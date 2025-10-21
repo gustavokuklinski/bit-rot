@@ -1,0 +1,15 @@
+<zombie name="office">
+    <xp value="1" />
+    <stats>
+        <health value="70" />
+        <speed value="2.0" />
+    </stats>
+    <visuals>
+        <sprite file="office.png" />
+    </visuals>
+    <loot>
+        <drop item="Vaccine" chance="0.1" />
+        <drop item="Knife" chance="0.2" />
+        <drop item="Pistol" chance="0.05" />
+    </loot>
+</zombie>

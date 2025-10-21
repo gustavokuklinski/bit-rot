@@ -1,0 +1,13 @@
+<zombie name="survivor">
+    <xp value="1" />
+    <stats>
+        <health value="100" />
+        <speed value="3.0" />
+    </stats>
+    <visuals>
+        <sprite file="survivor.png" />
+    </visuals>
+    <loot>
+        <drop item="Vaccine" chance="0.5" />
+    </loot>
+</zombie>

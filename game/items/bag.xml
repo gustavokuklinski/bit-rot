@@ -1,0 +1,7 @@
+<item name="Bag" type="backpack">
+    <properties>
+        <capacity value="10" />
+        <load value="1" />
+        <sprite file="bag.png" />
+    </properties>
+</item>

@@ -1,0 +1,26 @@
+<player name="player">
+    <name value="Player N.1" />
+
+    <stats>
+        <health value="100" />
+        <speed value="2.0" />
+        <experience value="0" />
+        <level value="1" />
+    </stats>
+
+    <skills>
+        <strength value="5" />
+        <range value="3" />
+        <melee value="3" />
+    </skills>
+
+    <initial_loot>
+        <inventory item="Water Bottle" />
+        <inventory item="Knife" />
+        <inventory item="Bag" />
+    </initial_loot>
+
+    <visuals>
+        <sprite file="player.png" />
+    </visuals>
+</player>

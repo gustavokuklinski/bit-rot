@@ -1,0 +1,13 @@
+<zombie name="farmer">
+    <xp value="1" />
+    <stats>
+        <health value="80" />
+        <speed value="1.8" />
+    </stats>
+    <visuals>
+        <sprite file="farmer.png" />
+    </visuals>
+    <loot>
+        <drop item="Canned Food" chance="0.6" />
+    </loot>
+</zombie>

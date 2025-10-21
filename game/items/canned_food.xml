@@ -1,0 +1,9 @@
+<item name="Canned Food" type="consumable">
+    <properties>
+        <load value="15" />
+        <capacity value="15" />
+        <color r="50" g="200" b="50" />
+        <sprite file="canned_food.png" />
+    </properties>
+    <spawn chance="10" /> <!-- 20 * 0.5 -->
+</item>

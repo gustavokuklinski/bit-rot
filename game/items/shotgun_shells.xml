@@ -1,0 +1,9 @@
+<item name="Shotgun Shells" type="consumable">
+    <properties>
+        <load min="5" max="25" />
+        <capacity value="50" />
+        <color r="220" g="20" b="20" />
+        <sprite file="shotgun_shells.png" />
+    </properties>
+    <spawn chance="10" />
+</item>

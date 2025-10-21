@@ -1,0 +1,14 @@
+<zombie name="soldier">
+    <xp value="1" />
+    <stats>
+        <health value="150" />
+        <speed value="2.5" />
+    </stats>
+    <visuals>
+        <sprite file="soldier.png" />
+    </visuals>
+    <loot>
+        <drop item="Shotgun" chance="0.1" />
+        <drop item="Shotgun Shells" chance="0.3" />
+    </loot>
+</zombie>

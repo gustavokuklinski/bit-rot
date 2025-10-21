@@ -1,0 +1,12 @@
+<item name="Shotgun" type="weapon">
+    <properties>
+        <durability min="60" max="120" />
+        <load min="2" max="8" />
+        <capacity value="8" />
+        <color r="80" g="60" b="40" />
+        <ammo type="Shotgun Shells" />
+        <firing pellets="6" spread_angle="15" />
+        <sprite file="shotgun.png" />
+    </properties>
+    <spawn chance="15" />
+</item>

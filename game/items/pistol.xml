@@ -1,0 +1,12 @@
+<item name="Pistol (9mm)" type="weapon">
+    <properties>
+        <durability min="50" max="100" />
+        <load min="5" max="12" />
+        <capacity value="12" />
+        <color r="30" g="30" b="30" />
+        <ammo type="9mm Ammo" />
+        <firing pellets="1" spread_angle="0" />
+        <sprite file="pistol_9mm.png" />
+    </properties> 
+    <spawn chance="35" />
+</item>

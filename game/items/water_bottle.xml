@@ -1,0 +1,9 @@
+<item name="Water Bottle" type="consumable">
+    <properties>
+        <load value="15" />
+        <capacity value="15" />
+        <color r="50" g="50" b="200" />
+        <sprite file="water_bottle.png" />
+    </properties>
+    <spawn chance="10" /> <!-- 20 * 0.5 -->
+</item>
