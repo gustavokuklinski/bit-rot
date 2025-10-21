@@ -7,10 +7,10 @@ VIRTUAL_SCREEN_WIDTH = 1200
 VIRTUAL_GAME_HEIGHT = 700
 
 # UI/Layout Constants
-STATUS_PANEL_WIDTH = 220
+# STATUS_PANEL_WIDTH = 220 # Removed as per user request
 INVENTORY_PANEL_WIDTH = 220
-GAME_OFFSET_X = STATUS_PANEL_WIDTH # X position where the central game box starts
-GAME_WIDTH = VIRTUAL_SCREEN_WIDTH - STATUS_PANEL_WIDTH - INVENTORY_PANEL_WIDTH
+GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
+GAME_WIDTH = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
 # Colors
@@ -33,7 +33,7 @@ title_font = pygame.font.Font(None, 72)
 # Game Constants
 TILE_SIZE = 16
 PLAYER_SPEED = 4
-ZOMBIE_SPEED = 0.1
+ZOMBIE_SPEED = 0
 ZOMBIE_DROP = 1
 DECAY_RATE_SECONDS = 5.0 # How often Water/Food decay
 FOOD_DECAY_AMOUNT = 0.5 # Percentage loss per tick

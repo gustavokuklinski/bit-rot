@@ -9,5 +9,7 @@
     </visuals>
     <loot>
         <drop item="Vaccine" chance="0.5" />
+        <drop item="Canned Food" chance="0.5" />
+        <drop item="Small Backpack" chance="0.5" />
     </loot>
 </zombie>

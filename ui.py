@@ -20,57 +20,28 @@ def get_backpack_slot_rect():
     slot_y = GAME_HEIGHT - 60 # Position it at the bottom of the inventory panel
     return pygame.Rect(inv_start_x + 5, slot_y, 200, 50)
 
+def get_container_slot_rect(container_pos, i):
+    """Calculates the screen rect for a slot inside a container modal."""
+    rows, cols = 4, 4
+    slot_size = 60
+    padding = 10
+    start_x = container_pos[0] + padding
+    start_y = container_pos[1] + 40
+    row = i // cols
+    col = i % cols
+    return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
+
 def draw_inventory(surface, player, dragged_item, drag_pos):
-    """Draws all UI panels (Status, Inventory, Belt)."""
+    """Draws all UI panels (Inventory, Belt)."""
     
-    # 1. Draw STATUS Panel (Left Column)
-    status_rect = pygame.Rect(0, 0, STATUS_PANEL_WIDTH, GAME_HEIGHT)
-    pygame.draw.rect(surface, PANEL_COLOR, status_rect)
-    
-    # Health/Infection/Resource Bars
-    stats = [
-        ("HP", player.health, RED), 
-        ("Stamina", player.stamina, (200, 200, 100)),
-        ("Water", player.water, BLUE), 
-        ("Food", player.food, GREEN), 
-        ("Infection", player.infection, YELLOW)
-    ]
-    
-    for i, (name, value, color) in enumerate(stats):
-        y_pos = 15 + i * 28
-        text = font.render(f"{name}: {value:.0f}%", True, WHITE)
-        surface.blit(text, (5, y_pos))
-        
-        bar_width = int(100 * (value / 100))
-        bar_rect = pygame.Rect(110, y_pos + 5, bar_width, 10)
-        pygame.draw.rect(surface, color, bar_rect)
-        pygame.draw.rect(surface, WHITE, (110, y_pos + 5, 100, 10), 1)
-
-    # Skills Display
-    skill_y = y_pos + 35
-    surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (5, skill_y))
-    surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (5, skill_y + 20))
-    
-    # PISTOL FIX: Display stats from the active_weapon object, which is directly updated
-    active_weapon_text = "None (Hands)"
-    if player.active_weapon:
-         active_weapon_text = f"Equipped: {player.active_weapon.name.split('(')[0]}"
-         if player.active_weapon.durability is not None:
-            active_weapon_text += f" | Dur: {player.active_weapon.durability:.0f}%"
-         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
-            active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
-            
-    status_text = font.render(active_weapon_text, True, YELLOW)
-    surface.blit(status_text, (5, skill_y + 45))
-
-    # 2. Draw INVENTORY Panel (Right Column)
+    # 1. Draw INVENTORY Panel (Right Column)
     inv_start_x = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
     inv_rect = pygame.Rect(inv_start_x, 0, INVENTORY_PANEL_WIDTH, GAME_HEIGHT)
     pygame.draw.rect(surface, PANEL_COLOR, inv_rect)
     surface.blit(font.render("INVENTORY", True, WHITE), (inv_start_x + 10, 15))
 
     # Draw Inventory Slots
-    for i in range(player.inventory_slots):
+    for i in range(player.base_inventory_slots):
         slot_rect = get_inventory_slot_rect(i)
         
         mouse_pos = pygame.mouse.get_pos()
@@ -242,15 +213,14 @@ def draw_game_over(screen, zombies_killed):
     
     return restart_rect, quit_rect
 
-def draw_container_view(surface, container_item):
+def draw_container_view(surface, container_item, position):
     """Draws a modal view for a container's inventory (e.g., a backpack)."""
     if not container_item or not hasattr(container_item, 'inventory'):
         return
 
     # Modal background
     modal_w, modal_h = 300, 300
-    modal_x = VIRTUAL_SCREEN_WIDTH / 2 - modal_w / 2
-    modal_y = VIRTUAL_GAME_HEIGHT / 2 - modal_h / 2
+    modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
     
     # Semi-transparent background
@@ -259,12 +229,18 @@ def draw_container_view(surface, container_item):
     surface.blit(s, (modal_x, modal_y))
     pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
 
+    # --- Draggable Header ---
+    header_h = 35
+    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
+    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+
     # Title
     title_text = font.render(f"{container_item.name} Contents", True, WHITE)
     surface.blit(title_text, (modal_x + 10, modal_y + 10))
 
     # Close instruction
-    close_text = font.render("Press ESC to close", True, GRAY)
+    close_text = font.render("ESC to close", True, GRAY)
     surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
 
     # Draw item slots
@@ -274,7 +250,12 @@ def draw_container_view(surface, container_item):
     start_x = modal_x + padding
     start_y = modal_y + 40
 
-    for i in range(container_item.capacity):
+    # Calculate how many rows can fit in the modal
+    # modal_h - (header_h + padding_bottom) / (slot_size + padding)
+    max_visible_rows = int((modal_h - header_h - padding) / (slot_size + padding))
+    max_visible_slots = max_visible_rows * cols
+
+    for i in range(min(container_item.capacity, max_visible_slots)):
         row = i // cols
         col = i % cols
         slot_rect = pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
@@ -285,3 +266,95 @@ def draw_container_view(surface, container_item):
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+
+    # Add a "More items..." indicator if there are more items than visible slots
+    if container_item.capacity > max_visible_slots:
+        more_text = font.render(f"... {container_item.capacity - max_visible_slots} more items ...", True, GRAY)
+        surface.blit(more_text, (modal_x + padding, modal_y + modal_h - padding - more_text.get_height()))
+
+# --- New UI Functions for Status Modal ---
+status_button_image = None
+def draw_status_button(surface):
+    global status_button_image
+    if status_button_image is None:
+        try:
+            status_button_image = pygame.image.load('game/ui/status.png').convert_alpha()
+            status_button_image = pygame.transform.scale(status_button_image, (40, 40))
+        except pygame.error as e:
+            print(f"Warning: Could not load status button image: {e}")
+            status_button_image = pygame.Surface((40, 40), pygame.SRCALPHA)
+            status_button_image.fill(GRAY) # Fallback
+
+    button_rect = pygame.Rect(10, 10, 40, 40) # Top-left corner
+    surface.blit(status_button_image, button_rect)
+    return button_rect
+
+def draw_status_modal(surface, player, position, zombies_killed):
+    modal_w, modal_h = 300, 400 # Slightly taller for more stats
+    modal_x, modal_y = position
+    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+    
+    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
+    s.fill((20, 20, 20, 200))
+    surface.blit(s, (modal_x, modal_y))
+    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
+
+    header_h = 35
+    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
+    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+
+    title_text = font.render("Player Status", True, WHITE)
+    surface.blit(title_text, (modal_x + 10, modal_y + 10))
+
+    close_text = font.render("ESC to close", True, GRAY)
+    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
+
+    # Display Player Stats
+    y_offset = modal_y + header_h + 10
+    x_offset = modal_x + 10
+
+    # Health/Infection/Resource Bars
+    stats = [
+        ("HP", player.health, RED), 
+        ("Stamina", player.stamina, GRAY),
+        ("Water", player.water, BLUE), 
+        ("Food", player.food, GREEN), 
+        ("Infection", player.infection, YELLOW),
+        ("XP", player.experience, YELLOW)
+    ]
+    
+    for i, (name, value, color) in enumerate(stats):
+        y_pos = y_offset + i * 28
+        text = font.render(f"{name}:", True, WHITE)
+        surface.blit(text, (x_offset, y_pos))
+        
+        bar_width = int(100 * (value / 100))
+        bar_rect = pygame.Rect(x_offset + 110, y_pos + 5, bar_width, 10)
+        pygame.draw.rect(surface, color, bar_rect)
+        pygame.draw.rect(surface, WHITE, (x_offset + 110, y_pos + 5, 100, 10), 1)
+
+    # Skills Display
+    skill_y = y_pos + 35 # Continue from last stat bar
+    surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
+    surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
+    
+    # Display Weight
+    weight_text = font.render(f"Weight: {player.get_inventory_weight():.1f}/{player.max_carry_weight:.1f}", True, WHITE)
+    surface.blit(weight_text, (x_offset, skill_y + 50))
+
+    # Display Zombies Killed
+    zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
+    surface.blit(zombies_killed_text, (x_offset, skill_y + 80))
+
+    # Equipped Weapon
+    active_weapon_text = "None (Hands)"
+    if player.active_weapon:
+         active_weapon_text = f"Equipped: {player.active_weapon.name.split('(')[0]}"
+         if player.active_weapon.durability is not None:
+            active_weapon_text += f" | Dur: {player.active_weapon.durability:.0f}%"
+         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
+            active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
+            
+    status_text = font.render(active_weapon_text, True, YELLOW)
+    surface.blit(status_text, (x_offset, skill_y + 110))

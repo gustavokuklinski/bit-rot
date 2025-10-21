@@ -49,6 +49,7 @@ class Item:
         try:
             path = os.path.join('game', 'items', 'sprites', sprite_file)
             image = pygame.image.load(path).convert_alpha()
+            image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE)) # Scale to TILE_SIZE
             return image
         except pygame.error as e:
             print(f"Warning: Could not load sprite '{sprite_file}': {e}")
@@ -240,8 +241,7 @@ class Player:
         # --- Experience & Leveling ---
         self.level = data.get('level', 1)
         self.experience = data.get('experience', 0)
-        self.base_inventory_slots = data.get('inventory_slots', 10)
-        self.inventory_slots = self.get_total_inventory_slots()
+        self.base_inventory_slots = 3 # The player has 3 base inventory slots
         
         # Animation Timers (frames remaining)
         self.melee_swing_timer = 0
@@ -254,39 +254,58 @@ class Player:
         self.is_reloading = False
         self.reload_timer = 0
         self.reload_duration = 120 # 2 seconds at 60 FPS
+        self.max_carry_weight = self.get_max_carry_weight() # Initialize max carry weight
 
-    def update_position(self, dx, dy, obstacles):
+        self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
+
+    def _load_sprite(self, sprite_path):
+        if not sprite_path: return None
+        try:
+            return pygame.image.load(sprite_path).convert_alpha()
+        except pygame.error as e:
+            print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
+            return None
+
+    def update_position(self, dx, dy, obstacles, zombies):
         """Move player and keep within game box bounds."""
+        # Store original dx, dy
+        original_dx, original_dy = dx, dy
+
+        # Now apply movement and check for hard obstacles (walls)
         new_x = self.x + dx
         new_y = self.y + dy
         
         # Create a temporary rect for collision checking
         temp_rect = self.rect.copy()
 
-        # Move in X direction and check for collisions
+        # Move in X direction and check for collisions with walls
         temp_rect.x = new_x
-        for obstacle in obstacles:
-            if temp_rect.colliderect(obstacle):
-                new_x = self.x # Reset x movement if collision
-                break
-        
-        # Move in Y direction and check for collisions
-        temp_rect.y = new_y
-        for obstacle in obstacles:
-            if temp_rect.colliderect(obstacle):
-                new_y = self.y # Reset y movement if collision
-                break
+        collided_with_wall_x = any(temp_rect.colliderect(ob) for ob in obstacles)
 
-        self.x = max(0, min(new_x, GAME_WIDTH - TILE_SIZE))
-        self.y = max(0, min(new_y, GAME_HEIGHT - TILE_SIZE))
-        self.rect.topleft = (self.x, self.y)
+        if not collided_with_wall_x:
+            self.x = new_x
+        
+        # Move in Y direction and check for collisions with walls
+        temp_rect.y = new_y
+        collided_with_wall_y = any(temp_rect.colliderect(ob) for ob in obstacles)
+
+        if not collided_with_wall_y:
+            self.y = new_y
+
+        # Ensure player stays within game bounds
+        self.x = max(0, min(self.x, GAME_WIDTH - TILE_SIZE))
+        self.y = max(0, min(self.y, GAME_HEIGHT - TILE_SIZE))
+        self.rect.topleft = (int(self.x), int(self.y))
 
     def draw(self, surface):
         """Draws the player and the melee swing animation."""
         
         # 1. Draw Player
         draw_rect = self.rect.move(GAME_OFFSET_X, 0)
-        pygame.draw.rect(surface, self.color, draw_rect)
+        if self.image:
+            surface.blit(self.image, draw_rect)
+        else:
+            pygame.draw.rect(surface, self.color, draw_rect)
 
         # 2. Draw Melee Swing Animation
         if self.melee_swing_timer > 0:
@@ -366,7 +385,7 @@ class Player:
     def get_total_inventory_slots(self):
         """Calculates total inventory slots based on base slots and equipped backpack."""
         if self.backpack:
-            return self.base_inventory_slots + (self.backpack.capacity or 0)
+            return self.base_inventory_slots + self.backpack.capacity
         return self.base_inventory_slots
 
     def get_inventory_weight(self):
@@ -500,29 +519,42 @@ class Player:
     def consume_item(self, item, source_type, item_index):
         """Uses a consumable item from the inventory or belt."""
         if item.item_type == 'consumable':
+            amount_consumed = 0
             if 'Water' in item.name:
-                self.water = min(100, self.water + item.load)
-                # Drinking water also restores stamina
-                self.stamina = min(self.max_stamina, self.stamina + 25)
-                print(f"Consumed Water. Water: {self.water:.0f}%")
+                amount_needed = 100 - self.water
+                amount_to_consume = min(amount_needed, item.load)
+                self.water = min(100, self.water + amount_to_consume)
+                self.stamina = min(self.max_stamina, self.stamina + (amount_to_consume / item.capacity) * 25) # Scale stamina regen
+                item.load -= amount_to_consume
+                amount_consumed = amount_to_consume
+                print(f"Consumed {amount_consumed:.0f}% Water. Water: {self.water:.0f}%")
             elif 'Food' in item.name:
-                self.food = min(100, self.food + item.load)
-                print(f"Consumed Food. Food: {self.food:.0f}%")
+                amount_needed = 100 - self.food
+                amount_to_consume = min(amount_needed, item.load)
+                self.food = min(100, self.food + amount_to_consume)
+                item.load -= amount_to_consume
+                amount_consumed = amount_to_consume
+                print(f"Consumed {amount_consumed:.0f}% Food. Food: {self.food:.0f}%")
             elif 'Vaccine' in item.name:
-                self.infection = max(0, self.infection - 50)
-                print(f"Used Vaccine. Infection cured by 50%. New Infection: {self.infection:.0f}%")
+                amount_needed = self.infection # Amount of infection to cure
+                amount_to_consume = min(amount_needed, item.load) # Use up to item's load
+                self.infection = max(0, self.infection - amount_to_consume)
+                item.load -= amount_to_consume
+                amount_consumed = amount_to_consume
+                print(f"Used {amount_consumed:.0f}% Vaccine. New Infection: {self.infection:.0f}%")
             elif 'Ammo' in item.name or 'Shells' in item.name:
                 # If ammo is used from the belt, it attempts to reload the active weapon
                 self.reload_active_weapon()
                 return True # Don't remove the item, reload handles it
             
-            # Remove the consumed item from its source
-            if source_type == 'belt':
-                self.belt[item_index] = None
-            elif source_type == 'inventory':
-                if item_index < len(self.inventory) and self.inventory[item_index] == item:
-                    self.inventory.pop(item_index)
-
+            # Only remove the item if its load is completely depleted
+            if item.load <= 0:
+                if source_type == 'belt':
+                    self.belt[item_index] = None
+                elif source_type == 'inventory':
+                    if item_index < len(self.inventory) and self.inventory[item_index] == item:
+                        self.inventory.pop(item_index)
+            
             return True
         return False
     
@@ -543,7 +575,6 @@ class Player:
         elif source == 'backpack':
             item_to_drop = self.backpack
             self.backpack = None
-            self.inventory_slots = self.get_total_inventory_slots() # Update slots
         return item_to_drop
 
 class Zombie:
@@ -565,6 +596,9 @@ class Zombie:
 
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.show_health_bar_timer = 0
+        self.last_attack_time = 0 # Initialize for attack cooldown
+        self.attack_range = TILE_SIZE * 1.5 # Increased attack range
+        self.attack_range = TILE_SIZE * 1.5 # Increased attack range
 
     @staticmethod
     def load_zombie_templates():
@@ -648,41 +682,90 @@ class Zombie:
         dist = math.sqrt(dx**2 + dy**2)
 
         if dist > 0:
+            # If already overlapping player, try to push out
+            if self.rect.colliderect(target_rect):
+                overlap_x = min(self.rect.right, target_rect.right) - max(self.rect.left, target_rect.left)
+                overlap_y = min(self.rect.bottom, target_rect.bottom) - max(self.rect.top, target_rect.top)
+
+                if overlap_x > 0 and overlap_y > 0: # Only push if there's actual overlap
+                    if overlap_x < overlap_y: # Overlap is smaller in X, push in X
+                        if self.rect.centerx < target_rect.centerx: # Zombie is to the left of player
+                            self.x -= overlap_x
+                        else:
+                            self.x += overlap_x
+                    else: # Overlap is smaller in Y, push in Y
+                        if self.rect.centery < target_rect.centery: # Zombie is above player
+                            self.y -= overlap_y
+                        else:
+                            self.y += overlap_y
+                    self.rect.topleft = (int(self.x), int(self.y))
+
             move_x = (dx / dist) * self.speed
             move_y = (dy / dist) * self.speed
             
-            # --- Collision check ---
-            # Separate movement into x and y to slide along obstacles/zombies
+            separation_x, separation_y = 0, 0
+            SEPARATION_RADIUS = TILE_SIZE # Zombies try to keep this distance
+            SEPARATION_FORCE = 0.5 # How strongly they repel
+
+            # Separate from other zombies
+            for other_z in other_zombies:
+                if other_z is self: continue
+                dist_sq = (self.x - other_z.x)**2 + (self.y - other_z.y)**2
+                if dist_sq < SEPARATION_RADIUS**2 and dist_sq > 0:
+                    dist_val = math.sqrt(dist_sq)
+                    # Vector pointing from other_z to self
+                    repel_x = (self.x - other_z.x) / dist_val
+                    repel_y = (self.y - other_z.y) / dist_val
+                    separation_x += repel_x * (SEPARATION_RADIUS - dist_val) * SEPARATION_FORCE
+                    separation_y += repel_y * (SEPARATION_RADIUS - dist_val) * SEPARATION_FORCE
+
+            # Separate from player
+            dist_sq_player = (self.x - target_rect.x)**2 + (self.y - target_rect.y)**2
+            if dist_sq_player < SEPARATION_RADIUS**2 and dist_sq_player > 0:
+                dist_player = math.sqrt(dist_sq_player)
+                repel_x_player = (self.x - target_rect.x) / dist_player
+                repel_y_player = (self.y - target_rect.y) / dist_player
+                separation_x += repel_x_player * (SEPARATION_RADIUS - dist_player) * SEPARATION_FORCE
+                separation_y += repel_y_player * (SEPARATION_RADIUS - dist_player) * SEPARATION_FORCE
+
+            # Apply separation to movement
+            move_x += separation_x
+            move_y += separation_y
             
-            # Check X movement
-            new_x = self.x + move_x
-            temp_rect_x = self.rect.copy()
-            temp_rect_x.x = new_x
-            
-            # Check against obstacles and other zombies
-            collided_x = any(temp_rect_x.colliderect(ob) for ob in obstacles) or \
-                         any(temp_rect_x.colliderect(z.rect) for z in other_zombies if z is not self)
+            # Store current position
+            old_x, old_y = self.x, self.y
+            # Attempt X movement
+            self.x += move_x
+            self.rect.x = int(self.x) # Update rect for collision check
 
-            if not collided_x:
-                self.x = new_x
+            # Check for collisions after X movement
+            collided_x = any(self.rect.colliderect(ob) for ob in obstacles) or \
+                         any(self.rect.colliderect(z.rect) for z in other_zombies if z is not self) or \
+                         self.rect.colliderect(target_rect) # target_rect is player
 
-            # Check Y movement
-            new_y = self.y + move_y
-            temp_rect_y = self.rect.copy()
-            temp_rect_y.y = new_y
+            if collided_x:
+                self.x = old_x # Revert X movement if collision
+                self.rect.x = int(self.x)
 
-            collided_y = any(temp_rect_y.colliderect(ob) for ob in obstacles) or \
-                         any(temp_rect_y.colliderect(z.rect) for z in other_zombies if z is not self)
+            # Attempt Y movement
+            self.y += move_y
+            self.rect.y = int(self.y) # Update rect for collision check
 
-            if not collided_y:
-                self.y = new_y
+            # Check for collisions after Y movement
+            collided_y = any(self.rect.colliderect(ob) for ob in obstacles) or \
+                         any(self.rect.colliderect(z.rect) for z in other_zombies if z is not self) or \
+                         self.rect.colliderect(target_rect) # target_rect is player
 
-            self.rect.topleft = (self.x, self.y)
+            if collided_y:
+                self.y = old_y # Revert Y movement if collision
+                self.rect.y = int(self.y)
+
+            self.rect.topleft = (int(self.x), int(self.y))
 
     def attack(self, player):
         """Zombie attacks the player, potentially infecting them."""
         # ... (Attack logic remains the same)
-        body_parts = {"Head": (0.20, 0.20), "Body": (0.25, 0.25), "Arms": (0.25, 0.25), "Legs": (0.15, 0.15), "Feet": (0.15, 0.15)}
+        body_parts = {"Head": (0.50, 0.20), "Body": (0.35, 0.25), "Arms": (0.30, 0.25), "Legs": (0.20, 0.15), "Feet": (0.10, 0.15)}
         part_names = list(body_parts.keys())
         weights = [p[0] for p in body_parts.values()]
         
@@ -694,7 +777,7 @@ class Zombie:
         player.health = max(0, player.health)
         
         if random.random() < inf_chance:
-            infection_amount = 5
+            infection_amount = 15 # Increased infection amount
             player.infection = min(100, player.infection + infection_amount)
             print(f"**HIT!** Player hit on {hit_part}. Took {damage:.1f} damage and gained {infection_amount}% infection!")
         else:

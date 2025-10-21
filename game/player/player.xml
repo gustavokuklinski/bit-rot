@@ -16,11 +16,11 @@
 
     <initial_loot>
         <inventory item="Water Bottle" />
-        <inventory item="Knife" />
+        <inventory item="Large Backpack" />
         <inventory item="Bag" />
     </initial_loot>
 
     <visuals>
-        <sprite file="player.png" />
+        <sprite file="sprites/player.png" />
     </visuals>
 </player>

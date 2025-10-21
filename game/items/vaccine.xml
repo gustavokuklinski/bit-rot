@@ -1,6 +1,6 @@
 <item name="Vaccine" type="consumable">
     <properties>
-        <load value="0.5" />
+        <load value="1" />
         <capacity value="1" />
         <color r="150" g="200" b="255" />
         <sprite file="vaccine.png" />

@@ -10,5 +10,6 @@
     <loot>
         <drop item="Shotgun" chance="0.1" />
         <drop item="Shotgun Shells" chance="0.3" />
+        <drop item="Large Backpack" chance="0.2" />
     </loot>
 </zombie>
