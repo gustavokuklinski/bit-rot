@@ -3,6 +3,7 @@ import random
 import time
 import math
 import uuid
+import os
 
 from config import *
 
@@ -106,44 +107,47 @@ def create_obstacles_from_map(layout):
                 obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
     return obstacles
 
+# Simple container object used for dead corpses (lootable)
+class Corpse:
+    def __init__(self, name="Dead corpse", capacity=8, image_path=None, pos=(0,0)):
+        self.name = name
+        self.capacity = capacity
+        self.inventory = []
+        self.weight = 35
+        self.image = None
+        if image_path:
+            try:
+                self.image = pygame.image.load(image_path).convert_alpha()
+                # scale to tile size for consistency with item sprites
+                self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
+            except Exception:
+                self.image = None
+        self.rect = pygame.Rect(0,0,TILE_SIZE, TILE_SIZE)
+        self.rect.center = pos
+        self.spawn_time = pygame.time.get_ticks()  # for decay
+        self.color = DARK_GRAY
+
 def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
     """Processes loot drops when a zombie dies."""
-    print(f"A {zombie.name} died. Checking for loot...")
+    print(f"A {zombie.name} died. Creating corpse and checking for loot...")
+    # create corpse at zombie position
+    dead_sprite_path = os.path.join('game', 'zombies', 'sprites', 'dead.png')
+    corpse = Corpse(name="Dead corpse", capacity=32, image_path=dead_sprite_path, pos=zombie.rect.center)
+    # build its inventory from the zombie loot table
     if hasattr(zombie, 'loot_table'):
         for drop in zombie.loot_table:
-            if random.random() < drop['chance']:
-                print(f"It dropped {drop['item']}!")
-                # The Item class needs to be able to be created by name.
-                # We will modify the Item class in the next step.
-                new_item = Item.create_from_name(drop['item'])
-                if new_item:
-                    # Ensure dropped items don't spawn inside obstacles or on top of other items
-                    new_item.rect.center = zombie.rect.center # Start at zombie's position
-                    attempts = 0
-                    max_attempts = 200 # Increased attempts
-                    original_x, original_y = new_item.rect.x, new_item.rect.y # Store original position
-
-                    while (any(new_item.rect.colliderect(ob) for ob in obstacles) or \
-                           any(new_item.rect.colliderect(other_item.rect) for other_item in items_on_ground_list)) and attempts < max_attempts:
-                        new_item.rect.x = random.randint(0, GAME_WIDTH - TILE_SIZE)
-                        new_item.rect.y = random.randint(0, GAME_HEIGHT - TILE_SIZE)
-                        attempts += 1
-                    
-                    if attempts == max_attempts: # If couldn't find a clear spot, try a small offset from original
-                        new_item.rect.x = original_x + random.randint(-TILE_SIZE, TILE_SIZE)
-                        new_item.rect.y = original_y + random.randint(-TILE_SIZE, TILE_SIZE)
-                        # Ensure it's still within bounds after offset
-                        new_item.rect.x = max(0, min(new_item.rect.x, GAME_WIDTH - TILE_SIZE))
-                        new_item.rect.y = max(0, min(new_item.rect.y, GAME_HEIGHT - TILE_SIZE))
-
-                    items_on_ground_list.append(new_item)
+            if random.random() < drop.get('chance', 0):
+                item_inst = Item.create_from_name(drop.get('item'))
+                if item_inst:
+                    corpse.inventory.append(item_inst)
                 else:
-                    print(f"Failed to create item: {drop['item']}")
-    
+                    print(f"Failed to create item: {drop.get('item')}")
+    # append corpse to world items (it behaves like an item on ground)
+    items_on_ground_list.append(corpse)
+
     # --- Experience Gain ---
     player.experience += zombie.xp_value
     print(f"Gained {zombie.xp_value} experience. Total XP: {player.experience}")
-    
     # --- Level Up Check ---
     xp_needed = experience_for_level(player.level + 1)
     if player.experience >= xp_needed:
@@ -805,6 +809,9 @@ def run_game():
                                 # allow place on backpack if player has a backpack (slot) and it can hold items
                                 if player.backpack and getattr(player.backpack, 'inventory', None) is not None:
                                     options.append('Place on Backpack')
+                                # If ground item exposes an inventory (corpse/container), allow Open
+                                if getattr(clicked_item, 'inventory', None) is not None:
+                                    options.append('Open')
                             context_menu['options'] = options
                             context_menu['rects'] = [] # Will be populated by draw_context_menu
                             continue # Consume the right-click
@@ -1221,12 +1228,23 @@ def run_game():
                 draw_rect = obstacle.move(GAME_OFFSET_X, 0)
                 pygame.draw.rect(VIRTUAL_SCREEN, DARK_GRAY, draw_rect)
 
+            # remove expired corpses (160 seconds = 160000 ms)
+            now_ms = pygame.time.get_ticks()
+            for ground_item in list(items_on_ground):
+                if getattr(ground_item, 'spawn_time', None) is not None:
+                    if now_ms - ground_item.spawn_time > 160000:
+                        print(f"{getattr(ground_item,'name','Corpse')} decayed.")
+                        try:
+                            items_on_ground.remove(ground_item)
+                        except ValueError:
+                            pass
+
             for item in items_on_ground:
                 draw_rect = item.rect.move(GAME_OFFSET_X, 0)
-                if item.image:
+                if getattr(item, 'image', None):
                     VIRTUAL_SCREEN.blit(item.image, draw_rect)
                 else: # Fallback to drawing a colored square
-                    pygame.draw.rect(VIRTUAL_SCREEN, item.color, draw_rect)
+                    pygame.draw.rect(VIRTUAL_SCREEN, getattr(item, 'color', WHITE), draw_rect)
             
             # Draw projectiles so bullets are visible (draw after ground items)
             for p in projectiles:
