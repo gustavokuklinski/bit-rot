@@ -199,6 +199,16 @@ def run_game():
     # --- Modal Management ---
     modals = [] # List to hold active modals. Each modal is a dict with {'id', 'type', 'item', 'position', 'is_dragging', 'drag_offset', 'rect'}
 
+    # --- Custom Cursor Setup ---
+    try:
+        cursor_image = pygame.image.load('game/ui/cursor.png').convert_alpha()
+        cursor_hotspot = (0, 0) # The tip of the arrow
+        custom_cursor = pygame.cursors.Cursor(cursor_hotspot, cursor_image)
+    except pygame.error as e:
+        print(f"Error loading cursor: {e}")
+        custom_cursor = None # Fallback to default cursor
+
+
     game_state = 'MENU' # Can be 'MENU', 'PLAYING', 'GAME_OVER'
     clock = pygame.time.Clock()
     
@@ -211,6 +221,12 @@ def run_game():
         scale_x = VIRTUAL_SCREEN_WIDTH / screen_w
         scale_y = VIRTUAL_GAME_HEIGHT / screen_h
         mouse_pos = (real_mouse_pos[0] * scale_x, real_mouse_pos[1] * scale_y)
+
+        # Set cursor visibility based on game state
+        if game_state == 'PLAYING' and custom_cursor:
+            pygame.mouse.set_cursor(custom_cursor)
+        else:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
         if game_state == 'MENU':
             start_button, quit_button = draw_menu(VIRTUAL_SCREEN)

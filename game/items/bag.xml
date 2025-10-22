@@ -1,6 +1,6 @@
 <item name="Bag" type="backpack">
     <properties>
-        <capacity value="10" />
+        <capacity value="5" />
         <load value="1" />
         <sprite file="bag.png" />
     </properties>

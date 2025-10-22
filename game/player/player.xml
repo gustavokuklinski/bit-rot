@@ -16,7 +16,6 @@
 
     <initial_loot>
         <inventory item="Water Bottle" />
-        <inventory item="Large Backpack" />
         <inventory item="Bag" />
     </initial_loot>
 
