@@ -6,11 +6,8 @@ pygame.init()
 VIRTUAL_SCREEN_WIDTH = 1200
 VIRTUAL_GAME_HEIGHT = 700
 
-# UI/Layout Constants
-# STATUS_PANEL_WIDTH = 220 # Removed as per user request
-INVENTORY_PANEL_WIDTH = 220
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
-GAME_WIDTH = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
+GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
 # Colors
@@ -26,9 +23,9 @@ PANEL_COLOR = (20, 20, 20)
 GAME_BG_COLOR = (25.9, 17.8, 22.4) # Distinct color for the game box
 
 # Fonts
-font = pygame.font.Font(None, 24)
-large_font = pygame.font.Font(None, 48)
-title_font = pygame.font.Font(None, 72)
+font = pygame.font.Font(None, 16)
+large_font = pygame.font.Font(None, 24)
+title_font = pygame.font.Font(None, 32)
 
 # Game Constants
 TILE_SIZE = 16

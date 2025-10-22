@@ -1,24 +1,24 @@
 import pygame
 from config import *
 
-def get_inventory_slot_rect(i):
-    """Calculates the screen rect for an inventory slot."""
-    inv_start_x = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
-    slot_y = 60 + i * 70
-    return pygame.Rect(inv_start_x + 5, slot_y, 200, 65)
+def get_inventory_slot_rect(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+    """Calculates the screen rect for an inventory slot inside its modal."""
+    slot_y = modal_position[1] + 45 + i * 70  # 45 is header + padding
+    return pygame.Rect(modal_position[0] + 10, slot_y, 280, 65)
 
-def get_belt_slot_rect(i):
-    """Calculates the screen rect for a belt slot."""
-    belt_start_x = GAME_OFFSET_X + GAME_WIDTH // 2 - (5 * 60) // 2
-    x = belt_start_x + i * 70
-    y = GAME_HEIGHT - 50
-    return pygame.Rect(x, y, 60, 40)
+def get_belt_slot_rect_in_modal(i, modal_position):
+    """Calculates the screen rect for a belt slot inside the inventory modal."""
+    # Position it below the backpack slot
+    backpack_bottom = modal_position[1] + 45 + (3 * 70) + 10 + 50 # From get_backpack_slot_rect
+    slot_y = backpack_bottom + 40 # 40 for "Belt" title and padding
+    slot_x = modal_position[0] + 10 + i * (50 + 5) # 50 is slot width, 5 is padding
+    return pygame.Rect(slot_x, slot_y, 50, 40)
 
-def get_backpack_slot_rect():
-    """Calculates the screen rect for the backpack slot."""
-    inv_start_x = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
-    slot_y = GAME_HEIGHT - 60 # Position it at the bottom of the inventory panel
-    return pygame.Rect(inv_start_x + 5, slot_y, 200, 50)
+def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+    """Calculates the screen rect for the backpack slot inside its modal."""
+    # Position it below the main inventory slots
+    slot_y = modal_position[1] + 45 + (3 * 70) + 10 # 3 is base_inventory_slots
+    return pygame.Rect(modal_position[0] + 10, slot_y, 280, 50)
 
 def get_container_slot_rect(container_pos, i):
     """Calculates the screen rect for a slot inside a container modal."""
@@ -31,24 +31,35 @@ def get_container_slot_rect(container_pos, i):
     col = i % cols
     return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
 
-def draw_inventory(surface, player, dragged_item, drag_pos):
-    """Draws all UI panels (Inventory, Belt)."""
-    
-    # 1. Draw INVENTORY Panel (Right Column)
-    inv_start_x = VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH
-    inv_rect = pygame.Rect(inv_start_x, 0, INVENTORY_PANEL_WIDTH, GAME_HEIGHT)
-    pygame.draw.rect(surface, PANEL_COLOR, inv_rect)
-    surface.blit(font.render("INVENTORY", True, WHITE), (inv_start_x + 10, 15))
+def draw_inventory_modal(surface, player, position):
+    """Draws the player's inventory, belt, and backpack in a modal window."""
+    modal_w, modal_h = 300, 480 # Adjusted height for backpack and belt slots
+    modal_x, modal_y = position
+    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+
+    # Semi-transparent background
+    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
+    s.fill((20, 20, 20, 200))
+    surface.blit(s, (modal_x, modal_y))
+    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
+
+    # --- Draggable Header ---
+    header_h = 35
+    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
+    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+
+    # Title
+    title_text = font.render("Inventory", True, WHITE)
+    surface.blit(title_text, (modal_x + 10, modal_y + 10))
+
+    close_text = font.render("ESC to close", True, GRAY)
+    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
 
     # Draw Inventory Slots
     for i in range(player.base_inventory_slots):
-        slot_rect = get_inventory_slot_rect(i)
-        
-        mouse_pos = pygame.mouse.get_pos()
-        is_hovered = slot_rect.collidepoint(mouse_pos) and not dragged_item
-        
-        slot_color = (60, 60, 60) if is_hovered else (40, 40, 40)
-        pygame.draw.rect(surface, slot_color, slot_rect, 0, 3)
+        slot_rect = get_inventory_slot_rect(i, position)
+        pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
 
         # Check if there is an item for this slot
         item = None
@@ -87,14 +98,11 @@ def draw_inventory(surface, player, dragged_item, drag_pos):
             pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
     # Draw Backpack Slot
-    backpack_slot_rect = get_backpack_slot_rect()
-    is_hovered = backpack_slot_rect.collidepoint(mouse_pos) and not dragged_item
-    slot_color = (60, 60, 60) if is_hovered else (40, 40, 40)
-    pygame.draw.rect(surface, slot_color, backpack_slot_rect, 0, 3)
+    backpack_slot_rect = get_backpack_slot_rect(position)
+    pygame.draw.rect(surface, (40, 40, 40), backpack_slot_rect, 0, 3)
     surface.blit(font.render("Backpack", True, WHITE), (backpack_slot_rect.x + 5, backpack_slot_rect.y - 20))
 
-    backpack = player.backpack
-    if backpack:
+    if (backpack := player.backpack):
         pygame.draw.rect(surface, backpack.color, backpack_slot_rect, 2, 3)
         if backpack.image:
             img_h = backpack_slot_rect.height - 10
@@ -114,39 +122,31 @@ def draw_inventory(surface, player, dragged_item, drag_pos):
     else:
         pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
 
+    # --- Draw Belt Slots ---
+    belt_y_start = backpack_slot_rect.bottom + 10
+    surface.blit(font.render("Belt", True, WHITE), (modal_x + 10, belt_y_start))
 
-
-
-
-    # 3. Draw BELT (Quick Slots 1-5, Centered in Game Box)
     for i in range(5):
         item = player.belt[i]
-        slot_rect = get_belt_slot_rect(i)
-        
-        pygame.draw.rect(surface, DARK_GRAY, slot_rect, 0, 5)
-        pygame.draw.rect(surface, WHITE, slot_rect, 2, 5)
-        surface.blit(font.render(str(i + 1), True, WHITE), (slot_rect.x + 5, slot_rect.y - 20))
-        
-        if item and item.image:
-            # Scale sprite to fit slot and blit it
-            img_h = slot_rect.height - 4
-            img_w = int(item.image.get_width() * (img_h / item.image.get_height()))
-            scaled_sprite = pygame.transform.scale(item.image, (img_w, img_h))
-            sprite_rect = scaled_sprite.get_rect(center=slot_rect.center)
-            surface.blit(scaled_sprite, sprite_rect)
+        slot_rect = get_belt_slot_rect_in_modal(i, position)
 
-    # 4. Draw DRAGGED ITEM (On Top)
-    if dragged_item:
-        drag_rect = (drag_pos[0], drag_pos[1], 100, 60)
-        pygame.draw.rect(surface, (50, 50, 50, 150), drag_rect, 0, 5)
-        pygame.draw.rect(surface, dragged_item.color, drag_rect, 2, 5)
+        # Draw slot background and border
+        pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
+        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
         
-        name_text = font.render(dragged_item.name.split('(')[0], True, dragged_item.color)
-        surface.blit(name_text, (drag_pos[0] + 5, drag_pos[1] + 5))
-        
-        if dragged_item.load is not None:
-             load_text = font.render(f"Load: {dragged_item.load:.0f}", True, WHITE)
-             surface.blit(load_text, (drag_pos[0] + 5, drag_pos[1] + 25))
+        # Draw slot number above
+        num_text = font.render(str(i + 1), True, WHITE)
+        surface.blit(num_text, (slot_rect.centerx - num_text.get_width() // 2, slot_rect.top - 20))
+
+        if item:
+            if item.image:
+                img_h = slot_rect.height - 8
+                img_w = int(item.image.get_width() * (img_h / item.image.get_height()))
+                scaled_sprite = pygame.transform.scale(item.image, (img_w, img_h))
+                sprite_rect = scaled_sprite.get_rect(center=slot_rect.center)
+                surface.blit(scaled_sprite, sprite_rect)
+            else: # Fallback for items without image
+                pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
 
 def draw_menu(screen):
     """Draws the main menu."""
@@ -273,6 +273,24 @@ def draw_container_view(surface, container_item, position):
         surface.blit(more_text, (modal_x + padding, modal_y + modal_h - padding - more_text.get_height()))
 
 # --- New UI Functions for Status Modal ---
+
+inventory_button_image = None
+def draw_inventory_button(surface):
+    global inventory_button_image
+    if inventory_button_image is None:
+        try:
+            inventory_button_image = pygame.image.load('game/ui/inventory.png').convert_alpha()
+            inventory_button_image = pygame.transform.scale(inventory_button_image, (40, 40))
+        except pygame.error as e:
+            print(f"Warning: Could not load status button image: {e}")
+            inventory_button_image = pygame.Surface((40, 40), pygame.SRCALPHA)
+            inventory_button_image.fill(GRAY) # Fallback
+
+    button_inventory_rect = pygame.Rect(10, 50, 60, 60) # Top-left corner
+    surface.blit(inventory_button_image, button_inventory_rect)
+    return button_inventory_rect
+
+
 status_button_image = None
 def draw_status_button(surface):
     global status_button_image

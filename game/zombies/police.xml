@@ -8,7 +8,7 @@
         <sprite file="police.png" />
     </visuals>
     <loot>
-        <drop item="Pistol" chance="0.15" />
+        <drop item="Pistol (9mm)" chance="0.15" />
         <drop item="9mm Ammo" chance="0.4" />
     </loot>
 </zombie>

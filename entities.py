@@ -7,7 +7,7 @@ import os
 import xml.etree.ElementTree as ET
 
 from config import *
-from ui import get_inventory_slot_rect, get_belt_slot_rect, get_backpack_slot_rect
+from ui import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 
 ITEM_TEMPLATES = {} # Changed to a dictionary for faster lookups
 ZOMBIE_TEMPLATES = []
@@ -429,7 +429,7 @@ class Player:
         # Then check belt
         for i, item in enumerate(self.belt):
             if item:
-                slot_rect = get_belt_slot_rect(i)
+                slot_rect = get_belt_slot_rect_in_modal(i)
                 if slot_rect.collidepoint(mouse_pos):
                     return item, 'belt', i
         # Then check backpack slot

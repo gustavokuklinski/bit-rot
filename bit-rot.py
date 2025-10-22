@@ -9,11 +9,12 @@ from config import *
 # Global dictionary to store last known positions of modals
 last_modal_positions = {
     'status': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
+    'inventory': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
     'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150)
 }
 
 from entities import Player, Zombie, Item, Projectile
-from ui import draw_inventory, draw_menu, draw_game_over, get_belt_slot_rect, get_inventory_slot_rect, get_backpack_slot_rect, draw_container_view, get_container_slot_rect, draw_status_button, draw_status_modal
+from ui import draw_inventory_modal, draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, draw_container_view, get_container_slot_rect, draw_inventory_button, draw_status_button, draw_status_modal
 from xml_parser import parse_player_data
 
 VIRTUAL_SCREEN = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
@@ -104,7 +105,7 @@ def create_obstacles_from_map(layout):
                 obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
     return obstacles
 
-def handle_zombie_death(player, zombie, items_on_ground_list):
+def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
     """Processes loot drops when a zombie dies."""
     print(f"A {zombie.name} died. Checking for loot...")
     if hasattr(zombie, 'loot_table'):
@@ -407,6 +408,28 @@ def run_game():
                             }
                             modals.append(new_status_modal)
                         continue # Consume the click
+                    
+                    inventory_button_rect = draw_inventory_button(VIRTUAL_SCREEN) # Draw to get its rect
+                    if event.button == 1 and inventory_button_rect.collidepoint(mouse_pos):
+                        inventory_modal_exists = False
+                        for modal in modals:
+                            if modal['type'] == 'inventory':
+                                modals.remove(modal)
+                                inventory_modal_exists = True
+                                break
+                        
+                        if not inventory_modal_exists:
+                            new_inventory_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'inventory',
+                                'item': None, # No item for status modal
+                                'position': last_modal_positions['inventory'], # Use stored position
+                                'is_dragging': False,
+                                'drag_offset': (0, 0),
+                                'rect': pygame.Rect(last_modal_positions['inventory'][0], last_modal_positions['inventory'][1], 300, 400) # Initial rect
+                            }
+                            modals.append(new_inventory_modal)
+                        continue # Consume the click
 
                     # --- Modal Drag Logic ---
                     # Check if any modal header is clicked for dragging
@@ -441,30 +464,33 @@ def run_game():
                             }
                             modals.append(new_container_modal)
                         return True # Indicate that a modal was toggled
+                    
+                    if event.button == 1: # Left-click to open containers
+                        # --- Backpack/Container Click Logic (within modals) ---
+                        for modal in reversed(modals):
+                            if modal['type'] == 'inventory':
+                                # Check for clicking on equipped backpack in inventory modal
+                                if player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
+                                    if toggle_container_modal(player.backpack):
+                                        continue # Consume the click
 
-                    # Check for clicking on equipped backpack
-                    if event.button == 1 and player.backpack and get_backpack_slot_rect().collidepoint(mouse_pos):
-                        toggle_container_modal(player.backpack)
-                        continue # Consume the click
+                                # Check for clicking on a backpack in the main inventory slots within the modal
+                                for i, item in enumerate(player.inventory):
+                                    if item and item.item_type == 'backpack':
+                                        slot_rect = get_inventory_slot_rect(i, modal['position'])
+                                        if slot_rect.collidepoint(mouse_pos):
+                                            if toggle_container_modal(item):
+                                                continue # Consume the click
 
-                    # Check for clicking on a backpack in the main inventory
-                    for i, item in enumerate(player.inventory):
-                        if item and item.item_type == 'backpack':
-                            slot_rect = get_inventory_slot_rect(i)
-                            if slot_rect.collidepoint(mouse_pos):
-                                toggle_container_modal(item)
-                                continue # Consume the click
+                        # Check for clicking on a backpack on the ground
+                        for item in items_on_ground:
+                            if item.item_type == 'backpack':
+                                item_screen_rect = item.rect.move(GAME_OFFSET_X, 0)
+                                if item_screen_rect.collidepoint(mouse_pos):
+                                    toggle_container_modal(item)
+                                    continue # Consume the click
 
-                    # Check for clicking on a backpack on the ground
-                    for item in items_on_ground:
-                        if item.item_type == 'backpack':
-                            item_screen_rect = item.rect.move(GAME_OFFSET_X, 0)
-                            if item_screen_rect.collidepoint(mouse_pos):
-                                toggle_container_modal(item)
-                                continue # Consume the click
-
-                    # --- Drag Candidate Identification (Right-click) ---
-                    if event.button == 3: # Right-click press - Identify a drag candidate
+                    elif event.button == 3: # Right-click press - Identify a drag candidate
                         # First, check if we are clicking an item in an open container
                         # Iterate through modals in reverse to check topmost first
                         for modal in reversed(modals):
@@ -480,22 +506,24 @@ def run_game():
                                 if drag_candidate: break # Found a drag candidate in a container
                         if drag_candidate: continue
 
-                        # If no candidate from container, check main inventory, belt, etc.
-                        # Check inventory
-                        for i, item in enumerate(player.inventory):
-                            if item:
-                                slot_rect = get_inventory_slot_rect(i)
-                                if slot_rect.collidepoint(mouse_pos):
-                                    drag_candidate = (item, (i, 'inventory'))
-                                    drag_start_pos = mouse_pos
-                                    drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                                    break
+                        # If no candidate from container, check inventory modal, belt, etc.
+                        for modal in reversed(modals):
+                            if modal['type'] == 'inventory':
+                                for i, item in enumerate(player.inventory):
+                                    if item:
+                                        slot_rect = get_inventory_slot_rect(i, modal['position'])
+                                        if slot_rect.collidepoint(mouse_pos):
+                                            drag_candidate = (item, (i, 'inventory'))
+                                            drag_start_pos = mouse_pos
+                                            drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                                            break
+                                if drag_candidate: break
                         if drag_candidate: continue
 
                         # Check belt
                         for i, item in enumerate(player.belt):
                             if item:
-                                slot_rect = get_belt_slot_rect(i)
+                                slot_rect = get_belt_slot_rect_in_modal(i)
                                 if slot_rect.collidepoint(mouse_pos):
                                     drag_candidate = (item, (i, 'belt'))
                                     drag_start_pos = mouse_pos
@@ -504,15 +532,18 @@ def run_game():
                         if drag_candidate: continue
 
                         # Check backpack slot
-                        if player.backpack:
-                            slot_rect = get_backpack_slot_rect()
-                            if slot_rect.collidepoint(mouse_pos):
-                                drag_candidate = (player.backpack, (0, 'backpack'))
-                                drag_start_pos = mouse_pos
-                                drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                        for modal in reversed(modals):
+                            if modal['type'] == 'inventory':
+                                if player.backpack:
+                                    slot_rect = get_backpack_slot_rect(modal['position'])
+                                    if slot_rect.collidepoint(mouse_pos):
+                                        drag_candidate = (player.backpack, (0, 'backpack'))
+                                        drag_start_pos = mouse_pos
+                                        drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                                        break
 
 
-                    elif event.button == 1: # Left-click attack
+                    if event.button == 1: # Left-click attack
                         # If any modal is currently being dragged, do not process attack
                         if any(modal['is_dragging'] for modal in modals):
                             continue
@@ -585,7 +616,7 @@ def run_game():
                                     for zombie in zombies:
                                         if player.rect.colliderect(zombie.rect.inflate(20, 20)):
                                             if player_hit_zombie(player, zombie): 
-                                                handle_zombie_death(player, zombie, items_on_ground)
+                                                handle_zombie_death(player, zombie, items_on_ground, obstacles)
                                                 zombies.remove(zombie)
                                                 zombies_killed += 1
                                             hit_a_zombie = True
@@ -632,7 +663,7 @@ def run_game():
 
                             dropped_successfully = False
                             for i_target in range(5):
-                                if get_belt_slot_rect(i_target).collidepoint(mouse_pos):
+                                if any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in modals):
                                     if dragged_item.item_type == 'backpack':
                                         print("Cannot place backpacks on the belt.")
                                         dropped_successfully = False # Explicitly set to False
@@ -683,15 +714,20 @@ def run_game():
                                     print("Only backpacks can be equipped here.")
 
 
-                            inv_area_rect = pygame.Rect(VIRTUAL_SCREEN_WIDTH - INVENTORY_PANEL_WIDTH, 0, INVENTORY_PANEL_WIDTH, VIRTUAL_GAME_HEIGHT)
-                            if not dropped_successfully and inv_area_rect.collidepoint(mouse_pos):
-                                target_index = -1
-                                for i in range(len(player.inventory) + 1):
-                                    if get_inventory_slot_rect(i).collidepoint(mouse_pos): target_index = i; break
-                                if target_index == -1: target_index = len(player.inventory)
-                                player.inventory.insert(target_index, dragged_item)
-                                player.inventory = [item for item in player.inventory if item is not None]
-                                dropped_successfully = True
+                            # Check for drop in inventory modal
+                            if not dropped_successfully:
+                                for modal in reversed(modals):
+                                    if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
+                                        target_index = -1
+                                        for i in range(len(player.inventory) + 1):
+                                            if get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
+                                                target_index = i
+                                                break
+                                        if target_index == -1: target_index = len(player.inventory)
+                                        player.inventory.insert(target_index, dragged_item)
+                                        player.inventory = [item for item in player.inventory if item is not None]
+                                        dropped_successfully = True
+                                        break
 
                             if not dropped_successfully:
                                 # Check if dropped in the game world area
@@ -765,7 +801,7 @@ def run_game():
                 if hit_zombie:
                     if player_hit_zombie(player, hit_zombie):
                         zombies_to_remove.append(hit_zombie)
-                        handle_zombie_death(player, hit_zombie, items_on_ground)
+                        handle_zombie_death(player, hit_zombie, items_on_ground, obstacles)
                         zombies_killed += 1
                     projectiles_to_remove.append(p)
             projectiles = [p for p in projectiles if p not in projectiles_to_remove]
@@ -810,18 +846,18 @@ def run_game():
                 pygame.draw.circle(VIRTUAL_SCREEN, YELLOW, (center_x, center_y), TILE_SIZE // 4)
                 player.gun_flash_timer -= 1
 
-            drag_pos = (mouse_pos[0] - drag_offset[0], mouse_pos[1] - drag_offset[1]) if is_dragging else (0, 0)
-            draw_inventory(VIRTUAL_SCREEN, player, dragged_item, drag_pos)
-            
-            # Draw status button
-            status_button_rect = draw_status_button(VIRTUAL_SCREEN)
-
             # Draw all active modals
             for modal in modals:
                 if modal['type'] == 'status':
                     draw_status_modal(VIRTUAL_SCREEN, player, modal['position'], zombies_killed)
+                elif modal['type'] == 'inventory':
+                    draw_inventory_modal(VIRTUAL_SCREEN, player, modal['position'])
                 elif modal['type'] == 'container':
                     draw_container_view(VIRTUAL_SCREEN, modal['item'], modal['position'])
+            
+            # Draw UI buttons on top of modals
+            status_button_rect = draw_status_button(VIRTUAL_SCREEN)
+            inventory_button_rect = draw_inventory_button(VIRTUAL_SCREEN)
 
             for p in projectiles: p.draw(VIRTUAL_SCREEN)
             
