@@ -9,3 +9,6 @@ Bit Rot is a 4-Bit zombie survivor game.
 
 - **E**: Get item from floor
 - **R**: Reload weapon
+
+- **I**: Opens inventory and belt
+- **H**: Opens Status

@@ -429,6 +429,46 @@ def run_game():
                         else:
                             print("No items nearby.")
 
+                    # Toggle inventory with 'i'
+                    if event.key == pygame.K_i:
+                        inventory_modal_exists = False
+                        for modal in modals:
+                            if modal['type'] == 'inventory':
+                                modals.remove(modal)
+                                inventory_modal_exists = True
+                                break
+                        if not inventory_modal_exists:
+                            new_inventory_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'inventory',
+                                'item': None,
+                                'position': last_modal_positions['inventory'],
+                                'is_dragging': False,
+                                'drag_offset': (0, 0),
+                                'rect': pygame.Rect(last_modal_positions['inventory'][0], last_modal_positions['inventory'][1], 300, 620)
+                            }
+                            modals.append(new_inventory_modal)
+
+                    # Toggle status with 'h'
+                    if event.key == pygame.K_h:
+                        status_modal_exists = False
+                        for modal in modals:
+                            if modal['type'] == 'status':
+                                modals.remove(modal)
+                                status_modal_exists = True
+                                break
+                        if not status_modal_exists:
+                            new_status_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'status',
+                                'item': None,
+                                'position': last_modal_positions['status'],
+                                'is_dragging': False,
+                                'drag_offset': (0, 0),
+                                'rect': pygame.Rect(last_modal_positions['status'][0], last_modal_positions['status'][1], 300, 400)
+                            }
+                            modals.append(new_status_modal)
+                    
                     if event.key == pygame.K_r:
                         player.reload_active_weapon()
 
