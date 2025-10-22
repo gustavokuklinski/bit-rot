@@ -10,14 +10,19 @@ def get_belt_slot_rect_in_modal(i, modal_position):
     """Calculates the screen rect for a belt slot inside the inventory modal."""
     # Position it below the backpack slot
     backpack_bottom = modal_position[1] + 45 + (3 * 70) + 10 + 50 # From get_backpack_slot_rect
-    slot_y = backpack_bottom + 40 # 40 for "Belt" title and padding
+    slot_y = backpack_bottom + 190 # 40 for "Belt" title and padding
     slot_x = modal_position[0] + 10 + i * (50 + 5) # 50 is slot width, 5 is padding
     return pygame.Rect(slot_x, slot_y, 50, 40)
 
 def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     """Calculates the screen rect for the backpack slot inside its modal."""
-    # Position it below the main inventory slots
-    slot_y = modal_position[1] + 45 + (3 * 70) + 10 # 3 is base_inventory_slots
+    # Position it below the main inventory slots. This is now dynamic.
+    # We'll calculate this inside draw_inventory_modal where we have the player object.
+    # This function will now require the number of base slots.
+    # For now, this is a placeholder. The real logic is in draw_inventory_modal.
+    # A better refactor would be to pass the player object here.
+    # Let's assume 5 for now, but the drawing function will do it right.
+    slot_y = modal_position[1] + 45 + (5 * 70) + 10 # 5 is base_inventory_slots
     return pygame.Rect(modal_position[0] + 10, slot_y, 280, 50)
 
 def get_container_slot_rect(container_pos, i):
@@ -33,7 +38,7 @@ def get_container_slot_rect(container_pos, i):
 
 def draw_inventory_modal(surface, player, position):
     """Draws the player's inventory, belt, and backpack in a modal window."""
-    modal_w, modal_h = 300, 480 # Adjusted height for backpack and belt slots
+    modal_w, modal_h = 300, 620 # Height for 5 inventory slots
     modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
 

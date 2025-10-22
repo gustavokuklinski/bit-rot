@@ -241,7 +241,7 @@ class Player:
         # --- Experience & Leveling ---
         self.level = data.get('level', 1)
         self.experience = data.get('experience', 0)
-        self.base_inventory_slots = 3 # The player has 3 base inventory slots
+        self.base_inventory_slots = 5 # The player has 5 base inventory slots
         
         # Animation Timers (frames remaining)
         self.melee_swing_timer = 0

@@ -535,7 +535,7 @@ def run_game():
                         for modal in reversed(modals):
                             if modal['type'] == 'inventory':
                                 if player.backpack:
-                                    slot_rect = get_backpack_slot_rect(modal['position'])
+                                    slot_rect = get_backpack_slot_rect(modal['position'], player)
                                     if slot_rect.collidepoint(mouse_pos):
                                         drag_candidate = (player.backpack, (0, 'backpack'))
                                         drag_start_pos = mouse_pos
@@ -630,10 +630,11 @@ def run_game():
                         modal['is_dragging'] = False
 
                     if event.button == 3: # Right-click release
-                        if is_dragging:
+                        # If a drag was in progress OR if we have a drag candidate (for quick clicks)
+                        if is_dragging or drag_candidate:
                             # Handle dropping into an open container
                             # Iterate through modals in reverse to check topmost first
-                            for modal in reversed(modals):
+                            for modal in reversed(modals): # Check topmost first
                                 if modal['type'] == 'container':
                                     container_rect = modal['rect']
                                     if container_rect.collidepoint(mouse_pos):
@@ -648,18 +649,22 @@ def run_game():
                                         else:
                                             print(f"{container.name} is full.")
                             
-                            # ... (drop logic using scaled mouse_pos)
-                            if drag_origin is not None:
+                            # If it was a quick click, we need to initialize the drag variables
+                            if not is_dragging and drag_candidate:
+                                dragged_item, drag_origin = drag_candidate
+                                # Manually remove the item from its source for the drop logic
                                 i_orig, type_orig, *container_info = drag_origin
-                                container_obj = container_info[0] if type_orig == 'container' else None # Correctly get container_obj
-                            else:
-                                # If drag_origin is None, it means no item was being dragged or it was an invalid drag.
-                                # We should probably just reset drag states and return.
-                                is_dragging = False
-                                dragged_item = None
-                                drag_origin = None
-                                drag_candidate = None
-                                continue # Skip the rest of the drop logic
+                                if type_orig == 'inventory':
+                                    player.inventory.pop(i_orig)
+                                elif type_orig == 'belt':
+                                    player.belt[i_orig] = None
+                                elif type_orig == 'backpack':
+                                    player.backpack = None
+                                elif type_orig == 'container':
+                                    container_info[0].inventory.pop(i_orig)
+
+                            i_orig, type_orig, *container_info = drag_origin
+                            container_obj = container_info[0] if type_orig == 'container' else None
 
                             dropped_successfully = False
                             for i_target in range(5):
@@ -683,36 +688,6 @@ def run_game():
     
                                     dropped_successfully = True
                                     break                            
-                            
-                            # Check for drop in backpack slot and continue if successful
-                            if not dropped_successfully and get_backpack_slot_rect().collidepoint(mouse_pos):
-                                if dragged_item.item_type == 'backpack':
-                                    # This is the point where duplication happens. We must ensure the dragged_item is removed from its original source.
-                                    if type_orig == 'inventory':
-                                        # We already removed it at the start of the drag, but let's ensure the list is clean.
-                                        pass # The item is already out of the inventory
-
-                                    if player.backpack is None:
-                                        player.backpack = dragged_item
-                                    else: # Swap backpacks
-                                        item_to_swap = player.backpack
-                                        player.backpack = dragged_item
-                                        # Place old backpack back where the new one came from
-                                        if type_orig == 'inventory':
-                                            player.inventory.insert(i_orig, item_to_swap)
-                                        elif type_orig == 'belt':
-                                            player.belt[i_orig] = item_to_swap
-                                        elif type_orig == 'container':
-                                            container_obj.inventory.insert(i_orig, item_to_swap)
-
-                                    dropped_successfully = True
-                                    dragged_item = None; drag_origin = None; is_dragging = False
-                                    # Final cleanup of player inventory to remove any None placeholders
-                                    player.inventory = [item for item in player.inventory if item is not None]
-                                    continue
-                                else:
-                                    print("Only backpacks can be equipped here.")
-
 
                             # Check for drop in inventory modal
                             if not dropped_successfully:
@@ -728,6 +703,35 @@ def run_game():
                                         player.inventory = [item for item in player.inventory if item is not None]
                                         dropped_successfully = True
                                         break
+                            
+                            # Check for drop in backpack slot (must be done after inventory/belt checks)
+                            if not dropped_successfully:
+                                for modal in modals:
+                                    if modal['type'] == 'inventory':
+                                        backpack_slot_rect = get_backpack_slot_rect(modal['position'])
+                                        if backpack_slot_rect.collidepoint(mouse_pos):
+                                            if dragged_item.item_type == 'backpack':
+                                                if player.backpack is None:
+                                                    player.backpack = dragged_item
+                                                else: # Swap backpacks
+                                                    item_to_swap = player.backpack
+                                                    player.backpack = dragged_item
+                                                    # Place old backpack back where the new one came from
+                                                    if type_orig == 'inventory':
+                                                        player.inventory.insert(i_orig, item_to_swap)
+                                                    elif type_orig == 'belt':
+                                                        player.belt[i_orig] = item_to_swap
+                                                    elif type_orig == 'container':
+                                                        container_obj.inventory.insert(i_orig, item_to_swap)
+                                                
+                                                dropped_successfully = True
+                                                # The item is successfully placed, so we nullify the dragged item
+                                            else:
+                                                print("Only backpacks can be equipped here.")
+                                            # Break from the modal loop since we found the target slot
+                                            break 
+
+
 
                             if not dropped_successfully:
                                 # Check if dropped in the game world area
