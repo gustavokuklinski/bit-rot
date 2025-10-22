@@ -1005,41 +1005,51 @@ def run_game():
                                     if modal['type'] == 'inventory':
                                         backpack_slot_rect = get_backpack_slot_rect(modal['position'])
                                         if backpack_slot_rect.collidepoint(mouse_pos):
+                                            # Accept backpacks/containers or anything that actually has an inventory
                                             is_backpack_like = (getattr(dragged_item, 'item_type', None) in ('backpack', 'container')) or hasattr(dragged_item, 'inventory')
                                             if not is_backpack_like:
-                                                print("Only backpacks/containers can be equipped here.")
-                                                dropped_successfully = False
+                                                # Not a backpack-like item — cannot equip here
+                                                # do not treat as a fatal error; allow other placement attempts
                                                 break
 
-                                            if player.backpack is None:
-                                                player.backpack = dragged_item
-                                                print(f"Equipped {dragged_item.name} as backpack.")
-                                            else:
-                                                old_backpack = player.backpack
-                                                player.backpack = dragged_item
-                                                placed_back = False
-                                                # Try return old backpack to original origin
-                                                if type_orig == 'inventory' and 0 <= i_orig <= len(player.inventory):
-                                                    player.inventory.insert(i_orig, old_backpack)
-                                                    placed_back = True
-                                                elif type_orig == 'belt' and 0 <= i_orig < len(player.belt) and player.belt[i_orig] is None:
-                                                    player.belt[i_orig] = old_backpack
-                                                    placed_back = True
+                                            # Ensure the dragged instance is removed from any source (defensive)
+                                            try:
+                                                if dragged_item in player.inventory:
+                                                    player.inventory.remove(dragged_item)
+                                                if dragged_item in player.belt:
+                                                    for bi, it in enumerate(player.belt):
+                                                        if it is dragged_item:
+                                                            player.belt[bi] = None
+                                                if dragged_item in items_on_ground:
+                                                    items_on_ground.remove(dragged_item)
+                                            except Exception:
+                                                pass
+
+                                            old_backpack = player.backpack
+                                            # Equip the new backpack
+                                            player.backpack = dragged_item
+                                            print(f"Equipped {dragged_item.name} as backpack via drag.")
+
+                                            # Return old backpack to a sensible place (inventory preferred)
+                                            if old_backpack:
+                                                returned = False
+                                                # Try to put old backpack into the player's main inventory if there's room
+                                                if len(player.inventory) < player.get_total_inventory_slots():
+                                                    player.inventory.append(old_backpack)
+                                                    returned = True
                                                 else:
-                                                    # try to find first empty belt slot
+                                                    # Try to place in first empty belt slot
                                                     for bi in range(len(player.belt)):
                                                         if player.belt[bi] is None:
                                                             player.belt[bi] = old_backpack
-                                                            placed_back = True
+                                                            returned = True
                                                             break
-                                                if not placed_back:
-                                                    if len(player.inventory) < player.get_total_inventory_slots():
-                                                        player.inventory.append(old_backpack)
-                                                    else:
-                                                        old_backpack.rect.center = player.rect.center
-                                                        items_on_ground.append(old_backpack)
-                                                        print(f"No space to return old backpack; dropped {old_backpack.name} on ground.")
-                                                print(f"Swapped backpack: equipped {dragged_item.name}, returned {old_backpack.name}.")
+                                                if not returned:
+                                                    # Last resort: drop on ground next to player
+                                                    old_backpack.rect.center = player.rect.center
+                                                    items_on_ground.append(old_backpack)
+                                                    print(f"No space to return old backpack; dropped {old_backpack.name} on ground.")
+
                                             dropped_successfully = True
                                             break
                                 # end for modal
@@ -1049,7 +1059,17 @@ def run_game():
                                 for modal in reversed(modals):
                                     if modal['type'] == 'container' and modal['rect'].collidepoint(mouse_pos):
                                         container = modal['item']
-                                        if len(container.inventory) < container.capacity:
+                                        # Prevent placing a container/backpack into itself
+                                        if dragged_item is container:
+                                            print("Cannot place a container inside itself.")
+                                            continue
+
+                                        # Prevent placing the equipped backpack into its own open inventory
+                                        if dragged_item is player.backpack and container is player.backpack:
+                                            print("Cannot move the equipped backpack into its own contents.")
+                                            continue
+
+                                        if len(container.inventory) < (container.capacity or 0):
                                             container.inventory.append(dragged_item)
                                             print(f"Moved {dragged_item.name} to {container.name}")
                                             dropped_successfully = True

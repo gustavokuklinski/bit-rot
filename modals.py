@@ -49,7 +49,7 @@ def get_container_slot_rect(container_pos, i):
 
 # --- Modal Drawers (inventory/status/container/context) ---
 def draw_inventory_modal(surface, player, position, mouse_pos):
-    modal_w, modal_h = 300, 320
+    modal_w, modal_h = 300, 300
     modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
     s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
