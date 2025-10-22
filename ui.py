@@ -1,32 +1,41 @@
 import pygame
 from config import *
 
-def get_inventory_slot_rect(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
-    """Calculates the screen rect for an inventory slot inside its modal."""
-    slot_y = modal_position[1] + 45 + i * 70  # 45 is header + padding
-    return pygame.Rect(modal_position[0] + 10, slot_y, 280, 65)
+# Keep rect helper functions here as lightweight UI helpers used by Player logic.
+# Modal drawing is moved to modals.py to separate rendering responsibilities.
 
-def get_belt_slot_rect_in_modal(i, modal_position):
-    """Calculates the screen rect for a belt slot inside the inventory modal."""
-    # Position it below the backpack slot
-    backpack_bottom = modal_position[1] + 45 + (3 * 70) + 10 + 50 # From get_backpack_slot_rect
-    slot_y = backpack_bottom + 190 # 40 for "Belt" title and padding
-    slot_x = modal_position[0] + 10 + i * (50 + 5) # 50 is slot width, 5 is padding
-    return pygame.Rect(slot_x, slot_y, 50, 40)
+def get_inventory_slot_rect(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+    # Inventory is a single row of 5 columns inside the inventory modal
+    modal_x, modal_y = modal_position
+    slot_w = 48
+    slot_h = 48
+    gap = 8
+    start_x = modal_x + 10
+    start_y = modal_y + 50
+    x = start_x + i * (slot_w + gap)
+    return pygame.Rect(x, start_y, slot_w, slot_h)
+
+def get_belt_slot_rect_in_modal(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+    # Belt slots arranged horizontally below backpack slot
+    modal_x, modal_y = modal_position
+    slot_w = 48
+    slot_h = 40
+    gap = 8
+    start_x = modal_x + 10
+    start_y = modal_y + 190
+    x = start_x + i * (slot_w + gap)
+    return pygame.Rect(x, start_y, slot_w, slot_h)
 
 def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
-    """Calculates the screen rect for the backpack slot inside its modal."""
-    # Position it below the main inventory slots. This is now dynamic.
-    # We'll calculate this inside draw_inventory_modal where we have the player object.
-    # This function will now require the number of base slots.
-    # For now, this is a placeholder. The real logic is in draw_inventory_modal.
-    # A better refactor would be to pass the player object here.
-    # Let's assume 5 for now, but the drawing function will do it right.
-    slot_y = modal_position[1] + 45 + (5 * 70) + 10 # 5 is base_inventory_slots
-    return pygame.Rect(modal_position[0] + 10, slot_y, 280, 50)
+    modal_x, modal_y = modal_position
+    # Backpack occupies a wide slot under the inventory row
+    slot_w = 280
+    slot_h = 60
+    x = modal_x + 10
+    y = modal_y + 110
+    return pygame.Rect(x, y, slot_w, slot_h)
 
 def get_container_slot_rect(container_pos, i):
-    """Calculates the screen rect for a slot inside a container modal."""
     rows, cols = 4, 4
     slot_size = 60
     padding = 10
@@ -36,394 +45,48 @@ def get_container_slot_rect(container_pos, i):
     col = i % cols
     return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
 
-def draw_inventory_modal(surface, player, position):
-    """Draws the player's inventory, belt, and backpack in a modal window."""
-    modal_w, modal_h = 300, 620 # Height for 5 inventory slots
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-
-    # Semi-transparent background
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
-
-    # --- Draggable Header ---
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-
-    # Title
-    title_text = font.render("Inventory", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
-
-    # Draw Inventory Slots
-    for i in range(player.base_inventory_slots):
-        slot_rect = get_inventory_slot_rect(i, position)
-        pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
-
-        # Check if there is an item for this slot
-        item = None
-        if i < len(player.inventory):
-            item = player.inventory[i]
-
-        if item: # If an item exists, draw it
-            pygame.draw.rect(surface, item.color, slot_rect, 2, 3)
-
-            if item.image:
-                # Scale sprite to fit slot height while maintaining aspect ratio
-                img_h = slot_rect.height - 10
-                img_w = int(item.image.get_width() * (img_h / item.image.get_height()))
-                scaled_sprite = pygame.transform.scale(item.image, (img_w, img_h))
-                sprite_rect = scaled_sprite.get_rect(centery=slot_rect.centery, left=slot_rect.left + 5)
-                surface.blit(scaled_sprite, sprite_rect)
-                text_x_offset = sprite_rect.right + 10
-            else: # Fallback for items without sprites
-                text_x_offset = slot_rect.left + 10
-
-            item_name_text = font.render(f"{item.name.split('(')[0]}", True, item.color)
-            surface.blit(item_name_text, (text_x_offset, slot_rect.top + 5))
-            
-            # Display secondary info (stack/durability)
-            info_text = None
-            if item.load is not None and item.capacity is not None and item.item_type == 'consumable':
-                info_text = font.render(f"Stack: {item.load:.0f}/{item.capacity:.0f}", True, WHITE)
-            elif item.durability is not None:
-                info_text = font.render(f"Dur: {item.durability:.0f}%", True, WHITE)
-            elif item.item_type == 'weapon' and item.load is not None:
-                 info_text = font.render(f"Ammo: {item.load:.0f}/{item.capacity:.0f}", True, WHITE)
-
-            if info_text:
-                surface.blit(info_text, (text_x_offset, slot_rect.top + 25))
-        else: # If no item, draw an empty slot
-            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-
-    # Draw Backpack Slot
-    backpack_slot_rect = get_backpack_slot_rect(position)
-    pygame.draw.rect(surface, (40, 40, 40), backpack_slot_rect, 0, 3)
-    surface.blit(font.render("Backpack", True, WHITE), (backpack_slot_rect.x + 5, backpack_slot_rect.y - 20))
-
-    if (backpack := player.backpack):
-        pygame.draw.rect(surface, backpack.color, backpack_slot_rect, 2, 3)
-        if backpack.image:
-            img_h = backpack_slot_rect.height - 10
-            img_w = int(backpack.image.get_width() * (img_h / backpack.image.get_height()))
-            scaled_sprite = pygame.transform.scale(backpack.image, (img_w, img_h))
-            sprite_rect = scaled_sprite.get_rect(centery=backpack_slot_rect.centery, left=backpack_slot_rect.left + 5)
-            surface.blit(scaled_sprite, sprite_rect)
-            text_x_offset = sprite_rect.right + 10
-        else:
-            text_x_offset = backpack_slot_rect.left + 10
-
-        item_name_text = font.render(f"{backpack.name}", True, backpack.color)
-        surface.blit(item_name_text, (text_x_offset, backpack_slot_rect.top + 5))
-
-        info_text = font.render(f"Slots: +{backpack.capacity or 0}", True, WHITE)
-        surface.blit(info_text, (text_x_offset, backpack_slot_rect.top + 25))
-    else:
-        pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
-
-    # --- Draw Belt Slots ---
-    belt_y_start = backpack_slot_rect.bottom + 10
-    surface.blit(font.render("Belt", True, WHITE), (modal_x + 10, belt_y_start))
-
-    for i in range(5):
-        item = player.belt[i]
-        slot_rect = get_belt_slot_rect_in_modal(i, position)
-
-        # Draw slot background and border
-        pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-        
-        # Draw slot number above
-        num_text = font.render(str(i + 1), True, WHITE)
-        surface.blit(num_text, (slot_rect.centerx - num_text.get_width() // 2, slot_rect.top - 20))
-
-        if item:
-            if item.image:
-                img_h = slot_rect.height - 8
-                img_w = int(item.image.get_width() * (img_h / item.image.get_height()))
-                scaled_sprite = pygame.transform.scale(item.image, (img_w, img_h))
-                sprite_rect = scaled_sprite.get_rect(center=slot_rect.center)
-                surface.blit(scaled_sprite, sprite_rect)
-            else: # Fallback for items without image
-                pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-
+# top-level menu and game over drawing kept here (they are not modal windows)
 def draw_menu(screen):
-    """Draws the main menu."""
     screen.fill(GAME_BG_COLOR)
-    
     title_text = title_font.render("Bit Rot", True, RED)
     title_rect = title_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 4))
     screen.blit(title_text, title_rect)
-
     start_text = large_font.render("START", True, WHITE)
     start_rect = start_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2))
-    
     quit_text = large_font.render("QUIT", True, WHITE)
     quit_rect = quit_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 60))
-
-    # Highlight on hover
     mouse_pos = pygame.mouse.get_pos()
-    # We need to scale mouse_pos for menu interaction if the screen is resized
     scale_x = VIRTUAL_SCREEN_WIDTH / screen.get_width()
     scale_y = VIRTUAL_GAME_HEIGHT / screen.get_height()
     scaled_mouse_pos = (mouse_pos[0] * scale_x, mouse_pos[1] * scale_y)
-
     if start_rect.collidepoint(scaled_mouse_pos):
         pygame.draw.rect(screen, GRAY, start_rect.inflate(20, 10))
     if quit_rect.collidepoint(scaled_mouse_pos):
         pygame.draw.rect(screen, GRAY, quit_rect.inflate(20, 10))
-
     screen.blit(start_text, start_rect)
     screen.blit(quit_text, quit_rect)
-    
     return start_rect, quit_rect
 
 def draw_game_over(screen, zombies_killed):
-    """Draws the game over screen."""
     screen.fill(GAME_BG_COLOR)
-    
     title_text = title_font.render("YOU DIED", True, RED)
     title_rect = title_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 4))
     screen.blit(title_text, title_rect)
-
     score_text = large_font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 - 60))
     screen.blit(score_text, score_rect)
-
     restart_text = large_font.render("Restart", True, WHITE)
     restart_rect = restart_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 20))
-    
     quit_text = large_font.render("Quit", True, WHITE)
     quit_rect = quit_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 80))
-
-    # Highlight on hover
     mouse_pos = pygame.mouse.get_pos()
     scale_x = VIRTUAL_SCREEN_WIDTH / screen.get_width()
     scale_y = VIRTUAL_GAME_HEIGHT / screen.get_height()
     scaled_mouse_pos = (mouse_pos[0] * scale_x, mouse_pos[1] * scale_y)
-
     if restart_rect.collidepoint(scaled_mouse_pos):
         pygame.draw.rect(screen, GRAY, restart_rect.inflate(20, 10))
     if quit_rect.collidepoint(scaled_mouse_pos):
         pygame.draw.rect(screen, GRAY, quit_rect.inflate(20, 10))
-
     screen.blit(restart_text, restart_rect)
     screen.blit(quit_text, quit_rect)
-    
     return restart_rect, quit_rect
-
-def draw_container_view(surface, container_item, position):
-    """Draws a modal view for a container's inventory (e.g., a backpack)."""
-    if not container_item or not hasattr(container_item, 'inventory'):
-        return
-
-    # Modal background
-    modal_w, modal_h = 300, 300
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-    
-    # Semi-transparent background
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
-
-    # --- Draggable Header ---
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-
-    # Title
-    title_text = font.render(f"{container_item.name} Contents", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-
-    # Close instruction
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
-
-    # Draw item slots
-    rows, cols = 4, 4 # Example layout
-    slot_size = 60
-    padding = 10
-    start_x = modal_x + padding
-    start_y = modal_y + 40
-
-    # Calculate how many rows can fit in the modal
-    # modal_h - (header_h + padding_bottom) / (slot_size + padding)
-    max_visible_rows = int((modal_h - header_h - padding) / (slot_size + padding))
-    max_visible_slots = max_visible_rows * cols
-
-    for i in range(min(container_item.capacity, max_visible_slots)):
-        row = i // cols
-        col = i % cols
-        slot_rect = pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
-        pygame.draw.rect(surface, (40, 40, 40), slot_rect, 1, 3)
-        if i < len(container_item.inventory):
-            item = container_item.inventory[i]
-            if item.image:
-                surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
-            else:
-                pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-
-    # Add a "More items..." indicator if there are more items than visible slots
-    if container_item.capacity > max_visible_slots:
-        more_text = font.render(f"... {container_item.capacity - max_visible_slots} more items ...", True, GRAY)
-        surface.blit(more_text, (modal_x + padding, modal_y + modal_h - padding - more_text.get_height()))
-
-# --- New UI Functions for Status Modal ---
-
-inventory_button_image = None
-def draw_inventory_button(surface):
-    global inventory_button_image
-    if inventory_button_image is None:
-        try:
-            inventory_button_image = pygame.image.load('game/ui/inventory.png').convert_alpha()
-            inventory_button_image = pygame.transform.scale(inventory_button_image, (40, 40))
-        except pygame.error as e:
-            print(f"Warning: Could not load status button image: {e}")
-            inventory_button_image = pygame.Surface((40, 40), pygame.SRCALPHA)
-            inventory_button_image.fill(GRAY) # Fallback
-
-    button_inventory_rect = pygame.Rect(10, 50, 60, 60) # Top-left corner
-    surface.blit(inventory_button_image, button_inventory_rect)
-    return button_inventory_rect
-
-
-status_button_image = None
-def draw_status_button(surface):
-    global status_button_image
-    if status_button_image is None:
-        try:
-            status_button_image = pygame.image.load('game/ui/status.png').convert_alpha()
-            status_button_image = pygame.transform.scale(status_button_image, (40, 40))
-        except pygame.error as e:
-            print(f"Warning: Could not load status button image: {e}")
-            status_button_image = pygame.Surface((40, 40), pygame.SRCALPHA)
-            status_button_image.fill(GRAY) # Fallback
-
-    button_rect = pygame.Rect(10, 10, 40, 40) # Top-left corner
-    surface.blit(status_button_image, button_rect)
-    return button_rect
-
-def draw_status_modal(surface, player, position, zombies_killed):
-    modal_w, modal_h = 300, 400 # Slightly taller for more stats
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-    
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
-
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-
-    title_text = font.render("Player Status", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
-
-    # Display Player Stats
-    y_offset = modal_y + header_h + 10
-    x_offset = modal_x + 10
-
-    # Health/Infection/Resource Bars
-    stats = [
-        ("HP", player.health, RED), 
-        ("Stamina", player.stamina, GRAY),
-        ("Water", player.water, BLUE), 
-        ("Food", player.food, GREEN), 
-        ("Infection", player.infection, YELLOW),
-        ("XP", player.experience, YELLOW)
-    ]
-    
-    for i, (name, value, color) in enumerate(stats):
-        y_pos = y_offset + i * 28
-        text = font.render(f"{name}:", True, WHITE)
-        surface.blit(text, (x_offset, y_pos))
-        
-        bar_width = int(100 * (value / 100))
-        bar_rect = pygame.Rect(x_offset + 110, y_pos + 5, bar_width, 10)
-        pygame.draw.rect(surface, color, bar_rect)
-        pygame.draw.rect(surface, WHITE, (x_offset + 110, y_pos + 5, 100, 10), 1)
-
-    # Skills Display
-    skill_y = y_pos + 35 # Continue from last stat bar
-    surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
-    surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
-    
-    # Display Weight
-    weight_text = font.render(f"Weight: {player.get_inventory_weight():.1f}/{player.max_carry_weight:.1f}", True, WHITE)
-    surface.blit(weight_text, (x_offset, skill_y + 50))
-
-    # Display Zombies Killed
-    zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
-    surface.blit(zombies_killed_text, (x_offset, skill_y + 80))
-
-    # Equipped Weapon
-    active_weapon_text = "None (Hands)"
-    if player.active_weapon:
-         active_weapon_text = f"Equipped: {player.active_weapon.name.split('(')[0]}"
-         if player.active_weapon.durability is not None:
-            active_weapon_text += f" | Dur: {player.active_weapon.durability:.0f}%"
-         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
-            active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
-            
-    status_text = font.render(active_weapon_text, True, YELLOW)
-    surface.blit(status_text, (x_offset, skill_y + 110))
-
-def draw_context_menu(surface, menu_state, mouse_pos):
-    """Draws a right-click context menu."""
-    if not menu_state['active']:
-        return
-
-    options = menu_state['options']
-    if not options:
-        menu_state['active'] = False
-        return
-
-    # --- Calculate Menu Dimensions ---
-    item_height = 25
-    padding = 5
-    max_width = max(font.size(opt)[0] for opt in options) + (padding * 2)
-    menu_height = len(options) * item_height
-
-    # --- Position the Menu ---
-    menu_x, menu_y = menu_state['position']
-    # Ensure menu doesn't go off-screen
-    if menu_x + max_width > VIRTUAL_SCREEN_WIDTH:
-        menu_x -= max_width
-    if menu_y + menu_height > VIRTUAL_GAME_HEIGHT:
-        menu_y -= menu_height
-
-    menu_rect = pygame.Rect(menu_x, menu_y, max_width, menu_height)
-
-    # --- Draw Menu Background ---
-    s = pygame.Surface((max_width, menu_height), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 220)) # Semi-transparent dark background
-    surface.blit(s, menu_rect.topleft)
-    pygame.draw.rect(surface, WHITE, menu_rect, 1) # Border
-
-    # --- Draw Options and Handle Hover ---
-    menu_state['rects'] = []
-    for i, option in enumerate(options):
-        option_rect = pygame.Rect(menu_x, menu_y + i * item_height, max_width, item_height)
-        menu_state['rects'].append(option_rect)
-
-        text_color = WHITE
-        if option_rect.collidepoint(mouse_pos):
-            pygame.draw.rect(surface, (80, 80, 80), option_rect) # Highlight
-            text_color = YELLOW
-
-        text_surf = font.render(option, True, text_color)
-        surface.blit(text_surf, (option_rect.x + padding, option_rect.y + (item_height - text_surf.get_height()) // 2))
