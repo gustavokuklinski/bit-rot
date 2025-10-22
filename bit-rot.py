@@ -18,6 +18,7 @@ last_modal_positions = {
 from core.player import Player
 from core.zombies import Zombie
 from core.items import Item, Projectile
+from core.corpse import Corpse
 
 # UI and modal functions split:
 from ui import draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_container_slot_rect
@@ -107,25 +108,6 @@ def create_obstacles_from_map(layout):
                 obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
     return obstacles
 
-# Simple container object used for dead corpses (lootable)
-class Corpse:
-    def __init__(self, name="Dead corpse", capacity=8, image_path=None, pos=(0,0)):
-        self.name = name
-        self.capacity = capacity
-        self.inventory = []
-        self.weight = 35
-        self.image = None
-        if image_path:
-            try:
-                self.image = pygame.image.load(image_path).convert_alpha()
-                # scale to tile size for consistency with item sprites
-                self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
-            except Exception:
-                self.image = None
-        self.rect = pygame.Rect(0,0,TILE_SIZE, TILE_SIZE)
-        self.rect.center = pos
-        self.spawn_time = pygame.time.get_ticks()  # for decay
-        self.color = DARK_GRAY
 
 def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
     """Processes loot drops when a zombie dies."""
@@ -293,7 +275,7 @@ def run_game():
                         player.rect.topleft = (player.x, player.y)
                         # --- Initialize inventory from parsed data ---
                         player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
-                        player.max_carry_weight = 10 + (player.skill_strength * 5) # Set initial carry weight
+                        # weight features removed — no carry limit to initialize
 
                         zombies_killed = 0
                         obstacles = create_obstacles_from_map(MAP_LAYOUT)
@@ -326,7 +308,6 @@ def run_game():
                         player = Player(player_data=player_data)
                         # --- Initialize inventory from parsed data ---
                         player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
-                        player.max_carry_weight = 10 + (player.skill_strength * 5) # Set initial carry weight
 
                         zombies_killed = 0
                         obstacles = create_obstacles_from_map(MAP_LAYOUT)
@@ -370,9 +351,10 @@ def run_game():
                     if event.key == pygame.K_e:
                         item_to_pickup = next((item for item in items_on_ground if player.rect.colliderect(item.rect)), None)
                         if item_to_pickup:
-                            # --- Weight Check ---
-                            if player.get_inventory_weight() + item_to_pickup.weight > player.max_carry_weight:
-                                print("You are carrying too much to pick that up!")
+                            if isinstance(item_to_pickup, Corpse):
+                                print("Cannot pick up a corpse. Right-click -> Open")
+                                continue
+                            
                             else:
                                 # --- New Pickup Logic ---
                                 target_inventory = None
@@ -699,25 +681,24 @@ def run_game():
                                     ground_idx = index
                                     if 0 <= ground_idx < len(items_on_ground):
                                         ground_item = items_on_ground[ground_idx]
-                                        if player.get_inventory_weight() + ground_item.weight > player.max_carry_weight:
-                                            print("You are carrying too much to pick that up!")
+                                        
+                                    else:
+                                        # prefer backpack if container modal of backpack is open
+                                        target_inventory = player.inventory
+                                        target_capacity = player.base_inventory_slots
+                                        if player.backpack and any(m['type'] == 'container' and m['item'] == player.backpack for m in modals):
+                                            target_inventory = player.backpack.inventory
+                                            target_capacity = player.backpack.capacity or 0
+                                        if len(target_inventory) < target_capacity:
+                                            target_inventory.append(ground_item)
+                                            items_on_ground.pop(ground_idx)
+                                            print(f"Grabbed {ground_item.name}.")
+                                        elif len(player.inventory) < player.get_total_inventory_slots():
+                                            player.inventory.append(ground_item)
+                                            items_on_ground.pop(ground_idx)
+                                            print(f"Grabbed {ground_item.name} into inventory.")
                                         else:
-                                            # prefer backpack if container modal of backpack is open
-                                            target_inventory = player.inventory
-                                            target_capacity = player.base_inventory_slots
-                                            if player.backpack and any(m['type'] == 'container' and m['item'] == player.backpack for m in modals):
-                                                target_inventory = player.backpack.inventory
-                                                target_capacity = player.backpack.capacity or 0
-                                            if len(target_inventory) < target_capacity:
-                                                target_inventory.append(ground_item)
-                                                items_on_ground.pop(ground_idx)
-                                                print(f"Grabbed {ground_item.name}.")
-                                            elif len(player.inventory) < player.get_total_inventory_slots():
-                                                player.inventory.append(ground_item)
-                                                items_on_ground.pop(ground_idx)
-                                                print(f"Grabbed {ground_item.name} into inventory.")
-                                            else:
-                                                print("No space to grab the item.")
+                                            print("No space to grab the item.")
 
                                 elif source == 'ground' and option == 'Place on Backpack':
                                     if player.backpack and getattr(player.backpack, 'inventory', None) is not None:
@@ -803,7 +784,11 @@ def run_game():
                                 options = [o for o in options if o != 'Equip']
                             # If ground item, show ground menu options
                             if click_source == 'ground':
-                                options = ['Grab']
+                                options = []
+                                # Corpses cannot be grabbed; they are lootable via Open
+                                if not isinstance(clicked_item, Corpse):
+                                    options.append('Grab')
+                                # Weapons/tools on ground can be equipped
                                 if getattr(clicked_item, 'item_type', None) in ('weapon', 'tool'):
                                     options.append('Equip')
                                 # allow place on backpack if player has a backpack (slot) and it can hold items

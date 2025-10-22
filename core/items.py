@@ -9,13 +9,12 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, weight=0.0, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.durability = durability
         self.load = load
         self.capacity = capacity
-        self.weight = weight
         self.ammo_type = ammo_type
         self.pellets = pellets
         self.spread_angle = spread_angle
@@ -95,14 +94,13 @@ class Item:
             else:
                 load = float(props['load'].get('value', 0))
         capacity = int(props['capacity']['value']) if 'capacity' in props else None
-        weight = float(props['weight']['value']) if 'weight' in props else 0.0
         color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
         color = (int(color_prop['r']), int(color_prop['g']), int(color_prop['b']))
         ammo_type = props.get('ammo', {}).get('type') if 'ammo' in props else None
         pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
         spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, weight=weight, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
+        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
 
     @classmethod
     def create_from_name(cls, item_name):
@@ -116,14 +114,13 @@ class Item:
         durability = float(props['durability']['max']) if 'durability' in props and 'max' in props['durability'] else None
         load = float(props['load']['value']) if 'load' in props and 'value' in props['load'] else None
         capacity = int(props['capacity']['value']) if 'capacity' in props else None
-        weight = float(props['weight']['value']) if 'weight' in props else 0.0
         color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
         color = (int(color_prop['r']), int(color_prop['g']), int(color_prop['b']))
         ammo_type = props.get('ammo', {}).get('type') if 'ammo' in props else None
         pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
         spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, weight=weight, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
+        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
 
 class Projectile:
     """Represents a bullet fired by the player."""

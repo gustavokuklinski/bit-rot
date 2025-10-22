@@ -21,7 +21,7 @@ def get_belt_slot_rect_in_modal(i, modal_position):
     # Belt slots arranged horizontally below backpack slot
     modal_x, modal_y = modal_position
     slot_w = 48
-    slot_h = 40
+    slot_h = 48
     gap = 8
     start_x = modal_x + 10
     start_y = modal_y + 190
@@ -31,15 +31,15 @@ def get_belt_slot_rect_in_modal(i, modal_position):
 def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     modal_x, modal_y = modal_position
     # Backpack occupies a wide slot under the inventory row
-    slot_w = 280
-    slot_h = 60
+    slot_w = 272
+    slot_h = 48
     x = modal_x + 10
     y = modal_y + 110
     return pygame.Rect(x, y, slot_w, slot_h)
 
 def get_container_slot_rect(container_pos, i):
     rows, cols = 4, 4
-    slot_size = 60
+    slot_size = 48
     padding = 10
     start_x = container_pos[0] + padding
     start_y = container_pos[1] + 40
@@ -191,8 +191,8 @@ def draw_container_view(surface, container_item, position):
     surface.blit(title_text, (modal_x + 10, modal_y + 10))
     close_text = font.render("ESC to close", True, GRAY)
     surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
-    rows, cols = 4, 4
-    slot_size = 60
+    rows, cols = 4, 5
+    slot_size = 48
     padding = 10
     start_x = modal_x + padding
     start_y = modal_y + 40
@@ -209,9 +209,7 @@ def draw_container_view(surface, container_item, position):
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-    if container_item.capacity > max_visible_slots:
-        more_text = font.render(f"... {container_item.capacity - max_visible_slots} more items ...", True, GRAY)
-        surface.blit(more_text, (modal_x + padding, modal_y + modal_h - padding - more_text.get_height()))
+
 
 # Buttons and status modal
 _inventory_img = None
@@ -280,8 +278,6 @@ def draw_status_modal(surface, player, position, zombies_killed):
     skill_y = y_pos + 35
     surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
     surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
-    weight_text = font.render(f"Weight: {player.get_inventory_weight():.1f}/{player.max_carry_weight:.1f}", True, WHITE)
-    surface.blit(weight_text, (x_offset, skill_y + 50))
     zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
     surface.blit(zombies_killed_text, (x_offset, skill_y + 80))
     

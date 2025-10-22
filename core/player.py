@@ -47,7 +47,6 @@ class Player:
         self.is_reloading = False
         self.reload_timer = 0
         self.reload_duration = 120
-        self.max_carry_weight = self.get_max_carry_weight()
 
         self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
 
@@ -136,22 +135,6 @@ class Player:
         if self.backpack:
             return self.base_inventory_slots + (self.backpack.capacity or 0)
         return self.base_inventory_slots
-
-    def get_inventory_weight(self):
-        total_weight = 0
-        for item in self.inventory + self.belt:
-            if item:
-                total_weight += getattr(item, 'weight', 0)
-        if self.backpack:
-            total_weight += getattr(self.backpack, 'weight', 0)
-            for item in self.backpack.inventory:
-                total_weight += getattr(item, 'weight', 0)
-        return total_weight
-
-    def get_max_carry_weight(self):
-        base_carry = 15
-        strength_bonus = self.skill_strength * 2
-        return base_carry + strength_bonus
 
     def find_consumable_at_mouse(self, mouse_pos):
         for i, item in enumerate(self.inventory):
