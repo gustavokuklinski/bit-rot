@@ -14,7 +14,7 @@ last_modal_positions = {
 }
 
 from entities import Player, Zombie, Item, Projectile
-from ui import draw_inventory_modal, draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, draw_container_view, get_container_slot_rect, draw_inventory_button, draw_status_button, draw_status_modal
+from ui import draw_inventory_modal, draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, draw_container_view, get_container_slot_rect, draw_inventory_button, draw_status_button, draw_status_modal, draw_context_menu
 from xml_parser import parse_player_data
 
 VIRTUAL_SCREEN = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
@@ -199,7 +199,18 @@ def run_game():
     # --- Modal Management ---
     modals = [] # List to hold active modals. Each modal is a dict with {'id', 'type', 'item', 'position', 'is_dragging', 'drag_offset', 'rect'}
 
-    # --- Custom Cursor Setup ---
+    # --- Context Menu State ---
+    context_menu = {
+        'active': False,
+        'item': None,
+        'source': None, # e.g., 'inventory', 'belt', 'container'
+        'index': -1,
+        'options': [],
+        'rects': [],
+        'position': (0, 0)
+    }
+
+    # --- Cursor Setup ---
     try:
         cursor_image = pygame.image.load('game/ui/cursor.png').convert_alpha()
         cursor_hotspot = (0, 0) # The tip of the arrow
@@ -207,6 +218,13 @@ def run_game():
     except pygame.error as e:
         print(f"Error loading cursor: {e}")
         custom_cursor = None # Fallback to default cursor
+    try:
+        aim_cursor_image = pygame.image.load('game/ui/aim.png').convert_alpha()
+        aim_cursor_hotspot = (aim_cursor_image.get_width() // 2, aim_cursor_image.get_height() // 2)
+        aim_cursor = pygame.cursors.Cursor(aim_cursor_hotspot, aim_cursor_image)
+    except pygame.error as e:
+        print(f"Error loading aim cursor: {e}")
+        aim_cursor = None # Fallback to default cursor
 
 
     game_state = 'MENU' # Can be 'MENU', 'PLAYING', 'GAME_OVER'
@@ -222,9 +240,13 @@ def run_game():
         scale_y = VIRTUAL_GAME_HEIGHT / screen_h
         mouse_pos = (real_mouse_pos[0] * scale_x, real_mouse_pos[1] * scale_y)
 
+        attack_mode = pygame.key.get_pressed()[pygame.K_LSHIFT] or pygame.key.get_pressed()[pygame.K_RSHIFT]
+
         # Set cursor visibility based on game state
-        if game_state == 'PLAYING' and custom_cursor:
+        if game_state == 'PLAYING' and not attack_mode and custom_cursor:
             pygame.mouse.set_cursor(custom_cursor)
+        elif game_state == 'PLAYING' and attack_mode and aim_cursor:
+            pygame.mouse.set_cursor(aim_cursor)
         else:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
@@ -367,20 +389,6 @@ def run_game():
                         else:
                             print("No items nearby.")
 
-                    if event.key == pygame.K_g: # Drop item
-                        item_to_drop, source, index = player.find_item_at_mouse(mouse_pos)
-                        if item_to_drop:
-                            dropped_item = player.drop_item(source, index)
-                            if dropped_item:
-                                # Position the item in front of the player
-                                dropped_item.rect.x = player.rect.centerx
-                                dropped_item.rect.y = player.rect.centery + TILE_SIZE
-                                items_on_ground.append(dropped_item)
-                                player.drop_cooldown = 10 # Prevent spam dropping
-                                print(f"Dropped {dropped_item.name}.")
-                        else:
-                            print("No item selected to drop.")
-
                     if event.key == pygame.K_r:
                         player.reload_active_weapon()
 
@@ -400,6 +408,7 @@ def run_game():
                         else:
                             player.active_weapon = None
                             print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
+                
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     # --- Status Button Click ---
@@ -459,54 +468,101 @@ def run_game():
                             modals.append(modal)
                             continue # Consume the click
 
-                    # --- Backpack Click Logic ---
-                    # Helper to open/close container modals
-                    def toggle_container_modal(item_to_toggle):
-                        modal_found = False
-                        for modal in modals:
-                            if modal['type'] == 'container' and modal['item'] == item_to_toggle:
-                                modals.remove(modal)
-                                modal_found = True
+                    # --- Context Menu & Left-Click Action Logic ---
+                    if context_menu['active'] and event.button == 1:
+                        clicked_on_menu = False
+                        for i, rect in enumerate(context_menu['rects']):
+                            if rect.collidepoint(mouse_pos):
+                                option = context_menu['options'][i]
+                                item = context_menu['item']
+                                source = context_menu['source']
+                                index = context_menu['index']
+                                container_item = context_menu.get('container_item')
+
+                                print(f"Clicked '{option}' on '{item.name}'")
+
+                                # --- Handle Actions ---
+                                if option == 'Use':
+                                    player.consume_item(item, source, index, container_item)
+                                elif option == 'Reload':
+                                    player.reload_active_weapon()
+                                elif option == 'Equip':
+                                    player.equip_item_to_belt(item, source, index, container_item)
+                                elif option == 'Drop':
+                                    dropped_item = player.drop_item(source, index, container_item)
+                                    if dropped_item:
+                                        dropped_item.rect.center = player.rect.center
+                                        items_on_ground.append(dropped_item)
+                                elif option == 'Open':
+                                    # Find if a modal for this item already exists
+                                    modal_exists = any(m['type'] == 'container' and m['item'] == item for m in modals)
+                                    if not modal_exists:
+                                        new_container_modal = {
+                                            'id': uuid.uuid4(),
+                                            'type': 'container',
+                                            'item': item,
+                                            'position': last_modal_positions['container'],
+                                            'is_dragging': False, 'drag_offset': (0, 0),
+                                            'rect': pygame.Rect(last_modal_positions['container'][0], last_modal_positions['container'][1], 300, 300)
+                                        }
+                                        modals.append(new_container_modal)
+
+                                clicked_on_menu = True
                                 break
-                        if not modal_found:
-                            new_container_modal = {
-                                'id': uuid.uuid4(),
-                                'type': 'container',
-                                'item': item_to_toggle,
-                                'position': last_modal_positions['container'], # Use stored position
-                                'is_dragging': False,
-                                'drag_offset': (0, 0),
-                                'rect': pygame.Rect(last_modal_positions['container'][0], last_modal_positions['container'][1], 300, 300) # Initial rect
-                            }
-                            modals.append(new_container_modal)
-                        return True # Indicate that a modal was toggled
-                    
-                    if event.button == 1: # Left-click to open containers
-                        # --- Backpack/Container Click Logic (within modals) ---
+                        
+                        context_menu['active'] = False # Close menu after any click
+                        if clicked_on_menu:
+                            continue # Consume the click
+
+                    # --- Right-Click Logic to OPEN Context Menu ---
+                    if event.button == 3: # Right-click
+                        context_menu['active'] = False # Close any existing menu
+                        clicked_item = None
+                        click_source = None
+                        click_index = -1
+                        click_container_item = None
+
+                        # Check modals in reverse order (top-most first)
                         for modal in reversed(modals):
+                            if not modal['rect'].collidepoint(mouse_pos): continue
+
                             if modal['type'] == 'inventory':
-                                # Check for clicking on equipped backpack in inventory modal
-                                if player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
-                                    if toggle_container_modal(player.backpack):
-                                        continue # Consume the click
-
-                                # Check for clicking on a backpack in the main inventory slots within the modal
+                                # Check main inventory slots
                                 for i, item in enumerate(player.inventory):
-                                    if item and item.item_type == 'backpack':
-                                        slot_rect = get_inventory_slot_rect(i, modal['position'])
-                                        if slot_rect.collidepoint(mouse_pos):
-                                            if toggle_container_modal(item):
-                                                continue # Consume the click
+                                    if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
+                                        clicked_item, click_source, click_index = item, 'inventory', i; break
+                                # Check belt slots
+                                if not clicked_item:
+                                    for i, item in enumerate(player.belt):
+                                        if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
+                                            clicked_item, click_source, click_index = item, 'belt', i; break
+                                # Check backpack slot
+                                if not clicked_item and player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
+                                    clicked_item, click_source, click_index = player.backpack, 'backpack', 0
+                            
+                            elif modal['type'] == 'container':
+                                container = modal['item']
+                                for i, item in enumerate(container.inventory):
+                                    if item and get_container_slot_rect(modal['position'], i).collidepoint(mouse_pos):
+                                        clicked_item, click_source, click_index, click_container_item = item, 'container', i, container; break
+                            
+                            if clicked_item: break
 
-                        # Check for clicking on a backpack on the ground
-                        for item in items_on_ground:
-                            if item.item_type == 'backpack':
-                                item_screen_rect = item.rect.move(GAME_OFFSET_X, 0)
-                                if item_screen_rect.collidepoint(mouse_pos):
-                                    toggle_container_modal(item)
-                                    continue # Consume the click
+                        if clicked_item:
+                            context_menu['active'] = True
+                            context_menu['item'] = clicked_item
+                            context_menu['source'] = click_source
+                            context_menu['index'] = click_index
+                            context_menu['container_item'] = click_container_item
+                            context_menu['position'] = mouse_pos
+                            context_menu['options'] = player.get_item_context_options(clicked_item)
+                            context_menu['rects'] = [] # Will be populated by draw_context_menu
+                            continue # Consume the right-click
 
-                    elif event.button == 3: # Right-click press - Identify a drag candidate
+
+
+
+                    if event.button == 1: # Left-click press - Identify a drag candidate
                         # First, check if we are clicking an item in an open container
                         # Iterate through modals in reverse to check topmost first
                         for modal in reversed(modals):
@@ -536,30 +592,31 @@ def run_game():
                                 if drag_candidate: break
                         if drag_candidate: continue
 
-                        # Check belt
-                        for i, item in enumerate(player.belt):
-                            if item:
-                                slot_rect = get_belt_slot_rect_in_modal(i)
-                                if slot_rect.collidepoint(mouse_pos):
-                                    drag_candidate = (item, (i, 'belt'))
-                                    drag_start_pos = mouse_pos
-                                    drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                                    break
-                        if drag_candidate: continue
+                        # Check belt (only if an inventory modal is open)
+                        for modal in reversed(modals):
+                            if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
+                                for i, item in enumerate(player.belt):
+                                    if item:
+                                        slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
+                                        if slot_rect.collidepoint(mouse_pos):
+                                            drag_candidate = (item, (i, 'belt'))
+                                            drag_start_pos = mouse_pos
+                                            drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                                            break
+                                if drag_candidate: break
 
                         # Check backpack slot
                         for modal in reversed(modals):
                             if modal['type'] == 'inventory':
                                 if player.backpack:
-                                    slot_rect = get_backpack_slot_rect(modal['position'], player)
+                                    slot_rect = get_backpack_slot_rect(modal['position'])
                                     if slot_rect.collidepoint(mouse_pos):
                                         drag_candidate = (player.backpack, (0, 'backpack'))
                                         drag_start_pos = mouse_pos
                                         drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                                         break
 
-
-                    if event.button == 1: # Left-click attack
+                    if event.button == 1 and attack_mode: # Left-click attack only in attack mode
                         # If any modal is currently being dragged, do not process attack
                         if any(modal['is_dragging'] for modal in modals):
                             continue
@@ -575,12 +632,6 @@ def run_game():
                             continue # Consume the click if it's inside a modal
 
                         # ... (attack logic using scaled mouse_pos)
-                        consumable_item, inv_index = player.find_consumable_at_mouse(mouse_pos)
-                        if consumable_item:
-                            if 'Ammo' not in consumable_item.name:
-                                player.consume_item(consumable_item, 'inventory', inv_index)
-                                continue
-
                         if GAME_OFFSET_X <= mouse_pos[0] < GAME_OFFSET_X + GAME_WIDTH:
                             weapon = player.active_weapon
                             if player.is_reloading:
@@ -645,7 +696,7 @@ def run_game():
                     for modal in modals:
                         modal['is_dragging'] = False
 
-                    if event.button == 3: # Right-click release
+                    if event.button == 1: # Left-click release
                         # If a drag was in progress OR if we have a drag candidate (for quick clicks)
                         if is_dragging or drag_candidate:
                             # Handle dropping into an open container
@@ -776,11 +827,11 @@ def run_game():
                         drag_origin = None
                         drag_candidate = None
 
-                    elif event.button == 1: # Left-click release
-                        # This block is now redundant as dragging is stopped for all modals above
+                if event.type == pygame.MOUSEMOTION:
+                    if context_menu['active']:
+                        # We don't need to do anything here for hover, draw_context_menu will handle it
                         pass
 
-                if event.type == pygame.MOUSEMOTION:
                     if drag_candidate and not is_dragging:
                         dist = math.hypot(mouse_pos[0] - drag_start_pos[0], mouse_pos[1] - drag_start_pos[1])
                         if dist > DRAG_THRESHOLD:
@@ -878,6 +929,10 @@ def run_game():
             # Draw UI buttons on top of modals
             status_button_rect = draw_status_button(VIRTUAL_SCREEN)
             inventory_button_rect = draw_inventory_button(VIRTUAL_SCREEN)
+
+            # Draw context menu on top of everything else if active
+            if context_menu['active']:
+                draw_context_menu(VIRTUAL_SCREEN, context_menu, mouse_pos)
 
             for p in projectiles: p.draw(VIRTUAL_SCREEN)
             

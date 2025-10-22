@@ -514,10 +514,58 @@ class Player:
                         pass # Already removed or moved
                 elif source_type == 'belt':
                     self.belt[index] = None
+    
+    def get_item_context_options(self, item):
+        """Returns a list of context menu options for a given item."""
+        options = []
+        if item.item_type == 'consumable':
+            if 'Ammo' in item.name or 'Shells' in item.name:
+                options.append('Reload')
+            else:
+                options.append('Use')
+            options.append('Equip')
+        elif item.item_type == 'backpack':
+            options.append('Open')
+            if not self.backpack: # Can only equip if slot is empty
+                options.append('Equip')
+        elif item.item_type in ['weapon', 'tool']:
+            options.append('Equip')
+        
+        options.append('Drop')
+        return options
 
+    def _get_source_inventory(self, source_type, container_item=None):
+        """Helper to get the correct inventory list based on source."""
+        if source_type == 'inventory':
+            return self.inventory
+        elif source_type == 'belt':
+            return self.belt
+        elif source_type == 'container' and container_item:
+            return container_item.inventory
+        return None
 
-    def consume_item(self, item, source_type, item_index):
+    def equip_item_to_belt(self, item, source_type, item_index, container_item=None):
+        """Moves an item from inventory or a container to an empty belt slot."""
+        if not any(slot is None for slot in self.belt):
+            print("Belt is full.")
+            return False
+
+        source_inventory = self._get_source_inventory(source_type, container_item)
+        if source_inventory is None or item not in source_inventory:
+            return False # Item not found
+
+        # Find first empty slot and place it
+        for i, slot in enumerate(self.belt):
+            if slot is None:
+                self.belt[i] = item
+                source_inventory.pop(item_index)
+                print(f"Equipped {item.name} to belt.")
+                return True
+        return False
+
+    def consume_item(self, item, source_type, item_index, container_item=None):
         """Uses a consumable item from the inventory or belt."""
+        source_inventory = self._get_source_inventory(source_type, container_item)
         if item.item_type == 'consumable':
             amount_consumed = 0
             if 'Water' in item.name:
@@ -558,7 +606,7 @@ class Player:
             return True
         return False
     
-    def drop_item(self, source, index):
+    def drop_item(self, source, index, container_item=None):
         """Removes an item from inventory/belt and returns it."""
         if self.drop_cooldown > 0:
             print("Cannot drop items so quickly.")
@@ -575,6 +623,9 @@ class Player:
         elif source == 'backpack':
             item_to_drop = self.backpack
             self.backpack = None
+        elif source == 'container' and container_item and index < len(container_item.inventory):
+            item_to_drop = container_item.inventory.pop(index)
+
         return item_to_drop
 
 class Zombie:
