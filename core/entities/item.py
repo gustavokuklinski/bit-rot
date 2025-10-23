@@ -9,7 +9,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.durability = durability
@@ -25,6 +25,9 @@ class Item:
         self.color = color
         self.min_damage = min_damage
         self.max_damage = max_damage
+        self.min_cure = min_cure
+        self.max_cure = max_cure
+        self.hp = hp
 
     @property
     def damage(self):
@@ -110,7 +113,10 @@ class Item:
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
         min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
-        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage)
+        min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
+        max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
+        hp = int(props['hp']['value']) if 'hp' in props and 'value' in props['hp'] else None
+        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
 
     @classmethod
     def create_from_name(cls, item_name):
@@ -137,7 +143,10 @@ class Item:
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
         min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
-        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage)
+        min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
+        max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
+        hp = int(props['hp']['value']) if 'hp' in props and 'value' in props['hp'] else None
+        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
 
 class Projectile:
     """Represents a bullet fired by the player."""

@@ -1,8 +1,10 @@
 <zombie name="person">
-    <xp value="1" />
+    <xp min="1" max="3" />
     <stats>
         <health value="130" />
         <speed value="2.0" />
+        <attack min="1" max="5" />
+        <infection min="1" max="3" />
     </stats>
     <visuals>
         <sprite file="person.png" />

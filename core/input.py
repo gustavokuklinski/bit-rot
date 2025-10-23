@@ -88,6 +88,9 @@ def try_grab_item(game):
     closest_item = None
     closest_dist = float('inf')
     for item in game.items_on_ground:
+        # prevent grabbing corpses
+        if isinstance(item, Corpse):
+            continue
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
         if dist < closest_dist:
             closest_dist = dist
@@ -181,7 +184,7 @@ def toggle_inventory_modal(game):
             'position': game.last_modal_positions['inventory'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], 300, 620)
+            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
         }
         game.modals.append(new_inventory_modal)
 
@@ -200,7 +203,7 @@ def toggle_status_modal(game):
             'position': game.last_modal_positions['status'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], 300, 400)
+            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
         }
         game.modals.append(new_status_modal)
 

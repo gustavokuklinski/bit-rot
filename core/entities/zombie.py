@@ -17,13 +17,17 @@ class Zombie:
         self.health = self.max_health
         self.speed = template.get('speed', 0.0)
         self.loot_table = template.get('loot', [])
-        self.xp_value = template.get('xp', 10)
+        self.xp_value = random.randint(template.get('min_xp', 5), template.get('max_xp', 15))
         self.image = self.load_sprite(template.get('sprite'))
         self.color = RED
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.show_health_bar_timer = 0
         self.last_attack_time = 0
         self.attack_range = TILE_SIZE * 1.5
+        self.min_attack = template.get('min_attack', 1)
+        self.max_attack = template.get('max_attack', 5)
+        self.min_infection = template.get('min_infection', 0)
+        self.max_infection = template.get('max_infection', 1)
 
     @staticmethod
     def load_zombie_templates(zombies_dir='game/zombies'):
@@ -70,13 +74,33 @@ class Zombie:
                 if isinstance(sprite_file, str):
                     sprite_file = sprite_file.strip() or None
 
+            attack_node = root.find('stats/attack')
+            min_attack = _safe_int(attack_node.get('min'), 1) if attack_node is not None else 1
+            max_attack = _safe_int(attack_node.get('max'), 5) if attack_node is not None else 5
+
+            infection_node = root.find('stats/infection')
+            min_infection = _safe_int(infection_node.get('min'), 0) if infection_node is not None else 0
+            max_infection = _safe_int(infection_node.get('max'), 1) if infection_node is not None else 1
+
+            health_node = root.find('stats/health')
+            health = _safe_float(health_node.get('value'), 10.0) if health_node is not None else 10.0
+
+            xp_node = root.find('stats/xp')
+            min_xp = _safe_int(xp_node.get('min'), 5) if xp_node is not None else 5
+            max_xp = _safe_int(xp_node.get('max'), 15) if xp_node is not None else 15
+
             template = {
                 'name': root.attrib.get('name'),
-                'health': _safe_float(root.findtext('stats/health'), 10.0),
+                'health': health,
                 'speed': _safe_float(root.findtext('stats/speed'), 1.0) * ZOMBIE_SPEED,
                 'sprite': sprite_file,
                 'loot': [],
-                'xp': _safe_int(root.findtext('stats/xp'), 10)
+                'min_xp': min_xp,
+                'max_xp': max_xp,
+                'min_attack': min_attack,
+                'max_attack': max_attack,
+                'min_infection': min_infection,
+                'max_infection': max_infection
             }
             for drop in root.findall('loot/drop'):
                 chance_raw = drop.attrib.get('chance', '0')
@@ -183,19 +207,15 @@ class Zombie:
         self.rect.topleft = (int(self.x), int(self.y))
 
     def attack(self, player):
-        body_parts = {"Head": (0.50, 0.20), "Body": (0.35, 0.25), "Arms": (0.30, 0.25), "Legs": (0.20, 0.15), "Feet": (0.10, 0.15)}
-        part_names = list(body_parts.keys())
-        weights = [p[0] for p in body_parts.values()]
-        hit_part = random.choices(part_names, weights, k=1)[0]
-        inf_chance, dmg_mult = body_parts[hit_part]
-        damage = 5 * dmg_mult
+        damage = random.randint(self.min_attack, self.max_attack)
+        infection = random.randint(self.min_infection, self.max_infection)
         player.health -= damage
         player.health = max(0, player.health)
-        if random.random() < inf_chance:
-            player.infection = min(100, player.infection + 15)
-            print(f"**HIT!** Player hit on {hit_part}. Took {damage:.1f} damage and gained 15% infection!")
+        if infection > 0:
+            player.infection = min(100, player.infection + infection)
+            print(f"**HIT!** Player took {damage} damage and {infection}% infection!")
         else:
-            print(f"Player hit on {hit_part}. Took {damage:.1f} damage (no infection).")
+            print(f"Player took {damage} damage (no infection).")
 
     def take_damage(self, damage):
         self.health -= damage
@@ -204,3 +224,4 @@ class Zombie:
             print("Zombie eliminated.")
             return True
         return False
+

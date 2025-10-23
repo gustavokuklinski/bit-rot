@@ -1,6 +1,7 @@
 import time
 import pygame
 import os
+import random
 
 from data.config import *
 from core.entities.item import Item
@@ -39,6 +40,7 @@ class Player:
         self.last_decay_time = time.time()
         self.level = data.get('level', 1)
         self.experience = data.get('experience', 0)
+        self.xp_to_next_level = 100 * self.level
         self.base_inventory_slots = 5
 
         # animation / action timers
@@ -60,6 +62,20 @@ class Player:
         except pygame.error as e:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
+
+    def add_xp(self, amount):
+        self.experience += amount
+        print(f"Gained {amount} XP.")
+        if self.experience >= self.xp_to_next_level:
+            self.level_up()
+
+    def level_up(self):
+        self.level += 1
+        self.experience = 0
+        self.xp_to_next_level = 100 * self.level
+        self.max_health += 10
+        self.health = self.max_health
+        print(f"Leveled up to level {self.level}!")
 
     def update_position(self, obstacles, zombies):
         new_x = self.x + self.vx
@@ -108,10 +124,16 @@ class Player:
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+        stamina_cap = self.max_stamina * (1 - self.infection / 100)
         if is_moving and self.stamina > 0:
             self.stamina = max(0, self.stamina - 0.2)
-        elif not is_moving and self.stamina < self.max_stamina:
-            self.stamina = min(self.max_stamina, self.stamina + 0.3)
+        elif not is_moving and self.stamina < stamina_cap:
+            self.stamina = min(stamina_cap, self.stamina + 0.3)
+
+        health_cap = self.max_health * (1 - self.infection / 100)
+        if self.health < health_cap:
+            self.health = min(health_cap, self.health + 0.1)
+
         if current_time - self.last_decay_time >= DECAY_RATE_SECONDS:
             self.water = max(0, self.water - WATER_DECAY_AMOUNT)
             self.food = max(0, self.food - FOOD_DECAY_AMOUNT)
@@ -120,9 +142,7 @@ class Player:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
                 self.health = max(0, self.health)
             if self.infection > 0:
-                self.infection += 0.1
-                if self.infection > 100:
-                    self.health = 0
+                self.health -= self.infection / 100 * 1
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
@@ -267,7 +287,6 @@ class Player:
                 amount_needed = 100 - self.water
                 amount_to_consume = min(amount_needed, item.load)
                 self.water = min(100, self.water + amount_to_consume)
-                self.stamina = min(self.max_stamina, self.stamina + (amount_to_consume / (item.capacity or 1)) * 25)
                 item.load -= amount_to_consume
                 print(f"Consumed {amount_to_consume:.0f}% Water. Water: {self.water:.0f}%")
             elif 'Food' in item.name:
@@ -276,12 +295,18 @@ class Player:
                 self.food = min(100, self.food + amount_to_consume)
                 item.load -= amount_to_consume
                 print(f"Consumed {amount_to_consume:.0f}% Food. Food: {self.food:.0f}%")
+            elif item.hp is not None:
+                self.health = min(self.max_health, self.health + item.hp)
+                print(f"Used {item.name} and restored {item.hp} HP.")
+                item.load -= 1
             elif 'Vaccine' in item.name:
-                amount_needed = self.infection
-                amount_to_consume = min(amount_needed, item.load)
-                self.infection = max(0, self.infection - amount_to_consume)
-                item.load -= amount_to_consume
-                print(f"Used {amount_to_consume:.0f}% Vaccine. New Infection: {self.infection:.0f}%")
+                cure_chance = random.uniform(item.min_cure, item.max_cure)
+                if random.random() < cure_chance:
+                    self.infection = 0
+                    print("The vaccine worked! Infection cured.")
+                else:
+                    print("The vaccine had no effect.")
+                item.load -= 1
             elif 'Ammo' in item.name or 'Shells' in item.name:
                 self.reload_active_weapon()
                 return True

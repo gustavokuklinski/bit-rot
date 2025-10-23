@@ -1,8 +1,10 @@
 <zombie name="survivor">
-    <xp value="1" />
+    <xp min="1" max="5" />
     <stats>
         <health value="120" />
         <speed value="3.0" />
+        <attack min="6" max="9" />
+        <infection min="5" max="10" />
     </stats>
     <visuals>
         <sprite file="survivor.png" />
@@ -11,5 +13,6 @@
         <drop item="Vaccine" chance="0.5" />
         <drop item="Canned Food" chance="0.5" />
         <drop item="Small Backpack" chance="0.5" />
+        <drop item="Medkit" chance="0.5" />
     </loot>
 </zombie>

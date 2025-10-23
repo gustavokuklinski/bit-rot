@@ -22,6 +22,11 @@ DARK_GRAY = (30, 30, 30)
 PANEL_COLOR = (20, 20, 20)
 GAME_BG_COLOR = (25.9, 17.8, 22.4) # Distinct color for the game box
 
+# Modal Dimensions
+INVENTORY_MODAL_WIDTH = 300
+INVENTORY_MODAL_HEIGHT = 300
+STATUS_MODAL_WIDTH = 200
+STATUS_MODAL_HEIGHT = 300
 
 # Fonts
 font = pygame.font.Font(None, 16)
@@ -31,7 +36,7 @@ title_font = pygame.font.Font(None, 32)
 # Game Constants
 TILE_SIZE = 16
 PLAYER_SPEED = 4
-ZOMBIE_SPEED = 0
+ZOMBIE_SPEED = 0.1
 ZOMBIE_DROP = 1
 DECAY_RATE_SECONDS = 5.0 # How often Water/Food decay
 FOOD_DECAY_AMOUNT = 0.5 # Percentage loss per tick

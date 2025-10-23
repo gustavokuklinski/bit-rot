@@ -7,6 +7,7 @@
         <ammo type="9mm Ammo" />
         <damage min="25" max="55" />
         <firing pellets="1" spread_angle="0" />
+        <skill type="range" />
         <sprite file="pistol_9mm.png" />
     </properties> 
     <spawn chance="35" />

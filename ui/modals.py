@@ -49,7 +49,7 @@ def get_container_slot_rect(container_pos, i):
 
 # --- Modal Drawers (inventory/status/container/context) ---
 def draw_inventory_modal(surface, player, position, mouse_pos):
-    modal_w, modal_h = 300, 300
+    modal_w, modal_h = INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT
     modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
     s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
@@ -214,7 +214,7 @@ def draw_container_view(surface, container_item, position):
 
 
 def draw_status_modal(surface, player, position, zombies_killed):
-    modal_w, modal_h = 200, 300
+    modal_w, modal_h = STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT
     modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
     s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
@@ -232,6 +232,10 @@ def draw_status_modal(surface, player, position, zombies_killed):
 
     y_offset = modal_y + header_h + 10
     x_offset = modal_x + 10
+
+    level_text = font.render(f"Level: {player.level}", True, WHITE)
+    surface.blit(level_text, (x_offset, y_offset))
+    y_offset += 20
 
     # Load stat icons (lazy, per-frame safe)
     stat_icons = {}
@@ -251,14 +255,14 @@ def draw_status_modal(surface, player, position, zombies_killed):
             stat_icons[k] = None
 
     stats = [
-        ("HP", player.health, RED),
-        ("Stamina", player.stamina, GRAY),
-        ("Water", player.water, BLUE),
-        ("Food", player.food, GREEN),
-        ("Infection", player.infection, YELLOW),
-        ("XP", player.experience, YELLOW)
+        ("HP", player.health, player.max_health, RED),
+        ("Stamina", player.stamina, player.max_stamina, GRAY),
+        ("Water", player.water, 100, BLUE),
+        ("Food", player.food, 100, GREEN),
+        ("Infection", player.infection, 100, YELLOW),
+        ("XP", player.experience, player.xp_to_next_level, YELLOW)
     ]
-    for i, (name, value, color) in enumerate(stats):
+    for i, (name, value, max_value, color) in enumerate(stats):
         y_pos = y_offset + i * 28
         icon = stat_icons.get(name)
         if icon:
@@ -272,14 +276,11 @@ def draw_status_modal(surface, player, position, zombies_killed):
 
         # draw the bar (positioned after icon/text)
         bar_x = label_x + 12
-        bar_width = int(100 * (value / 100))
+        bar_width = int(100 * (value / max_value))
         bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
         pygame.draw.rect(surface, color, bar_rect)
         pygame.draw.rect(surface, WHITE, (bar_x, y_pos + 5, 100, 10), 1)
-    skill_y = y_pos + 35
 
-    #surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
-    #surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
     try:
         if '_kills_img' not in globals() or _kills_img is None:
             _kills_img = pygame.image.load('game/zombies/sprites/dead.png').convert_alpha()
@@ -288,12 +289,12 @@ def draw_status_modal(surface, player, position, zombies_killed):
         _kills_img = None
 
     if _kills_img:
-        surface.blit(_kills_img, (x_offset, skill_y))
+        surface.blit(_kills_img, (x_offset, y_pos + 35))
         num_text = font.render(f"{str(zombies_killed)} Killed", True, WHITE)
-        surface.blit(num_text, (x_offset + _kills_img.get_width() + 16, skill_y + 6))
+        surface.blit(num_text, (x_offset + _kills_img.get_width() + 16, y_pos + 35 + 6))
     else:
         zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
-        surface.blit(zombies_killed_text, (x_offset, skill_y))
+        surface.blit(zombies_killed_text, (x_offset, y_pos))
     
    
 

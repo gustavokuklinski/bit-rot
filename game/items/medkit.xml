@@ -1,10 +1,10 @@
-<item name="Vaccine" type="consumable">
+<item name="Medkit" type="consumable">
     <properties>
         <load value="1" />
-        <cure min="1" max="100" />
+        <hp min="1" max="100" />
         <capacity value="1" />
         <color r="150" g="200" b="255" />
-        <sprite file="vaccine.png" />
+        <sprite file="medkit.png" />
     </properties>
     <spawn chance="8" /> <!-- 20 * 0.4 -->
 </item>

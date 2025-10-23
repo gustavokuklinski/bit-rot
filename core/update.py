@@ -137,20 +137,4 @@ def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
     if find_free_tile(corpse.rect, obstacles, items_on_ground_list, initial_pos=zombie.rect.topleft):
         items_on_ground_list.append(corpse)
 
-    # --- Experience Gain ---
-    player.experience += zombie.xp_value
-    print(f"Gained {zombie.xp_value} experience. Total XP: {player.experience}")
-    # --- Level Up Check ---
-    xp_needed = experience_for_level(player.level + 1)
-    if player.experience >= xp_needed:
-        player.level += 1
-        player.skill_strength += 1
-        player.skill_melee += 1
-        player.skill_ranged += 1
-        player.max_health += 10
-        player.health = player.max_health # Full heal on level up
-        print(f"LEVEL UP! You are now level {player.level}!")
-
-def experience_for_level(level):
-    """Calculates the experience needed for a given level."""
-    return int(100 * (1.5 ** (level - 1)))
+    player.add_xp(zombie.xp_value)
