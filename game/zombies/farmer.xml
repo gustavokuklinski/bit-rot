@@ -1,7 +1,7 @@
 <zombie name="farmer">
     <xp value="1" />
     <stats>
-        <health value="80" />
+        <health value="180" />
         <speed value="1.8" />
     </stats>
     <visuals>

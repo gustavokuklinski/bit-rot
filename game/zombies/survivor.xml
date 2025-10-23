@@ -1,7 +1,7 @@
 <zombie name="survivor">
     <xp value="1" />
     <stats>
-        <health value="100" />
+        <health value="120" />
         <speed value="3.0" />
     </stats>
     <visuals>

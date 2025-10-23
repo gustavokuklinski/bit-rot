@@ -1,5 +1,5 @@
 # Bit Rot
-Bit Rot is a 4-Bit zombie survivor game.
+Bit Rot is a zombie survivor game.
 
 **Basic controls**:
 - **W/A/S/D**: Walk
@@ -12,3 +12,6 @@ Bit Rot is a 4-Bit zombie survivor game.
 
 - **I**: Opens inventory and belt
 - **H**: Opens Status
+
+**Credits**
+Tiles: https://opengameart.org/content/1-bit-pack

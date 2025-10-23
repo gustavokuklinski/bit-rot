@@ -1,7 +1,7 @@
 <zombie name="office">
     <xp value="1" />
     <stats>
-        <health value="70" />
+        <health value="170" />
         <speed value="2.0" />
     </stats>
     <visuals>

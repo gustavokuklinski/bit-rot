@@ -17,6 +17,8 @@
     <initial_loot>
         <inventory item="Water Bottle" />
         <inventory item="Bag" />
+        <inventory item="Knife" />
+        <inventory item="Pistol (9mm)" />
     </initial_loot>
 
     <visuals>

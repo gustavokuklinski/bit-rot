@@ -1,6 +1,6 @@
 import pygame
 import os
-from config import TILE_SIZE, DARK_GRAY
+from data.config import TILE_SIZE, DARK_GRAY
 
 class Corpse:
     """Lootable corpse container with automatic decay."""

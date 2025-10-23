@@ -4,7 +4,7 @@ import math
 import pygame
 import xml.etree.ElementTree as ET
 
-from config import TILE_SIZE, DARK_GRAY, RED, ZOMBIE_SPEED, ZOMBIE_DROP
+from data.config import TILE_SIZE, DARK_GRAY, RED, ZOMBIE_SPEED, ZOMBIE_DROP
 
 ZOMBIE_TEMPLATES = []
 

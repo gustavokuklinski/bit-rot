@@ -1,5 +1,5 @@
 import pygame
-from config import *
+from data.config import *
 
 # Keep rect helper functions here as lightweight UI helpers used by Player logic.
 # Modal drawing is moved to modals.py to separate rendering responsibilities.
@@ -47,6 +47,35 @@ def get_container_slot_rect(container_pos, i):
 
 # cached logo image
 _logo_img = None
+
+# Buttons and status modal
+_inventory_img = None
+_status_img = None
+def draw_inventory_button(surface):
+    global _inventory_img
+    if _inventory_img is None:
+        try:
+            _inventory_img = pygame.image.load('game/ui/inventory.png').convert_alpha()
+            _inventory_img = pygame.transform.scale(_inventory_img, (40, 40))
+        except pygame.error:
+            _inventory_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _inventory_img.fill(GRAY)
+    button_inventory_rect = pygame.Rect(10, 50, 60, 60)
+    surface.blit(_inventory_img, button_inventory_rect)
+    return button_inventory_rect
+
+def draw_status_button(surface):
+    global _status_img
+    if _status_img is None:
+        try:
+            _status_img = pygame.image.load('game/ui/status.png').convert_alpha()
+            _status_img = pygame.transform.scale(_status_img, (40, 40))
+        except pygame.error:
+            _status_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _status_img.fill(GRAY)
+    button_rect = pygame.Rect(10, 10, 40, 40)
+    surface.blit(_status_img, button_rect)
+    return button_rect
 
 def draw_menu(screen):
     global _logo_img

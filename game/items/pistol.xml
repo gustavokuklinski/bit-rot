@@ -5,6 +5,7 @@
         <capacity value="12" />
         <color r="30" g="30" b="30" />
         <ammo type="9mm Ammo" />
+        <damage min="25" max="55" />
         <firing pellets="1" spread_angle="0" />
         <sprite file="pistol_9mm.png" />
     </properties> 

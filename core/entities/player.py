@@ -2,18 +2,21 @@ import time
 import pygame
 import os
 
-from config import *
-from core.items import Item
+from data.config import *
+from core.entities.item import Item
+from core.entities.corpse import Corpse
 
 # Note: player references UI helpers for slot rectangles for mouse detection.
 # We import functions from ui (which remain in the root ui.py)
-from modals import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from ui.modals import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 
 class Player:
     def __init__(self, player_data=None):
         self.x = GAME_WIDTH // 2
         self.y = GAME_HEIGHT // 2
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
+        self.vx = 0
+        self.vy = 0
         self.color = BLUE
 
         data = player_data or {}
@@ -58,9 +61,9 @@ class Player:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
 
-    def update_position(self, dx, dy, obstacles, zombies):
-        new_x = self.x + dx
-        new_y = self.y + dy
+    def update_position(self, obstacles, zombies):
+        new_x = self.x + self.vx
+        new_y = self.y + self.vy
         temp_rect = self.rect.copy()
         temp_rect.x = new_x
         collided_with_wall_x = any(temp_rect.colliderect(ob) for ob in obstacles)
@@ -215,6 +218,9 @@ class Player:
 
     def get_item_context_options(self, item):
         options = []
+        if isinstance(item, Corpse):
+            options.append('Open')
+            return options
         if item.item_type == 'consumable':
             if 'Ammo' in item.name or 'Shells' in item.name:
                 options.append('Reload')

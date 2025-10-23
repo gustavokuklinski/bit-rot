@@ -3,13 +3,13 @@ import random
 import xml.etree.ElementTree as ET
 import pygame
 
-from config import TILE_SIZE, WHITE
+from data.config import TILE_SIZE, WHITE
 
 ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.durability = durability
@@ -23,6 +23,14 @@ class Item:
         if self.item_type == 'backpack':
             self.inventory = []
         self.color = color
+        self.min_damage = min_damage
+        self.max_damage = max_damage
+
+    @property
+    def damage(self):
+        if self.min_damage is not None and self.max_damage is not None:
+            return random.randint(self.min_damage, self.max_damage)
+        return 0
 
     def __repr__(self):
         parts = [self.name]
@@ -100,7 +108,9 @@ class Item:
         pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
         spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
+        min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
+        max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
+        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage)
 
     @classmethod
     def create_from_name(cls, item_name):
@@ -112,7 +122,12 @@ class Item:
         template = ITEM_TEMPLATES[item_name]
         props = template['properties']
         durability = float(props['durability']['max']) if 'durability' in props and 'max' in props['durability'] else None
-        load = float(props['load']['value']) if 'load' in props and 'value' in props['load'] else None
+        load = None
+        if 'load' in props:
+            if 'min' in props['load']:
+                load = random.randint(int(props['load']['min']), int(props['load']['max']))
+            else:
+                load = float(props['load'].get('value', 0))
         capacity = int(props['capacity']['value']) if 'capacity' in props else None
         color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
         color = (int(color_prop['r']), int(color_prop['g']), int(color_prop['b']))
@@ -120,7 +135,9 @@ class Item:
         pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
         spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file)
+        min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
+        max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
+        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage)
 
 class Projectile:
     """Represents a bullet fired by the player."""
@@ -141,7 +158,7 @@ class Projectile:
 
     def update(self, game_width=None, game_height=None, game_offset_x=0):
         # lazy import to avoid circular imports at module load time
-        from config import GAME_WIDTH, GAME_HEIGHT
+        from data.config import GAME_WIDTH, GAME_HEIGHT
         if game_width is None:
             game_width = GAME_WIDTH
         if game_height is None:

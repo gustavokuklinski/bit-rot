@@ -1,7 +1,6 @@
 <item name="Small Backpack" type="backpack">
     <properties>
         <capacity value="10" />
-        <load value="2" />
         <sprite file="small_backpack.png" />
     </properties>
 </item>
