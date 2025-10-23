@@ -117,6 +117,17 @@ def try_grab_item(game):
 
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
+        for button in getattr(game, 'modal_buttons', []):
+            if button['rect'].collidepoint(mouse_pos):
+                modal_to_affect = next((m for m in game.modals if m['id'] == button['id']), None)
+                if modal_to_affect:
+                    if button['type'] == 'close':
+                        game.modals.remove(modal_to_affect)
+                        return
+                    elif button['type'] == 'minimize':
+                        modal_to_affect['minimized'] = not modal_to_affect.get('minimized', False)
+                        return
+
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game)
             return
@@ -136,7 +147,8 @@ def handle_mouse_down(game, event, mouse_pos):
                             'item': game.player.backpack,
                             'position': game.last_modal_positions['container'],
                             'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300)
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                            'minimized': False
                         }
                         game.modals.append(new_container_modal)
                     return
@@ -184,7 +196,8 @@ def toggle_inventory_modal(game):
             'position': game.last_modal_positions['inventory'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
+            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+            'minimized': False
         }
         game.modals.append(new_inventory_modal)
 
@@ -203,7 +216,8 @@ def toggle_status_modal(game):
             'position': game.last_modal_positions['status'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
+            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT),
+            'minimized': False
         }
         game.modals.append(new_status_modal)
 
@@ -326,7 +340,8 @@ def handle_context_menu_click(game, mouse_pos):
                         'item': item,
                         'position': game.last_modal_positions['container'],
                         'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300)
+                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                        'minimized': False
                     }
                     game.modals.append(new_container_modal)
 
@@ -461,7 +476,7 @@ def handle_right_click(game, mouse_pos):
             if getattr(clicked_item, 'item_type', None) in ('weapon', 'tool'):
                 options.append('Equip')
             # allow place on backpack if player has a backpack (slot) and it can hold items
-            if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None:
+            if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
                 options.append('Place on Backpack')
             # If ground item exposes an inventory (corpse/container), allow Open
             if getattr(clicked_item, 'inventory', None) is not None:

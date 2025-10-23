@@ -8,6 +8,12 @@
         <level value="1" />
     </stats>
 
+    <skills>
+        <strength value="3" />
+        <melee value="3" />
+        <ranged value="3" />
+    </skills>
+
     <initial_loot>
         <inventory item="Water Bottle" />
         <inventory item="Bag" />

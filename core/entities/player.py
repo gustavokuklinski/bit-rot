@@ -21,25 +21,28 @@ class Player:
         self.color = BLUE
 
         data = player_data or {}
+        stats = data.get('stats', {})
+        skills = data.get('skills', {})
+
         # Stats
-        self.max_health = data.get('max_health', 100.0)
-        self.health = data.get('health', self.max_health)
-        self.water = data.get('water', 100.0)
-        self.food = data.get('food', 100.0)
-        self.infection = data.get('infection', 0.0)
-        self.max_stamina = data.get('max_stamina', 100.0)
-        self.stamina = data.get('stamina', self.max_stamina)
-        self.skill_strength = data.get('skill_strength', 3)
-        self.skill_melee = data.get('skill_melee', 3)
-        self.skill_ranged = data.get('skill_ranged', 3)
+        self.max_health = stats.get('health', 100.0)
+        self.health = stats.get('health', self.max_health)
+        self.water = stats.get('water', 100.0)
+        self.food = stats.get('food', 100.0)
+        self.infection = stats.get('infection', 0.0)
+        self.max_stamina = stats.get('stamina', 100.0)
+        self.stamina = stats.get('stamina', self.max_stamina)
+        self.skill_strength = skills.get('strength', 3)
+        self.skill_melee = skills.get('melee', 3)
+        self.skill_ranged = skills.get('ranged', 3)
 
         self.inventory = []
         self.backpack = None
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
-        self.level = data.get('level', 1)
-        self.experience = data.get('experience', 0)
+        self.level = stats.get('level', 1)
+        self.experience = stats.get('experience', 0)
         self.xp_to_next_level = 100 * self.level
         self.base_inventory_slots = 5
 

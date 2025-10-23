@@ -18,6 +18,14 @@ def load_assets():
         print(f"Error loading aim cursor: {e}")
         assets['aim_cursor'] = None
 
+    try:
+        assets['close_button'] = pygame.image.load('game/ui/close.png').convert_alpha()
+        assets['minimize_button'] = pygame.image.load('game/ui/minimize.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading modal buttons: {e}")
+        assets['close_button'] = None
+        assets['minimize_button'] = None
+
     assets['font'] = pygame.font.Font(None, 24)
 
     return assets

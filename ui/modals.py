@@ -4,6 +4,50 @@ from data.config import *
 from core.entities.item import Item
 from core.entities.zombie import Zombie
 
+class BaseModal:
+    def __init__(self, surface, modal, assets, title):
+        self.surface = surface
+        self.modal = modal
+        self.assets = assets
+        self.title = title
+        self.modal_w, self.modal_h = self.get_modal_dimensions()
+        self.modal_x, self.modal_y = modal['position']
+        self.header_h = 35
+        self.minimized = modal.get('minimized', False)
+        self.modal_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h if self.minimized else self.modal_h)
+        self.close_button_rect = self.assets['close_button'].get_rect(topright=(self.modal_x + self.modal_w - 10, self.modal_y + 10))
+        self.minimize_button_rect = self.assets['minimize_button'].get_rect(topright=(self.close_button_rect.left - 10, self.modal_y + 10))
+
+    def get_modal_dimensions(self):
+        if self.modal['type'] == 'inventory':
+            return INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT
+        elif self.modal['type'] == 'status':
+            return STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT
+        elif self.modal['type'] == 'container':
+            return 300, 300
+        return 300, 300
+
+    def draw_header(self):
+        header_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h)
+        pygame.draw.rect(self.surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+        pygame.draw.rect(self.surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+        title_text = font.render(self.title, True, WHITE)
+        self.surface.blit(title_text, (self.modal_x + 10, self.modal_y + 10))
+        self.surface.blit(self.assets['close_button'], self.close_button_rect)
+        self.surface.blit(self.assets['minimize_button'], self.minimize_button_rect)
+
+    def draw_base(self):
+        height = self.header_h if self.minimized else self.modal_h
+        s = pygame.Surface((self.modal_w, height), pygame.SRCALPHA)
+        s.fill((20, 20, 20, 200))
+        self.surface.blit(s, (self.modal_x, self.modal_y))
+        pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)
+        self.draw_header()
+
+    def get_buttons(self):
+        return {'id': self.modal['id'], 'type': 'close', 'rect': self.close_button_rect}, \
+               {'id': self.modal['id'], 'type': 'minimize', 'rect': self.minimize_button_rect}
+
 # This module contains modal/window rendering functions previously in ui.py
 
 def get_inventory_slot_rect(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
@@ -48,23 +92,13 @@ def get_container_slot_rect(container_pos, i):
     return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
 
 # --- Modal Drawers (inventory/status/container/context) ---
-def draw_inventory_modal(surface, player, position, mouse_pos):
-    modal_w, modal_h = INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
+def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
+    base_modal = BaseModal(surface, modal, assets, "Inventory")
+    base_modal.draw_base()
+    close_button, minimize_button = base_modal.get_buttons()
 
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-    title_text = font.render("Inventory", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
+    if base_modal.minimized:
+        return None, close_button, minimize_button
 
     # FIX: inventory UI must show exactly 5 inventory slots (single horizontal row)
     INVENTORY_SLOTS = 5
@@ -72,7 +106,7 @@ def draw_inventory_modal(surface, player, position, mouse_pos):
     tooltip_info = None  # collect tooltip data to draw later (on top)
 
     for i in range(INVENTORY_SLOTS):
-        slot_rect = get_inventory_slot_rect(i, position)
+        slot_rect = get_inventory_slot_rect(i, modal['position'])
         pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
@@ -118,7 +152,7 @@ def draw_inventory_modal(surface, player, position, mouse_pos):
             pass
 
     # Backpack slot rendering unchanged (keeps current visuals)
-    backpack_slot_rect = get_backpack_slot_rect(position)
+    backpack_slot_rect = get_backpack_slot_rect(modal['position'])
     pygame.draw.rect(surface, (40, 40, 40), backpack_slot_rect, 0, 3)
     surface.blit(font.render("Backpack", True, WHITE), (backpack_slot_rect.x + 5, backpack_slot_rect.y - 20))
     if (backpack := player.backpack):
@@ -141,10 +175,10 @@ def draw_inventory_modal(surface, player, position, mouse_pos):
 
     # Belt
     belt_y_start = backpack_slot_rect.bottom + 10
-    surface.blit(font.render("Belt", True, WHITE), (modal_x + 10, belt_y_start))
+    surface.blit(font.render("Belt", True, WHITE), (base_modal.modal_x + 10, belt_y_start))
     for i in range(5):
         item = player.belt[i]
-        slot_rect = get_belt_slot_rect_in_modal(i, position)
+        slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
         pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
         num_text = font.render(str(i + 1), True, WHITE)
@@ -167,36 +201,29 @@ def draw_inventory_modal(surface, player, position, mouse_pos):
         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
             active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
     status_text = font.render(active_weapon_text, True, YELLOW)
-    surface.blit(status_text, (modal_x + 10, belt_y_start + 60))
+    surface.blit(status_text, (base_modal.modal_x + 10, belt_y_start + 60))
     
 
     # Return tooltip info so caller can draw it on top of everything
-    return tooltip_info
+    return tooltip_info, close_button, minimize_button
 
-def draw_container_view(surface, container_item, position):
+def draw_container_view(surface, container_item, modal, assets):
     if not container_item or not hasattr(container_item, 'inventory'):
         return
-    modal_w, modal_h = 300, 300
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-    title_text = font.render(f"{container_item.name} Contents", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
+    
+    base_modal = BaseModal(surface, modal, assets, f"{container_item.name} Contents")
+    base_modal.draw_base()
+    close_button, minimize_button = base_modal.get_buttons()
+
+    if base_modal.minimized:
+        return close_button, minimize_button
+
     rows, cols = 4, 5
     slot_size = 48
     padding = 10
-    start_x = modal_x + padding
-    start_y = modal_y + 40
-    max_visible_rows = int((modal_h - header_h - padding) / (slot_size + padding))
+    start_x = base_modal.modal_x + padding
+    start_y = base_modal.modal_y + 40
+    max_visible_rows = int((base_modal.modal_h - base_modal.header_h - padding) / (slot_size + padding))
     max_visible_slots = max_visible_rows * cols
     for i in range(min(container_item.capacity, max_visible_slots)):
         row = i // cols
@@ -209,29 +236,18 @@ def draw_container_view(surface, container_item, position):
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+    return close_button, minimize_button
 
+def draw_status_modal(surface, player, modal, assets, zombies_killed):
+    base_modal = BaseModal(surface, modal, assets, "Player Status")
+    base_modal.draw_base()
+    close_button, minimize_button = base_modal.get_buttons()
 
+    if base_modal.minimized:
+        return close_button, minimize_button
 
-
-def draw_status_modal(surface, player, position, zombies_killed):
-    modal_w, modal_h = STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT
-    modal_x, modal_y = position
-    modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
-    s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 200))
-    surface.blit(s, (modal_x, modal_y))
-    pygame.draw.rect(surface, WHITE, modal_rect, 1, 4)
-    header_h = 35
-    header_rect = pygame.Rect(modal_x, modal_y, modal_w, header_h)
-    pygame.draw.rect(surface, (60, 60, 60), header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-    pygame.draw.rect(surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-    title_text = font.render("Player Status", True, WHITE)
-    surface.blit(title_text, (modal_x + 10, modal_y + 10))
-    close_text = font.render("ESC to close", True, GRAY)
-    surface.blit(close_text, (modal_x + modal_w - close_text.get_width() - 10, modal_y + 10))
-
-    y_offset = modal_y + header_h + 10
-    x_offset = modal_x + 10
+    y_offset = base_modal.modal_y + base_modal.header_h + 10
+    x_offset = base_modal.modal_x + 10
 
     level_text = font.render(f"Level: {player.level}", True, WHITE)
     surface.blit(level_text, (x_offset, y_offset))
@@ -296,7 +312,7 @@ def draw_status_modal(surface, player, position, zombies_killed):
         zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
         surface.blit(zombies_killed_text, (x_offset, y_pos))
     
-   
+    return close_button, minimize_button
 
 def draw_context_menu(surface, menu_state, mouse_pos):
     if not menu_state['active']:
