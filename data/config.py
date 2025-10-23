@@ -3,8 +3,8 @@ import pygame
 pygame.init()
 
 # --- Scalable Screen Setup ---
-VIRTUAL_SCREEN_WIDTH = 1200
-VIRTUAL_GAME_HEIGHT = 700
+VIRTUAL_SCREEN_WIDTH = 1312
+VIRTUAL_GAME_HEIGHT = 720
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
@@ -36,14 +36,9 @@ title_font = pygame.font.Font(None, 32)
 # Game Constants
 TILE_SIZE = 16
 PLAYER_SPEED = 4
-ZOMBIE_SPEED = 0.1
+ZOMBIE_SPEED = 1
 ZOMBIE_DROP = 1
+ZOMBIES_PER_SPAWN = 5
 DECAY_RATE_SECONDS = 5.0 # How often Water/Food decay
 FOOD_DECAY_AMOUNT = 0.5 # Percentage loss per tick
 WATER_DECAY_AMOUNT = FOOD_DECAY_AMOUNT * 1.5 # Water depletes 1.5x faster
-
-# --- Custom Map Layout ---
-# Define the map using characters. '#' will be an obstacle.
-MAP_LAYOUT = [
-
-]

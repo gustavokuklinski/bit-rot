@@ -18,7 +18,7 @@ from assets.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
-from core.world import create_obstacles_from_map, spawn_initial_items, spawn_initial_zombies
+from core.world import parse_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
 
 class Game:
     def __init__(self):
@@ -30,6 +30,7 @@ class Game:
         self.assets = load_assets()
         self.game_state = 'MENU'
         self.running = True
+        self.map_manager = MapManager()
 
         self.player = None
         self.zombies = []
@@ -65,6 +66,62 @@ class Game:
 
         self.status_button_rect = None
         self.inventory_button_rect = None
+
+    def load_map(self, map_filename):
+        map_filepath = os.path.join(self.map_manager.map_folder, map_filename)
+        if not os.path.exists(map_filepath):
+            print(f"Error: Map file not found: {map_filepath}")
+            self.running = False
+            return
+
+        map_layout = load_map_from_file(map_filepath)
+        self.obstacles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout)
+
+        if player_spawn:
+            self.player.rect.topleft = player_spawn
+            self.player.x, self.player.y = player_spawn
+
+        self.items_on_ground = []
+        self.zombies = []
+        self.projectiles = []
+
+        self.items_on_ground = spawn_initial_items(self.obstacles, item_spawns)
+        self.zombies = spawn_initial_zombies(self.obstacles, zombie_spawns, self.items_on_ground)
+
+    def start_new_game(self):
+        player_data = parse_player_data()
+        self.player = Player(player_data=player_data)
+        self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
+        self.zombies_killed = 0
+        self.modals = []
+        
+        self.load_map(self.map_manager.current_map_filename)
+
+    def check_map_transition(self):
+        new_map = None
+        new_player_pos = None
+
+        if self.player.rect.left <= 0:
+            new_map = self.map_manager.transition('left')
+            if new_map:
+                new_player_pos = (GAME_WIDTH - self.player.rect.width - 1, self.player.rect.y)
+        elif self.player.rect.right >= GAME_WIDTH:
+            new_map = self.map_manager.transition('right')
+            if new_map:
+                new_player_pos = (1, self.player.rect.y)
+        elif self.player.rect.top <= 0:
+            new_map = self.map_manager.transition('top')
+            if new_map:
+                new_player_pos = (self.player.rect.x, GAME_HEIGHT - self.player.rect.height - 1)
+        elif self.player.rect.bottom >= GAME_HEIGHT:
+            new_map = self.map_manager.transition('bottom')
+            if new_map:
+                new_player_pos = (self.player.rect.x, 1)
+
+        if new_map and new_player_pos:
+            self.load_map(new_map)
+            self.player.rect.topleft = new_player_pos
+            self.player.x, self.player.y = new_player_pos
 
     def run(self):
         while self.running:
@@ -117,26 +174,27 @@ class Game:
     def run_playing(self):
         handle_input(self)
         update_game_state(self)
+        self.check_map_transition()
         draw_game(self)
         self._update_screen()
 
-    def start_new_game(self):
-        player_data = parse_player_data()
-        self.player = Player(player_data=player_data)
-        self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
-        self.zombies_killed = 0
-        self.obstacles = create_obstacles_from_map(MAP_LAYOUT)
-        self.items_on_ground = spawn_initial_items(self.obstacles)
-        self.zombies = spawn_initial_zombies()
-        self.projectiles = []
-        self.modals = []
-
     def _get_scaled_mouse_pos(self):
         real_mouse_pos = pygame.mouse.get_pos()
-        screen_w, screen_h = self.screen.get_size()
-        scale_x = VIRTUAL_SCREEN_WIDTH / screen_w
-        scale_y = VIRTUAL_GAME_HEIGHT / screen_h
-        return (real_mouse_pos[0] * scale_x, real_mouse_pos[1] * scale_y)
+        current_w, current_h = self.screen.get_size()
+
+        scale = min(current_w / VIRTUAL_SCREEN_WIDTH, current_h / VIRTUAL_GAME_HEIGHT)
+        
+        scaled_w, scaled_h = int(VIRTUAL_SCREEN_WIDTH * scale), int(VIRTUAL_GAME_HEIGHT * scale)
+        blit_x = (current_w - scaled_w) // 2
+        blit_y = (current_h - scaled_h) // 2
+
+        mouse_on_surf_x = real_mouse_pos[0] - blit_x
+        mouse_on_surf_y = real_mouse_pos[1] - blit_y
+
+        scaled_x = mouse_on_surf_x / scale
+        scaled_y = mouse_on_surf_y / scale
+
+        return (scaled_x, scaled_y)
 
     def _update_screen(self):
         current_w, current_h = self.screen.get_size()
@@ -149,3 +207,4 @@ class Game:
         self.screen.blit(scaled_surf, (blit_x, blit_y))
         pygame.display.flip()
         self.clock.tick(60)
+
