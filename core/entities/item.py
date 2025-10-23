@@ -115,7 +115,7 @@ class Item:
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
         min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
-        hp = int(props['hp']['value']) if 'hp' in props and 'value' in props['hp'] else None
+        hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
         return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
 
     @classmethod
@@ -145,7 +145,7 @@ class Item:
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
         min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
-        hp = int(props['hp']['value']) if 'hp' in props and 'value' in props['hp'] else None
+        hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
         return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
 
 class Projectile:
