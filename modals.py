@@ -38,7 +38,7 @@ def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     return pygame.Rect(x, y, slot_w, slot_h)
 
 def get_container_slot_rect(container_pos, i):
-    rows, cols = 4, 4
+    rows, cols = 4, 5
     slot_size = 48
     padding = 10
     start_x = container_pos[0] + padding
@@ -241,7 +241,7 @@ def draw_status_button(surface):
     return button_rect
 
 def draw_status_modal(surface, player, position, zombies_killed):
-    modal_w, modal_h = 300, 400
+    modal_w, modal_h = 200, 300
     modal_x, modal_y = position
     modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
     s = pygame.Surface((modal_w, modal_h), pygame.SRCALPHA)
@@ -259,6 +259,24 @@ def draw_status_modal(surface, player, position, zombies_killed):
 
     y_offset = modal_y + header_h + 10
     x_offset = modal_x + 10
+
+    # Load stat icons (lazy, per-frame safe)
+    stat_icons = {}
+    icon_files = {
+        "HP": "game/ui/hp.png",
+        "Stamina": "game/ui/stamina.png",
+        "Water": "game/ui/water.png",
+        "Food": "game/ui/food.png",
+        "Infection": "game/ui/infection.png",
+        "XP": "game/ui/xp.png"
+    }
+    for k, path in icon_files.items():
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            stat_icons[k] = pygame.transform.scale(img, (24, 24))
+        except Exception:
+            stat_icons[k] = None
+
     stats = [
         ("HP", player.health, RED),
         ("Stamina", player.stamina, GRAY),
@@ -269,17 +287,40 @@ def draw_status_modal(surface, player, position, zombies_killed):
     ]
     for i, (name, value, color) in enumerate(stats):
         y_pos = y_offset + i * 28
-        text = font.render(f"{name}:", True, WHITE)
-        surface.blit(text, (x_offset, y_pos))
+        icon = stat_icons.get(name)
+        if icon:
+            surface.blit(icon, (x_offset, y_pos))
+            label_x = x_offset + 28
+        else:
+            # fallback to text label if icon missing
+            text = font.render(f"{name}:", True, WHITE)
+            surface.blit(text, (x_offset, y_pos))
+            label_x = x_offset + 110
+
+        # draw the bar (positioned after icon/text)
+        bar_x = label_x + 12
         bar_width = int(100 * (value / 100))
-        bar_rect = pygame.Rect(x_offset + 110, y_pos + 5, bar_width, 10)
+        bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
         pygame.draw.rect(surface, color, bar_rect)
-        pygame.draw.rect(surface, WHITE, (x_offset + 110, y_pos + 5, 100, 10), 1)
+        pygame.draw.rect(surface, WHITE, (bar_x, y_pos + 5, 100, 10), 1)
     skill_y = y_pos + 35
-    surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
-    surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
-    zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
-    surface.blit(zombies_killed_text, (x_offset, skill_y + 80))
+
+    #surface.blit(font.render(f"Ranged Skill: {player.skill_ranged}/10", True, WHITE), (x_offset, skill_y))
+    #surface.blit(font.render(f"Melee Skill: {player.skill_melee}/10", True, WHITE), (x_offset, skill_y + 20))
+    try:
+        if '_kills_img' not in globals() or _kills_img is None:
+            _kills_img = pygame.image.load('game/zombies/sprites/dead.png').convert_alpha()
+            _kills_img = pygame.transform.scale(_kills_img, (24, 24))
+    except Exception:
+        _kills_img = None
+
+    if _kills_img:
+        surface.blit(_kills_img, (x_offset, skill_y))
+        num_text = font.render(f"{str(zombies_killed)} Killed", True, WHITE)
+        surface.blit(num_text, (x_offset + _kills_img.get_width() + 16, skill_y + 6))
+    else:
+        zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
+        surface.blit(zombies_killed_text, (x_offset, skill_y))
     
    
 

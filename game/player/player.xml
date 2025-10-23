@@ -3,7 +3,7 @@
 
     <stats>
         <health value="100" />
-        <speed value="2.0" />
+        <speed value="1.0" />
         <experience value="0" />
         <level value="1" />
     </stats>

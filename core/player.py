@@ -7,7 +7,7 @@ from core.items import Item
 
 # Note: player references UI helpers for slot rectangles for mouse detection.
 # We import functions from ui (which remain in the root ui.py)
-from ui import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from modals import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 
 class Player:
     def __init__(self, player_data=None):

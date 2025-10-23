@@ -22,6 +22,7 @@ DARK_GRAY = (30, 30, 30)
 PANEL_COLOR = (20, 20, 20)
 GAME_BG_COLOR = (25.9, 17.8, 22.4) # Distinct color for the game box
 
+
 # Fonts
 font = pygame.font.Font(None, 16)
 large_font = pygame.font.Font(None, 24)
