@@ -133,9 +133,7 @@ class Player:
         elif not is_moving and self.stamina < stamina_cap:
             self.stamina = min(stamina_cap, self.stamina + 0.3)
 
-        health_cap = self.max_health * (1 - self.infection / 100)
-        if self.health < health_cap:
-            self.health = min(health_cap, self.health + 0.1)
+
 
         if current_time - self.last_decay_time >= DECAY_RATE_SECONDS:
             self.water = max(0, self.water - WATER_DECAY_AMOUNT)
@@ -144,8 +142,6 @@ class Player:
             if self.water <= 0 or self.food <= 0:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
                 self.health = max(0, self.health)
-            if self.infection > 0:
-                self.health -= self.infection / 100 * 1
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:

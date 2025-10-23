@@ -207,4 +207,3 @@ class Game:
         self.screen.blit(scaled_surf, (blit_x, blit_y))
         pygame.display.flip()
         self.clock.tick(60)
-

@@ -31,7 +31,7 @@ STATUS_MODAL_HEIGHT = 300
 # Fonts
 font = pygame.font.Font(None, 16)
 large_font = pygame.font.Font(None, 24)
-title_font = pygame.font.Font(None, 32)
+title_font = pygame.font.Font(None, 24)
 
 # Game Constants
 TILE_SIZE = 16
