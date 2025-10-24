@@ -1,5 +1,5 @@
 # Bit Rot
-Bit Rot is a zombie survivor game.
+Bit Rot is a zombie survivor game inspired by Atari Adventure and Project Zomboid.
 
 **Basic controls**:
 - **W/A/S/D**: Walk
@@ -13,24 +13,12 @@ Bit Rot is a zombie survivor game.
 - **I**: Opens inventory and belt
 - **H**: Opens Status
 
+----
 
 **Mapping**
 - **P**: Player spawn
 - **Z**: Zombie spawn
 - **I**: Item map spawn
-
-**Game map Building example**
-
-```
-@@@W@W@@@
-@EM @CCS@
-@P      @
-@@@ @@@@@
-WN  L@B W
-@A   D  @
-@N   @T @
-@@@D@@W@@
-```
 
 **How Map Transitions Work**
 The system treats the numbers in the map filenames (map_TOP_RIGHT_BOTTOM_LEFT.csv) as Connection IDs. A connection is made between two maps if they have a matching ID on opposite sides.
@@ -55,6 +43,22 @@ This would create a chain of three maps you can walk through from left to right 
 For spawning and background the maps must have a:
 * map_0_1_0_0_spawn.csv
 * map_0_1_0_0_ground.csv
+
+----
+
+**Hacking the game**
+Install system wide
+```python
+$ sudo apt install python3-pygame
+$ python3 bit-rot.py
+```
+
+Install on virtual environment
+```python
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ python bit-rot.py
+```
 
 **Credits**
 Tiles: https://opengameart.org/content/1-bit-pack
