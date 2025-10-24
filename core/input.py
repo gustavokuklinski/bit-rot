@@ -108,10 +108,20 @@ def try_grab_item(game):
             target_inventory.append(closest_item)
             game.items_on_ground.remove(closest_item)
             print(f"Grabbed {closest_item.name}.")
+            # Record picked up item in map state
+            current_map_filename = game.map_manager.current_map_filename
+            if current_map_filename not in game.map_states:
+                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': []}
+            game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
             game.player.inventory.append(closest_item)
             game.items_on_ground.remove(closest_item)
             print(f"Grabbed {closest_item.name} into inventory.")
+            # Record picked up item in map state
+            current_map_filename = game.map_manager.current_map_filename
+            if current_map_filename not in game.map_states:
+                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': []}
+            game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
         else:
             print("No space to grab the item.")
 

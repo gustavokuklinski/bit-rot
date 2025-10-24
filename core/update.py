@@ -24,7 +24,7 @@ def update_game_state(game):
         if hit_zombie:
             if player_hit_zombie(game.player, hit_zombie):
                 zombies_to_remove.append(hit_zombie)
-                handle_zombie_death(game.player, hit_zombie, game.items_on_ground, game.obstacles)
+                handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles)
                 game.zombies_killed += 1
             projectiles_to_remove.append(p)
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
@@ -118,7 +118,7 @@ def player_hit_zombie(player, zombie):
     print(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False 
 
-def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
+def handle_zombie_death(game, zombie, items_on_ground_list, obstacles):
     """Processes loot drops when a zombie dies."""
     print(f"A {zombie.name} died. Creating corpse and checking for loot...")
     # create corpse at zombie position
@@ -137,4 +137,10 @@ def handle_zombie_death(player, zombie, items_on_ground_list, obstacles):
     if find_free_tile(corpse.rect, obstacles, items_on_ground_list, initial_pos=zombie.rect.topleft):
         items_on_ground_list.append(corpse)
 
-    player.add_xp(zombie.xp_value)
+    game.player.add_xp(zombie.xp_value)
+
+    # Record killed zombie in map state
+    current_map_filename = game.map_manager.current_map_filename
+    if current_map_filename not in game.map_states:
+        game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': []}
+    game.map_states[current_map_filename]['killed_zombies'].append(zombie.id)

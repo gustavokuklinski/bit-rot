@@ -67,6 +67,8 @@ class Game:
         self.status_button_rect = None
         self.inventory_button_rect = None
 
+        self.map_states = {}
+
     def load_map(self, map_filename):
         map_filepath = os.path.join(self.map_manager.map_folder, map_filename)
         if not os.path.exists(map_filepath):
@@ -81,12 +83,29 @@ class Game:
             self.player.rect.topleft = player_spawn
             self.player.x, self.player.y = player_spawn
 
-        self.items_on_ground = []
-        self.zombies = []
-        self.projectiles = []
+        if map_filename in self.map_states:
+            map_state = self.map_states[map_filename]
+            self.items_on_ground = map_state['items']
+            self.zombies = map_state['zombies']
+        else:
+            self.items_on_ground = spawn_initial_items(self.obstacles, item_spawns)
+            self.zombies = spawn_initial_zombies(self.obstacles, zombie_spawns, self.items_on_ground)
+            self.map_states[map_filename] = {
+                'items': self.items_on_ground,
+                'zombies': self.zombies,
+                'killed_zombies': [],
+                'picked_up_items': []
+            }
+        
+        # Filter out killed zombies
+        if map_filename in self.map_states:
+            killed_zombie_ids = set(self.map_states[map_filename]['killed_zombies'])
+            self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
 
-        self.items_on_ground = spawn_initial_items(self.obstacles, item_spawns)
-        self.zombies = spawn_initial_zombies(self.obstacles, zombie_spawns, self.items_on_ground)
+        # Filter out picked up items
+        if map_filename in self.map_states:
+            picked_up_item_ids = set(self.map_states[map_filename]['picked_up_items'])
+            self.items_on_ground = [item for item in self.items_on_ground if item.id not in picked_up_item_ids]
 
     def start_new_game(self):
         player_data = parse_player_data()
@@ -94,6 +113,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
         self.zombies_killed = 0
         self.modals = []
+        self.map_states = {}
         
         self.load_map(self.map_manager.current_map_filename)
 

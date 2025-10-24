@@ -2,6 +2,7 @@ import os
 import random
 import xml.etree.ElementTree as ET
 import pygame
+import uuid
 
 from data.config import TILE_SIZE, WHITE
 
@@ -12,6 +13,7 @@ class Item:
     def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
+        self.id = str(uuid.uuid4())
         self.durability = durability
         self.load = load
         self.capacity = capacity

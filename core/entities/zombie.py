@@ -3,6 +3,7 @@ import random
 import math
 import pygame
 import xml.etree.ElementTree as ET
+import uuid
 
 from data.config import TILE_SIZE, DARK_GRAY, RED, ZOMBIE_SPEED, ZOMBIE_DROP
 
@@ -12,6 +13,7 @@ class Zombie:
     def __init__(self, x, y, template):
         self.x = x
         self.y = y
+        self.id = str(uuid.uuid4())
         self.name = template.get('name', 'Zombie')
         self.max_health = template.get('health', 10.0)
         self.health = self.max_health
