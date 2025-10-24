@@ -1,0 +1,5 @@
+<map name="library" type="maptile" char="L" is_obstacle="true">
+    <visuals>
+        <sprite file="library.png" />
+    </visuals>
+</map>

@@ -1,0 +1,5 @@
+<map name="bed" type="maptile" char="E" is_obstacle="false">
+    <visuals>
+        <sprite file="bed.png" />
+    </visuals>
+</map>

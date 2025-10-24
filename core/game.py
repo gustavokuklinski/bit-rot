@@ -18,7 +18,7 @@ from assets.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
-from core.world import parse_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
+from core.world import TileManager, parse_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
 
 class Game:
     def __init__(self):
@@ -31,12 +31,14 @@ class Game:
         self.game_state = 'MENU'
         self.running = True
         self.map_manager = MapManager()
+        self.tile_manager = TileManager()
 
         self.player = None
         self.zombies = []
         self.items_on_ground = []
         self.projectiles = []
         self.obstacles = []
+        self.renderable_tiles = []
         self.zombies_killed = 0
 
         self.modals = []
@@ -77,7 +79,7 @@ class Game:
             return
 
         map_layout = load_map_from_file(map_filepath)
-        self.obstacles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout)
+        self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout, self.tile_manager)
 
         if player_spawn:
             self.player.rect.topleft = player_spawn

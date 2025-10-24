@@ -3,6 +3,11 @@ import os
 
 PLAYER_XML_PATH = 'game/player/player.xml'
 
+def parse_xml_file(filepath):
+    """Parses a generic XML file and returns the ElementTree object."""
+    tree = ET.parse(filepath)
+    return tree
+
 def parse_player_data():
     """Parses the player XML file and returns a dictionary of attributes."""
     tree = ET.parse(PLAYER_XML_PATH)

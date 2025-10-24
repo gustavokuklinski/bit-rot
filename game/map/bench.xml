@@ -1,0 +1,5 @@
+<map name="bench" type="maptile" char="N" is_obstacle="false">
+    <visuals>
+        <sprite file="bench.png" />
+    </visuals>
+</map>

@@ -19,6 +19,20 @@ Bit Rot is a zombie survivor game.
 - **Z**: Zombie spawn
 - **I**: Item map spawn
 
+**Game map Building example**
+
+```
+@@@W@W@@@
+@EM @CCS@
+@P      @
+@@@ @@@@@
+WN  L@B W
+@A   D  @
+@N   @T @
+@@@D@@W@@
+```
+
+
 **How Map Transitions Work**
 The system treats the numbers in the map filenames (map_TOP_RIGHT_BOTTOM_LEFT.txt) as Connection IDs. A connection is made between two maps if they have a matching ID on opposite sides.
 
@@ -38,7 +52,6 @@ You can create chains of maps this way:
 * map_0_0_0_2.txt (left connection 2)
 
 This would create a chain of three maps you can walk through from left to right and back.
-
 
 **Credits**
 Tiles: https://opengameart.org/content/1-bit-pack

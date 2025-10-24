@@ -170,7 +170,7 @@ class Zombie:
         # separation
         separation_x = separation_y = 0
         SEPARATION_RADIUS = TILE_SIZE
-        SEPARATION_FORCE = 0.5
+        SEPARATION_FORCE = 0.2
         for other in other_zombies:
             if other is self: continue
             dsq = (self.x - other.x)**2 + (self.y - other.y)**2

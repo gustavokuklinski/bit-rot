@@ -13,6 +13,11 @@ def draw_game(game):
     for obstacle in game.obstacles:
         draw_rect = obstacle.move(GAME_OFFSET_X, 0)
         pygame.draw.rect(game.virtual_screen, DARK_GRAY, draw_rect)
+    
+    for image, rect in game.renderable_tiles:
+        draw_rect = rect.move(GAME_OFFSET_X, 0)
+        game.virtual_screen.blit(image, draw_rect)
+
 
     for item in game.items_on_ground:
         draw_rect = item.rect.move(GAME_OFFSET_X, 0)
