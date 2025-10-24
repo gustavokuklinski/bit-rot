@@ -16,6 +16,17 @@ def handle_input(game):
             pygame.quit()
             sys.exit()
 
+        # --- ADD THIS BLOCK FOR ZOOM ---
+        if event.type == pygame.MOUSEWHEEL:
+            if event.y > 0: # Scroll up to zoom in
+                game.zoom_level += 0.1
+            elif event.y < 0: # Scroll down to zoom out
+                game.zoom_level -= 0.1
+            # Clamp the zoom level to reasonable values
+            game.zoom_level = max(1.5, min(game.zoom_level, 3.5))
+       
+        # --- END OF ZOOM BLOCK ---
+
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 
@@ -575,12 +586,11 @@ def handle_attack(game, mouse_pos):
         if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:
             if weapon.load > 0 and weapon.durability > 0:
                 # Base direction towards the mouse
-                base_target_x = mouse_pos[0] - GAME_OFFSET_X
-                base_target_y = mouse_pos[1]
+                target_world_x, target_world_y = game.screen_to_world(mouse_pos)
                 
-                # Calculate base angle
-                dx = base_target_x - game.player.rect.centerx
-                dy = base_target_y - game.player.rect.centery
+                # 2. Calculate direction from player's world pos to mouse's world pos
+                dx = target_world_x - game.player.rect.centerx
+                dy = target_world_y - game.player.rect.centery
                 base_angle = math.atan2(dy, dx)
 
                 for _ in range(weapon.pellets):
@@ -607,8 +617,9 @@ def handle_attack(game, mouse_pos):
             if game.player.stamina >= 10:
                 game.player.stamina -= 10
                 game.player.melee_swing_timer = 10
-                player_screen_x = game.player.rect.centerx + GAME_OFFSET_X
-                player_screen_y = game.player.rect.centery
+                player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
+                player_screen_y = GAME_HEIGHT / 2
+                
                 dx_swing = mouse_pos[0] - player_screen_x
                 dy_swing = mouse_pos[1] - player_screen_y
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)

@@ -182,6 +182,6 @@ class Projectile:
             return True
         return False
 
-    def draw(self, surface, game_offset_x=0):
-        draw_center = (int(self.x) + game_offset_x, int(self.y))
+    def draw(self, surface, offset_x=0, offset_y=0):
+        draw_center = (int(self.x) + offset_x, int(self.y) + offset_y)
         pygame.draw.circle(surface, self.color, draw_center, 5)

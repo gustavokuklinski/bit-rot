@@ -96,31 +96,36 @@ class Player:
         self.y = max(0, min(self.y, GAME_HEIGHT - TILE_SIZE))
         self.rect.topleft = (int(self.x), int(self.y))
 
-    def draw(self, surface):
-        draw_rect = self.rect.move(GAME_OFFSET_X, 0)
+    def draw(self, surface, offset_x, offset_y):
+        draw_rect = self.rect.move(offset_x, offset_y)
+        
         if self.image:
             surface.blit(self.image, draw_rect)
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
-        # melee arc
+
+        # Melee arc
         if self.melee_swing_timer > 0:
             swing_radius = TILE_SIZE * 1.5
-            swing_color = YELLOW
-            swing_thickness = 3
-            center_x = self.x + TILE_SIZE // 2 + GAME_OFFSET_X
-            center_y = self.y + TILE_SIZE // 2
-            start_angle = self.melee_swing_angle - (3.1415/4)
-            end_angle = self.melee_swing_angle + (3.1415/4)
-            pygame.draw.arc(surface, swing_color,
-                            (center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2),
-                            start_angle, end_angle, swing_thickness)
+            center_x, center_y = draw_rect.center
+            start_angle = self.melee_swing_angle - (3.1415 / 4)
+            end_angle = self.melee_swing_angle + (3.1415 / 4)
+            arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
+            pygame.draw.arc(surface, YELLOW, arc_bounds, start_angle, end_angle, 3)
             self.melee_swing_timer -= 1
+
+        # Reloading bar
         if self.is_reloading:
             progress = 1.0 - (self.reload_timer / self.reload_duration)
-            bar_width = int(TILE_SIZE * 2 * progress)
-            bar_rect = pygame.Rect(draw_rect.left - TILE_SIZE // 2, draw_rect.top - 10, bar_width, 5)
-            bg_bar_rect = pygame.Rect(draw_rect.left - TILE_SIZE // 2, draw_rect.top - 10, TILE_SIZE * 2, 5)
+            bar_total_width = TILE_SIZE * 2
+            bar_x = draw_rect.centerx - (bar_total_width / 2)
+            bar_y = draw_rect.top - 10
+            
+            bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
             pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+            
+            bar_progress_width = int(bar_total_width * progress)
+            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
             pygame.draw.rect(surface, YELLOW, bar_rect)
 
     def update_stats(self):

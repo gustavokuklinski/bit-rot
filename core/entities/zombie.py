@@ -133,18 +133,24 @@ class Zombie:
             print(f"Warning: Could not load zombie sprite '{sprite_file}': {e}")
             return None
 
-    def draw(self, surface, game_offset_x=0):
-        draw_rect = self.rect.move(game_offset_x, 0)
+    def draw(self, surface, offset_x, offset_y):
+        draw_rect = self.rect.move(offset_x, offset_y)
+        
         if self.image:
             surface.blit(self.image, draw_rect)
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
+        
         if self.show_health_bar_timer > 0:
-            bg_bar_rect = pygame.Rect(draw_rect.left, draw_rect.top - 10, TILE_SIZE, 5)
+            bar_y = draw_rect.top - 7
+            bg_bar_rect = pygame.Rect(draw_rect.left, bar_y, TILE_SIZE, 5)
             pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+            
             health_percentage = max(0, self.health / self.max_health)
-            health_bar_rect = pygame.Rect(draw_rect.left, draw_rect.top - 10, int(health_percentage * TILE_SIZE), 5)
-            pygame.draw.rect(surface, (50,200,50), health_bar_rect)
+            health_bar_width = int(health_percentage * TILE_SIZE)
+            health_bar_rect = pygame.Rect(draw_rect.left, bar_y, health_bar_width, 5)
+            pygame.draw.rect(surface, (50, 200, 50), health_bar_rect)
+            
             self.show_health_bar_timer -= 1
 
     def move_towards(self, target_rect, obstacles, other_zombies):

@@ -6,41 +6,66 @@ from ui.modals import draw_inventory_modal, draw_container_view, draw_status_mod
 from ui.helpers import draw_inventory_button, draw_status_button
 
 def draw_game(game):
+    # Clear the main screen that holds the game and UI panels
     game.virtual_screen.fill(PANEL_COLOR)
-    game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
-    game.virtual_screen.fill(GAME_BG_COLOR, game_rect)
 
-    for obstacle in game.obstacles:
-        draw_rect = obstacle.move(GAME_OFFSET_X, 0)
-        pygame.draw.rect(game.virtual_screen, DARK_GRAY, draw_rect)
-    
+    # --- World Rendering with Pixelated Zoom ---
+
+    # 1. Create a temporary surface for the world view.
+    # Its size is the virtual screen size divided by the zoom level.
+    zoom = game.zoom_level
+    view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
+    view_h = int(VIRTUAL_GAME_HEIGHT / zoom)
+    world_view_surface = pygame.Surface((view_w, view_h))
+    world_view_surface.fill(GAME_BG_COLOR) # Set the world background color
+
+    # 2. Calculate a single camera offset to center the player.
+    offset_x = view_w / 2 - game.player.rect.centerx
+    offset_y = view_h / 2 - game.player.rect.centery
+
+    # --- ADD THIS BLOCK to clamp the camera offset ---
+    # Prevent the camera from showing areas outside the map boundaries
+    offset_x = min(0, offset_x) # Clamp left
+    offset_y = min(0, offset_y) # Clamp top
+    offset_x = max(view_w - game.current_map_width, offset_x)   # Clamp right
+    offset_y = max(view_h - game.current_map_height, offset_y)  # Clamp bottom
+    # --- END ---
+
+    # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     for image, rect in game.renderable_tiles:
-        draw_rect = rect.move(GAME_OFFSET_X, 0)
-        game.virtual_screen.blit(image, draw_rect)
-
+        world_view_surface.blit(image, rect.move(offset_x, offset_y))
 
     for item in game.items_on_ground:
-        draw_rect = item.rect.move(GAME_OFFSET_X, 0)
+        draw_pos = item.rect.move(offset_x, offset_y)
         if getattr(item, 'image', None):
-            game.virtual_screen.blit(item.image, draw_rect)
-        else: # Fallback to drawing a colored square
-            pygame.draw.rect(game.virtual_screen, getattr(item, 'color', WHITE), draw_rect)
-    
+            world_view_surface.blit(item.image, draw_pos)
+        else:
+            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+
     for p in game.projectiles:
-        try:
-            p.draw(game.virtual_screen, GAME_OFFSET_X)
-        except Exception:
-            pass
+        p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        zombie.draw(game.virtual_screen, GAME_OFFSET_X)
-    
-    game.player.draw(game.virtual_screen)
-    
+        zombie.draw(world_view_surface, offset_x, offset_y)
+
+    game.player.draw(world_view_surface, offset_x, offset_y)
+
+    # 4. Scale the entire world view surface up to the final game size.
+    scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
+
+    # 5. Blit the scaled world onto the main virtual screen.
+    game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
+    game.virtual_screen.blit(scaled_world, game_rect)
+
+    # --- UI & Effects Rendering (Unaffected by Zoom) ---
+    # These elements are drawn on top of the scaled world, so they remain sharp.
+
+    # Gun flash effect is drawn relative to the screen center, where the player is.
     if game.player.gun_flash_timer > 0:
-        center_x = game.player.rect.centerx + GAME_OFFSET_X
-        center_y = game.player.rect.centery
-        pygame.draw.circle(game.virtual_screen, YELLOW, (center_x, center_y), TILE_SIZE // 4)
+        center_x = GAME_OFFSET_X + GAME_WIDTH // 2
+        center_y = GAME_HEIGHT // 2
+        flash_radius = (TILE_SIZE // 2) * zoom # Scale flash size with zoom
+        pygame.draw.circle(game.virtual_screen, YELLOW, (center_x, center_y), flash_radius)
         game.player.gun_flash_timer -= 1
 
     top_tooltip = None

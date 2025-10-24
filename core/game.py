@@ -14,7 +14,6 @@ from ui.helpers import draw_menu, draw_game_over, get_belt_slot_rect_in_modal, g
 from ui.modals import draw_inventory_modal, draw_container_view, draw_status_modal, draw_context_menu
 from data.xml_parser import parse_player_data
 from assets.assets import load_assets
-
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
@@ -68,8 +67,10 @@ class Game:
 
         self.status_button_rect = None
         self.inventory_button_rect = None
-
+        self.camera = None
         self.map_states = {}
+        self.current_map_width = 0   # <-- Add this
+        self.current_map_height = 0  # <-- Add this
 
     def load_map(self, map_filename):
         map_filepath = os.path.join(self.map_manager.map_folder, map_filename)
@@ -79,6 +80,12 @@ class Game:
             return
 
         map_layout = load_map_from_file(map_filepath)
+        # --- ADD THESE LINES to calculate and store map dimensions ---
+        if map_layout:
+            self.current_map_width = len(map_layout[0]) * TILE_SIZE
+            self.current_map_height = len(map_layout) * TILE_SIZE
+        # --- END ---
+
         self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout, self.tile_manager)
 
         if player_spawn:
@@ -112,6 +119,9 @@ class Game:
     def start_new_game(self):
         player_data = parse_player_data()
         self.player = Player(player_data=player_data)
+        # --- ADD THESE LINES ---
+        self.zoom_level = 1.5 # Initial zoom
+        # --- END ---
         self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
         self.zombies_killed = 0
         self.modals = []
@@ -217,6 +227,29 @@ class Game:
         scaled_y = mouse_on_surf_y / scale
 
         return (scaled_x, scaled_y)
+
+
+    def screen_to_world(self, screen_pos):
+        """Converts screen coordinates to world coordinates."""
+        screen_x, screen_y = screen_pos
+        
+        # Adjust for the game area's offset on the virtual screen
+        screen_x -= GAME_OFFSET_X
+        
+        # Calculate mouse position relative to the screen center (where the player is)
+        relative_screen_x = screen_x - (GAME_WIDTH / 2)
+        relative_screen_y = screen_y - (GAME_HEIGHT / 2)
+        
+        # Scale this relative position down by the zoom level to get world offset
+        relative_world_x = relative_screen_x / self.zoom_level
+        relative_world_y = relative_screen_y / self.zoom_level
+        
+        # Add to the player's world position to get the final world coordinate
+        world_x = self.player.rect.centerx + relative_world_x
+        world_y = self.player.rect.centery + relative_world_y
+        
+        return (world_x, world_y)
+
 
     def _update_screen(self):
         current_w, current_h = self.screen.get_size()
