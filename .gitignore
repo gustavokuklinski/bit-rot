@@ -1,3 +1,6 @@
 .venv
 .bitrotenv
 __pycache__
+build
+dist
+bit-rot.spec
