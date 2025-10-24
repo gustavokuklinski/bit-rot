@@ -103,48 +103,90 @@ class MapManager:
         print(f"Warning: No map found for transition '{direction}' from {self.current_map_filename}")
         return None
 
-def parse_map_layout(layout, tile_manager):
+def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_manager):
     """
-    Creates lists of tiles, obstacles, and spawn points from a text-based map layout.
-    Uses a TileManager to interpret the characters.
+    Creates lists of tiles, obstacles, and spawn points from layered map layouts.
+    - ground_layout defines floor tiles (never obstacles).
+    - base_layout defines walls and structural obstacles.
+    - spawn_layout defines player, zombie, and item start positions.
     """
     obstacles = []
-    renderable_tiles = []
+    renderable_tiles = [] # List to store (image, rect) tuples for drawing
     player_spawn = None
     zombie_spawns = []
     item_spawns = []
-    transition_tiles = []
-    expected_width = GAME_WIDTH // TILE_SIZE
-    expected_height = GAME_HEIGHT // TILE_SIZE
 
-    map_height_in_tiles = len(layout)
-    map_width_in_tiles = len(layout[0]) if map_height_in_tiles > 0 else 0
+    # Use dimensions from the base layout (assuming all layers match)
+    map_height = len(base_layout)
+    map_width = len(base_layout[0]) if map_height > 0 else 0
 
-    if len(layout) != expected_height:
-        print(f"Warning: Map layout has {len(layout)} rows, expected {expected_height}")
+    if not map_height or not map_width:
+        print("Error: Base map layout is empty.")
+        return [], [], None, [], []
 
-    for y, row in enumerate(layout):
-        if len(row) != expected_width:
-            print(f"Warning: Map layout row {y} has length {len(row)}, expected {expected_width}")
-        
+    # 1. Process Ground Layer (Floor Tiles)
+    if len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
+        print("Warning: Ground layout dimensions mismatch base layout.")
+    for y, row in enumerate(ground_layout):
+         if y >= map_height: break # Prevent index error if mismatch
+         for x, char in enumerate(row):
+            if x >= map_width: break
+            if char and char != ' ': # Ignore empty cells in ground layer
+                if char in tile_manager.definitions:
+                    tile_def = tile_manager.definitions[char]
+                    if tile_def['is_obstacle']:
+                         print(f"Warning: Ground layer tile '{char}' at ({x},{y}) is marked as obstacle. Ground tiles should not be obstacles.")
+                    pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+                    rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
+                    renderable_tiles.append((tile_def['image'], rect))
+                else:
+                    print(f"Warning: Undefined ground tile character '{char}' at ({x},{y}).")
+
+    # 2. Process Base Layer (Walls, Obstacles)
+    # This adds obstacle rects and potentially overwrites ground tiles if needed
+    if len(base_layout) != map_height or (map_height > 0 and len(base_layout[0]) != map_width):
+        print("Error: Base layout dimensions are inconsistent.") # Base MUST match expected size
+        # Handle this error case as needed, maybe return empty
+    for y, row in enumerate(base_layout):
+        if y >= map_height: break
         for x, char in enumerate(row):
-            pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
-            
-            if char in tile_manager.definitions:
-                tile_def = tile_manager.definitions[char]
+            if x >= map_width: break
+            if char and char != ' ': # Ignore empty cells in base layer
+                pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                 rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
-                renderable_tiles.append((tile_def['image'], rect))
-                if tile_def['is_obstacle']:
-                    obstacles.append(rect)
 
-            elif char == '#':
-                obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-            elif char == 'P':
+                if char in tile_manager.definitions:
+                    tile_def = tile_manager.definitions[char]
+                    renderable_tiles.append((tile_def['image'], rect)) # Add visuals
+                    if tile_def['is_obstacle']:
+                        obstacles.append(rect) # Add collision rect
+                #elif char == '#': # Keep supporting '#' as a generic obstacle
+                #     obstacles.append(rect)
+                else:
+                    print(f"Warning: Undefined base tile character '{char}' at ({x},{y}).")
+
+
+    # 3. Process Spawn Layer (P, Z, I)
+    if len(spawn_layout) != map_height or (map_height > 0 and len(spawn_layout[0]) != map_width):
+        print("Warning: Spawn layout dimensions mismatch base layout.")
+    for y, row in enumerate(spawn_layout):
+        if y >= map_height: break
+        for x, char in enumerate(row):
+            if x >= map_width: break
+            if char == 'P':
+                if player_spawn:
+                     print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
                 player_spawn = (x * TILE_SIZE, y * TILE_SIZE)
             elif char == 'Z':
                 zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
             elif char == 'I':
                 item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+            # Ignore other characters in the spawn layer
+
+    if not player_spawn:
+        print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at default position.")
+        # Optionally set a default spawn like center of map or (0,0)
+        # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
 
     return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns
 
@@ -166,24 +208,49 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground):
     spacing_obstacles = []
 
     for pos in zombie_spawns:
-        for _ in range(ZOMBIES_PER_SPAWN):
-            zombie = Zombie.create_random(pos[0], pos[1])
-            
-            current_obstacles = obstacles + spacing_obstacles
-            
-            if find_free_tile(zombie.rect, current_obstacles, all_spawned_entities, initial_pos=pos):
-                zombie.x = zombie.rect.x
-                zombie.y = zombie.rect.y
+        # Spawn one zombie per 'Z' marker, or adjust ZOMBIES_PER_SPAWN if needed
+        # ZOMBIES_PER_SPAWN = 1 # Usually 1 per marker is intended
+        # for _ in range(ZOMBIES_PER_SPAWN):
+            zombie = Zombie.create_random(pos[0], pos[1]) # Create zombie first
+
+            # Use current obstacles + already spawned items + temp spacing rects
+            current_collision_rects = obstacles + [e.rect for e in all_spawned_entities] + spacing_obstacles
+
+            # Try to place the zombie using find_free_tile logic if needed,
+            # but usually spawning directly at 'pos' is intended if 'pos' is valid.
+            # Check if the designated spot 'pos' itself is blocked
+            spawn_rect = pygame.Rect(pos[0], pos[1], TILE_SIZE, TILE_SIZE)
+            initial_collision = any(spawn_rect.colliderect(ob) for ob in obstacles)
+
+            if not initial_collision:
+                zombie.rect.topleft = pos # Place at the exact spot
+                zombie.x, zombie.y = pos[0], pos[1]
                 zombies.append(zombie)
-                all_spawned_entities.append(zombie)
-                spacing_obstacles.append(zombie.rect.inflate(TILE_SIZE, TILE_SIZE))
+                all_spawned_entities.append(zombie) # Add to list for next checks
+                # Add a temporary larger rect to prevent others spawning too close
+                spacing_obstacles.append(zombie.rect.inflate(TILE_SIZE // 2, TILE_SIZE // 2))
             else:
-                print(f"Warning: Could not spawn zombie near {pos}.")
+                 print(f"Warning: Zombie spawn point {pos} is blocked by an obstacle. Trying nearby...")
+                 # Fallback: Try finding a free tile near the original pos
+                 if find_free_tile(zombie.rect, obstacles, all_spawned_entities, initial_pos=pos):
+                     zombie.x = zombie.rect.x
+                     zombie.y = zombie.rect.y
+                     zombies.append(zombie)
+                     all_spawned_entities.append(zombie)
+                     spacing_obstacles.append(zombie.rect.inflate(TILE_SIZE // 2, TILE_SIZE // 2))
+                 else:
+                     print(f"Warning: Could not find free space to spawn zombie near {pos}.")
     return zombies
 
 def load_map_from_file(filepath):
     """Loads a map layout from a CSV file."""
-    with open(filepath, 'r', newline='') as f:
-        reader = csv.reader(f)
-        # The csv reader automatically creates a list of lists of characters
-        return list(reader)
+    layout = []
+    try:
+        with open(filepath, 'r', newline='') as f:
+            reader = csv.reader(f)
+            layout = list(reader)
+    except FileNotFoundError:
+        print(f"Error: Map layer file not found: {filepath}")
+    except Exception as e:
+        print(f"Error reading map layer file {filepath}: {e}")
+    return layout # Return list (possibly empty if file not found/error)

@@ -23,7 +23,7 @@ def handle_input(game):
             elif event.y < 0: # Scroll down to zoom out
                 game.zoom_level -= 0.1
             # Clamp the zoom level to reasonable values
-            game.zoom_level = max(1.5, min(game.zoom_level, 3.5))
+            game.zoom_level = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
        
         # --- END OF ZOOM BLOCK ---
 
@@ -658,7 +658,7 @@ def handle_attack(game, mouse_pos):
                             game.zombies_killed += 1
                         hit_a_zombie = True
                         break
-                        
+
                 if not hit_a_zombie: print("Swung and missed!")
             else: print("Too tired to swing!")
 

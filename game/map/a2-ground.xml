@@ -1,0 +1,5 @@
+<map name="a2-ground" type="maptile" char="=" is_obstacle="false">
+    <visuals>
+        <sprite file="a2-ground.png" />
+    </visuals>
+</map>

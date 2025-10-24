@@ -17,7 +17,7 @@ from assets.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
-from core.world import TileManager, parse_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
+from core.world import TileManager, parse_layered_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
 
 class Game:
     def __init__(self):
@@ -72,36 +72,82 @@ class Game:
         self.camera = None
         self.map_states = {}
 
-    def load_map(self, map_filename):
-        map_filepath = os.path.join(self.map_manager.map_folder, map_filename)
-        if not os.path.exists(map_filepath):
-            print(f"Error: Map file not found: {map_filepath}")
-            self.running = False
-            return None
+    def load_map(self, base_map_filename):
+        """Loads map data from base, ground, and spawn CSV layer files."""
+        print(f"Loading map layers for: {base_map_filename}")
 
-        map_layout = load_map_from_file(map_filepath)
+        # Construct filenames for the layers
+        base_filepath = os.path.join(self.map_manager.map_folder, base_map_filename)
+        ground_filename = base_map_filename.replace(".csv", "_ground.csv")
+        ground_filepath = os.path.join(self.map_manager.map_folder, ground_filename)
+        spawn_filename = base_map_filename.replace(".csv", "_spawn.csv")
+        spawn_filepath = os.path.join(self.map_manager.map_folder, spawn_filename)
 
-       
-        self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout, self.tile_manager)
+        # Load the data from each layer file
+        base_layout = load_map_from_file(base_filepath)
+        ground_layout = load_map_from_file(ground_filepath)
+        spawn_layout = load_map_from_file(spawn_filepath)
+
+        # Basic validation: Check if base layout loaded successfully
+        if not base_layout:
+            print(f"Error: Failed to load base map layer: {base_filepath}")
+            self.running = False # Or handle error appropriately
+            return None # Return None to indicate failure
+
+        # If ground/spawn layers are missing, create empty layouts of the same size
+        map_height = len(base_layout)
+        map_width = len(base_layout[0]) if map_height > 0 else 0
+
+        if not ground_layout:
+            print(f"Warning: Ground layer not found or empty ({ground_filepath}). Creating blank ground layer.")
+            ground_layout = [[' ' for _ in range(map_width)] for _ in range(map_height)]
+        elif len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width) :
+            print(f"Warning: Ground layer dimensions mismatch base layer. Check {ground_filepath}")
+            # Attempt to use it anyway, parser will warn further
+
+        if not spawn_layout:
+            print(f"Warning: Spawn layer not found or empty ({spawn_filepath}). Creating blank spawn layer.")
+            spawn_layout = [[' ' for _ in range(map_width)] for _ in range(map_height)]
+        elif len(spawn_layout) != map_height or (map_height > 0 and len(spawn_layout[0]) != map_width):
+            print(f"Warning: Spawn layer dimensions mismatch base layer. Check {spawn_filepath}")
+            # Attempt to use it anyway, parser will warn further
+
+
+        # Update map dimensions (important for camera clamping if you use it)
+        self.current_map_width = map_width * TILE_SIZE
+        self.current_map_height = map_height * TILE_SIZE
+
+        # Call the new layered parser function
+        self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = \
+            parse_layered_map_layout(base_layout, ground_layout, spawn_layout, self.tile_manager)
+
+        # --- Rest of the function (loading state, spawning entities) remains the same ---
+        map_filename = base_map_filename # Use base filename as the key for state
 
         if map_filename in self.map_states:
             map_state = self.map_states[map_filename]
-            self.items_on_ground = map_state['items']
-            self.zombies = map_state['zombies']
+            # Load saved state for items and zombies
+            self.items_on_ground = map_state.get('items', [])
+            self.zombies = map_state.get('zombies', [])
+            # Apply filters for killed/picked up items
+            killed_zombie_ids = set(map_state.get('killed_zombies', []))
+            self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
+            picked_up_item_ids = set(map_state.get('picked_up_items', []))
+            self.items_on_ground = [item for item in self.items_on_ground if item.id not in picked_up_item_ids]
+
         else:
+            # First time visiting this map: Spawn initial entities
             self.items_on_ground = spawn_initial_items(self.obstacles, item_spawns)
             self.zombies = spawn_initial_zombies(self.obstacles, zombie_spawns, self.items_on_ground)
+            # Initialize map state
             self.map_states[map_filename] = {
-                'items': self.items_on_ground, 'zombies': self.zombies,
-                'killed_zombies': [], 'picked_up_items': []
+                'items': self.items_on_ground[:], # Store copies
+                'zombies': self.zombies[:],       # Store copies
+                'killed_zombies': [],
+                'picked_up_items': []
             }
-        
-        killed_zombie_ids = set(self.map_states[map_filename].get('killed_zombies', []))
-        self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
-        
-        picked_up_item_ids = set(self.map_states[map_filename].get('picked_up_items', []))
-        self.items_on_ground = [item for item in self.items_on_ground if item.id not in picked_up_item_ids]
 
+        # Return the player spawn point found in the spawn layer
         return player_spawn
 
     def start_new_game(self):

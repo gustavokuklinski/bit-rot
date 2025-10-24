@@ -1,5 +1,0 @@
-<map name="border" type="maptile" char="0" is_obstacle="false">
-    <visuals>
-        <sprite file="border.png" />
-    </visuals>
-</map>
