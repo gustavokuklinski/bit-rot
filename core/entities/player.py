@@ -81,20 +81,46 @@ class Player:
         print(f"Leveled up to level {self.level}!")
 
     def update_position(self, obstacles, zombies):
-        new_x = self.x + self.vx
-        new_y = self.y + self.vy
-        temp_rect = self.rect.copy()
-        temp_rect.x = new_x
-        collided_with_wall_x = any(temp_rect.colliderect(ob) for ob in obstacles)
-        if not collided_with_wall_x:
-            self.x = new_x
-        temp_rect.y = new_y
-        collided_with_wall_y = any(temp_rect.colliderect(ob) for ob in obstacles)
-        if not collided_with_wall_y:
-            self.y = new_y
-        self.x = max(0, min(self.x, GAME_WIDTH - TILE_SIZE))
-        self.y = max(0, min(self.y, GAME_HEIGHT - TILE_SIZE))
-        self.rect.topleft = (int(self.x), int(self.y))
+        # Move on X axis first
+        self.x += self.vx
+        self.rect.x = int(self.x)
+
+        # Check for X-axis collisions with obstacles
+        for obstacle in obstacles:
+            if self.rect.colliderect(obstacle):
+                if self.vx > 0:  # Moving right
+                    self.rect.right = obstacle.left
+                elif self.vx < 0:  # Moving left
+                    self.rect.left = obstacle.right
+                self.x = self.rect.x
+
+        # Move on Y axis separately
+        self.y += self.vy
+        self.rect.y = int(self.y)
+
+        # Check for Y-axis collisions with obstacles
+        for obstacle in obstacles:
+            if self.rect.colliderect(obstacle):
+                if self.vy > 0:  # Moving down
+                    self.rect.bottom = obstacle.top
+                elif self.vy < 0:  # Moving up
+                    self.rect.top = obstacle.bottom
+                self.y = self.rect.y
+        
+        # --- ADD THIS BLOCK BACK ---
+        # Clamp player to screen boundaries (for edge transitions)
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > GAME_WIDTH:
+            self.rect.right = GAME_WIDTH
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > GAME_HEIGHT:
+            self.rect.bottom = GAME_HEIGHT
+            
+        self.x = self.rect.x
+        self.y = self.rect.y
+        # --- END OF ADDED BLOCK ---
 
     def draw(self, surface, offset_x, offset_y):
         draw_rect = self.rect.move(offset_x, offset_y)

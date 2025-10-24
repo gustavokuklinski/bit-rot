@@ -23,13 +23,7 @@ def draw_game(game):
     offset_x = view_w / 2 - game.player.rect.centerx
     offset_y = view_h / 2 - game.player.rect.centery
 
-    # --- ADD THIS BLOCK to clamp the camera offset ---
-    # Prevent the camera from showing areas outside the map boundaries
-    offset_x = min(0, offset_x) # Clamp left
-    offset_y = min(0, offset_y) # Clamp top
-    offset_x = max(view_w - game.current_map_width, offset_x)   # Clamp right
-    offset_y = max(view_h - game.current_map_height, offset_y)  # Clamp bottom
-    # --- END ---
+
 
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     for image, rect in game.renderable_tiles:

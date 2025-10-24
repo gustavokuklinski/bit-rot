@@ -145,9 +145,27 @@ def handle_mouse_down(game, event, mouse_pos):
                     if button['type'] == 'close':
                         game.modals.remove(modal_to_affect)
                         return
+                    # --- MODIFIED LOGIC FOR MINIMIZE ---
                     elif button['type'] == 'minimize':
-                        modal_to_affect['minimized'] = not modal_to_affect.get('minimized', False)
+                        # Toggle the minimized state
+                        is_minimized = not modal_to_affect.get('minimized', False)
+                        modal_to_affect['minimized'] = is_minimized
+
+                        # Explicitly update the modal's stored rect height to match
+                        header_height = 35 # As defined in BaseModal
+
+                        # Get the original full height of the modal
+                        if modal_to_affect['type'] == 'inventory':
+                            full_height = INVENTORY_MODAL_HEIGHT
+                        elif modal_to_affect['type'] == 'status':
+                            full_height = STATUS_MODAL_HEIGHT
+                        else: # For containers
+                            full_height = 300 
+
+                        # Set the rect's height based on the new state
+                        modal_to_affect['rect'].height = header_height if is_minimized else full_height
                         return
+                    # --- END MODIFICATION ---
 
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game)
@@ -156,23 +174,23 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_inventory_modal(game)
             return
 
-        for modal in game.modals:
-            if modal['type'] == 'inventory':
-                backpack_slot_rect = get_backpack_slot_rect(modal['position'])
-                if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
-                    modal_exists = any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals)
-                    if not modal_exists:
-                        new_container_modal = {
-                            'id': uuid.uuid4(),
-                            'type': 'container',
-                            'item': game.player.backpack,
-                            'position': game.last_modal_positions['container'],
-                            'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                            'minimized': False
-                        }
-                        game.modals.append(new_container_modal)
-                    return
+    for modal in game.modals:
+        if modal['type'] == 'inventory':
+            backpack_slot_rect = get_backpack_slot_rect(modal['position'])
+            if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
+                modal_exists = any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals)
+                if not modal_exists:
+                    new_container_modal = {
+                        'id': uuid.uuid4(),
+                        'type': 'container',
+                        'item': game.player.backpack,
+                        'position': game.last_modal_positions['container'],
+                        'is_dragging': False, 'drag_offset': (0, 0),
+                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                        'minimized': False
+                    }
+                    game.modals.append(new_container_modal)
+                return
 
     # --- Modal Drag Logic ---
     for modal in game.modals:
@@ -217,8 +235,7 @@ def toggle_inventory_modal(game):
             'position': game.last_modal_positions['inventory'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
-            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),            'minimized': False
         }
         game.modals.append(new_inventory_modal)
 
@@ -460,17 +477,26 @@ def handle_right_click(game, mouse_pos):
         
         if clicked_item: break
 
-    # If nothing in modals was clicked, check ground items
+    # --- THIS IS THE CORRECTED BLOCK ---
+    # If nothing in modals was clicked, check ground items (and corpses)
     if not clicked_item:
+        # Convert mouse screen pos to world pos
+        world_pos = game.screen_to_world(mouse_pos)
+        
         for i, ground_item in enumerate(game.items_on_ground):
-            # account for GAME_OFFSET_X when checking mouse vs item rect
-            item_rect_world = ground_item.rect.move(GAME_OFFSET_X, 0)
-            if item_rect_world.collidepoint(mouse_pos):
-                clicked_item = ground_item
-                click_source = 'ground'
-                click_index = i
-                click_container_item = None
-                break
+            # Check collision in WORLD space
+            if ground_item.rect.collidepoint(world_pos):
+                # Add a proximity check to make sure the player is nearby
+                dist = math.hypot(game.player.rect.centerx - ground_item.rect.centerx, game.player.rect.centery - ground_item.rect.centery)
+                if dist < TILE_SIZE * 2: # Must be within 2 tiles to interact
+                    clicked_item = ground_item
+                    click_source = 'ground'
+                    click_index = i
+                    click_container_item = None
+                    break
+                else:
+                    print("Item is too far away to interact with.")
+    # --- END OF CORRECTED BLOCK ---
 
     if clicked_item:
         game.context_menu['active'] = True
@@ -632,6 +658,7 @@ def handle_attack(game, mouse_pos):
                             game.zombies_killed += 1
                         hit_a_zombie = True
                         break
+                        
                 if not hit_a_zombie: print("Swung and missed!")
             else: print("Too tired to swing!")
 
@@ -843,7 +870,6 @@ def handle_mouse_up(game, event, mouse_pos):
 
 def handle_mouse_motion(game, event, mouse_pos):
     if game.context_menu['active']:
-        # We don't need to do anything here for hover, draw_context_menu will handle it
         pass
 
     if game.drag_candidate and not game.is_dragging:
@@ -852,8 +878,7 @@ def handle_mouse_motion(game, event, mouse_pos):
             game.is_dragging = True
             game.dragged_item, game.drag_origin = game.drag_candidate
             game.drag_candidate = None
-            
-            # Remove item from its original location now that drag is confirmed
+
             i_orig, type_orig, *container_info = game.drag_origin
             if type_orig == 'inventory':
                 game.player.inventory.pop(i_orig)
@@ -869,8 +894,26 @@ def handle_mouse_motion(game, event, mouse_pos):
 
     for modal in game.modals:
         if modal['is_dragging']:
-            modal['position'] = (mouse_pos[0] - modal['drag_offset'][0], mouse_pos[1] - modal['drag_offset'][1])
-            # Update the rect as well for collision detection
+            # Calculate the potential new position
+            new_x = mouse_pos[0] - modal['drag_offset'][0]
+            new_y = mouse_pos[1] - modal['drag_offset'][1]
+
+            # --- MODIFIED LOGIC ---
+            # Check if the modal is minimized to use the correct height
+            is_minimized = modal.get('minimized', False)
+            header_height = 35  # The height of the modal's header bar
+
+            modal_width = modal['rect'].width
+            # Use the small header height for clamping if minimized
+            modal_height = header_height if is_minimized else modal['rect'].height
+            # --- END MODIFICATION ---
+
+            # Clamp the new position to the screen boundaries
+            clamped_x = max(0, min(new_x, VIRTUAL_SCREEN_WIDTH - modal_width))
+            clamped_y = max(0, min(new_y, VIRTUAL_GAME_HEIGHT - modal_height))
+
+            # Set the final, clamped position
+            modal['position'] = (clamped_x, clamped_y)
             modal['rect'].topleft = modal['position']
 
 def resolve_drag_origin_from_item(item, player, modals):

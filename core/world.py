@@ -2,7 +2,7 @@ import pygame
 import random
 import os
 import xml.etree.ElementTree as ET
-
+import csv
 from data.config import *
 from core.entities.item import Item
 from core.entities.zombie import Zombie
@@ -47,15 +47,18 @@ class TileManager:
 class MapManager:
     def __init__(self, map_folder='game/map/world'):
         self.map_folder = map_folder
-        self.current_map_filename = 'map_0_1_0_0.txt'
+        # Change the default filename to .csv
+        self.current_map_filename = 'map_0_1_0_0.csv'
         self.map_files = self._discover_maps()
 
     def _discover_maps(self):
         maps = {}
         for filename in os.listdir(self.map_folder):
-            if filename.startswith('map_') and filename.endswith('.txt'):
+            # Change the check to end with .csv
+            if filename.startswith('map_') and filename.endswith('.csv'):
                 try:
-                    parts = filename.replace('map_', '').replace('.txt', '').split('_')
+                    # Change the replacement to .csv
+                    parts = filename.replace('map_', '').replace('.csv', '').split('_')
                     if len(parts) == 4:
                         connections = tuple(int(p) for p in parts)
                         maps[filename] = connections
@@ -110,20 +113,30 @@ def parse_map_layout(layout, tile_manager):
     player_spawn = None
     zombie_spawns = []
     item_spawns = []
+    transition_tiles = []
     expected_width = GAME_WIDTH // TILE_SIZE
+    expected_height = GAME_HEIGHT // TILE_SIZE
+
+    map_height_in_tiles = len(layout)
+    map_width_in_tiles = len(layout[0]) if map_height_in_tiles > 0 else 0
+
+    if len(layout) != expected_height:
+        print(f"Warning: Map layout has {len(layout)} rows, expected {expected_height}")
 
     for y, row in enumerate(layout):
         if len(row) != expected_width:
             print(f"Warning: Map layout row {y} has length {len(row)}, expected {expected_width}")
+        
         for x, char in enumerate(row):
             pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+            
             if char in tile_manager.definitions:
                 tile_def = tile_manager.definitions[char]
                 rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                 renderable_tiles.append((tile_def['image'], rect))
                 if tile_def['is_obstacle']:
                     obstacles.append(rect)
-                    
+
             elif char == '#':
                 obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
             elif char == 'P':
@@ -132,6 +145,7 @@ def parse_map_layout(layout, tile_manager):
                 zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
             elif char == 'I':
                 item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+
     return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns
 
 def spawn_initial_items(obstacles, item_spawns):
@@ -168,6 +182,8 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground):
     return zombies
 
 def load_map_from_file(filepath):
-    """Loads a map layout from a text file."""
-    with open(filepath, 'r') as f:
-        return [line.rstrip('\n') for line in f.readlines()]
+    """Loads a map layout from a CSV file."""
+    with open(filepath, 'r', newline='') as f:
+        reader = csv.reader(f)
+        # The csv reader automatically creates a list of lists of characters
+        return list(reader)

@@ -33,12 +33,20 @@ font = pygame.font.Font(None, 16)
 large_font = pygame.font.Font(None, 24)
 title_font = pygame.font.Font(None, 24)
 
+
 # Game Constants
 TILE_SIZE = 16
-PLAYER_SPEED = 4
-ZOMBIE_SPEED = 1
-ZOMBIE_DROP = 1
-ZOMBIES_PER_SPAWN = 5
+PLAYER_SPEED = 2
 DECAY_RATE_SECONDS = 5.0 # How often Water/Food decay
 FOOD_DECAY_AMOUNT = 0.5 # Percentage loss per tick
 WATER_DECAY_AMOUNT = FOOD_DECAY_AMOUNT * 1.5 # Water depletes 1.5x faster
+
+# --- ZOMBIE AI SETTINGS ---
+ZOMBIE_SPEED = 1 # Zombie speed
+ZOMBIE_DROP = 1 # Drop percentage
+ZOMBIE_DETECTION_RADIUS = 20 * TILE_SIZE # How far (in pixels) zombies can 'see' the player
+ZOMBIE_WANDER_ENABLED = True          # Should zombies wander when idle?
+ZOMBIE_WANDER_CHANGE_INTERVAL = 2000  # How often (ms) wandering zombies pick a new target
+ZOMBIE_LINE_OF_SIGHT_CHECK = True    # Should obstacles block zombie sight?
+ZOMBIES_PER_SPAWN = 3
+# --- ZOMBIE AI SETTINGS ---

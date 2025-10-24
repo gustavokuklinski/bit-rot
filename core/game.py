@@ -38,6 +38,8 @@ class Game:
         self.projectiles = []
         self.obstacles = []
         self.renderable_tiles = []
+        
+
         self.zombies_killed = 0
 
         self.modals = []
@@ -69,28 +71,18 @@ class Game:
         self.inventory_button_rect = None
         self.camera = None
         self.map_states = {}
-        self.current_map_width = 0   # <-- Add this
-        self.current_map_height = 0  # <-- Add this
 
     def load_map(self, map_filename):
         map_filepath = os.path.join(self.map_manager.map_folder, map_filename)
         if not os.path.exists(map_filepath):
             print(f"Error: Map file not found: {map_filepath}")
             self.running = False
-            return
+            return None
 
         map_layout = load_map_from_file(map_filepath)
-        # --- ADD THESE LINES to calculate and store map dimensions ---
-        if map_layout:
-            self.current_map_width = len(map_layout[0]) * TILE_SIZE
-            self.current_map_height = len(map_layout) * TILE_SIZE
-        # --- END ---
 
+       
         self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = parse_map_layout(map_layout, self.tile_manager)
-
-        if player_spawn:
-            self.player.rect.topleft = player_spawn
-            self.player.x, self.player.y = player_spawn
 
         if map_filename in self.map_states:
             map_state = self.map_states[map_filename]
@@ -100,60 +92,68 @@ class Game:
             self.items_on_ground = spawn_initial_items(self.obstacles, item_spawns)
             self.zombies = spawn_initial_zombies(self.obstacles, zombie_spawns, self.items_on_ground)
             self.map_states[map_filename] = {
-                'items': self.items_on_ground,
-                'zombies': self.zombies,
-                'killed_zombies': [],
-                'picked_up_items': []
+                'items': self.items_on_ground, 'zombies': self.zombies,
+                'killed_zombies': [], 'picked_up_items': []
             }
         
-        # Filter out killed zombies
-        if map_filename in self.map_states:
-            killed_zombie_ids = set(self.map_states[map_filename]['killed_zombies'])
-            self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
+        killed_zombie_ids = set(self.map_states[map_filename].get('killed_zombies', []))
+        self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
+        
+        picked_up_item_ids = set(self.map_states[map_filename].get('picked_up_items', []))
+        self.items_on_ground = [item for item in self.items_on_ground if item.id not in picked_up_item_ids]
 
-        # Filter out picked up items
-        if map_filename in self.map_states:
-            picked_up_item_ids = set(self.map_states[map_filename]['picked_up_items'])
-            self.items_on_ground = [item for item in self.items_on_ground if item.id not in picked_up_item_ids]
+        return player_spawn
 
     def start_new_game(self):
         player_data = parse_player_data()
         self.player = Player(player_data=player_data)
-        # --- ADD THESE LINES ---
-        self.zoom_level = 1.5 # Initial zoom
-        # --- END ---
+        self.zoom_level = 1.5
         self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
         self.zombies_killed = 0
         self.modals = []
         self.map_states = {}
         
-        self.load_map(self.map_manager.current_map_filename)
+        player_spawn = self.load_map(self.map_manager.current_map_filename)
+        
+        if player_spawn:
+            self.player.rect.topleft = player_spawn
+            self.player.x, self.player.y = player_spawn
 
     def check_map_transition(self):
         new_map = None
         new_player_pos = None
 
-        if self.player.rect.left <= 0:
-            new_map = self.map_manager.transition('left')
-            if new_map:
-                new_player_pos = (GAME_WIDTH - self.player.rect.width - 1, self.player.rect.y)
-        elif self.player.rect.right >= GAME_WIDTH:
-            new_map = self.map_manager.transition('right')
-            if new_map:
-                new_player_pos = (1, self.player.rect.y)
-        elif self.player.rect.top <= 0:
+        if self.player.rect.top <= 0:
             new_map = self.map_manager.transition('top')
             if new_map:
-                new_player_pos = (self.player.rect.x, GAME_HEIGHT - self.player.rect.height - 1)
+                new_player_pos = (self.player.rect.x, GAME_HEIGHT - self.player.rect.height)
         elif self.player.rect.bottom >= GAME_HEIGHT:
             new_map = self.map_manager.transition('bottom')
             if new_map:
-                new_player_pos = (self.player.rect.x, 1)
+                new_player_pos = (self.player.rect.x, 0)
+        elif self.player.rect.left <= 0:
+            new_map = self.map_manager.transition('left')
+            if new_map:
+                new_player_pos = (GAME_WIDTH - self.player.rect.width, self.player.rect.y)
+        elif self.player.rect.right >= GAME_WIDTH:
+            new_map = self.map_manager.transition('right')
+            if new_map:
+                new_player_pos = (0, self.player.rect.y)
 
         if new_map and new_player_pos:
+            current_map_filename = self.map_manager.current_map_filename
+        
+            if current_map_filename not in self.map_states:
+                self.map_states[current_map_filename] = {}
+            self.map_states[current_map_filename]['items'] = self.items_on_ground
+            self.map_states[current_map_filename]['zombies'] = self.zombies
+
             self.load_map(new_map)
+            
             self.player.rect.topleft = new_player_pos
             self.player.x, self.player.y = new_player_pos
+            self.player.vx = 0
+            self.player.vy = 0
 
     def run(self):
         while self.running:
