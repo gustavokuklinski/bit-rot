@@ -1,9 +1,11 @@
 import pygame
-
+import math
 from data.config import *
 from ui.helpers import draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_container_slot_rect
 from ui.modals import draw_inventory_modal, draw_container_view, draw_status_modal, draw_context_menu
 from ui.helpers import draw_inventory_button, draw_status_button
+
+
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels

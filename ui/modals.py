@@ -154,7 +154,7 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
     # Backpack slot rendering unchanged (keeps current visuals)
     backpack_slot_rect = get_backpack_slot_rect(modal['position'])
     pygame.draw.rect(surface, (40, 40, 40), backpack_slot_rect, 0, 3)
-    surface.blit(font.render("Backpack", True, WHITE), (backpack_slot_rect.x + 5, backpack_slot_rect.y - 20))
+    surface.blit(font.render("Backpack", True, WHITE), (backpack_slot_rect.x + 1, backpack_slot_rect.y - 10))
     if (backpack := player.backpack):
         pygame.draw.rect(surface, backpack.color, backpack_slot_rect, 2, 3)
         if backpack.image:
@@ -174,15 +174,15 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
         pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
 
     # Belt
-    belt_y_start = backpack_slot_rect.bottom + 10
-    surface.blit(font.render("Belt", True, WHITE), (base_modal.modal_x + 10, belt_y_start))
+    belt_y_start = backpack_slot_rect.bottom + 5
+    surface.blit(font.render("", True, WHITE), (base_modal.modal_x + 10, belt_y_start))
     for i in range(5):
         item = player.belt[i]
         slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
         pygame.draw.rect(surface, (40, 40, 40), slot_rect, 0, 3)
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
         num_text = font.render(str(i + 1), True, WHITE)
-        surface.blit(num_text, (slot_rect.centerx - num_text.get_width() // 2, slot_rect.top - 20))
+        surface.blit(num_text, (slot_rect.centerx - num_text.get_width() // 2, slot_rect.top - 15))
         if item:
             if item.image:
                 img_h = slot_rect.height - 8
@@ -201,7 +201,7 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
             active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
     status_text = font.render(active_weapon_text, True, YELLOW)
-    surface.blit(status_text, (base_modal.modal_x + 10, belt_y_start + 60))
+    surface.blit(status_text, (base_modal.modal_x + 10, belt_y_start + 80))
     
 
     # Return tooltip info so caller can draw it on top of everything
@@ -256,12 +256,12 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
     # Load stat icons (lazy, per-frame safe)
     stat_icons = {}
     icon_files = {
-        "HP": "game/ui/hp.png",
-        "Stamina": "game/ui/stamina.png",
-        "Water": "game/ui/water.png",
-        "Food": "game/ui/food.png",
-        "Infection": "game/ui/infection.png",
-        "XP": "game/ui/xp.png"
+        "HP": "game/ui/sprites/hp.png",
+        "Stamina": "game/ui/sprites/stamina.png",
+        "Water": "game/ui/sprites/water.png",
+        "Food": "game/ui/sprites/food.png",
+        "Infection": "game/ui/sprites/infection.png",
+        "XP": "game/ui/sprites/xp.png"
     }
     for k, path in icon_files.items():
         try:

@@ -210,36 +210,22 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground):
     for pos in zombie_spawns:
         # Spawn one zombie per 'Z' marker, or adjust ZOMBIES_PER_SPAWN if needed
         # ZOMBIES_PER_SPAWN = 1 # Usually 1 per marker is intended
-        # for _ in range(ZOMBIES_PER_SPAWN):
-            zombie = Zombie.create_random(pos[0], pos[1]) # Create zombie first
+        for _ in range(ZOMBIES_PER_SPAWN): # <-- Your uncommented loop
+            
+            # Create a zombie at the spawn point's location
+            zombie = Zombie.create_random(pos[0], pos[1]) 
 
-            # Use current obstacles + already spawned items + temp spacing rects
-            current_collision_rects = obstacles + [e.rect for e in all_spawned_entities] + spacing_obstacles
-
-            # Try to place the zombie using find_free_tile logic if needed,
-            # but usually spawning directly at 'pos' is intended if 'pos' is valid.
-            # Check if the designated spot 'pos' itself is blocked
-            spawn_rect = pygame.Rect(pos[0], pos[1], TILE_SIZE, TILE_SIZE)
-            initial_collision = any(spawn_rect.colliderect(ob) for ob in obstacles)
-
-            if not initial_collision:
-                zombie.rect.topleft = pos # Place at the exact spot
-                zombie.x, zombie.y = pos[0], pos[1]
+            # Now, ask find_free_tile to place it.
+            # We pass 'all_spawned_entities' as the list of items to avoid.
+            # This makes the 2nd and 3rd zombies automatically find a spot
+            # next to the 1st zombie.
+            if find_free_tile(zombie.rect, obstacles, all_spawned_entities, initial_pos=pos):
+                zombie.x = zombie.rect.x
+                zombie.y = zombie.rect.y
                 zombies.append(zombie)
-                all_spawned_entities.append(zombie) # Add to list for next checks
-                # Add a temporary larger rect to prevent others spawning too close
-                spacing_obstacles.append(zombie.rect.inflate(TILE_SIZE // 2, TILE_SIZE // 2))
+                all_spawned_entities.append(zombie) # Add to the list for the *next* zombie to check against
             else:
-                 print(f"Warning: Zombie spawn point {pos} is blocked by an obstacle. Trying nearby...")
-                 # Fallback: Try finding a free tile near the original pos
-                 if find_free_tile(zombie.rect, obstacles, all_spawned_entities, initial_pos=pos):
-                     zombie.x = zombie.rect.x
-                     zombie.y = zombie.rect.y
-                     zombies.append(zombie)
-                     all_spawned_entities.append(zombie)
-                     spacing_obstacles.append(zombie.rect.inflate(TILE_SIZE // 2, TILE_SIZE // 2))
-                 else:
-                     print(f"Warning: Could not find free space to spawn zombie near {pos}.")
+                print(f"Warning: Could not find free space to spawn zombie near {pos}.")
     return zombies
 
 def load_map_from_file(filepath):

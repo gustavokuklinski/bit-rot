@@ -137,7 +137,9 @@ def try_grab_item(game):
             print("No space to grab the item.")
 
 def handle_mouse_down(game, event, mouse_pos):
+    # --- FIX 1: This block is now *inside* event.button == 1 ---
     if event.button == 1:
+        # --- Modal Button (Close/Minimize) Logic ---
         for button in getattr(game, 'modal_buttons', []):
             if button['rect'].collidepoint(mouse_pos):
                 modal_to_affect = next((m for m in game.modals if m['id'] == button['id']), None)
@@ -145,28 +147,20 @@ def handle_mouse_down(game, event, mouse_pos):
                     if button['type'] == 'close':
                         game.modals.remove(modal_to_affect)
                         return
-                    # --- MODIFIED LOGIC FOR MINIMIZE ---
                     elif button['type'] == 'minimize':
-                        # Toggle the minimized state
                         is_minimized = not modal_to_affect.get('minimized', False)
                         modal_to_affect['minimized'] = is_minimized
-
-                        # Explicitly update the modal's stored rect height to match
-                        header_height = 35 # As defined in BaseModal
-
-                        # Get the original full height of the modal
+                        header_height = 35
                         if modal_to_affect['type'] == 'inventory':
                             full_height = INVENTORY_MODAL_HEIGHT
                         elif modal_to_affect['type'] == 'status':
                             full_height = STATUS_MODAL_HEIGHT
-                        else: # For containers
+                        else: 
                             full_height = 300 
-
-                        # Set the rect's height based on the new state
                         modal_to_affect['rect'].height = header_height if is_minimized else full_height
                         return
-                    # --- END MODIFICATION ---
 
+        # --- UI Button (Status/Inventory) Logic ---
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game)
             return
@@ -174,51 +168,59 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_inventory_modal(game)
             return
 
-    for modal in game.modals:
-        if modal['type'] == 'inventory':
-            backpack_slot_rect = get_backpack_slot_rect(modal['position'])
-            if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
-                modal_exists = any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals)
-                if not modal_exists:
-                    new_container_modal = {
-                        'id': uuid.uuid4(),
-                        'type': 'container',
-                        'item': game.player.backpack,
-                        'position': game.last_modal_positions['container'],
-                        'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                        'minimized': False
-                    }
-                    game.modals.append(new_container_modal)
+        # --- Backpack Left-Click-Open Logic ---
+        # This was moved here. It will now only run on a LEFT-click.
+        for modal in game.modals:
+            if modal['type'] == 'inventory':
+                backpack_slot_rect = get_backpack_slot_rect(modal['position'])
+                if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
+                    modal_exists = any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals)
+                    if not modal_exists:
+                        new_container_modal = {
+                            'id': uuid.uuid4(),
+                            'type': 'container',
+                            'item': game.player.backpack,
+                            'position': game.last_modal_positions['container'],
+                            'is_dragging': False, 'drag_offset': (0, 0),
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                            'minimized': False
+                        }
+                        game.modals.append(new_container_modal)
+                    return # Consume the left-click
+
+        # --- Modal Drag Logic ---
+        for modal in game.modals:
+            # Use the modal's actual width
+            modal_header_rect = pygame.Rect(modal['position'][0], modal['position'][1], modal['rect'].width, 35)
+            if modal_header_rect.collidepoint(mouse_pos):
+                modal['is_dragging'] = True
+                modal['drag_offset'] = (mouse_pos[0] - modal['position'][0], mouse_pos[1] - modal['position'][1])
+                game.modals.remove(modal)
+                game.modals.append(modal)
                 return
 
-    # --- Modal Drag Logic ---
-    for modal in game.modals:
-        modal_header_rect = pygame.Rect(modal['position'][0], modal['position'][1], 300, 35)
-        if event.button == 1 and modal_header_rect.collidepoint(mouse_pos):
-            modal['is_dragging'] = True
-            modal['drag_offset'] = (mouse_pos[0] - modal['position'][0], mouse_pos[1] - modal['position'][1])
-            game.modals.remove(modal)
-            game.modals.append(modal)
+        # --- Context Menu & Left-Click Action Logic ---
+        if game.context_menu['active']:
+            handle_context_menu_click(game, mouse_pos)
             return
 
-    # --- Context Menu & Left-Click Action Logic ---
-    if game.context_menu['active'] and event.button == 1:
-        handle_context_menu_click(game, mouse_pos)
-        return
-
-    # --- Right-Click Logic to OPEN Context Menu ---
-    if event.button == 3:
-        handle_right_click(game, mouse_pos)
-        return
-
-    # --- Left-click press - Identify a drag candidate ---
-    if event.button == 1:
+        # --- Left-click press - Identify a drag candidate ---
         handle_left_click_drag_candidate(game, mouse_pos)
 
-    # --- Attack Logic ---
-    if event.button == 1 and (pygame.key.get_pressed()[pygame.K_LSHIFT] or pygame.key.get_pressed()[pygame.K_RSHIFT]):
-        handle_attack(game, mouse_pos)
+        # --- Attack Logic ---
+        if (pygame.key.get_pressed()[pygame.K_LSHIFT] or pygame.key.get_pressed()[pygame.K_RSHIFT]):
+            handle_attack(game, mouse_pos)
+
+    # --- Right-Click Logic to OPEN Context Menu ---
+    elif event.button == 3:
+        # If a menu is already open, close it
+        if game.context_menu['active']:
+            game.context_menu['active'] = False
+            return # Consume the click
+
+        # Otherwise, open a new one
+        handle_right_click(game, mouse_pos)
+        return
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -362,11 +364,27 @@ def handle_context_menu_click(game, mouse_pos):
                         # equip from inventory/container/belt
                         game.player.equip_item_to_belt(item, source, index, container_item)
 
+            # --- FIX 2: Added 'if source == 'backpack'' logic ---
             elif option == 'Drop':
-                dropped_item = game.player.drop_item(source, index, container_item)
-                if dropped_item:
-                    dropped_item.rect.center = game.player.rect.center
-                    game.items_on_ground.append(dropped_item)
+                dropped_item = None # Initialize
+                if source == 'backpack':
+                    # Special case for dropping from the backpack slot
+                    item_to_drop = game.player.backpack
+                    if item_to_drop and item_to_drop == item:
+                        game.player.backpack = None # Unequip it
+                        item_to_drop.rect.center = game.player.rect.center # Set drop position
+                        game.items_on_ground.append(item_to_drop) # Add to world
+                        print(f"Dropped {item_to_drop.name} from backpack slot.")
+                        dropped_item = item_to_drop # Signal success
+                    else:
+                        print("Backpack drop error: item mismatch.")
+                else:
+                    # Original generic logic for inventory/belt/container
+                    dropped_item = game.player.drop_item(source, index, container_item)
+                    if dropped_item:
+                        dropped_item.rect.center = game.player.rect.center
+                        game.items_on_ground.append(dropped_item)
+            # --- END FIX 2 ---
 
             elif option == 'Open':
                 # Open container modal if not already open
@@ -383,6 +401,7 @@ def handle_context_menu_click(game, mouse_pos):
                     }
                     game.modals.append(new_container_modal)
 
+            # --- MODIFIED UNEQUIP LOGIC ---
             elif option == 'Unequip':
                 if source == 'belt':
                     if 0 <= index < len(game.player.belt) and game.player.belt[index] == item:
@@ -397,8 +416,25 @@ def handle_context_menu_click(game, mouse_pos):
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
                         print(f"Unequipped {item.name} -> Dropped on ground (inventory full)")
+                
+                elif source == 'backpack':
+                    item_to_unequip = game.player.backpack
+                    if item_to_unequip and item_to_unequip == item:
+                        game.player.backpack = None # Remove from slot
+                        # move to inventory or drop if full
+                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                            game.player.inventory.append(item_to_unequip)
+                            print(f"Unequipped {item_to_unequip.name} -> Inventory")
+                        else:
+                            item_to_unequip.rect.center = game.player.rect.center
+                            game.items_on_ground.append(item_to_unequip)
+                            print(f"Unequipped {item_to_unequip.name} -> Dropped on ground (inventory full)")
+                    else:
+                         print("Backpack unequip error: item mismatch.")
+                
                 else:
-                    print("Unequip is only available for belt items.")
+                    print("Unequip is only available for belt or backpack items.")
+            # --- END MODIFICATION ---
 
             # Ground-specific actions
             elif source == 'ground' and option == 'Grab':
@@ -444,7 +480,7 @@ def handle_context_menu_click(game, mouse_pos):
         return # Consume the click
 
 def handle_right_click(game, mouse_pos):
-    game.context_menu['active'] = False # Close any existing menu
+    # game.context_menu['active'] = False # This is handled in MOUSEBUTTONDOWN
     clicked_item = None
     click_source = None
     click_index = -1
@@ -507,14 +543,23 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['position'] = mouse_pos
         # Base options from player
         options = game.player.get_item_context_options(clicked_item) if click_source != 'ground' else []
-        # If clicked from belt, allow unequip and remove 'Equip'
+        
+        # --- MODIFIED CONTEXT OPTION LOGIC ---
         if click_source == 'belt':
             if 'Unequip' not in options:
                 options.append('Unequip')
             # Ensure 'Equip' is not shown for an item that's already on the belt
             options = [o for o in options if o != 'Equip']
+        
+        elif click_source == 'backpack':
+            if 'Unequip' not in options:
+                options.append('Unequip') # Add 'Unequip'
+            if 'Drop' not in options:
+                options.append('Drop') # Add 'Drop'
+            options = [o for o in options if o != 'Equip'] # Remove 'Equip'
+
         # If ground item, show ground menu options
-        if click_source == 'ground':
+        elif click_source == 'ground':
             options = []
             # Corpses cannot be grabbed; they are lootable via Open
             if not isinstance(clicked_item, Corpse):
@@ -528,10 +573,13 @@ def handle_right_click(game, mouse_pos):
             # If ground item exposes an inventory (corpse/container), allow Open
             if getattr(clicked_item, 'inventory', None) is not None:
                 options.append('Open')
+        # --- END MODIFICATION ---
+        
         game.context_menu['options'] = options
         game.context_menu['rects'] = [] # Will be populated by draw_context_menu
         return # Consume the right-click
 
+# --- MODIFIED DRAG CANDIDATE LOGIC ---
 def handle_left_click_drag_candidate(game, mouse_pos):
     # First, check if we are clicking an item in an open container
     # Iterate through modals in reverse to check topmost first
@@ -548,9 +596,12 @@ def handle_left_click_drag_candidate(game, mouse_pos):
             if game.drag_candidate: break # Found a drag candidate in a container
     if game.drag_candidate: return
 
-    # If no candidate from container, check inventory modal, belt, etc.
+    # If no candidate from container, check inventory modal (inventory, belt, AND backpack)
     for modal in reversed(game.modals):
-        if modal['type'] == 'inventory':
+        # We only care about the inventory modal
+        if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
+            
+            # Check main inventory slots
             for i, item in enumerate(game.player.inventory):
                 if item:
                     slot_rect = get_inventory_slot_rect(i, modal['position'])
@@ -559,12 +610,9 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         break
-            if game.drag_candidate: break
-    if game.drag_candidate: return
+            if game.drag_candidate: break # Found in inventory
 
-    # Check belt (only if an inventory modal is open)
-    for modal in reversed(game.modals):
-        if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
+            # Check belt slots
             for i, item in enumerate(game.player.belt):
                 if item:
                     slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
@@ -573,18 +621,16 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         break
-            if game.drag_candidate: break
+            if game.drag_candidate: break # Found in belt
 
-    # Check backpack slot
-    for modal in reversed(game.modals):
-        if modal['type'] == 'inventory':
-            if game.player.backpack:
-                slot_rect = get_backpack_slot_rect(modal['position'])
-                if slot_rect.collidepoint(mouse_pos):
-                    game.drag_candidate = (game.player.backpack, (0, 'backpack'))
-                    game.drag_start_pos = mouse_pos
-                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                    break
+            # --- Backpack slot dragging is intentionally disabled ---
+            # (The left-click-open logic in handle_mouse_down intercepts the click)
+    
+    # If we found a candidate in the inventory modal, we can stop checking other modals
+    if game.drag_candidate:
+        return
+# --- END MODIFICATION ---
+
 
 def handle_attack(game, mouse_pos):
     # If any modal is currently being dragged, do not process attack
@@ -653,7 +699,7 @@ def handle_attack(game, mouse_pos):
                 for zombie in game.zombies:
                     if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
                         if player_hit_zombie(game.player, zombie):
-                            handle_zombie_death(game.player, zombie, game.items_on_ground, game.obstacles)
+                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles)
                             game.zombies.remove(zombie)
                             game.zombies_killed += 1
                         hit_a_zombie = True
@@ -808,11 +854,16 @@ def handle_mouse_up(game, event, mouse_pos):
                             if get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
                                 target_index = i
                                 break
-                        if target_index == -1:
-                            # append to end of inventory
-                            target_index = len(game.player.inventory)
-                        game.player.inventory.insert(target_index, game.dragged_item)
-                        dropped_successfully = True
+                        
+                        # Check if we have space (excluding the item we are dragging)
+                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                            if target_index == -1:
+                                # append to end of inventory
+                                target_index = len(game.player.inventory)
+                            game.player.inventory.insert(target_index, game.dragged_item)
+                            dropped_successfully = True
+                        else:
+                            print("Inventory is full.")
                         break
 
             # If still not placed, attempt to drop into any open container under mouse

@@ -68,8 +68,13 @@ def update_game_state(game):
     for modal in list(game.modals):
         if modal['type'] == 'container':
             container_item = modal['item']
-            # Ensure container_item is still valid and has a rect
-            if container_item and hasattr(container_item, 'rect'):
+            
+            # --- REVISED FIX ---
+            # Only run the distance check if the container_item is an item
+            # that is physically on the ground (like a corpse).
+            # Worn backpacks or backpacks opened from inventory should not be checked.
+            if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
+            # --- END REVISED FIX ---
                 distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)
