@@ -10,7 +10,7 @@ from core.placement import find_free_tile
 
 class TileManager:
     """Manages tile definitions, loading them from XML and handling image assets."""
-    def __init__(self, tile_folder='game/map', asset_folder='game/map/sprites'):
+    def __init__(self, tile_folder='game/map/data', asset_folder='game/map/sprites'):
         self.tile_folder = tile_folder
         self.asset_folder = asset_folder
         self.definitions = {}

@@ -194,7 +194,7 @@ class Zombie:
             print(f"**HIT!** Player takes {damage} damage.")
 
     @staticmethod
-    def load_templates(folder='game/zombies'):
+    def load_templates(folder='game/zombies/data'):
         """Loads all zombie templates from XML files in a folder."""
         global ZOMBIE_TEMPLATES
         ZOMBIE_TEMPLATES = []

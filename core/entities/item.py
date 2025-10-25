@@ -58,7 +58,7 @@ class Item:
             return None
 
     @staticmethod
-    def load_item_templates(items_dir='game/items'):
+    def load_item_templates(items_dir='game/items/data'):
         """Loads item templates from XML files in the game/items directory."""
         global ITEM_TEMPLATES
         if ITEM_TEMPLATES:

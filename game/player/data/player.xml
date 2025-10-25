@@ -22,6 +22,6 @@
     </initial_loot>
 
     <visuals>
-        <sprite file="sprites/player.png" />
+        <sprite file="../sprites/player.png" />
     </visuals>
 </player>

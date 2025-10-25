@@ -1,10 +1,11 @@
 # Bit Rot
-Bit Rot is a zombie survivor game inspired by Atari Adventure and Project Zomboid.
+Bit Rot is a zombie survivor game.
 
 **Basic controls**:
 - **W/A/S/D**: Walk
-- **SHIFT + Click**: Shoot/Attack
-- **Click + Drag**: Place on Belt/Backpack or Drop
+- **SHIFT + R-Click**: Shoot/Attack
+- **R-Click + Drag**: Place on Belt/Backpack or Drop
+- **L-Click**: Opens menu 
 - **1/2/3/4/5**: Equip/Use item from Belt
 
 - **E**: Get item from floor
@@ -47,6 +48,7 @@ For spawning and background the maps must have a:
 ----
 
 **Hacking the game**
+
 Install system wide
 ```python
 $ sudo apt install python3-pygame
@@ -59,6 +61,8 @@ $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ python bit-rot.py
 ```
+
+----
 
 **Credits**
 Tiles: https://opengameart.org/content/1-bit-pack

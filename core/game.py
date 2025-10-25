@@ -13,7 +13,7 @@ from core.entities.corpse import Corpse
 from ui.helpers import draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_container_slot_rect
 from ui.modals import draw_inventory_modal, draw_container_view, draw_status_modal, draw_context_menu
 from data.xml_parser import parse_player_data
-from assets.assets import load_assets
+from ui.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
