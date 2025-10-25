@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import pygame
 import uuid
 
-from data.config import TILE_SIZE, WHITE
+from data.config import *
 
 ITEM_TEMPLATES = {}  # loaded templates
 
@@ -152,7 +152,7 @@ class Item:
 
 class Projectile:
     """Represents a bullet fired by the player."""
-    def __init__(self, start_x, start_y, target_x, target_y, speed=8, color=(255,255,0)):
+    def __init__(self, start_x, start_y, target_x, target_y, speed=8, color=YELLOW):
         self.x = start_x
         self.y = start_y
         self.rect = pygame.Rect(start_x, start_y, 5, 5)

@@ -6,9 +6,7 @@ import xml.etree.ElementTree as ET
 import uuid
 
 # Import the new config variables
-from data.config import TILE_SIZE, DARK_GRAY, RED, ZOMBIE_SPEED, ZOMBIE_DROP, \
-                        ZOMBIE_DETECTION_RADIUS, ZOMBIE_WANDER_ENABLED, \
-                        ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
+from data.config import *
 
 ZOMBIE_TEMPLATES = []
 
@@ -73,7 +71,7 @@ class Zombie:
             health_percentage = max(0, self.health / self.max_health)
             health_bar_width = int(health_percentage * TILE_SIZE)
             health_bar_rect = pygame.Rect(draw_rect.left, bar_y, health_bar_width, 5)
-            pygame.draw.rect(surface, (50, 200, 50), health_bar_rect)
+            pygame.draw.rect(surface, GREEN, health_bar_rect)
 
             self.show_health_bar_timer -= 1
 

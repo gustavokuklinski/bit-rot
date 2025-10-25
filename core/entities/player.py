@@ -8,8 +8,8 @@ from core.entities.item import Item
 from core.entities.corpse import Corpse
 
 # Note: player references UI helpers for slot rectangles for mouse detection.
-# We import functions from ui (which remain in the root ui.py)
-from ui.modals import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+# We import functions from core.ui (which remain in the root ui.py)
+from core.ui.inventory import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 
 class Player:
     def __init__(self, player_data=None):

@@ -1,0 +1,44 @@
+import pygame
+from data.config import *
+from core.ui.modals import BaseModal
+
+def get_container_slot_rect(container_pos, i):
+    rows, cols = 4, 5
+    slot_size = 48
+    padding = 10
+    start_x = container_pos[0] + padding
+    start_y = container_pos[1] + 40
+    row = i // cols
+    col = i % cols
+    return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
+
+def draw_container_view(surface, container_item, modal, assets):
+    if not container_item or not hasattr(container_item, 'inventory'):
+        return
+    
+    base_modal = BaseModal(surface, modal, assets, f"{container_item.name} Contents")
+    base_modal.draw_base()
+    close_button, minimize_button = base_modal.get_buttons()
+
+    if base_modal.minimized:
+        return close_button, minimize_button
+
+    rows, cols = 4, 5
+    slot_size = 48
+    padding = 10
+    start_x = base_modal.modal_x + padding
+    start_y = base_modal.modal_y + 40
+    max_visible_rows = int((base_modal.modal_h - base_modal.header_h - padding) / (slot_size + padding))
+    max_visible_slots = max_visible_rows * cols
+    for i in range(min(container_item.capacity, max_visible_slots)):
+        row = i // cols
+        col = i % cols
+        slot_rect = pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
+        pygame.draw.rect(surface, GRAY_40, slot_rect, 1, 3)
+        if i < len(container_item.inventory):
+            item = container_item.inventory[i]
+            if item.image:
+                surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
+            else:
+                pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+    return close_button, minimize_button

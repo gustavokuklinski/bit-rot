@@ -10,10 +10,13 @@ from core.entities.player import Player
 from core.entities.zombie import Zombie
 from core.entities.item import Item, Projectile
 from core.entities.corpse import Corpse
-from ui.helpers import draw_menu, draw_game_over, get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_container_slot_rect
-from ui.modals import draw_inventory_modal, draw_container_view, draw_status_modal, draw_context_menu
+from core.ui.helpers import draw_menu, draw_game_over
+from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from core.ui.container import draw_container_view, get_container_slot_rect
+from core.ui.status import draw_status_modal
+from core.ui.dropdown import draw_context_menu
 from data.xml_parser import parse_player_data
-from ui.assets import load_assets
+from core.ui.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game

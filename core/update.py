@@ -112,11 +112,11 @@ def player_hit_zombie(player, zombie):
     is_headshot = False
     damage_multiplier = 1.0
     # Apply headshot multiplier only for ranged weapons (done in projectile hit check, not melee)
-    # if active_weapon and 'Gun' in active_weapon.name:
-    #     headshot_chance = 0.1 + (player.skill_ranged * 0.04)
-    #     if random.random() < headshot_chance:
-    #         is_headshot = True
-    #         damage_multiplier = 2.0
+    if active_weapon and 'Gun' in active_weapon.name:
+        headshot_chance = 0.1 + (player.skill_ranged * 0.04)
+        if random.random() < headshot_chance:
+            is_headshot = True
+            damage_multiplier = 2.0
 
     # Apply melee skill multiplier for melee attacks
     if not (active_weapon and 'Gun' in active_weapon.name):
