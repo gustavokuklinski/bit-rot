@@ -1,5 +1,5 @@
 <zombie name="survivor">
-    <name value="Survivor">
+    <name value="Survivor" />
     <xp min="1" max="5" />
     <stats>
         <health value="120" />

@@ -10,12 +10,13 @@ from core.entities.player import Player
 from core.entities.zombie import Zombie
 from core.entities.item import Item, Projectile
 from core.entities.corpse import Corpse
-from core.ui.helpers import draw_menu, draw_game_over
+from core.ui.helpers import draw_menu, draw_game_over, run_player_setup
 from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
-from data.xml_parser import parse_player_data
+from data.player_xml_parser import parse_player_data
+from data.professions_xml_parser import get_profession_by_name
 from core.ui.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
@@ -74,6 +75,9 @@ class Game:
         self.inventory_button_rect = None
         self.camera = None
         self.map_states = {}
+        self.player_name = ""
+        self.name_input_active = False
+        self.selected_profession = None
 
     def load_map(self, base_map_filename):
         """Loads map data from base, ground, and spawn CSV layer files."""
@@ -153,8 +157,17 @@ class Game:
         # Return the player spawn point found in the spawn layer
         return player_spawn
 
-    def start_new_game(self):
+    def start_new_game(self, profession_name):
         player_data = parse_player_data()
+        profession_data = get_profession_by_name(profession_name)
+        if profession_data:
+            player_data['attributes'] = profession_data['attributes']
+            player_data['initial_loot'] = profession_data['initial_loot']
+            player_data['visuals'] = profession_data['visuals']
+        
+        player_data['name'] = self.player_name
+        player_data['profession'] = profession_name
+
         self.player = Player(player_data=player_data)
         self.zoom_level = 1.5
         self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
@@ -208,6 +221,8 @@ class Game:
         while self.running:
             if self.game_state == 'MENU':
                 self.run_menu()
+            elif self.game_state == 'PLAYER_SETUP':
+                self.run_player_setup()
             elif self.game_state == 'PLAYING':
                 self.run_playing()
             elif self.game_state == 'GAME_OVER':
@@ -226,12 +241,14 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
                 if start_button.collidepoint(mouse_pos):
-                    self.start_new_game()
-                    self.game_state = 'PLAYING'
+                    self.game_state = 'PLAYER_SETUP'
                 elif quit_button.collidepoint(mouse_pos):
                     self.running = False
                     return
         self._update_screen()
+
+    def run_player_setup(self):
+        run_player_setup(self)
 
     def run_game_over(self):
         restart_button, quit_button = draw_game_over(self.virtual_screen, self.zombies_killed)
@@ -245,8 +262,7 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
                 if restart_button.collidepoint(mouse_pos):
-                    self.start_new_game()
-                    self.game_state = 'PLAYING'
+                    self.game_state = 'PLAYER_SETUP'
                 elif quit_button.collidepoint(mouse_pos):
                     self.running = False
                     return

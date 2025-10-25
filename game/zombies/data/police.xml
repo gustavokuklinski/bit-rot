@@ -1,5 +1,5 @@
 <zombie name="police">
-    <name value="Police">
+    <name value="Police" />
     <xp min="3" max="8" />
     <stats>
         <health value="150" />

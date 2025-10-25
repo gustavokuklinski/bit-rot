@@ -27,7 +27,7 @@ def update_game_state(game):
         if hit_zombie:
             if player_hit_zombie(game.player, hit_zombie):
                 zombies_to_remove.append(hit_zombie)
-                handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles)
+                handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
                 game.zombies_killed += 1
             projectiles_to_remove.append(p)
 
@@ -91,12 +91,12 @@ def player_hit_zombie(player, zombie):
     if active_weapon:
         base_damage = active_weapon.damage
         if active_weapon.item_type in ['weapon', 'tool']:
-            if random.randint(0, 10) < player.skill_melee:
+            if random.randint(0, 10) < player.progression.melee:
                 weapon_durability_loss = 0.5
             else:
                 weapon_durability_loss = 2.0
     else: # Unarmed
-        base_damage = 1 + (player.skill_strength * 0.1)
+        base_damage = 1 + (player.progression.strength * 0.1)
 
     # RANGED WEAPON DURABILITY CHECK handled in shooting code (input.py)
 
@@ -113,14 +113,14 @@ def player_hit_zombie(player, zombie):
     damage_multiplier = 1.0
     # Apply headshot multiplier only for ranged weapons (done in projectile hit check, not melee)
     if active_weapon and 'Gun' in active_weapon.name:
-        headshot_chance = 0.1 + (player.skill_ranged * 0.04)
+        headshot_chance = 0.1 + (player.progression.ranged * 0.04)
         if random.random() < headshot_chance:
             is_headshot = True
             damage_multiplier = 2.0
 
     # Apply melee skill multiplier for melee attacks
     if not (active_weapon and 'Gun' in active_weapon.name):
-        damage_multiplier *= (1 + player.skill_melee * 0.1)
+        damage_multiplier *= (1 + player.progression.melee * 0.1)
     final_damage = (base_damage * damage_multiplier)
 
     if zombie.take_damage(final_damage):
@@ -131,7 +131,7 @@ def player_hit_zombie(player, zombie):
     return False # Zombie survived
 
 
-def handle_zombie_death(game, zombie, items_on_ground_list, obstacles):
+def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
     print(f"A {zombie.name} died. Creating corpse and checking for loot...")
     # create corpse at zombie position
@@ -151,6 +151,7 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles):
         items_on_ground_list.append(corpse)
 
     game.player.add_xp(zombie.xp_value)
+    game.player.process_kill(weapon)
 
     # Record killed zombie in map state
     current_map_filename = game.map_manager.current_map_filename

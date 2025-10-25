@@ -1,24 +1,26 @@
 <player name="player">
-    <name value="Player N.1" />
+    <name value="Player" />
 
     <stats>
-        <health value="100" />
-        <speed value="1.0" />
+        <health value="100.0" />
+        <stamina value="100.0" />
+        <water value="100.0" />
+        <food value="100.0" />
+        <infection value="0" />
         <experience value="0" />
-        <level value="1" />
+        <level value="1" min="1" max="100" />
     </stats>
 
-    <skills>
-        <strength value="3" />
-        <melee value="3" />
-        <ranged value="3" />
-    </skills>
+    <attributes>
+        <strength value="0.0" min="0.0" max="10.0" />
+        <fitness value="0.0" min="0.0" max="10.0" />
+        <melee value="0.0" min="0.0" max="10.0"  />
+        <ranged value="0.0" min="0.0" max="10.0" />
+        <lucky value="0.0" min="0.0" max="10.0" />
+        <speed value="0.0" min="0.0" max="10.0" />
+    </attributes>
 
     <initial_loot>
-        <inventory item="Water Bottle" />
-        <inventory item="Large Backpack" />
-        <inventory item="Shotgun" />
-        <inventory item="Pistol (9mm)" />
     </initial_loot>
 
     <visuals>

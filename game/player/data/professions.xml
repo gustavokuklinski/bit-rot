@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<professions>
+    <profession name="Civilian">
+        <description>A normal person.</description>
+        <attributes>
+            <strength value="0" />
+            <fitness value="0" />
+            <melee value="0" />
+            <ranged value="0" />
+            <lucky value="0" />
+            <speed value="0" />
+        </attributes>
+        <initial_loot>
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/civilian.png" />
+        </visuals>
+    </profession>
+    <profession name="Survivor">
+        <description>A balanced profession with a bit of everything.</description>
+        <attributes>
+            <strength value="3" />
+            <fitness value="3" />
+            <melee value="3" />
+            <ranged value="3" />
+            <lucky value="3" />
+            <speed value="3" />
+        </attributes>
+        <initial_loot>
+            <item name="Water Bottle" />
+            <item name="Canned Food" />
+            <item name="Knife" />
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/survivor.png" />
+        </visuals>
+    </profession>
+    <profession name="Soldier">
+        <description>A combat-focused profession with high ranged skill.</description>
+        <attributes>
+            <strength value="4" />
+            <fitness value="4" />
+            <melee value="2" />
+            <ranged value="5" />
+            <lucky value="2" />
+            <speed value="3" />
+        </attributes>
+        <initial_loot>
+            <item name="Pistol (9mm)" />
+            <item name="9mm Ammo" />
+            <item name="Medkit" />
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/soldier.png" />
+        </visuals>
+    </profession>
+    <profession name="Police">
+        <description>A profession with a good balance of combat and utility.</description>
+        <attributes>
+            <strength value="3" />
+            <fitness value="3" />
+            <melee value="4" />
+            <ranged value="4" />
+            <lucky value="3" />
+            <speed value="3" />
+        </attributes>
+        <initial_loot>
+            <item name="Baton" />
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/police.png" />
+        </visuals>
+    </profession>
+    <profession name="Farmer">
+        <description>A profession with a focus on strength and melee.</description>
+        <attributes>
+            <strength value="5" />
+            <fitness value="4" />
+            <melee value="5" />
+            <ranged value="1" />
+            <lucky value="2" />
+            <speed value="3" />
+        </attributes>
+        <initial_loot>
+            <item name="Axe" />
+            <item name="Canned Food" />
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/farmer.png" />
+        </visuals>
+    </profession>
+    <profession name="Office worker">
+        <description>A profession with a focus on intelligence and luck.</description>
+        <attributes>
+            <strength value="2" />
+            <fitness value="2" />
+            <melee value="1" />
+            <ranged value="1" />
+            <lucky value="5" />
+            <speed value="3" />
+        </attributes>
+        <initial_loot>
+            <item name="Medkit" />
+        </initial_loot>
+        <visuals>
+            <sprite file="../sprites/office.png" />
+        </visuals>
+    </profession>
+</professions>

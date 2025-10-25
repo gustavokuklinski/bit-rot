@@ -6,6 +6,7 @@ import random
 from data.config import *
 from core.entities.item import Item
 from core.entities.corpse import Corpse
+from core.entities.player_progression import PlayerProgression
 
 # Note: player references UI helpers for slot rectangles for mouse detection.
 # We import functions from core.ui (which remain in the root ui.py)
@@ -22,9 +23,11 @@ class Player:
 
         data = player_data or {}
         stats = data.get('stats', {})
-        skills = data.get('skills', {})
+        self.progression = PlayerProgression(data)
 
         # Stats
+        self.name = data.get('name', "Player")
+        self.profession = data.get('profession', "Survivor")
         self.max_health = stats.get('health', 100.0)
         self.health = stats.get('health', self.max_health)
         self.water = stats.get('water', 100.0)
@@ -32,18 +35,12 @@ class Player:
         self.infection = stats.get('infection', 0.0)
         self.max_stamina = stats.get('stamina', 100.0)
         self.stamina = stats.get('stamina', self.max_stamina)
-        self.skill_strength = skills.get('strength', 3)
-        self.skill_melee = skills.get('melee', 3)
-        self.skill_ranged = skills.get('ranged', 3)
 
         self.inventory = []
         self.backpack = None
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
-        self.level = stats.get('level', 1)
-        self.experience = stats.get('experience', 0)
-        self.xp_to_next_level = 100 * self.level
         self.base_inventory_slots = 5
 
         # animation / action timers
@@ -67,18 +64,10 @@ class Player:
             return None
 
     def add_xp(self, amount):
-        self.experience += amount
-        print(f"Gained {amount} XP.")
-        if self.experience >= self.xp_to_next_level:
-            self.level_up()
+        self.progression.add_xp(amount, self)
 
-    def level_up(self):
-        self.level += 1
-        self.experience = 0
-        self.xp_to_next_level = 100 * self.level
-        self.max_health += 10
-        self.health = self.max_health
-        print(f"Leveled up to level {self.level}!")
+    def process_kill(self, weapon):
+        self.progression.process_kill(self, weapon)
 
     def update_position(self, obstacles, zombies):
         # Move on X axis first

@@ -1,6 +1,6 @@
 <zombie name="farmer">
     <xp min="2" max="5" />
-    <name value="Farmer">
+    <name value="Farmer" />
     <stats>
         <health value="180" />
         <speed value="1.8" />
