@@ -1,6 +1,6 @@
 <item name="Shotgun" type="weapon">
     <properties>
-        <durability min="60" max="120" />
+        <durability min="10" max="100" />
         <load min="2" max="8" />
         <capacity value="8" />
         <color r="80" g="60" b="40" />

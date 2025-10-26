@@ -23,7 +23,7 @@ class PlayerProgression:
         self.level += 1
         self.experience = 0
         self.xp_to_next_level = 100 * self.level
-        player.max_health += 10
+        player.max_health += 0.1
         player.health = player.max_health
         self.speed += 0.1
         self.lucky += 0.1

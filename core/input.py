@@ -51,3 +51,5 @@ def handle_input(game):
                 handle_mouse_up(game, event, mouse_pos)
             elif event.type == pygame.MOUSEMOTION:
                 handle_mouse_motion(game, event, mouse_pos)
+        elif game.game_state == 'PAUSED':
+            handle_keyboard_events(game, event)

@@ -299,15 +299,15 @@ class Player:
         source_inventory = self._get_source_inventory(source_type, container_item)
         if item.item_type == 'consumable':
             if 'Water' in item.name:
-                amount_needed = 100 - self.water
+                amount_needed = 100.0 - self.water
                 amount_to_consume = min(amount_needed, item.load)
-                self.water = min(100, self.water + amount_to_consume)
+                self.water = min(100.0, self.water + amount_to_consume)
                 item.load -= amount_to_consume
                 print(f"Consumed {amount_to_consume:.0f}% Water. Water: {self.water:.0f}%")
             elif 'Food' in item.name:
-                amount_needed = 100 - self.food
+                amount_needed = 100.0 - self.food
                 amount_to_consume = min(amount_needed, item.load)
-                self.food = min(100, self.food + amount_to_consume)
+                self.food = min(100.0, self.food + amount_to_consume)
                 item.load -= amount_to_consume
                 print(f"Consumed {amount_to_consume:.0f}% Food. Food: {self.food:.0f}%")
             elif item.hp is not None:

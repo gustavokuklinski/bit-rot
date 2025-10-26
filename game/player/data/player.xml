@@ -8,7 +8,7 @@
         <food value="100.0" />
         <infection value="0.0" />
         <experience value="0.0" />
-        <level value="1" min="1" max="100" />
+        <level value="1.0" min="1.0" max="100.0" />
     </stats>
 
     <attributes>

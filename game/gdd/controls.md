@@ -12,3 +12,5 @@
 
 - **I**: Opens inventory and belt
 - **H**: Opens Status
+
+- **F2**: Pause game

@@ -41,8 +41,17 @@ def toggle_status_modal(game):
         }
         game.modals.append(new_status_modal)
 
+def toggle_pause(game):
+    if game.game_state == 'PLAYING':
+        game.game_state = 'PAUSED'
+    elif game.game_state == 'PAUSED':
+        game.game_state = 'PLAYING'
+
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_F2:
+            toggle_pause(game)
+
         if event.key == pygame.K_i:
             toggle_inventory_modal(game)
 

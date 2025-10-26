@@ -2,7 +2,7 @@
 Bit Rot is a zombie survivor game.
 
 **Basic controls**:
-- **W/A/S/D**: Walk
+- **W/A/S/D or arrows**: Walk
 - **SHIFT + R-Click**: Shoot/Attack
 - **R-Click + Drag**: Place on Belt/Backpack or Drop
 - **L-Click**: Opens menu 
@@ -14,6 +14,7 @@ Bit Rot is a zombie survivor game.
 - **I**: Opens inventory and belt
 - **H**: Opens Status
 
+- **F2**: Pause game
 ----
 
 

@@ -227,6 +227,8 @@ class Game:
                 self.run_player_setup()
             elif self.game_state == 'PLAYING':
                 self.run_playing()
+            elif self.game_state == 'PAUSED':
+                self.run_paused()
             elif self.game_state == 'GAME_OVER':
                 self.run_game_over()
             
@@ -278,6 +280,15 @@ class Game:
         update_game_state(self)
         self.check_map_transition()
         draw_game(self)
+        self._update_screen()
+
+    def run_paused(self):
+        handle_input(self)
+        draw_game(self)
+        font = pygame.font.Font(None, 50)
+        text = font.render("PAUSED", True, WHITE)
+        text_rect = text.get_rect(center=(VIRTUAL_SCREEN_WIDTH / 2, VIRTUAL_GAME_HEIGHT / 2))
+        self.virtual_screen.blit(text, text_rect)
         self._update_screen()
 
     def _get_scaled_mouse_pos(self):
