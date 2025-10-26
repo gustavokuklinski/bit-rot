@@ -219,8 +219,7 @@ class Game:
             self.player.vx = 0
             self.player.vy = 0
 
-    #async def run(self):
-    def run(self):
+    async def run(self):
         while self.running:
             if self.game_state == 'MENU':
                 self.run_menu()
@@ -230,10 +229,10 @@ class Game:
                 self.run_playing()
             elif self.game_state == 'GAME_OVER':
                 self.run_game_over()
-        
-        #await asyncio.sleep(0)
+            
+            await asyncio.sleep(0)
 
-        pygame.quit()
+        # pygame.quit()
 
     def run_menu(self):
         start_button, quit_button = draw_menu(self.virtual_screen)

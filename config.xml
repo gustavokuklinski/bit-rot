@@ -12,8 +12,8 @@
     <zombie>
         <speed value="2" />
         <drop value="1" />
-        <detection value="20">
-        <wander vale="true">
+        <detection value="20" />
+        <wander value="true" />
         <wander_interval value="2000" />
         <sight_check value="true" />
         <spawn value="3" />

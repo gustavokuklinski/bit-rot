@@ -1,4 +1,5 @@
 import pygame
+import xml.etree.ElementTree as ET
 
 pygame.init()
 
@@ -42,23 +43,27 @@ title_font = pygame.font.Font(FONT_FACE, 16)
 # Game Constants
 TILE_SIZE = 16
 
-# Player setup
-PLAYER_SPEED = 2
-DECAY_RATE_SECONDS = 2.0 # How often Water/Food decay
-FOOD_WATER_MULTIPLIER_DECAY = 1.5
-FOOD_DECAY_AMOUNT = 0.5 * FOOD_WATER_MULTIPLIER_DECAY # Percentage loss per tick
-WATER_DECAY_AMOUNT = FOOD_DECAY_AMOUNT * 1.5 * FOOD_WATER_MULTIPLIER_DECAY # Water depletes 1.5x faster
-START_ZOOM = 1.5
-FAR_ZOOM = 1.0
-NEAR_ZOOM = 5.0
+# --- XML Parsing ---
+tree = ET.parse('config.xml')
+root = tree.getroot()
 
+# Player settings
+player_config = root.find('player')
+PLAYER_SPEED = float(player_config.find('speed').get('value'))
+DECAY_RATE_SECONDS = float(player_config.find('food_water_decay_seconds').get('value'))
+FOOD_WATER_MULTIPLIER_DECAY = float(player_config.find('food_water_multiplier_decay').get('value'))
+FOOD_DECAY_AMOUNT = float(player_config.find('food_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY
+WATER_DECAY_AMOUNT = float(player_config.find('water_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY * 1.5
+START_ZOOM = float(player_config.find('zoom_start').get('value'))
+FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
+NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
 
-# --- ZOMBIE AI SETTINGS ---
-ZOMBIE_SPEED = 1 # Zombie speed
-ZOMBIE_DROP = 100 # Drop percentage
-ZOMBIE_DETECTION_RADIUS = 20 * TILE_SIZE # How far (in pixels) zombies can 'see' the player
-ZOMBIE_WANDER_ENABLED = True          # Should zombies wander when idle?
-ZOMBIE_WANDER_CHANGE_INTERVAL = 2000  # How often (ms) wandering zombies pick a new target
-ZOMBIE_LINE_OF_SIGHT_CHECK = True    # Should obstacles block zombie sight?
-ZOMBIES_PER_SPAWN = 3
-# --- ZOMBIE AI SETTINGS ---
+# Zombie settings
+zombie_config = root.find('zombie')
+ZOMBIE_SPEED = float(zombie_config.find('speed').get('value'))
+ZOMBIE_DROP = int(zombie_config.find('drop').get('value'))
+ZOMBIE_DETECTION_RADIUS = int(zombie_config.find('detection').get('value')) * TILE_SIZE
+ZOMBIE_WANDER_ENABLED = zombie_config.find('wander').get('value') == 'true'
+ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
+ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == 'true'
+ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))

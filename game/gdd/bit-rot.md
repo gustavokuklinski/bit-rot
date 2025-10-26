@@ -1,4 +1,5 @@
 # Bit Rot
+Developer: Gustavo Kuklinski
 
 A deadly disease swept across the world - but humanity eventually discovered a cure.
 The problem? The vaccine was rushed, released without proper testing.
