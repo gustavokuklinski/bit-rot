@@ -43,4 +43,4 @@ $ pygbag main.py
 ----
 
 **Credits**
-Tiles: https://opengameart.org/content/1-bit-pack
+Tiles: https://kenney.nl/assets/1-bit-pack

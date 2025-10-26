@@ -1,7 +1,8 @@
 import xml.etree.ElementTree as ET
 import os
+from data.config import DATA_PATH, SPRITE_PATH
 
-PROFESSIONS_XML_PATH = 'game/player/data/professions.xml'
+PROFESSIONS_XML_PATH = DATA_PATH + 'player/professions.xml'
 
 def parse_professions_data():
     """Parses the professions XML file and returns a list of profession dictionaries."""
@@ -22,8 +23,7 @@ def parse_professions_data():
         for item in prof_node.findall('initial_loot/item'):
             profession['initial_loot'].append(item.get('name'))
         sprite_path_relative = prof_node.find('visuals/sprite').get('file')
-        xml_dir = os.path.dirname(PROFESSIONS_XML_PATH)
-        profession['visuals']['sprite'] = os.path.join(xml_dir, sprite_path_relative)
+        profession['visuals']['sprite'] = SPRITE_PATH + 'player/' + sprite_path_relative
         professions.append(profession)
     
     return professions

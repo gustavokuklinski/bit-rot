@@ -43,7 +43,7 @@ class Zombie:
     def load_sprite(self, sprite_file):
         if not sprite_file: return None
         try:
-            path = f"game/zombies/sprites/{sprite_file}"
+            path = SPRITE_PATH + "zombie/" + sprite_file
             img = pygame.image.load(path).convert_alpha()
             return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
         except Exception as e:
@@ -207,7 +207,7 @@ class Zombie:
             print(f"**HIT!** Player takes {damage} damage.")
 
     @staticmethod
-    def load_templates(folder='game/zombies/data'):
+    def load_templates(folder=DATA_PATH + 'zombie/'):
         """Loads all zombie templates from XML files in a folder."""
         global ZOMBIE_TEMPLATES
         ZOMBIE_TEMPLATES = []

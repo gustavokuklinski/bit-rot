@@ -10,7 +10,7 @@ from core.placement import find_free_tile
 
 class TileManager:
     """Manages tile definitions, loading them from XML and handling image assets."""
-    def __init__(self, tile_folder='game/map/data', asset_folder='game/map/sprites'):
+    def __init__(self, tile_folder=DATA_PATH + 'map/', asset_folder=SPRITE_PATH + 'map/'):
         self.tile_folder = tile_folder
         self.asset_folder = asset_folder
         self.definitions = {}
@@ -45,7 +45,7 @@ class TileManager:
                     print(f"Warning: Could not parse XML file {filename}: {e}")
 
 class MapManager:
-    def __init__(self, map_folder='game/map/world'):
+    def __init__(self, map_folder='game/map'):
         self.map_folder = map_folder
         # Change the default filename to .csv
         self.current_map_filename = 'map_0_1_0_0.csv'

@@ -13,7 +13,7 @@
         <initial_loot>
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/civilian.png" />
+            <sprite file="civilian.png" />
         </visuals>
     </profession>
     <profession name="Survivor">
@@ -32,7 +32,7 @@
             <item name="Knife" />
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/survivor.png" />
+            <sprite file="survivor.png" />
         </visuals>
     </profession>
     <profession name="Soldier">
@@ -50,7 +50,7 @@
             <item name="9mm Ammo" />
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/soldier.png" />
+            <sprite file="soldier.png" />
         </visuals>
     </profession>
     <profession name="Police">
@@ -67,7 +67,7 @@
             <item name="Baton" />
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/police.png" />
+            <sprite file="police.png" />
         </visuals>
     </profession>
     <profession name="Farmer">
@@ -84,7 +84,7 @@
             <item name="Canned Food" />
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/farmer.png" />
+            <sprite file="farmer.png" />
         </visuals>
     </profession>
     <profession name="Office worker">
@@ -100,7 +100,7 @@
         <initial_loot>
         </initial_loot>
         <visuals>
-            <sprite file="../sprites/office.png" />
+            <sprite file="office.png" />
         </visuals>
     </profession>
 </professions>

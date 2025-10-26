@@ -8,12 +8,12 @@ def draw_record_tab(surface, player, modal, assets):
 
     skill_icons = {}
     icon_files = {
-        "Strength": "game/ui/sprites/strength.png",
-        "Fitness": "game/ui/sprites/fitness.png",
-        "Melee": "game/ui/sprites/melee.png",
-        "Ranged": "game/ui/sprites/range.png",
-        "Lucky": "game/ui/sprites/lucky.png",
-        "Speed": "game/ui/sprites/speed.png",
+        "Strength": SPRITE_PATH + "ui/strength.png",
+        "Fitness": SPRITE_PATH + "ui/fitness.png",
+        "Melee": SPRITE_PATH + "ui/melee.png",
+        "Ranged": SPRITE_PATH + "ui/range.png",
+        "Lucky": SPRITE_PATH + "ui/lucky.png",
+        "Speed": SPRITE_PATH + "ui/speed.png",
     }
     for k, path in icon_files.items():
         try:
@@ -105,12 +105,12 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
 
         stat_icons = {}
         icon_files = {
-            "HP": "game/ui/sprites/hp.png",
-            "Stamina": "game/ui/sprites/stamina.png",
-            "Water": "game/ui/sprites/water.png",
-            "Food": "game/ui/sprites/food.png",
-            "Infection": "game/ui/sprites/infection.png",
-            "XP": "game/ui/sprites/xp.png"
+            "HP": SPRITE_PATH + "ui/hp.png",
+            "Stamina": SPRITE_PATH + "ui/stamina.png",
+            "Water": SPRITE_PATH + "ui/water.png",
+            "Food": SPRITE_PATH + "ui/food.png",
+            "Infection": SPRITE_PATH + "ui/infection.png",
+            "XP": SPRITE_PATH + "ui/xp.png"
         }
         for k, path in icon_files.items():
             try:

@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
-import os
+from data.config import DATA_PATH, SPRITE_PATH
 
-PLAYER_XML_PATH = 'game/player/data/player.xml'
+PLAYER_XML_PATH = DATA_PATH + 'player/player.xml'
 
 def parse_player_data():
     """Parses the player XML file and returns a dictionary of attributes."""
@@ -30,7 +30,6 @@ def parse_player_data():
         data['initial_loot'].append(item.get('item'))
         
     sprite_path_relative = root.find('visuals/sprite').get('file')
-    xml_dir = os.path.dirname(PLAYER_XML_PATH)
-    data['visuals']['sprite'] = os.path.join(xml_dir, sprite_path_relative)
+    data['visuals']['sprite'] = SPRITE_PATH + 'player/' + sprite_path_relative
     
     return data

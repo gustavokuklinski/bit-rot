@@ -49,7 +49,7 @@ class Item:
         if not sprite_file:
             return None
         try:
-            path = path = f"game/items/sprites/{sprite_file}"
+            path = SPRITE_PATH + "items/" + sprite_file
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
@@ -58,8 +58,8 @@ class Item:
             return None
 
     @staticmethod
-    def load_item_templates(items_dir='game/items/data'):
-        """Loads item templates from XML files in the game/items directory."""
+    def load_item_templates(items_dir=DATA_PATH + 'items/'):
+        """Loads item templates from XML files in the game/data/items directory."""
         global ITEM_TEMPLATES
         if ITEM_TEMPLATES:
             return

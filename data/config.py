@@ -11,6 +11,9 @@ GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
+DATA_PATH = "game/data/" # Folders with XML data files
+SPRITE_PATH = "game/sprites/" # Folders with PNG sprites
+
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)

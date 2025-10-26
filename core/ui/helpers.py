@@ -15,7 +15,7 @@ def draw_inventory_button(surface):
     global _inventory_img
     if _inventory_img is None:
         try:
-            _inventory_img = pygame.image.load('game/ui/sprites/inventory.png').convert_alpha()
+            _inventory_img = pygame.image.load(SPRITE_PATH + 'ui/inventory.png').convert_alpha()
             _inventory_img = pygame.transform.scale(_inventory_img, (40, 40))
         except pygame.error:
             _inventory_img = pygame.Surface((40, 40), pygame.SRCALPHA)
@@ -28,7 +28,7 @@ def draw_status_button(surface):
     global _status_img
     if _status_img is None:
         try:
-            _status_img = pygame.image.load('game/ui/sprites/status.png').convert_alpha()
+            _status_img = pygame.image.load(SPRITE_PATH + 'ui/status.png').convert_alpha()
             _status_img = pygame.transform.scale(_status_img, (40, 40))
         except pygame.error:
             _status_img = pygame.Surface((40, 40), pygame.SRCALPHA)
@@ -44,7 +44,7 @@ def draw_menu(screen):
     # try to load and draw logo image instead of text title
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load('game/ui/sprites/logo_small.png').convert_alpha()
+            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo_small.png').convert_alpha()
             logo_w = 300
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
@@ -81,7 +81,7 @@ def draw_game_over(screen, zombies_killed):
     global _logo_img
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load('game/ui/sprites/logo_small.png').convert_alpha()
+            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo_small.png').convert_alpha()
             logo_w = 300
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
@@ -124,7 +124,7 @@ def run_player_setup(game):
 
     y_pos = 148
     rectName = pygame.Rect(VIRTUAL_SCREEN_WIDTH // 2 - 200, y_pos, 400, 50)
-    spriteName = pygame.image.load('game/ui/sprites/player.png').convert_alpha()
+    spriteName = pygame.image.load(SPRITE_PATH + 'ui/player.png').convert_alpha()
     spriteName = pygame.transform.scale(spriteName, (42, 42))
     game.virtual_screen.blit(spriteName, (rectName.left - 60, rectName.y))
 
