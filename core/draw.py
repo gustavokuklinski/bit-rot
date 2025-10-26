@@ -7,7 +7,7 @@ from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.helpers import draw_inventory_button, draw_status_button
-
+from core.ui.tooltip import draw_tooltip
 
 
 def draw_game(game):
@@ -83,9 +83,6 @@ def draw_game(game):
     
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
-
-    if game.context_menu['active']:
-        draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
     highlighted_rect = None
     highlighted_allowed = False
@@ -168,6 +165,12 @@ def draw_game(game):
         fill_w = int(max(0.0, min(1.0, frac)) * bar_w)
         pygame.draw.rect(game.virtual_screen, bar_color, (bar_x, bar_y, fill_w, bar_h))
         pygame.draw.rect(game.virtual_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
+
+    if game.hovered_item and not game.context_menu['active']:
+        draw_tooltip(game.virtual_screen, game.hovered_item, game._get_scaled_mouse_pos())
+
+    if game.context_menu['active']:
+        draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
     # Set cursor
     keys = pygame.key.get_pressed()

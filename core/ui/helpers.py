@@ -118,8 +118,7 @@ def draw_game_over(screen, zombies_killed):
 def run_player_setup(game):
     professions = parse_professions_data()
     game.virtual_screen.fill(DARK_GRAY)
-    title_font = pygame.font.Font(None, 28)
-    title_text = title_font.render("Choose your Profession", True, WHITE)
+    title_text = font.render("Choose your Profession", True, WHITE)
     title_rect = title_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, 100))
     game.virtual_screen.blit(title_text, title_rect)
 
@@ -142,7 +141,7 @@ def run_player_setup(game):
         pygame.draw.rect(game.virtual_screen, GRAY, rect, 2)
         prof_text = large_font.render(prof['name'], True, WHITE)
         game.virtual_screen.blit(prof_text, (rect.x + 10, rect.y + 10))
-        desc_text = font.render(prof['description'], True, WHITE)
+        desc_text = font_small.render(prof['description'], True, WHITE)
         game.virtual_screen.blit(desc_text, (rect.x + 10, rect.y + 30))
 
         sprite_path = prof['visuals']['sprite']

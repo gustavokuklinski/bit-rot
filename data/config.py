@@ -31,10 +31,12 @@ INVENTORY_MODAL_HEIGHT = 300
 STATUS_MODAL_WIDTH = 250
 STATUS_MODAL_HEIGHT = 360
 
+FONT_FACE = "game/font/DejaVuSansMono.ttf"
 # Fonts
-font = pygame.font.Font(None, 16)
-large_font = pygame.font.Font(None, 24)
-title_font = pygame.font.Font(None, 24)
+font = pygame.font.Font(FONT_FACE, 16)
+font_small = pygame.font.Font(FONT_FACE, 10)
+large_font = pygame.font.Font(FONT_FACE, 16)
+title_font = pygame.font.Font(FONT_FACE, 16)
 
 
 # Game Constants
@@ -53,7 +55,7 @@ NEAR_ZOOM = 5.0
 
 # --- ZOMBIE AI SETTINGS ---
 ZOMBIE_SPEED = 1 # Zombie speed
-ZOMBIE_DROP = 1 # Drop percentage
+ZOMBIE_DROP = 100 # Drop percentage
 ZOMBIE_DETECTION_RADIUS = 20 * TILE_SIZE # How far (in pixels) zombies can 'see' the player
 ZOMBIE_WANDER_ENABLED = True          # Should zombies wander when idle?
 ZOMBIE_WANDER_CHANGE_INTERVAL = 2000  # How often (ms) wandering zombies pick a new target

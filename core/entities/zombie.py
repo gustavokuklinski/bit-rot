@@ -31,6 +31,8 @@ class Zombie:
         self.max_attack = template.get('max_attack')
         self.min_infection = template.get('min_infection')
         self.max_infection = template.get('max_infection')
+        self.melee_swing_timer = 0
+        self.melee_swing_angle = 0
 
         # --- NEW AI STATE VARIABLES ---
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
@@ -41,7 +43,7 @@ class Zombie:
     def load_sprite(self, sprite_file):
         if not sprite_file: return None
         try:
-            path = os.path.join('game', 'zombies', 'sprites', sprite_file)
+            path = f"game/zombies/sprites/{sprite_file}"
             img = pygame.image.load(path).convert_alpha()
             return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
         except Exception as e:
@@ -74,6 +76,15 @@ class Zombie:
             pygame.draw.rect(surface, GREEN, health_bar_rect)
 
             self.show_health_bar_timer -= 1
+
+        if self.melee_swing_timer > 0:
+            swing_radius = TILE_SIZE * 0.8
+            center_x, center_y = draw_rect.center
+            start_angle = self.melee_swing_angle - (3.1415 / 4)
+            end_angle = self.melee_swing_angle + (3.1415 / 4)
+            arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
+            pygame.draw.arc(surface, RED, arc_bounds, start_angle, end_angle, 3)
+            self.melee_swing_timer -= 1
 
     def has_line_of_sight(self, target_rect, obstacles):
         """Checks if there is an uninterrupted line between zombie and target."""
@@ -181,6 +192,10 @@ class Zombie:
         self.rect.topleft = (int(self.x), int(self.y))
 
     def attack(self, player):
+        self.melee_swing_timer = 10
+        dx = player.rect.centerx - self.rect.centerx
+        dy = player.rect.centery - self.rect.centery
+        self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
         infection = random.randint(self.min_infection, self.max_infection)
         player.health -= damage
@@ -199,7 +214,7 @@ class Zombie:
         try:
             for filename in os.listdir(folder):
                 if filename.endswith('.xml'):
-                    filepath = os.path.join(folder, filename)
+                    filepath = filepath = f"{folder}/{filename}"
                     try:
                         tree = ET.parse(filepath)
                         root = tree.getroot()

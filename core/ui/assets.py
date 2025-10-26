@@ -1,4 +1,6 @@
 import pygame
+from data.config import *
+
 
 def load_assets():
     assets = {}
@@ -26,6 +28,6 @@ def load_assets():
         assets['close_button'] = None
         assets['minimize_button'] = None
 
-    assets['font'] = pygame.font.Font(None, 24)
+    assets['font'] = font
 
     return assets

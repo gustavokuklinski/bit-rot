@@ -36,7 +36,7 @@ class BaseModal:
     def draw_base(self):
         height = self.header_h if self.minimized else self.modal_h
         s = pygame.Surface((self.modal_w, height), pygame.SRCALPHA)
-        s.fill((20, 20, 20, 200))
+        s.fill((20, 20, 20, 230))
         self.surface.blit(s, (self.modal_x, self.modal_y))
         pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)
         self.draw_header()

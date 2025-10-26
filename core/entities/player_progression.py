@@ -42,3 +42,17 @@ class PlayerProgression:
             self.strength += 0.1 * lucky_bonus
             self.fitness += 0.1 * lucky_bonus
             self.melee += 0.5 * lucky_bonus
+
+    def update_stamina(self, player, is_moving):
+        stamina_cap = player.max_stamina * (1 - player.infection / 100)
+        if is_moving and player.stamina > 0:
+            player.stamina = max(0, player.stamina - 0.2)
+        elif not is_moving and player.stamina < stamina_cap:
+            player.stamina = min(stamina_cap, player.stamina + 0.3)
+
+    def handle_melee_attack(self, player):
+        if player.stamina >= 10:
+            player.stamina -= 5
+            return True
+        print("Too tired to swing!")
+        return False

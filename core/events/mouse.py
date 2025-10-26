@@ -45,7 +45,7 @@ def handle_mouse_down(game, event, mouse_pos):
             if modal['type'] == 'inventory':
                 backpack_slot_rect = get_backpack_slot_rect(modal['position'])
                 if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
-                    modal_exists = any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals)
+                    modal_exists = any(m for m in game.modals if m['type'] == 'container' and m['item'] == game.player.backpack)
                     if not modal_exists:
                         new_container_modal = {
                             'id': uuid.uuid4(),
@@ -260,7 +260,30 @@ def handle_mouse_up(game, event, mouse_pos):
         game.drag_origin = None
         game.drag_candidate = None
 
+def find_item_at_pos(game, mouse_pos):
+    for modal in reversed(game.modals):
+        if not modal['rect'].collidepoint(mouse_pos):
+            continue
+
+        if modal['type'] == 'inventory':
+            for i, item in enumerate(game.player.inventory):
+                if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
+                    return item
+            for i, item in enumerate(game.player.belt):
+                if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
+                    return item
+            if game.player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
+                return game.player.backpack
+        
+        elif modal['type'] == 'container':
+            container = modal['item']
+            for i, item in enumerate(container.inventory):
+                if item and get_container_slot_rect(modal['position'], i).collidepoint(mouse_pos):
+                    return item
+    return None
+
 def handle_mouse_motion(game, event, mouse_pos):
+    game.hovered_item = find_item_at_pos(game, mouse_pos)
     if game.context_menu['active']:
         pass
 
@@ -678,8 +701,7 @@ def handle_attack(game, mouse_pos):
             elif weapon.load <= 0: print(f"**CLICK!** {weapon.name} is out of ammo.")
             else: print(f"**CLUNK!** {weapon.name} is broken.")
         else:
-            if game.player.stamina >= 10:
-                game.player.stamina -= 10
+            if game.player.progression.handle_melee_attack(game.player):
                 game.player.melee_swing_timer = 10
                 player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
                 player_screen_y = GAME_HEIGHT / 2
@@ -691,11 +713,10 @@ def handle_attack(game, mouse_pos):
                 for zombie in game.zombies:
                     if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
                         if player_hit_zombie(game.player, zombie):
-                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles)
+                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
                             game.zombies.remove(zombie)
                             game.zombies_killed += 1
                         hit_a_zombie = True
                         break
 
                 if not hit_a_zombie: print("Swung and missed!")
-            else: print("Too tired to swing!")

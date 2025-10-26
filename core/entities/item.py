@@ -49,7 +49,7 @@ class Item:
         if not sprite_file:
             return None
         try:
-            path = os.path.join('game', 'items', 'sprites', sprite_file)
+            path = path = f"game/items/sprites/{sprite_file}"
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
@@ -69,7 +69,7 @@ class Item:
         for filename in os.listdir(items_dir):
             if not filename.endswith('.xml'):
                 continue
-            tree = ET.parse(os.path.join(items_dir, filename))
+            tree = ET.parse(f"{items_dir}/{filename}")
             root = tree.getroot()
             name = root.attrib.get('name')
             ttype = root.attrib.get('type')

@@ -3,14 +3,15 @@
     <profession name="Civilian">
         <description>A normal person.</description>
         <attributes>
-            <strength value="0" />
-            <fitness value="0" />
-            <melee value="0" />
-            <ranged value="0" />
-            <lucky value="0" />
-            <speed value="0" />
+            <strength value="0.0" />
+            <fitness value="0.0" />
+            <melee value="0.0" />
+            <ranged value="0.0" />
+            <lucky value="0.0" />
+            <speed value="0.0" />
         </attributes>
         <initial_loot>
+            <item name="Bag" />
         </initial_loot>
         <visuals>
             <sprite file="../sprites/civilian.png" />
@@ -19,12 +20,12 @@
     <profession name="Survivor">
         <description>A balanced profession with a bit of everything.</description>
         <attributes>
-            <strength value="3" />
-            <fitness value="3" />
-            <melee value="3" />
-            <ranged value="3" />
-            <lucky value="3" />
-            <speed value="3" />
+            <strength value="3.0" />
+            <fitness value="3.0" />
+            <melee value="3.0" />
+            <ranged value="3.0" />
+            <lucky value="3.0" />
+            <speed value="3.0" />
         </attributes>
         <initial_loot>
             <item name="Water Bottle" />
@@ -38,12 +39,12 @@
     <profession name="Soldier">
         <description>A combat-focused profession with high ranged skill.</description>
         <attributes>
-            <strength value="4" />
-            <fitness value="4" />
-            <melee value="2" />
-            <ranged value="5" />
-            <lucky value="2" />
-            <speed value="3" />
+            <strength value="4.0" />
+            <fitness value="4.0" />
+            <melee value="2.0" />
+            <ranged value="5.0" />
+            <lucky value="2.0" />
+            <speed value="3.0" />
         </attributes>
         <initial_loot>
             <item name="Pistol (9mm)" />
@@ -57,12 +58,12 @@
     <profession name="Police">
         <description>A profession with a good balance of combat and utility.</description>
         <attributes>
-            <strength value="3" />
-            <fitness value="3" />
-            <melee value="4" />
-            <ranged value="4" />
-            <lucky value="3" />
-            <speed value="3" />
+            <strength value="3.0" />
+            <fitness value="3.0" />
+            <melee value="4.0" />
+            <ranged value="4.0" />
+            <lucky value="3.0" />
+            <speed value="3.0" />
         </attributes>
         <initial_loot>
             <item name="Baton" />
@@ -74,12 +75,12 @@
     <profession name="Farmer">
         <description>A profession with a focus on strength and melee.</description>
         <attributes>
-            <strength value="5" />
-            <fitness value="4" />
-            <melee value="5" />
-            <ranged value="1" />
-            <lucky value="2" />
-            <speed value="3" />
+            <strength value="5.0" />
+            <fitness value="4.0" />
+            <melee value="5.0" />
+            <ranged value="1.0" />
+            <lucky value="2.0" />
+            <speed value="3.0" />
         </attributes>
         <initial_loot>
             <item name="Axe" />
@@ -92,12 +93,12 @@
     <profession name="Office worker">
         <description>A profession with a focus on intelligence and luck.</description>
         <attributes>
-            <strength value="2" />
-            <fitness value="2" />
-            <melee value="1" />
-            <ranged value="1" />
-            <lucky value="5" />
-            <speed value="3" />
+            <strength value="2.0" />
+            <fitness value="2.0" />
+            <melee value="1.0" />
+            <ranged value="1.0" />
+            <lucky value="5.0" />
+            <speed value="3.0" />
         </attributes>
         <initial_loot>
             <item name="Medkit" />

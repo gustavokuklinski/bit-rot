@@ -121,7 +121,7 @@ class Player:
 
         # Melee arc
         if self.melee_swing_timer > 0:
-            swing_radius = TILE_SIZE * 1.5
+            swing_radius = TILE_SIZE * 0.8
             center_x, center_y = draw_rect.center
             start_angle = self.melee_swing_angle - (3.1415 / 4)
             end_angle = self.melee_swing_angle + (3.1415 / 4)
@@ -147,11 +147,7 @@ class Player:
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
-        stamina_cap = self.max_stamina * (1 - self.infection / 100)
-        if is_moving and self.stamina > 0:
-            self.stamina = max(0, self.stamina - 0.2)
-        elif not is_moving and self.stamina < stamina_cap:
-            self.stamina = min(stamina_cap, self.stamina + 0.3)
+        self.progression.update_stamina(self, is_moving)
 
 
 

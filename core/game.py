@@ -4,6 +4,7 @@ import time
 import math
 import uuid
 import os
+import asyncio
 
 from data.config import *
 from core.entities.player import Player
@@ -78,17 +79,18 @@ class Game:
         self.player_name = ""
         self.name_input_active = False
         self.selected_profession = None
+        self.hovered_item = None
 
     def load_map(self, base_map_filename):
         """Loads map data from base, ground, and spawn CSV layer files."""
         print(f"Loading map layers for: {base_map_filename}")
 
         # Construct filenames for the layers
-        base_filepath = os.path.join(self.map_manager.map_folder, base_map_filename)
+        base_filepath = f"{self.map_manager.map_folder}/{base_map_filename}"
         ground_filename = base_map_filename.replace(".csv", "_ground.csv")
-        ground_filepath = os.path.join(self.map_manager.map_folder, ground_filename)
+        ground_filepath = f"{self.map_manager.map_folder}/{ground_filename}"
         spawn_filename = base_map_filename.replace(".csv", "_spawn.csv")
-        spawn_filepath = os.path.join(self.map_manager.map_folder, spawn_filename)
+        spawn_filepath = f"{self.map_manager.map_folder}/{spawn_filename}"
 
         # Load the data from each layer file
         base_layout = load_map_from_file(base_filepath)
@@ -217,6 +219,7 @@ class Game:
             self.player.vx = 0
             self.player.vy = 0
 
+    #async def run(self):
     def run(self):
         while self.running:
             if self.game_state == 'MENU':
@@ -227,6 +230,9 @@ class Game:
                 self.run_playing()
             elif self.game_state == 'GAME_OVER':
                 self.run_game_over()
+        
+        #await asyncio.sleep(0)
+
         pygame.quit()
 
     def run_menu(self):

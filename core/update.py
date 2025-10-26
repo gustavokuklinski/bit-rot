@@ -80,7 +80,6 @@ def update_game_state(game):
                     game.modals.remove(modal)
                     print(f"Closed {container_item.name} because you moved away.")
 
-
 def player_hit_zombie(player, zombie):
     """Calculates damage and processes the hit."""
 
@@ -130,17 +129,16 @@ def player_hit_zombie(player, zombie):
     print(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False # Zombie survived
 
-
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
     print(f"A {zombie.name} died. Creating corpse and checking for loot...")
     # create corpse at zombie position
-    dead_sprite_path = os.path.join('game', 'zombies', 'sprites', 'dead.png')
+    dead_sprite_path = dead_sprite_path = "game/zombies/sprites/dead.png"
     corpse = Corpse(name="Dead corpse", capacity=10, image_path=dead_sprite_path, pos=zombie.rect.center)
     # build its inventory from the zombie loot table
     if hasattr(zombie, 'loot_table'):
         for drop in zombie.loot_table:
-            if random.random() < drop.get('chance', 0):
+            if random.random() < drop.get('chance', 0) * (ZOMBIE_DROP / 100.0):
                 item_inst = Item.create_from_name(drop.get('item'))
                 if item_inst:
                     corpse.inventory.append(item_inst)

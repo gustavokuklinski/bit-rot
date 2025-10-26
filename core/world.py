@@ -20,7 +20,7 @@ class TileManager:
         """Parses all XML files in the tile folder to load tile definitions."""
         for filename in os.listdir(self.tile_folder):
             if filename.endswith('.xml'):
-                filepath = os.path.join(self.tile_folder, filename)
+                filepath = f"{self.tile_folder}/{filename}"
                 try:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
@@ -31,7 +31,7 @@ class TileManager:
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
                         if char and sprite_file:
-                            image_path = os.path.join(self.asset_folder, sprite_file)
+                            image_path = f"{self.asset_folder}/{sprite_file}"
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 self.definitions[char] = {

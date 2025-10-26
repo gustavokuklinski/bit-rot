@@ -6,6 +6,22 @@ def draw_record_tab(surface, player, modal, assets):
     y_offset = modal['rect'].y + 80
     x_offset = modal['rect'].x + 10
 
+    skill_icons = {}
+    icon_files = {
+        "Strength": "game/ui/sprites/strength.png",
+        "Fitness": "game/ui/sprites/fitness.png",
+        "Melee": "game/ui/sprites/melee.png",
+        "Ranged": "game/ui/sprites/range.png",
+        "Lucky": "game/ui/sprites/lucky.png",
+        "Speed": "game/ui/sprites/speed.png",
+    }
+    for k, path in icon_files.items():
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            skill_icons[k] = pygame.transform.scale(img, (24, 24))
+        except Exception:
+            skill_icons[k] = None
+
     skills = [
         ("Strength", player.progression.strength, 10, RED),
         ("Fitness", player.progression.fitness, 10, GREEN),
@@ -18,11 +34,19 @@ def draw_record_tab(surface, player, modal, assets):
     for i, (name, value, max_value, color) in enumerate(skills):
         y_pos = y_offset + i * 28
         
-        text = font.render(f"{name}: [{int(value)}/{max_value}]", True, WHITE)
-        surface.blit(text, (x_offset, y_pos))
-        label_x = x_offset + 110
+        icon = skill_icons.get(name)
+        if icon:
+            surface.blit(icon, (x_offset, y_pos))
+            label_x = x_offset + 28
+        else:
+            text = font.render(f"{name}:", True, WHITE)
+            surface.blit(text, (x_offset, y_pos))
+            label_x = x_offset + 110
 
-        bar_x = label_x + 12
+        text = font_small.render(f"[{int(value)}/{max_value}]", True, WHITE)
+        surface.blit(text, (label_x, y_pos + 3))
+
+        bar_x = label_x + 60
         bar_width = int(100 * (value / max_value))
         bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 20)
         pygame.draw.rect(surface, color, bar_rect)
@@ -49,8 +73,8 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
     pygame.draw.rect(surface, WHITE, status_tab_rect, 1)
     pygame.draw.rect(surface, WHITE, record_tab_rect, 1)
 
-    status_text = font.render("Status", True, WHITE)
-    record_text = font.render("Record", True, WHITE)
+    status_text = font_small.render("Status", True, WHITE)
+    record_text = font_small.render("Record", True, WHITE)
     surface.blit(status_text, (status_tab_rect.centerx - status_text.get_width() / 2, status_tab_rect.centery - status_text.get_height() / 2))
     surface.blit(record_text, (record_tab_rect.centerx - record_text.get_width() / 2, record_tab_rect.centery - record_text.get_height() / 2))
 
@@ -67,15 +91,15 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
         y_offset = base_modal.modal_y + base_modal.header_h + 40
         x_offset = base_modal.modal_x + 10
 
-        name_text = font.render(f"Name: {player.name}", True, WHITE)
+        name_text = font.render(f"{player.name}", True, WHITE)
         surface.blit(name_text, (x_offset, y_offset))
         y_offset += 20
 
-        profession_text = font.render(f"Profession: {player.profession}", True, WHITE)
+        profession_text = font_small.render(f"Profession: {player.profession}", True, WHITE)
         surface.blit(profession_text, (x_offset, y_offset))
         y_offset += 20
 
-        level_text = font.render(f"Level: {player.progression.level}", True, WHITE)
+        level_text = font_small.render(f"Level: {player.progression.level}", True, WHITE)
         surface.blit(level_text, (x_offset, y_offset))
         y_offset += 20
 
@@ -114,11 +138,14 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
                 surface.blit(text, (x_offset, y_pos))
                 label_x = x_offset + 110
 
+            text = font_small.render(f"[{int(value)}/{max_value}]", True, WHITE)
+            surface.blit(text, (label_x, y_pos + 3))
+
             bar_x = label_x + 12
             bar_width = int(100 * (value / max_value))
-            bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
+            bar_rect = pygame.Rect(bar_x + 60, y_pos + 5, bar_width, 10)
             pygame.draw.rect(surface, color, bar_rect)
-            pygame.draw.rect(surface, WHITE, (bar_x, y_pos + 5, 100, 10), 1)
+            pygame.draw.rect(surface, WHITE, (bar_x + 60, y_pos + 5, 100, 10), 1)
 
         try:
             if '_kills_img' not in globals() or _kills_img is None:
@@ -129,10 +156,10 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed):
 
         if _kills_img:
             surface.blit(_kills_img, (x_offset, y_pos + 35))
-            num_text = font.render(f"{str(zombies_killed)} Killed", True, WHITE)
-            surface.blit(num_text, (x_offset + _kills_img.get_width() + 16, y_pos + 35 + 6))
+            num_text = font_small.render(f"{str(zombies_killed)} Killed", True, WHITE)
+            surface.blit(num_text, (x_offset + _kills_img.get_width() + 10, y_pos + 35 + 6))
         else:
-            zombies_killed_text = font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
+            zombies_killed_text = font_small.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
             surface.blit(zombies_killed_text, (x_offset, y_pos))
     
     elif modal['active_tab'] == 'Record':

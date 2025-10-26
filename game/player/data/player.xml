@@ -6,8 +6,8 @@
         <stamina value="100.0" />
         <water value="100.0" />
         <food value="100.0" />
-        <infection value="0" />
-        <experience value="0" />
+        <infection value="0.0" />
+        <experience value="0.0" />
         <level value="1" min="1" max="100" />
     </stats>
 
