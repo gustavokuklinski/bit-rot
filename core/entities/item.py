@@ -22,7 +22,7 @@ class Item:
         self.spread_angle = spread_angle
         self.image = self.load_sprite(sprite_file)
         self.rect = pygame.Rect(0, 0, TILE_SIZE, TILE_SIZE)
-        if self.item_type == 'backpack':
+        if self.item_type in ['backpack', 'container']:
             self.inventory = []
         self.color = color
         self.min_damage = min_damage
@@ -49,7 +49,10 @@ class Item:
         if not sprite_file:
             return None
         try:
-            path = SPRITE_PATH + "items/" + sprite_file
+            if sprite_file.startswith("game/"):
+                path = sprite_file
+            else:
+                path = SPRITE_PATH + "items/" + sprite_file
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
@@ -149,6 +152,11 @@ class Item:
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
         hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
         return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+
+class Container(Item):
+    def __init__(self, name, items=None, capacity=0):
+        super().__init__(name, item_type='container', capacity=capacity)
+        self.inventory = items if items is not None else []
 
 class Projectile:
     """Represents a bullet fired by the player."""

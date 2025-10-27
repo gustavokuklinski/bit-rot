@@ -1,0 +1,9 @@
+<map name="cupboard" type="maptile_container" char="C" is_obstacle="true">
+    <visuals>
+        <sprite file="cupboard.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="Canned Food" chance="0.6" />
+    </loot>
+</map>

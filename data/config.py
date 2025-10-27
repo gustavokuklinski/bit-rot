@@ -34,13 +34,17 @@ INVENTORY_MODAL_WIDTH = 300
 INVENTORY_MODAL_HEIGHT = 300
 STATUS_MODAL_WIDTH = 250
 STATUS_MODAL_HEIGHT = 360
+NEARBY_MODAL_WIDTH = 300
+NEARBY_MODAL_HEIGHT = 300
 
-FONT_FACE = "game/font/DejaVuSansMono.ttf"
+FONT_FACE = "game/font/Oxanium-Regular.ttf"
+FONT_TITLE = "game/font/VT323-Regular.ttf"
+
 # Fonts
 font = pygame.font.Font(FONT_FACE, 16)
-font_small = pygame.font.Font(FONT_FACE, 10)
+font_small = pygame.font.Font(FONT_FACE, 16)
 large_font = pygame.font.Font(FONT_FACE, 16)
-title_font = pygame.font.Font(FONT_FACE, 16)
+title_font = pygame.font.Font(FONT_TITLE, 16)
 
 
 # Game Constants

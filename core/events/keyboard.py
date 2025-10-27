@@ -41,6 +41,27 @@ def toggle_status_modal(game):
         }
         game.modals.append(new_status_modal)
 
+def toggle_nearby_modal(game):
+    nearby_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'nearby':
+            game.modals.remove(modal)
+            nearby_modal_exists = True
+            break
+    if not nearby_modal_exists:
+        new_nearby_modal = {
+            'id': uuid.uuid4(),
+            'type': 'nearby',
+            'item': None,
+            'position': game.last_modal_positions['nearby'],
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(game.last_modal_positions['nearby'][0], game.last_modal_positions['nearby'][1], 300, 300),
+            'minimized': False
+        }
+        game.modals.append(new_nearby_modal)
+
+
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'

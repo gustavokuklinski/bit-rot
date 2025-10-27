@@ -6,7 +6,8 @@ from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
-from core.ui.helpers import draw_inventory_button, draw_status_button
+from core.ui.nearby import draw_nearby_modal
+from core.ui.helpers import draw_inventory_button, draw_status_button, draw_nearby_button
 from core.ui.tooltip import draw_tooltip
 
 
@@ -80,9 +81,13 @@ def draw_game(game):
         elif modal['type'] == 'container':
             buttons = draw_container_view(game.virtual_screen, modal['item'], modal, game.assets)
             game.modal_buttons.extend(buttons)
+        elif modal['type'] == 'nearby':
+            buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)
+            game.modal_buttons.extend(buttons)
     
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
+    game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
 
     highlighted_rect = None
     highlighted_allowed = False

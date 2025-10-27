@@ -11,7 +11,7 @@
         <sprite file="police.png" />
     </visuals>
     <loot>
-        <item name="Pistol (9mm)" chance="0.15" />
-        <item name="9mm Ammo" chance="0.4" />
+        <item name="Pistol 9mm" chance="100.0" />
+        <item name="9mm Ammo" chance="100.0" />
     </loot>
 </zombie>

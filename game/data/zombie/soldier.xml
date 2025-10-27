@@ -11,8 +11,8 @@
         <sprite file="soldier.png" />
     </visuals>
     <loot>
-        <item name="Shotgun" chance="0.1" />
-        <item name="Shotgun Shells" chance="0.3" />
-        <item name="Large Backpack" chance="0.2" />
+        <item name="Shotgun" chance="100.0" />
+        <item name="Shotgun Shells" chance="100.0" />
+        <item name="Large Backpack" chance="100.0" />
     </loot>
 </zombie>

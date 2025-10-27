@@ -11,8 +11,8 @@
         <sprite file="office.png" />
     </visuals>
     <loot>
-        <item name="Vaccine" chance="0.1" />
-        <item name="Knife" chance="0.2" />
-        <item name="Pistol" chance="0.05" />
+        <item name="Vaccine" chance="100.0" />
+        <item name="Knife" chance="100.0" />
+        <item name="Pistol" chance="100.0" />
     </loot>
 </zombie>

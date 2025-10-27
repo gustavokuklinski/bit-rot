@@ -1,4 +1,4 @@
-<map name="stove" type="maptile" char="S" is_obstacle="true">
+<map name="stove" type="maptile_container" char="S" is_obstacle="true">
     <visuals>
         <sprite file="stove.png" />
     </visuals>

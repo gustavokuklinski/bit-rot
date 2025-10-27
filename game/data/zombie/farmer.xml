@@ -11,6 +11,6 @@
         <sprite file="farmer.png" />
     </visuals>
     <loot>
-        <item name="Canned Food" chance="0.6" />
+        <item name="Canned Food" chance="100.0" />
     </loot>
 </zombie>

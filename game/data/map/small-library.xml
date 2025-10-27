@@ -1,5 +1,0 @@
-<map name="small-library" type="maptile" char="M" is_obstacle="true">
-    <visuals>
-        <sprite file="small-library.png" />
-    </visuals>
-</map>

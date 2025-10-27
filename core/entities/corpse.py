@@ -1,22 +1,13 @@
 import pygame
 import os
 from data.config import TILE_SIZE, DARK_GRAY
+from core.entities.item import Item
 
-class Corpse:
+class Corpse(Item):
     """Lootable corpse container with automatic decay."""
 
     def __init__(self, name="Dead corpse", capacity=8, image_path=None, pos=(0, 0), decay_ms=160000):
-        self.name = name
-        self.capacity = capacity
-        self.inventory = []
-        self.image = None
-        if image_path:
-            try:
-                self.image = pygame.image.load(image_path).convert_alpha()
-                self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
-            except Exception:
-                self.image = None
-        self.rect = pygame.Rect(0, 0, TILE_SIZE, TILE_SIZE)
+        super().__init__(name, 'container', capacity=capacity, sprite_file=image_path)
         self.rect.center = pos
         self.spawn_time = pygame.time.get_ticks()
         self.decay_ms = decay_ms
@@ -27,14 +18,6 @@ class Corpse:
         if now_ms is None:
             now_ms = pygame.time.get_ticks()
         return (now_ms - self.spawn_time) > self.decay_ms
-
-    def draw(self, surface, game_offset_x=0):
-        """Draw corpse on provided surface (accounts for game offset)."""
-        draw_rect = self.rect.move(game_offset_x, 0)
-        if self.image:
-            surface.blit(self.image, draw_rect)
-        else:
-            pygame.draw.rect(surface, self.color, draw_rect)
 
     def spill_contents_to_ground(self, items_on_ground, drop_pos=None):
         """Move contained items from this corpse to world items_on_ground.

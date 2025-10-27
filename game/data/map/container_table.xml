@@ -1,0 +1,11 @@
+<map name="table" type="maptile" char="A" is_obstacle="true">
+    <visuals>
+        <sprite file="table.png" />
+    </visuals>
+    <loot>
+        <item item="Shotgun Shells" chance="0.1" />
+        <item item="Shotgun" chance="0.1" />
+        <item item="Canned Food" chance="1.5" />
+        <item item="Water Bottle" chance="100.0" />
+    </loot>
+</map>

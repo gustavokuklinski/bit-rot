@@ -1,5 +1,0 @@
-<map name="toilet" type="maptile" char="T" is_obstacle="true">
-    <visuals>
-        <sprite file="toilet.png" />
-    </visuals>
-</map>

@@ -37,6 +37,21 @@ def draw_status_button(surface):
     surface.blit(_status_img, button_rect)
     return button_rect
 
+_nearby_img = None
+def draw_nearby_button(surface):
+    global _nearby_img
+    if _nearby_img is None:
+        try:
+            _nearby_img = pygame.image.load(SPRITE_PATH + 'ui/nearby.png').convert_alpha()
+            _nearby_img = pygame.transform.scale(_nearby_img, (40, 40))
+        except pygame.error:
+            _nearby_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _nearby_img.fill(GRAY)
+    button_nearby_rect = pygame.Rect(10, 110, 60, 60)
+    surface.blit(_nearby_img, button_nearby_rect)
+    return button_nearby_rect
+
+
 def draw_menu(screen):
     global _logo_img
     screen.fill(DARK_GRAY)

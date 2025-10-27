@@ -4,7 +4,7 @@ import os
 import xml.etree.ElementTree as ET
 import csv
 from data.config import *
-from core.entities.item import Item
+from core.entities.item import Item, Container
 from core.entities.zombie import Zombie
 from core.placement import find_free_tile
 
@@ -24,7 +24,7 @@ class TileManager:
                 try:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
-                    if root.tag == 'map' and root.get('type') == 'maptile':
+                    if root.tag == 'map':
                         char = root.get('char')
                         is_obstacle = root.get('is_obstacle', 'false').lower() == 'true'
                         sprite_node = root.find('visuals/sprite')
@@ -34,10 +34,24 @@ class TileManager:
                             image_path = f"{self.asset_folder}/{sprite_file}"
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
-                                self.definitions[char] = {
+                                definition = {
                                     'is_obstacle': is_obstacle,
-                                    'image': image
+                                    'image': image,
+                                    'type': root.get('type')
                                 }
+                                if root.get('type') == 'maptile_container':
+                                    capacity_node = root.find('capacity')
+                                    if capacity_node is not None:
+                                        definition['capacity'] = int(capacity_node.get('value'))
+                                    loot_node = root.find('loot')
+                                    if loot_node is not None:
+                                        definition['loot'] = []
+                                        for item_node in loot_node.findall('item'):
+                                            definition['loot'].append({
+                                                'item': item_node.get('item'),
+                                                'chance': float(item_node.get('chance', '0'))
+                                            })
+                                self.definitions[char] = definition
                                 print(f"Loaded tile definition for '{char}' from {filename} {image_path}")
                             except pygame.error as e:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
@@ -115,6 +129,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
     player_spawn = None
     zombie_spawns = []
     item_spawns = []
+    containers = []
 
     # Use dimensions from the base layout (assuming all layers match)
     map_height = len(base_layout)
@@ -122,7 +137,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
 
     if not map_height or not map_width:
         print("Error: Base map layout is empty.")
-        return [], [], None, [], []
+        return [], [], None, [], [], []
 
     # 1. Process Ground Layer (Floor Tiles)
     if len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
@@ -160,13 +175,23 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                     renderable_tiles.append((tile_def['image'], rect)) # Add visuals
                     if tile_def['is_obstacle']:
                         obstacles.append(rect) # Add collision rect
-                #elif char == '#': # Keep supporting '#' as a generic obstacle
-                #     obstacles.append(rect)
+                    if tile_def['type'] == 'maptile_container':
+                        items = []
+                        if 'loot' in tile_def:
+                            for loot_item in tile_def['loot']:
+                                if random.random() < loot_item['chance']:
+                                    items.append(Item.create_from_name(loot_item['item']))
+                        capacity = tile_def.get('capacity', 0)
+                        container = Container(name=tile_def['type'], items=items, capacity=capacity)
+                        container.rect = rect
+                        container.image = tile_def['image']
+                        containers.append(container)
                 else:
                     print(f"Warning: Undefined base tile character '{char}' at ({x},{y}).")
 
 
     # 3. Process Spawn Layer (P, Z, I)
+    possible_player_spawns = []
     if len(spawn_layout) != map_height or (map_height > 0 and len(spawn_layout[0]) != map_width):
         print("Warning: Spawn layout dimensions mismatch base layout.")
     for y, row in enumerate(spawn_layout):
@@ -181,14 +206,17 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                 zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
             elif char == 'I':
                 item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-            # Ignore other characters in the spawn layer
+            elif char != ' ':
+                possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
 
     if not player_spawn:
-        print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at default position.")
+        print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at a random available spawn point.")
+        if possible_player_spawns:
+            player_spawn = random.choice(possible_player_spawns)
         # Optionally set a default spawn like center of map or (0,0)
         # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
 
-    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns
+    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers
 
 def spawn_initial_items(obstacles, item_spawns):
     items_on_ground = []

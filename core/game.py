@@ -43,6 +43,7 @@ class Game:
         self.projectiles = []
         self.obstacles = []
         self.renderable_tiles = []
+        self.containers = []
         
 
         self.zombies_killed = 0
@@ -69,11 +70,13 @@ class Game:
         self.last_modal_positions = {
             'status': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
             'inventory': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
-            'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150)
+            'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
+            'nearby': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150)
         }
 
         self.status_button_rect = None
         self.inventory_button_rect = None
+        self.nearby_button_rect = None
         self.camera = None
         self.map_states = {}
         self.player_name = ""
@@ -127,7 +130,7 @@ class Game:
         self.current_map_height = map_height * TILE_SIZE
 
         # Call the new layered parser function
-        self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns = \
+        self.obstacles, self.renderable_tiles, player_spawn, zombie_spawns, item_spawns, self.containers = \
             parse_layered_map_layout(base_layout, ground_layout, spawn_layout, self.tile_manager)
 
         # --- Rest of the function (loading state, spawning entities) remains the same ---
@@ -138,6 +141,7 @@ class Game:
             # Load saved state for items and zombies
             self.items_on_ground = map_state.get('items', [])
             self.zombies = map_state.get('zombies', [])
+            self.containers = map_state.get('containers', [])
             # Apply filters for killed/picked up items
             killed_zombie_ids = set(map_state.get('killed_zombies', []))
             self.zombies = [z for z in self.zombies if z.id not in killed_zombie_ids]
@@ -152,6 +156,7 @@ class Game:
             self.map_states[map_filename] = {
                 'items': self.items_on_ground[:], # Store copies
                 'zombies': self.zombies[:],       # Store copies
+                'containers': self.containers[:], # Store copies
                 'killed_zombies': [],
                 'picked_up_items': []
             }
@@ -211,6 +216,7 @@ class Game:
                 self.map_states[current_map_filename] = {}
             self.map_states[current_map_filename]['items'] = self.items_on_ground
             self.map_states[current_map_filename]['zombies'] = self.zombies
+            self.map_states[current_map_filename]['containers'] = self.containers
 
             self.load_map(new_map)
             
@@ -309,6 +315,15 @@ class Game:
 
         return (scaled_x, scaled_y)
 
+
+    def find_nearby_containers(self):
+        nearby_containers = []
+        for item in self.items_on_ground + self.containers:
+            if hasattr(item, 'inventory'):
+                dist = math.hypot(self.player.rect.centerx - item.rect.centerx, self.player.rect.centery - item.rect.centery)
+                if dist <= TILE_SIZE:
+                    nearby_containers.append(item)
+        return nearby_containers
 
     def screen_to_world(self, screen_pos):
         """Converts screen coordinates to world coordinates."""

@@ -11,6 +11,6 @@
         <sprite file="person.png" />
     </visuals>
     <loot>
-        <item name="Water Bottle" chance="0.2" />
+        <item name="Water Bottle" chance="100.0" />
     </loot>
 </zombie>
