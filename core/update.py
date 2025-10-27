@@ -81,53 +81,38 @@ def update_game_state(game):
                     print(f"Closed {container_item.name} because you moved away.")
 
 def player_hit_zombie(player, zombie):
-    """Calculates damage and processes the hit."""
-
+    progression = player.progression
     active_weapon = player.active_weapon
-    base_damage = 1 # Unarmed base damage
-    weapon_durability_loss = 0
+    
+    base_damage = 1
+    damage_multiplier = 1.0
+    is_headshot = False
 
     if active_weapon:
         base_damage = active_weapon.damage
-        if active_weapon.item_type in ['weapon', 'tool']:
-            if random.randint(0, 10) < player.progression.melee:
-                weapon_durability_loss = 0.5
-            else:
-                weapon_durability_loss = 2.0
+        if 'Gun' in active_weapon.name: # Ranged
+            if random.random() < progression.get_headshot_chance():
+                is_headshot = True
+                damage_multiplier = 2.0
+        else: # Melee
+            damage_multiplier = progression.get_melee_damage_multiplier()
+            durability_loss = progression.get_weapon_durability_loss()
+            if active_weapon.durability is not None and active_weapon.durability > 0:
+                active_weapon.durability -= durability_loss
+                if active_weapon.durability <= 0:
+                    print(f"{active_weapon.name} broke!")
+                    # player.unequip_item(active_weapon) # This method doesn't exist
     else: # Unarmed
-        base_damage = 1 + (player.progression.strength * 0.1)
+        base_damage = progression.get_unarmed_damage()
 
-    # RANGED WEAPON DURABILITY CHECK handled in shooting code (input.py)
-
-    # MELEE WEAPON DURABILITY CHECK
-    if active_weapon and 'Gun' not in active_weapon.name: # Only apply durability loss for non-gun weapons on hit
-        if active_weapon.durability is not None and active_weapon.durability > 0:
-            active_weapon.durability -= weapon_durability_loss
-            if active_weapon.durability <= 0:
-                print(f"{active_weapon.name} broke!")
-                player.unequip_item(active_weapon) # Use a method to handle unequip logic
-
-
-    is_headshot = False
-    damage_multiplier = 1.0
-    # Apply headshot multiplier only for ranged weapons (done in projectile hit check, not melee)
-    if active_weapon and 'Gun' in active_weapon.name:
-        headshot_chance = 0.1 + (player.progression.ranged * 0.04)
-        if random.random() < headshot_chance:
-            is_headshot = True
-            damage_multiplier = 2.0
-
-    # Apply melee skill multiplier for melee attacks
-    if not (active_weapon and 'Gun' in active_weapon.name):
-        damage_multiplier *= (1 + player.progression.melee * 0.1)
-    final_damage = (base_damage * damage_multiplier)
+    final_damage = base_damage * damage_multiplier
 
     if zombie.take_damage(final_damage):
-        return True # Zombie died
+        return True
 
     hit_type = "Headshot" if is_headshot else "Hit"
     print(f"{hit_type}! Dealt {final_damage:.1f} damage.")
-    return False # Zombie survived
+    return False
 
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
@@ -148,8 +133,7 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     if find_free_tile(corpse.rect, obstacles, items_on_ground_list, initial_pos=zombie.rect.topleft):
         items_on_ground_list.append(corpse)
 
-    game.player.add_xp(zombie.xp_value)
-    game.player.process_kill(weapon)
+    game.player.process_kill(weapon, zombie)
 
     # Record killed zombie in map state
     current_map_filename = game.map_manager.current_map_filename

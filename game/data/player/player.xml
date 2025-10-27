@@ -7,17 +7,15 @@
         <water value="100.0" />
         <food value="100.0" />
         <infection value="0.0" />
-        <experience value="0.0" />
-        <level value="1.0" min="1.0" max="100.0" />
     </stats>
 
     <attributes>
-        <strength value="0.0" min="0.0" max="10.0" />
-        <fitness value="0.0" min="0.0" max="10.0" />
-        <melee value="0.0" min="0.0" max="10.0"  />
-        <ranged value="0.0" min="0.0" max="10.0" />
-        <lucky value="0.0" min="0.0" max="10.0" />
-        <speed value="0.0" min="0.0" max="10.0" />
+        <strength value="0.0"/>
+        <fitness value="0.0" />
+        <melee value="0.0"  />
+        <ranged value="0.0" />
+        <lucky value="0.0" />
+        <speed value="0.0" />
     </attributes>
 
     <initial_loot>

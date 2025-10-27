@@ -63,11 +63,8 @@ class Player:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
 
-    def add_xp(self, amount):
-        self.progression.add_xp(amount, self)
-
-    def process_kill(self, weapon):
-        self.progression.process_kill(self, weapon)
+    def process_kill(self, weapon, zombie):
+        self.progression.process_kill(self, weapon, zombie)
 
     def update_position(self, obstacles, zombies):
         # Move on X axis first
@@ -147,9 +144,7 @@ class Player:
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
-        self.progression.update_stamina(self, is_moving)
-
-
+        self.progression.update(self, is_moving)
 
         if current_time - self.last_decay_time >= DECAY_RATE_SECONDS:
             self.water = max(0, self.water - WATER_DECAY_AMOUNT)

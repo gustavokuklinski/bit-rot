@@ -13,9 +13,6 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     surface.blit(profession_text, (x_offset, y_offset))
     y_offset += 20
 
-    level_text = font_small.render(f"Level: {player.progression.level}", True, WHITE)
-    surface.blit(level_text, (x_offset, y_offset))
-    y_offset += 20
 
     stat_icons = {}
     icon_files = {
@@ -38,8 +35,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("STM", player.stamina, player.max_stamina, GRAY),
         ("WTR", player.water, 100, BLUE),
         ("FOD", player.food, 100, GREEN),
-        ("INF", player.infection, 100, YELLOW),
-        ("XP", player.progression.experience, player.progression.xp_to_next_level, YELLOW)
+        ("INF", player.infection, 100, YELLOW)
     ]
     for i, (name, value, max_value, color) in enumerate(stats):
         y_pos = y_offset + i * 28

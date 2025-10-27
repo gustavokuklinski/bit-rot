@@ -13,7 +13,7 @@ def try_grab_item(game):
             closest_dist = dist
             closest_item = item
 
-    if closest_item and closest_dist < TILE_SIZE * 1.5:
+    if closest_item and closest_dist < TILE_SIZE * 2:
         target_inventory = game.player.inventory
         target_capacity = game.player.base_inventory_slots
         if game.player.backpack and any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals):

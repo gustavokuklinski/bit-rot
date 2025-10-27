@@ -7,8 +7,9 @@ from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_m
 def handle_movement(game):
     keys = pygame.key.get_pressed()
     current_speed = PLAYER_SPEED
+
     if game.player.stamina <= 0:
-        current_speed = PLAYER_SPEED / 2
+        current_speed = PLAYER_SPEED / 3
 
     if keys[pygame.K_w] or keys[pygame.K_UP]:
         game.player.vy = -current_speed
@@ -23,6 +24,7 @@ def handle_movement(game):
         game.player.vx = current_speed
     else:
         game.player.vx = 0
+    
 
 def handle_input(game):
     for event in pygame.event.get():
