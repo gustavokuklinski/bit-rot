@@ -14,10 +14,7 @@ def draw_nearby_modal(surface, game, modal, assets):
         modal['content_rect'] = None # No content rect when minimized
         return close_button, minimize_button
 
-    # Use stored containers if available, otherwise find them
-    # This helps prevent flicker if find_nearby_containers is slow
-    nearby_containers = modal.get('nearby_containers', game.find_nearby_containers())
-    modal['nearby_containers'] = nearby_containers # Store/update
+    nearby_containers = game.find_nearby_containers()
 
     if not nearby_containers:
         no_containers_text = font.render("No containers nearby.", True, WHITE)
