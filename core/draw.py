@@ -79,7 +79,7 @@ def draw_game(game):
             top_tooltip = tooltip or top_tooltip
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'container':
-            buttons = draw_container_view(game.virtual_screen, modal['item'], modal, game.assets)
+            buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'nearby':
             buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)

@@ -12,17 +12,25 @@ def get_container_slot_rect(container_pos, i):
     col = i % cols
     return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
 
-def _draw_slots(surface, container_item, start_x, start_y, modal_h, header_h):
+def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header_h):
     rows, cols = 4, 5
     slot_size = 48
     padding = 10
     max_visible_rows = int((modal_h - header_h - padding) / (slot_size + padding))
     max_visible_slots = max_visible_rows * cols
+    mouse_pos = pygame.mouse.get_pos()
+
     for i in range(min(container_item.capacity or 0, max_visible_slots)):
         row = i // cols
         col = i % cols
         slot_rect = pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
-        pygame.draw.rect(surface, GRAY_40, slot_rect, 1, 3)
+        
+        border_color = GRAY_40
+        if game.is_dragging and slot_rect.collidepoint(mouse_pos):
+            border_color = WHITE # Highlight color
+
+        pygame.draw.rect(surface, border_color, slot_rect, 1, 3)
+
         if i < len(container_item.inventory):
             item = container_item.inventory[i]
             if item.image:
@@ -30,16 +38,16 @@ def _draw_slots(surface, container_item, start_x, start_y, modal_h, header_h):
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
 
-def draw_container_content(surface, container_item, modal, assets):
+def draw_container_content(surface, game, container_item, modal, assets):
     if not container_item or not hasattr(container_item, 'inventory'):
         return
 
     padding = 10
     start_x = modal['rect'].x + padding
     start_y = modal['rect'].y + 40
-    _draw_slots(surface, container_item, start_x, start_y, modal['rect'].height, 40)
+    _draw_slots(surface, game, container_item, start_x, start_y, modal['rect'].height, 40)
 
-def draw_container_view(surface, container_item, modal, assets):
+def draw_container_view(surface, game, container_item, modal, assets):
     if not container_item or not hasattr(container_item, 'inventory'):
         return
     
@@ -53,5 +61,5 @@ def draw_container_view(surface, container_item, modal, assets):
     padding = 10
     start_x = base_modal.modal_x + padding
     start_y = base_modal.modal_y + 40
-    _draw_slots(surface, container_item, start_x, start_y, base_modal.modal_h, base_modal.header_h)
+    _draw_slots(surface, game, container_item, start_x, start_y, base_modal.modal_h, base_modal.header_h)
     return close_button, minimize_button

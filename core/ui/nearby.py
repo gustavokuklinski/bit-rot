@@ -108,7 +108,7 @@ def draw_nearby_modal(surface, game, modal, assets):
         # pygame.draw.rect(surface, (30,30,30), content_rect) # Darker background
 
         # print(f"    Drawing content for container: {container.name}") # DEBUG
-        draw_container_content(surface, container, container_modal_view, assets)
+        draw_container_content(surface, game, container, container_modal_view, assets)
     # else:
         # print(f"    No active_tab_data found to draw content for '{active_tab_label_to_draw}'") # DEBUG
 
