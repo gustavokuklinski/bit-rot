@@ -47,14 +47,13 @@ def load_all_map_layers(base_map_filename):
     all_ground_layers = {}
     all_spawn_layers = {}
 
-    base_name_match = re.match(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)', base_map_filename.replace('.csv', ''))
+    base_name_match = re.match(r'map_L(\d+)_P((?:\d+_)*\d+)', base_map_filename.replace('_map.csv', ''))
     if not base_name_match:
         print(f"CRITICAL: Base map filename does not match expected pattern: {base_map_filename}")
         return {}, {}, {}
 
     base_layer_num = int(base_name_match.group(1))
-    base_position_num = int(base_name_match.group(2))
-    base_connections_str = '_'.join(base_name_match.groups()[2:])
+    base_connections_str = base_name_match.group(2)
 
     print(f"Loading all layers for base map: {base_map_filename}")
 
@@ -77,9 +76,9 @@ def load_all_map_layers(base_map_filename):
     for i in range(1, 10): # i = 1, 2, 3, ..., 9
         
         # 1. Determine filenames for this layer using the new convention
-        layer_prefix = f"map_L{i}_P{base_position_num}_{base_connections_str}"
+        layer_prefix = f"map_L{i}_P{base_connections_str}"
 
-        layer_map_file_relative = f"{layer_prefix}.csv"
+        layer_map_file_relative = f"{layer_prefix}_map.csv"
         layer_ground_file_relative = f"{layer_prefix}_ground.csv"
         layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
         

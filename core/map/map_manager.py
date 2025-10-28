@@ -6,14 +6,14 @@ from data.config import *
 class MapManager:
     def __init__(self, map_folder='game/map'):
         self.map_folder = map_folder
-        self.current_map_filename = 'map_L1_P0_0_1_0_0.csv' # Updated default filename
+        self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
         self.map_files = self._discover_maps()
 
     def _discover_maps(self):
         maps = {}
-        # Regex to match the new naming convention: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>.csv
-        # Example: map_L1_P0_0_1_0_0.csv
-        pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)\.csv')
+        # Regex to match the new naming convention: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
+        # Example: map_L1_P0_0_1_0_0_map.csv
+        pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
 
         for filename in os.listdir(self.map_folder):
             match = pattern.match(filename)
