@@ -131,3 +131,11 @@ def handle_keyboard_events(game, event):
             else:
                 game.player.active_weapon = None
                 print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
+
+        zoom_step = 1
+        if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: # Handles '+' (often requires shift=equals)
+            game.zoom_level += zoom_step
+            game.zoom_level = min(game.zoom_level, NEAR_ZOOM) # Clamp to max zoom
+        elif event.key == pygame.K_MINUS: # Handles '-'
+            game.zoom_level -= zoom_step
+            game.zoom_level = max(FAR_ZOOM, game.zoom_level) # Clamp to min zoom

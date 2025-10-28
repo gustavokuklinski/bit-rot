@@ -3,12 +3,12 @@
         <speed value="1.5" />
         <food_water_decay_seconds value="5.0" />
         <food_water_multiplier_decay value="1.5" />
-        <food_decay value="0.5" />
-        <water_decay value="5.5" />
+        <food_decay value="0.2" />
+        <water_decay value="0.3" />
         <water_autodrink value="true" /> <!-- # Enable/disable auto-drinking -->
         <water_threshold value="90" /> <!-- # Min % to enable auto-drink -->
-        <zoom_start value="1.5" />
-        <zoom_far value="1.0" />
+        <zoom_start value="3.0" />
+        <zoom_far value="1.3" />
         <zoom_near value="5.0" />
     </player>
     <zombie>

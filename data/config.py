@@ -7,10 +7,14 @@ pygame.init()
 VIRTUAL_SCREEN_WIDTH = 1312
 VIRTUAL_GAME_HEIGHT = 720
 
+# Tile size
+TILE_SIZE = 16
+
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
+MAP_DIR = "game/map/"
 DATA_PATH = "game/data/" # Folders with XML data files
 SPRITE_PATH = "game/sprites/" # Folders with PNG sprites
 
@@ -58,9 +62,6 @@ font_small = pygame.font.Font(FONT_FACE, 16)
 large_font = pygame.font.Font(FONT_FACE, 16)
 title_font = pygame.font.Font(FONT_TITLE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 10)
-
-# Game Constants
-TILE_SIZE = 16
 
 # Game XML Config
 tree = ET.parse('config.xml')

@@ -9,11 +9,14 @@ from core.entities.corpse import Corpse
 from core.entities.zombie import Zombie
 from core.entities.player import Player
 from core.placement import find_free_tile
+from core.map.world_layers import check_for_layer_teleport
 
 def update_game_state(game):
     game.player.update_position(game.obstacles, game.zombies)
+
+    check_for_layer_teleport(game)
+    
     if game.player.update_stats():
-        print("DEBUG: update_stats returned True. Setting state to GAME_OVER.")
         game.game_state = 'GAME_OVER'
 
     # --- Projectile update logic (unchanged) ---

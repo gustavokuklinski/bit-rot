@@ -56,10 +56,14 @@ class Player:
 
         self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
 
+        self.layer_switch_cooldown = 0
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
-            return pygame.image.load(sprite_path).convert_alpha()
+            image = pygame.image.load(sprite_path).convert_alpha()
+            image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
+            return image
         except pygame.error as e:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
@@ -177,6 +181,12 @@ class Player:
 
         if self.drop_cooldown > 0:
             self.drop_cooldown -= 1
+        
+        # --- ADD THIS ---
+        if self.layer_switch_cooldown > 0:
+            self.layer_switch_cooldown -= 1
+        # --- END ADD ---
+
         return False
 
     def get_total_inventory_slots(self):

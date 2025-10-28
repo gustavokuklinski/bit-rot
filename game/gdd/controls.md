@@ -17,3 +17,6 @@
 - **N**: Opens Nearby
 
 - **F2**: Pause game
+
+- **MOUSE SCROLL**: Zoom in/Zoom out
+- **-/=**: Keyboard Zoom in/Zoom out

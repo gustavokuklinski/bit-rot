@@ -25,6 +25,6 @@ You can create chains of maps this way:
 
 This would create a chain of three maps you can walk through from left to right and back.
 
-For spawning and background the maps must have a:
+For spawning and ground the maps must have a:
 * map_0_1_0_0_spawn.csv
 * map_0_1_0_0_ground.csv

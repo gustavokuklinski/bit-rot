@@ -3,6 +3,7 @@
 ### Dev
 - [x] Create lootable containers on map
 - [x] Ajust dynamic 'Nearby' lootable containers
+- [] Nearby system shows itens on the floor
 - [x] Ajust the walk controls: W/A goes fast, S/D goes slow
 - [x] Added scrool to messages
 - [x] Set the default open modals (Inventory and Nearby)
@@ -12,17 +13,18 @@
 - [] Add the Wallet slot
 - [] Make player spawn with backpack and wallet on slot
 - [] Add Saves for the current game
-- [] Add TCP/IP direct multiplayer
 - [] Build day/night system (with sleep)
 - [] Add player spawn choice and random spawn
 - [] Build a camp system
+- [] Add TCP/IP direct multiplayer
 - [] Build a simple craft system (allow the player to chop trees and build a little house on the map)
 
-### Player
+### Player and Zombies
 - [] Add more prefessions
 - [] Add more traits
 - [] Create a character builder (traits and char sprite)
 - [] Generate Zombie and Player ID
+- [] Player balance action
 
 ### In game
 - [] Create more diverse Zombie types
