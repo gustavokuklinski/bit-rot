@@ -1,0 +1,16 @@
+<zombie name="Civilian">
+    <xp min="0.2" max="0.5" />
+    <name value="Civilian" />
+    <stats>
+        <health value="110" />
+        <speed value="1" />
+        <attack min="8" max="10" />
+        <infection min="1" max="10" />
+    </stats>
+    <visuals>
+        <sprite file="civilian.png" />
+    </visuals>
+    <loot>
+        <item name="Wallet" chance="100.0" />
+    </loot>
+</zombie>

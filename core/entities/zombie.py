@@ -5,8 +5,8 @@ import pygame
 import xml.etree.ElementTree as ET
 import uuid
 
-# Import the new config variables
 from data.config import *
+from core.messages import display_message
 
 ZOMBIE_TEMPLATES = []
 
@@ -203,8 +203,10 @@ class Zombie:
         if infection > 0:
             player.infection = min(100, player.infection + infection)
             print(f"**HIT!** Player takes {damage} damage and {infection}% infection.")
+
         else:
             print(f"**HIT!** Player takes {damage} damage.")
+
 
     @staticmethod
     def load_templates(folder=DATA_PATH + 'zombie/'):

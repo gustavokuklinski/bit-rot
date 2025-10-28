@@ -84,6 +84,15 @@ class Item:
             spawn_node = root.find('spawn')
             if spawn_node is not None:
                 template['spawn_chance'] = float(spawn_node.attrib.get('chance', '0'))
+            
+            loot_node = root.find('loot')
+            if loot_node is not None:
+                template['loot'] = []
+                for loot_item_node in loot_node.findall('item'):
+                    loot_item_name = loot_item_node.attrib.get('name')
+                    loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
+                    template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
+
             ITEM_TEMPLATES[name] = template
         # silent on count to avoid spam
         # print(f"Loaded {len(ITEM_TEMPLATES)} item templates.")
@@ -98,33 +107,11 @@ class Item:
             return None
         names = list(spawnable.keys())
         chances = [d['spawn_chance'] for d in spawnable.values()]
-        chosen = random.choices(names, weights=chances, k=1)[0]
-        props = spawnable[chosen]['properties']
-        durability = None
-        if 'durability' in props and 'min' in props['durability']:
-            durability = random.uniform(float(props['durability']['min']), float(props['durability']['max']))
-        load = None
-        if 'load' in props:
-            if 'min' in props['load']:
-                load = random.randint(int(props['load']['min']), int(props['load']['max']))
-            else:
-                load = float(props['load'].get('value', 0))
-        capacity = int(props['capacity']['value']) if 'capacity' in props else None
-        color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
-        color = (int(color_prop['r']), int(color_prop['g']), int(color_prop['b']))
-        ammo_type = props.get('ammo', {}).get('type') if 'ammo' in props else None
-        pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
-        spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
-        sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
-        max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
-        min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
-        max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
-        hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
-        return Item(chosen, spawnable[chosen]['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+        chosen_name = random.choices(names, weights=chances, k=1)[0]
+        return Item.create_from_name(chosen_name, randomize_durability=True)
 
     @classmethod
-    def create_from_name(cls, item_name):
+    def create_from_name(cls, item_name, randomize_durability=False):
         if not ITEM_TEMPLATES:
             cls.load_item_templates()
         if item_name not in ITEM_TEMPLATES:
@@ -132,7 +119,12 @@ class Item:
             return None
         template = ITEM_TEMPLATES[item_name]
         props = template['properties']
-        durability = float(props['durability']['max']) if 'durability' in props and 'max' in props['durability'] else None
+        durability = None
+        if 'durability' in props and 'max' in props['durability']:
+            if randomize_durability and 'min' in props['durability']:
+                durability = random.uniform(float(props['durability']['min']), float(props['durability']['max']))
+            else:
+                durability = float(props['durability']['max'])
         load = None
         if 'load' in props:
             if 'min' in props['load']:
@@ -151,7 +143,18 @@ class Item:
         min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
         hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
-        return cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+        
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+
+        if 'loot' in template and hasattr(new_item, 'inventory'):
+            for loot_info in template['loot']:
+                if random.random() < loot_info['chance']:
+                    loot_item = cls.create_from_name(loot_info['name'])
+                    if loot_item:
+                        if len(new_item.inventory) < (new_item.capacity or 0):
+                            new_item.inventory.append(loot_item)
+        
+        return new_item
 
 class Container(Item):
     def __init__(self, name, items=None, capacity=0):

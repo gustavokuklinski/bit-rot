@@ -29,13 +29,25 @@ GRAY_60 = (60, 60, 60)
 GRAY_40 = (40, 40, 40)
 GRAY_80 = (80, 80, 80)
 
-# Modal Dimensions
+# Inventory Modal
 INVENTORY_MODAL_WIDTH = 300
 INVENTORY_MODAL_HEIGHT = 300
+
+# Status Modal
 STATUS_MODAL_WIDTH = 250
 STATUS_MODAL_HEIGHT = 360
+
+# Nearby Modal
 NEARBY_MODAL_WIDTH = 300
-NEARBY_MODAL_HEIGHT = 300
+NEARBY_MODAL_HEIGHT = 210
+
+# Container Modal
+CONTAINER_MODAL_WIDTH = 300
+CONTAINER_MODAL_HEIGHT = 300
+
+# Messages Modal
+MESSAGES_MODAL_WIDTH = 400
+MESSAGES_MODAL_HEIGHT = 150
 
 FONT_FACE = "game/font/Oxanium-Regular.ttf"
 FONT_TITLE = "game/font/VT323-Regular.ttf"
@@ -45,12 +57,12 @@ font = pygame.font.Font(FONT_FACE, 16)
 font_small = pygame.font.Font(FONT_FACE, 16)
 large_font = pygame.font.Font(FONT_FACE, 16)
 title_font = pygame.font.Font(FONT_TITLE, 16)
-
+font_notification = pygame.font.Font(FONT_FACE, 10)
 
 # Game Constants
 TILE_SIZE = 16
 
-# --- XML Parsing ---
+# Game XML Config
 tree = ET.parse('config.xml')
 root = tree.getroot()
 

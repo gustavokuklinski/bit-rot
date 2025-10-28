@@ -2,10 +2,10 @@
     <profession name="Civilian">
         <description>Debug.</description>
         <attributes>
-            <strength value="10.0" />
-            <fitness value="10.0" />
-            <melee value="10.0" />
-            <ranged value="10.0" />
+            <strength value="0.0" />
+            <fitness value="0.0" />
+            <melee value="0.0" />
+            <ranged value="0.0" />
             <lucky value="10.0" />
             <speed value="10.0" />
         </attributes>
@@ -13,6 +13,7 @@
             <item name="Shotgun" />
             <item name="Shotgun Shells" />
             <item name="Large Backpack" />
+            <item name="Wallet" />
         </initial_loot>
         <visuals>
             <sprite file="civilian.png" />

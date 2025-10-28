@@ -9,7 +9,7 @@ from core.ui.dropdown import draw_context_menu
 from core.ui.nearby import draw_nearby_modal
 from core.ui.helpers import draw_inventory_button, draw_status_button, draw_nearby_button
 from core.ui.tooltip import draw_tooltip
-
+from core.ui.messages_modal import draw_messages_modal, draw_messages_button
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -50,6 +50,13 @@ def draw_game(game):
 
     game.player.draw(world_view_surface, offset_x, offset_y)
 
+    if game.hovered_container:
+        hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
+        pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
+
+    # for msg in game.active_messages:
+    #     msg.draw(world_view_surface, offset_x, offset_y)
+
     # 4. Scale the entire world view surface up to the final game size.
     scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
 
@@ -84,10 +91,15 @@ def draw_game(game):
         elif modal['type'] == 'nearby':
             buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
-    
+        elif modal['type'] == 'messages':
+            _, close_button, minimize_button = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
+            if close_button: game.modal_buttons.append(close_button)
+            if minimize_button: game.modal_buttons.append(minimize_button)
+
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
     game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
+    game.messages_button_rect = draw_messages_button(game.virtual_screen)
 
     highlighted_rect = None
     highlighted_allowed = False
@@ -126,6 +138,8 @@ def draw_game(game):
                         break
                 if highlighted_rect:
                     break
+            elif modal['type'] == 'messages':
+                pass
 
         if highlighted_rect:
             overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)
@@ -150,7 +164,7 @@ def draw_game(game):
         tip_rect = top_tooltip['rect']
         item = top_tooltip['item']
         frac = top_tooltip['frac']
-        bar_color = top_tooltip['bar_color']
+        bar_color = top_tooltip['bar']
 
         tip_s = pygame.Surface((tip_rect.width, tip_rect.height), pygame.SRCALPHA)
         tip_s.fill((10, 10, 10, 220))

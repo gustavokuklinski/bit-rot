@@ -3,4 +3,6 @@
         <capacity value="5" />
         <sprite file="bag.png" />
     </properties>
+    <loot>
+    </loot>
 </item>

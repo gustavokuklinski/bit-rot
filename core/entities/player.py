@@ -19,6 +19,7 @@ class Player:
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.vx = 0
         self.vy = 0
+        self.is_walking = False
         self.color = BLUE
 
         data = player_data or {}
@@ -69,7 +70,7 @@ class Player:
     def update_position(self, obstacles, zombies):
         # Move on X axis first
         self.x += self.vx
-        self.rect.x = int(self.x)
+        self.rect.x = round(self.x)
 
         # Check for X-axis collisions with obstacles
         for obstacle in obstacles:
@@ -82,7 +83,7 @@ class Player:
 
         # Move on Y axis separately
         self.y += self.vy
-        self.rect.y = int(self.y)
+        self.rect.y = round(self.y)
 
         # Check for Y-axis collisions with obstacles
         for obstacle in obstacles:
@@ -263,6 +264,8 @@ class Player:
                 options.append('Equip')
         elif item.item_type in ['weapon', 'tool']:
             options.append('Equip')
+        elif item.item_type == 'container':
+            options.append('Open')
         options.append('Drop')
         return options
 
@@ -306,10 +309,16 @@ class Player:
                 item.load -= amount_to_consume
                 print(f"Consumed {amount_to_consume:.0f}% Food. Food: {self.food:.0f}%")
             elif item.hp is not None:
+                if item.load <= 0:
+                    print(f"Cannot use {item.name}, it is empty.")
+                    return False
                 self.health = min(self.max_health, self.health + item.hp)
                 print(f"Used {item.name} and restored {item.hp} HP.")
                 item.load -= 1
             elif 'Vaccine' in item.name:
+                if item.load <= 0:
+                    print(f"Cannot use {item.name}, it is empty.")
+                    return False
                 cure_chance = random.uniform(item.min_cure, item.max_cure)
                 if random.random() < cure_chance:
                     self.infection = 0
@@ -326,6 +335,9 @@ class Player:
                 elif source_type == 'inventory':
                     if item_index < len(self.inventory) and self.inventory[item_index] == item:
                         self.inventory.pop(item_index)
+                elif source_type == 'container' and container_item:
+                    if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
+                        container_item.inventory.pop(item_index)
             return True
         return False
 

@@ -3,4 +3,8 @@
         <capacity value="10" />
         <sprite file="small_backpack.png" />
     </properties>
+    <loot>
+        <item name="Water Bottle" chance="0.8" />
+        <item name="Canned Food" chance="0.6" />
+    </loot>
 </item>

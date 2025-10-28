@@ -9,6 +9,8 @@ from core.entities.corpse import Corpse
 from core.update import player_hit_zombie, handle_zombie_death
 from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect
 from core.ui.container import get_container_slot_rect
+from core.messages import display_message
+from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal
 
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
@@ -46,22 +48,24 @@ def handle_mouse_down(game, event, mouse_pos):
                             full_height = INVENTORY_MODAL_HEIGHT
                         elif modal_to_affect['type'] == 'status':
                             full_height = STATUS_MODAL_HEIGHT
+                        elif modal_to_affect['type'] == 'messages':
+                            full_height = MESSAGES_MODAL_HEIGHT
                         else: 
                             full_height = 300 
                         modal_to_affect['rect'].height = header_height if is_minimized else full_height
                         return
 
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
-            from core.events.keyboard import toggle_status_modal
             toggle_status_modal(game)
             return
         if game.inventory_button_rect and game.inventory_button_rect.collidepoint(mouse_pos):
-            from core.events.keyboard import toggle_inventory_modal
             toggle_inventory_modal(game)
             return
         if game.nearby_button_rect and game.nearby_button_rect.collidepoint(mouse_pos):
-            from core.events.keyboard import toggle_nearby_modal
             toggle_nearby_modal(game)
+            return
+        if game.messages_button_rect and game.messages_button_rect.collidepoint(mouse_pos):
+            toggle_messages_modal(game)
             return
 
         for modal in reversed(game.modals):
@@ -362,6 +366,14 @@ def find_item_at_pos(game, mouse_pos):
 
 def handle_mouse_motion(game, event, mouse_pos):
     game.hovered_item = find_item_at_pos(game, mouse_pos)
+
+    game.hovered_container = None
+    world_pos = game.screen_to_world(mouse_pos)
+    for container in game.containers:
+        if container.rect.collidepoint(world_pos):
+            game.hovered_container = container
+            break
+
     if game.context_menu['active']:
         pass
 
@@ -682,6 +694,7 @@ def handle_right_click(game, mouse_pos):
                     click_container_item = None
                     break
                 else:
+                    display_message(game, "Item is too far away to interact with.")
                     print("Item is too far away to interact with.")
         
         if not clicked_item:
@@ -695,6 +708,7 @@ def handle_right_click(game, mouse_pos):
                         click_container_item = None
                         break
                     else:
+                        display_message(game, "Item is too far away to interact with.")
                         print("Container is too far away to interact with.")
 
     if clicked_item:

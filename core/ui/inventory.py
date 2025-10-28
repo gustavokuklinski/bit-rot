@@ -24,7 +24,7 @@ def get_belt_slot_rect_in_modal(i, modal_position):
 
 def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     modal_x, modal_y = modal_position
-    slot_w = 272
+    slot_w = 218
     slot_h = 48
     x = modal_x + 10
     y = modal_y + 125

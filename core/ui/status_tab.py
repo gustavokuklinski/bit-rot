@@ -48,7 +48,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
             surface.blit(text, (x_offset, y_pos))
             label_x = x_offset + 110
 
-        text = font_small.render(f"[{int(value)}/{max_value}]", True, WHITE)
+        text = font_small.render(f"[{int(value)}%]", True, WHITE)
         surface.blit(text, (label_x, y_pos + 3))
 
         bar_x = label_x + 12

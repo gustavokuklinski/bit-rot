@@ -24,6 +24,8 @@ class BaseModal:
             return 300, 300
         elif self.modal['type'] == 'nearby':
             return NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT
+        elif self.modal['type'] == 'messages':
+            return MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT
         return 300, 300
 
     def draw_header(self):

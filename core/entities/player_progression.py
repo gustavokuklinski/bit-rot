@@ -21,7 +21,7 @@ class PlayerProgression:
 
     def _add_xp(self, attribute, amount):
         attribute['xp'] += amount
-        print(f"Gained {amount} XP for an attribute.")
+        print(f"Gained {amount} XP for an {attribute}.")
         if attribute['xp'] >= attribute['xp_to_next_level']:
             self._level_up(attribute)
 

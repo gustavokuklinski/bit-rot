@@ -1,5 +1,6 @@
 import pygame
 import sys
+import math
 from data.config import *
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
@@ -8,22 +9,32 @@ def handle_movement(game):
     keys = pygame.key.get_pressed()
     current_speed = PLAYER_SPEED
 
+    is_walking = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+    game.player.is_walking = is_walking
+
+    if is_walking:
+        current_speed = PLAYER_SPEED / 2
+
     if game.player.stamina <= 0:
         current_speed = PLAYER_SPEED / 3
 
+    dx, dy = 0, 0
     if keys[pygame.K_w] or keys[pygame.K_UP]:
-        game.player.vy = -current_speed
-    elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        game.player.vy = current_speed
-    else:
-        game.player.vy = 0
-
+        dy -= 1
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        dy += 1
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        game.player.vx = -current_speed
-    elif keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        game.player.vx = current_speed
-    else:
-        game.player.vx = 0
+        dx -= 1
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        dx += 1
+
+    if dx != 0 and dy != 0:
+        # Normalize for diagonal movement
+        dx /= math.sqrt(2)
+        dy /= math.sqrt(2)
+
+    game.player.vx = dx * current_speed
+    game.player.vy = dy * current_speed
     
 
 def handle_input(game):

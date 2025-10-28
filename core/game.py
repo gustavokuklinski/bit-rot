@@ -23,6 +23,7 @@ from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
 from core.world import TileManager, parse_layered_map_layout, spawn_initial_items, spawn_initial_zombies, load_map_from_file, MapManager
+from core.ui.messages_modal import draw_messages_modal, draw_messages_button
 
 class Game:
     def __init__(self):
@@ -69,20 +70,24 @@ class Game:
 
         self.last_modal_positions = {
             'status': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
-            'inventory': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
+            'inventory': (1000, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150)
+            'nearby': (1000, 320),
+            'messages': (10, 560)
         }
 
         self.status_button_rect = None
         self.inventory_button_rect = None
         self.nearby_button_rect = None
+        self.messages_button_rect = None
         self.camera = None
         self.map_states = {}
         self.player_name = ""
         self.name_input_active = False
         self.selected_profession = None
         self.hovered_item = None
+        self.hovered_container = None
+        self.message_log = []
 
     def load_map(self, base_map_filename):
         """Loads map data from base, ground, and spawn CSV layer files."""
@@ -113,7 +118,7 @@ class Game:
         if not ground_layout:
             print(f"Warning: Ground layer not found or empty ({ground_filepath}). Creating blank ground layer.")
             ground_layout = [[' ' for _ in range(map_width)] for _ in range(map_height)]
-        elif len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width) :
+        elif len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
             print(f"Warning: Ground layer dimensions mismatch base layer. Check {ground_filepath}")
             # Attempt to use it anyway, parser will warn further
 
@@ -187,6 +192,30 @@ class Game:
         if player_spawn:
             self.player.rect.topleft = player_spawn
             self.player.x, self.player.y = player_spawn
+        
+        inventory_modal = {
+            'id': uuid.uuid4(),
+            'type': 'inventory',
+            'item': None,
+            'position': self.last_modal_positions['inventory'],
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+            'minimized': False
+        }
+        self.modals.append(inventory_modal)
+
+        nearby_modal = {
+            'id': uuid.uuid4(),
+            'type': 'nearby',
+            'item': None,
+            'position': self.last_modal_positions['nearby'],
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
+            'minimized': False
+        }
+        self.modals.append(nearby_modal)
 
     def check_map_transition(self):
         new_map = None
@@ -358,3 +387,8 @@ class Game:
         self.screen.blit(scaled_surf, (blit_x, blit_y))
         pygame.display.flip()
         self.clock.tick(60)
+
+    def update_messages(self):
+        self.active_messages = [msg for msg in self.active_messages if msg.duration > 0]
+        for msg in self.active_messages:
+            msg.update()

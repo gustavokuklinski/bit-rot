@@ -1,0 +1,9 @@
+<item name="Large Satchel" type="container">
+    <properties>
+        <capacity value="10" />
+        <sprite file="wallet.png" />
+    </properties>
+    <loot>
+    </loot>
+</item>
+
