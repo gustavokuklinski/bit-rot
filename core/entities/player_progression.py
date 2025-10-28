@@ -91,12 +91,12 @@ class PlayerProgression:
             return 2.0
 
     def get_stamina_consumption(self, is_walking):
-        base_consumption = 0.1 if is_walking else 0.2
+        base_consumption = 0.05 if is_walking else 0.08
         modifier = 1 - (self.speed * 0.05)
         return base_consumption * modifier
 
     def get_stamina_regeneration(self):
-        return 0.3 + (self.fitness['level'] * 0.1)
+        return 0.03 + (self.fitness['level'] * 0.1)
 
     def get_xp_bonus(self):
         return 1 + (self.lucky * 0.01)

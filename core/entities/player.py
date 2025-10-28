@@ -154,6 +154,15 @@ class Player:
             if self.water <= 0 or self.food <= 0:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
                 self.health = max(0, self.health)
+
+            # --- AUTO-DRINK LOGIC ---
+            if AUTO_DRINK and self.water <= AUTO_DRINK_THRESHOLD:
+                print(f"Water level {self.water} <= threshold {AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
+                water_item, source, index, container = self.find_water_to_auto_drink()
+                if water_item:
+                    print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
+                    self.consume_item(water_item, source, index, container)
+            # --- END AUTO-DRINK ---
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
@@ -302,11 +311,14 @@ class Player:
         source_inventory = self._get_source_inventory(source_type, container_item)
         if item.item_type == 'consumable':
             if 'Water' in item.name:
-                amount_needed = 100.0 - self.water
-                amount_to_consume = min(amount_needed, item.load)
-                self.water = min(100.0, self.water + amount_to_consume)
-                item.load -= amount_to_consume
-                print(f"Consumed {amount_to_consume:.0f}% Water. Water: {self.water:.0f}%")
+                if item.load <= 0: # Check if stack is empty first
+                    print(f"Cannot use {item.name}, it is empty.")
+                    return False # Stop consumption if empty
+
+                water_restored_per_use = 25 # Define how much water one 'use' restores (e.g., 25%)
+                self.water = min(100.0, self.water + water_restored_per_use)
+                item.load -= 1 # Decrement stack count by 1
+                print(f"Consumed 1 use of {item.name}. Restored {water_restored_per_use} Water. Water: {self.water:.0f}%, Remaining uses: {item.load:.0f}")
             elif 'Food' in item.name:
                 amount_needed = 100.0 - self.food
                 amount_to_consume = min(amount_needed, item.load)
@@ -364,3 +376,38 @@ class Player:
         elif source == 'container' and container_item and index < len(container_item.inventory):
             item_to_drop = container_item.inventory.pop(index)
         return item_to_drop
+
+    def find_water_to_auto_drink(self):
+        """Searches belt, inventory, then backpack for a usable water item."""
+        # 1. Search Belt
+        for i, item in enumerate(self.belt):
+            if item and 'Water' in item.name and item.load > 0:
+                print(f"Found water in belt slot {i}") # Optional debug
+                return item, 'belt', i, None # No container item needed for belt
+
+        # 2. Search Inventory
+        for i, item in enumerate(self.inventory):
+            if item and 'Water' in item.name and item.load > 0:
+                print(f"Found water in inventory slot {i}") # Optional debug
+                return item, 'inventory', i, None # No container item needed for inventory
+
+        for i, container_item in enumerate(self.inventory):
+            if container_item and hasattr(container_item, 'inventory') and container_item.inventory:
+                print(f"Checking inside container '{container_item.name}' in inventory slot {i}") # Debug
+                for sub_index, sub_item in enumerate(container_item.inventory):
+                    if sub_item and 'Water' in sub_item.name and sub_item.load > 0:
+                        print(f"Found water inside '{container_item.name}' at sub-index {sub_index}")
+                        # Source: 'container', Index: sub_index (within container), Container: container_item
+                        return sub_item, 'container', sub_index, container_item
+
+        # 3. Search Backpack (if exists and has inventory)
+        if self.backpack and hasattr(self.backpack, 'inventory'):
+            for i, item in enumerate(self.backpack.inventory):
+                if item and 'Water' in item.name and item.load > 0:
+                    print(f"Found water in backpack slot {i}") # Optional debug
+                    # For backpack items, the source is 'container' and we need the backpack itself
+                    return item, 'container', i, self.backpack
+
+        # 4. Not found
+        print("No water found for auto-drink.") # Optional debug
+        return None, None, None, None

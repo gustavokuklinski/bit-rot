@@ -76,6 +76,8 @@ WATER_DECAY_AMOUNT = float(player_config.find('water_decay').get('value')) * FOO
 START_ZOOM = float(player_config.find('zoom_start').get('value'))
 FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
 NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
+AUTO_DRINK = player_config.find('water_autodrink').get('value') == 'true'
+AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
 
 # Zombie settings
 zombie_config = root.find('zombie')
