@@ -7,11 +7,13 @@ from data.config import *
 from core.entities.item import Item
 from core.entities.corpse import Corpse
 from core.entities.zombie import Zombie
+from core.entities.player import Player
 from core.placement import find_free_tile
 
 def update_game_state(game):
     game.player.update_position(game.obstacles, game.zombies)
     if game.player.update_stats():
+        print("DEBUG: update_stats returned True. Setting state to GAME_OVER.")
         game.game_state = 'GAME_OVER'
 
     # --- Projectile update logic (unchanged) ---

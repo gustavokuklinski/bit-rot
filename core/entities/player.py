@@ -158,9 +158,14 @@ class Player:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
                 self._finish_reload()
-        if self.health <= 0:
+
+        if self.health <= 1:
             print("GAME OVER: Health depleted!")
             return True
+        if self.infection >= 100:
+            print("GAME OVER: Zombified!")
+            return True
+
         if self.drop_cooldown > 0:
             self.drop_cooldown -= 1
         return False

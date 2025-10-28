@@ -64,7 +64,7 @@ class PlayerProgression:
         if player.infection > 0:
             player.infection += 0.005 # Progressive infection
             if player.infection >= 100:
-                player.health = 0 # Player dies
+                player.health = 1 # Player dies
 
     def handle_melee_attack(self, player):
         if player.stamina >= 10:

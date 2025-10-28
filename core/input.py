@@ -38,22 +38,47 @@ def handle_movement(game):
     
 
 def handle_input(game):
+    mouse_pos = game._get_scaled_mouse_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
         if event.type == pygame.MOUSEWHEEL:
-            if event.y > 0:
-                game.zoom_level += 0.1
-            elif event.y < 0:
-                game.zoom_level -= 0.1
-            game.zoom_level = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
+            # Check zoom first (global behavior)
+            if not any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals):
+                 # Only zoom if mouse is NOT over any modal
+                if event.y > 0:
+                    game.zoom_level += 0.1
+                elif event.y < 0:
+                    game.zoom_level -= 0.1
+                game.zoom_level = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
+            else:
+                # Mouse is over a modal, check if it's the messages modal content area
+                for modal in reversed(game.modals): # Check topmost modal first
+                    if modal.get('type') == 'messages' and not modal.get('minimized', False):
+                        content_rect = modal.get('content_rect') # Get rect calculated in draw step
+                        if content_rect and content_rect.collidepoint(mouse_pos):
+                            # --- Calculate scroll limits within the handler ---
+                            line_height = font_small.get_height() + 2
+                            total_text_height = len(game.message_log) * line_height
+                            visible_height = content_rect.height
+                            max_scroll_offset = max(0, total_text_height - visible_height)
+                            current_offset = modal.get('scroll_offset_y', 0)
+
+                            # Adjust scroll offset (event.y is typically 1 or -1)
+                            scroll_amount = event.y * line_height * 3 # Scroll 3 lines at a time
+                            new_offset = current_offset - scroll_amount # Subtract because positive event.y is scroll up
+
+                            # Clamp the new offset
+                            modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                            break # Found the modal, stop checking others
+        # --- END MOUSE WHEEL HANDLING ---
 
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 
-        mouse_pos = game._get_scaled_mouse_pos()
+        #mouse_pos = game._get_scaled_mouse_pos()
 
         if game.game_state == 'PLAYING':
             handle_movement(game)

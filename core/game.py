@@ -69,7 +69,7 @@ class Game:
         self.DRAG_THRESHOLD = 5
 
         self.last_modal_positions = {
-            'status': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 200),
+            'status': (65, 10),
             'inventory': (1000, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'nearby': (1000, 320),

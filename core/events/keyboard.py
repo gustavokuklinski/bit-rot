@@ -98,6 +98,12 @@ def handle_keyboard_events(game, event):
         if event.key == pygame.K_h:
             toggle_status_modal(game)
         
+        if event.key == pygame.K_n:
+            toggle_nearby_modal(game)
+        
+        if event.key == pygame.K_m:
+            toggle_messages_modal(game)
+        
         if event.key == pygame.K_r:
             game.player.reload_active_weapon()
 

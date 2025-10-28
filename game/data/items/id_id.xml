@@ -1,0 +1,6 @@
+<item name="ID" type="id">
+    <properties>
+        <sprite file="id.png" />
+    </properties>
+    <spawn chance="100" />
+</item>
