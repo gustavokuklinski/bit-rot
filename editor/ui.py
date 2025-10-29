@@ -1,5 +1,6 @@
 import pygame
-from .config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH
+from editor.config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE
+from editor.assets import load_editor_icons
 
 class NewMapModal:
     def __init__(self, x, y, width, height, font):
@@ -61,31 +62,60 @@ class Toolbar:
         self.width = width
         self.height = height
         self.font = font
-        self.buttons = {}
+        self.buttons = []
+        self.icons = load_editor_icons("game/sprites/editor")
 
-        button_labels = ["NEW MAP", "SAVE MAP", "DELETE MAP", "ERASER", "PLAYER SPAWN", "ZOMBIE SPAWN", "ITEM SPAWN"]
-        button_width = 120
-        button_height = 30
+        button_definitions = [
+            {"label": "NEW MAP", "icon": "new", "action": "NEW MAP"},
+            {"label": "SAVE MAP", "icon": "save", "action": "SAVE MAP"},
+            {"label": "DELETE MAP", "icon": "delete", "action": "DELETE MAP"},
+            {"label": "ERASER", "icon": "eraser", "action": "ERASER"},
+            {"label": "PLAYER SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
+            {"label": "ZOMBIE SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
+            {"label": "ITEM SPAWN", "icon": "item", "action": "ITEM SPAWN"},
+            {"label": "SELECTION", "icon": "selection", "action": "SELECTION"}
+        ]
+
+        button_width = ICON_SIZE + 10
+        button_height = ICON_SIZE + 10
         padding = 5
         current_x = x + padding
 
-        for label in button_labels:
-            self.buttons[label] = pygame.Rect(current_x, y + padding, button_width, button_height)
+        for btn_def in button_definitions:
+            rect = pygame.Rect(current_x, y + (height - button_height) // 2, button_width, button_height)
+            self.buttons.append({
+                "rect": rect,
+                "label": btn_def["label"],
+                "icon": self.icons[btn_def["icon"]],
+                "action": btn_def["action"]
+            })
             current_x += button_width + padding
 
     def draw(self, surface):
         pygame.draw.rect(surface, (80, 80, 80), (self.x, self.y, self.width, self.height))
-        for label, rect in self.buttons.items():
-            pygame.draw.rect(surface, (120, 120, 120), rect)
-            text_surf = self.font.render(label, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=rect.center)
-            surface.blit(text_surf, text_rect)
+        mouse_pos = pygame.mouse.get_pos()
+        hovered_button = None
+
+        for button in self.buttons:
+            pygame.draw.rect(surface, (120, 120, 120), button["rect"])
+            surface.blit(button["icon"], (button["rect"].x + 5, button["rect"].y + 5))
+            if button["rect"].collidepoint(mouse_pos):
+                hovered_button = button
+
+        if hovered_button:
+            pygame.draw.rect(surface, (150, 150, 150), hovered_button["rect"], 2)
+            
+            # Draw tooltip
+            text_surf = self.font.render(hovered_button["label"], True, (255, 255, 255))
+            tooltip_rect = text_surf.get_rect(center=(mouse_pos[0], mouse_pos[1] + 20))
+            pygame.draw.rect(surface, (0, 0, 0), tooltip_rect.inflate(10, 5))
+            surface.blit(text_surf, tooltip_rect)
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for label, rect in self.buttons.items():
-                if rect.collidepoint(event.pos):
-                    return label
+            for button in self.buttons:
+                if button["rect"].collidepoint(event.pos):
+                    return button["action"]
         return None
 
 class Sidebar:

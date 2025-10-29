@@ -6,7 +6,8 @@ Bit Rot is a zombie survivor game.
 Install system wide
 ```shell
 $ sudo apt install python3-pygame
-$ python3 main.py
+$ python3 main.py # Play the game
+$ python3 editor.py # Edit game maps
 ```
 
 Install on virtual environment
@@ -14,7 +15,8 @@ Install on virtual environment
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
-$ python main.py
+$ python main.py # Play the game
+$ python editor.py # Edit game maps
 ```
 
 Play on browser

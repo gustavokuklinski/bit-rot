@@ -2,7 +2,7 @@ import pygame
 import os
 import xml.etree.ElementTree as ET
 
-from editor.config import TILE_SIZE
+from editor.config import TILE_SIZE, ICON_SIZE
 
 def load_sprite_images(path):
     """Loads all sprite images from the given path and scales them."""
@@ -14,6 +14,17 @@ def load_sprite_images(path):
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             sprites[name] = image
     return sprites
+
+def load_editor_icons(path):
+    """Loads all sprite images from the given path and scales them to ICON_SIZE."""
+    icons = {}
+    for filename in os.listdir(path):
+        if filename.endswith(".png"):
+            name = os.path.splitext(filename)[0]
+            image = pygame.image.load(os.path.join(path, filename)).convert_alpha()
+            image = pygame.transform.scale(image, (ICON_SIZE, ICON_SIZE))
+            icons[name] = image
+    return icons
 
 def load_map_tiles_from_xml(xml_dir, sprite_dir):
     """Loads map tile definitions from XML files and their corresponding sprites."""

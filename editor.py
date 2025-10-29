@@ -23,6 +23,7 @@ BLACK = (0, 0, 0)
 GREY = (200, 200, 200)
 LIGHT_GREY = (220, 220, 220)
 DARK_GREY = (100, 100, 100)
+YELLOW = (255, 255, 0)
 
 FONT = pygame.font.Font(None, 24) # Default font for UI text
 
@@ -150,6 +151,12 @@ def main():
     dragging = False
     drag_start_pos = (0, 0)
 
+    # Selection variables
+    selection_mode = False
+    is_selecting = False
+    selection_start_pos = None
+    selection_rect = None
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -171,6 +178,9 @@ def main():
 
             # Handle events for UI components
             sidebar.handle_event(event)
+            if sidebar.selected_tile:
+                selection_mode = False
+
             tree_action = file_tree.handle_event(event)
             if tree_action:
                 if tree_action['action'] == 'select_map':
@@ -208,12 +218,19 @@ def main():
                     load_map(game_map, current_base_map_name, map_dir)
                 elif action == "ERASER":
                     sidebar.selected_tile = "eraser"
+                    selection_mode = False
                 elif action == "PLAYER SPAWN":
                     sidebar.selected_tile = "P"
+                    selection_mode = False
                 elif action == "ZOMBIE SPAWN":
                     sidebar.selected_tile = "Z"
+                    selection_mode = False
                 elif action == "ITEM SPAWN":
                     sidebar.selected_tile = "I"
+                    selection_mode = False
+                elif action == "SELECTION":
+                    selection_mode = True
+                    sidebar.selected_tile = None
                 elif action == "SAVE MAP":
                     save_map(game_map, current_base_map_name, map_dir)
                     status_message = f"Map '{current_base_map_name}' saved!"
@@ -231,6 +248,7 @@ def main():
                     status_message_timer = pygame.time.get_ticks() + 2000 # Display for 2 seconds
 
             if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = event.pos
                 # Scroll wheel for zoom
                 if event.button == 4: # Scroll up (zoom in)
                     zoom_level_index = min(len(ZOOM_LEVELS) - 1, zoom_level_index + 1)
@@ -242,22 +260,31 @@ def main():
                     dragging = True
                     drag_start_pos = event.pos
 
-                if event.button == 1 and sidebar.selected_tile:
-                    mouse_x, mouse_y = event.pos
-                    # Check if click is on the map area, not sidebar or file tree
+                if event.button == 1:
                     if map_view_rect.collidepoint(mouse_x, mouse_y):
-                        # Adjust mouse coordinates for camera offset and zoom
                         adjusted_mouse_x = (mouse_x - camera_offset_x) / current_zoom_scale
                         adjusted_mouse_y = (mouse_y - camera_offset_y) / current_zoom_scale
-
                         map_x = int(adjusted_mouse_x // TILE_SIZE)
                         map_y = int(adjusted_mouse_y // TILE_SIZE)
-                        
-                        if 0 <= map_x < game_map.width and 0 <= map_y < game_map.height:
+
+                        if selection_mode:
+                            is_selecting = True
+                            selection_start_pos = (map_x, map_y)
+                            selection_rect = pygame.Rect(selection_start_pos[0], selection_start_pos[1], 0, 0)
+                        elif sidebar.selected_tile and selection_rect and selection_rect.collidepoint(map_x, map_y):
                             tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
-                            game_map.set_tile(map_x, map_y, tile_to_place, game_map.active_layer_name)
+                            for row in range(selection_rect.height):
+                                for col in range(selection_rect.width):
+                                    game_map.set_tile(selection_rect.x + col, selection_rect.y + row, tile_to_place, game_map.active_layer_name)
+                            selection_rect = None # Clear selection after filling
+                        elif sidebar.selected_tile:
+                            if 0 <= map_x < game_map.width and 0 <= map_y < game_map.height:
+                                tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
+                                game_map.set_tile(map_x, map_y, tile_to_place, game_map.active_layer_name)
 
             if event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    is_selecting = False
                 if event.button == 3: # Right click release
                     dragging = False
 
@@ -268,6 +295,20 @@ def main():
                     camera_offset_x += (mouse_x - prev_mouse_x)
                     camera_offset_y += (mouse_y - prev_mouse_y)
                     drag_start_pos = event.pos
+                elif is_selecting:
+                    mouse_x, mouse_y = event.pos
+                    if map_view_rect.collidepoint(mouse_x, mouse_y):
+                        adjusted_mouse_x = (mouse_x - camera_offset_x) / current_zoom_scale
+                        adjusted_mouse_y = (mouse_y - camera_offset_y) / current_zoom_scale
+                        map_x = int(adjusted_mouse_x // TILE_SIZE)
+                        map_y = int(adjusted_mouse_y // TILE_SIZE)
+                        
+                        if selection_start_pos:
+                            x = min(selection_start_pos[0], map_x)
+                            y = min(selection_start_pos[1], map_y)
+                            width = abs(selection_start_pos[0] - map_x) + 1
+                            height = abs(selection_start_pos[1] - map_y) + 1
+                            selection_rect = pygame.Rect(x, y, width, height)
 
         # Drawing
         screen.fill(GREY) # Fill background
@@ -278,11 +319,31 @@ def main():
         # Draw grid (only within map view area)
         draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom_scale, game_map.width, game_map.height, map_view_rect)
 
+        # Draw selection rect
+        if selection_rect and not is_selecting:
+            scaled_tile_size = TILE_SIZE * current_zoom_scale
+            screen_rect = pygame.Rect(
+                selection_rect.x * scaled_tile_size + camera_offset_x,
+                selection_rect.y * scaled_tile_size + camera_offset_y,
+                selection_rect.width * scaled_tile_size,
+                selection_rect.height * scaled_tile_size
+            )
+            pygame.draw.rect(screen, YELLOW, screen_rect, 2)
+        elif is_selecting and selection_rect:
+            scaled_tile_size = TILE_SIZE * current_zoom_scale
+            screen_rect = pygame.Rect(
+                selection_rect.x * scaled_tile_size + camera_offset_x,
+                selection_rect.y * scaled_tile_size + camera_offset_y,
+                selection_rect.width * scaled_tile_size,
+                selection_rect.height * scaled_tile_size
+            )
+            pygame.draw.rect(screen, YELLOW, screen_rect, 2)
+
         # Draw rulers
         draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom_scale, game_map.width, game_map.height, map_view_rect, FONT)
 
         # Draw File Tree
-        file_tree.draw(screen)
+        file_tree.draw(screen, current_base_map_name, game_map.active_layer_name)
 
         # Draw sidebar
         sidebar.draw(screen)
@@ -290,14 +351,6 @@ def main():
 
         if new_map_modal.active:
             new_map_modal.draw(screen)
-
-        # Display active layer name (moved to avoid file tree)
-        active_layer_text = FONT.render(f"Layer: {game_map.active_layer_name}", True, BLACK)
-        screen.blit(active_layer_text, (FILE_TREE_WIDTH + 10, TOOLBAR_HEIGHT + 10))
-
-        # Display current map name (moved to avoid file tree)
-        map_name_text = FONT.render(f"Map: {current_base_map_name}", True, BLACK)
-        screen.blit(map_name_text, (FILE_TREE_WIDTH + 10, TOOLBAR_HEIGHT + 40))
 
         # Display status message (moved to avoid file tree)
         if pygame.time.get_ticks() < status_message_timer:

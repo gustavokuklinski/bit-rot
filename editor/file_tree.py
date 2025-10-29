@@ -1,6 +1,9 @@
 import pygame
 import re
 
+from editor.assets import load_editor_icons
+from editor.config import ICON_SIZE
+
 class FileTree:
     def __init__(self, x, y, width, height, available_maps, font):
         self.x = x
@@ -10,6 +13,7 @@ class FileTree:
         self.font = font
         self.line_height = 25
         self.scroll_offset = 0
+        self.icons = load_editor_icons("game/sprites/editor")
 
         self.grouped_maps = self._group_maps(available_maps)
         self.map_names = sorted(self.grouped_maps.keys())
@@ -35,10 +39,19 @@ class FileTree:
                 grouped[base_name].append(f)
         return grouped
 
-    def draw(self, surface):
+    def draw(self, surface, current_map_name, active_layer_name):
         pygame.draw.rect(surface, (200, 200, 200), (self.x, self.y, self.width, self.height))
 
-        display_y = self.y + 5 - self.scroll_offset
+        # Display current map and layer info
+        map_info_y = self.y + 5
+        map_text = f"Active map: {current_map_name}"
+        layer_text = f"Editing layer: {active_layer_name}"
+        map_surf = self.font.render(map_text, True, (0, 0, 0))
+        layer_surf = self.font.render(layer_text, True, (0, 0, 0))
+        surface.blit(map_surf, (self.x + 10, map_info_y))
+        surface.blit(layer_surf, (self.x + 10, map_info_y + self.line_height))
+
+        display_y = self.y + 5 - self.scroll_offset + (self.line_height * 2)
         for map_name in self.map_names:
             # Draw base map name
             icon = "[-]" if self.expanded_maps.get(map_name) else "[+]"
@@ -63,11 +76,9 @@ class FileTree:
                     surface.blit(layer_surf, (self.x + 15, display_y))
 
                     # View/Hide button
-                    vh_text = "[HIDE]" if prop["visible"] else "[VIEW]"
-                    vh_rect = pygame.Rect(self.x + self.width - 150, display_y, 60, self.line_height - 5)
-                    pygame.draw.rect(surface, (180, 180, 180), vh_rect)
-                    vh_surf = self.font.render(vh_text, True, (0,0,0))
-                    surface.blit(vh_surf, (vh_rect.x + 5, vh_rect.y + 2))
+                    icon = self.icons["hide"] if prop["visible"] else self.icons["view"]
+                    vh_rect = pygame.Rect(self.x + self.width - 150, display_y - 6, ICON_SIZE, ICON_SIZE)
+                    surface.blit(icon, vh_rect)
 
                     # Opacity controls
                     op_rect = pygame.Rect(self.x + self.width - 80, display_y, 70, self.line_height - 5)
@@ -83,7 +94,7 @@ class FileTree:
                 mouse_x, mouse_y = event.pos
                 if self.x <= mouse_x <= self.x + self.width and self.y <= mouse_y <= self.y + self.height:
                     
-                    current_y = self.y + 5 - self.scroll_offset
+                    current_y = self.y + 5 - self.scroll_offset + (self.line_height * 2)
                     for map_name in self.map_names:
                         # Check click on base map name
                         base_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
@@ -104,7 +115,7 @@ class FileTree:
                                 layer_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
                                 if layer_rect.collidepoint(mouse_x, mouse_y):
                                     # Check view/hide click
-                                    vh_rect = pygame.Rect(self.x + self.width - 150, current_y, 60, self.line_height - 5)
+                                    vh_rect = pygame.Rect(self.x + self.width - 150, current_y, ICON_SIZE, ICON_SIZE)
                                     if vh_rect.collidepoint(mouse_x, mouse_y):
                                         self.layer_properties[layer_file]["visible"] = not self.layer_properties[layer_file]["visible"]
                                         return {"action": "toggle_visibility", "layer": layer_file, "properties": self.layer_properties[layer_file]}

@@ -2,13 +2,14 @@
 
 # Screen dimensions
 SCREEN_WIDTH = 1480 # Increased to accommodate file tree
-SCREEN_HEIGHT = 720
+SCREEN_HEIGHT = 820
 
 # Toolbar height
 TOOLBAR_HEIGHT = 40
 
 # Tile size
 TILE_SIZE = 32
+ICON_SIZE = 30
 
 # Sidebar width (for tiles)
 SIDEBAR_WIDTH = 300
