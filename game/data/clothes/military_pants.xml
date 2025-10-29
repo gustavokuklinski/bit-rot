@@ -1,0 +1,6 @@
+<cloth name="Military Pants" type="cloth" id="legs">
+    <properties>
+        <defence value="50" />
+        <sprite file="military_pants.png" />
+    </properties>
+</cloth>

@@ -1,0 +1,6 @@
+<cloth name="Empty Body" type="cloth" id="body">
+    <properties>
+        <defence value="0" />
+        <sprite file="empty.png" />
+    </properties>
+</cloth>

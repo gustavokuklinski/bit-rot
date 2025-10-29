@@ -4,5 +4,6 @@
         <sprite file="wallet.png" />
     </properties>
     <loot>
+        <item name="ID" chance="100" />
     </loot>
 </item>

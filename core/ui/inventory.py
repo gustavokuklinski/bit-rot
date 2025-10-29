@@ -30,6 +30,15 @@ def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     y = modal_y + 125
     return pygame.Rect(x, y, slot_w, slot_h)
 
+def get_invcontainer_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+    modal_x, modal_y = modal_position
+    slot_w = 48
+    slot_h = 48
+    gap = 8
+    x = modal_x + 235
+    y = modal_y + 125
+    return pygame.Rect(x, y, slot_w, slot_h)
+
 def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory")
     base_modal.draw_base()
@@ -80,6 +89,25 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
         surface.blit(info_text, (text_x_offset, backpack_slot_rect.top + 25))
     else:
         pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
+    
+    invcontainer_slot_rect = get_invcontainer_slot_rect(modal['position'])
+    pygame.draw.rect(surface, GRAY_40, invcontainer_slot_rect, 0, 3)
+
+    surface.blit(font_small.render("", True, WHITE), (invcontainer_slot_rect.x + 1, invcontainer_slot_rect.y - 15))
+    if (invcontainer := player.invcontainer):
+        pygame.draw.rect(surface, invcontainer.color, invcontainer_slot_rect, 2, 5)
+        if invcontainer.image:
+            img_h = invcontainer_slot_rect.height - 10
+            img_w = int(invcontainer.image.get_width() * (img_h / invcontainer.image.get_height()))
+            scaled_sprite = pygame.transform.scale(invcontainer.image, (img_w, img_h))
+            sprite_rect = scaled_sprite.get_rect(centery=invcontainer_slot_rect.centery, left=invcontainer_slot_rect.left + 5)
+            surface.blit(scaled_sprite, sprite_rect)
+            text_x_offset = sprite_rect.right + 10
+        else:
+            text_x_offset = invcontainer_slot_rect.left + 10
+
+    else:
+        pygame.draw.rect(surface, GRAY, invcontainer_slot_rect, 1, 3)
 
     belt_y_start = backpack_slot_rect.bottom + 15
     surface.blit(font.render("", True, WHITE), (base_modal.modal_x + 10, belt_y_start))
@@ -87,7 +115,13 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
         item = player.belt[i]
         slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+        
+        # Highlight active weapon
+        if item and player.active_weapon and item.id == player.active_weapon.id:
+            pygame.draw.rect(surface, YELLOW, slot_rect, 2, 3)
+        else:
+            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+
         num_text = font_small.render(f"[{str(i + 1)}]", True, WHITE)
         surface.blit(num_text, (slot_rect.centerx - num_text.get_width() // 2, slot_rect.top - 15))
         if item:

@@ -10,7 +10,7 @@ from core.entities.player_progression import PlayerProgression
 
 # Note: player references UI helpers for slot rectangles for mouse detection.
 # We import functions from core.ui (which remain in the root ui.py)
-from core.ui.inventory import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from core.ui.inventory import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 
 class Player:
     def __init__(self, player_data=None):
@@ -39,6 +39,7 @@ class Player:
 
         self.inventory = []
         self.backpack = None
+        self.invcontainer = None
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
@@ -217,6 +218,11 @@ class Player:
             slot_rect = get_backpack_slot_rect()
             if slot_rect.collidepoint(mouse_pos):
                 return self.backpack, 'backpack', 0
+        if self.invcontainer:
+            slot_rect = get_invcontainer_slot_rect()
+            if slot_rect.collidepoint(mouse_pos):
+                return self.invcontainer, 'invcontainer', 0
+
         return None, None, None
 
     def find_matching_ammo(self, weapon):
@@ -298,6 +304,8 @@ class Player:
             return self.inventory
         elif source_type == 'belt':
             return self.belt
+        elif source_type == 'invcontainer':
+            return [self.invcontainer] if self.invcontainer else []
         elif source_type == 'container' and container_item:
             return container_item.inventory
         return None

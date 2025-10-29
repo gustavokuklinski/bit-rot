@@ -1,8 +1,6 @@
-<clothes name="Leather Black Jacket" type="cloth">
+<cloth name="Leather Black Jacket" type="cloth" id="body">
     <properties>
         <defence value="50" />
         <sprite file="leather_black_jacket.png" />
     </properties>
-    <loot>
-    </loot>
-</clothes>
+</cloth>

@@ -1,0 +1,33 @@
+<zombie>
+    <name value="RANDOM" />
+    <profession value="RANDOM" />
+    <sex value="RANDOM" />
+    <vaccine value="RANDOM" />
+
+    <xp min="0.2" max="80" />
+    
+    <stats>
+        <health min="30" max="90" />
+        <speed min="1" max="2" />
+        <attack min="1" max="2" />
+        <infection min="1" max="2" />
+    </stats>
+    
+    <clothes>
+        <head></head>
+        <feet></feet>
+        <hands></hands>
+        <torso></torso>
+        <body></body>
+        <legs></legs>
+    </clothes>
+
+    <visuals>
+        <sprite file="zombie.png" />
+    </visuals>
+    
+    <loot>
+        <item name="Wallet" chance="100.0" />
+    </loot>
+
+</zombie>

@@ -5,11 +5,12 @@
         <food_water_multiplier_decay value="1.5" />
         <food_decay value="0.2" />
         <water_decay value="0.3" />
-        <water_autodrink value="true" /> <!-- # Enable/disable auto-drinking -->
-        <water_threshold value="90" /> <!-- # Min % to enable auto-drink -->
+        <water_autodrink value="true" />
+        <water_threshold value="90" />
         <zoom_start value="3.0" />
         <zoom_far value="1.3" />
         <zoom_near value="5.0" />
+        <view_radius value="15" />
     </player>
     <zombie>
         <speed value="2" />
@@ -18,6 +19,7 @@
         <wander value="true" />
         <wander_interval value="2000" />
         <sight_check value="true" />
-        <spawn value="3" />
+        <spawn value="1" />
+        <respawn_on_layer_change value="true" />
     </zombie>
 </config>

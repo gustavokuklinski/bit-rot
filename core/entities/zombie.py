@@ -4,24 +4,61 @@ import math
 import pygame
 import xml.etree.ElementTree as ET
 import uuid
-
+from faker import Faker
 from data.config import *
 from core.messages import display_message
 
+fake = Faker()
 ZOMBIE_TEMPLATES = []
+ZOMBIE_CLOTHES_POOL = {}
 
 class Zombie:
     def __init__(self, x, y, template):
         self.x = x
         self.y = y
         self.id = str(uuid.uuid4())
-        self.name = template.get('name', 'Zombie')
+
+        # 1. Generate Sex (must be first, as Name depends on it)
+        sex_val = template.get('sex', 'Male') # Get value from XML
+        if sex_val.upper() == 'RANDOM':
+            self.sex = random.choice(['Male', 'Female'])
+        else:
+            self.sex = sex_val
+
+        # 2. Generate Name
+        name_val = template.get('name', 'Zombie') # Get value from XML
+        if name_val.upper() == 'RANDOM':
+            # Use Faker to get a name matching the generated sex
+            if self.sex == 'Male':
+                self.name = fake.name_male()
+            else:
+                self.name = fake.name_female()
+        else:
+            self.name = name_val # Use the hard-coded name (e.g., "John Doe")
+
+        # 3. Generate Profession
+        prof_val = template.get('profession', 'Civilian') # Get value from XML
+        if prof_val.upper() == 'RANDOM':
+            self.profession = fake.job()
+        else:
+            self.profession = prof_val
+
+        # 4. Generate Vaccine Status
+        vacc_val = template.get('vaccine', 'False') # Get value from XML
+        if vacc_val.upper() == 'RANDOM':
+            self.vaccine = random.choice([True, False])
+        else:
+            # Convert the string "True" or "False" to a real boolean
+            self.vaccine = vacc_val.lower() == 'true'
+
+
         self.max_health = template.get('health')
         self.health = self.max_health
         self.speed = template.get('speed', ZOMBIE_SPEED)
         self.loot_table = template.get('loot', [])
-        self.xp_value = random.randint(template.get('min_xp'), template.get('max_xp'))
+        self.xp_value = random.uniform(template.get('min_xp'), template.get('max_xp'))
         self.image = self.load_sprite(template.get('sprite'))
+        self.clothes = template.get('clothes', {})
         self.color = RED
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.show_health_bar_timer = 0
@@ -56,14 +93,27 @@ class Zombie:
         self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)
         return self.health <= 0 # Return True if dead
 
-    def draw(self, surface, offset_x, offset_y):
+    def draw(self, surface, offset_x, offset_y, opacity=255):
         # This draw method is for the pixelated zoom approach
         draw_rect = self.rect.move(offset_x, offset_y)
 
         if self.image:
-            surface.blit(self.image, draw_rect)
+            temp_image = self.image.copy()
+            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(temp_image, draw_rect)
+
+            # Draw clothes
+            for slot, clothe in self.clothes.items():
+                if clothe:
+                    clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
+                    if clothe_sprite:
+                        clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+                        surface.blit(clothe_sprite, draw_rect)
         else:
-            pygame.draw.rect(surface, self.color, draw_rect)
+            # Fallback for zombies without an image
+            temp_surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+            temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
+            surface.blit(temp_surface, draw_rect)
 
         if self.show_health_bar_timer > 0:
             bar_y = draw_rect.top - 7
@@ -85,6 +135,16 @@ class Zombie:
             arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
             pygame.draw.arc(surface, RED, arc_bounds, start_angle, end_angle, 3)
             self.melee_swing_timer -= 1
+
+    def load_clothe_sprite(self, sprite_file):
+        if not sprite_file: return None
+        try:
+            path = SPRITE_PATH + "clothes/" + sprite_file
+            img = pygame.image.load(path).convert_alpha()
+            return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+        except Exception as e:
+            print(f"Error loading clothe sprite {sprite_file}: {e}")
+            return None
 
     def has_line_of_sight(self, target_rect, obstacles):
         """Checks if there is an uninterrupted line between zombie and target."""
@@ -203,7 +263,6 @@ class Zombie:
         if infection > 0:
             player.infection = min(100, player.infection + infection)
             print(f"**HIT!** Player takes {damage} damage and {infection}% infection.")
-
         else:
             print(f"**HIT!** Player takes {damage} damage.")
 
@@ -211,58 +270,120 @@ class Zombie:
     @staticmethod
     def load_templates(folder=DATA_PATH + 'zombie/'):
         """Loads all zombie templates from XML files in a folder."""
-        global ZOMBIE_TEMPLATES
+        global ZOMBIE_TEMPLATES, ZOMBIE_CLOTHES_POOL # <-- Add to global
         ZOMBIE_TEMPLATES = []
+        ZOMBIE_CLOTHES_POOL.clear()
+        
         try:
+            # Load clothes data first
+            clothes_data = {}
+            clothes_folder = DATA_PATH + 'clothes/'
+            for filename in os.listdir(clothes_folder):
+                if filename.endswith('.xml'):
+                    filepath = os.path.join(clothes_folder, filename)
+                    try:
+                        tree = ET.parse(filepath)
+                        root = tree.getroot()
+                        if root.tag == 'cloth':
+
+                            clothe_type = root.get('id') # e.g., "head", "torso", "legs"
+                            if not clothe_type:
+                                print(f"Warning: Clothe {filename} has no 'type' attribute, skipping.")
+                                continue
+
+                            if clothe_type not in ZOMBIE_CLOTHES_POOL:
+                                ZOMBIE_CLOTHES_POOL[clothe_type] = [] # e.g., ZOMBIE_CLOTHES_POOL['head'] = []
+
+                            properties = root.find('properties')
+                            if properties is None: continue
+
+                            # Build a dictionary of this clothe's properties
+                            clothe_props = {
+                                'name': root.get('name'),
+                                'type': clothe_type,
+                                'defence': 0.0, # Default
+                                'speed': 0.0, # Default
+                                'sprite': None # Default
+                            }
+                            
+                            def_node = properties.find('defence')
+                            if def_node is not None:
+                                clothe_props['defence'] = float(def_node.get('value', 0))
+                                
+                            spd_node = properties.find('speed')
+                            if spd_node is not None:
+                                clothe_props['speed'] = float(spd_node.get('value', 0))
+                                
+                            spr_node = properties.find('sprite')
+                            if spr_node is not None:
+                                clothe_props['sprite'] = spr_node.get('file')
+
+                            # Add this item to the global pool, sorted by its type
+                            ZOMBIE_CLOTHES_POOL[clothe_type].append(clothe_props)
+                    except Exception as e:
+                        print(f"Error loading clothe from {filename}: {e}")
+
             for filename in os.listdir(folder):
                 if filename.endswith('.xml'):
-                    filepath = filepath = f"{folder}/{filename}"
+                    filepath = os.path.join(folder, filename)
                     try:
                         tree = ET.parse(filepath)
                         root = tree.getroot()
                         if root.tag == 'zombie':
-                            # --- Corrected XML Parsing ---
                             template = {}
                             name_node = root.find('name')
                             stats_node = root.find('stats')
                             visuals_node = root.find('visuals')
-                            attack_node = root.find('attack')
-                            infection_node = root.find('infection')
                             xp_node = root.find('xp')
                             loot_node = root.find('loot')
+                            clothes_node = root.find('clothes')
 
-                            # Safely get values, providing defaults
                             template['name'] = name_node.get('value') if name_node is not None else 'Unknown Zombie'
 
-                            template['health'] = float(stats_node.find('health').get('value')) if stats_node and stats_node.find('health') is not None else 10.0
-                            template['speed'] = float(stats_node.find('speed').get('value')) if stats_node and stats_node.find('speed') is not None else ZOMBIE_SPEED
+                            health_node = stats_node.find('health')
+                            template['min_health'] = int(health_node.get('min'))
+                            template['max_health'] = int(health_node.get('max'))
+
+                            speed_node = stats_node.find('speed')
+                            template['min_speed'] = int(speed_node.get('min'))
+                            template['max_speed'] = int(speed_node.get('max'))
+
+                            attack_node = stats_node.find('attack')
+                            template['min_attack'] = int(attack_node.get('min'))
+                            template['max_attack'] = int(attack_node.get('max'))
+
+                            infection_node = stats_node.find('infection')
+                            template['min_infection'] = int(infection_node.get('min'))
+                            template['max_infection'] = int(infection_node.get('max'))
 
                             template['sprite'] = visuals_node.find('sprite').get('file') if visuals_node and visuals_node.find('sprite') is not None else None
 
-                            template['min_attack'] = int(attack_node.find('min').get('value')) if attack_node and attack_node.find('min') is not None else 1
-                            template['max_attack'] = int(attack_node.find('max').get('value')) if attack_node and attack_node.find('max') is not None else 3
-
-                            template['min_infection'] = int(infection_node.find('min').get('value')) if infection_node and infection_node.find('min') is not None else 0
-                            template['max_infection'] = int(infection_node.find('max').get('value')) if infection_node and infection_node.find('max') is not None else 1
-
-                            template['min_xp'] = int(xp_node.find('min').get('value')) if xp_node and xp_node.find('min') is not None else 1
-                            template['max_xp'] = int(xp_node.find('max').get('value')) if xp_node and xp_node.find('max') is not None else 5
+                            template['min_xp'] = float(xp_node.get('min'))
+                            template['max_xp'] = float(xp_node.get('max'))
 
                             template['loot'] = []
                             if loot_node is not None:
-                                for item_node in loot_node.findall('item'): # Corrected findall path
+                                for item_node in loot_node.findall('item'):
                                     template['loot'].append({
                                         'item': item_node.get('name'),
                                         'chance': float(item_node.get('chance'))
                                     })
-                            # --- End Corrected XML Parsing ---
+
+                            # Instead of loading item lists, just get the tag names
+                            template['clothes_slots'] = []
+                            if clothes_node is not None:
+                                for slot_node in clothes_node:
+                                    # slot_node.tag will be "head", "torso", etc.
+                                    template['clothes_slots'].append(slot_node.tag)
+
+
 
                             ZOMBIE_TEMPLATES.append(template)
                             print(f"Loaded zombie template: {template['name']}")
                     except Exception as e:
                         print(f"Error loading zombie template from {filename}: {e}")
         except FileNotFoundError:
-             print(f"Error: Zombie template folder not found: {folder}")
+            print(f"Error: Zombie template folder not found: {folder}")
 
 
     @staticmethod
@@ -288,7 +409,47 @@ class Zombie:
             return Zombie(x, y, default_template)
 
         template = random.choice(ZOMBIE_TEMPLATES)
-        return Zombie(x, y, template)
+        zombie = Zombie(x, y, template)
+
+        # Randomly assign clothes and calculate defense bonus
+        # Randomly assign clothes and calculate defense bonus
+        total_defense = 0
+        zombie.clothes = {} # Start with an empty clothes dict for this instance
+
+        # Check if the template has the 'clothes_slots' list (from <head></head>, etc.)
+        if 'clothes_slots' in template:
+            
+            # Iterate through each slot defined in the XML (e.g., 'head', 'torso', ...)
+            for slot_name in template['clothes_slots']:
+                
+                # Find the list of available clothes for this specific slot
+                # e.g., ZOMBIE_CLOTHES_POOL['head']
+                available_clothes_for_slot = ZOMBIE_CLOTHES_POOL.get(slot_name)
+                
+                # Check if we have any clothes for that slot
+                if available_clothes_for_slot:
+                    # Pick one random piece of clothing from the list
+                    chosen_clothe = random.choice(available_clothes_for_slot)
+                    
+                    # Assign it to the zombie instance
+                    zombie.clothes[slot_name] = chosen_clothe
+                    
+                    # Add its defense value
+                    total_defense += chosen_clothe.get('defence', 0)
+            
+            #if zombie.clothes:
+                # Optional debug print to confirm
+                print(f"Zombie: '{zombie.name}' spawned with clothes: {list(zombie.clothes.keys())}")
+        
+        # Apply defense multiplier to health
+        defense_multiplier = 1 + (total_defense / 100.0)
+        zombie.max_health = random.randint(template['min_health'], template['max_health']) * defense_multiplier
+        zombie.health = zombie.max_health
+
+        # Set other stats
+        zombie.speed = random.randint(template['min_speed'], template['max_speed'])
+
+        return zombie
 
 # Load templates when the module is imported (ensure it only happens once)
 if not ZOMBIE_TEMPLATES:

@@ -1,0 +1,6 @@
+<cloth name="Black Hat" type="cloth" id="head">
+    <properties>
+        <defence value="0" />
+        <sprite file="black_hat.png" />
+    </properties>
+</cloth>

@@ -5,6 +5,7 @@ import pygame
 from data.config import *
 from core.entities.item import Item
 from core.entities.zombie import Zombie
+from core.entities.corpse import Corpse
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.tile_manager import TileManager
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
@@ -127,8 +128,6 @@ def _rebuild_world_from_data(game):
     # Clear all current-layer entities
     game.obstacles.clear()
     game.containers.clear()
-    game.items_on_ground.clear()
-    game.zombies.clear()
 
     # Call parse_layered_map_layout to get the new world data
     obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers = \
@@ -139,12 +138,8 @@ def _rebuild_world_from_data(game):
     game.renderable_tiles = renderable_tiles
     game.containers = containers
 
-    # Handle spawning of items and zombies (these functions will need to be moved to spawn_manager.py)
-    # For now, we'll keep them here and assume they are imported or defined elsewhere if needed.
-    game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-    game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
-
-    # Note: Player spawn is handled in game.load_map, so we don't re-assign it here.
+    # Return spawn points for set_active_layer to handle
+    return item_spawns, zombie_spawns
 
 def set_active_layer(game, layer_index):
     """
@@ -153,6 +148,12 @@ def set_active_layer(game, layer_index):
     if layer_index not in game.all_map_layers:
         print(f"Error: Attempted to switch to non-existent layer {layer_index}")
         return False
+
+    # --- State Saving ---
+    if game.current_layer_index in game.layer_items:
+        game.layer_items[game.current_layer_index] = game.items_on_ground[:]
+    if game.current_layer_index in game.layer_zombies:
+        game.layer_zombies[game.current_layer_index] = game.zombies[:]
 
     print(f"Setting active layer to: {layer_index}")
     game.current_layer_index = layer_index
@@ -166,8 +167,30 @@ def set_active_layer(game, layer_index):
     print(f"Active ground_data shape: ({len(game.ground_data)}, {len(game.ground_data[0]) if game.ground_data else 0})")
     print(f"Active spawn_data shape: ({len(game.spawn_data)}, {len(game.spawn_data[0]) if game.spawn_data else 0})")
     
-    # Rebuild obstacles, zombies, etc.
-    _rebuild_world_from_data(game)
+    # Rebuild obstacles and get spawn points
+    item_spawns, zombie_spawns = _rebuild_world_from_data(game)
+
+    # --- State Loading ---
+    # Items: Load if they exist for the new layer, otherwise spawn them
+    if layer_index in game.layer_items:
+        game.items_on_ground = game.layer_items[layer_index][:]
+    else:
+        game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
+        game.layer_items[layer_index] = game.items_on_ground[:]
+
+    # Zombies: Load if they exist and respawn is OFF, otherwise spawn them
+    if ZOMBIE_RESPAWN_ON_LAYER_CHANGE:
+        game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
+        game.layer_zombies[layer_index] = game.zombies[:]
+        # Clear corpses from the item list for this layer
+        game.items_on_ground = [item for item in game.items_on_ground if not isinstance(item, Corpse)]
+        game.layer_items[layer_index] = game.items_on_ground[:]
+    else:
+        if layer_index in game.layer_zombies:
+            game.zombies = game.layer_zombies[layer_index][:]
+        else:
+            game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
+            game.layer_zombies[layer_index] = game.zombies[:]
     
     return True
 

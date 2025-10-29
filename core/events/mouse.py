@@ -7,7 +7,7 @@ from data.config import *
 from core.entities.item import Item, Projectile
 from core.entities.corpse import Corpse
 from core.update import player_hit_zombie, handle_zombie_death
-from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect
+from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal
@@ -135,6 +135,8 @@ def handle_mouse_up(game, event, mouse_pos):
                         game.player.belt[i_temp] = None
                 elif type_temp == 'backpack':
                     game.player.backpack = None
+                elif type_temp == 'invcontainer':
+                    game.player.invcontainer = None
                 elif type_temp == 'container' and container_temp:
                     cont_obj = container_temp[0]
                     if 0 <= i_temp < len(cont_obj.inventory):
@@ -233,6 +235,38 @@ def handle_mouse_up(game, event, mouse_pos):
 
             if not dropped_successfully:
                 for modal in reversed(game.modals):
+                    if modal['type'] == 'inventory':
+                        invcontainer_slot_rect = get_invcontainer_slot_rect(modal['position'])
+                        if invcontainer_slot_rect.collidepoint(mouse_pos):
+                            is_container_like = (getattr(game.dragged_item, 'item_type', None) in ('backpack', 'container')) or hasattr(game.dragged_item, 'inventory')
+                            if not is_container_like:
+                                break
+
+                            old_invcontainer = game.player.invcontainer
+                            game.player.invcontainer = game.dragged_item
+                            print(f"Equipped {game.dragged_item.name} as invcontainer via drag.")
+
+                            if old_invcontainer:
+                                returned = False
+                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    game.player.inventory.append(old_invcontainer)
+                                    returned = True
+                                else:
+                                    for bi in range(len(game.player.belt)):
+                                        if game.player.belt[bi] is None:
+                                            game.player.belt[bi] = old_invcontainer
+                                            returned = True
+                                            break
+                                if not returned:
+                                    old_invcontainer.rect.center = game.player.rect.center
+                                    game.items_on_ground.append(old_invcontainer)
+                                    print(f"No space to return old invcontainer; dropped {old_invcontainer.name} on ground.")
+
+                            dropped_successfully = True
+                            break
+
+            if not dropped_successfully:
+                for modal in reversed(game.modals):
                     if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
                         target_index = -1
                         for i in range(5):
@@ -311,6 +345,8 @@ def handle_mouse_up(game, event, mouse_pos):
                         game.player.belt[i_orig] = game.dragged_item
                     elif type_orig == 'backpack':
                         game.player.backpack = game.dragged_item
+                    elif type_orig == 'invcontainer':
+                        game.player.invcontainer = game.dragged_item
                     elif type_orig == 'container' and container_obj is not None:
                         container_obj.inventory.insert(i_orig, game.dragged_item)
                     elif type_orig == 'nearby' and container_obj is not None:
@@ -337,6 +373,8 @@ def find_item_at_pos(game, mouse_pos):
                     return item
             if game.player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
                 return game.player.backpack
+            if game.player.invcontainer and get_invcontainer_slot_rect(modal['position']).collidepoint(mouse_pos):
+                return game.player.invcontainer
         
         elif modal['type'] == 'container':
             container = modal['item']
@@ -393,6 +431,8 @@ def handle_mouse_motion(game, event, mouse_pos):
                 game.player.belt[i_orig] = None
             elif type_orig == 'backpack':
                 game.player.backpack = None
+            elif type_orig == 'invcontainer':
+                game.player.invcontainer = None
             elif type_orig == 'container':
                 container_obj = container_info[0]
                 container_obj.inventory.pop(i_orig)
@@ -427,6 +467,8 @@ def resolve_drag_origin_from_item(item, player, modals):
             return (player.belt.index(item), 'belt')
         if player.backpack is item:
             return (0, 'backpack')
+        if player.invcontainer is item:
+            return (0, 'invcontainer')
         for modal in reversed(modals):
             if modal.get('type') == 'container' and modal.get('item') and hasattr(modal['item'], 'inventory'):
                 cont = modal['item']
@@ -546,6 +588,16 @@ def handle_context_menu_click(game, mouse_pos):
                         dropped_item = item_to_drop
                     else:
                         print("Backpack drop error: item mismatch.")
+                elif source == 'invcontainer':
+                    item_to_drop = game.player.invcontainer
+                    if item_to_drop and item_to_drop == item:
+                        game.player.invcontainer = None
+                        item_to_drop.rect.center = game.player.rect.center
+                        game.items_on_ground.append(item_to_drop)
+                        print(f"Dropped {item_to_drop.name} from invcontainer slot.")
+                        dropped_item = item_to_drop
+                    else:
+                        print("Invcontainer drop error: item mismatch.")
                 else:
                     dropped_item = game.player.drop_item(source, index, container_item)
                     if dropped_item:
@@ -672,6 +724,9 @@ def handle_right_click(game, mouse_pos):
             if not clicked_item:
                 if game.player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
                     clicked_item, click_source, click_index = game.player.backpack, 'backpack', 0
+            if not clicked_item:
+                if game.player.invcontainer and get_invcontainer_slot_rect(modal['position']).collidepoint(mouse_pos):
+                    clicked_item, click_source, click_index = game.player.invcontainer, 'invcontainer', 0
         
         elif modal['type'] == 'container':
             container = modal['item']
@@ -814,6 +869,15 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         break
+            if game.drag_candidate: break
+
+            if game.player.invcontainer:
+                slot_rect = get_invcontainer_slot_rect(modal['position'])
+                if slot_rect.collidepoint(mouse_pos):
+                    game.drag_candidate = (game.player.invcontainer, (0, 'invcontainer'))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+
             if game.drag_candidate: break
     
     if game.drag_candidate:

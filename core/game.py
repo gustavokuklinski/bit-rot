@@ -12,7 +12,7 @@ from core.entities.zombie import Zombie
 from core.entities.item import Item, Projectile
 from core.entities.corpse import Corpse
 from core.ui.helpers import draw_menu, draw_game_over, run_player_setup
-from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -86,6 +86,8 @@ class Game:
         self.messages_button_rect = None
         self.camera = None
         self.map_states = {}
+        self.layer_items = {}
+        self.layer_zombies = {}
         self.player_name = ""
         self.name_input_active = False
         self.selected_profession = None
@@ -113,6 +115,8 @@ class Game:
         self.all_map_layers.clear()
         self.all_ground_layers.clear()
         self.all_spawn_layers.clear()
+        self.layer_items.clear()
+        self.layer_zombies.clear()
 
         self.map_manager.current_map_filename = map_filename
 
@@ -195,7 +199,6 @@ class Game:
     def check_map_transition(self):
         new_map = None
         new_player_pos = None
-
         if self.player.rect.top <= 0:
             new_map = self.map_manager.transition('top')
             if new_map:
@@ -208,26 +211,26 @@ class Game:
             new_map = self.map_manager.transition('left')
             if new_map:
                 new_player_pos = (GAME_WIDTH - self.player.rect.width, self.player.rect.y)
-        elif self.player.rect.right >= GAME_WIDTH:
-            new_map = self.map_manager.transition('right')
+            elif self.player.rect.right >= GAME_WIDTH:
+                new_map = self.map_manager.transition('right')
             if new_map:
                 new_player_pos = (0, self.player.rect.y)
+            if new_map and new_player_pos:
+                current_map_filename = self.map_manager.current_map_filename
 
-        if new_map and new_player_pos:
-            current_map_filename = self.map_manager.current_map_filename
-        
             if current_map_filename not in self.map_states:
                 self.map_states[current_map_filename] = {}
-            self.map_states[current_map_filename]['items'] = self.items_on_ground
-            self.map_states[current_map_filename]['zombies'] = self.zombies
-            self.map_states[current_map_filename]['containers'] = self.containers
 
-            self.load_map(new_map)
-            
-            self.player.rect.topleft = new_player_pos
-            self.player.x, self.player.y = new_player_pos
-            self.player.vx = 0
-            self.player.vy = 0
+                self.map_states[current_map_filename]['items'] = self.items_on_ground
+                self.map_states[current_map_filename]['zombies'] = self.zombies
+                self.map_states[current_map_filename]['containers'] = self.containers
+
+                self.load_map(new_map)
+                    
+                self.player.rect.topleft = new_player_pos
+                self.player.x, self.player.y = new_player_pos
+                self.player.vx = 0
+                self.player.vy = 0
 
     async def run(self):
         while self.running:

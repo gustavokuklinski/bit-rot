@@ -2,7 +2,7 @@ import pygame
 import math
 from data.config import *
 from core.ui.helpers import draw_menu, draw_game_over
-from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -36,17 +36,38 @@ def draw_game(game):
         world_view_surface.blit(image, rect.move(offset_x, offset_y))
 
     for item in game.items_on_ground:
+        dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
+        if dist > PLAYER_VIEW_RADIUS:
+            continue
+
         draw_pos = item.rect.move(offset_x, offset_y)
+        
+        # Calculate opacity
+        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+
         if getattr(item, 'image', None):
-            world_view_surface.blit(item.image, draw_pos)
+            # Create a copy of the image to modify its alpha value
+            temp_image = item.image.copy()
+            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            world_view_surface.blit(temp_image, draw_pos)
         else:
-            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+            # For items without an image, we need to handle color with alpha
+            color = getattr(item, 'color', WHITE)
+            temp_surface = pygame.Surface(item.rect.size, pygame.SRCALPHA)
+            temp_surface.fill((color[0], color[1], color[2], opacity))
+            world_view_surface.blit(temp_surface, draw_pos)
 
     for p in game.projectiles:
         p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        zombie.draw(world_view_surface, offset_x, offset_y)
+        dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+        if dist > PLAYER_VIEW_RADIUS:
+            continue
+
+        # Calculate opacity
+        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+        zombie.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw(world_view_surface, offset_x, offset_y)
 

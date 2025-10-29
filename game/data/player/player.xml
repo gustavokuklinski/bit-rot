@@ -1,5 +1,7 @@
 <player name="player">
     <name value="Player" />
+    <sex value="Male" />
+    <vaccine value="True" />
 
     <stats>
         <health value="100.0" />
@@ -24,4 +26,26 @@
     <visuals>
         <sprite file="player.png" />
     </visuals>
+
+    <clothes>
+        <head>
+        
+        </head>
+        <feet>
+          
+        </feet>
+        <hands>
+         
+        </hands>
+        <torso>
+           
+        </torso>
+        <body>
+        
+        </body>
+        <legs>
+      
+        </legs>
+
+    </clothes>
 </player>

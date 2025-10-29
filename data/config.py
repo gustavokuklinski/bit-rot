@@ -43,7 +43,7 @@ STATUS_MODAL_HEIGHT = 360
 
 # Nearby Modal
 NEARBY_MODAL_WIDTH = 300
-NEARBY_MODAL_HEIGHT = 210
+NEARBY_MODAL_HEIGHT = 320
 
 # Container Modal
 CONTAINER_MODAL_WIDTH = 300
@@ -79,6 +79,7 @@ FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
 NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
 AUTO_DRINK = player_config.find('water_autodrink').get('value') == 'true'
 AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
+PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
 
 # Zombie settings
 zombie_config = root.find('zombie')
@@ -89,3 +90,4 @@ ZOMBIE_WANDER_ENABLED = zombie_config.find('wander').get('value') == 'true'
 ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
 ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == 'true'
 ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
+ZOMBIE_RESPAWN_ON_LAYER_CHANGE = zombie_config.find('respawn_on_layer_change').get('value') == 'true'
