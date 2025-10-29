@@ -4,6 +4,10 @@
 SCREEN_WIDTH = 1480 # Increased to accommodate file tree
 SCREEN_HEIGHT = 820
 
+# Map default size
+MAP_DEFAULT_WIDTH = 100
+MAP_DEFAULT_HEIGHT = 100
+
 # Toolbar height
 TOOLBAR_HEIGHT = 40
 

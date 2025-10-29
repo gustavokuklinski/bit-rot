@@ -43,6 +43,3 @@ $ pygbag main.py
 
 - **F2**: Pause game
 ----
-
-**Credits**
-Tiles: https://kenney.nl/assets/1-bit-pack

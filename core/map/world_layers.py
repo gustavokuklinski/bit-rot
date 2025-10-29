@@ -5,9 +5,9 @@ import pygame
 from data.config import *
 from core.entities.item import Item
 from core.entities.zombie import Zombie
-from .map_loader import load_map_from_file, parse_layered_map_layout
-from .tile_manager import TileManager
-from .spawn_manager import spawn_initial_items, spawn_initial_zombies
+from core.map.map_loader import load_map_from_file, parse_layered_map_layout
+from core.map.tile_manager import TileManager
+from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 
 def resize_map_layer(layer_data, target_width, target_height, fill_value=''):
     """

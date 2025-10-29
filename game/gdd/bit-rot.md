@@ -1,6 +1,7 @@
 # Bit Rot
 Developer: Gustavo Kuklinski
 
+## Plot
 A deadly disease swept across the world - but humanity eventually discovered a cure.
 The problem? The vaccine was rushed, released without proper testing.
 
@@ -12,3 +13,5 @@ The rest were forced to make an impossible choice - save themselves, or save som
 
 Now, everyone is vulnerable.
 And once you’re infected... there's no coming back... until the next dose.
+
+## 

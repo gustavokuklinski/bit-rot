@@ -3,7 +3,7 @@ import sys
 import os
 import re
 
-from editor.config import SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT
+from editor.config import SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT
 from editor.assets import load_map_tiles_from_xml
 from editor.map import Map
 from editor.ui import Sidebar, Toolbar, NewMapModal
@@ -14,7 +14,8 @@ pygame.init()
 pygame.font.init() # Initialize font module
 
 # Set up the display
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED | pygame.RESIZABLE)
+
 pygame.display.set_caption("Bit Rot - Map Editor")
 
 # Colors
@@ -74,13 +75,13 @@ def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, ma
     for x in range(map_width + 1):
         line_x = int(x * scaled_tile_size + offset_x)
         if map_view_rect.left <= line_x <= map_view_rect.right:
-            pygame.draw.line(surface, LIGHT_GREY, (line_x, map_view_rect.top), (line_x, map_view_rect.bottom), 1)
+            pygame.draw.line(surface, DARK_GREY, (line_x, map_view_rect.top), (line_x, map_view_rect.bottom), 1)
 
     # Horizontal lines
     for y in range(map_height + 1):
         line_y = int(y * scaled_tile_size + offset_y)
         if map_view_rect.top <= line_y <= map_view_rect.bottom:
-            pygame.draw.line(surface, LIGHT_GREY, (map_view_rect.left, line_y), (map_view_rect.right, line_y), 1)
+            pygame.draw.line(surface, DARK_GREY, (map_view_rect.left, line_y), (map_view_rect.right, line_y), 1)
 
 def draw_rulers(surface, offset_x, offset_y, zoom_scale, map_width, map_height, map_view_rect, font):
     scaled_tile_size = TILE_SIZE * zoom_scale
@@ -115,7 +116,7 @@ def main():
     map_tiles = load_map_tiles_from_xml(xml_map_data_path, sprite_map_path)
 
     # Set up map and UI components
-    game_map = Map(width=82, height=45) # Correct map dimensions
+    game_map = Map(width=MAP_DEFAULT_WIDTH, height=MAP_DEFAULT_HEIGHT) # Correct map dimensions
 
     map_dir = os.path.join(game_root, 'map')
     
@@ -156,6 +157,8 @@ def main():
     is_selecting = False
     selection_start_pos = None
     selection_rect = None
+
+    modified_maps = set()
 
     running = True
     while running:
@@ -212,6 +215,8 @@ def main():
                     for filename in os.listdir(map_dir):
                         if filename.startswith(current_base_map_name):
                             os.remove(os.path.join(map_dir, filename))
+                    if current_base_map_name in modified_maps:
+                        modified_maps.remove(current_base_map_name)
                     all_map_files = sorted([f for f in os.listdir(map_dir) if f.endswith('.csv')])
                     file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
                     current_base_map_name = file_tree.selected_map or "new_map"
@@ -235,17 +240,24 @@ def main():
                     save_map(game_map, current_base_map_name, map_dir)
                     status_message = f"Map '{current_base_map_name}' saved!"
                     status_message_timer = pygame.time.get_ticks() + 2000
+                    if current_base_map_name in modified_maps:
+                        modified_maps.remove(current_base_map_name)
 
             if event.type == pygame.KEYDOWN:
+                mods = pygame.key.get_mods()
                 if event.key == pygame.K_TAB: # Cycle through layers
                     if game_map.default_layers: # Use default_layers which now stores detected layers
                         current_layer_index = game_map.default_layers.index(game_map.active_layer_name)
                         next_layer_index = (current_layer_index + 1) % len(game_map.default_layers)
                         game_map.set_active_layer(game_map.default_layers[next_layer_index])
-                elif event.key == pygame.K_s: # Save map
+                elif event.key == pygame.K_s and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META): # Save map
                     save_map(game_map, current_base_map_name, map_dir)
                     status_message = f"Map '{current_base_map_name}' saved!"
                     status_message_timer = pygame.time.get_ticks() + 2000 # Display for 2 seconds
+                    if current_base_map_name in modified_maps:
+                        modified_maps.remove(current_base_map_name)
+                elif event.key == pygame.K_n and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META):
+                    new_map_modal.active = True
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = event.pos
@@ -276,11 +288,13 @@ def main():
                             for row in range(selection_rect.height):
                                 for col in range(selection_rect.width):
                                     game_map.set_tile(selection_rect.x + col, selection_rect.y + row, tile_to_place, game_map.active_layer_name)
+                                    modified_maps.add(current_base_map_name)
                             selection_rect = None # Clear selection after filling
                         elif sidebar.selected_tile:
                             if 0 <= map_x < game_map.width and 0 <= map_y < game_map.height:
                                 tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
                                 game_map.set_tile(map_x, map_y, tile_to_place, game_map.active_layer_name)
+                                modified_maps.add(current_base_map_name)
 
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -309,6 +323,12 @@ def main():
                             width = abs(selection_start_pos[0] - map_x) + 1
                             height = abs(selection_start_pos[1] - map_y) + 1
                             selection_rect = pygame.Rect(x, y, width, height)
+
+        # Update window title if map is modified
+        caption = "Bit Rot - Map Editor"
+        if current_base_map_name in modified_maps:
+            caption += " *"
+        pygame.display.set_caption(caption)
 
         # Drawing
         screen.fill(GREY) # Fill background
@@ -343,7 +363,7 @@ def main():
         draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom_scale, game_map.width, game_map.height, map_view_rect, FONT)
 
         # Draw File Tree
-        file_tree.draw(screen, current_base_map_name, game_map.active_layer_name)
+        file_tree.draw(screen, current_base_map_name, game_map.active_layer_name, modified_maps)
 
         # Draw sidebar
         sidebar.draw(screen)

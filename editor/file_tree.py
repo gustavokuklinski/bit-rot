@@ -39,7 +39,9 @@ class FileTree:
                 grouped[base_name].append(f)
         return grouped
 
-    def draw(self, surface, current_map_name, active_layer_name):
+    def draw(self, surface, current_map_name, active_layer_name, modified_maps=None):
+        if modified_maps is None:
+            modified_maps = set()
         pygame.draw.rect(surface, (200, 200, 200), (self.x, self.y, self.width, self.height))
 
         # Display current map and layer info
@@ -55,7 +57,8 @@ class FileTree:
         for map_name in self.map_names:
             # Draw base map name
             icon = "[-]" if self.expanded_maps.get(map_name) else "[+]"
-            text = f"{icon} {map_name}"
+            modified_indicator = "*" if map_name in modified_maps else ""
+            text = f"{icon} {map_name}{modified_indicator}"
             text_surface = self.font.render(text, True, (0, 0, 0))
             
             if map_name == self.selected_map:

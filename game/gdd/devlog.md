@@ -11,6 +11,7 @@
 - [x] Modals have keybindings
 - [] Append the important player messages to Messages modal ```display_message(game, "Replace print('messages')")```
 - [] Add the Wallet slot
+- [] Create a player view 360 radius
 - [] Make player spawn with backpack and wallet on slot
 - [] Add Saves for the current game
 - [] Build day/night system (with sleep)
@@ -18,6 +19,12 @@
 - [] Build a camp system
 - [] Add TCP/IP direct multiplayer
 - [] Build a simple craft system (allow the player to chop trees and build a little house on the map)
+
+### Map Editor
+- [x] Allow selection of an Area
+- [x] Game map size: 100x100 - Can be increased
+- [] Display some map relation on boundaries in editor using the map pattern: ```map_L<NUM>_P0_<TOP>_<RIGHT>_<BOTTOM>_<LEFT>``` and add a button: ```Create new Map Section```
+- [] Add a menu buttom to connect a layared map (Make it search the connection on the same map codes and place correctly)
 
 ### Player and Zombies
 - [] Add more prefessions
