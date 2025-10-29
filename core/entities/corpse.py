@@ -6,7 +6,7 @@ from core.entities.item import Item
 class Corpse(Item):
     """Lootable corpse container with automatic decay."""
 
-    def __init__(self, name="Dead corpse", capacity=8, image_path=None, pos=(0, 0), decay_ms=160000):
+    def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000):
         super().__init__(name, 'container', capacity=capacity, sprite_file=image_path)
         self.rect.center = pos
         self.spawn_time = pygame.time.get_ticks()

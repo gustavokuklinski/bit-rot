@@ -1,13 +1,28 @@
 <player name="player">
     <name value="Player" />
     <sex value="Male" />
-    <vaccine value="True" />
+    <profession value="Civilian" />
+
+    <traits>
+        <vaccine value="false" /> <!-- IF TRUE: -5% infection; -->
+        <athletic value="false" /> <!-- IF TRUE: -1% stamina;  -->
+        <strong value="false" /> <!-- IF TRUE: +2 strength; -->
+        <weak value="false" /> <!-- IF TRUE: -2 strength; -->
+        <luck value="false" /> <!-- IF TRUE: +1 lucky +5% bonus; -->
+        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -5% bonus; -->
+        <runner value="false" /> <!-- IF TRUE: +1 speed; -->
+        <smoker value="false" /> <!-- IF TRUE: -5% stamina; +5% anxiety -->
+        <drunk value="false" /> <!-- IF TRUE: -5% speed; +5% anxiety -->
+        <illnes value="false" /> <!-- IF TRUE: +5% infection rate; -->
+        <sedentary value="false" /> <!-- IF TRUE: -5% stamina, -2 strenght  -->
+    </traits>
 
     <stats>
         <health value="100.0" />
         <stamina value="100.0" />
         <water value="100.0" />
         <food value="100.0" />
+        <anxiety value="0.0" />
         <infection value="0.0" />
     </stats>
 
@@ -28,24 +43,11 @@
     </visuals>
 
     <clothes>
-        <head>
-        
-        </head>
-        <feet>
-          
-        </feet>
-        <hands>
-         
-        </hands>
-        <torso>
-           
-        </torso>
-        <body>
-        
-        </body>
-        <legs>
-      
-        </legs>
-
+        <head></head>
+        <feet></feet>
+        <hands></hands>
+        <torso></torso>
+        <body></body>
+        <legs></legs>
     </clothes>
 </player>

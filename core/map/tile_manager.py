@@ -42,11 +42,14 @@ class TileManager:
                                     loot_node = root.find('loot')
                                     if loot_node is not None:
                                         definition['loot'] = []
-                                        for item_node in loot_node.findall('item'):
-                                            definition['loot'].append({
-                                                'item': item_node.get('item'),
-                                                'chance': float(item_node.get('chance', '0'))
-                                            })
+
+                                        for loot_entry_node in loot_node:
+                                            item_name = loot_entry_node.get('item')
+                                            if item_name: # Check that the 'item' attribute exists
+                                                definition['loot'].append({
+                                                    'item': item_name,
+                                                    'chance': float(loot_entry_node.get('chance', '0'))
+                                                })
                                 self.definitions[char] = definition
                                 print(f"Loaded tile definition for '{char}' from {filename}. Image loaded from: {image_path}")
                             except pygame.error as e:

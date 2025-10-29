@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -30,6 +30,10 @@ class Item:
         self.min_cure = min_cure
         self.max_cure = max_cure
         self.hp = hp
+
+        self.slot = slot       # e.g., "head", "torso"
+        self.defence = defence # e.g., 0.0
+        self.speed = speed     # e.g., 0.0
 
     @property
     def damage(self):
@@ -52,7 +56,11 @@ class Item:
             if sprite_file.startswith("game/"):
                 path = sprite_file
             else:
-                path = SPRITE_PATH + "items/" + sprite_file
+                #path = SPRITE_PATH + "items/" + sprite_file
+                if self.item_type == 'cloth':
+                    path = SPRITE_PATH + "clothes/" + sprite_file
+                else:
+                    path = SPRITE_PATH + "items/" + sprite_file
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
@@ -96,6 +104,59 @@ class Item:
             ITEM_TEMPLATES[name] = template
         # silent on count to avoid spam
         # print(f"Loaded {len(ITEM_TEMPLATES)} item templates.")
+
+        clothes_dir = DATA_PATH + 'clothes/'
+        print(f"Loading clothes templates from: {clothes_dir}")
+        if not os.path.isdir(clothes_dir):
+            print(f"Warning: Clothes templates directory not found at '{clothes_dir}'")
+        else:
+            for filename in os.listdir(clothes_dir):
+                if not filename.endswith('.xml'):
+                    continue
+                try:
+                    tree = ET.parse(f"{clothes_dir}/{filename}")
+                    root = tree.getroot()
+                    if root.tag != 'cloth': continue # Skip if not <cloth>
+                    
+                    name = root.attrib.get('name')
+                    if not name: continue
+                    
+                    # Create a template that *mimics* an item template
+                    template = {
+                        'type': root.attrib.get('type'), # "cloth"
+                        'properties': {}
+                    }
+                    
+                    # Store the slot ID (e.g., "head")
+                    template['properties']['slot'] = {'value': root.attrib.get('id')}
+                    
+                    props_node = root.find('properties')
+                    if props_node is not None:
+                        # Map <defence> to item template format
+                        def_node = props_node.find('defence')
+                        if def_node is not None:
+                            template['properties']['defence'] = {'value': def_node.attrib.get('value', '0')}
+
+                        # Map <speed> (if you add it) to item template format
+                        spd_node = props_node.find('speed')
+                        if spd_node is not None:
+                            template['properties']['speed'] = {'value': spd_node.attrib.get('value', '0')}
+                        
+                        # Map <sprite> to item template format
+                        spr_node = props_node.find('sprite')
+                        if spr_node is not None:
+                            template['properties']['sprite'] = {'file': spr_node.attrib.get('file')}
+                    
+                    # Add this new "cloth-item" to the main template list
+                    if name in ITEM_TEMPLATES:
+                        print(f"Warning: Duplicate item/cloth name '{name}'")
+                    ITEM_TEMPLATES[name] = template
+
+                except Exception as e:
+                    print(f"Error parsing cloth {filename}: {e}")
+        
+        print(f"Loaded {len(ITEM_TEMPLATES)} total item/cloth templates.")
+
 
     @staticmethod
     def generate_random():
@@ -144,7 +205,13 @@ class Item:
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
         hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
         
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+        slot = props.get('slot', {}).get('value')
+        defence = float(props.get('defence', {}).get('value', 0))
+        speed = float(props.get('speed', {}).get('value', 0))
+
+
+        #new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp)
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

@@ -11,6 +11,7 @@ from core.messages import display_message
 fake = Faker()
 ZOMBIE_TEMPLATES = []
 ZOMBIE_CLOTHES_POOL = {}
+ALL_ITEM_TEMPLATES = []
 
 class Zombie:
     def __init__(self, x, y, template):
@@ -270,10 +271,11 @@ class Zombie:
     @staticmethod
     def load_templates(folder=DATA_PATH + 'zombie/'):
         """Loads all zombie templates from XML files in a folder."""
-        global ZOMBIE_TEMPLATES, ZOMBIE_CLOTHES_POOL # <-- Add to global
+        global ZOMBIE_TEMPLATES, ZOMBIE_CLOTHES_POOL, ALL_ITEM_TEMPLATES
         ZOMBIE_TEMPLATES = []
         ZOMBIE_CLOTHES_POOL.clear()
-        
+        ALL_ITEM_TEMPLATES.clear()
+
         try:
             # Load clothes data first
             clothes_data = {}
@@ -323,6 +325,26 @@ class Zombie:
                     except Exception as e:
                         print(f"Error loading clothe from {filename}: {e}")
 
+            items_folder = DATA_PATH + 'items/'
+            if os.path.exists(items_folder):
+                for filename in os.listdir(items_folder):
+                    if filename.endswith('.xml'):
+                        try:
+                            item_path = os.path.join(items_folder, filename)
+                            tree = ET.parse(item_path)
+                            root = tree.getroot()
+                            if root.tag == 'item':
+                                item_name = root.get('name')
+                                if item_name:
+                                    ALL_ITEM_TEMPLATES.append(item_name)
+                        except Exception as e:
+                            print(f"Error parsing item XML {filename}: {e}")
+                print(f"Loaded {len(ALL_ITEM_TEMPLATES)} item names for random loot.")
+            else:
+                print(f"Warning: Item folder not found at {items_folder}")
+            
+            
+            
             for filename in os.listdir(folder):
                 if filename.endswith('.xml'):
                     filepath = os.path.join(folder, filename)
@@ -389,13 +411,15 @@ class Zombie:
     @staticmethod
     def create_random(x, y):
         """Creates a zombie instance from a random template."""
+        if not ZOMBIE_TEMPLATES or not ALL_ITEM_TEMPLATES: # <-- Check both lists
+            Zombie.load_templates()
         if not ZOMBIE_TEMPLATES:
             Zombie.load_templates() # Load templates if not already loaded
         if not ZOMBIE_TEMPLATES:
             # Fallback if loading failed or no templates exist
             print("Error: No zombie templates loaded. Creating default zombie.")
             default_template = {
-                'name':'Zombie',
+                'name':'Jogn Doe',
                 'health':10,
                 'speed':ZOMBIE_SPEED, 
                 'loot':[], 
@@ -404,14 +428,28 @@ class Zombie:
                 'min_attack':1, 
                 'max_attack':3, 
                 'min_infection':0, 
-                'max_infection':1
+                'max_infection':1,
+                'sex': 'Male', 
+                'profession': 'Civilian', 
+                'vaccine': 'False'
             }
             return Zombie(x, y, default_template)
 
         template = random.choice(ZOMBIE_TEMPLATES)
         zombie = Zombie(x, y, template)
+        zombie.loot_table = list(template.get('loot', []))
 
-        # Randomly assign clothes and calculate defense bonus
+        num_random_items = random.randint(0, 2) # Add 0, 1, or 2 extra items
+        if ALL_ITEM_TEMPLATES: # Make sure the list isn't empty
+            for _ in range(num_random_items):
+                item_name = random.choice(ALL_ITEM_TEMPLATES)
+                # Add to the zombie's loot table with a random chance
+                zombie.loot_table.append({
+                    'item': item_name,
+                    'chance': random.uniform(25.0, 75.0) # e.g., 25% to 75% chance
+                })
+
+
         # Randomly assign clothes and calculate defense bonus
         total_defense = 0
         zombie.clothes = {} # Start with an empty clothes dict for this instance
@@ -437,9 +475,17 @@ class Zombie:
                     # Add its defense value
                     total_defense += chosen_clothe.get('defence', 0)
             
-            #if zombie.clothes:
-                # Optional debug print to confirm
-                print(f"Zombie: '{zombie.name}' spawned with clothes: {list(zombie.clothes.keys())}")
+        for slot_name, clothe_dict in zombie.clothes.items():
+            if clothe_dict:
+                item_name = clothe_dict.get('name')
+                if item_name and not item_name.startswith("Empty"):
+                    # Add the *specific* item this zombie is wearing to loot
+                    zombie.loot_table.append({
+                        'item': item_name,
+                        'chance': 100.0 # Always drops the clothes it's wearing
+                    })
+        print(f"Zombie '{zombie.name}' spawned. Loot: {[item['item'] for item in zombie.loot_table]}")
+        print(f"Zombie: '{zombie.name}' spawned with clothes: {list(zombie.clothes.keys())}")
         
         # Apply defense multiplier to health
         defense_multiplier = 1 + (total_defense / 100.0)
