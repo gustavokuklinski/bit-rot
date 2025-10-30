@@ -1,9 +1,0 @@
-<map name="library" type="maptile_container" char="L" is_obstacle="true">
-    <visuals>
-        <sprite file="library.png" />
-    </visuals>
-    <capacity value="10" />
-    <loot>
-
-    </loot>
-</map>

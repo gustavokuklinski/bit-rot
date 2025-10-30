@@ -1,0 +1,5 @@
+<map name="garden_grass_1" type="maptile" char="garden_grass_1" is_obstacle="false">
+    <visuals>
+        <sprite file="garden_grass_1.png" />
+    </visuals>
+</map>

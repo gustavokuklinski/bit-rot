@@ -33,7 +33,9 @@ class TileManager:
                                 definition = {
                                     'is_obstacle': is_obstacle,
                                     'image': image,
-                                    'type': root.get('type')
+                                    'type': root.get('type'),
+                                    'state': root.get('state'), # Added: Read the 'state' attribute
+                                    'is_statable': root.get('state') is not None # Added: True if 'state' exists
                                 }
                                 if root.get('type') == 'maptile_container':
                                     capacity_node = root.find('capacity')
@@ -42,14 +44,11 @@ class TileManager:
                                     loot_node = root.find('loot')
                                     if loot_node is not None:
                                         definition['loot'] = []
-
-                                        for loot_entry_node in loot_node:
-                                            item_name = loot_entry_node.get('item')
-                                            if item_name: # Check that the 'item' attribute exists
-                                                definition['loot'].append({
-                                                    'item': item_name,
-                                                    'chance': float(loot_entry_node.get('chance', '0'))
-                                                })
+                                        for item_node in loot_node.findall('item'):
+                                            definition['loot'].append({
+                                                'item': item_node.get('item'),
+                                                'chance': float(item_node.get('chance', '0'))
+                                            })
                                 self.definitions[char] = definition
                                 print(f"Loaded tile definition for '{char}' from {filename}. Image loaded from: {image_path}")
                             except pygame.error as e:

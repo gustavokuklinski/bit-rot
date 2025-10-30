@@ -3,7 +3,6 @@
         <durability min="5" max="100" />
         <load min="5" max="12" />
         <capacity value="12" />
-        <color r="30" g="30" b="30" />
         <ammo type="9mm Ammo" />
         <damage min="25" max="55" />
         <firing pellets="1" spread_angle="0" />

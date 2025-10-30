@@ -1,0 +1,5 @@
+<map name="stair_up_right" type="maptile" char="stair_up_right" is_obstacle="false">
+    <visuals>
+        <sprite file="stair_up_right.png" />
+    </visuals>
+</map>

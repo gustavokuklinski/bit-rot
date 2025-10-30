@@ -2,7 +2,6 @@
     <properties>
         <load min="10" max="50" />
         <capacity value="100" />
-        <color r="255" g="255" b="0" />
         <sprite file="9mm_ammo.png" />
     </properties>
     <spawn chance="12" /> <!-- 20 * 0.6 -->

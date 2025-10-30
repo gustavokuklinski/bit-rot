@@ -4,17 +4,29 @@ import random
 import math
 
 from data.config import *
-from core.entities.item import Item
-from core.entities.corpse import Corpse
-from core.entities.zombie import Zombie
-from core.entities.player import Player
+from core.entities.item.item import Item
+from core.entities.zombie.corpse import Corpse
+from core.entities.zombie.zombie import Zombie
+from core.entities.player.player import Player
 from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
+from core.map.spawn_manager import spawn_initial_zombies
 
 def update_game_state(game):
     game.player.update_position(game.obstacles, game.zombies)
 
     check_for_layer_teleport(game)
+
+
+    game.hovered_interactable_tile_rect = None # Reset
+    facing_x, facing_y = game.get_player_facing_tile()
+    if facing_x is not None:
+        tile_def = game.map_manager.get_tile_at(facing_x, facing_y)
+        if tile_def and tile_def.get('is_statable'):
+            game.hovered_interactable_tile_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+
+    check_zombie_respawn(game)
     
     if game.player.update_stats():
         game.game_state = 'GAME_OVER'
@@ -106,7 +118,7 @@ def player_hit_zombie(player, zombie):
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
                     print(f"{active_weapon.name} broke!")
-                    # player.unequip_item(active_weapon) # This method doesn't exist
+                    player.destroy_broken_weapon(active_weapon)
     else: # Unarmed
         base_damage = progression.get_unarmed_damage()
 
@@ -143,5 +155,61 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     # Record killed zombie in map state
     current_map_filename = game.map_manager.current_map_filename
     if current_map_filename not in game.map_states:
-        game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': []} # Ensure lists exist
+        game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()} # Ensure lists exist
     game.map_states[current_map_filename].setdefault('killed_zombies', []).append(zombie.id) # Use setdefault
+
+def check_zombie_respawn(game):
+    """Checks if the respawn timer has elapsed for the current map and spawns zombies."""
+    if ZOMBIE_RESPAWN_TIMER_MS <= 0: # Timer is disabled in config
+        return
+
+    current_time = pygame.time.get_ticks()
+    current_map = game.map_manager.current_map_filename
+    
+    # Ensure map state exists, initializing if it's the first time.
+    if current_map not in game.map_states:
+        game.map_states[current_map] = {
+            'items': game.items_on_ground, 
+            'zombies': game.zombies, 
+            'killed_zombies': [], 
+            'picked_up_items': [],
+            'last_respawn_time': current_time # Initialize timer
+        }
+        return
+
+    # Check if timer has been initialized for this map (for older save states)
+    if 'last_respawn_time' not in game.map_states[current_map]:
+        game.map_states[current_map]['last_respawn_time'] = current_time
+        return
+
+    last_respawn = game.map_states[current_map]['last_respawn_time']
+
+    if current_time - last_respawn > ZOMBIE_RESPAWN_TIMER_MS:
+        print(f"Respawn timer expired for {current_map}. Respawning zombies.")
+        
+        # Re-extract zombie spawn points from the current layer's spawn data
+        zombie_spawns = []
+        if hasattr(game, 'spawn_data'):
+            for y, row in enumerate(game.spawn_data):
+                for x, char in enumerate(row):
+                    if char == 'Z':
+                        zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+        
+        if not zombie_spawns:
+            print("No 'Z' spawn points found for this layer. Cannot respawn.")
+            game.map_states[current_map]['last_respawn_time'] = current_time # Reset timer anyway
+            return
+
+        # Get all entities to avoid spawning on top of them
+        all_current_entities = game.items_on_ground + game.zombies
+        
+        # Spawn new zombies
+        new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities)
+        
+        game.zombies.extend(new_zombies)
+        game.layer_zombies[current_map] = game.zombies[:] # Update the saved layer state
+        
+        print(f"Spawned {len(new_zombies)} new zombies. Total: {len(game.zombies)}")
+        
+        # Reset the timer
+        game.map_states[current_map]['last_respawn_time'] = current_time

@@ -1,5 +1,0 @@
-<map name="door" type="maptile" char="D" is_obstacle="false">
-    <visuals>
-        <sprite file="door.png" />
-    </visuals>
-</map>

@@ -3,7 +3,6 @@
         <durability min="10" max="100" />
         <load min="2" max="8" />
         <capacity value="8" />
-        <color r="80" g="60" b="40" />
         <ammo type="Shotgun Shells" />
         <damage min="65" max="150" />
         <firing pellets="6" spread_angle="15" />

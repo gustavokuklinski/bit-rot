@@ -1,0 +1,7 @@
+<clothe name="Red Sneakers" type="cloth" id="feet">
+    <properties>
+        <defence value="0" />
+        <speed value="0" />
+        <sprite file="red_sneakers.png" />
+    </properties>
+</clothe>

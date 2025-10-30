@@ -7,10 +7,10 @@ import os
 import asyncio
 
 from data.config import *
-from core.entities.player import Player
-from core.entities.zombie import Zombie
-from core.entities.item import Item, Projectile
-from core.entities.corpse import Corpse
+from core.entities.player.player import Player
+from core.entities.zombie.zombie import Zombie
+from core.entities.item.item import Item, Projectile
+from core.entities.zombie.corpse import Corpse
 from core.ui.helpers import draw_menu, draw_game_over, run_player_setup
 from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
@@ -38,7 +38,9 @@ class Game:
         self.assets = load_assets()
         self.game_state = 'MENU'
         self.running = True
-        self.map_manager = MapManager()
+
+        self.map_manager = MapManager(self)
+        #self.map_manager = MapManager()
         self.tile_manager = TileManager()
 
         self.player = None
@@ -93,14 +95,17 @@ class Game:
         self.selected_profession = None
         self.hovered_item = None
         self.hovered_container = None
+
+        self.hovered_interactable_tile_rect = None
+
         self.message_log = []
 
-        # --- ADD THESE ---
+
         self.current_layer_index = 1
         self.all_map_layers = {} # Will store {1: data, 2: data, ...}
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
-        # --- END ADD ---
+
 
 
     def load_map(self, map_filename):
@@ -321,6 +326,25 @@ class Game:
         scaled_y = mouse_on_surf_y / scale
 
         return (scaled_x, scaled_y)
+
+    # --- ADDED METHOD ---
+    def get_player_facing_tile(self):
+        if not self.player:
+            return None, None
+        
+        # Get player's center grid position
+        player_grid_x = self.player.rect.centerx // TILE_SIZE
+        player_grid_y = self.player.rect.centery // TILE_SIZE
+        
+        # Get facing direction (default to down if not set)
+        facing_x, facing_y = getattr(self.player, 'facing_direction', (0, 1))
+        
+        # Calculate the tile in front
+        target_grid_x = player_grid_x + facing_x
+        target_grid_y = player_grid_y + facing_y
+        
+        return target_grid_x, target_grid_y
+    # --- END ADDITION ---
 
 
     def find_nearby_containers(self):

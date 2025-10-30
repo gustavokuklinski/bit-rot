@@ -1,0 +1,6 @@
+<cloth name="Blue Tshirt" type="cloth" id="torso">
+    <properties>
+        <defence value="0" />
+        <sprite file="blue_tshirt.png" />
+    </properties>
+</cloth>

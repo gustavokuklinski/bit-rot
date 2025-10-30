@@ -3,8 +3,8 @@ import pygame
 import random
 
 from data.config import *
-from core.entities.item import Item, Container
-from core.entities.zombie import Zombie
+from core.entities.item.item import Item, Container
+from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 
 def load_map_from_file(filepath):

@@ -1,0 +1,5 @@
+<map name="house_bed_right" type="maptile" char="house_bed_right" is_obstacle="false">
+    <visuals>
+        <sprite file="house_bed_right.png" />
+    </visuals>
+</map>

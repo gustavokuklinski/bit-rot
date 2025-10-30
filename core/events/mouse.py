@@ -4,8 +4,8 @@ import random
 import math
 
 from data.config import *
-from core.entities.item import Item, Projectile
-from core.entities.corpse import Corpse
+from core.entities.item.item import Item, Projectile
+from core.entities.zombie.corpse import Corpse
 from core.update import player_hit_zombie, handle_zombie_death
 from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import get_container_slot_rect
@@ -923,9 +923,8 @@ def handle_attack(game, mouse_pos):
                 weapon.durability = max(0, weapon.durability - 0.5)
                 game.player.gun_flash_timer = 5
                 if weapon.durability <= 0:
-                    for i, item in enumerate(game.player.belt):
-                        if item == weapon: game.player.belt[i] = None; break
-                    game.player.active_weapon = None
+                    print(f"{weapon.name} broke!")
+                    game.player.destroy_broken_weapon(weapon)
             elif weapon.load <= 0: print(f"**CLICK!** {weapon.name} is out of ammo.")
             else: print(f"**CLUNK!** {weapon.name} is broken.")
         else:

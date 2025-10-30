@@ -4,17 +4,18 @@
     <profession value="Civilian" />
 
     <traits>
-        <vaccine value="false" /> <!-- IF TRUE: -5% infection; -->
-        <athletic value="false" /> <!-- IF TRUE: -1% stamina;  -->
+        <vaccine value="false" /> <!-- IF TRUE: -15% infection; -->
+        <athletic value="false" /> <!-- IF TRUE: -10% stamina;  -->
         <strong value="false" /> <!-- IF TRUE: +2 strength; -->
         <weak value="false" /> <!-- IF TRUE: -2 strength; -->
-        <luck value="false" /> <!-- IF TRUE: +1 lucky +5% bonus; -->
-        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -5% bonus; -->
+        <luck value="false" /> <!-- IF TRUE: +1 lucky +15% bonus; -->
+        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -15% bonus; -->
         <runner value="false" /> <!-- IF TRUE: +1 speed; -->
-        <smoker value="false" /> <!-- IF TRUE: -5% stamina; +5% anxiety -->
-        <drunk value="false" /> <!-- IF TRUE: -5% speed; +5% anxiety -->
-        <illnes value="false" /> <!-- IF TRUE: +5% infection rate; -->
-        <sedentary value="false" /> <!-- IF TRUE: -5% stamina, -2 strenght  -->
+        <smoker value="false" /> <!-- IF TRUE: -15% stamina; +15% anxiety -->
+        <drunk value="false" /> <!-- IF TRUE: -15% speed; +15% anxiety -->
+        <illnes value="false" /> <!-- IF TRUE: +15% infection rate; -->
+        <sedentary value="false" /> <!-- IF TRUE: -15% stamina, -2 strenght  -->
+        <myopia value="false" /> <!-- IF TRUE: -10% view radius, -10% ranged -->
     </traits>
 
     <stats>

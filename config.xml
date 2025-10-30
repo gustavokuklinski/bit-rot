@@ -1,4 +1,5 @@
 <config>
+    <!-- Player Config -->
     <player>
         <speed value="1.5" />
         <food_water_decay_seconds value="5.0" />
@@ -10,16 +11,30 @@
         <zoom_start value="3.0" />
         <zoom_far value="1.3" />
         <zoom_near value="5.0" />
-        <view_radius value="15" />
+        <view_radius value="6" />
     </player>
+
+    <!-- Items Durabilitie Config -->
+    <durability>
+        <multiplier value="1.0" />
+        <weapon_multiplier value="1.0" />
+        <tool_multiplier value="1.0" />
+    </durability>
+
+    <!-- Spawning Config -->
+    <spawning>
+        <item_spawn_chance_multiplier value="1.0" />
+    </spawning>
+
+    <!-- Zombies Config -->
     <zombie>
-        <speed value="2" />
+        <speed value="1" />
         <drop value="1" />
         <detection value="20" />
         <wander value="true" />
         <wander_interval value="2000" />
         <sight_check value="true" />
         <spawn value="2" />
-        <respawn_on_layer_change value="true" />
+        <respawn_timer value="12000" />
     </zombie>
 </config>

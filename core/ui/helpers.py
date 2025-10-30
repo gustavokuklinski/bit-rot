@@ -59,7 +59,7 @@ def draw_menu(screen):
     # try to load and draw logo image instead of text title
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo_v2.png').convert_alpha()
+            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
             logo_w = 300
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
@@ -96,7 +96,7 @@ def draw_game_over(screen, zombies_killed):
     global _logo_img
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo_v2.png').convert_alpha()
+            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
             logo_w = 300
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))

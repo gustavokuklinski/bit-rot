@@ -1,0 +1,9 @@
+<map name="house_cupboard top" type="maptile_container" char="house_cupboard" is_obstacle="true">
+    <visuals>
+        <sprite file="house_cupboard_top.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="Canned Food" chance="0.6" />
+    </loot>
+</map>

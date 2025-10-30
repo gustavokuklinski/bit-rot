@@ -90,4 +90,14 @@ ZOMBIE_WANDER_ENABLED = zombie_config.find('wander').get('value') == 'true'
 ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
 ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == 'true'
 ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
-ZOMBIE_RESPAWN_ON_LAYER_CHANGE = zombie_config.find('respawn_on_layer_change').get('value') == 'true'
+ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
+
+# Durability settings
+durability_config = root.find('durability')
+DURABILITY_MULTIPLIER = float(durability_config.find('multiplier').get('value'))
+WEAPON_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_multiplier').get('value'))
+TOOL_DURABILITY_MULTIPLIER = float(durability_config.find('tool_multiplier').get('value'))
+
+# Spawning settings
+spawning_config = root.find('spawning')
+ITEM_SPAWN_CHANCE_MULTIPLIER = float(spawning_config.find('item_spawn_chance_multiplier').get('value'))

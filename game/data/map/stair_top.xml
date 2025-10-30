@@ -1,5 +1,5 @@
-<map name="stair-top" type="maptile" char="ST" is_obstacle="false">
+<map name="stair_top" type="maptile" char="stair_top" is_obstacle="false">
     <visuals>
-        <sprite file="stair-top.png" />
+        <sprite file="stair_top.png" />
     </visuals>
 </map>

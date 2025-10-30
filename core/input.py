@@ -28,6 +28,17 @@ def handle_movement(game):
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         dx += 1
 
+
+    if dx > 0: 
+        game.player.facing_direction = (1, 0)
+    elif dx < 0: 
+        game.player.facing_direction = (-1, 0)
+    elif dy > 0: 
+        game.player.facing_direction = (0, 1)
+    elif dy < 0: 
+        game.player.facing_direction = (0, -1)
+
+
     if dx != 0 and dy != 0:
         # Normalize for diagonal movement
         dx /= math.sqrt(2)
@@ -81,8 +92,19 @@ def handle_input(game):
         #mouse_pos = game._get_scaled_mouse_pos()
 
         if game.game_state == 'PLAYING':
+            # Handle keyboard events more generally
+            handle_keyboard_events(game, event) # Call existing handler for other keys
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e: # Interaction key
+                    player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
+                    if player_facing_grid_x is not None and player_facing_grid_y is not None:
+                        tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
+                        if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                            # Assuming 'maptile' type for doors
+                            game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
+
             handle_movement(game)
-            handle_keyboard_events(game, event)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 handle_mouse_down(game, event, mouse_pos)
             elif event.type == pygame.MOUSEBUTTONUP:

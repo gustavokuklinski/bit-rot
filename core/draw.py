@@ -32,8 +32,31 @@ def draw_game(game):
 
 
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
+    #for image, rect in game.renderable_tiles:
+    #    world_view_surface.blit(image, rect.move(offset_x, offset_y))
+
     for image, rect in game.renderable_tiles:
-        world_view_surface.blit(image, rect.move(offset_x, offset_y))
+        dist = math.hypot(rect.centerx - game.player.rect.centerx, rect.centery - game.player.rect.centery)
+        if dist > PLAYER_VIEW_RADIUS:
+            continue # Don't draw if outside radius
+
+        draw_pos = rect.move(offset_x, offset_y)
+        
+        # Calculate opacity
+        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+
+        # Create a copy of the image to modify its alpha value
+        temp_image = image.copy()
+        
+        # Ensure image has an alpha channel (it should from tile_manager, but safe to check)
+        if temp_image.get_alpha() is None:
+             temp_image = temp_image.convert_alpha()
+
+        # Apply the opacity fade
+        temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+        
+        world_view_surface.blit(temp_image, draw_pos)
+
 
     for item in game.items_on_ground:
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
@@ -74,6 +97,10 @@ def draw_game(game):
     if game.hovered_container:
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
+
+    if game.hovered_interactable_tile_rect:
+        hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
+        pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
 
     # for msg in game.active_messages:
     #     msg.draw(world_view_surface, offset_x, offset_y)

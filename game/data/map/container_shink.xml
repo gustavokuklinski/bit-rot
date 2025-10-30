@@ -1,9 +1,0 @@
-<map name="shink" type="maptile_container" char="H" is_obstacle="true">
-    <visuals>
-        <sprite file="shink.png" />
-    </visuals>
-    <capacity value="10" />
-    <loot>
-        <item item="Water Bottle" chance="100.0" />
-    </loot>
-</map>

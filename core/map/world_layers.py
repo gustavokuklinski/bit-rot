@@ -3,9 +3,9 @@ import os
 import re
 import pygame
 from data.config import *
-from core.entities.item import Item
-from core.entities.zombie import Zombie
-from core.entities.corpse import Corpse
+from core.entities.item.item import Item
+from core.entities.zombie.zombie import Zombie
+from core.entities.zombie.corpse import Corpse
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.tile_manager import TileManager
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
@@ -179,18 +179,11 @@ def set_active_layer(game, layer_index):
         game.layer_items[layer_index] = game.items_on_ground[:]
 
     # Zombies: Load if they exist and respawn is OFF, otherwise spawn them
-    if ZOMBIE_RESPAWN_ON_LAYER_CHANGE:
+    if layer_index in game.layer_zombies:
+        game.zombies = game.layer_zombies[layer_index][:]
+    else:
         game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
         game.layer_zombies[layer_index] = game.zombies[:]
-        # Clear corpses from the item list for this layer
-        game.items_on_ground = [item for item in game.items_on_ground if not isinstance(item, Corpse)]
-        game.layer_items[layer_index] = game.items_on_ground[:]
-    else:
-        if layer_index in game.layer_zombies:
-            game.zombies = game.layer_zombies[layer_index][:]
-        else:
-            game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
-            game.layer_zombies[layer_index] = game.zombies[:]
     
     return True
 

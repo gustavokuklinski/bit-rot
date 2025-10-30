@@ -1,6 +1,7 @@
 import math
+import pygame
 from data.config import *
-from core.entities.corpse import Corpse
+from core.entities.zombie.corpse import Corpse
 
 def try_grab_item(game):
     closest_item = None
@@ -25,7 +26,7 @@ def try_grab_item(game):
             print(f"Grabbed {closest_item.name}.")
             current_map_filename = game.map_manager.current_map_filename
             if current_map_filename not in game.map_states:
-                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': []}
+                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()}
             game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
             game.player.inventory.append(closest_item)
@@ -33,7 +34,7 @@ def try_grab_item(game):
             print(f"Grabbed {closest_item.name} into inventory.")
             current_map_filename = game.map_manager.current_map_filename
             if current_map_filename not in game.map_states:
-                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': []}
+                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()}
             game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
         else:
             print("No space to grab the item.")
