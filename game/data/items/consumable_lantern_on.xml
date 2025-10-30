@@ -1,10 +1,9 @@
-<item name="Lantern off" type="utility" state="on">
+<item name="Lantern on" type="utility" state="on">
     <properties>
-        <load min="15" max="25" />
-        <capacity value="25" />
-        <durability min="2" max="5" />
+        <durability min="1" max="200" />
+        <light min="5" max="100" />
+        <fuel type="Matches" />
         <sprite file="lantern_on.png" />
-        <fuel type="Matches">
     </properties>
     <spawn chance="10" /> <!-- 20 * 0.5 -->
 </item>

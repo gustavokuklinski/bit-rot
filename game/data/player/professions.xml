@@ -13,7 +13,8 @@
             <item name="Shotgun" />
             <item name="Shotgun Shells" />
             <item name="Large Backpack" />
-            <item name="Wallet" />
+            <item name="Matches" />
+            <item name="Lantern off" />
         </initial_loot>
         <visuals>
             <sprite file="civilian.png" />

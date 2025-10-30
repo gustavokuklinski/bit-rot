@@ -167,6 +167,28 @@ class Player:
                     print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
                     self.consume_item(water_item, source, index, container)
             # --- END AUTO-DRINK ---
+        
+        # --- ADDED: Utility Item Durability/Fuel Consumption ---
+        # Check all inventories for 'on' items
+        all_inventories = [self.belt, self.inventory]
+        if self.backpack:
+            all_inventories.append(self.backpack.inventory)
+            
+        if self.invcontainer:
+             all_inventories.append(self.invcontainer.inventory)
+
+        for inv in all_inventories:
+            for item in inv:
+                # Use getattr for safety
+                if getattr(item, 'state', 'off') == 'on':
+                    if item.durability is not None:
+                        item.durability -= 0.05 # Adjust this value for consumption rate
+                        if item.durability <= 0:
+                            item.durability = 0
+                            # Item is out of fuel/broken, turn it off
+                            self.toggle_utility_item(item, None, None, None) # Pass None source to just toggle
+        # --- END ADDITION ---
+
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
@@ -235,6 +257,39 @@ class Player:
                 return item, source_type, index
         return None, None, None
 
+
+    # --- ADDED ---
+    def find_fuel(self, fuel_name):
+        """Searches all inventories for a fuel item (like 'Matches')."""
+        if not fuel_name:
+            return None, None, None, None
+            
+        # 1. Search Belt
+        for i, item in enumerate(self.belt):
+            if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+                return item, 'belt', i, None
+
+        # 2. Search Inventory
+        for i, item in enumerate(self.inventory):
+            if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+                return item, 'inventory', i, None
+        
+        # 3. Search Backpack (if exists)
+        if self.backpack and hasattr(self.backpack, 'inventory'):
+            for i, item in enumerate(self.backpack.inventory):
+                if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+                    return item, 'container', i, self.backpack
+                    
+        # 4. Search attached container
+        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
+            for i, item in enumerate(self.invcontainer.inventory):
+                 if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+                    return item, 'container', i, self.invcontainer
+
+        return None, None, None, None
+    # --- END ADDITION ---
+
+
     def reload_active_weapon(self):
         if self.is_reloading:
             print("Already reloading.")
@@ -281,12 +336,28 @@ class Player:
         if isinstance(item, Corpse):
             options.append('Open')
             return options
+        #if item.item_type == 'consumable':
+        #    if 'Ammo' in item.name or 'Shells' in item.name:
+        #        options.append('Reload')
+        #    else:
+        #        options.append('Use')
+        #    options.append('Equip')
+
         if item.item_type == 'consumable':
             if 'Ammo' in item.name or 'Shells' in item.name:
-                options.append('Reload')
+                options.append('Reload') # This is for guns
             else:
                 options.append('Use')
             options.append('Equip')
+        elif item.item_type == 'utility':
+            if item.state == 'on':
+                options.append('Turn off')
+            elif item.state == 'off':
+                options.append('Turn on')
+            if item.fuel_type:
+                options.append('Reload') # This is for lanterns
+            options.append('Equip')
+
         elif item.item_type == 'backpack':
             options.append('Open')
             if not self.backpack:
@@ -374,6 +445,101 @@ class Player:
                         container_item.inventory.pop(item_index)
             return True
         return False
+
+
+    def toggle_utility_item(self, item, source, index, container_item):
+        """Toggles a utility item's state (e.g., Lantern On/Off)."""
+        if not hasattr(item, 'state'):
+            return
+
+        new_name = ""
+        if item.state == "on":
+            new_name = item.name.replace(" on", " off")
+        elif item.state == "off":
+            # Check for matches to turn ON
+            matches, m_source, m_index, m_container = self.find_fuel("Matches")
+            if not matches:
+                print("No matches to light the lantern.")
+                return
+            
+            # Consume one match
+            matches.load -= 1
+            if matches.load <= 0:
+                # Remove empty matchbox
+                m_inv = self._get_source_inventory(m_source, m_container)
+                if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
+                    m_inv.pop(m_index)
+
+            new_name = item.name.replace(" off", " on")
+        
+        if not new_name:
+            return
+
+        # Create the new item
+        new_item = Item.create_from_name(new_name)
+        if not new_item:
+            print(f"Error: Could not find item template for '{new_name}'")
+            return
+
+        # Preserve durability and load (fuel)
+        new_item.durability = item.durability
+        new_item.load = item.load
+
+        # Replace the item in its original location
+        # If source is None, it means it was an update_stats call
+        if source and index is not None:
+            source_inventory = self._get_source_inventory(source, container_item)
+            if source_inventory and index < len(source_inventory) and source_inventory[index] == item:
+                source_inventory[index] = new_item
+            else:
+                # Failsafe: if we can't find it, we can't replace it
+                print(f"Error: Could not find item {item.name} in {source} to toggle.")
+        elif item in self.belt:
+             self.belt[self.belt.index(item)] = new_item
+        elif item in self.inventory:
+             self.inventory[self.inventory.index(item)] = new_item
+        # Add backpack/container checks if needed
+        
+    # --- MODIFIED METHOD ---
+    def reload_utility_item(self, item, source, index, container_item):
+        """Reloads a utility item (Lantern) with fuel (Matches). Resets Durability."""
+        if not item.fuel_type:
+            print(f"{item.name} does not use fuel.")
+            return
+
+        fuel_item, f_source, f_index, f_container = self.find_fuel(item.fuel_type)
+        if not fuel_item:
+            print(f"No {item.fuel_type} found to reload.")
+            return
+            
+        # Check if durability is already full
+        max_dur = item.max_durability
+        dur_needed = max_dur - (item.durability or 0)
+        
+        if dur_needed <= 0:
+            print(f"{item.name} durability is already full.")
+            return
+
+        # Check if there are any matches left
+        if fuel_item.load <= 0:
+            print(f"No {item.fuel_type} left to use.")
+            return
+
+        # Consume only 1 match
+        fuel_item.load -= 1
+        
+        # As requested: "Reload" resets durability to full
+        item.durability = max_dur
+        
+        print(f"Used 1 {item.fuel_type} to reload {item.name}. Durability set to: {item.durability:.0f}")
+
+        if fuel_item.load <= 0:
+            # Remove empty fuel item
+            f_inv = self._get_source_inventory(f_source, f_container)
+            if f_inv and f_index < len(f_inv) and f_inv[f_index] == fuel_item:
+                f_inv.pop(f_index)
+    # --- END MODIFICATION ---
+
 
     def drop_item(self, source, index, container_item=None):
         if self.drop_cooldown > 0:

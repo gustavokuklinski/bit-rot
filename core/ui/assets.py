@@ -28,6 +28,14 @@ def load_assets():
         assets['close_button'] = None
         assets['minimize_button'] = None
 
+    try:
+        # This image should be a white circle fading to transparent
+        assets['light_texture'] = pygame.image.load(SPRITE_PATH + 'ui/light.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading light texture: {e}")
+        assets['light_texture'] = None
+    # --- END ADDITION ---
+
     assets['font'] = font
 
     return assets

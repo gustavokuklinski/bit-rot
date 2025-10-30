@@ -11,7 +11,8 @@
         <zoom_start value="3.0" />
         <zoom_far value="1.3" />
         <zoom_near value="5.0" />
-        <view_radius value="6" />
+        <view_radius value="3" />
+        <fow_radius value="15" />
     </player>
 
     <!-- Items Durabilitie Config -->

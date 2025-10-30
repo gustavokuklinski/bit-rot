@@ -503,8 +503,18 @@ def handle_context_menu_click(game, mouse_pos):
             if option == 'Use':
                 game.player.consume_item(item, source, index, container_item)
 
+            #elif option == 'Reload':
+            #    game.player.reload_active_weapon()
+
             elif option == 'Reload':
-                game.player.reload_active_weapon()
+                if getattr(item, 'item_type', None) == 'utility':
+                    game.player.reload_utility_item(item, source, index, container_item)
+                else:
+                    game.player.reload_active_weapon() # Assume gun
+            
+            elif option == 'Turn on' or option == 'Turn off':
+                game.player.toggle_utility_item(item, source, index, container_item)
+            # --- END MODIFICATION ---
 
             elif option == 'Equip':
                 if getattr(item, 'item_type', None) == 'backpack':
@@ -773,8 +783,32 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['index'] = click_index
         game.context_menu['container_item'] = click_container_item
         game.context_menu['position'] = mouse_pos
-        options = game.player.get_item_context_options(clicked_item) if click_source != 'ground' else []
-        
+
+        # options = game.player.get_item_context_options(clicked_item) if click_source != 'ground' else []
+        options = game.player.get_item_context_options(clicked_item)
+
+        #if click_source == 'belt':
+        #    if 'Unequip' not in options:
+        #        options.append('Unequip')
+        #    options = [o for o in options if o != 'Equip']
+        #
+        #elif click_source == 'backpack':
+        #    if 'Unequip' not in options:
+        #        options.append('Unequip')
+        #    if 'Drop' not in options:
+        #        options.append('Drop')
+        #    options = [o for o in options if o != 'Equip']
+#
+        #elif click_source == 'ground':
+        #    options = []
+        #    if not isinstance(clicked_item, Corpse):
+        #        options.append('Grab')
+        #    if getattr(clicked_item, 'item_type', None) in ('weapon', 'tool'):
+        #        options.append('Equip')
+        #    if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
+        #        options.append('Place on Backpack')
+        #    if getattr(clicked_item, 'inventory', None) is not None:
+        #        options.append('Open')
         if click_source == 'belt':
             if 'Unequip' not in options:
                 options.append('Unequip')
@@ -788,15 +822,23 @@ def handle_right_click(game, mouse_pos):
             options = [o for o in options if o != 'Equip']
 
         elif click_source == 'ground':
-            options = []
+            # Item is on the ground, so "Drop" makes no sense.
+            if 'Drop' in options:
+                options.remove('Drop')
+                
+            # Add ground-specific actions
             if not isinstance(clicked_item, Corpse):
-                options.append('Grab')
-            if getattr(clicked_item, 'item_type', None) in ('weapon', 'tool'):
-                options.append('Equip')
+                if 'Grab' not in options:
+                    options.insert(0, 'Grab') # Add Grab to the beginning
+            
             if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
-                options.append('Place on Backpack')
+                if 'Place on Backpack' not in options:
+                    options.append('Place on Backpack')
+            
+            # "Equip" and "Open" should already be in the list from get_item_context_options
             if getattr(clicked_item, 'inventory', None) is not None:
-                options.append('Open')
+                if 'Open' not in options:
+                    options.append('Open')
         
         elif click_source == 'container_map':
             options = ['Inspect']

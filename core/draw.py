@@ -2,6 +2,7 @@ import pygame
 import math
 from data.config import *
 from core.ui.helpers import draw_menu, draw_game_over
+from core.entities.item.item import Item
 from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
@@ -18,7 +19,6 @@ def draw_game(game):
     # --- World Rendering with Pixelated Zoom ---
 
     # 1. Create a temporary surface for the world view.
-    # Its size is the virtual screen size divided by the zoom level.
     zoom = game.zoom_level
     view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
     view_h = int(VIRTUAL_GAME_HEIGHT / zoom)
@@ -29,69 +29,121 @@ def draw_game(game):
     offset_x = view_w / 2 - game.player.rect.centerx
     offset_y = view_h / 2 - game.player.rect.centery
 
+    # --- NEW: Create Light Mask ---
+    light_mask = pygame.Surface((view_w, view_h))
+    
+    # Fill the mask with pitch black.
+    light_mask.fill((25, 25, 25)) # <-- This was the fix from last time
+    ambient = int(game.world_time.current_ambient_light) 
+    
+    light_texture = game.assets.get('light_texture')
+    
+    light_sources = []
+
+    # 1. Add the player's base vision as a light source (Fog of War)
+    if light_texture:
+        try:
+            radius_world_pixels = game.player_view_radius
+            radius_view_pixels = int(radius_world_pixels / zoom)
+            
+            if radius_view_pixels > 0:
+                player_vision_tex = pygame.transform.scale(light_texture, (radius_view_pixels * PLAYER_FOW_RADIUS, radius_view_pixels * PLAYER_FOW_RADIUS))
+                ambient_color = (ambient, ambient, ambient)
+                player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
+                light_rect = player_vision_tex.get_rect()
+                light_rect.center = (view_w / 2, view_h / 2)
+                light_mask.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+        except Exception as e:
+            print(f"Error drawing player vision: {e}")
+
+    # 2. Get all dynamic light sources (lanterns)
+    # (This section is correct)
+    all_player_inventories = [game.player.belt, game.player.inventory]
+    if game.player.backpack:
+        all_player_inventories.append(game.player.backpack.inventory)
+    if game.player.invcontainer:
+        all_player_inventories.append(game.player.invcontainer.inventory)
+
+    for inv in all_player_inventories:
+        for item in inv:
+            if getattr(item, 'state', 'off') == 'on':
+                light_sources.append({'item': item, 'owner': 'player'})
+
+    for item in game.items_on_ground:
+         if getattr(item, 'state', 'off') == 'on':
+            light_sources.append({'item': item, 'owner': 'ground'})
+
+    if light_texture:
+        # 3. Draw all dynamic lights (lanterns)
+        # (This section is correct)
+        for light_info in light_sources:
+            light = light_info['item']
+            radius_world_pixels = light.current_light_radius
+            radius_view_pixels = int(radius_world_pixels / zoom)
+            
+            if radius_view_pixels <= 0:
+                continue
+
+            try:
+                scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
+                light_rect = scaled_light_tex.get_rect()
+                
+                if light_info['owner'] == 'player':
+                    px_view = view_w / 2
+                    py_view = view_h / 2
+                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.75
+                    offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.75
+                    light_rect.center = (px_view + offset_lx, py_view + offset_ly)
+                else:
+                    pos_x_view = light.rect.centerx + offset_x
+                    pos_y_view = light.rect.centery + offset_y
+                    light_rect.center = (pos_x_view, pos_y_view)
+                
+                light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+            except Exception as e:
+                print(f"Error drawing light: {e}")
+    # --- END LIGHT MASK ---
 
 
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
-    #for image, rect in game.renderable_tiles:
-    #    world_view_surface.blit(image, rect.move(offset_x, offset_y))
-
+    
+    # Draw Map Tiles (These are NOT distance-checked, they are lit by the mask)
     for image, rect in game.renderable_tiles:
-        dist = math.hypot(rect.centerx - game.player.rect.centerx, rect.centery - game.player.rect.centery)
-
-        if dist > game.player_view_radius: # Use game.player_view_radius
-            continue
-
-        draw_pos = rect.move(offset_x, offset_y)
-        
-        # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
-
-        # Create a copy of the image to modify its alpha value
-        temp_image = image.copy()
-        
-        # Ensure image has an alpha channel (it should from tile_manager, but safe to check)
-        if temp_image.get_alpha() is None:
-             temp_image = temp_image.convert_alpha()
-
-        # Apply the opacity fade
-        temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-        
-        world_view_surface.blit(temp_image, draw_pos)
+        world_view_surface.blit(image, rect.move(offset_x, offset_y))
 
 
+    # This loop for loose items is correct and already has the fog of war check.
     for item in game.items_on_ground:
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
+        
         if dist > game.player_view_radius:
             continue
-
+            
         draw_pos = item.rect.move(offset_x, offset_y)
-        
-        # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
-
         if getattr(item, 'image', None):
-            # Create a copy of the image to modify its alpha value
-            temp_image = item.image.copy()
-            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-            world_view_surface.blit(temp_image, draw_pos)
+            world_view_surface.blit(item.image, draw_pos)
         else:
-            # For items without an image, we need to handle color with alpha
-            color = getattr(item, 'color', WHITE)
-            temp_surface = pygame.Surface(item.rect.size, pygame.SRCALPHA)
-            temp_surface.fill((color[0], color[1], color[2], opacity))
-            world_view_surface.blit(temp_surface, draw_pos)
+            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+
 
     for p in game.projectiles:
         p.draw(world_view_surface, offset_x, offset_y)
 
+    # --- MODIFIED BLOCK: This is the fix ---
     for zombie in game.zombies:
+        # Check distance from player
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+        
+        # Don't draw zombie if it's outside the player's view radius
         if dist > game.player_view_radius:
             continue
 
-        # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
-        zombie.draw(world_view_surface, offset_x, offset_y, opacity)
+        # FIX: Draw the zombie at 255 (full) opacity. 
+        # The light_mask will handle making it dark.
+        # The old 'opacity = ...' line was incorrect.
+        zombie.draw(world_view_surface, offset_x, offset_y, 255)
+    # --- END MODIFICATION ---
+
 
     game.player.draw(world_view_surface, offset_x, offset_y)
 
@@ -103,8 +155,8 @@ def draw_game(game):
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
 
-    # for msg in game.active_messages:
-    #     msg.draw(world_view_surface, offset_x, offset_y)
+    # Apply the light mask
+    world_view_surface.blit(light_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     # 4. Scale the entire world view surface up to the final game size.
     scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
@@ -114,19 +166,13 @@ def draw_game(game):
     game.virtual_screen.blit(scaled_world, game_rect)
 
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
-    # These elements are drawn on top of the scaled world, so they remain sharp.
-
-    darkness_alpha = game.world_time.current_darkness_overlay
-    if darkness_alpha > 0:
-        game.darkness_overlay.set_alpha(darkness_alpha)
-        game.virtual_screen.blit(game.darkness_overlay, (GAME_OFFSET_X, 0))
-
-
-    # Gun flash effect is drawn relative to the screen center, where the player is.
+    # (Rest of file is unchanged)
+    # ...
+    # Gun flash effect
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
         center_y = GAME_HEIGHT // 2
-        flash_radius = (TILE_SIZE // 2) * zoom # Scale flash size with zoom
+        flash_radius = (TILE_SIZE // 2) * zoom 
         pygame.draw.circle(game.virtual_screen, YELLOW, (center_x, center_y), flash_radius)
         game.player.gun_flash_timer -= 1
 

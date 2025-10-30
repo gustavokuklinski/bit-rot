@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -35,6 +35,12 @@ class Item:
         self.defence = defence # e.g., 0.0
         self.speed = speed     # e.g., 0.0
 
+        self.state = state          # e.g., "on", "off"
+        self.min_light = min_light  # e.g., 0
+        self.max_light = max_light  # e.g., 15 (in tiles)
+        self.fuel_type = fuel_type  # e.g., "Matches"
+
+
     @property
     def damage(self):
         if self.min_damage is not None and self.max_damage is not None:
@@ -50,6 +56,41 @@ class Item:
                             return int(base_damage * durability_percentage)
             return base_damage
         return 0
+
+    @property
+    def max_durability(self):
+        """Gets the max durability from the item's template."""
+        template = ITEM_TEMPLATES.get(self.name)
+        if template:
+            props = template.get('properties', {})
+            if 'durability' in props and 'max' in props['durability']:
+                # Apply multipliers just like in create_from_name
+                max_dur = float(props['durability']['max'])
+                multiplier = DURABILITY_MULTIPLIER
+                if template['type'] == 'weapon':
+                    multiplier *= WEAPON_DURABILITY_MULTIPLIER
+                elif template['type'] == 'tool':
+                    multiplier *= TOOL_DURABILITY_MULTIPLIER
+                return max_dur * multiplier
+        return self.durability or 100 # Fallback
+        
+    @property
+    def current_light_radius(self):
+        """Calculates the current light radius based on durability."""
+        if self.state != 'on' or self.min_light is None or self.max_light is None:
+            return 0
+        
+        max_dur = self.max_durability
+        if max_dur <= 0 or self.durability is None:
+            return self.min_light
+            
+        # Light scales with durability
+        dur_percent = max(0, min(1, self.durability / max_dur))
+        
+        # Lerp
+        light_range = self.max_light - self.min_light
+        return (self.min_light + (light_range * dur_percent)) * TILE_SIZE
+
 
     @property
     def current_damage_range(self):
@@ -111,7 +152,12 @@ class Item:
             root = tree.getroot()
             name = root.attrib.get('name')
             ttype = root.attrib.get('type')
-            template = {'type': ttype, 'properties': {}}
+
+            state = root.attrib.get('state')
+            template = {'type': ttype, 'properties': {}, 'state': state}
+
+            # template = {'type': ttype, 'properties': {}}
+            
             props_node = root.find('properties')
             if props_node is not None:
                 for prop in props_node:
@@ -207,7 +253,8 @@ class Item:
             return None
         template = ITEM_TEMPLATES[item_name]
 
-        if template['type'] == 'weapon':
+        # if template['type'] == 'weapon':
+        if template['type'] == 'weapon' or template['type'] == 'utility':
             randomize_durability = True
             
         props = template['properties']
@@ -252,7 +299,15 @@ class Item:
         defence = float(props.get('defence', {}).get('value', 0))
         speed = float(props.get('speed', {}).get('value', 0))
 
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed)
+        state = template.get('state') # Get root state attribute
+        if not state: # Check in properties if not on root
+             state = props.get('state', {}).get('value')
+             
+        min_light = int(props['light']['min']) if 'light' in props and 'min' in props['light'] else None
+        max_light = int(props['light']['max']) if 'light' in props and 'max' in props['light'] else None
+        fuel_type = props.get('fuel', {}).get('type')
+
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

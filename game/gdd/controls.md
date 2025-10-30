@@ -8,8 +8,8 @@
 - **L-Click**: Opens menu 
 - **1/2/3/4/5**: Equip/Use item from Belt
 
-- **E**: Get item from floor
-- **R**: Reload weapon
+- **E**: Get item from floor, open/close door
+- **R**: Reload weapon or item
 
 - **I**: Opens inventory and belt
 - **H**: Opens Status
