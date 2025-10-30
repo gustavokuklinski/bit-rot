@@ -79,7 +79,12 @@ FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
 NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
 AUTO_DRINK = player_config.find('water_autodrink').get('value') == 'true'
 AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
-PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
+
+BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
+
+DAY_NIGHT_CYCLE_MS = 60000 # 1 minute
+TRANSITION_DURATION_MS = 60000 # 1 for the fade
+MAX_DARKNESS_OPACITY = 150 # How dark it gets at night (0-255)
 
 # Zombie settings
 zombie_config = root.find('zombie')

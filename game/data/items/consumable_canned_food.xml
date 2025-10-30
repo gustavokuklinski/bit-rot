@@ -5,5 +5,5 @@
         <color r="50" g="200" b="50" />
         <sprite file="canned_food.png" />
     </properties>
-    <spawn chance="10" /> <!-- 20 * 0.5 -->
+    <spawn chance="0" /> <!-- 20 * 0.5 -->
 </item>

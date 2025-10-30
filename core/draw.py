@@ -37,13 +37,14 @@ def draw_game(game):
 
     for image, rect in game.renderable_tiles:
         dist = math.hypot(rect.centerx - game.player.rect.centerx, rect.centery - game.player.rect.centery)
-        if dist > PLAYER_VIEW_RADIUS:
-            continue # Don't draw if outside radius
+
+        if dist > game.player_view_radius: # Use game.player_view_radius
+            continue
 
         draw_pos = rect.move(offset_x, offset_y)
         
         # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
 
         # Create a copy of the image to modify its alpha value
         temp_image = image.copy()
@@ -60,13 +61,13 @@ def draw_game(game):
 
     for item in game.items_on_ground:
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
-        if dist > PLAYER_VIEW_RADIUS:
+        if dist > game.player_view_radius:
             continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
         
         # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
 
         if getattr(item, 'image', None):
             # Create a copy of the image to modify its alpha value
@@ -85,11 +86,11 @@ def draw_game(game):
 
     for zombie in game.zombies:
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-        if dist > PLAYER_VIEW_RADIUS:
+        if dist > game.player_view_radius:
             continue
 
         # Calculate opacity
-        opacity = max(0, 255 * (1 - dist / PLAYER_VIEW_RADIUS))
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
         zombie.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw(world_view_surface, offset_x, offset_y)
@@ -114,6 +115,12 @@ def draw_game(game):
 
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
     # These elements are drawn on top of the scaled world, so they remain sharp.
+
+    darkness_alpha = game.world_time.current_darkness_overlay
+    if darkness_alpha > 0:
+        game.darkness_overlay.set_alpha(darkness_alpha)
+        game.virtual_screen.blit(game.darkness_overlay, (GAME_OFFSET_X, 0))
+
 
     # Gun flash effect is drawn relative to the screen center, where the player is.
     if game.player.gun_flash_timer > 0:

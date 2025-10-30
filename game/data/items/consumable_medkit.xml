@@ -3,7 +3,6 @@
         <load min="1" max="25" />
         <hp min="1" max="25" />
         <capacity value="25" />
-        <color r="150" g="200" b="255" />
         <sprite file="medkit.png" />
     </properties>
     <spawn chance="8" /> <!-- 20 * 0.4 -->

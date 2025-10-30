@@ -2,7 +2,6 @@
     <properties>
         <load min="15" max="25" />
         <capacity value="25" />
-        <color r="50" g="50" b="200" />
         <sprite file="water_bottle.png" />
     </properties>
     <spawn chance="10" /> <!-- 20 * 0.5 -->

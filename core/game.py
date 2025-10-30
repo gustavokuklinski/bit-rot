@@ -27,6 +27,7 @@ from core.map.map_manager import MapManager
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 from core.map.world_layers import load_all_map_layers, set_active_layer
+from core.map.world_time import WorldTime
 
 class Game:
     def __init__(self):
@@ -106,7 +107,11 @@ class Game:
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
 
-
+        self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
+        self.world_time = WorldTime(self)
+        self.darkness_overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
+        self.darkness_overlay.fill(BLACK)
+        self.darkness_overlay.set_alpha(0) # Start fully transparent
 
     def load_map(self, map_filename):
         # Clear all game state
@@ -176,6 +181,8 @@ class Game:
         if player_spawn:
             self.player.rect.topleft = player_spawn
             self.player.x, self.player.y = player_spawn
+
+        self.world_time = WorldTime(self)
         
         inventory_modal = {
             'id': uuid.uuid4(),
@@ -294,6 +301,8 @@ class Game:
         self._update_screen()
 
     def run_playing(self):
+        self.world_time.update()
+
         handle_input(self)
         update_game_state(self)
         self.check_map_transition()
