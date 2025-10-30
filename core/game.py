@@ -110,9 +110,6 @@ class Game:
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.world_time = WorldTime(self)
 
-        #self.darkness_overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
-        #self.darkness_overlay.fill(BLACK)
-        #self.darkness_overlay.set_alpha(0) # Start fully transparent
 
     def load_map(self, map_filename):
         # Clear all game state

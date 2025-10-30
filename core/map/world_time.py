@@ -18,12 +18,7 @@ class WorldTime:
         # Define the min/max values for radius and darkness
         self.day_radius = BASE_PLAYER_VIEW_RADIUS * 1.5
         self.night_radius = BASE_PLAYER_VIEW_RADIUS * 0.5
-        # self.min_darkness = 0
-        # self.max_darkness = MAX_DARKNESS_OPACITY
-        # 
-        # # Set initial values on the game object
-        # self.game.player_view_radius = self.day_radius
-        # self.current_darkness_overlay = self.min_darkness
+
 
         self.day_ambient = 255 # Full brightness
         # Calculate night ambient from the old darkness value

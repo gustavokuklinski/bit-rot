@@ -787,28 +787,7 @@ def handle_right_click(game, mouse_pos):
         # options = game.player.get_item_context_options(clicked_item) if click_source != 'ground' else []
         options = game.player.get_item_context_options(clicked_item)
 
-        #if click_source == 'belt':
-        #    if 'Unequip' not in options:
-        #        options.append('Unequip')
-        #    options = [o for o in options if o != 'Equip']
-        #
-        #elif click_source == 'backpack':
-        #    if 'Unequip' not in options:
-        #        options.append('Unequip')
-        #    if 'Drop' not in options:
-        #        options.append('Drop')
-        #    options = [o for o in options if o != 'Equip']
-#
-        #elif click_source == 'ground':
-        #    options = []
-        #    if not isinstance(clicked_item, Corpse):
-        #        options.append('Grab')
-        #    if getattr(clicked_item, 'item_type', None) in ('weapon', 'tool'):
-        #        options.append('Equip')
-        #    if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
-        #        options.append('Place on Backpack')
-        #    if getattr(clicked_item, 'inventory', None) is not None:
-        #        options.append('Open')
+
         if click_source == 'belt':
             if 'Unequip' not in options:
                 options.append('Unequip')
