@@ -12,16 +12,18 @@
 - [x] Modals have keybindings
 - [x] Build day/night system
 - [x] FoW (Fog of War) mechanism
-- [] Stackable items in inventory and container
+- [x] Stackable items in inventory and container
+- [] Fix the extra 'invcontainer' for typos: Ammo, Utilities and Container
 - [] Show the weapon on player hand when SHIFT is pressed
 - [] Nearby system shows itens on the floor
 - [] Append the important player messages to Messages modal ```display_message(game, "Replace print('messages')")```
-- [] Make player spawn with wallet on slot
 - [] Add Saves for the current game
 - [] Add player spawn choice and random spawn
 - [] Build a camp system
 - [] Add TCP/IP direct multiplayer
 - [] Build a simple craft system (allow the player to chop trees and build a little house on the map)
+
+### UI
 
 ### Map Editor
 - [x] Allow selection of an Area

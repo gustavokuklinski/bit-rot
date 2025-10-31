@@ -61,7 +61,7 @@ def draw_game(game):
     all_player_inventories = [game.player.belt, game.player.inventory]
     if game.player.backpack:
         all_player_inventories.append(game.player.backpack.inventory)
-    if game.player.invcontainer:
+    if game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory'):
         all_player_inventories.append(game.player.invcontainer.inventory)
 
     for inv in all_player_inventories:
@@ -109,10 +109,24 @@ def draw_game(game):
     
     # Draw Map Tiles (These are NOT distance-checked, they are lit by the mask)
     for image, rect in game.renderable_tiles:
+        #dist = math.hypot(rect.centerx - game.player.rect.centerx, rect.centery - game.player.rect.centery)
+        #if dist > game.player_view_radius: # Use game.player_view_radius
+        #    continue
+        #draw_pos = rect.move(offset_x, offset_y)
+        # Calculate opacity
+        #opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
+        # Create a copy of the image to modify its alpha value
+        #temp_image = image.copy()
+        # Ensure image has an alpha channel (it should from tile_manager, but safe to check)
+        #if temp_image.get_alpha() is None:
+        #     temp_image = temp_image.convert_alpha()
+        # Apply the opacity fade
+        #temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+        #world_view_surface.blit(temp_image, draw_pos)
+
         world_view_surface.blit(image, rect.move(offset_x, offset_y))
+        
 
-
-    # This loop for loose items is correct and already has the fog of war check.
     for item in game.items_on_ground:
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
         
@@ -120,10 +134,17 @@ def draw_game(game):
             continue
             
         draw_pos = item.rect.move(offset_x, offset_y)
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
+        
         if getattr(item, 'image', None):
-            world_view_surface.blit(item.image, draw_pos)
+            temp_image = item.image.copy()
+            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            world_view_surface.blit(temp_image, draw_pos)
         else:
-            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+            color = getattr(item, 'color', WHITE)
+            temp_surface = pygame.Surface(item.rect.size, pygame.SRCALPHA)
+            temp_surface.fill((color[0], color[1], color[2], opacity))
+            world_view_surface.blit(temp_surface, draw_pos)
 
 
     for p in game.projectiles:
@@ -138,11 +159,10 @@ def draw_game(game):
         if dist > game.player_view_radius:
             continue
 
-        # FIX: Draw the zombie at 255 (full) opacity. 
-        # The light_mask will handle making it dark.
-        # The old 'opacity = ...' line was incorrect.
-        zombie.draw(world_view_surface, offset_x, offset_y, 255)
-    # --- END MODIFICATION ---
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
+
+        zombie.draw(world_view_surface, offset_x, offset_y, opacity)
+
 
 
     game.player.draw(world_view_surface, offset_x, offset_y)
@@ -228,6 +248,21 @@ def draw_game(game):
                 if slot.collidepoint(game._get_scaled_mouse_pos()):
                     highlighted_rect = slot
                     highlighted_allowed = (preview_item.item_type == 'backpack')
+                    break
+                    
+                slot = get_invcontainer_slot_rect(modal['position'])
+                if slot.collidepoint(game._get_scaled_mouse_pos()):
+                    highlighted_rect = slot
+                    
+                    # Check allowed item types
+                    dragged_type = getattr(preview_item, 'item_type', None)
+                    dragged_ammo_type = getattr(preview_item, 'ammo_type', None)
+                    
+                    highlighted_allowed = (
+                        dragged_type == 'container' or
+                        dragged_type == 'utility' or
+                        (dragged_type == 'consumable' and dragged_ammo_type is not None)
+                    )
                     break
             elif modal['type'] == 'container':
                 cont = modal['item']

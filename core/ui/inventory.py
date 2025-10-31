@@ -68,6 +68,11 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
                     pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
             except Exception:
                 pass
+            
+            if item.is_stackable and item.load is not None and item.load > 1:
+                stack_text = font_small.render(str(int(item.load)), True, WHITE)
+                text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
+                surface.blit(stack_text, text_rect)
 
     backpack_slot_rect = get_backpack_slot_rect(modal['position'])
     pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
@@ -133,6 +138,11 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
                 surface.blit(scaled_sprite, sprite_rect)
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+            
+            if item.is_stackable and item.load is not None and item.load > 1:
+                stack_text = font_small.render(str(int(item.load)), True, WHITE)
+                text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
+                surface.blit(stack_text, text_rect)
 
     active_weapon_text = "None (Hands)"
     if player.active_weapon:

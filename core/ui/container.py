@@ -37,6 +37,11 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
             else:
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+            
+            if item.is_stackable and item.load is not None and item.load > 1:
+                stack_text = font_small.render(str(int(item.load)), True, WHITE)
+                text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
+                surface.blit(stack_text, text_rect)
 
 def draw_container_content(surface, game, container_item, modal, assets):
     if not container_item or not hasattr(container_item, 'inventory'):

@@ -174,7 +174,7 @@ class Player:
         if self.backpack:
             all_inventories.append(self.backpack.inventory)
             
-        if self.invcontainer:
+        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
              all_inventories.append(self.invcontainer.inventory)
 
         for inv in all_inventories:
@@ -331,7 +331,7 @@ class Player:
                 elif source_type == 'belt':
                     self.belt[index] = None
 
-    def get_item_context_options(self, item):
+    def get_item_context_options(self, item, source, container_item=None):
         options = []
         if isinstance(item, Corpse):
             options.append('Open')
@@ -366,7 +366,28 @@ class Player:
             options.append('Equip')
         elif item.item_type == 'container':
             options.append('Open')
-        options.append('Drop')
+
+        if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None:
+            options.append('Drop one')
+            if item.load > 1:
+                options.append('Drop all')
+            
+            # --- Transfer Options ---
+            # 1. Check if item is NOT in Backpack, and we have one
+            if self.backpack and container_item is not self.backpack:
+                options.append('Send all to Backpack')
+            
+            # 2. Check if item is NOT in Utility, and we have one
+            if self.invcontainer and container_item is not self.invcontainer and source != 'invcontainer':
+                 options.append('Send all to Utility')
+
+            # 3. Check if item is NOT in main inventory
+            if source != 'inventory':
+                options.append('Send all to Inventory')
+
+        else:
+            # Not stackable, add normal 'Drop'
+            options.append('Drop')
         return options
 
     def _get_source_inventory(self, source_type, container_item=None):
@@ -376,7 +397,7 @@ class Player:
             return self.belt
         elif source_type == 'invcontainer':
             return [self.invcontainer] if self.invcontainer else []
-        elif source_type == 'container' and container_item:
+        elif (source_type == 'container' or source_type == 'nearby') and container_item:
             return container_item.inventory
         return None
 
@@ -385,8 +406,22 @@ class Player:
             print("Belt is full.")
             return False
         source_inventory = self._get_source_inventory(source_type, container_item)
-        if source_inventory is None or item not in source_inventory:
+        if source_inventory is None:
+             print(f"Error: Could not find source inventory for {source_type}")
+             return False
+
+        if item not in source_inventory:
+             # Handle special case where item is 'invcontainer' itself
+            if source_type == 'invcontainer' and item == self.invcontainer:
+                 for i, slot in enumerate(self.belt):
+                    if slot is None:
+                        self.belt[i] = item
+                        self.invcontainer = None # Unequip from slot
+                        print(f"Equipped {item.name} to belt.")
+                        return True
+            print(f"Error: Item {item.name} not found in source {source_type}")
             return False
+        
         for i, slot in enumerate(self.belt):
             if slot is None:
                 self.belt[i] = item
@@ -500,7 +535,6 @@ class Player:
              self.inventory[self.inventory.index(item)] = new_item
         # Add backpack/container checks if needed
         
-    # --- MODIFIED METHOD ---
     def reload_utility_item(self, item, source, index, container_item):
         """Reloads a utility item (Lantern) with fuel (Matches). Resets Durability."""
         if not item.fuel_type:
@@ -538,7 +572,111 @@ class Player:
             f_inv = self._get_source_inventory(f_source, f_container)
             if f_inv and f_index < len(f_inv) and f_inv[f_index] == fuel_item:
                 f_inv.pop(f_index)
-    # --- END MODIFICATION ---
+    
+    def find_item_and_stack(self, source, index, container_item):
+        """Helper to find an item and its containing inventory list."""
+        source_inventory = self._get_source_inventory(source, container_item)
+        if source_inventory and 0 <= index < len(source_inventory):
+            item = source_inventory[index]
+            return item, source_inventory
+        
+        # Handle special cases like 'backpack' or 'invcontainer' which aren't in lists
+        if source == 'backpack' and self.backpack:
+            return self.backpack, [self] # Use [self] as a dummy list
+        if source == 'invcontainer' and self.invcontainer:
+            return self.invcontainer, [self]
+            
+        return None, None
+
+    def drop_item_stack(self, source, index, container_item, quantity):
+        """Drops one, all, or a specific quantity of a stackable item."""
+        item, source_inventory = self.find_item_and_stack(source, index, container_item)
+        if not item:
+            print("Error: Could not find item to drop.")
+            return
+
+        item_to_drop = None
+        if quantity == 'all' or quantity >= item.load:
+            # Drop the entire stack
+            item_to_drop = self.drop_item(source, index, container_item)
+        elif quantity > 0 and item.load > 0:
+            # Drop a partial stack
+            item_to_drop = Item.create_from_name(item.name)
+            if not item_to_drop: return
+
+            transfer_amount = min(item.load, quantity)
+            item_to_drop.load = transfer_amount
+            item_to_drop.durability = item.durability # Preserve stats
+            
+            item.load -= transfer_amount
+            if item.load <= 0:
+                # The original stack is now empty, remove it
+                self.drop_item(source, index, container_item) # Use original drop to handle pop
+        
+        if item_to_drop:
+            item_to_drop.rect.center = self.rect.center
+            return item_to_drop # Return to mouse.py to be added to items_on_ground
+        return None
+
+    def transfer_item_stack(self, source, index, container_item, target_container):
+        """Transfers an entire stack to another container, merging if possible."""
+        item, source_inventory = self.find_item_and_stack(source, index, container_item)
+
+        target_inv = None
+        target_cap = 0
+        target_name = "Unknown"
+
+        if target_container is self: # Check if target is the player object
+            target_inv = self.inventory
+            target_cap = self.get_total_inventory_slots()
+            target_name = "Inventory"
+        elif target_container and hasattr(target_container, 'inventory'):
+            target_inv = target_container.inventory
+            target_cap = target_container.capacity or 0
+            target_name = target_container.name
+        else:
+            print("Error: Invalid source or target container.")
+            return
+
+        if not item:
+            print("Error: Invalid source item.")
+            return
+        
+        # 1. Try to merge with existing stacks
+        remaining_load = item.load
+        for target_item in target_inv:
+            if target_item.can_stack_with(item):
+                available_space = target_item.capacity - target_item.load
+                transfer = min(available_space, remaining_load)
+                
+                target_item.load += transfer
+                remaining_load -= transfer
+                item.load = remaining_load # Update original item
+                
+                if remaining_load <= 0:
+                    break # Entire stack was merged
+        
+        # 2. If stack is now empty, remove it from source
+        if item.load <= 0:
+            self.drop_item(source, index, container_item) # Use drop to handle removal
+            print(f"Merged all of {item.name} into {target_name}.")
+            return
+            
+        # 3. If load remains, try to add as a new stack
+        if remaining_load > 0:
+            if len(target_inv) < target_cap:
+                # We need to create a new item, as we can't just move 'item' (it might be a partial stack)
+                new_stack = Item.create_from_name(item.name)
+                new_stack.load = remaining_load
+                new_stack.durability = item.durability # Copy stats just in case
+                
+                target_inv.append(new_stack)
+                
+                # Now the original item is empty, remove it
+                self.drop_item(source, index, container_item)
+                print(f"Sent {remaining_load} {item.name} to {target_name}.")
+            else:
+                print(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
 
 
     def drop_item(self, source, index, container_item=None):
@@ -556,9 +694,34 @@ class Player:
         elif source == 'backpack':
             item_to_drop = self.backpack
             self.backpack = None
-        elif source == 'container' and container_item and index < len(container_item.inventory):
+        elif (source == 'container' or source == 'nearby') and container_item and index < len(container_item.inventory):
             item_to_drop = container_item.inventory.pop(index)
         return item_to_drop
+
+    def stack_item_in_inventory(self, item_to_stack):
+        """Tries to merge an item with existing stacks in inventory, then belt."""
+        if not item_to_stack.is_stackable():
+            return # Not stackable, do nothing
+
+        # 1. Try to merge with inventory
+        for item in self.inventory:
+            if item.can_stack_with(item_to_stack):
+                available_space = item.capacity - item.load
+                transfer = min(available_space, item_to_stack.load)
+                item.load += transfer
+                item_to_stack.load -= transfer
+                if item_to_stack.load <= 0:
+                    return # Fully stacked
+        
+        # 2. Try to merge with belt
+        for item in self.belt:
+            if item and item.can_stack_with(item_to_stack):
+                available_space = item.capacity - item.load
+                transfer = min(available_space, item_to_stack.load)
+                item.load += transfer
+                item_to_stack.load -= transfer
+                if item_to_stack.load <= 0:
+                    return # Fully stacked
 
     def destroy_broken_weapon(self, broken_weapon):
         if self.active_weapon == broken_weapon:

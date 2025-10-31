@@ -91,6 +91,21 @@ class Item:
         light_range = self.max_light - self.min_light
         return (self.min_light + (light_range * dur_percent)) * TILE_SIZE
 
+    def is_stackable(self):
+        """Returns True if the item uses 'load' as a quantity."""
+        # Items are stackable if they have a 'capacity' defined for stacking
+        return (self.capacity is not None and self.capacity > 1 and 
+                self.durability is None and self.item_type in ['consumable', 'utility'])
+
+    def can_stack_with(self, other_item):
+        """Checks if this item can be stacked with another."""
+        if not self.is_stackable or not other_item.is_stackable:
+            return False
+        # Stacking requires same name and (for safety) same item type
+        # We also check that durability is None, as stackable items shouldn't have it
+        return (self.name == other_item.name and 
+                self.item_type == other_item.item_type and
+                self.durability is None)
 
     @property
     def current_damage_range(self):
