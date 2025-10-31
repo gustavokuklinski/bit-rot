@@ -33,7 +33,7 @@ def draw_game(game):
     light_mask = pygame.Surface((view_w, view_h))
     
     # Fill the mask with pitch black.
-    light_mask.fill((25, 25, 25)) # <-- This was the fix from last time
+    light_mask.fill((50, 50, 50)) # <-- This was the fix from last time
     ambient = int(game.world_time.current_ambient_light) 
     
     light_texture = game.assets.get('light_texture')
@@ -44,7 +44,7 @@ def draw_game(game):
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
-            radius_view_pixels = int(radius_world_pixels / zoom)
+            radius_view_pixels = int(radius_world_pixels / zoom) # or Zoom
             
             if radius_view_pixels > 0:
                 player_vision_tex = pygame.transform.scale(light_texture, (radius_view_pixels * PLAYER_FOW_RADIUS, radius_view_pixels * PLAYER_FOW_RADIUS))

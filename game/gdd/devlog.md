@@ -10,12 +10,14 @@
 - [x] Set the default open modals (Inventory and Nearby)
 - [x] Modals have default start alignment
 - [x] Modals have keybindings
+- [x] Build day/night system
+- [x] FoW (Fog of War) mechanism
+- [] Stackable items in inventory and container
 - [] Show the weapon on player hand when SHIFT is pressed
 - [] Nearby system shows itens on the floor
 - [] Append the important player messages to Messages modal ```display_message(game, "Replace print('messages')")```
 - [] Make player spawn with wallet on slot
 - [] Add Saves for the current game
-- [] Build day/night system (with sleep)
 - [] Add player spawn choice and random spawn
 - [] Build a camp system
 - [] Add TCP/IP direct multiplayer
@@ -24,10 +26,13 @@
 ### Map Editor
 - [x] Allow selection of an Area
 - [x] Game map size: 100x100 - Can be increased
+- [x] Add open/closed doors
 - [] Display some map relation on boundaries in editor using the map pattern: ```map_L<NUM>_P0_<TOP>_<RIGHT>_<BOTTOM>_<LEFT>``` and add a button: ```Create new Map Section```
 - [] Add a menu buttom to connect a layared map (Make it search the connection on the same map codes and place correctly)
-- [] Add open/closed doors
 - [] Breakable scenarios (walls, containers, doors)
+
+### Items
+- [x] Add utility consumable item: Lantern consume matches
 
 ### Player
 - [] Add more prefessions
