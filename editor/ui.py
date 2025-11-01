@@ -123,16 +123,64 @@ class Sidebar:
         self.x = x
         self.y = y
         self.font = font
-        self.tiles = tiles.copy() # Make a copy to not modify the original dict
+        self.all_tiles = tiles.copy() # Store all tiles
+        self.tiles = tiles.copy() # Tiles to be displayed (filtered)
         self.selected_tile = None
 
+        self.search_rect = pygame.Rect(self.x + 10, self.y + 10, SIDEBAR_WIDTH - 20, 30)
+        self.search_text = ""
+        self.search_active = False
+        
+        # Y-coordinate where tiles start drawing, below the search bar
+        self.tile_area_y = self.y + self.search_rect.height + 20 
+
+    def _filter_tiles(self):
+        """Filters the displayed tiles based on the search text."""
+        if not self.search_text:
+            self.tiles = self.all_tiles.copy()
+        else:
+            self.tiles = {}
+            for name, image in self.all_tiles.items():
+                if self.search_text.lower() in name.lower():
+                    self.tiles[name] = image
+
     def draw(self, surface):
+        # Draw sidebar background
         pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, SIDEBAR_WIDTH, SCREEN_HEIGHT))
         
+        # --- Draw Search Bar ---
+        # Draw border (yellow if active, black otherwise)
+        border_color = (255, 255, 0) if self.search_active else (0, 0, 0)
+        pygame.draw.rect(surface, (255, 255, 255), self.search_rect)
+        pygame.draw.rect(surface, border_color, self.search_rect, 2)
+        
+        # Draw search text or placeholder
+        if self.search_text:
+            search_surf = self.font.render(self.search_text, True, (0, 0, 0))
+        else:
+            search_surf = self.font.render("Search tiles...", True, (150, 150, 150)) # Placeholder text
+        
+        # Blit text, clipping it if it's too long
+        text_rect = search_surf.get_rect(centery=self.search_rect.centery)
+        text_rect.x = self.search_rect.x + 5
+        # Create a clipping area so text doesn't overflow the search box
+        clip_rect = self.search_rect.inflate(-10, -10) # Small margin
+        surface.set_clip(clip_rect)
+        surface.blit(search_surf, text_rect)
+        surface.set_clip(None) # Reset clipping area
+        
+        # --- Draw Tiles ---
         row, col = 0, 0
-        for name, image in self.tiles.items():
+        
+        # --- MODIFIED: Sort tiles alphabetically by name ---
+        for name, image in sorted(self.tiles.items()):
             tile_x = self.x + col * (TILE_SIZE + 10) + 10
-            tile_y = self.y + row * (TILE_SIZE + 10) + 10
+            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) # Use tile_area_y
+            
+            # Stop drawing if tiles go off-screen (simple vertical check)
+            if tile_y > self.y + SCREEN_HEIGHT:
+                break
+
             tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
             surface.blit(image, (tile_x, tile_y))
             
@@ -149,17 +197,40 @@ class Sidebar:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 mouse_x, mouse_y = event.pos
-                if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH:
+                
+                # Check search box click
+                if self.search_rect.collidepoint(mouse_x, mouse_y):
+                    self.search_active = True
+                else:
+                    self.search_active = False
+                
+                # Check tile selection click (must be in the tile area)
+                if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH and mouse_y >= self.tile_area_y:
                     row, col = 0, 0
-                    for name, image in self.tiles.items():
+                    
+                    # --- MODIFIED: Sort tiles alphabetically for click detection ---
+                    for name, image in sorted(self.tiles.items()):
                         tile_x = self.x + col * (TILE_SIZE + 10) + 10
-                        tile_y = self.y + row * (TILE_SIZE + 10) + 10
+                        tile_y = self.tile_area_y + row * (TILE_SIZE + 10) # Use tile_area_y
+                        
                         tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
                         if tile_rect.collidepoint(mouse_x, mouse_y):
                             self.selected_tile = name
-                            break
+                            break # Found the tile
                         
                         col += 1
                         if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
                             col = 0
                             row += 1
+                            
+                        # Stop checking if tiles would be off-screen
+                        if tile_y > self.y + SCREEN_HEIGHT:
+                            break
+
+        if event.type == pygame.KEYDOWN and self.search_active:
+            # Handle typing in the search box
+            if event.key == pygame.K_BACKSPACE:
+                self.search_text = self.search_text[:-1]
+            else:
+                self.search_text += event.unicode
+            self._filter_tiles() # Update the filtered list

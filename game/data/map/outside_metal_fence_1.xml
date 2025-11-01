@@ -1,0 +1,5 @@
+<map name="outside_metal_fence_1" type="maptile" char="outside_metal_fence_1" is_obstacle="true">
+    <visuals>
+        <sprite id="close" file="outside_metal_fence_1.png" />
+    </visuals>
+</map>

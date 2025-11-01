@@ -1,4 +1,3 @@
-
 # editor/map.py
 import csv
 import os
@@ -13,6 +12,7 @@ class Map:
         self.layers = {}
         self.layer_properties = {}
         self.active_layer_name = None
+        self.undo_stack = []
 
         if default_layers is None:
             default_layers = ['map', 'ground', 'spawn'] # Default layers
@@ -23,6 +23,23 @@ class Map:
         
         if default_layers:
             self.active_layer_name = default_layers[0]
+
+
+    def _push_to_undo(self, changes):
+        """Internal helper to add a list of changes as a single undo step."""
+        if changes:
+            self.undo_stack.append(changes)
+            
+    def undo(self):
+        """Undoes the last action."""
+        if not self.undo_stack:
+            return
+
+        last_changes = self.undo_stack.pop()
+        for (x, y, layer_name, old_tile_name) in last_changes:
+            # Call set_tile with undoing=True to prevent re-adding to the stack
+            self.set_tile(x, y, old_tile_name, layer_name, undoing=True)
+
 
     def set_active_layer(self, layer_name):
         if layer_name in self.layers:
@@ -43,7 +60,9 @@ class Map:
             for y, row in enumerate(reader):
                 for x, tile in enumerate(row):
                     if x < self.width and y < self.height:
-                        self.layers[layer_name][y][x] = tile if tile != '' else None # Store empty strings as None
+                        self.layers[layer_name][y][x] = tile if tile != '' else None
+        
+        self.undo_stack.clear()
 
     def save_to_csv(self, filepath, layer_name):
         if layer_name not in self.layers:
@@ -59,19 +78,105 @@ class Map:
                 row_data = [tile if tile is not None else '' for tile in self.layers[layer_name][y]]
                 writer.writerow(row_data)
 
-    def set_tile(self, x, y, tile_name, layer_name=None):
+    # --- MODIFIED: Added 'undoing=False' parameter to fix bug ---
+    def set_tile(self, x, y, tile_name, layer_name=None, undoing=False):
         if layer_name is None:
             layer_name = self.active_layer_name
 
         if layer_name in self.layers and 0 <= x < self.width and 0 <= y < self.height:
+            if not undoing:
+                old_tile_name = self.layers[layer_name][y][x]
+                # Don't log if the tile isn't actually changing
+                if old_tile_name != tile_name:
+                    self._push_to_undo([(x, y, layer_name, old_tile_name)])
+            
+            # --- MODIFIED: This was indented under the 'if not undoing' block, moved out ---
             self.layers[layer_name][y][x] = tile_name
         else:
-            print(f"Error: Cannot set tile. Layer '{layer_name}' not found or coordinates out of bounds.")
+            pass
+    
+    def clear_rect(self, rect, layer_name):
+        """Clears (sets to None) all tiles in the given rect on the given layer."""
+        if layer_name not in self.layers:
+            return
+        
+        changes = []
+        for y in range(rect.top, rect.top + rect.height):
+            for x in range(rect.left, rect.left + rect.width):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    old_tile = self.layers[layer_name][y][x]
+                    if old_tile is not None:
+                        changes.append((x, y, layer_name, old_tile))
+                        self.layers[layer_name][y][x] = None
+        
+        self._push_to_undo(changes)
+    
+    # --- NEW: Added fill_rect method ---
+    def fill_rect(self, rect, tile_name, layer_name):
+        """Fills all tiles in the given rect with the given tile_name."""
+        if layer_name not in self.layers:
+            return
+        
+        changes = []
+        for y in range(rect.top, rect.top + rect.height):
+            for x in range(rect.left, rect.left + rect.width):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    old_tile = self.layers[layer_name][y][x]
+                    if old_tile != tile_name:
+                        changes.append((x, y, layer_name, old_tile))
+                        self.layers[layer_name][y][x] = tile_name
+        
+        self._push_to_undo(changes)
+
+    def get_tiles_in_rect(self, rect, layer_name):
+        """Copies tile data from the specified rect and layer into a 2D list."""
+        if layer_name not in self.layers:
+            return None
+        
+        clipboard = []
+        for y in range(rect.top, rect.top + rect.height):
+            row = []
+            for x in range(rect.left, rect.left + rect.width):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    row.append(self.layers[layer_name][y][x])
+                else:
+                    row.append(None) # Add None for parts of rect outside map
+            clipboard.append(row)
+        return clipboard
+
+    def paste_tiles(self, topleft_coord, clipboard_data, layer_name):
+        """Pastes clipboard data (2D list) onto the map at the topleft coordinate."""
+        if layer_name not in self.layers or not clipboard_data:
+            return
+
+        start_x, start_y = topleft_coord
+        changes = []
+        
+        for y_offset, row in enumerate(clipboard_data):
+            for x_offset, tile_name in enumerate(row):
+                
+                # Calculate target map coordinates
+                map_x = start_x + x_offset
+                map_y = start_y + y_offset
+
+                # Check bounds
+                if 0 <= map_x < self.width and 0 <= map_y < self.height:
+                    # Log the change for undo
+                    old_tile = self.layers[layer_name][map_y][map_x]
+                    if old_tile != tile_name:
+                        changes.append((map_x, map_y, layer_name, old_tile))
+                        self.layers[layer_name][map_y][map_x] = tile_name
+
+        self._push_to_undo(changes)
 
     def render(self, surface, tiles, font, offset=(0, 0), zoom_scale=1.0):
         scaled_tile_size = int(TILE_SIZE * zoom_scale)
 
-        for layer_name, layer_grid in self.layers.items():
+        # --- MODIFIED: Ensure layers are rendered in a consistent order ---
+        # Sorting by key ('ground', 'map', 'spawn') is a good default
+        sorted_layers = sorted(self.layers.items())
+
+        for layer_name, layer_grid in sorted_layers:
             properties = self.layer_properties.get(layer_name, {"visible": True, "opacity": 255})
             if not properties["visible"]:
                 continue

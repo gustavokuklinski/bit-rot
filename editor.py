@@ -158,6 +158,9 @@ def main():
     selection_start_pos = None
     selection_rect = None
 
+    # --- NEW: Clipboard for copy/paste ---
+    clipboard = None
+
     modified_maps = set()
 
     running = True
@@ -259,6 +262,45 @@ def main():
                 elif event.key == pygame.K_n and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META):
                     new_map_modal.active = True
 
+                # --- NEW: Handle CTRL+Z for Undo ---
+                elif event.key == pygame.K_z and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META):
+                    game_map.undo()
+                    modified_maps.add(current_base_map_name)
+                    status_message = "Undo!"
+                    status_message_timer = pygame.time.get_ticks() + 1000
+
+                # --- NEW: Handle CTRL+C for Copy ---
+                elif event.key == pygame.K_c and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META):
+                    if selection_rect:
+                        clipboard = game_map.get_tiles_in_rect(selection_rect, game_map.active_layer_name)
+                        status_message = "Area copied!"
+                        status_message_timer = pygame.time.get_ticks() + 2000
+                
+                # --- NEW: Handle CTRL+V for Paste ---
+                elif event.key == pygame.K_v and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_META):
+                    if clipboard:
+                        # Get current mouse position in map coordinates to paste
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                        if map_view_rect.collidepoint(mouse_x, mouse_y):
+                            adjusted_mouse_x = (mouse_x - camera_offset_x) / current_zoom_scale
+                            adjusted_mouse_y = (mouse_y - camera_offset_y) / current_zoom_scale
+                            map_x = int(adjusted_mouse_x // TILE_SIZE)
+                            map_y = int(adjusted_mouse_y // TILE_SIZE)
+                            
+                            game_map.paste_tiles((map_x, map_y), clipboard, game_map.active_layer_name)
+                            modified_maps.add(current_base_map_name)
+                            status_message = "Pasted!"
+                            status_message_timer = pygame.time.get_ticks() + 2000
+
+                # --- NEW: Handle DELETE to clear selection ---
+                elif event.key == pygame.K_DELETE:
+                    if selection_rect:
+                        game_map.clear_rect(selection_rect, game_map.active_layer_name)
+                        modified_maps.add(current_base_map_name)
+                        status_message = "Area cleared!"
+                        status_message_timer = pygame.time.get_ticks() + 2000
+
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = event.pos
                 # Scroll wheel for zoom
@@ -283,18 +325,25 @@ def main():
                             is_selecting = True
                             selection_start_pos = (map_x, map_y)
                             selection_rect = pygame.Rect(selection_start_pos[0], selection_start_pos[1], 0, 0)
+                        
+                        # --- MODIFIED: Fill selection and keep it active ---
                         elif sidebar.selected_tile and selection_rect and selection_rect.collidepoint(map_x, map_y):
                             tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
-                            for row in range(selection_rect.height):
-                                for col in range(selection_rect.width):
-                                    game_map.set_tile(selection_rect.x + col, selection_rect.y + row, tile_to_place, game_map.active_layer_name)
-                                    modified_maps.add(current_base_map_name)
-                            selection_rect = None # Clear selection after filling
+                            
+                            # Use new fill_rect method for efficiency and single undo
+                            game_map.fill_rect(selection_rect, tile_to_place, game_map.active_layer_name)
+                            modified_maps.add(current_base_map_name)
+                            
+                            # Per request, selection_rect is NOT cleared to allow fill
+                            # selection_rect = None # <-- This line was removed
+                        
+                        # --- MODIFIED: Placing a single tile now deselects the rect ---
                         elif sidebar.selected_tile:
                             if 0 <= map_x < game_map.width and 0 <= map_y < game_map.height:
                                 tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
                                 game_map.set_tile(map_x, map_y, tile_to_place, game_map.active_layer_name)
                                 modified_maps.add(current_base_map_name)
+                            selection_rect = None # <-- This line was ADDED
 
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:

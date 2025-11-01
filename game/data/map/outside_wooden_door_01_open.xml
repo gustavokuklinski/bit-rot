@@ -1,0 +1,5 @@
+<map name="outside_wooden_door_01_open" type="maptile" char="outside_wooden_door_01_open" state="open" is_obstacle="false">
+    <visuals>
+        <sprite id="open" file="outside_wooden_door_01_open.png" />
+    </visuals>
+</map>
