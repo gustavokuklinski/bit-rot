@@ -7,16 +7,31 @@ from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_m
 
 def handle_movement(game):
     keys = pygame.key.get_pressed()
-    current_speed = PLAYER_SPEED
+    #current_speed = PLAYER_SPEED
+    current_speed = 0
 
-    is_walking = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
-    game.player.is_walking = is_walking
+    #is_walking = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+    #game.player.is_walking = is_walking
 
-    if is_walking:
-        current_speed = PLAYER_SPEED / 2
+    #if is_walking:
+    #    current_speed = PLAYER_SPEED / 2
+
+    #if game.player.stamina <= 0:
+    #    current_speed = PLAYER_SPEED / 3
+
+    is_running = (keys[pygame.K_LALT] or keys[pygame.K_RALT])
+    game.player.is_running = is_running
 
     if game.player.stamina <= 0:
+        # Exhausted speed
         current_speed = PLAYER_SPEED / 3
+    elif is_running:
+        # Running speed
+        current_speed = PLAYER_SPEED
+    else:
+        # Normal walk speed
+        current_speed = PLAYER_SPEED / 2
+        
 
     dx, dy = 0, 0
     if keys[pygame.K_w] or keys[pygame.K_UP]:

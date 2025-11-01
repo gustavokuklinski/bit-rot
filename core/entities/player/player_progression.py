@@ -49,7 +49,7 @@ class PlayerProgression:
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)
         if is_moving and player.stamina > 0:
-            consumption = self.get_stamina_consumption(player.is_walking)
+            consumption = self.get_stamina_consumption(player.is_running)
             player.stamina = max(0, player.stamina - consumption)
         elif not is_moving and player.stamina < stamina_cap:
             regeneration = self.get_stamina_regeneration()
@@ -90,8 +90,15 @@ class PlayerProgression:
         else:
             return 2.0
 
-    def get_stamina_consumption(self, is_walking):
-        base_consumption = 0.05 if is_walking else 0.08
+    #def get_stamina_consumption(self, is_walking):
+    #    base_consumption = 0.05 if is_walking else 0.08
+    #    modifier = 1 - (self.speed * 0.05)
+    #    return base_consumption * modifier
+    
+    def get_stamina_consumption(self, is_running):
+        # Renamed 'is_walking' to 'is_running'
+        # Now returns 0.0 if not running, and 0.08 if running
+        base_consumption = 0.08 if is_running else 0.0
         modifier = 1 - (self.speed * 0.05)
         return base_consumption * modifier
 

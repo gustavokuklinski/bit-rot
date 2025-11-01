@@ -97,21 +97,6 @@ class Player:
                 elif self.vy < 0:  # Moving up
                     self.rect.top = obstacle.bottom
                 self.y = self.rect.y
-        
-        # --- ADD THIS BLOCK BACK ---
-        # Clamp player to screen boundaries (for edge transitions)
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > GAME_WIDTH:
-            self.rect.right = GAME_WIDTH
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > GAME_HEIGHT:
-            self.rect.bottom = GAME_HEIGHT
-            
-        self.x = self.rect.x
-        self.y = self.rect.y
-        # --- END OF ADDED BLOCK ---
 
     def draw(self, surface, offset_x, offset_y):
         draw_rect = self.rect.move(offset_x, offset_y)
