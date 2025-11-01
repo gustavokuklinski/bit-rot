@@ -47,7 +47,7 @@ def draw_game(game):
             radius_view_pixels = int(radius_world_pixels / zoom) # or Zoom
             
             if radius_view_pixels > 0:
-                player_vision_tex = pygame.transform.scale(light_texture, (radius_view_pixels * PLAYER_FOW_RADIUS, radius_view_pixels * PLAYER_FOW_RADIUS))
+                player_vision_tex = pygame.transform.smoothscale(light_texture, (radius_view_pixels * PLAYER_FOW_RADIUS, radius_view_pixels * PLAYER_FOW_RADIUS))
                 ambient_color = (ambient, ambient, ambient)
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
                 light_rect = player_vision_tex.get_rect()

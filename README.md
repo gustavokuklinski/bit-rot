@@ -17,6 +17,7 @@ $ python editor.py # Edit game maps
 **Basic controls**:
 - **W/A/S/D or arrows**: Walk
 - **SHIFT + R-Click**: Shoot/Attack
+- **ALT + W/A/S/D**: Run
 - **R-Click + Drag**: Place on Belt/Backpack or Drop
 - **L-Click**: Opens menu 
 - **1/2/3/4/5**: Equip/Use item from Belt
