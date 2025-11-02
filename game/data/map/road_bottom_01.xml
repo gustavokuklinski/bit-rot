@@ -1,0 +1,5 @@
+<map name="road_bottom_01" type="maptile" char="road_bottom_01" is_obstacle="false">
+    <visuals>
+        <sprite id="close" file="road_bottom_01.png" />
+    </visuals>
+</map>

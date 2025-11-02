@@ -17,7 +17,6 @@ def draw_game(game):
     game.virtual_screen.fill(PANEL_COLOR)
 
     # --- World Rendering with Pixelated Zoom ---
-
     # 1. Create a temporary surface for the world view.
     zoom = game.zoom_level
     view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
@@ -29,7 +28,6 @@ def draw_game(game):
     offset_x = view_w / 2 - game.player.rect.centerx
     offset_y = view_h / 2 - game.player.rect.centery
 
-    # --- NEW: Create Light Mask ---
     light_mask = pygame.Surface((view_w, view_h))
     
     # Fill the mask with pitch black.
@@ -102,27 +100,13 @@ def draw_game(game):
                 light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception as e:
                 print(f"Error drawing light: {e}")
-    # --- END LIGHT MASK ---
+
 
 
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     
     # Draw Map Tiles (These are NOT distance-checked, they are lit by the mask)
     for image, rect in game.renderable_tiles:
-        #dist = math.hypot(rect.centerx - game.player.rect.centerx, rect.centery - game.player.rect.centery)
-        #if dist > game.player_view_radius: # Use game.player_view_radius
-        #    continue
-        #draw_pos = rect.move(offset_x, offset_y)
-        # Calculate opacity
-        #opacity = max(0, 255 * (1 - dist / game.player_view_radius)) # Use game.player_view_radius
-        # Create a copy of the image to modify its alpha value
-        #temp_image = image.copy()
-        # Ensure image has an alpha channel (it should from tile_manager, but safe to check)
-        #if temp_image.get_alpha() is None:
-        #     temp_image = temp_image.convert_alpha()
-        # Apply the opacity fade
-        #temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-        #world_view_surface.blit(temp_image, draw_pos)
 
         world_view_surface.blit(image, rect.move(offset_x, offset_y))
         
@@ -150,7 +134,7 @@ def draw_game(game):
     for p in game.projectiles:
         p.draw(world_view_surface, offset_x, offset_y)
 
-    # --- MODIFIED BLOCK: This is the fix ---
+
     for zombie in game.zombies:
         # Check distance from player
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)

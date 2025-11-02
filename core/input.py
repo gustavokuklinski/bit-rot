@@ -7,17 +7,7 @@ from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_m
 
 def handle_movement(game):
     keys = pygame.key.get_pressed()
-    #current_speed = PLAYER_SPEED
     current_speed = 0
-
-    #is_walking = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
-    #game.player.is_walking = is_walking
-
-    #if is_walking:
-    #    current_speed = PLAYER_SPEED / 2
-
-    #if game.player.stamina <= 0:
-    #    current_speed = PLAYER_SPEED / 3
 
     is_running = (keys[pygame.K_LALT] or keys[pygame.K_RALT])
     game.player.is_running = is_running
@@ -31,7 +21,7 @@ def handle_movement(game):
     else:
         # Normal walk speed
         current_speed = PLAYER_SPEED / 2
-        
+
 
     dx, dy = 0, 0
     if keys[pygame.K_w] or keys[pygame.K_UP]:
@@ -53,9 +43,8 @@ def handle_movement(game):
     elif dy < 0: 
         game.player.facing_direction = (0, -1)
 
-
+    # Normalize for diagonal movement
     if dx != 0 and dy != 0:
-        # Normalize for diagonal movement
         dx /= math.sqrt(2)
         dy /= math.sqrt(2)
 
@@ -99,7 +88,6 @@ def handle_input(game):
                             # Clamp the new offset
                             modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
                             break # Found the modal, stop checking others
-        # --- END MOUSE WHEEL HANDLING ---
 
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)

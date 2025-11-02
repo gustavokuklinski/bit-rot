@@ -54,10 +54,7 @@ class Tabs:
         current_x = self.base_modal.modal_x
         tab_height = 30 # Hardcoded tab height
 
-        # --- ADD PRINT BEFORE LOOP ---
         current_active_label = self.modal.get('active_tab', 'NONE SET')
-        # print(f"--- Tabs.draw(): Checking against active_tab = '{current_active_label}' ---") # DEBUG
-        # --- END ADDITION ---
 
         for i, tab in enumerate(self.tabs_data):
             # Calculate width for this specific tab
@@ -74,9 +71,6 @@ class Tabs:
             # Draw tab background - Check the logic here carefully
             is_active = (current_active_label == tab['label']) # Use the variable fetched before the loop
 
-            # --- ADD PRINT INSIDE LOOP ---
-            # print(f"  Drawing tab '{tab['label']}': is_active = {is_active}") # DEBUG
-            # --- END ADDITION ---
 
             if is_active: # Use the boolean variable
                 pygame.draw.rect(self.surface, GRAY_60, tab_rect) # Active color

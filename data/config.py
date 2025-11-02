@@ -85,7 +85,7 @@ PLAYER_FOW_RADIUS = int(player_config.find('fow_radius').get('value'))
 
 DAY_NIGHT_CYCLE_MS = 60000 # 1 minute
 TRANSITION_DURATION_MS = 60000 # 1 for the fade
-MAX_DARKNESS_OPACITY = 250 # How dark it gets at night (0-255)
+MAX_DARKNESS_OPACITY = 255 # How dark it gets at night (0-255)
 
 # Zombie settings
 zombie_config = root.find('zombie')

@@ -16,7 +16,7 @@ class Player:
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.vx = 0
         self.vy = 0
-        self.is_walking = False
+        self.is_running = False
         self.color = BLUE
 
         data = player_data or {}
@@ -144,17 +144,13 @@ class Player:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
                 self.health = max(0, self.health)
 
-            # --- AUTO-DRINK LOGIC ---
             if AUTO_DRINK and self.water <= AUTO_DRINK_THRESHOLD:
                 print(f"Water level {self.water} <= threshold {AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
                     print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
                     self.consume_item(water_item, source, index, container)
-            # --- END AUTO-DRINK ---
         
-        # --- ADDED: Utility Item Durability/Fuel Consumption ---
-        # Check all inventories for 'on' items
         all_inventories = [self.belt, self.inventory]
         if self.backpack:
             all_inventories.append(self.backpack.inventory)
@@ -172,7 +168,6 @@ class Player:
                             item.durability = 0
                             # Item is out of fuel/broken, turn it off
                             self.toggle_utility_item(item, None, None, None) # Pass None source to just toggle
-        # --- END ADDITION ---
 
         if self.is_reloading:
             self.reload_timer -= 1
@@ -189,10 +184,8 @@ class Player:
         if self.drop_cooldown > 0:
             self.drop_cooldown -= 1
         
-        # --- ADD THIS ---
         if self.layer_switch_cooldown > 0:
             self.layer_switch_cooldown -= 1
-        # --- END ADD ---
 
         return False
 
@@ -242,8 +235,6 @@ class Player:
                 return item, source_type, index
         return None, None, None
 
-
-    # --- ADDED ---
     def find_fuel(self, fuel_name):
         """Searches all inventories for a fuel item (like 'Matches')."""
         if not fuel_name:
@@ -272,7 +263,6 @@ class Player:
                     return item, 'container', i, self.invcontainer
 
         return None, None, None, None
-    # --- END ADDITION ---
 
 
     def reload_active_weapon(self):
@@ -357,7 +347,6 @@ class Player:
             if item.load > 1:
                 options.append('Drop all')
             
-            # --- Transfer Options ---
             # 1. Check if item is NOT in Backpack, and we have one
             if self.backpack and container_item is not self.backpack:
                 options.append('Send all to Backpack')

@@ -72,11 +72,9 @@ class Zombie:
         self.melee_swing_timer = 0
         self.melee_swing_angle = 0
 
-        # --- NEW AI STATE VARIABLES ---
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
         self.wander_target = None # (x, y) coordinate
         self.last_wander_change = 0 # Timestamp for changing wander direction
-        # --- END NEW AI VARIABLES ---
 
     def load_sprite(self, sprite_file):
         if not sprite_file: return None

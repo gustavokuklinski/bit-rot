@@ -31,7 +31,7 @@ def update_game_state(game):
     if game.player.update_stats():
         game.game_state = 'GAME_OVER'
 
-    # --- Projectile update logic (unchanged) ---
+    # --- Projectile update logic
     projectiles_to_remove = []
     zombies_to_remove = []
     for p in game.projectiles:
@@ -51,7 +51,7 @@ def update_game_state(game):
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
-    # --- CORRECTED ZOMBIE AI LOOP ---
+
     zombies_alive = game.zombies[:]
     for zombie in zombies_alive:
 
@@ -66,9 +66,8 @@ def update_game_state(game):
             if current_time - zombie.last_attack_time > 500: # 500ms cooldown
                 zombie.attack(game.player)
                 zombie.last_attack_time = current_time
-    # --- END OF CORRECTION ---
 
-    # --- Corpse decay logic (unchanged) ---
+
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):
         if isinstance(ground_item, Corpse): # Check specifically for Corpse objects
@@ -86,12 +85,11 @@ def update_game_state(game):
         if modal['type'] == 'container':
             container_item = modal['item']
             
-            # --- REVISED FIX ---
+
             # Only run the distance check if the container_item is an item
             # that is physically on the ground (like a corpse).
             # Worn backpacks or backpacks opened from inventory should not be checked.
             if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
-            # --- END REVISED FIX ---
                 distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)

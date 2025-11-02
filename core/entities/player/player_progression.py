@@ -74,7 +74,6 @@ class PlayerProgression:
         return False
 
     # --- HELPER FUNCTIONS ---
-
     def get_melee_damage_multiplier(self):
         return 1 + (self.melee['level'] * 0.1)
 

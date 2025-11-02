@@ -103,16 +103,45 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
         if y >= map_height: break
         for x, char in enumerate(row):
             if x >= map_width: break
-            if char == 'P':
-                if player_spawn:
-                     print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
-                player_spawn = (x * TILE_SIZE, y * TILE_SIZE)
-            elif char == 'Z':
-                zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-            elif char == 'I':
-                item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-            elif char != ' ':
-                possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+            if char and char != ' ': # Ignore empty cells
+                
+                # --- START CHANGE ---
+                # Check for spawn markers FIRST
+                if char == 'P':
+                    if player_spawn:
+                         print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
+                    player_spawn = (x * TILE_SIZE, y * TILE_SIZE)
+                elif char == 'Z':
+                    zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                elif char == 'I':
+                    item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                else:
+                    # If not a standard spawn marker, it might be a player spawn point
+                    possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+
+                # NOW, also check if the character is a renderable tile
+                if char in tile_manager.definitions:
+                    pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+                    rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
+                    tile_def = tile_manager.definitions[char]
+                    
+                    renderable_tiles.append((tile_def['image'], rect)) # Add visuals
+                    
+                    if tile_def['is_obstacle']:
+                        obstacles.append(rect) # Add collision rect
+                        
+                    if tile_def['type'] == 'maptile_container':
+                        items = []
+                        if 'loot' in tile_def:
+                            for loot_item in tile_def['loot']:
+                                if random.random() < loot_item['chance']:
+                                    items.append(Item.create_from_name(loot_item['item']))
+                        capacity = tile_def.get('capacity', 0)
+                        container = Container(name=tile_def['type'], items=items, capacity=capacity)
+                        container.rect = rect
+                        container.image = tile_def['image']
+                        containers.append(container)
+                # --- END CHANGE ---
 
     if not player_spawn:
         print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at a random available spawn point.")

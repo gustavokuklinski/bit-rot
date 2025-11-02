@@ -1,7 +1,7 @@
 <config>
     <!-- Player Config -->
     <player>
-        <speed value="1.5" />
+        <speed value="2" />
         <food_water_decay_seconds value="5.0" />
         <food_water_multiplier_decay value="1.5" />
         <food_decay value="0.2" />
@@ -29,13 +29,13 @@
 
     <!-- Zombies Config -->
     <zombie>
-        <speed value="1" />
-        <drop value="1" />
-        <detection value="20" />
-        <wander value="true" />
-        <wander_interval value="2000" />
-        <sight_check value="true" />
-        <spawn value="0" />
-        <respawn_timer value="12000" />
+        <speed value="1" /> <!-- Zombie Speed -->
+        <drop value="1" />  <!-- Zombie Drop -->
+        <detection value="20" /> <!-- Zombie detect player radius -->
+        <wander value="true" /> <!-- Zombie wander true = wander, false = follow the player -->
+        <wander_interval value="2000" /> <!-- wandering interval in MS -->
+        <sight_check value="true" />  <!-- Zombie spot the player and go to -->
+        <spawn value="3" /> <!-- How many zombies per spawn -->
+        <respawn_timer value="30000" /> <!-- Time to Reaspawn Zombie in MS-->
     </zombie>
 </config>

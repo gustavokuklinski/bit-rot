@@ -3,7 +3,8 @@ import re
 
 from editor.assets import load_editor_icons
 from editor.config import ICON_SIZE
-
+YELLOW = (255, 255, 0)
+LIGHT_BLUE = (180, 180, 220)
 class FileTree:
     def __init__(self, x, y, width, height, available_maps, font):
         self.x = x
@@ -63,16 +64,31 @@ class FileTree:
             
             if map_name == self.selected_map:
                 pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 10, self.line_height - 2))
-
+                
             surface.blit(text_surface, (self.x + 10, display_y))
             display_y += self.line_height
 
             # Draw layers if expanded
             if self.expanded_maps.get(map_name):
-                for layer_file in sorted(self.grouped_maps[map_name]):
-                    layer_name = layer_file.replace(map_name, "").replace(".csv", "")[1:]
+                layer_order = ['map', 'spawn', 'ground']
+                
+                layer_file_lookup = {}
+                for lf in self.grouped_maps[map_name]:
+                    # Extract layer name (e.g., "map", "spawn", "ground")
+                    ln = lf.replace(map_name, "").replace(".csv", "")[1:]
+                    layer_file_lookup[ln] = lf
+
+                for layer_name in layer_order:
+                    layer_file = layer_file_lookup.get(layer_name)
+                    if not layer_file: # Skip if this map doesn't have this layer
+                        continue
+
                     prop = self.layer_properties[layer_file]
                     
+                    # --- NEW: Highlight active layer ---
+                    if layer_name == active_layer_name and map_name == current_map_name:
+                        pygame.draw.rect(surface, LIGHT_BLUE, (self.x + 10, display_y, self.width - 20, self.line_height - 2))
+
                     # Layer name
                     layer_text = f"    {layer_name}"
                     layer_surf = self.font.render(layer_text, True, (50, 50, 50))
@@ -90,7 +106,7 @@ class FileTree:
                     surface.blit(op_surf, (op_rect.x + 5, op_rect.y + 2))
 
                     display_y += self.line_height
-
+                    
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click
@@ -114,7 +130,19 @@ class FileTree:
 
                         # Check click on layers if expanded
                         if self.expanded_maps.get(map_name):
-                            for layer_file in sorted(self.grouped_maps[map_name]):
+                            # --- MODIFIED: Iterate in fixed order to match draw() ---
+                            layer_order = ['map', 'spawn', 'ground']
+                
+                            layer_file_lookup = {}
+                            for lf in self.grouped_maps[map_name]:
+                                ln = lf.replace(map_name, "").replace(".csv", "")[1:]
+                                layer_file_lookup[ln] = lf
+
+                            for layer_name in layer_order:
+                                layer_file = layer_file_lookup.get(layer_name)
+                                if not layer_file:
+                                    continue
+                                
                                 layer_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
                                 if layer_rect.collidepoint(mouse_x, mouse_y):
                                     # Check view/hide click
@@ -131,7 +159,7 @@ class FileTree:
                                         self.layer_properties[layer_file]["opacity"] = 0 if current_op == 255 else 255
                                         return {"action": "set_opacity", "layer": layer_file, "properties": self.layer_properties[layer_file]}
                                     else:
-                                        layer_name = layer_file.replace(map_name, "").replace(".csv", "")[1:]
+                                        # Clicked on layer name
                                         return {"action": "set_active_layer", "layer_name": layer_name}
 
                                 current_y += self.line_height

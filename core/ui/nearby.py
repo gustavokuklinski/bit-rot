@@ -69,11 +69,9 @@ def draw_nearby_modal(surface, game, modal, assets):
 
     modal['tabs_data'] = tabs_data # Store the generated tabs_data
 
-    # --- VALIDATE active_tab ---
     # Ensure active_tab is valid, default to first if not set or invalid
     if modal.get('active_tab') not in current_tab_labels:
         modal['active_tab'] = tabs_data[0]['label'] if tabs_data else None
-    # --- END VALIDATION ---
 
     # DEBUG 9: Show active tab at the START of drawing
     # print(f"--- Drawing Nearby Modal (Start): Active Tab is '{modal.get('active_tab')}' ---") # DEBUG
@@ -87,7 +85,6 @@ def draw_nearby_modal(surface, game, modal, assets):
         # Find the active tab data using the *potentially modified* label
         active_tab_data = next((tab for tab in tabs_data if tab['label'] == active_tab_label_to_draw), None)
 
-    # --- DEFINE CONTENT RECT ---
     # Calculate the area below the header and tab bar for container content
     content_rect = pygame.Rect(
         modal['position'][0], # Modal X
@@ -96,7 +93,6 @@ def draw_nearby_modal(surface, game, modal, assets):
         modal['rect'].height - base_modal.header_h # Remaining Height
     )
     modal['content_rect'] = content_rect # Store for find_item_at_pos and potentially drawing bg
-    # --- END DEFINE ---
 
 
     if active_tab_data:

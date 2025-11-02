@@ -128,14 +128,14 @@ class Game:
 
         self.map_manager.current_map_filename = map_filename
 
-        # --- NEW: Load all layers from world_layers.py ---
+
         self.all_map_layers, self.all_ground_layers, self.all_spawn_layers = \
             load_all_map_layers(map_filename)
 
         if 1 not in self.all_map_layers:
             raise FileNotFoundError(f"Base map file {map_filename} (Layer 1) could not be loaded.")
 
-        # --- NEW: Set Layer 1 as the active one to start ---
+
         set_active_layer(self, 1)
 
         # --- Find Player Spawn ('P') *only on Layer 1* ---
@@ -334,7 +334,6 @@ class Game:
 
         return (scaled_x, scaled_y)
 
-    # --- ADDED METHOD ---
     def get_player_facing_tile(self):
         if not self.player:
             return None, None
@@ -351,7 +350,6 @@ class Game:
         target_grid_y = player_grid_y + facing_y
         
         return target_grid_x, target_grid_y
-    # --- END ADDITION ---
 
 
     def find_nearby_containers(self):

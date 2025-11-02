@@ -1,0 +1,9 @@
+<map name="crate" type="maptile_container" char="crate" is_obstacle="true">
+    <visuals>
+        <sprite file="crate.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <cloth item="Black Tshirt" chance="0.2" />
+    </loot>
+</map>

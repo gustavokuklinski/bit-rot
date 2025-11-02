@@ -34,7 +34,6 @@ def load_assets():
     except pygame.error as e:
         print(f"Error loading light texture: {e}")
         assets['light_texture'] = None
-    # --- END ADDITION ---
 
     assets['font'] = font
 
