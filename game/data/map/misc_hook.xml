@@ -1,0 +1,5 @@
+<map name="misc_hook" type="maptile" char="misc_hook" is_obstacle="true">
+    <visuals>
+        <sprite file="misc_hook.png" />
+    </visuals>
+</map>

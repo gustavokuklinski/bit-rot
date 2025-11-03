@@ -1,0 +1,5 @@
+<map name="factory_industrial_part_left_02" type="maptile" char="factory_industrial_part_left_02" is_obstacle="true">
+    <visuals>
+        <sprite file="factory_industrial_part_left_02.png" />
+    </visuals>
+</map>

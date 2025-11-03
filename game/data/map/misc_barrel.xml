@@ -1,0 +1,5 @@
+<map name="misc_barrel" type="maptile" char="misc_barrel" is_obstacle="true">
+    <visuals>
+        <sprite file="misc_barrel.png" />
+    </visuals>
+</map>

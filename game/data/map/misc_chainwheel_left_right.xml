@@ -1,0 +1,5 @@
+<map name="misc_chainwheel_left_right" type="maptile" char="misc_chainwheel_left_right" is_obstacle="true">
+    <visuals>
+        <sprite file="misc_chainwheel_left_right.png" />
+    </visuals>
+</map>

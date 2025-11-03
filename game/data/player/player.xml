@@ -9,7 +9,7 @@
         <strong value="false" /> <!-- IF TRUE: +2 strength; -->
         <weak value="false" /> <!-- IF TRUE: -2 strength; -->
         <luck value="false" /> <!-- IF TRUE: +1 lucky +15% bonus; -->
-        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -15% bonus; -->
+        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -15% lucky bonus; -->
         <runner value="false" /> <!-- IF TRUE: +1 speed; -->
         <smoker value="false" /> <!-- IF TRUE: -15% stamina; +15% anxiety -->
         <drunk value="false" /> <!-- IF TRUE: -15% speed; +15% anxiety -->
@@ -24,6 +24,7 @@
         <water value="100.0" />
         <food value="100.0" />
         <anxiety value="0.0" />
+        <tireness value="0.0" />
         <infection value="0.0" />
     </stats>
 
