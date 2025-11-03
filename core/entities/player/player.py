@@ -33,6 +33,8 @@ class Player:
         self.infection = stats.get('infection', 0.0)
         self.max_stamina = stats.get('stamina', 100.0)
         self.stamina = stats.get('stamina', self.max_stamina)
+        self.anxiety = stats.get('anxiety', 0.0)
+        self.tireness = stats.get('tireness', 0.0)
 
         self.inventory = []
         self.backpack = None
@@ -61,7 +63,7 @@ class Player:
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
-            image = pygame.image.load(sprite_path).convert_alpha()
+            image = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
         except pygame.error as e:
@@ -130,11 +132,12 @@ class Player:
             bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
             pygame.draw.rect(surface, YELLOW, bar_rect)
 
-    def update_stats(self):
+    def update_stats(self, game):
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
-        self.progression.update(self, is_moving)
+
+        self.progression.update(self, is_moving, game)
 
         if current_time - self.last_decay_time >= DECAY_RATE_SECONDS:
             self.water = max(0, self.water - WATER_DECAY_AMOUNT)

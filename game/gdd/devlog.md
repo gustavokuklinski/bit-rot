@@ -35,11 +35,11 @@
 
 ### Items
 - [x] Add utility consumable item: Lantern consume matches
+- [] Bed to sleep
 
 ### Player
-- [] Add more prefessions
-- [] Add more traits
-- [] Create a character builder (traits and char sprite)
+- [x] Add more traits (tireness, anxiety)
+- [x] Create a character builder (traits and char sprite)
 - [] Generate Player ID
 - [] Player balance action
 

@@ -28,7 +28,7 @@ def update_game_state(game):
 
     check_zombie_respawn(game)
     
-    if game.player.update_stats():
+    if game.player.update_stats(game):
         game.game_state = 'GAME_OVER'
 
     # --- Projectile update logic
@@ -106,11 +106,12 @@ def player_hit_zombie(player, zombie):
     if active_weapon:
         base_damage = active_weapon.damage
         if 'Gun' in active_weapon.name: # Ranged
+            damage_multiplier = progression.get_ranged_damage_multiplier(player)
             if random.random() < progression.get_headshot_chance():
                 is_headshot = True
-                damage_multiplier = 2.0
+                damage_multiplier *= 2.0 # Headshot bonus stacks
         else: # Melee
-            damage_multiplier = progression.get_melee_damage_multiplier()
+            damage_multiplier = progression.get_melee_damage_multiplier(player)
             durability_loss = progression.get_weapon_durability_loss()
             if active_weapon.durability is not None and active_weapon.durability > 0:
                 active_weapon.durability -= durability_loss
@@ -118,7 +119,7 @@ def player_hit_zombie(player, zombie):
                     print(f"{active_weapon.name} broke!")
                     player.destroy_broken_weapon(active_weapon)
     else: # Unarmed
-        base_damage = progression.get_unarmed_damage()
+        base_damage = progression.get_unarmed_damage(player)
 
     final_damage = base_damage * damage_multiplier
 

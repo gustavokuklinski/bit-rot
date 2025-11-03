@@ -21,7 +21,9 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "WTR": SPRITE_PATH + "ui/water.png",
         "FOD": SPRITE_PATH + "ui/food.png",
         "INF": SPRITE_PATH + "ui/infection.png",
-        "XP": SPRITE_PATH + "ui/xp.png"
+        "XP": SPRITE_PATH + "ui/xp.png",
+        "ANX": SPRITE_PATH + "ui/axiety.png",
+        "TIR": SPRITE_PATH + "ui/tireness.png"
     }
     for k, path in icon_files.items():
         try:
@@ -35,7 +37,9 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("STM", player.stamina, player.max_stamina, GRAY),
         ("WTR", player.water, 100, BLUE),
         ("FOD", player.food, 100, GREEN),
-        ("INF", player.infection, 100, YELLOW)
+        ("INF", player.infection, 100, YELLOW),
+        ("ANX", player.anxiety, 100, (150, 0, 150)),
+        ("TIR", player.tireness, 100, (100, 100, 150))
     ]
     for i, (name, value, max_value, color) in enumerate(stats):
         y_pos = y_offset + i * 28
@@ -56,6 +60,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         bar_rect = pygame.Rect(bar_x + 60, y_pos + 5, bar_width, 10)
         pygame.draw.rect(surface, color, bar_rect)
         pygame.draw.rect(surface, WHITE, (bar_x + 60, y_pos + 5, 100, 10), 1)
+
+    y_pos = y_offset + len(stats) * 28
 
     try:
         if '_kills_img' not in globals() or _kills_img is None:

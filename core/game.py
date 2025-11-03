@@ -17,7 +17,6 @@ from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from data.player_xml_parser import parse_player_data
-from data.professions_xml_parser import get_profession_by_name
 from core.ui.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
@@ -106,7 +105,9 @@ class Game:
         self.all_map_layers = {} # Will store {1: data, 2: data, ...}
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
-
+        
+        self.player_setup_state = {}
+        
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.world_time = WorldTime(self)
 
@@ -156,20 +157,18 @@ class Game:
 
         return player_spawn_pos
 
-    def start_new_game(self, profession_name):
-        player_data = parse_player_data()
-        profession_data = get_profession_by_name(profession_name)
-        if profession_data:
-            player_data['attributes'] = profession_data['attributes']
-            player_data['initial_loot'] = profession_data['initial_loot']
-            player_data['visuals'] = profession_data['visuals']
+    def start_new_game(self, player_data):
         
-        player_data['name'] = self.player_name
-        player_data['profession'] = profession_name
-
+        # The player_data dict is now fully constructed by the setup screen.
+        self.player_name = player_data.get('name', "Player") # Ensure game obj has name
+        
         self.player = Player(player_data=player_data)
         self.zoom_level = START_ZOOM
-        self.player.inventory = [Item.create_from_name(name) for name in player_data['initial_loot'] if Item.create_from_name(name)]
+        
+        # The setup screen should have put initial_loot in the dict.
+        initial_loot = player_data.get('initial_loot', [])
+        self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
+        
         self.zombies_killed = 0
         self.modals = []
         self.map_states = {}

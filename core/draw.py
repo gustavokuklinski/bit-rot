@@ -170,8 +170,6 @@ def draw_game(game):
     game.virtual_screen.blit(scaled_world, game_rect)
 
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
-    # (Rest of file is unchanged)
-    # ...
     # Gun flash effect
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
