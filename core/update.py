@@ -64,7 +64,7 @@ def update_game_state(game):
         if distance_to_player < zombie.attack_range:
             current_time = pygame.time.get_ticks()
             if current_time - zombie.last_attack_time > 500: # 500ms cooldown
-                zombie.attack(game.player)
+                zombie.attack(game.player, game)
                 zombie.last_attack_time = current_time
 
 

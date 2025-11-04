@@ -1,6 +1,7 @@
 <cloth name="Leather Black Pants" type="cloth" id="legs">
     <properties>
-        <defence value="50" />
+        <defence value="3" />
+        <durability min="1" max="100" />
         <sprite file="leather_black_pants.png" />
     </properties>
     <spawn chance="1" />

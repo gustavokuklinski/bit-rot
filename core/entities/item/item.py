@@ -71,7 +71,11 @@ class Item:
                     multiplier *= WEAPON_DURABILITY_MULTIPLIER
                 elif template['type'] == 'tool':
                     multiplier *= TOOL_DURABILITY_MULTIPLIER
+                elif template['type'] == 'cloth':
+                    multiplier *= DURABILITY_MULTIPLIER
+                
                 return max_dur * multiplier
+                
         return self.durability or 100 # Fallback
         
     @property
@@ -269,15 +273,29 @@ class Item:
         template = ITEM_TEMPLATES[item_name]
 
         # if template['type'] == 'weapon':
-        if template['type'] == 'weapon' or template['type'] == 'utility':
+        if template['type'] in ['weapon', 'utility', 'cloth']:
             randomize_durability = True
             
         props = template['properties']
-        durability = None
-        if 'durability' in props and 'max' in props['durability']:
-            min_dur = float(props['durability']['min'])
-            max_dur = float(props['durability']['max'])
 
+        durability = None
+        min_dur = 0.0
+        max_dur = 0.0
+        needs_durability = False
+
+        if 'durability' in props and 'max' in props['durability']:
+            # Item has durability defined in its XML (weapons, tools)
+            min_dur = float(props['durability'].get('min', 0))
+            max_dur = float(props['durability']['max'])
+            needs_durability = True
+        elif template['type'] == 'cloth':
+            # Item is cloth, give it default durability even if not in XML
+            min_dur = 50.0 # Default min
+            max_dur = 100.0 # Default max
+            needs_durability = True
+        
+        if needs_durability:
+            # Apply multipliers
             multiplier = DURABILITY_MULTIPLIER
             if template['type'] == 'weapon':
                 multiplier *= WEAPON_DURABILITY_MULTIPLIER
@@ -287,10 +305,9 @@ class Item:
             min_dur *= multiplier
             max_dur *= multiplier
 
-            if randomize_durability:
-                durability = random.uniform(min_dur, max_dur)
-            else:
-                durability = max_dur
+            # Always randomize durability for items that have it
+            durability = random.uniform(min_dur, max_dur)
+            
         load = None
         if 'load' in props:
             if 'min' in props['load']:

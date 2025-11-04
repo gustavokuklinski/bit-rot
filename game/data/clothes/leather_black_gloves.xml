@@ -1,6 +1,7 @@
 <cloth name="Leather Black Gloves" type="cloth" id="hand">
     <properties>
-        <defence value="10" />
+        <defence value="1" />
+        <durability min="1" max="100" />
         <sprite file="leather_black_gloves.png" />
     </properties>
     <spawn chance="1" />

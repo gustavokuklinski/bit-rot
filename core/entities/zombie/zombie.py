@@ -250,20 +250,36 @@ class Zombie:
         # Update final position based on potential collision adjustments
         self.rect.topleft = (int(self.x), int(self.y))
 
-    def attack(self, player):
+    def attack(self, player, game):
         self.melee_swing_timer = 10
         dx = player.rect.centerx - self.rect.centerx
         dy = player.rect.centery - self.rect.centery
         self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
         infection = random.randint(self.min_infection, self.max_infection)
+        player.take_durability_damage(damage, game)
+
+        total_defence = player.get_total_defence() # Get defence from player
+        
+        final_damage = damage
+        final_infection = infection
+
+        if total_defence > 0:
+            # Defence reduces damage by its percentage
+            damage_reduction = 1.0 - (total_defence / 100.0)
+            # Defence reduces infection by half its percentage
+            infection_reduction = 1.0 - ((total_defence / 2.0) / 100.0) 
+
+            final_damage = max(0, damage * damage_reduction) # Ensure damage doesn't go negative
+            final_infection = max(0, infection * infection_reduction) # Ensure infection doesn't go negative
+
         player.health -= damage
         player.health = max(0, player.health)
         if infection > 0:
             player.infection = min(100, player.infection + infection)
-            print(f"**HIT!** Player takes {damage} damage and {infection}% infection.")
+            display_message(game, f"**HIT!** Player takes {damage} damage and {infection}% infection.")
         else:
-            print(f"**HIT!** Player takes {damage} damage.")
+            display_message(game, f"**HIT!** Player takes {damage} damage.")
 
 
     @staticmethod

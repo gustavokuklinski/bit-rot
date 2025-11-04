@@ -10,6 +10,8 @@ def draw_tooltip(surface, item, pos):
         lines.append(f"Type: {item.item_type}")
     if item.durability is not None:
         lines.append(f"Durability: {item.durability:.0f}")
+    if item.defence is not None and item.defence > 0:
+        lines.append(f"Defence: {item.defence:.0f}")
     if item.load is not None and item.capacity is not None:
         lines.append(f"Load: {item.load:.0f}/{item.capacity:.0f}")
     elif item.load is not None:

@@ -1,6 +1,7 @@
 <cloth name="Empty Legs" type="cloth" id="legs">
     <properties>
         <defence value="0" />
+        <durability min="1" max="100" />
         <sprite file="empty.png" />
     </properties>
     <spawn chance="0" />

@@ -8,6 +8,7 @@ from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.player.player_progression import PlayerProgression
 from core.ui.inventory import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
+from core.messages import display_message
 
 class Player:
     def __init__(self, player_data=None):
@@ -79,6 +80,50 @@ class Player:
         except pygame.error as e:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
+
+    def get_total_defence(self):
+        """Calculates the total defence value from all equipped clothes."""
+        total_defence = 0
+        for item in self.clothes.values():
+            if item and hasattr(item, 'defence') and item.defence is not None:
+                # Only add defence if the item is not broken
+                if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
+                    total_defence += item.defence
+                # Also count items that don't have durability
+                elif not hasattr(item, 'durability') or item.durability is None:
+                     total_defence += item.defence
+        return total_defence
+
+    def take_durability_damage(self, raw_damage, game):
+        """Applies durability damage to a random piece of equipped gear."""
+        # Find all clothes that have durability
+        worn_clothes = [item for item in self.clothes.values() if item and hasattr(item, 'durability') and item.durability is not None and item.durability > 0]
+        
+        if not worn_clothes:
+            return # No clothes to damage
+
+        # Pick one random piece to take the hit
+        item_hit = random.choice(worn_clothes)
+        
+        # Calculate durability damage (e.g., 25% of raw attack damage)
+        # This can be tuned for balance
+        dur_damage = raw_damage * 0.25 
+        
+        if dur_damage > 0:
+            item_hit.durability = max(0, item_hit.durability - dur_damage)
+
+            if item_hit.durability <= 0:
+                # Find the slot this item was in and remove it
+                slot_to_clear = None
+                for slot, item in self.clothes.items():
+                    if item == item_hit:
+                        slot_to_clear = slot
+                        break
+                
+                if slot_to_clear:
+                    self.clothes[slot_to_clear] = None
+                    display_message(game, f"Your {item_hit.name} broke!")
+
 
     def process_kill(self, weapon, zombie):
         self.progression.process_kill(self, weapon, zombie)
