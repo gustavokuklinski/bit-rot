@@ -1,7 +1,7 @@
-<clothe name="Pink Sneakers" type="cloth" id="feet">
+<cloth name="Pink Sneakers" type="cloth" id="feet">
     <properties>
         <defence value="0" />
         <speed value="0" />
         <sprite file="pink_sneakers.png" />
     </properties>
-</clothe>
+</cloth>

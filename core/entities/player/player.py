@@ -44,6 +44,16 @@ class Player:
         self.last_decay_time = time.time()
         self.base_inventory_slots = 5
 
+        self.clothes_slots = ['head', 'feet', 'hands', 'torso', 'body', 'legs']
+        self.clothes = {slot: None for slot in self.clothes_slots}
+        
+        # Load clothes from player_data
+        chosen_clothes_dict = data.get('clothes', {})
+        for slot, item_name in chosen_clothes_dict.items():
+            if item_name and item_name != "None" and slot in self.clothes_slots:
+                # Create the item instance for the chosen clothing
+                self.clothes[slot] = Item.create_from_name(item_name)
+
         # animation / action timers
         self.melee_swing_timer = 0
         self.gun_flash_timer = 0
@@ -107,6 +117,11 @@ class Player:
             surface.blit(self.image, draw_rect)
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
+
+        for slot in self.clothes_slots: # Draw in order
+            item = self.clothes.get(slot)
+            if item and item.image:
+                surface.blit(item.image, draw_rect)
 
         # Melee arc
         if self.melee_swing_timer > 0:

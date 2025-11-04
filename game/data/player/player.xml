@@ -46,10 +46,10 @@
 
     <clothes>
         <head></head>
+        <legs></legs>
         <feet></feet>
-        <hands></hands>
+        <hand></hand>
         <torso></torso>
         <body></body>
-        <legs></legs>
     </clothes>
 </player>

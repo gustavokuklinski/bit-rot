@@ -1,7 +1,7 @@
-<clothe name="Military Boots" type="cloth" id="feet">
+<cloth name="Military Boots" type="cloth" id="feet">
     <properties>
         <defence value="50" />
         <speed value="0.5" />
         <sprite file="military_boots.png" />
     </properties>
-</clothe>
+</cloth>
