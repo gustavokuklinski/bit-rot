@@ -1,9 +1,12 @@
 import pygame
 import xml.etree.ElementTree as ET
+import os
+import xml.dom.minidom
 from data.config import *
-# MODIFICATION: Import the parser from its correct location
 import data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
+from faker import Faker
+fake = Faker()
 
 TRAIT_DEFINITIONS = {
     "vaccine": {"cost": 1, "stats": {"infection": -15}}, # Example cost, adjust as needed
@@ -162,6 +165,7 @@ def _parse_player_xml_data(xml_string):
     return base_data, trait_names
 
 
+
 def _draw_dropdown(surface, state, slot_name, rect, mouse_pos):
     """Draws a single dropdown menu and its options if active."""
     clickable_rects = {
@@ -180,25 +184,88 @@ def _draw_dropdown(surface, state, slot_name, rect, mouse_pos):
     # Draw arrow
     pygame.draw.polygon(surface, WHITE, [(rect.right - 15, rect.y + 10), (rect.right - 5, rect.y + 10), (rect.right - 10, rect.y + 15)])
 
-    # 2. Draw the open list if this dropdown is active
+    # 2. Check if this dropdown is active
     if state.get('active_dropdown') == slot_name:
         options = state['available_clothes'].get(slot_name, [])
         if not options:
             return clickable_rects # No options to draw
             
         option_height = 25
-        list_height = len(options) * option_height
+        
+        # --- NEW: SCROLLING LOGIC ---
+        max_options_visible = 4 # Max items to show before scrolling
+        max_list_height = max_options_visible * option_height
+        
+        total_options_height = len(options) * option_height
+        
+        # Determine final list height (clamped)
+        list_height = min(max_list_height, total_options_height)
+        
+        # Get scroll state for this *specific* dropdown
+        scroll_state = state['gear_dropdown_scrolls'][slot_name]
+        max_scroll_offset = max(0, total_options_height - list_height)
+        scroll_state['max_scroll'] = max_scroll_offset
+        
+        # Clamp offset
+        scroll_offset_y = max(0, min(scroll_state['offset'], max_scroll_offset))
+        scroll_state['offset'] = scroll_offset_y
+        
+        # Define rects
         list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
+        # --- FIX: Content rect needs to be clipped by the *screen* edge ---
+        if list_rect.bottom > VIRTUAL_GAME_HEIGHT:
+            list_rect.height = VIRTUAL_GAME_HEIGHT - list_rect.top
         
-        # --- FIX 1: This draw call is now at the END of the main draw function ---
-        # We only return the rects here.
+        content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height) # Room for scrollbar
         
-        y_offset = list_rect.y
+        # --- FIX: Handle ValueError by clipping content_rect to surface ---
+        drawable_rect = surface.get_rect().clip(content_rect)
+        if drawable_rect.width <= 0 or drawable_rect.height <= 0:
+             return clickable_rects # Cannot draw subsurface
+             
+        # Create clipping subsurface
+        content_surface = surface.subsurface(drawable_rect)
+        content_surface.fill((30, 30, 30))
+        
+        # Draw options onto subsurface
+        y_offset = 0 - scroll_offset_y
         for option_name in options:
-            # --- FIX 2: Option rect width now matches list_rect width ---
-            option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
-            clickable_rects['options'].append((option_name, option_rect))
+            option_rect_rel = pygame.Rect(0, y_offset, content_rect.width, option_height)
+            
+            # Get screen-space rect for hover/click
+            option_rect_abs = pygame.Rect(content_rect.x, content_rect.y + y_offset, content_rect.width, option_height)
+            
+            # Draw highlight only if visible
+            if option_rect_abs.bottom > content_rect.top and option_rect_abs.top < content_rect.bottom:
+                if option_rect_abs.collidepoint(mouse_pos):
+                    pygame.draw.rect(content_surface, (70, 70, 70), option_rect_rel)
+                
+                text = font.render(option_name, True, WHITE)
+                content_surface.blit(text, (option_rect_rel.x + 5, option_rect_rel.y + 2))
+            
+            # Add the *absolute* screen rect for click detection
+            clickable_rects['options'].append((option_name, option_rect_abs))
             y_offset += option_height
+
+        # Draw Scrollbar
+        if total_options_height > list_height:
+            scrollbar_area_rect = pygame.Rect(content_rect.right, list_rect.top, 10, list_rect.height)
+            
+            handle_height_ratio = list_height / total_options_height
+            handle_height = max(10, scrollbar_area_rect.height * handle_height_ratio)
+            
+            handle_pos_ratio = 0
+            if max_scroll_offset > 0:
+                 handle_pos_ratio = scroll_offset_y / max_scroll_offset
+            
+            handle_y = scrollbar_area_rect.top + (scrollbar_area_rect.height - handle_height) * handle_pos_ratio
+            
+            handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
+            pygame.draw.rect(surface, GRAY, handle_rect, 0, 2)
+            scroll_state['handle_rect'] = handle_rect # Store for click/drag
+        else:
+            scroll_state['handle_rect'] = None
+        # --- END SCROLLING LOGIC ---
 
     return clickable_rects
 
@@ -211,15 +278,107 @@ def _draw_player_build_screen(game, state, mouse_pos):
         "remove_trait": [],
         "start_button": None,
         "dropdown_buttons": {},
-        "dropdown_options": [] 
+        "dropdown_options": [],
+        "name_input": None,
+        "save_button": None,
+        "delete_button": None,
+        "load_dropdown_button": None,
+        "load_dropdown_options": []
     }
     
+    col1_x = 50
+    col1_width = 280
+    col2_x = col1_x + col1_width + 20 # 350
+    col2_width = 280
+    col3_x = col2_x + col2_width + 20 # 650
+    col3_width = 280
+    col4_x = col3_x + col3_width + 20 # 950
+    col4_width = 280 # Adjusted to fit
+
     padding = 10
     
-    # --- Column 1: Available Traits (Left) ---
-    col1_x = 50
-    col1_width = 300
-    available_rect = pygame.Rect(col1_x, 50, col1_width, 640) # Full height
+    # --- Column 1, Block 1: Preset Management Panel (Top-Left) ---
+    preset_rect = pygame.Rect(col1_x, 50, col1_width, 170)
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1)
+    
+    # 1. Name Input
+    game.virtual_screen.blit(font.render("Player Name:", True, WHITE), (preset_rect.x + padding, preset_rect.y + 10))
+    name_input_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 35, preset_rect.width - padding*2, 30)
+    pygame.draw.rect(game.virtual_screen, (50, 50, 50), name_input_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, name_input_rect, 1)
+    
+    name_text = state.get('player_name', "Survivor")
+    text_surf = font.render(name_text, True, WHITE)
+    game.virtual_screen.blit(text_surf, (name_input_rect.x + 5, name_input_rect.y + 5))
+    
+    # Blinking cursor if active
+    if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
+        cursor_x = name_input_rect.x + 5 + text_surf.get_width()
+        pygame.draw.line(game.virtual_screen, WHITE, (cursor_x, name_input_rect.y + 5), (cursor_x, name_input_rect.bottom - 5), 2)
+    
+    clickable_rects['name_input'] = name_input_rect
+
+    # 2. Buttons
+    save_btn_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 80, 80, 30)
+    pygame.draw.rect(game.virtual_screen, GREEN, save_btn_rect)
+    game.virtual_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
+    clickable_rects['save_button'] = save_btn_rect
+    
+    delete_btn_rect = pygame.Rect(preset_rect.right - 90, preset_rect.y + 80, 80, 30)
+    pygame.draw.rect(game.virtual_screen, RED, delete_btn_rect)
+    game.virtual_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
+    clickable_rects['delete_button'] = delete_btn_rect
+    
+    # 3. Load Dropdown
+    load_dd_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 125, preset_rect.width - padding*2, 30)
+    clickable_rects['load_dropdown_button'] = load_dd_rect # Store for click
+
+
+    # --- Column 1, Block 2: Gear Selection (Bottom-Left) ---
+    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 450) # Bottom half
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), gear_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, gear_rect, 1)
+    game.virtual_screen.blit(font.render("Clothes", True, WHITE), (gear_rect.x + 10, gear_rect.y + 10))
+
+    gear_content_rect = pygame.Rect(
+        gear_rect.x + padding,
+        gear_rect.y + 40, 
+        gear_rect.width - (padding * 2), # Use full width
+        gear_rect.height - (padding * 2) - 30
+    )
+    state['gear_content_rect'] = gear_content_rect 
+
+    # Create Subsurface for clipping
+    drawable_gear_rect = game.virtual_screen.get_rect().clip(gear_content_rect)
+    dropdown_draw_list = [] # Store (slot_name, rect) to draw buttons later
+    
+    if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
+        gear_content_surface = game.virtual_screen.subsurface(drawable_gear_rect)
+        gear_content_surface.fill((30, 30, 30))
+
+        label_width = 80
+        dropdown_width = col1_width - label_width - (padding * 3)
+        
+        y_offset = 0 # Start relative to subsurface
+        
+        for slot_name in state['clothes_slots']: # Iterate in correct order
+            dropdown_rect = pygame.Rect(
+                gear_content_rect.x + label_width + (padding * 2), 
+                gear_content_rect.y + y_offset, 
+                dropdown_width, 
+                25
+            )
+            
+            if dropdown_rect.bottom > gear_content_rect.top and dropdown_rect.top < gear_content_rect.bottom:
+                gear_content_surface.blit(font.render(f"{slot_name.capitalize()}:", True, WHITE), (0, y_offset + 5))
+                dropdown_draw_list.append((slot_name, dropdown_rect))
+            
+            y_offset += 35 # Use fixed line height
+
+
+    # --- Column 2: Available Traits (Middle-Left) ---
+    available_rect = pygame.Rect(col2_x, 50, col2_width, 640) # Full height
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), available_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, available_rect, 1)
     game.virtual_screen.blit(font.render("Available Traits", True, WHITE), (available_rect.x + 10, available_rect.y + 10))
@@ -236,12 +395,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
         if y_offset > available_rect.bottom - 30: break
 
 
-    # --- Column 2: Chosen Traits (Top-Middle) & Gear (Bottom-Middle) ---
-    col2_x = col1_x + col1_width + 20
-    col2_width = 300
-    
-    # Block 2.1: Chosen Traits
-    chosen_rect = pygame.Rect(col2_x, 50, col2_width, 310) # Top half
+    # --- Column 3: Chosen Traits (Middle-Right) ---
+    chosen_rect = pygame.Rect(col3_x, 50, col3_width, 640) # Full height
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), chosen_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, chosen_rect, 1)
     game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (chosen_rect.x + 10, chosen_rect.y + 10))
@@ -257,59 +412,31 @@ def _draw_player_build_screen(game, state, mouse_pos):
         y_offset += 35
         if y_offset > chosen_rect.bottom - 30: break
 
-    # Block 2.2: Gear Selection
-    gear_rect = pygame.Rect(col2_x, chosen_rect.bottom + 20, col2_width, 310) # Bottom half
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), gear_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, gear_rect, 1)
-    game.virtual_screen.blit(font.render("Gear", True, WHITE), (gear_rect.x + 10, gear_rect.y + 10))
 
-    y_offset = gear_rect.y + 40
-    label_width = 80
-    dropdown_width = col2_width - label_width - (padding * 3) # Use col2_width
-    dropdown_draw_list = [] # Store (slot_name, rect) to draw buttons later
+    # --- Column 4: Player Sprite (Top-Right) & Stats (Bottom-Right) ---
     
-    for slot_name in state['chosen_clothes'].keys():
-        game.virtual_screen.blit(font.render(f"{slot_name.capitalize()}:", True, WHITE), (gear_rect.x + padding, y_offset + 5))
-        dropdown_rect = pygame.Rect(gear_rect.x + label_width + (padding * 2), y_offset, dropdown_width, 25)
-        
-        # --- FIX 1: Store rect to draw later, don't draw here ---
-        dropdown_draw_list.append((slot_name, dropdown_rect))
-        
-        y_offset += 35 # Give more space for dropdowns
-        if y_offset > gear_rect.bottom - 30: break
-
-
-    # --- Column 3: Player Sprite (Top-Right) & Stats (Bottom-Right) ---
-    col3_x = col2_x + col2_width + 20
-    col3_width = 400
-    
-    # Block 3.1: Sprite
-    sprite_rect_container = pygame.Rect(col3_x, 50, col3_width, 310) # Top half
+    # Block 4.1: Sprite
+    sprite_rect_container = pygame.Rect(col4_x, 50, col4_width, 310) # Top half
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), sprite_rect_container)
     pygame.draw.rect(game.virtual_screen, WHITE, sprite_rect_container, 1)
     
     if state.get('player_sprite_large'):
         sprite_rect = state['player_sprite_large'].get_rect(center=sprite_rect_container.center)
-        # Draw base sprite
         game.virtual_screen.blit(state['player_sprite_large'], sprite_rect)
         
-        # --- FIX 3: Draw clothes on top of sprite ---
-        for slot in state['clothes_slots']: # Use defined order for correct layering
+        for slot in state['clothes_slots']: 
             item_name = state['chosen_clothes'].get(slot)
             if item_name and item_name != "None":
-                # Get the pre-loaded clothing sprite
                 clothing_img = state['clothing_sprites'].get(item_name)
                 if clothing_img:
-                    # Blit the clothing image directly over the player sprite
                     game.virtual_screen.blit(clothing_img, sprite_rect)
 
-    # Block 3.2: Current Stats
-    stats_rect = pygame.Rect(col3_x, sprite_rect_container.bottom + 20, col3_width, 240) # Bottom half (smaller)
+    # Block 4.2: Current Stats
+    stats_rect = pygame.Rect(col4_x, sprite_rect_container.bottom + 20, col4_width, 240) # Bottom half (smaller)
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), stats_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, stats_rect, 1)
     game.virtual_screen.blit(font.render("Current Stats", True, WHITE), (stats_rect.x + 10, stats_rect.y + 10))
     
-    # (Stats calculation and scrolling logic - unchanged)
     stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + 40, stats_rect.width - (padding * 2) - 10, stats_rect.height - (padding * 2) - 30)
     state['stats_content_rect'] = stats_content_rect
     current_stats = state['base_data']['stats'].copy()
@@ -330,13 +457,18 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['stats_max_scroll'] = max_scroll_offset
     scroll_offset_y = max(0, min(state.get('stats_scroll_offset_y', 0), max_scroll_offset))
     state['stats_scroll_offset_y'] = scroll_offset_y
-    content_surface = game.virtual_screen.subsurface(stats_content_rect)
-    content_surface.fill((30, 30, 30))
-    y_offset = 0 - scroll_offset_y
-    for stat, value in current_stats.items():
-        content_surface.blit(font.render(f"{stat.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
-    for attr, value in current_attrs.items():
-        content_surface.blit(font.render(f"{attr.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
+    
+    drawable_stats_rect = game.virtual_screen.get_rect().clip(stats_content_rect)
+    if drawable_stats_rect.width > 0 and drawable_stats_rect.height > 0:
+        content_surface = game.virtual_screen.subsurface(drawable_stats_rect)
+        content_surface.fill((30, 30, 30))
+        y_offset = 0 - scroll_offset_y
+        for stat, value in current_stats.items():
+            content_surface.blit(font.render(f"{stat.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
+        for attr, value in current_attrs.items():
+            content_surface.blit(font.render(f"{attr.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
+    
+    # Draw Stats Scrollbar
     if total_text_height > visible_height:
         scrollbar_area_height = stats_content_rect.height
         scrollbar_area_rect = pygame.Rect(stats_content_rect.right + 2, stats_content_rect.top, 8, scrollbar_area_height)
@@ -345,12 +477,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
         handle_pos_ratio = 0
         if max_scroll_offset > 0: handle_pos_ratio = scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
-        pygame.draw.rect(game.virtual_screen, GRAY, pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height), 0, 2)
-    # (End of unchanged stats logic)
+        
+        stats_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
+        pygame.draw.rect(game.virtual_screen, GRAY, stats_scrollbar_handle_rect, 0, 2)
+        state['stats_scrollbar_handle_rect'] = stats_scrollbar_handle_rect 
+    else:
+        state['stats_scrollbar_handle_rect'] = None
 
 
     # --- Start Button (Bottom Right) ---
-    start_btn_rect = pygame.Rect(col3_x, stats_rect.bottom + 20, col3_width, 70) # Below stats
+    start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70) # Below stats
     pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect)
     if start_btn_rect.collidepoint(mouse_pos):
         pygame.draw.rect(game.virtual_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4))
@@ -359,51 +495,93 @@ def _draw_player_build_screen(game, state, mouse_pos):
     game.virtual_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
 
-    # --- FIX 1: Draw dropdowns LAST (so they appear on top) ---
+    # --- Draw dropdowns LAST (so they appear on top) ---
     active_dropdown_slot = state.get('active_dropdown')
+    active_preset_dropdown = state.get('preset_dropdown_active', False)
     
-    # First, draw all *inactive* buttons
+    # 1. Draw Gear Dropdowns
     for slot_name, rect in dropdown_draw_list:
-        if slot_name != active_dropdown_slot:
-            dropdown_rects = _draw_dropdown(game.virtual_screen, state, slot_name, rect, mouse_pos)
-            clickable_rects['dropdown_buttons'][slot_name] = dropdown_rects['button']
+        dropdown_rects = _draw_dropdown(game.virtual_screen, state, slot_name, rect, mouse_pos)
+        clickable_rects['dropdown_buttons'][slot_name] = dropdown_rects['button']
 
-    # Then, draw the *active* button (so its list renders on top of all other elements)
+    # 2. Draw Load Preset Dropdown Button
+    pygame.draw.rect(game.virtual_screen, (50, 50, 50), load_dd_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, load_dd_rect, 1)
+    selected_preset = state.get('selected_preset', "None")
+    game.virtual_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
+    pygame.draw.polygon(game.virtual_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
+    
+    # 3. Draw OPEN Gear Dropdown List
     if active_dropdown_slot:
         for slot_name, rect in dropdown_draw_list:
             if slot_name == active_dropdown_slot:
-                # Call _draw_dropdown, which will draw the button AND return the option rects
-                dropdown_rects = _draw_dropdown(game.virtual_screen, state, slot_name, rect, mouse_pos)
-                clickable_rects['dropdown_buttons'][slot_name] = dropdown_rects['button']
-                
-                # Now, manually draw the option list on top of everything
+                # --- Manually draw the option list on top of everything ---
                 options = state['available_clothes'].get(slot_name, [])
                 option_height = 25
-                list_height = len(options) * option_height
+                max_options_visible = 6 
+                max_list_height = max_options_visible * option_height
+                total_options_height = len(options) * option_height
+                list_height = min(max_list_height, total_options_height)
                 list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
+                if list_rect.bottom > VIRTUAL_GAME_HEIGHT:
+                    list_rect.height = VIRTUAL_GAME_HEIGHT - list_rect.top
                 
+                content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height)
                 pygame.draw.rect(game.virtual_screen, (30, 30, 30), list_rect)
                 pygame.draw.rect(game.virtual_screen, WHITE, list_rect, 1)
+
+                drawable_rect = game.virtual_screen.get_rect().clip(content_rect)
+                if drawable_rect.width <= 0 or drawable_rect.height <= 0: break
+                    
+                content_surface = game.virtual_screen.subsurface(drawable_rect)
+                content_surface.fill((30, 30, 30))
                 
-                y_offset = list_rect.y
-                # Clear and repopulate the clickable options
+                scroll_state = state['gear_dropdown_scrolls'][slot_name]
+                scroll_offset_y = scroll_state['offset']
+                
+                y_offset = 0 - scroll_offset_y
                 clickable_rects["dropdown_options"] = [] 
                 for option_name in options:
-                    # FIX 2: Use list_rect.width for the option rect
-                    option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
+                    option_rect_rel = pygame.Rect(0, y_offset, content_rect.width, option_height)
+                    option_rect_abs = pygame.Rect(content_rect.x, content_rect.y + y_offset, content_rect.width, option_height)
                     
-                    if option_rect.collidepoint(mouse_pos):
-                        pygame.draw.rect(game.virtual_screen, (70, 70, 70), option_rect)
-                        
-                    text = font.render(option_name, True, WHITE)
-                    game.virtual_screen.blit(text, (option_rect.x + 5, option_rect.y + 2))
+                    if option_rect_abs.bottom > content_rect.top and option_rect_abs.top < content_rect.bottom:
+                        if option_rect_abs.collidepoint(mouse_pos):
+                            pygame.draw.rect(content_surface, (70, 70, 70), option_rect_rel)
+                        text = font.render(option_name, True, WHITE)
+                        content_surface.blit(text, (option_rect_rel.x + 5, option_rect_rel.y + 2))
                     
-                    clickable_rects['dropdown_options'].append((slot_name, option_name, option_rect))
+                    clickable_rects['dropdown_options'].append((slot_name, option_name, option_rect_abs))
                     y_offset += option_height
-                break # Stop after drawing the active one
+                
+                handle_rect = scroll_state.get('handle_rect')
+                if handle_rect:
+                    pygame.draw.rect(game.virtual_screen, GRAY, handle_rect, 0, 2)
+                break
     
-    return clickable_rects
+    # 4. Draw OPEN Load Preset Dropdown List
+    if active_preset_dropdown:
+        options = state.get('preset_list', ["None"])
+        option_height = 25
+        list_height = len(options) * option_height
+        list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom, load_dd_rect.width, list_height)
+        
+        pygame.draw.rect(game.virtual_screen, (30, 30, 30), list_rect)
+        pygame.draw.rect(game.virtual_screen, WHITE, list_rect, 1)
+        
+        y_offset = list_rect.y
+        clickable_rects["load_dropdown_options"] = []
+        for option_name in options:
+            option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
+            if option_rect.collidepoint(mouse_pos):
+                pygame.draw.rect(game.virtual_screen, (70, 70, 70), option_rect)
+            
+            text = font.render(option_name, True, WHITE)
+            game.virtual_screen.blit(text, (option_rect.x + 5, option_rect.y + 2))
+            clickable_rects["load_dropdown_options"].append((option_name, option_rect))
+            y_offset += option_height
 
+    return clickable_rects
 
 def run_player_setup(game):
     # Initialize state on the game object the first time
@@ -422,40 +600,63 @@ def run_player_setup(game):
         state['final_stats'] = state['base_data']['stats'].copy()
         state['final_attrs'] = state['base_data']['attributes'].copy()
         
+        # Stats scroll
         state['stats_scroll_offset_y'] = 0
-        state['stats_content_rect'] = None # Will be set by draw function
-        state['stats_line_height'] = 25 # Default
-        state['stats_max_scroll'] = 0 # Default
-
+        state['stats_content_rect'] = None
+        state['stats_line_height'] = 25
+        state['stats_max_scroll'] = 0
+        state['is_dragging_stats_scrollbar'] = False
+        state['stats_scroll_drag_last_y'] = 0
+        
         Item.load_item_templates()
 
-        state['clothes_slots'] = ['head',  'legs', 'feet','hand', 'torso', 'body']
+        state['clothes_slots'] = ['head','legs', 'feet',  'torso' ,'body', 'hands']
         
         state['available_clothes'] = {slot: [] for slot in state['clothes_slots']}
         state['chosen_clothes'] = {slot: "None" for slot in state['clothes_slots']}
-        state['active_dropdown'] = None # Stores the name of the active dropdown (e.g., 'head')
+        state['active_dropdown'] = None
+        
+        state['gear_dropdown_scrolls'] = {
+            slot: {
+                'offset': 0, 
+                'is_dragging': False, 
+                'last_y': 0, 
+                'handle_rect': None, 
+                'max_scroll': 0
+            } for slot in state['clothes_slots']
+        }
 
         state['clothing_sprites'] = {} # Cache for clothing images
 
 
-        player_sprite_size = (128, 128) 
+        state['gear_dropdown_scrolls'] = {
+            slot: {
+                'offset': 0, 'is_dragging': False, 'last_y': 0, 
+                'handle_rect': None, 'max_scroll': 0
+            } for slot in state['clothes_slots']
+        }
+
+
+        player_sprite_size = (128, 128) # Your original code used 128x128
 
         for item_name, template in ITEM_TEMPLATES.items():
             if template.get('type') == 'cloth':
                 slot = template.get('properties', {}).get('slot', {}).get('value')
+
+                if slot == 'hand': slot = 'hands' 
+                
                 if slot in state['available_clothes']:
 
                     if not item_name.startswith("Empty"):
                         state['available_clothes'][slot].append(item_name)
                   
-
                     # Pre-load and scale the sprite
                     sprite_file = template.get('properties', {}).get('sprite', {}).get('file')
                     if sprite_file:
                         try:
                             path = SPRITE_PATH + "clothes/" + sprite_file
                             img = pygame.image.load(path).convert_alpha()
-                            scaled_img = pygame.transform.scale(img, player_sprite_size)
+                            scaled_img = pygame.transform.scale(img, (256, 256))
                             state['clothing_sprites'][item_name] = scaled_img
                         except Exception as e:
                             print(f"Error loading cloth sprite {sprite_file}: {e}")
@@ -467,15 +668,21 @@ def run_player_setup(game):
     
         # Load the player sprite
         try:
-            # --- FIX 3: Correct path loading ---
-            # The parser already prepends SPRITE_PATH + 'player/'
-            sprite_path = SPRITE_PATH + state['base_data']['visuals']['sprite']
-            sprite_img = pygame.image.load(sprite_path).convert_alpha()
-            state['player_sprite_large'] = pygame.transform.scale(sprite_img, player_sprite_size)
+            sprite_path = state['base_data']['visuals']['sprite']
+            sprite_img = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
+            state['player_sprite_large'] = pygame.transform.scale(sprite_img, (256, 256))
         except Exception as e:
             print(f"Error loading player sprite for setup: {e}")
-            state['player_sprite_large'] = pygame.Surface(player_sprite_size, pygame.SRCALPHA)
+            state['player_sprite_large'] = pygame.Surface((256, 256), pygame.SRCALPHA)
             state['player_sprite_large'].fill(BLUE) # Fallback
+
+
+        state['player_name'] = fake.name()
+        state['name_input_active'] = False
+        state['preset_list'] = ["None"]
+        state['selected_preset'] = "None"
+        state['preset_dropdown_active'] = False
+        _load_presets(state) # Load initial presets
 
     # Get state and mouse pos
     state = game.player_setup_state
@@ -491,22 +698,72 @@ def run_player_setup(game):
             return
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            
         if event.type == pygame.MOUSEWHEEL:
             stats_rect = state.get('stats_content_rect')
-            if stats_rect and stats_rect.collidepoint(mouse_pos):
+            active_dropdown_slot = state.get('active_dropdown')
+            
+            if active_dropdown_slot:
+                scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
+                # Check if mouse is over the *open* dropdown list
+                # We can approximate this by checking the button rect and below
+                button_rect = clickable_rects['dropdown_buttons'][active_dropdown_slot]
+                list_rect = pygame.Rect(button_rect.x, button_rect.bottom, button_rect.width, 6 * 25) # Approx 6 items
+                
+                if list_rect.collidepoint(mouse_pos):
+                    line_height = 25
+                    max_scroll = scroll_state['max_scroll']
+                    current_offset = scroll_state['offset']
+                    scroll_amount = event.y * line_height * 2 # Scroll 2 lines
+                    new_offset = current_offset - scroll_amount
+                    scroll_state['offset'] = max(0, min(new_offset, max_scroll))
+
+            # If not scrolling dropdown, check stats panel
+            elif stats_rect and stats_rect.collidepoint(mouse_pos):
                 line_height = state.get('stats_line_height', 25)
                 max_scroll = state.get('stats_max_scroll', 0)
                 current_offset = state.get('stats_scroll_offset_y', 0)
                 scroll_amount = event.y * line_height * 2 
                 new_offset = current_offset - scroll_amount
                 state['stats_scroll_offset_y'] = max(0, min(new_offset, max_scroll))
+        
+        if event.type == pygame.KEYDOWN:
+            if state.get('name_input_active'):
+                if event.key == pygame.K_BACKSPACE:
+                    state['player_name'] = state['player_name'][:-1]
+                elif event.key == pygame.K_RETURN:
+                    state['name_input_active'] = False
+                elif len(state['player_name']) <= 20: # Limit name length
+                    state['player_name'] += event.unicode
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             dropdown_clicked = False
+            scrollbar_clicked = False
             
+            stats_scrollbar_rect = state.get('stats_scrollbar_handle_rect')
+            if stats_scrollbar_rect and stats_scrollbar_rect.collidepoint(mouse_pos):
+                state['is_dragging_stats_scrollbar'] = True
+                state['stats_scroll_drag_last_y'] = mouse_pos[1] # Store initial mouse Y
+                scrollbar_clicked = True
+            
+            active_dropdown_slot = state.get('active_dropdown')
+            if active_dropdown_slot:
+                scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
+                handle_rect = scroll_state.get('handle_rect')
+                if handle_rect and handle_rect.collidepoint(mouse_pos):
+                    scroll_state['is_dragging'] = True
+                    scroll_state['last_y'] = mouse_pos[1]
+                    scrollbar_clicked = True
+
+            if scrollbar_clicked: continue # Don't process other clicks if dragging scrollbar
+
+            if clickable_rects['name_input'].collidepoint(mouse_pos):
+                state['name_input_active'] = True
+            else:
+                state['name_input_active'] = False # Deactivate on any other click
+
             # 1. Check if an active dropdown's *options* were clicked
             if state.get('active_dropdown'):
-                # Use the rects calculated and stored by the draw function
                 for slot_name, option_name, option_rect in clickable_rects["dropdown_options"]:
                     if option_rect.collidepoint(mouse_pos):
                         state['chosen_clothes'][slot_name] = option_name
@@ -522,25 +779,43 @@ def run_player_setup(game):
                         state['active_dropdown'] = None # Close it
                     else:
                         state['active_dropdown'] = slot_name # Open it
+                        # Reset scroll on open
+                        state['gear_dropdown_scrolls'][slot_name]['offset'] = 0 
                     dropdown_clicked = True
                     break
             
-            # 3. If clicking anywhere else (and not opening a new dropdown), close any active dropdown
-            if not dropdown_clicked and state.get('active_dropdown'):
-                state['active_dropdown'] = None
-            
-            if dropdown_clicked: continue
-            # --- End Dropdown Logic ---
+            # 3. Check if an active PRESET dropdown's *options* were clicked
+            if state.get('preset_dropdown_active'):
+                for option_name, option_rect in clickable_rects["load_dropdown_options"]:
+                    if option_rect.collidepoint(mouse_pos):
+                        state['selected_preset'] = option_name
+                        state['preset_dropdown_active'] = False # Close
+                        _load_preset(state) # Load the preset
+                        dropdown_clicked = True
+                        break
+                if dropdown_clicked: continue
 
-            # Check Add Trait buttons
+            # 4. Check if PRESET dropdown *button* was clicked
+            if clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
+                state['preset_dropdown_active'] = not state.get('preset_dropdown_active', False)
+                state['active_dropdown'] = None # Close other dropdown
+                dropdown_clicked = True
+            
+            # 5. If clicking anywhere else, close all dropdowns
+            if not dropdown_clicked:
+                state['active_dropdown'] = None
+                state['preset_dropdown_active'] = False
+            
+
+            if dropdown_clicked: continue
+            
+            # (Check Add/Remove Trait buttons - unchanged)
             for trait_name, rect in clickable_rects["add_trait"]:
                 if rect.collidepoint(mouse_pos):
                     if trait_name in state['available_traits']:
                         state['available_traits'].remove(trait_name)
                         state['chosen_traits'].append(trait_name)
-                        break # Stop checking after one click
-            
-            # Check Remove Trait buttons
+                        break 
             for trait_name, rect in clickable_rects["remove_trait"]:
                 if rect.collidepoint(mouse_pos):
                     if trait_name in state['chosen_traits']:
@@ -548,6 +823,12 @@ def run_player_setup(game):
                         state['available_traits'].append(trait_name)
                         break
             
+            if clickable_rects['save_button'].collidepoint(mouse_pos):
+                _save_preset(state)
+            
+            if clickable_rects['delete_button'].collidepoint(mouse_pos):
+                _delete_preset(state)
+
             # Check Start Button
             if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
                 final_player_data = state['base_data'].copy() # Start with base
@@ -558,7 +839,172 @@ def run_player_setup(game):
                 game.start_new_game(final_player_data)
                 game.game_state = 'PLAYING'
                 return
+        
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            state['is_dragging_stats_scrollbar'] = False
+            # Also reset all dropdown scroll drags
+            for slot in state['gear_dropdown_scrolls']:
+                state['gear_dropdown_scrolls'][slot]['is_dragging'] = False
+
+
+        if event.type == pygame.MOUSEMOTION:
+            if state.get('is_dragging_stats_scrollbar'):
+                mouse_delta_y = mouse_pos[1] - state['stats_scroll_drag_last_y']
+                state['stats_scroll_drag_last_y'] = mouse_pos[1] 
+                
+                content_height = state['stats_content_rect'].height
+                handle_rect = state['stats_scrollbar_handle_rect']
+                track_height = content_height - handle_rect.height
+                
+                if track_height > 0:
+                    scroll_per_pixel = state['stats_max_scroll'] / track_height
+                    current_offset = state.get('stats_scroll_offset_y', 0)
+                    new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
+                    state['stats_scroll_offset_y'] = max(0, min(new_offset, state['stats_max_scroll']))
+
+            active_dropdown_slot = state.get('active_dropdown')
+            if active_dropdown_slot:
+                scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
+                if scroll_state.get('is_dragging'):
+                    mouse_delta_y = mouse_pos[1] - scroll_state['last_y']
+                    scroll_state['last_y'] = mouse_pos[1]
+                    
+                    handle_rect = scroll_state.get('handle_rect')
+                    if handle_rect:
+                        # Calculate track height
+                        max_options_visible = 4
+                        option_height = 25
+                        max_list_height = max_options_visible * option_height
+                        track_height = max_list_height - handle_rect.height
+                        
+                        if track_height > 0:
+                            scroll_per_pixel = scroll_state['max_scroll'] / track_height
+                            current_offset = scroll_state['offset']
+                            new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
+                            scroll_state['offset'] = max(0, min(new_offset, scroll_state['max_scroll']))
+
+
 
     # Draw the screen (updates highlights and dropdown states)
     _draw_player_build_screen(game, state, mouse_pos)
     game._update_screen()
+
+def _load_presets(state):
+    """Loads all .xml preset files from the save/player directory."""
+    preset_dir = "save/player"
+    if not os.path.exists(preset_dir):
+        os.makedirs(preset_dir)
+    
+    presets = ["None"]
+    try:
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.xml')]
+        presets.extend([f.replace('.xml', '') for f in files])
+    except Exception as e:
+        print(f"Error loading presets: {e}")
+        
+    state['preset_list'] = presets
+
+def _save_preset(state):
+    """Saves the current traits and clothes to an XML file."""
+    player_name = state.get('player_name')
+    if not player_name or player_name == "Survivor":
+        print("Cannot save preset with default name.")
+        return # Add a message to the user later
+
+    preset_dir = "save/player"
+    if not os.path.exists(preset_dir):
+        os.makedirs(preset_dir)
+        
+    filepath = os.path.join(preset_dir, f"{player_name}.xml")
+    
+    root = ET.Element("preset")
+    
+    # Save name
+    ET.SubElement(root, "name").text = player_name
+    
+    # Save traits
+    traits_node = ET.SubElement(root, "traits")
+    for trait in state['chosen_traits']:
+        ET.SubElement(traits_node, "trait").text = trait
+        
+    # Save clothes
+    clothes_node = ET.SubElement(root, "clothes")
+    for slot, item_name in state['chosen_clothes'].items():
+        ET.SubElement(clothes_node, "slot", name=slot).text = item_name
+
+    # Write to file
+    try:
+        raw_xml = ET.tostring(root, 'utf-8')
+        pretty_xml = xml.dom.minidom.parseString(raw_xml).toprettyxml(indent="    ")
+        
+        with open(filepath, "w") as f:
+            f.write(pretty_xml)
+            
+        print(f"Preset saved: {filepath}")
+        _load_presets(state) # Refresh preset list
+        state['selected_preset'] = player_name # Select the new preset
+    except Exception as e:
+        print(f"Error saving preset: {e}")
+
+def _load_preset(state):
+    """Loads traits and clothes from a selected preset file."""
+    preset_name = state.get('selected_preset')
+    if not preset_name or preset_name == "None":
+        return
+
+    filepath = os.path.join("save/player", f"{preset_name}.xml")
+    if not os.path.exists(filepath):
+        print(f"Error: Preset file not found: {filepath}")
+        return
+
+    try:
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+        
+        # Load name
+        name_node = root.find('name')
+        if name_node is not None:
+            state['player_name'] = name_node.text
+        
+        # Load traits
+        new_traits = []
+        traits_node = root.find('traits')
+        if traits_node is not None:
+            new_traits = [node.text for node in traits_node.findall('trait')]
+            
+        # Reset available traits
+        state['available_traits'] = [t for t in TRAIT_DEFINITIONS if t not in new_traits]
+        state['chosen_traits'] = new_traits
+        
+        # Load clothes
+        clothes_node = root.find('clothes')
+        if clothes_node is not None:
+            for node in clothes_node.findall('slot'):
+                slot_name = node.attrib.get('name')
+                item_name = node.text
+                if slot_name in state['chosen_clothes']:
+                    state['chosen_clothes'][slot_name] = item_name
+                    
+        print(f"Preset loaded: {preset_name}")
+    except Exception as e:
+        print(f"Error parsing preset file {filepath}: {e}")
+
+def _delete_preset(state):
+    """Deletes the currently selected preset file."""
+    preset_name = state.get('selected_preset')
+    if not preset_name or preset_name == "None":
+        print("No preset selected to delete.")
+        return
+
+    filepath = os.path.join("save/player", f"{preset_name}.xml")
+    if not os.path.exists(filepath):
+        print(f"Error: Preset file not found: {filepath}")
+        return
+        
+    try:
+        os.remove(filepath)
+        print(f"Preset deleted: {preset_name}")
+        _load_presets(state) # Refresh preset list
+        state['selected_preset'] = "None"
+    except Exception as e:
+        print(f"Error deleting preset: {e}")

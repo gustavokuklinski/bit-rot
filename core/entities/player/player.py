@@ -44,7 +44,7 @@ class Player:
         self.last_decay_time = time.time()
         self.base_inventory_slots = 5
 
-        self.clothes_slots = ['head', 'feet', 'hands', 'torso', 'body', 'legs']
+        self.clothes_slots =  ['head','legs', 'feet',  'torso' ,'body', 'hands']
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         # Load clothes from player_data

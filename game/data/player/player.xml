@@ -48,8 +48,8 @@
         <head></head>
         <legs></legs>
         <feet></feet>
-        <hand></hand>
         <torso></torso>
+        <hand></hand>
         <body></body>
     </clothes>
 </player>
