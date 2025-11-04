@@ -135,7 +135,7 @@ class PlayerProgression:
 
     def handle_melee_attack(self, player):
         if player.stamina >= 10:
-            player.stamina = max(0, player.stamina - 0.001)
+            player.stamina = max(0, player.stamina - 0.01)
             player.tireness = min(100, player.tireness + 0.01)
             return True
         print("Too tired to swing!")
@@ -167,11 +167,6 @@ class PlayerProgression:
             return 0.5
         else:
             return 2.0
-
-    #def get_stamina_consumption(self, is_walking):
-    #    base_consumption = 0.05 if is_walking else 0.08
-    #    modifier = 1 - (self.speed * 0.05)
-    #    return base_consumption * modifier
     
     def get_stamina_consumption(self, is_running):
         # Renamed 'is_walking' to 'is_running'

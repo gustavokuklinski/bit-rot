@@ -16,6 +16,7 @@
         <illnes value="false" /> <!-- IF TRUE: +15% infection rate; -->
         <sedentary value="false" /> <!-- IF TRUE: -15% stamina, -2 strenght  -->
         <myopia value="false" /> <!-- IF TRUE: -10% view radius, -10% ranged -->
+        <collateral_effect value="false" /> <!-- IF TRUE: -1 stregth; -1 fitness; -1 ranged; -1 melee; -30 health; -60 infection; -15 stamina; +15 anxiety -->
     </traits>
 
     <stats>

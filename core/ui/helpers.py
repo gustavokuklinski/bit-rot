@@ -5,6 +5,7 @@ import xml.dom.minidom
 from data.config import *
 import data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
+import random
 from faker import Faker
 fake = Faker()
 
@@ -20,11 +21,39 @@ TRAIT_DEFINITIONS = {
     "drunk": {"cost": -1, "attributes": {"speed": -15}, "stats": {"anxiety": 15}},
     "illnes": {"cost": -1, "stats": {"infection": 15}}, # This is infection rate, logic not fully here
     "sedentary": {"cost": -2, "stats": {"stamina": -15}, "attributes": {"strength": -2}},
-    "myopia": {"cost": -1, "attributes": {"ranged": -10}}, # View radius not handled here
+    "myopia": {"cost": -1, "attributes": {"ranged": -10}},
+    "collateral_effect": {"cost": -5, "attributes": {"strength": -1, "fitness": -1, "ranged": -1, "melee": -1}, "stats": {"health": -30, "infection": 60,"stamina": -15, "anxiety": 15}}, # Vaccine colateral effect: -1 stregth, -1 fitness, -1 ranged, -1 melee, -30 health, -60 infection, -15 stamina, +15 anxiety
 }
 
 # cached logo image
 _logo_img = None
+_stat_icons_cache = {}
+def _load_stat_icons():
+    """Loads all stat and skill icons into a global cache."""
+    if _stat_icons_cache: # Don't reload
+        return
+
+    icon_size = (20, 20) # A bit smaller than the line height
+    icon_files = {
+        # Stats
+        "health": SPRITE_PATH + "ui/hp.png",
+        "stamina": SPRITE_PATH + "ui/stamina.png",
+        "water": SPRITE_PATH + "ui/water.png",
+        "food": SPRITE_PATH + "ui/food.png",
+        "anxiety": SPRITE_PATH + "ui/axiety.png", # Assuming 'anxiety.png'
+        "tireness": SPRITE_PATH + "ui/tireness.png", # Assuming 'tireness.png'
+        "infection": SPRITE_PATH + "ui/infection.png",
+        "strength": SPRITE_PATH + "ui/strength.png",
+        "fitness": SPRITE_PATH + "ui/fitness.png",
+        "melee": SPRITE_PATH + "ui/melee.png",
+        "ranged": SPRITE_PATH + "ui/range.png",
+        "lucky": SPRITE_PATH + "ui/lucky.png",
+        "speed": SPRITE_PATH + "ui/speed.png",
+    }
+    
+    for key, path in icon_files.items():
+        img = pygame.image.load(path).convert_alpha()
+        _stat_icons_cache[key] = pygame.transform.scale(img, icon_size)
 
 # Buttons and status modal
 _inventory_img = None
@@ -283,9 +312,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
         "save_button": None,
         "delete_button": None,
         "load_dropdown_button": None,
-        "load_dropdown_options": []
+        "load_dropdown_options": [],
+        "random_button": None
     }
-    
+    header_height = 30 # Height for the new title bars
+    border_radius = 4
+
+    _load_stat_icons()
+    icon_padding = 24
+
+
     col1_x = 50
     col1_width = 280
     col2_x = col1_x + col1_width + 20 # 350
@@ -298,13 +334,22 @@ def _draw_player_build_screen(game, state, mouse_pos):
     padding = 10
     
     # --- Column 1, Block 1: Preset Management Panel (Top-Left) ---
-    preset_rect = pygame.Rect(col1_x, 50, col1_width, 170)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1)
+    #preset_rect = pygame.Rect(col1_x, 50, col1_width, 170)
+    #pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_rect)
+    #pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1, border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
+    preset_rect = pygame.Rect(col1_x, 50, col1_width, 210)
+
+    preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
+    preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
     
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, GRAY_60, preset_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1, border_radius=border_radius)
+    game.virtual_screen.blit(font.render("Preset", True, WHITE), (preset_header_rect.x + 10, preset_header_rect.y + 7))
+
     # 1. Name Input
-    game.virtual_screen.blit(font.render("Player Name:", True, WHITE), (preset_rect.x + padding, preset_rect.y + 10))
-    name_input_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 35, preset_rect.width - padding*2, 30)
+    game.virtual_screen.blit(font.render("Player Name:", True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + 10))
+    name_input_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 35, preset_body_rect.width - padding*2, 30)
     pygame.draw.rect(game.virtual_screen, (50, 50, 50), name_input_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, name_input_rect, 1)
     
@@ -312,7 +357,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
     text_surf = font.render(name_text, True, WHITE)
     game.virtual_screen.blit(text_surf, (name_input_rect.x + 5, name_input_rect.y + 5))
     
-    # Blinking cursor if active
     if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
         cursor_x = name_input_rect.x + 5 + text_surf.get_width()
         pygame.draw.line(game.virtual_screen, WHITE, (cursor_x, name_input_rect.y + 5), (cursor_x, name_input_rect.bottom - 5), 2)
@@ -320,26 +364,41 @@ def _draw_player_build_screen(game, state, mouse_pos):
     clickable_rects['name_input'] = name_input_rect
 
     # 2. Buttons
-    save_btn_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 80, 80, 30)
+    btn_width = 80
+    # Calculate padding between buttons
+    btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
+    
+    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 80, btn_width, 30)
     pygame.draw.rect(game.virtual_screen, GREEN, save_btn_rect)
     game.virtual_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
     clickable_rects['save_button'] = save_btn_rect
     
-    delete_btn_rect = pygame.Rect(preset_rect.right - 90, preset_rect.y + 80, 80, 30)
+    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
+    pygame.draw.rect(game.virtual_screen, (0, 100, 150), random_btn_rect) # Blue-ish color
+    game.virtual_screen.blit(font.render("Random", True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
+    clickable_rects['random_button'] = random_btn_rect
+
+    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
     pygame.draw.rect(game.virtual_screen, RED, delete_btn_rect)
     game.virtual_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
     clickable_rects['delete_button'] = delete_btn_rect
     
     # 3. Load Dropdown
-    load_dd_rect = pygame.Rect(preset_rect.x + padding, preset_rect.y + 125, preset_rect.width - padding*2, 30)
-    clickable_rects['load_dropdown_button'] = load_dd_rect # Store for click
-
+    load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 125, preset_body_rect.width - padding*2, 30)
+    clickable_rects['load_dropdown_button'] = load_dd_rect
+    
+ 
 
     # --- Column 1, Block 2: Gear Selection (Bottom-Left) ---
-    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 450) # Bottom half
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), gear_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, gear_rect, 1)
-    game.virtual_screen.blit(font.render("Clothes", True, WHITE), (gear_rect.x + 10, gear_rect.y + 10))
+    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 410) # Bottom half
+
+    gear_header_rect = pygame.Rect(gear_rect.x, gear_rect.y, gear_rect.width, header_height)
+    gear_body_rect = pygame.Rect(gear_rect.x, gear_rect.y + header_height, gear_rect.width, gear_rect.height - header_height)
+
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), gear_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, GRAY_60, gear_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, WHITE, gear_rect, 1, border_radius=border_radius)
+    game.virtual_screen.blit(font.render("Clothes", True, WHITE), (gear_header_rect.x + 10, gear_header_rect.y + 7))
 
     gear_content_rect = pygame.Rect(
         gear_rect.x + padding,
@@ -379,9 +438,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Column 2: Available Traits (Middle-Left) ---
     available_rect = pygame.Rect(col2_x, 50, col2_width, 640) # Full height
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), available_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, available_rect, 1)
-    game.virtual_screen.blit(font.render("Available Traits", True, WHITE), (available_rect.x + 10, available_rect.y + 10))
+    avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
+    avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
+    
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, WHITE, available_rect, 1, border_radius=border_radius)
+    game.virtual_screen.blit(font.render("Available Traits", True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
 
     y_offset = available_rect.y + 40
     for i, trait_name in enumerate(state['available_traits']):
@@ -397,10 +460,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Column 3: Chosen Traits (Middle-Right) ---
     chosen_rect = pygame.Rect(col3_x, 50, col3_width, 640) # Full height
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), chosen_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, chosen_rect, 1)
-    game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (chosen_rect.x + 10, chosen_rect.y + 10))
+    # --- MODIFICATION: Draw styled panel (from your snippet) ---
+    header_height = 30
+    header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
+    body_rect = pygame.Rect(chosen_rect.x, chosen_rect.y + header_height, chosen_rect.width, chosen_rect.height - header_height)
     
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
+    game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (header_rect.x + 10, header_rect.y + 7)) # Adjusted y for padding
+
     y_offset = chosen_rect.y + 40
     for i, trait_name in enumerate(state['chosen_traits']):
         row_rect = pygame.Rect(chosen_rect.x + 10, y_offset, chosen_rect.width - 20, 30)
@@ -418,7 +487,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     # Block 4.1: Sprite
     sprite_rect_container = pygame.Rect(col4_x, 50, col4_width, 310) # Top half
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), sprite_rect_container)
-    pygame.draw.rect(game.virtual_screen, WHITE, sprite_rect_container, 1)
+    pygame.draw.rect(game.virtual_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     
     if state.get('player_sprite_large'):
         sprite_rect = state['player_sprite_large'].get_rect(center=sprite_rect_container.center)
@@ -433,10 +502,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # Block 4.2: Current Stats
     stats_rect = pygame.Rect(col4_x, sprite_rect_container.bottom + 20, col4_width, 240) # Bottom half (smaller)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), stats_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, stats_rect, 1)
-    game.virtual_screen.blit(font.render("Current Stats", True, WHITE), (stats_rect.x + 10, stats_rect.y + 10))
-    
+    stats_header_rect = pygame.Rect(stats_rect.x, stats_rect.y, stats_rect.width, header_height)
+    stats_body_rect = pygame.Rect(stats_rect.x, stats_rect.y + header_height, stats_rect.width, stats_rect.height - header_height)
+
+    pygame.draw.rect(game.virtual_screen, (30, 30, 30), stats_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, GRAY_60, stats_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.virtual_screen, WHITE, stats_rect, 1, border_radius=border_radius)
+    game.virtual_screen.blit(font.render("Current Stats", True, WHITE), (stats_header_rect.x + 10, stats_header_rect.y + 7))
+
     stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + 40, stats_rect.width - (padding * 2) - 10, stats_rect.height - (padding * 2) - 30)
     state['stats_content_rect'] = stats_content_rect
     current_stats = state['base_data']['stats'].copy()
@@ -464,9 +537,31 @@ def _draw_player_build_screen(game, state, mouse_pos):
         content_surface.fill((30, 30, 30))
         y_offset = 0 - scroll_offset_y
         for stat, value in current_stats.items():
-            content_surface.blit(font.render(f"{stat.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
+            icon = _stat_icons_cache.get(stat)
+            if icon:
+                content_surface.blit(icon, (0, y_offset + (line_height - icon.get_height()) // 2))
+                text_x = icon_padding
+            else:
+                text_x = 0 # No icon, start text at left edge
+            
+            # Format value
+            val_str = f"{value:.1f}" if value != 0 else "0.0"
+            text_surf = font.render(f"{stat.capitalize()}: {val_str}", True, WHITE)
+            content_surface.blit(text_surf, (text_x, y_offset +3))
+            y_offset += line_height
+
         for attr, value in current_attrs.items():
-            content_surface.blit(font.render(f"{attr.capitalize()}: {value}", True, WHITE), (0, y_offset)); y_offset += line_height
+            icon = _stat_icons_cache.get(attr)
+            if icon:
+                content_surface.blit(icon, (0, y_offset + (line_height - icon.get_height()) // 2))
+                text_x = icon_padding
+            else:
+                text_x = 0
+                
+            val_str = f"{value:.1f}" if value != 0 else "0.0"
+            text_surf = font.render(f"{attr.capitalize()}: {val_str}", True, WHITE)
+            content_surface.blit(text_surf, (text_x, y_offset))
+            y_offset += line_height
     
     # Draw Stats Scrollbar
     if total_text_height > visible_height:
@@ -487,7 +582,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Start Button (Bottom Right) ---
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70) # Below stats
-    pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect)
+    pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     if start_btn_rect.collidepoint(mouse_pos):
         pygame.draw.rect(game.virtual_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4))
     start_text = large_font.render("START GAME", True, WHITE)
@@ -635,7 +730,6 @@ def run_player_setup(game):
                 'handle_rect': None, 'max_scroll': 0
             } for slot in state['clothes_slots']
         }
-
 
         player_sprite_size = (128, 128) # Your original code used 128x128
 
@@ -826,6 +920,9 @@ def run_player_setup(game):
             if clickable_rects['save_button'].collidepoint(mouse_pos):
                 _save_preset(state)
             
+            if clickable_rects['random_button'].collidepoint(mouse_pos):
+                _randomize_character(state)
+
             if clickable_rects['delete_button'].collidepoint(mouse_pos):
                 _delete_preset(state)
 
@@ -1008,3 +1105,43 @@ def _delete_preset(state):
         state['selected_preset'] = "None"
     except Exception as e:
         print(f"Error deleting preset: {e}")
+
+def _randomize_character(state):
+    """Randomizes the character's name, traits, and clothes."""
+    print("Generating random character...")
+    
+    # 1. Randomize Name (simple)
+    state['player_name'] = fake.name()
+    
+    # 2. Randomize Traits
+    all_traits = list(state['all_traits'].keys())
+    
+    # Aim for a mix of positive and negative traits
+    pos_traits = [t for t in all_traits if state['all_traits'][t]['cost'] > 0]
+    neg_traits = [t for t in all_traits if state['all_traits'][t]['cost'] < 0]
+    
+    num_pos = random.randint(1, 2)
+    num_neg = random.randint(0, 1)
+    
+    new_traits = []
+    if pos_traits:
+        new_traits.extend(random.sample(pos_traits, min(num_pos, len(pos_traits))))
+    if neg_traits:
+        new_traits.extend(random.sample(neg_traits, min(num_neg, len(neg_traits))))
+    
+    state['chosen_traits'] = new_traits
+    state['available_traits'] = [t for t in all_traits if t not in new_traits]
+    
+    # 3. Randomize Clothes
+    available_clothes = state['available_clothes']
+    chosen_clothes = {}
+    for slot, options in available_clothes.items():
+        if options:
+            # random.choice(options) will include "None" since it's in the list
+            chosen_clothes[slot] = random.choice(options)
+        else:
+            chosen_clothes[slot] = "None"
+    state['chosen_clothes'] = chosen_clothes
+    
+    # 4. Reset preset dropdown
+    state['selected_preset'] = "None"

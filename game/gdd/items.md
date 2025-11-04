@@ -1,6 +1,6 @@
 ### Items
 
-All item design is stored at: game/sprites/*
+All item design is stored at: ```game/sprites/item/[ITEM_NAME]```
 
 Sprite types and codes:
 
