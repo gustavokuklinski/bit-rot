@@ -13,7 +13,7 @@ Sprite types and codes:
         <fuel type="Matches" /> <!-- type of fuel to turn 'ON' (state="on") -->
         <sprite file="lantern_on.png" /> <!-- utility sprite -->
     </properties>
-    <spawn chance="0" /> <!-- utility chance to spawn by [I] on map, or inside a type="container" -->
+    <spawn chance="1" /> <!-- utility chance to spawn by [I] on map, or inside a type="container" -->
 </item>
 ```
 
@@ -24,7 +24,7 @@ Sprite types and codes:
         <capacity value="3" /> <!-- container capacitie: min: value="3" and max value="20"  -->
         <sprite file="wallet.png" /> <!-- container default sprite -->
     </properties>
-     <spawn chance="0" /> <!-- utility chance to spawn by [I] on map, or inside a type="container" -->
+     <spawn chance="1" /> <!-- utility chance to spawn by [I] on map, or inside a type="container" -->
     <loot> <!-- container default loot -->
         <item name="ID" chance="100" />  <!-- container default item spawn inside -->
     </loot>
@@ -40,7 +40,7 @@ Sprite types and codes:
         <skill type="melee" /><!-- weapon skill boost  -->
         <sprite file="axe.png" /><!-- weapon sprite  -->
     </properties>
-     <spawn chance="0" /> <!-- chance to spawn by [I] on map, or inside a type="container" -->
+     <spawn chance="1" /> <!-- chance to spawn by [I] on map, or inside a type="container" -->
 </item>
 ```
 
@@ -57,7 +57,7 @@ Sprite types and codes:
         <skill type="range" /><!-- weapon skill boost  -->
         <sprite file="pistol_9mm.png" /><!-- weapon sprite  -->
     </properties> 
-    <spawn chance="35" /><!-- chance to spawn by [I] on map, or inside a type="container" -->
+    <spawn chance="1" /><!-- chance to spawn by [I] on map, or inside a type="container" -->
 </item>
 ```
 

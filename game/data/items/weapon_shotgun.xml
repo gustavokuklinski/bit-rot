@@ -9,5 +9,5 @@
         <skill type="range" />
         <sprite file="shotgun.png" />
     </properties>
-    <spawn chance="15" />
+    <spawn chance="1" />
 </item>

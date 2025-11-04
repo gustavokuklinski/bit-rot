@@ -3,5 +3,5 @@
         <defence value="0" />
         <sprite file="empty.png" />
     </properties>
-    <spawn chance="8" />
+    <spawn chance="0" />
 </cloth>

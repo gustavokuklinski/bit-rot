@@ -210,42 +210,58 @@ def draw_game(game):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
         for modal in reversed(game.modals):
             if modal['type'] == 'inventory':
-                for i in range(len(game.player.belt)):
-                    slot = get_belt_slot_rect_in_modal(i, modal['position'])
+
+
+                if modal.get('active_tab', 'Inventory') == 'Inventory':
+                    # Only check these slots if Inventory tab is active
+                    for i in range(len(game.player.belt)):
+                        slot = get_belt_slot_rect_in_modal(i, modal['position'])
+                        if slot.collidepoint(game._get_scaled_mouse_pos()):
+                            highlighted_rect = slot
+                            highlighted_allowed = (preview_item.item_type != 'backpack')
+                            break
+                    if highlighted_rect:
+                        break
+                    for i in range(5):
+                        slot = get_inventory_slot_rect(i, modal['position'])
+                        if slot.collidepoint(game._get_scaled_mouse_pos()):
+                            highlighted_rect = slot
+                            highlighted_allowed = True
+                            break
+                    if highlighted_rect:
+                        break
+                    slot = get_backpack_slot_rect(modal['position'])
                     if slot.collidepoint(game._get_scaled_mouse_pos()):
                         highlighted_rect = slot
-                        highlighted_allowed = (preview_item.item_type != 'backpack')
+                        highlighted_allowed = (preview_item.item_type == 'backpack')
                         break
-                if highlighted_rect:
-                    break
-                for i in range(5):
-                    slot = get_inventory_slot_rect(i, modal['position'])
+                        
+                    slot = get_invcontainer_slot_rect(modal['position'])
                     if slot.collidepoint(game._get_scaled_mouse_pos()):
                         highlighted_rect = slot
-                        highlighted_allowed = True
+                        dragged_type = getattr(preview_item, 'item_type', None)
+                        dragged_ammo_type = getattr(preview_item, 'ammo_type', None)
+                        highlighted_allowed = (
+                            dragged_type == 'container' or
+                            dragged_type == 'utility' or
+                            (dragged_type == 'consumable' and dragged_ammo_type is not None)
+                        )
                         break
-                if highlighted_rect:
-                    break
-                slot = get_backpack_slot_rect(modal['position'])
-                if slot.collidepoint(game._get_scaled_mouse_pos()):
-                    highlighted_rect = slot
-                    highlighted_allowed = (preview_item.item_type == 'backpack')
-                    break
-                    
-                slot = get_invcontainer_slot_rect(modal['position'])
-                if slot.collidepoint(game._get_scaled_mouse_pos()):
-                    highlighted_rect = slot
-                    
-                    # Check allowed item types
-                    dragged_type = getattr(preview_item, 'item_type', None)
-                    dragged_ammo_type = getattr(preview_item, 'ammo_type', None)
-                    
-                    highlighted_allowed = (
-                        dragged_type == 'container' or
-                        dragged_type == 'utility' or
-                        (dragged_type == 'consumable' and dragged_ammo_type is not None)
-                    )
-                    break
+                
+                elif modal.get('active_tab') == 'Gear':
+                    # Only check these slots if Gear tab is active
+                    if 'gear_slot_rects' in modal:
+                        for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                            if slot_rect.collidepoint(game._get_scaled_mouse_pos()):
+                                highlighted_rect = slot_rect
+                                # Check if item is allowed
+                                item_slot = getattr(preview_item, 'slot', None)
+                                if item_slot == 'hand': item_slot = 'hands'
+                                highlighted_allowed = (item_slot == slot_name)
+                                break
+                    if highlighted_rect:
+                        break
+                        
             elif modal['type'] == 'container':
                 cont = modal['item']
                 for i in range(min(cont.capacity, len(cont.inventory) + 16)):

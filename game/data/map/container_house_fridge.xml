@@ -2,8 +2,10 @@
     <visuals>
         <sprite file="house_fridge.png" />
     </visuals>
+    <capacity value="10" />
     <loot>
-        <item item="Canned Food" chance="1.5" />
-        <item item="Water Bottle" chance="100.0" />
+        <item item="Canned Food" chance="1" />
+        <item item="Water Bottle" chance="1" />
+
     </loot>
 </map>

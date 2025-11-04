@@ -5,4 +5,5 @@
     </properties>
     <loot>
     </loot>
+    <spawn chance="1" />
 </item>

@@ -4,6 +4,12 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <cloth item="Black Tshirt" chance="0.2" />
+        <item item="Pistol 9mm" chance="1" />
+        <item item="9mm Ammo" chance="1" />
+        <item item="Military Pants" chance="1" />
+        <item item="Leather Black Gloves" chance="1" />
+        <item item="Military Jacket" chance="1" />
+        <item item="Black Tshirt" chance="1" />
+        <item item="Wallet" chance="1" />
     </loot>
 </map>

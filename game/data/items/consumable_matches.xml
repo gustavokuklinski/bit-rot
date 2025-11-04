@@ -4,5 +4,5 @@
         <capacity value="10" />
         <sprite file="matches.png" />
     </properties>
-    <spawn chance="8" />
+    <spawn chance="1" />
 </item>

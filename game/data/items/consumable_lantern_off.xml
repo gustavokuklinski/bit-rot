@@ -5,5 +5,5 @@
         <fuel type="Matches" />
         <sprite file="lantern_off.png" />
     </properties>
-    <spawn chance="10" /> <!-- 20 * 0.5 -->
+    <spawn chance="1" />
 </item>

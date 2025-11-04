@@ -6,4 +6,5 @@
     <loot>
         <item name="ID" chance="100" />
     </loot>
+    <spawn chance="1" />
 </item>

@@ -4,5 +4,5 @@
         <capacity value="50" />
         <sprite file="shotgun_shells.png" />
     </properties>
-    <spawn chance="10" />
+    <spawn chance="1" />
 </item>

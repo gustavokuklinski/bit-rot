@@ -5,5 +5,5 @@
         <skill type="melee" />
         <sprite file="knife.png" />
     </properties>
-    <spawn chance="12.5" /> <!-- 25 * 0.5 -->
+    <spawn chance="1" />
 </item>

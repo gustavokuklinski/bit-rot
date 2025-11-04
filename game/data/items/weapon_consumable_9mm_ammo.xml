@@ -4,5 +4,5 @@
         <capacity value="100" />
         <sprite file="9mm_ammo.png" />
     </properties>
-    <spawn chance="12" /> <!-- 20 * 0.6 -->
+    <spawn chance="1" />
 </item>

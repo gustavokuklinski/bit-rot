@@ -54,8 +54,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
             if char and char != ' ': # Ignore empty cells in ground layer
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
-                    if tile_def['is_obstacle']:
-                         print(f"Warning: Ground layer tile '{char}' at ({x},{y}) is marked as obstacle. Ground tiles should not be obstacles.")
+                    #if tile_def['is_obstacle']:
+                    #     print(f"Warning: Ground layer tile '{char}' at ({x},{y}) is marked as obstacle. Ground tiles should not be obstacles.")
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     renderable_tiles.append((tile_def['image'], rect))

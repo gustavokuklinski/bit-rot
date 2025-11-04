@@ -3,4 +3,5 @@
         <defence value="50" />
         <sprite file="leather_black_pants.png" />
     </properties>
+    <spawn chance="1" />
 </cloth>

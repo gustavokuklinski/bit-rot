@@ -3,4 +3,5 @@
         <defence value="50" />
         <sprite file="military_jacket.png" />
     </properties>
+    <spawn chance="1" />
 </cloth>
