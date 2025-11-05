@@ -1,0 +1,17 @@
+<item name="Newspaper 2020-02-16" type="text">
+    <properties>
+        <sprite file="newspaper.png" />
+        <text>
+            # Global News
+            _2020/02/16_
+
+            A virus new virus has been emerged from bats in east Asia markets
+            The location was unkown by some people felt symthons of a occoring flu
+            and after paneumonia.
+
+            Doctors are on a rush and the WHO decreted a world wide lockdown.
+            Some nations adopted and who couldn't had mass death by the decease.
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

@@ -78,8 +78,17 @@ class Game:
             'status': (65, 10),
             'inventory': (1000, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (1000, 320),
+            'nearby': (1000, 360),
             'messages': (10, 560)
+        }
+
+        self.last_modal_positions = {
+            'status': (65, 10),
+            'inventory': (1000, 10),
+            'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
+            'nearby': (1000, 360),
+            'messages': (10, 560),
+            'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150) # --- ADD THIS LINE ---
         }
 
         self.status_button_rect = None
@@ -99,7 +108,6 @@ class Game:
         self.hovered_interactable_tile_rect = None
 
         self.message_log = []
-
 
         self.current_layer_index = 1
         self.all_map_layers = {} # Will store {1: data, 2: data, ...}
@@ -168,7 +176,22 @@ class Game:
         # The setup screen should have put initial_loot in the dict.
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
-        
+
+        try:
+            # Assumes your item name in the XML is "ID"
+            # If your item is named "Wallet", change "ID" to "Wallet"
+            wallet_item = Item.create_from_name("Wallet") 
+            if wallet_item:
+                # Check if there's space
+                if len(self.player.inventory) < self.player.get_total_inventory_slots():
+                    self.player.inventory.append(wallet_item)
+                else:
+                    print("Could not add wallet; inventory is full!")
+            else:
+                print("Warning: Could not create 'ID' item. Check item XML.")
+        except Exception as e:
+            print(f"Error creating starting wallet: {e}")
+
         self.zombies_killed = 0
         self.modals = []
         self.map_states = {}

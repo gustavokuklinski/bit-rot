@@ -1,0 +1,8 @@
+<item name="Powerbank" type="utility">
+    <properties>
+        <load min="1" max="1000" />
+        <capacity value="1000" />
+        <sprite file="powerbank.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

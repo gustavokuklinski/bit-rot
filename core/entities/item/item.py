@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -40,6 +40,7 @@ class Item:
         self.max_light = max_light  # e.g., 15 (in tiles)
         self.fuel_type = fuel_type  # e.g., "Matches"
 
+        self.text = text
 
     @property
     def damage(self):
@@ -181,7 +182,17 @@ class Item:
             if props_node is not None:
                 for prop in props_node:
                     template['properties'][prop.tag] = {k: v for k, v in prop.attrib.items()}
+                
+                text_node = props_node.find('text')
+                if text_node is not None:
+                    # Clean up indentation from XML text
+                    template['text'] = "\n".join(line.strip() for line in text_node.text.strip().split('\n'))
+                else:
+                    template['text'] = None
+                    
+
             spawn_node = root.find('spawn')
+
             if spawn_node is not None:
                 template['spawn_chance'] = float(spawn_node.attrib.get('chance', '0'))
             
@@ -338,8 +349,8 @@ class Item:
         min_light = int(props['light']['min']) if 'light' in props and 'min' in props['light'] else None
         max_light = int(props['light']['max']) if 'light' in props and 'max' in props['light'] else None
         fuel_type = props.get('fuel', {}).get('type')
-
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type)
+        text = template.get('text')
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

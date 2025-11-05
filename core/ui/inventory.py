@@ -230,8 +230,8 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
 
     # --- Tabs ---
     tabs_data = [
-        {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory.png'},
-        {'label': 'Gear', 'icon_path': SPRITE_PATH + 'ui/status.png'} # Using status icon for gear
+        {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'},
+        {'label': 'Gear', 'icon_path': SPRITE_PATH + 'ui/gear_tab.png'} # Using status icon for gear
     ]
     modal['tabs_data'] = tabs_data
 

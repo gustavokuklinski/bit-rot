@@ -36,6 +36,6 @@
         <wander_interval value="2000" /> <!-- wandering interval in MS -->
         <sight_check value="true" />  <!-- Zombie spot the player and go to -->
         <spawn value="3" /> <!-- How many zombies per spawn -->
-        <respawn_timer value="30000" /> <!-- Time to Reaspawn Zombie in MS-->
+        <respawn_timer value="0" /> <!-- Time to Reaspawn Zombie in MS-->
     </zombie>
 </config>

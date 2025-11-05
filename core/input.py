@@ -89,6 +89,21 @@ def handle_input(game):
                             modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
                             break # Found the modal, stop checking others
 
+                    elif modal.get('type') == 'text' and not modal.get('minimized', False):
+                        content_rect = modal.get('content_rect')
+                    if content_rect and content_rect.collidepoint(mouse_pos):
+                        # Read the max_scroll from the modal (set during draw)
+                        max_scroll_offset = modal.get('max_scroll_offset', 0)
+                        current_offset = modal.get('scroll_offset_y', 0)
+
+                        # Use the same line height as the draw function
+                        line_height = font_small.get_height() + 2
+                        scroll_amount = event.y * line_height * 3 # Scroll 3 lines
+
+                        new_offset = current_offset - scroll_amount
+                        modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                        break #
+
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 

@@ -786,6 +786,43 @@ def handle_context_menu_click(game, mouse_pos):
                     }
                     game.modals.append(new_container_modal)
 
+
+
+            elif option == 'Open' or option == 'Read' or option == 'Inspect':
+            # Check if it's a text item first
+                if getattr(item, 'item_type', None) == 'text':
+                    modal_exists = any(m['type'] == 'text' and m['item'] == item for m in game.modals)
+                    if not modal_exists:
+                        new_text_modal = {
+                            'id': uuid.uuid4(),
+                            'type': 'text',
+                            'item': item,
+                            'position': game.last_modal_positions['text'], # Needs to be added to game.py
+                            'is_dragging': False, 'drag_offset': (0, 0),
+                            'rect': pygame.Rect(game.last_modal_positions['text'][0], game.last_modal_positions['text'][1], TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT),
+                            'minimized': False,
+                            'scroll_offset_y': 0
+                        }
+                        game.modals.append(new_text_modal)
+
+                # Existing container logic
+                elif getattr(item, 'inventory', None) is not None:
+                    modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                    if not modal_exists:
+                        new_container_modal = {
+                            'id': uuid.uuid4(),
+                            'type': 'container',
+                            'item': item,
+                            'position': game.last_modal_positions['container'],
+                            'is_dragging': False, 'drag_offset': (0, 0),
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                            'minimized': False
+                        }
+                        game.modals.append(new_container_modal)
+
+                    clicked_on_menu = True
+
+
             elif option == 'Unequip':
                 if source == 'belt':
                     if 0 <= index < len(game.player.belt) and game.player.belt[index] == item:

@@ -38,6 +38,9 @@ class Player:
         self.anxiety = stats.get('anxiety', 0.0)
         self.tireness = stats.get('tireness', 0.0)
 
+        self.sex = data.get('sex', 'Male')
+        self.traits = data.get('traits', [])
+
         self.inventory = []
         self.backpack = None
         self.invcontainer = None
@@ -375,6 +378,18 @@ class Player:
         if isinstance(item, Corpse):
             options.append('Open')
             return options
+
+        if item.item_type == 'text':
+            options.append('Read')
+            if hasattr(item, 'is_stackable') and item.is_stackable():
+                 # This logic probably won't apply to text items, but good to keep
+                options.append('Drop one')
+                if item.load > 1:
+                    options.append('Drop all')
+            else:
+                options.append('Drop')
+            return options # Return immediately
+
         #if item.item_type == 'consumable':
         #    if 'Ammo' in item.name or 'Shells' in item.name:
         #        options.append('Reload')

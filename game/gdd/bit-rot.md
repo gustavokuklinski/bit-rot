@@ -2,85 +2,93 @@
 Developer: Gustavo Kuklinski
 
 ## Plot
-A deadly disease swept across the world - but humanity eventually discovered a cure.
-The problem? The vaccine was rushed, released without proper testing.
+A pandemic swept the globe. We found a cure — and released it too soon. 
+Fear turned to fury: labs burned, vaccines destroyed. Only a few doses remain. 
+Now the world runs on a thin, fragile supply of power and trust.
 
-As fear spread, misinformation followed. Entire nations turned against the cure, calling it a lie.
-Riots broke out, labs were burned, and most of the remaining vaccines were destroyed.
+You work at Next Petrol, an offshore Brazilian firm running an underground 
+petrol mine in a volcanic island chain. It’s supposed to be safe. Today, 
+it isn’t. The chopper left. The boats are gone. The tunnels might be intact. 
+Your choices are simple and brutal: survive, call for help, go to shore, 
+or secure the factory and hope Rio notices.
 
-Only a handful of people managed to get a dose. 
-The rest were forced to make an impossible choice - save themselves, or save someone they loved.
-
-Now, everyone is vulnerable.
-Is the vaccine a cure, or a spread?
+Welcome to BITROT.
 
 ### Back story
-You are in a safe haven, an ground petrol mine in the middle of the vulcanic islands circle.
-The company is one of a few who still powering the world after the pandemic.
-Some countries fall apart, the nations who left ware in the pacific, Australia,
-part of South America and a few nation spread cells around Europe.
+You are in a safe haven: an underground petrol mine in the middle of a 
+volcanic island chain. The company that runs it is one of the few still 
+powering the world after the pandemic. Some countries collapsed; the 
+survivors clustered in parts of the Pacific, Australia, sections of 
+South America, and scattered enclaves across Europe.
 
-Next Petrol was an international Brazilian company still sending energy to the world.
-And the other business, producing and shipping vaccines for the W.H.O made offshore.
+Next Petrol is an international Brazilian company still exporting energy 
+to the world. Another business — producing and shipping vaccines for 
+the WHO — operates offshore.
 
----
+All the stability on land was overturned, including at the main plant. 
+Trillions of Brazilian reais feel like a future memory, an expense no 
+one can recover. If nations fall, who will pay our bills? Will we riot 
+and build an energy temple? Those were the thoughts when Petrus was 
+created in the 1960s. Now we live and work here to find purpose.
 
-All the stabilitie on land were upside down. Also with the main plant. Probably
-trilions brazilian reais would be an future memory of an expance. If nations fall,
-who will pay our bills? Will we riot and build a energy tample. Probably the thoughts 
-when Petrus was created by the las century 60s. Now we live and work on this to try to
-have a purpose in life.
+People come and go; some never return to land and others… become memories.
 
-People here just come and go, some never come back to land and others... Become a memory.
+You signed on to work in exchange for safety. Safety is the privilege 
+of a few — the biggest clients in the most populated regions: the Brazilian 
+coast, much of the U.S. along an east–west corridor, and Australia. 
+The capital of this new world order is Rio de Janeiro — home of those 
+who still pull the strings: economists, doctors, scientists, religious 
+leaders, and politicians.
 
-You've signed to work in exchange to be safe. Safety is the expance of a few, the biggest clients 
-in biggest countries, the very populated ones like the coast of Brazil, Half of USA in a thing 
-line east to west and Australia.
-The Capital of this new world: Rio de Janeiro. Where who send the cards live. 
-A crowd of economists, doctors, physicians and a lof the science, religion and politics...
+Here, you have mainly two jobs: do what you always did to earn money, 
+and keep the oil running.
 
-Over here, you who mainly two jobs: Do what you always did to earn money and keep the 
-oil running the world.
+I was doing my daily paperwork in the main house when people came from 
+the heliport wing reporting a breach — another day in paradise. We keep 
+a counter showing the years since the last breach, but this one felt different. 
+Maybe the large groups were trying to turn the facility into a flu 
+research site. The chopper had left full, as if a state was collapsing again.
 
----
+I heard strange engine noises fade away; when I looked, there was no boat 
+to the mainland. For my luck, the Next Petrol Manufacturing Plant was close 
+to the main site via the tunnel. The short tides of the island and the local 
+ancient religion — a people who probably once worshipped a god tied to this 
+land — are centered where the factory sits.
 
-On the main house I was doing my dialy job paperwork at the platform when some people 
-come from the heliport wing reporting a breach again - Another day in heaven - We have a counter
-showing the years the last breach happened, but this got different. Probably the big ones were
-trying to turn the facility one of the flu reserach. The chopper was full, like some state was just
-falling apart again. 
+You probably have choices:
 
-I've heard some strange noises of motors going away, and when I realize, there was no boat to mainland.
-But for my lucky, Next Petrol Manufacture Plant was close to main by the tunnel. The short tides of the 
-island and the local anccient relogion, probably adored some kind of god in this part of the land, just 
-where the factory is landed.
+Try to survive.
 
-Probably you have choices:
-- Try to survive.
-- Go to the heliport and try to call help?
-- Go to mainland to check if everything is ok?
-- Secure all this factory and go back to Rio as a hero!
-- Exit the game.
+Go to the heliport and try to call for help.
 
-Wllcome to BITROT.
+Go to the mainland to check if everything is okay.
 
-### Try to survive.
-You already know, nobody is comming, its your own.
-How to romantize the moment of fully loneness by a strange selfish peace.
-Time to move own into reality, loot everything and be roque, trust is rare.
+Secure the factory and return to Rio as a hero.
 
-### Go to the heliport and try to call help?
-The chooper just left with some of the ritches. 
-The boats were left with the, let me quote: "Required and assistant personal". I'm the first at NP.
-Maybe I can use the radio to call some boat or chooper.
+Exit the game.
 
-### Go to mainland to check if everything is ok?
-Probably I'm going by foot. The distribution center is just south, there's no error in the tunnel.
-Just more them 1000 working on the depths of earth. From civilians to the rich managers.
-What kind of things could I find there?
+Welcome to BITROT.
 
-### Secure all this factory and go back to Rio as a hero!
-The first rule of the NP work manual. There's also seminaries on how to manage the platform. People
-grow with this at schools: "What would you do if you owned the company" - Some people come and go
-frequently promoting this heroim, the retirement plan is everything and free housing at the beach!
+### Try to survive
+You already know: nobody is coming. It’s on you. How do you romanticize the moment 
+of full loneliness into a strange, selfish peace? Time to face reality, loot what 
+you can, and go rogue — trust is rare.
 
+### Go to the heliport and try to call help
+
+The chopper just left with some of the rich. The boats were prioritized for, quote, 
+"required and assistant personnel."
+I’m the first one at Next Petrol. Maybe I can use the radio to call a boat or another chopper.
+
+### Go to the mainland to check if everything is okay
+
+You’d probably go on foot. The distribution center is just south; the tunnel 
+should be intact. There are more than a thousand people working deep underground — 
+from civilians to senior managers. What might you find there?
+
+### Secure the factory and go back to Rio as a hero
+
+That’s the first rule of the NP manual. There are seminars on how to run 
+the platform: “What would you do if you owned the company?” People come and go, 
+always selling the idea of heroism. The retirement plan promises everything — 
+even free housing at the beach.

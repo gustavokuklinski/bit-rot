@@ -11,6 +11,7 @@ from core.ui.nearby import draw_nearby_modal
 from core.ui.helpers import draw_inventory_button, draw_status_button, draw_nearby_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.messages_modal import draw_messages_modal, draw_messages_button
+from core.ui.text_modal import draw_text_modal
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -196,6 +197,10 @@ def draw_game(game):
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'messages':
             _, close_button, minimize_button = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
+            if close_button: game.modal_buttons.append(close_button)
+            if minimize_button: game.modal_buttons.append(minimize_button)
+        elif modal['type'] == 'text':
+            _, close_button, minimize_button = draw_text_modal(game.virtual_screen, game, modal, game.assets)
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
 

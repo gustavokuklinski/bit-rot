@@ -1,0 +1,18 @@
+<item name="Safety Guide" type="text">
+    <properties>
+        <sprite file="newspaper.png" />
+        <text>
+            # Next Petrol
+            ## Safety Guide
+
+            1. Keep your hands clean
+            2. If possible use the mask on closed places
+            3. If you feel something go to the infermary imediatly
+
+            We'll be always here for you!
+
+            Next Petrol Director
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

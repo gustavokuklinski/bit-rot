@@ -932,7 +932,10 @@ def run_player_setup(game):
                 final_player_data['stats'] = state['final_stats']
                 final_player_data['attributes'] = state['final_attrs']
                 final_player_data['clothes'] = state['chosen_clothes']
-                
+                final_player_data['name'] = state.get('player_name', "Player") # Pass the name
+                final_player_data['sex'] = state['base_data'].get('sex', 'Male') # Pass the sex
+                final_player_data['traits'] = state['chosen_traits']
+
                 game.start_new_game(final_player_data)
                 game.game_state = 'PLAYING'
                 return

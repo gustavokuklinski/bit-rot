@@ -1,6 +1,12 @@
-<item name="ID" type="id">
+<item name="ID" type="text">
     <properties>
         <sprite file="id.png" />
+        <text>
+            Name: [PLAYER NAME]
+            Sex: [PLAYER SEX]
+            Traits:
+                - [LIST TO TRAITS]
+        </text>
     </properties>
     <spawn chance="0" />
 </item>

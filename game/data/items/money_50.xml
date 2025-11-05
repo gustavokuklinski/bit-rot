@@ -1,0 +1,9 @@
+<item name="Money 20" type="text">
+    <properties>
+        <sprite file="money_50.png" />
+        <text>
+            Value: 50
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>
