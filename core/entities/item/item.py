@@ -307,7 +307,7 @@ class Item:
 
             # Always randomize durability for items that have it
             durability = random.uniform(min_dur, max_dur)
-            
+
         load = None
         if 'load' in props:
             if 'min' in props['load']:
@@ -374,12 +374,10 @@ class Projectile:
             self.vx = self.vy = 0
 
     def update(self, game_width=None, game_height=None, game_offset_x=0):
-        # lazy import to avoid circular imports at module load time
-        from data.config import GAME_WIDTH, GAME_HEIGHT
-        if game_width is None:
-            game_width = GAME_WIDTH
-        if game_height is None:
-            game_height = GAME_HEIGHT
+  
+        if game_width is None or game_height is None:
+            print("Error: Projectile.update() called without game_width/game_height. Projectile will be removed.")
+            return True # Remove projectile if bounds are unknown
 
         self.x += self.vx
         self.y += self.vy

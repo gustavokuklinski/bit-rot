@@ -163,6 +163,13 @@ def set_active_layer(game, layer_index):
     game.ground_data = game.all_ground_layers.get(layer_index, [])
     game.spawn_data = game.all_spawn_layers.get(layer_index, [])
 
+    if game.map_data:
+        game.map_height_pixels = len(game.map_data) * TILE_SIZE
+        game.map_width_pixels = len(game.map_data[0]) * TILE_SIZE
+    else:
+        game.map_height_pixels = 0
+        game.map_width_pixels = 0
+
     print(f"Active map_data shape: ({len(game.map_data)}, {len(game.map_data[0]) if game.map_data else 0})")
     print(f"Active ground_data shape: ({len(game.ground_data)}, {len(game.ground_data[0]) if game.ground_data else 0})")
     print(f"Active spawn_data shape: ({len(game.spawn_data)}, {len(game.spawn_data[0]) if game.spawn_data else 0})")

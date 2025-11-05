@@ -35,7 +35,8 @@ def update_game_state(game):
     projectiles_to_remove = []
     zombies_to_remove = []
     for p in game.projectiles:
-        if p.update() or any(p.rect.colliderect(ob) for ob in game.obstacles):
+        if p.update(game.map_width_pixels, game.map_height_pixels) or any(p.rect.colliderect(ob) for ob in game.obstacles):
+        #if p.update() or any(p.rect.colliderect(ob) for ob in game.obstacles):
             projectiles_to_remove.append(p)
             continue
 

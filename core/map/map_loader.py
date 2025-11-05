@@ -112,7 +112,23 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                          print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
                     player_spawn = (x * TILE_SIZE, y * TILE_SIZE)
                 elif char == 'Z':
-                    zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                    base_char = base_layout[y][x]
+                    tile_def = tile_manager.definitions.get(base_char)
+                    
+                    is_valid_spawn = True
+                    if not tile_def:
+                        is_valid_spawn = False # Don't spawn on empty space
+                    elif tile_def['is_obstacle']:
+                        is_valid_spawn = False # Don't spawn on obstacles
+                    elif base_char == 'bg' or base_char.startswith('water_') or base_char.startswith('petrol_'):
+                        is_valid_spawn = False # Don't spawn on forbidden tiles
+                        
+                    if is_valid_spawn:
+                        zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                    else:
+                        # Optional: Log why a spawn point was skipped
+                        # print(f"Skipping zombie spawn at ({x},{y}), tile is '{base_char}'.")
+                        pass
                 elif char == 'I':
                     item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 else:
