@@ -14,7 +14,7 @@ The rest were forced to make an impossible choice - save themselves, or save som
 Now, everyone is vulnerable.
 Is the vaccine a cure, or a spread?
 
-## 
+### Back story
 You are in a safe haven, an ground petrol mine in the middle of the vulcanic islands circle.
 The company is one of a few who still powering the world after the pandemic.
 Some countries fall apart, the nations who left ware in the pacific, Australia,

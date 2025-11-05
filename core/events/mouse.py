@@ -12,6 +12,7 @@ from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_re
 from core.ui.container import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal
+from core.placement import find_free_tile
 
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
@@ -278,8 +279,26 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_slot == slot_name:
                                             item_in_slot = game.player.clothes.get(slot_name)
                                             game.player.clothes[slot_name] = dragged_item
-                                            game.dragged_item = item_in_slot 
-                                            dropped_successfully = (item_in_slot is None)
+                                            
+                                            if item_in_slot:
+                                                # This was a SWAP. Put the old item back where the new one came from
+                                                # (This is the "bounce back" logic, but done *here*)
+                                                if type_orig == 'inventory' and 0 <= i_orig <= len(game.player.inventory):
+                                                    game.player.inventory.insert(i_orig, item_in_slot)
+                                                elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
+                                                    game.player.belt[i_orig] = item_in_slot
+                                                elif type_orig == 'gear':
+                                                    # Swapping gear-to-gear
+                                                    game.player.clothes[i_orig] = item_in_slot
+                                                # (Add other valid bounce-back locations if needed, e.g., container)
+                                                else:
+                                                    game.player.inventory.append(item_in_slot) # Failsafe
+                                                game.dragged_item = None # Cursor is empty, swap complete
+                                            else:
+                                                # This was a simple equip, no swap.
+                                                game.dragged_item = None # Cursor is empty
+                                            
+                                            dropped_successfully = True
                                         else:
                                             print(f"Cannot place {dragged_item.name} in {slot_name} slot.")
                                             dropped_successfully = False 
@@ -346,25 +365,26 @@ def handle_mouse_up(game, event, mouse_pos):
 
             # --- 4. Bounce back or Drop on Ground ---
             if not dropped_successfully:
+                is_over_modal = False
+                for modal in game.modals:
+                    if not modal.get('minimized', False) and modal['rect'].collidepoint(mouse_pos):
+                        is_over_modal = True
+                        break
+
                 game_world_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
                 if game.dragged_item:
-                    if game_world_rect.collidepoint(mouse_pos):
-                        dropped_on_stack = False
-                        for ground_item in game.items_on_ground:
-                            if ground_item.rect.collidepoint(game.screen_to_world(mouse_pos)) and ground_item.can_stack_with(game.dragged_item):
-                                available_space = ground_item.capacity - ground_item.load
-                                transfer = min(available_space, game.dragged_item.load)
-                                ground_item.load += transfer
-                                game.dragged_item.load -= transfer
-                                if game.dragged_item.load <= 0:
-                                    dropped_successfully = True
-                                dropped_on_stack = True
-                                break
-                        
-                        if not dropped_on_stack:
-                            game.dragged_item.rect.center = game.screen_to_world(mouse_pos)
+                    # --- MODIFIED: Added 'and not is_over_modal' ---
+                    if game_world_rect.collidepoint(mouse_pos) and not is_over_modal:
+                        # --- START MODIFICATION: Use find_free_tile ---
+                        # Try to drop at player's feet (radius 1)
+                        if find_free_tile(game.dragged_item.rect, game.obstacles, game.items_on_ground, initial_pos=game.player.rect.center, max_radius=1):
+                            # find_free_tile modified the rect, so we just append
                             game.items_on_ground.append(game.dragged_item)
                             dropped_successfully = True
+                        else:
+                            # No space within 1 tile, drop fails
+                            dropped_successfully = False
+                            print("No free space to drop the item.")
                     
                     if not dropped_successfully and game.dragged_item:
                         # BOUNCE BACK
@@ -718,23 +738,20 @@ def handle_context_menu_click(game, mouse_pos):
                     slot_name = index 
                     item_to_drop = game.player.clothes.get(slot_name)
                     if item_to_drop and item_to_drop == item:
-                        game.player.clothes[slot_name] = None
-                        item_to_drop.rect.center = game.player.rect.center
-                        game.items_on_ground.append(item_to_drop)
-                        print(f"Dropped {item_to_drop.name} from {slot_name} slot.")
-                        dropped_item = item_to_drop
+                        dropped_item = game.player.drop_item(game, source, index, container_item)
+                        if dropped_item:
+                            game.items_on_ground.append(dropped_item)
+                            print(f"Dropped {dropped_item.name} from {slot_name} slot.")
                 
                 elif source == 'invcontainer':
-                    slot_name = index 
-                    item_to_unequip = game.player.clothes.get(slot_name)
-                    if item_to_unequip and item_to_unequip == item:
-                        game.player.clothes[slot_name] = None
-                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                            game.player.inventory.append(item_to_unequip)
-                            print(f"Unequipped {item_to_unequip.name} -> Inventory")
-                        else:
-                            item_to_unequip.rect.center = game.player.rect.center
-                            game.items_on_ground.append(item_to_unequip)
+                    item_to_drop = game.player.invcontainer # Correct item
+                    if item_to_drop and item_to_drop == item:
+                        dropped_item = game.player.drop_item(game, source, index, container_item)
+                        if dropped_item:
+                            game.items_on_ground.append(dropped_item)
+                            print(f"Dropped {dropped_item.name} from invcontainer slot.")
+                    else:
+                        print("Invcontainer drop error: item mismatch.")
                 
                 else:
                     dropped_item = game.player.drop_item(source, index, container_item)
@@ -809,6 +826,20 @@ def handle_context_menu_click(game, mouse_pos):
                             game.items_on_ground.append(item_to_unequip)
                             print(f"Unequipped {item_to_unequip.name} -> Dropped on ground (inventory full)")
                 
+                elif source == 'invcontainer':
+                    item_to_unequip = game.player.invcontainer # Correct item
+                    if item_to_unequip and item_to_unequip == item:
+                        game.player.invcontainer = None # Correct slot
+                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                            game.player.inventory.append(item_to_unequip)
+                            print(f"Unequipped {item_to_unequip.name} -> Inventory")
+                        else:
+                            item_to_unequip.rect.center = game.player.rect.center
+                            game.items_on_ground.append(item_to_unequip)
+                            print(f"Unequipped {item_to_unequip.name} -> Dropped on ground (inventory full)")
+                    else:
+                         print("Invcontainer unequip error: item mismatch.")
+
                 else:
                     print("Unequip is only available for belt or backpack items.")
 

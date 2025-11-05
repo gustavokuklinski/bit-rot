@@ -1,7 +1,7 @@
 import random
 from data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
-def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None):
+def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None, max_radius=10):
     """
     Finds a free tile for the given rect, avoiding obstacles and other items.
     The position is snapped to the grid.
@@ -34,7 +34,7 @@ def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None):
 
     # If not, and we have an initial position, search outwards
     if initial_pos:
-        for radius in range(1, 10): # Search in a 10-tile radius
+        for radius in range(1, max_radius + 1): # Search in a <max_radius>-tile radius
             for i in range(-radius, radius + 1):
                 for j in range(-radius, radius + 1):
                     if abs(i) < radius and abs(j) < radius:
@@ -58,10 +58,10 @@ def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None):
                                 break
                     
                     if not collision:
-                        return True
+                        return True # Found a free tile
 
-    # If no initial position or no free tile found nearby, revert to random search
-    return find_random_free_tile(rect, obstacles, items_on_ground)
+    # If no free tile was found within the radius, return False
+    return False
 
 def find_random_free_tile(rect, obstacles, items_on_ground):
     rect.x = random.randint(0, (GAME_WIDTH // TILE_SIZE) - 1) * TILE_SIZE

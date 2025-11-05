@@ -3,6 +3,7 @@
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Walk slow
+- **ALT + W/A/S/D**: Walk fast
 - **SHIFT + R-Click**: Shoot/Attack
 - **R-Click + Drag**: Place on Belt/Backpack or Drop
 - **L-Click**: Opens menu 

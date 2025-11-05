@@ -9,6 +9,7 @@ from core.entities.zombie.corpse import Corpse
 from core.entities.player.player_progression import PlayerProgression
 from core.ui.inventory import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.messages import display_message
+from core.placement import find_free_tile
 
 class Player:
     def __init__(self, player_data=None):
@@ -651,8 +652,14 @@ class Player:
                 self.drop_item(source, index, container_item) # Use original drop to handle pop
         
         if item_to_drop:
-            item_to_drop.rect.center = self.rect.center
-            return item_to_drop # Return to mouse.py to be added to items_on_ground
+            if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+                return item_to_drop # Success, return item to be added to ground
+            else:
+                # No space, put the created stack back into inventory
+                print("No free space to drop the item.")
+                self.inventory.append(item_to_drop) # Failsafe: add to inventory
+                self.stack_item_in_inventory(item_to_drop) # Try to stack it
+                return None
         return None
 
     def transfer_item_stack(self, source, index, container_item, target_container):
@@ -716,24 +723,68 @@ class Player:
                 print(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
 
 
-    def drop_item(self, source, index, container_item=None):
+    def drop_item(self, game, source, index, container_item=None):
         if self.drop_cooldown > 0:
             print("Cannot drop items so quickly.")
             return None
+
         item_to_drop = None
+        source_inventory = None # To know where to return it
+        source_index = -1
+
         if source == 'inventory' and index < len(self.inventory):
             item_to_drop = self.inventory.pop(index)
+            source_inventory = self.inventory
+            source_index = index
         elif source == 'belt' and index < len(self.belt):
             item_to_drop = self.belt[index]
             self.belt[index] = None
             if self.active_weapon == item_to_drop:
                 self.active_weapon = None
+            source_inventory = self.belt
+            source_index = index
         elif source == 'backpack':
             item_to_drop = self.backpack
             self.backpack = None
+            source_inventory = [self] # Use dummy list
+            source_index = 0 # Dummy index
+        elif source == 'invcontainer':
+            item_to_drop = self.invcontainer
+            self.invcontainer = None
+            source_inventory = [self] # Use dummy list
+            source_index = 1 # Dummy index
+        elif source == 'gear':
+            item_to_drop = self.clothes.get(index) # index is slot_name
+            self.clothes[index] = None
+            source_inventory = [self] # Use dummy list
+            source_index = 2 # Dummy index
         elif (source == 'container' or source == 'nearby') and container_item and index < len(container_item.inventory):
             item_to_drop = container_item.inventory.pop(index)
-        return item_to_drop
+            source_inventory = container_item.inventory
+            source_index = index
+
+        if item_to_drop:
+            # --- MODIFIED: Check for valid drop location ---
+            if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+                return item_to_drop # Success
+            else:
+                # No space, put it back
+                print("No free space to drop the item.")
+                if source == 'inventory':
+                    source_inventory.insert(source_index, item_to_drop)
+                elif source == 'belt':
+                    source_inventory[source_index] = item_to_drop
+                elif source == 'backpack':
+                    self.backpack = item_to_drop
+                elif source == 'invcontainer':
+                    self.invcontainer = item_to_drop
+                elif source == 'gear':
+                    self.clothes[index] = item_to_drop # index is slot_name
+                elif source == 'container' or source == 'nearby':
+                    source_inventory.insert(source_index, item_to_drop)
+                return None # Failed to drop
+
+        return None
 
     def stack_item_in_inventory(self, item_to_stack):
         """Tries to merge an item with existing stacks in inventory, then belt."""
