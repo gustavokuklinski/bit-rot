@@ -209,7 +209,12 @@ class Zombie:
         dy = target_pos[1] - self.rect.centery
         dist = math.hypot(dx, dy)
 
-        if dist > TILE_SIZE / 2: # Don't move if already very close
+        stop_distance = TILE_SIZE / 2 # Default stop distance for wandering
+        if self.state == 'chasing':
+            # If chasing, stop when within attack range
+            stop_distance = self.attack_range * 0.9 # Use 90% of range to avoid jitter
+
+        if dist > stop_distance: # Don't move if already very close
             # Normalize and scale by speed
             move_x = (dx / dist) * self.speed
             move_y = (dy / dist) * self.speed

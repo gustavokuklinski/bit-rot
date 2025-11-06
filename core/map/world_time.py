@@ -19,7 +19,6 @@ class WorldTime:
         self.day_radius = BASE_PLAYER_VIEW_RADIUS * 1.5
         self.night_radius = BASE_PLAYER_VIEW_RADIUS * 0.5
 
-
         self.day_ambient = 255 # Full brightness
         # Calculate night ambient from the old darkness value
         self.night_ambient = 255 - MAX_DARKNESS_OPACITY 

@@ -689,7 +689,19 @@ class Player:
 
     def transfer_item_stack(self, source, index, container_item, target_container):
         """Transfers an entire stack to another container, merging if possible."""
-        item, source_inventory = self.find_item_and_stack(source, index, container_item)
+        
+        # --- [FIX START] ---
+        # Get the item and its actual source list
+        item = None
+        source_inventory = self._get_source_inventory(source, container_item) # Get the real inventory list
+        
+        if source == 'backpack':
+            item = self.backpack
+        elif source == 'invcontainer':
+            item = self.invcontainer
+        elif source_inventory and 0 <= index < len(source_inventory):
+            item = source_inventory[index] # Get the item from the list
+        # --- [FIX END] ---
 
         target_inv = None
         target_cap = 0
@@ -720,14 +732,24 @@ class Player:
                 
                 target_item.load += transfer
                 remaining_load -= transfer
-                item.load = remaining_load # Update original item
+                item.load = remaining_load # This updates the item in the source
                 
                 if remaining_load <= 0:
-                    break # Entire stack was merged
+                    break 
         
         # 2. If stack is now empty, remove it from source
         if item.load <= 0:
-            self.drop_item(source, index, container_item) # Use drop to handle removal
+            # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
+            
+            # --- [FIX START] ---
+            if source == 'backpack':
+                self.backpack = None
+            elif source == 'invcontainer':
+                self.invcontainer = None
+            elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                source_inventory.pop(index) # Use pop(index) to be precise
+            # --- [FIX END] ---
+            
             print(f"Merged all of {item.name} into {target_name}.")
             return
             
@@ -741,8 +763,18 @@ class Player:
                 
                 target_inv.append(new_stack)
                 
-                # Now the original item is empty, remove it
-                self.drop_item(source, index, container_item)
+                # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
+
+                # --- [FIX START] ---
+                # The original item is now empty, remove it from its source.
+                if source == 'backpack':
+                    self.backpack = None
+                elif source == 'invcontainer':
+                    self.invcontainer = None
+                elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                     source_inventory.pop(index) # Use pop(index)
+                # --- [FIX END] ---
+
                 print(f"Sent {remaining_load} {item.name} to {target_name}.")
             else:
                 print(f"{target_name} is full. Could not transfer remaining {remaining_load}.")

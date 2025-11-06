@@ -397,7 +397,7 @@ class Game:
         for item in self.items_on_ground + self.containers:
             if hasattr(item, 'inventory'):
                 dist = math.hypot(self.player.rect.centerx - item.rect.centerx, self.player.rect.centery - item.rect.centery)
-                if dist <= TILE_SIZE:
+                if dist <= TILE_SIZE * 1.5:
                     nearby_containers.append(item)
         return nearby_containers
 
