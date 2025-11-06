@@ -1,9 +1,9 @@
-<item name="Mobile off" type="utility" state="on">
+<item name="Mobile off" type="mobile" state="off">
     <properties>
-        <durability min="1" max="20000" />
+        <durability min="1" max="10000" />
         <light min="0" max="0" />
         <fuel type="Powerbank" />
-        <sprite file="mobile.png" />
+        <sprite file="mobile_off.png" />
     </properties>
     <spawn chance="0" />
 </item>

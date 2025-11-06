@@ -107,7 +107,7 @@ def draw_menu(screen):
     try:
         if _logo_img is None:
             _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
-            logo_w = 300
+            logo_w = 400
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
     except Exception:
@@ -144,7 +144,7 @@ def draw_game_over(screen, zombies_killed):
     try:
         if _logo_img is None:
             _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
-            logo_w = 300
+            logo_w = 500
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
     except Exception:

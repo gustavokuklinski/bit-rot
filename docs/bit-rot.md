@@ -57,15 +57,10 @@ land — are centered where the factory sits.
 
 You probably have choices:
 
-Try to survive.
-
-Go to the heliport and try to call for help.
-
-Go to the mainland to check if everything is okay.
-
-Secure the factory and return to Rio as a hero.
-
-Exit the game.
+- Try to survive.
+- Go to the heliport and try to call for help.
+- Go to the mainland to check if everything is okay.
+- Secure the factory and return to Rio as a hero.
 
 Welcome to BITROT.
 

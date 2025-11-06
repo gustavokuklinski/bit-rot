@@ -1,4 +1,7 @@
+![BitRot logo](https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/game/sprites/ui/logo.png)
+
 # Bit Rot
+
 Bit Rot is a zombie survivor game.
 
 **Hacking the game**
@@ -25,8 +28,12 @@ $ python editor.py # Edit game maps
 - **E**: Get item from floor
 - **R**: Reload weapon
 
-- **I**: Opens inventory and belt
-- **H**: Opens Status
+- **I**: Opens Inventory and Belt (open as default)
+- **N**: Open Nearby (open as default)
+- **H**: Open Status
+- **M**: Open Messages
 
 - **F2**: Pause game
-----
+
+- **MOUSE SCROLL**: Zoom in/Zoom out
+- **-/=**: Keyboard Zoom in/Zoom out

@@ -24,6 +24,11 @@ class WorldTime:
         # Calculate night ambient from the old darkness value
         self.night_ambient = 255 - MAX_DARKNESS_OPACITY 
         
+        self.total_cycle_duration = self.day_duration + self.transition_duration + self.night_duration + self.transition_duration
+        self.game_time_ms = 180000 # Represents current time within the 24h cycle (Start at 6 AM)
+        self.current_hour = 6 # Start at 6 AM
+        self.last_update_time = pygame.time.get_ticks()
+
         # Set initial values on the game object
         self.game.player_view_radius = self.day_radius
         self.current_ambient_light = self.day_ambient # New variable
@@ -32,6 +37,15 @@ class WorldTime:
     def update(self):
         """Runs the day/night state machine."""
         current_time = pygame.time.get_ticks()
+        
+        delta_time = current_time - self.last_update_time
+        self.last_update_time = current_time
+        # Scale game time to be faster (e.g., 20x real time)
+        scaled_delta_time = delta_time * 20 
+        self.game_time_ms = (self.game_time_ms + scaled_delta_time) % self.total_cycle_duration
+        time_percentage = self.game_time_ms / self.total_cycle_duration
+        self.current_hour = int(time_percentage * 24)
+
         time_since_change = current_time - self.last_state_change_time
 
         # --- State: DAY ---

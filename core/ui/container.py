@@ -54,7 +54,7 @@ def draw_container_content(surface, game, container_item, modal, assets):
 
 def draw_container_view(surface, game, container_item, modal, assets):
     if not container_item or not hasattr(container_item, 'inventory'):
-        return
+        return ()
     
     base_modal = BaseModal(surface, modal, assets, f"{container_item.name} Contents")
     base_modal.draw_base()

@@ -601,7 +601,7 @@ def handle_context_menu_click(game, mouse_pos):
             if option == 'Use':
                 game.player.consume_item(item, source, index, container_item)
             elif option == 'Reload':
-                if getattr(item, 'item_type', None) == 'utility':
+                if getattr(item, 'item_type', None) in ['utility', 'mobile']:
                     game.player.reload_utility_item(item, source, index, container_item)
                 else:
                     game.player.reload_active_weapon() 
@@ -759,38 +759,27 @@ def handle_context_menu_click(game, mouse_pos):
                         dropped_item.rect.center = game.player.rect.center
                         game.items_on_ground.append(dropped_item)
 
-            elif option == 'Open':
-                modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                if not modal_exists:
-                    new_container_modal = {
-                        'id': uuid.uuid4(),
-                        'type': 'container',
-                        'item': item,
-                        'position': game.last_modal_positions['container'],
-                        'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                        'minimized': False
-                    }
-                    game.modals.append(new_container_modal)
-            elif option == 'Inspect':
-                modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                if not modal_exists:
-                    new_container_modal = {
-                        'id': uuid.uuid4(),
-                        'type': 'container',
-                        'item': item,
-                        'position': game.last_modal_positions['container'],
-                        'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                        'minimized': False
-                    }
-                    game.modals.append(new_container_modal)
-
-
-
             elif option == 'Open' or option == 'Read' or option == 'Inspect':
-            # Check if it's a text item first
-                if getattr(item, 'item_type', None) == 'text':
+                # The Mobile context window
+                if getattr(item, 'item_type', None) == 'mobile':
+                    modal_exists = any(m['type'] == 'mobile' and m['item'] == item for m in game.modals)
+                    if not modal_exists:
+                        new_mobile_modal = {
+                            'id': uuid.uuid4(),
+                            'type': 'mobile',
+                            'item': item,
+                            'position': game.last_modal_positions['mobile'],
+                            'is_dragging': False, 'drag_offset': (0, 0),
+                            # Assuming 250x400 from previous implementation
+                            'rect': pygame.Rect(game.last_modal_positions['mobile'][0], game.last_modal_positions['mobile'][1], 250, 400), 
+                            'minimized': False,
+                            'active_tab': 'Clock' # Default tab
+                        }
+                        game.modals.append(new_mobile_modal)
+                    clicked_on_menu = True
+
+                # Check if it's a text item first
+                elif getattr(item, 'item_type', None) == 'text':
                     modal_exists = any(m['type'] == 'text' and m['item'] == item for m in game.modals)
                     if not modal_exists:
                         new_text_modal = {
@@ -804,6 +793,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'scroll_offset_y': 0
                         }
                         game.modals.append(new_text_modal)
+                    clicked_on_menu = True
 
                 # Existing container logic
                 elif getattr(item, 'inventory', None) is not None:
@@ -819,7 +809,6 @@ def handle_context_menu_click(game, mouse_pos):
                             'minimized': False
                         }
                         game.modals.append(new_container_modal)
-
                     clicked_on_menu = True
 
 

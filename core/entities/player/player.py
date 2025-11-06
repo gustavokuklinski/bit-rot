@@ -403,13 +403,15 @@ class Player:
             else:
                 options.append('Use')
             options.append('Equip')
-        elif item.item_type == 'utility':
+        elif item.item_type in ['utility', 'mobile']:
             if item.state == 'on':
                 options.append('Turn off')
             elif item.state == 'off':
                 options.append('Turn on')
             if item.fuel_type:
                 options.append('Reload') # This is for lanterns
+            if item.item_type == 'mobile': # Check for mobile
+                options.append('Open')
             options.append('Equip')
 
         elif item.item_type == 'backpack':
@@ -544,20 +546,28 @@ class Player:
         if item.state == "on":
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
-            # Check for matches to turn ON
-            matches, m_source, m_index, m_container = self.find_fuel("Matches")
-            if not matches:
-                print("No matches to light the lantern.")
+            if item.durability is not None and item.durability <= 0:
+                print(f"Cannot turn on {item.name}, it's out of power.")
                 return
             
-            # Consume one match
-            matches.load -= 1
-            if matches.load <= 0:
-                # Remove empty matchbox
-                m_inv = self._get_source_inventory(m_source, m_container)
-                if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
-                    m_inv.pop(m_index)
-
+            # Check for fuel type (e.g., "Matches" for lantern)
+            if item.fuel_type == "Matches":
+                matches, m_source, m_index, m_container = self.find_fuel("Matches")
+                if not matches:
+                    print("No matches to light the lantern.")
+                    return
+                
+                # Consume one match
+                matches.load -= 1
+                if matches.load <= 0:
+                    m_inv = self._get_source_inventory(m_source, m_container)
+                    if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
+                        m_inv.pop(m_index)
+            
+            # If fuel_type is "Powerbank", we don't need to consume anything to *turn on*,
+            # just check durability (which we did).
+            # If fuel_type is None, it also just turns on.
+            
             new_name = item.name.replace(" off", " on")
         
         if not new_name:

@@ -12,10 +12,10 @@
 - **E**: Get item from floor, open/close door
 - **R**: Reload weapon or item
 
-- **I**: Opens inventory and belt
-- **H**: Opens Status
-- **M**: Opens Messages
-- **N**: Opens Nearby
+- **I**: Opens Inventory and Belt
+- **H**: Open Status
+- **N**: Open Nearby
+- **M**: Open Messages
 
 - **F2**: Pause game
 

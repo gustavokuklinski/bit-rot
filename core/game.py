@@ -27,6 +27,7 @@ from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 from core.map.world_layers import load_all_map_layers, set_active_layer
 from core.map.world_time import WorldTime
+from core.ui.mobile_modal import draw_mobile_modal
 
 class Game:
     def __init__(self):
@@ -88,7 +89,8 @@ class Game:
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'nearby': (1000, 360),
             'messages': (10, 560),
-            'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150) # --- ADD THIS LINE ---
+            'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
+            'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200)
         }
 
         self.status_button_rect = None
@@ -191,6 +193,21 @@ class Game:
                 print("Warning: Could not create 'ID' item. Check item XML.")
         except Exception as e:
             print(f"Error creating starting wallet: {e}")
+        
+        try:
+            # Assumes your item name in the XML is "ID"
+            # If your item is named "Wallet", change "ID" to "Wallet"
+            wallet_item = Item.create_from_name("Powerbank") 
+            if wallet_item:
+                # Check if there's space
+                if len(self.player.inventory) < self.player.get_total_inventory_slots():
+                    self.player.inventory.append(wallet_item)
+                else:
+                    print("Could not add wallet; inventory is full!")
+            else:
+                print("Warning: Could not create 'ID' item. Check item XML.")
+        except Exception as e:
+            print(f"Error creating starting wallet: {e}")
 
         self.zombies_killed = 0
         self.modals = []
@@ -203,7 +220,8 @@ class Game:
             self.player.x, self.player.y = player_spawn
 
         self.world_time = WorldTime(self)
-        
+        self.game_start_time = pygame.time.get_ticks()
+
         inventory_modal = {
             'id': uuid.uuid4(),
             'type': 'inventory',

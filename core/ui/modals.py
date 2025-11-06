@@ -28,6 +28,8 @@ class BaseModal:
             return MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT
         elif self.modal['type'] == 'text':
             return TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT
+        elif self.modal['type'] == 'mobile':
+            return MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT
         return 300, 300
 
     def draw_header(self):
