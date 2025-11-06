@@ -90,6 +90,7 @@ AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
 BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
 PLAYER_FOW_RADIUS = int(player_config.find('fow_radius').get('value'))
 
+START_HOUR = int(player_config.find('start_hour').get('value'))
 DAY_NIGHT_CYCLE_MS = int(player_config.find('day_night_cycle').get('value'))
 TRANSITION_DURATION_MS = int(player_config.find('day_night_cycle_transition').get('value'))
 MAX_DARKNESS_OPACITY = int(player_config.find('day_night_cycle_darkness').get('value'))

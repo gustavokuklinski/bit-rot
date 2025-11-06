@@ -77,6 +77,8 @@ class Toolbar:
             {"label": "PLAYER SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
             {"label": "ZOMBIE SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
             {"label": "ITEM SPAWN", "icon": "item", "action": "ITEM SPAWN"},
+            {"label": "STAIR L1", "icon": "stair", "action": "STAIR L1"},
+            {"label": "STAIR L2", "icon": "stair", "action": "STAIR L2"},
             {"label": "SELECTION", "icon": "selection", "action": "SELECTION"}
         ]
 

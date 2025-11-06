@@ -18,7 +18,7 @@ def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
         # Check for tab clicks (This part is correct)
         for modal in reversed(game.modals):
-            if modal['type'] in ['nearby', 'status', 'inventory'] and 'tab_rects' in modal and 'tabs_data' in modal:
+            if modal['type'] in ['nearby', 'status', 'inventory', 'mobile'] and 'tab_rects' in modal and 'tabs_data' in modal:
                 tab_rects = modal.get('tab_rects', [])
                 tabs_data = modal.get('tabs_data', [])
                 clicked_tab = False

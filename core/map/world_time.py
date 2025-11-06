@@ -26,7 +26,7 @@ class WorldTime:
         
         self.total_cycle_duration = self.day_duration + self.transition_duration + self.night_duration + self.transition_duration
         self.game_time_ms = 180000 # Represents current time within the 24h cycle (Start at 6 AM)
-        self.current_hour = 6 # Start at 6 AM
+        self.current_hour = START_HOUR # Start at 6 AM
         self.last_update_time = pygame.time.get_ticks()
 
         # Set initial values on the game object
@@ -37,7 +37,7 @@ class WorldTime:
     def update(self):
         """Runs the day/night state machine."""
         current_time = pygame.time.get_ticks()
-        
+
         delta_time = current_time - self.last_update_time
         self.last_update_time = current_time
         # Scale game time to be faster (e.g., 20x real time)

@@ -189,8 +189,8 @@ def set_active_layer(game, layer_index):
     if layer_index in game.layer_zombies:
         game.zombies = game.layer_zombies[layer_index][:]
     else:
-        game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
-        game.layer_zombies[layer_index] = game.zombies[:]
+        game.zombies = [] # Start empty
+        game.layer_zombies[layer_index] = []
     
     return True
 

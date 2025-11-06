@@ -162,6 +162,10 @@ def main():
     clipboard = None
 
     modified_maps = set()
+    
+    # --- MODIFIED: Unify tool selection to one variable ---
+    tile_to_place = None # This will store "[1]", "[2]", etc.
+    # sidebar.selected_tile will still be used by the sidebar UI, but we'll sync it
 
     running = True
     while running:
@@ -183,9 +187,12 @@ def main():
                 continue
 
             # Handle events for UI components
+            # --- MODIFIED: Sync sidebar selection with tile_to_place ---
             sidebar.handle_event(event)
             if sidebar.selected_tile:
+                tile_to_place = None # Deactivate stair tool if a sidebar tile is clicked
                 selection_mode = False
+            # --- END MODIFICATION ---
 
             tree_action = file_tree.handle_event(event)
             if tree_action:
@@ -224,21 +231,40 @@ def main():
                     file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
                     current_base_map_name = file_tree.selected_map or "new_map"
                     load_map(game_map, current_base_map_name, map_dir)
+                
+                # --- MODIFIED: All tools now sync variables ---
                 elif action == "ERASER":
                     sidebar.selected_tile = "eraser"
+                    tile_to_place = None 
                     selection_mode = False
                 elif action == "PLAYER SPAWN":
                     sidebar.selected_tile = "P"
+                    tile_to_place = None
                     selection_mode = False
                 elif action == "ZOMBIE SPAWN":
                     sidebar.selected_tile = "Z"
+                    tile_to_place = None
                     selection_mode = False
                 elif action == "ITEM SPAWN":
                     sidebar.selected_tile = "I"
+                    tile_to_place = None
                     selection_mode = False
                 elif action == "SELECTION":
                     selection_mode = True
                     sidebar.selected_tile = None
+                    tile_to_place = None
+                elif action == "STAIR L1":
+                    tile_to_place = "[1]"
+                    sidebar.selected_tile = None # Deactivate sidebar tool
+                    status_message = "Stair tool: [1] (To Layer 1)"
+                    status_message_timer = pygame.time.get_ticks()
+                elif action == "STAIR L2":
+                    tile_to_place = "[2]"
+                    sidebar.selected_tile = None # Deactivate sidebar tool
+                    status_message = "Stair tool: [2] (To Layer 2)"
+                    status_message_timer = pygame.time.get_ticks()
+                # --- END MODIFICATION ---
+                    
                 elif action == "SAVE MAP":
                     save_map(game_map, current_base_map_name, map_dir)
                     status_message = f"Map '{current_base_map_name}' saved!"
@@ -321,29 +347,43 @@ def main():
                         map_x = int(adjusted_mouse_x // TILE_SIZE)
                         map_y = int(adjusted_mouse_y // TILE_SIZE)
 
+                        # --- LOGIC RE-ORDERED AND CLEANED ---
+                        
+                        # Determine what tool is active
+                        current_tool = tile_to_place if tile_to_place is not None else sidebar.selected_tile
+
                         if selection_mode:
                             is_selecting = True
                             selection_start_pos = (map_x, map_y)
                             selection_rect = pygame.Rect(selection_start_pos[0], selection_start_pos[1], 0, 0)
                         
-                        # --- MODIFIED: Fill selection and keep it active ---
-                        elif sidebar.selected_tile and selection_rect and selection_rect.collidepoint(map_x, map_y):
-                            tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
+                        # --- MODIFIED: Fill selection (uses current_tool) ---
+                        elif current_tool and selection_rect and selection_rect.collidepoint(map_x, map_y):
+                            tool_to_fill = None if current_tool == "eraser" else current_tool
                             
-                            # Use new fill_rect method for efficiency and single undo
-                            game_map.fill_rect(selection_rect, tile_to_place, game_map.active_layer_name)
+                            game_map.fill_rect(selection_rect, tool_to_fill, game_map.active_layer_name)
                             modified_maps.add(current_base_map_name)
                             
-                            # Per request, selection_rect is NOT cleared to allow fill
-                            # selection_rect = None # <-- This line was removed
-                        
-                        # --- MODIFIED: Placing a single tile now deselects the rect ---
-                        elif sidebar.selected_tile:
+                        # --- MODIFIED: Placing a single tile (uses current_tool) ---
+                        elif current_tool:
                             if 0 <= map_x < game_map.width and 0 <= map_y < game_map.height:
-                                tile_to_place = None if sidebar.selected_tile == "eraser" else sidebar.selected_tile
-                                game_map.set_tile(map_x, map_y, tile_to_place, game_map.active_layer_name)
-                                modified_maps.add(current_base_map_name)
-                            selection_rect = None # <-- This line was ADDED
+                                tool_to_set = None if current_tool == "eraser" else current_tool
+                                active_layer_name = game_map.active_layer_name
+                                
+                                # Check for stair tile rule
+                                is_stair_tile = isinstance(tool_to_set, str) and tool_to_set.startswith("[") and tool_to_set.endswith("]")
+                                
+                                if is_stair_tile and active_layer_name != 'map':
+                                    # If it's a stair AND we are NOT on the 'map' layer, show an error
+                                    status_message = "Stairs can ONLY be placed on the 'map' layer."
+                                    status_message_timer = pygame.time.get_ticks() + 2000 # Show for 2 seconds
+                                else:
+                                    # Otherwise, place the tile (either a normal tile or a stair on the 'map' layer)
+                                    game_map.set_tile(map_x, map_y, tool_to_set, active_layer_name)
+                                    modified_maps.add(current_base_map_name)
+                                
+                                # Placing a single tile clears the selection
+                                selection_rect = None
 
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:

@@ -4,9 +4,8 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Shotgun Shells" chance="1" />
-        <item item="Shotgun Shells" chance="1" />
-        <item item="Shotgun Shells" chance="1" />
-        <item item="Shotgun" chance="1" />
+        <item item="Canned Food" chance="0.1" />
+        <item item="Water Bottle" chance="0.1" />
+        <item item="Baton" chance="0.1" />
     </loot>
 </map>

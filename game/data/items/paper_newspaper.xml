@@ -13,5 +13,5 @@
             Some nations adopted and who couldn't had mass death by the decease.
         </text>
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1" />
 </item>

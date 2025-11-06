@@ -14,5 +14,5 @@
             Next Petrol Director
         </text>
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1" />
 </item>
