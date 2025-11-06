@@ -708,11 +708,11 @@ def handle_context_menu_click(game, mouse_pos):
                         game.player.equip_item_to_belt(item, source, index, container_item)
 
             elif option == 'Drop one':
-                dropped = game.player.drop_item_stack(source, index, container_item, 1)
+                dropped = game.player.drop_item_stack(game, source, index, container_item, 1)
                 if dropped:
                     game.items_on_ground.append(dropped)
             elif option == 'Drop all':
-                dropped = game.player.drop_item_stack(source, index, container_item, 'all')
+                dropped = game.player.drop_item_stack(game, source, index, container_item, 'all')
                 if dropped:
                     game.items_on_ground.append(dropped)
             elif option == 'Send all to Backpack':
@@ -724,15 +724,10 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Drop':
                 dropped_item = None
                 if source == 'backpack':
-                    item_to_drop = game.player.backpack
-                    if item_to_drop and item_to_drop == item:
-                        game.player.backpack = None
-                        item_to_drop.rect.center = game.player.rect.center
-                        game.items_on_ground.append(item_to_drop)
-                        print(f"Dropped {item_to_drop.name} from backpack slot.")
-                        dropped_item = item_to_drop
-                    else:
-                        print("Backpack drop error: item mismatch.")
+                    dropped_item = game.player.drop_item(game, source, index, container_item)
+                    if dropped_item:
+                        game.items_on_ground.append(dropped_item)
+                        print(f"Dropped {dropped_item.name} from backpack slot.")
                 
                 elif source == 'gear':
                     slot_name = index 
@@ -754,7 +749,7 @@ def handle_context_menu_click(game, mouse_pos):
                         print("Invcontainer drop error: item mismatch.")
                 
                 else:
-                    dropped_item = game.player.drop_item(source, index, container_item)
+                    dropped_item = game.player.drop_item(game, source, index, container_item)
                     if dropped_item:
                         dropped_item.rect.center = game.player.rect.center
                         game.items_on_ground.append(dropped_item)

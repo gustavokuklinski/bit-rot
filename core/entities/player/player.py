@@ -651,7 +651,7 @@ class Player:
             
         return None, None
 
-    def drop_item_stack(self, source, index, container_item, quantity):
+    def drop_item_stack(self, game, source, index, container_item, quantity):
         """Drops one, all, or a specific quantity of a stackable item."""
         item, source_inventory = self.find_item_and_stack(source, index, container_item)
         if not item:
@@ -661,7 +661,7 @@ class Player:
         item_to_drop = None
         if quantity == 'all' or quantity >= item.load:
             # Drop the entire stack
-            item_to_drop = self.drop_item(source, index, container_item)
+            item_to_drop = self.drop_item(game, source, index, container_item)
         elif quantity > 0 and item.load > 0:
             # Drop a partial stack
             item_to_drop = Item.create_from_name(item.name)
@@ -674,7 +674,7 @@ class Player:
             item.load -= transfer_amount
             if item.load <= 0:
                 # The original stack is now empty, remove it
-                self.drop_item(source, index, container_item) # Use original drop to handle pop
+                self.drop_item(game, source, index, container_item) # Use original drop to handle pop
         
         if item_to_drop:
             if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
