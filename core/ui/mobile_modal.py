@@ -10,6 +10,12 @@ def draw_mobile_modal(surface, game, modal, assets):
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 
+
+    all_buttons = [close_button, minimize_button]
+
+    if base_modal.minimized:
+        return all_buttons
+
     if base_modal.minimized:
         return close_button, minimize_button
 
@@ -31,6 +37,10 @@ def draw_mobile_modal(surface, game, modal, assets):
     if modal['active_tab'] == 'Clock':
         draw_clock_tab(surface, game, modal, assets)
     elif modal['active_tab'] == 'Map':
-        draw_map_tab(surface, game, modal, assets)
+        zoom_in_btn, zoom_out_btn = draw_map_tab(surface, game, modal, assets)
+        if zoom_in_btn:
+            all_buttons.append(zoom_in_btn)
+        if zoom_out_btn:
+            all_buttons.append(zoom_out_btn)
     
-    return close_button, minimize_button
+    return all_buttons

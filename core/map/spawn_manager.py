@@ -18,10 +18,13 @@ def spawn_initial_items(obstacles, item_spawns):
             print(f"Warning: Could not spawn item at {pos} due to collision with obstacle.")
     return items_on_ground
 
-def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000):
+def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None):
     zombies = []
     all_spawned_entities = list(items_on_ground)
     spacing_obstacles = []
+
+    if spawns_per_marker is None:
+        spawns_per_marker = ZOMBIES_PER_SPAWN
 
     for pos in zombie_spawns:
 
@@ -30,7 +33,7 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000)
 
         # Spawn one zombie per 'Z' marker, or adjust ZOMBIES_PER_SPAWN if needed
         # ZOMBIES_PER_SPAWN = 1 # Usually 1 per marker is intended
-        for _ in range(ZOMBIES_PER_SPAWN): # <-- Your uncommented loop
+        for _ in range(spawns_per_marker):
             if len(zombies) >= limit: # Check again inside the inner loop
                 break
             # Create a zombie at the spawn point's location

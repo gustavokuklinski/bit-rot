@@ -53,6 +53,14 @@ def handle_mouse_down(game, event, mouse_pos):
                             full_height = 300 
                         modal_to_affect['rect'].height = header_height if is_minimized else full_height
                         return
+                    elif button['type'] == 'map_zoom_in':
+                        current_zoom = modal_to_affect.get('map_zoom', 4)
+                        modal_to_affect['map_zoom'] = min(16, current_zoom + 1) # Zoom in, max 16px
+                        return # Click handled
+                    elif button['type'] == 'map_zoom_out':
+                        current_zoom = modal_to_affect.get('map_zoom', 4)
+                        modal_to_affect['map_zoom'] = max(2, current_zoom - 1) # Zoom out, min 2px
+                        return # Click handled
 
         # (Existing code for UI buttons: status, inventory, etc.)
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):

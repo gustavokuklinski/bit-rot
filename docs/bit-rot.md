@@ -87,3 +87,36 @@ That’s the first rule of the NP manual. There are seminars on how to run
 the platform: “What would you do if you owned the company?” People come and go, 
 always selling the idea of heroism. The retirement plan promises everything — 
 even free housing at the beach.
+
+## Marechal Souza
+A Senior Military from the Army facility. 
+Worked on the distribution for ONU, WHO and other human organizations. 
+
+```
+    Hello! I'm Marechal Souza! On head of NS_X0A6!
+    We were luck to be here when the choper leave.
+
+    Hope you are smart.
+    Get my gear, I wont need them now.
+
+    If you try to get the choper, keep in mind: 100.000 for the landing back.
+    Be brave to try out.
+    Well, for our luck we have an infinite stock of Vaccine.
+    If someday it ends, or anyone need Vacs, I'll be here to serve
+    those souls.
+
+    You can try the tunnel. It goes to the Heli facility and the town.
+    You can choose your path kiddo.
+
+    This is a job for adults.
+    I don't think Rio will come.
+
+    Good luck!
+```
+
+## Doc Yu
+Yu is a chinese doctor from the middle wing of the underground platform.
+
+```
+
+```

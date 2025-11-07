@@ -72,3 +72,18 @@ Sprite types and codes:
     <spawn chance="12" /><!-- chance to spawn by [I] on map, or inside a type="container" -->
 </item>
 ```
+
+- **type="consumable"** (Ranged: 9mm ammo, Shotgun Shells...)
+```xml
+<item name="Bible" type="skill">
+    <properties>
+        <sprite file="bible_1.png" /> <!-- Skill sprite -->
+    </properties>
+        <stats> <!-- Set the status to update -->
+            <health value="100.0" />  <!-- Reset health to value -->
+            <stamina value="100.0" /> <!-- Reset stamina to value -->
+            <anxiety value="0.0" /> <!-- Reset anxiety to value -->
+        </stats>
+    <spawn chance="1" />
+</item>
+```

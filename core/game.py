@@ -118,6 +118,8 @@ class Game:
         self.layer_spawn_triggers = {} # Stores triggered spawns for each layer
         self.triggered_spawns = set()
         
+        self.current_zombie_spawns = []
+
         self.player_setup_state = {}
         
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS

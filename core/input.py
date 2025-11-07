@@ -91,18 +91,30 @@ def handle_input(game):
 
                     elif modal.get('type') == 'text' and not modal.get('minimized', False):
                         content_rect = modal.get('content_rect')
-                    if content_rect and content_rect.collidepoint(mouse_pos):
-                        # Read the max_scroll from the modal (set during draw)
-                        max_scroll_offset = modal.get('max_scroll_offset', 0)
-                        current_offset = modal.get('scroll_offset_y', 0)
 
-                        # Use the same line height as the draw function
-                        line_height = font_small.get_height() + 2
-                        scroll_amount = event.y * line_height * 3 # Scroll 3 lines
+                    #if content_rect and content_rect.collidepoint(mouse_pos):
+                    #    # Read the max_scroll from the modal (set during draw)
+                    #    max_scroll_offset = modal.get('max_scroll_offset', 0)
+                    #    current_offset = modal.get('scroll_offset_y', 0)
+                    #
+                    #    # Use the same line height as the draw function
+                    #    line_height = font_small.get_height() + 2
+                    #    scroll_amount = event.y * line_height * 3 # Scroll 3 lines
+                    #
+                    #    new_offset = current_offset - scroll_amount
+                    #    modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                    #    break 
 
-                        new_offset = current_offset - scroll_amount
-                        modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
-                        break #
+                    elif modal.get('type') == 'mobile' and not modal.get('minimized', False) and modal.get('active_tab') == 'Map':
+                        
+                        map_area = modal.get('map_area_rect') # Rect stored by map_tab.py
+                        if map_area and map_area.collidepoint(mouse_pos):
+                            current_zoom = modal.get('map_zoom', 4)
+                            if event.y > 0: # Scroll up
+                                modal['map_zoom'] = min(16, current_zoom + 1) # Zoom in, max 16px
+                            elif event.y < 0: # Scroll down
+                                modal['map_zoom'] = max(2, current_zoom - 1) # Zoom out, min 2px
+                            break # Handled scroll for this modal
 
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)

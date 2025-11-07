@@ -177,6 +177,11 @@ def set_active_layer(game, layer_index):
     # Rebuild obstacles and get spawn points
     item_spawns, zombie_spawns = _rebuild_world_from_data(game)
 
+    # Store the list of 'Z' markers for the dynamic spawner
+    game.current_zombie_spawns = zombie_spawns
+    # Ensure the triggered set exists for this layer
+    game.layer_spawn_triggers.setdefault(layer_index, set())
+
     # --- State Loading ---
     # Items: Load if they exist for the new layer, otherwise spawn them
     if layer_index in game.layer_items:

@@ -205,10 +205,11 @@ def draw_game(game):
             _, close_button, minimize_button = draw_text_modal(game.virtual_screen, game, modal, game.assets)
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
+        
         elif modal['type'] == 'mobile':
-            close_button, minimize_button = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
-            if close_button: game.modal_buttons.append(close_button)
-            if minimize_button: game.modal_buttons.append(minimize_button)
+            # draw_mobile_modal now returns a list of buttons
+            buttons = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
+            game.modal_buttons.extend(buttons)
 
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
