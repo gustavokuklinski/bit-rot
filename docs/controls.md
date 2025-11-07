@@ -2,15 +2,15 @@
 
 **Basic controls**:
 - **W/A/S/D**: Walk
-- **SHIFT + W/A/S/D**: Walk slow
-- **ALT + W/A/S/D**: Walk fast
+- **ALT + W/A/S/D**: Run
 - **SHIFT + R-Click**: Shoot/Attack
-- **R-Click + Drag**: Place on Belt/Backpack or Drop
+- **SHIFT + L-Click + Drag**: Get only one item from stack
+- **R-Click + Drag**: Place or Drop
 - **L-Click**: Opens menu 
-- **1/2/3/4/5**: Equip/Use item from Belt
+- **1/2/3/4/5**: Equip and use item from Belt
 
 - **E**: Get item from floor, open/close door
-- **R**: Reload weapon or item
+- **R**: Reload weapon
 
 - **I**: Opens Inventory and Belt
 - **H**: Open Status

@@ -23,6 +23,13 @@ def draw_tooltip(surface, item, pos):
         lines.append(f"HP: {item.hp}")
     if item.min_cure is not None and item.max_cure is not None:
         lines.append(f"Cure: {item.min_cure}-{item.max_cure}%")
+        
+    if item.item_type == 'skill' and hasattr(item, 'skill_stats') and item.skill_stats:
+        lines.append("") # Add a spacer line
+        lines.append("Passive (in Inventory):")
+        for stat_name, value in item.skill_stats.items():
+            # Format the stat name and value (e.g., "Anxiety: 0")
+            lines.append(f"  {stat_name.capitalize()}: {value:.0f}")
 
 
     font = pygame.font.Font(None, 24)

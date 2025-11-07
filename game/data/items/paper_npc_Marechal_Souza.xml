@@ -1,0 +1,27 @@
+<item name="npc_Marechal_Souza" type="text">
+    <properties>
+        <sprite file="npc_message.png" />
+        <text>
+            Hello! I'm Marechal Souza! On head of NS_X0A6!
+            We were luck to be here when the choper leave.
+
+            Hope you are smart.
+            Get my gear, I wont need them now.
+
+            If you try to get the choper, keep in mind: 100.000 for the landing back.
+            Be brave to try out.
+            Well, for our luck we have an infinite stock of Vaccine.
+            If someday it ends, or anyone need Vacs, I'll be here to serve
+            those souls.
+
+            You can try the tunnel. It goes to the Heli facility and the town.
+            You can choose your path kiddo.
+
+            This is a job for adults.
+            I don't think Rio will come.
+
+            Good luck!
+        </text>
+    </properties>
+    <spawn chance="1" />
+</item>

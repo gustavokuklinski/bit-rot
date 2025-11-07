@@ -1,0 +1,18 @@
+<map name="npc_Marechal_Souza" type="maptile_container" char="npc_Marechal_Souza" is_obstacle="true">
+    <visuals>
+        <sprite file="npc_Marechal_Souza.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="npc_Marechal_Souza" chance="100" />
+        <item item="Wallet" chance="100" />
+        <item item="Water Bottle" chance="0.5" />
+        <item item="Knife" chance="0.5" />
+        <item item="Matches" chance="0.5" />
+        <item item="Lantern off" chance="0.5" />
+        <item item="Vaccine" chance="100" />
+        <item item="Bible" chance="0.8" />
+        <item item="Powerbank" chance="0.8" />
+        <item item="Bag" chance="0.8" />
+    </loot>
+</map>

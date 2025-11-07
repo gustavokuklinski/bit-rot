@@ -197,6 +197,8 @@ class Player:
             pygame.draw.rect(surface, YELLOW, bar_rect)
 
     def update_stats(self, game):
+        
+
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
@@ -240,6 +242,16 @@ class Player:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
                 self._finish_reload()
+
+
+        for item in self.inventory:
+            if item and item.item_type == 'skill' and item.skill_stats:
+                for stat_name, value in item.skill_stats.items():
+                    # Set the player's stat directly
+                    # This will overwrite current values with the buff
+                    # e.g., self.anxiety = 0.0, self.health = 100.0
+                    setattr(self, stat_name, value)
+
 
         if self.health <= 1:
             print("GAME OVER: Health depleted!")

@@ -1,0 +1,11 @@
+<item name="Bible" type="skill">
+    <properties>
+        <sprite file="bible_1.png" />
+    </properties>
+        <stats>
+            <health value="100.0" />
+            <stamina value="100.0" />
+            <anxiety value="0.0" />
+        </stats>
+    <spawn chance="1" />
+</item>

@@ -1,3 +1,4 @@
+# Radio Dialogs
 * Radio Next Petrol
     - Store items and equipament for at least 7 days. The Next Petrol Pacific is in Lockdown.
     - Secure the platatform until news from Rio.
@@ -11,3 +12,7 @@
     - AVA System leaving Pacific NP plant.
     - Brazil capital has fallen. South on riot.
     - 3 airplanes and 2 choopers fall during pacific evac.
+
+# Features
+- XP Debuf in percentage instead of level down
+- Only Spawn Zombies when player get near them

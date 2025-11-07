@@ -143,18 +143,18 @@ class PlayerProgression:
 
     # --- HELPER FUNCTIONS ---
     def get_melee_damage_multiplier(self, player):
-        base_multiplier = 1 + (self.melee['level'] * 0.1)
-        tireness_modifier = 1.0 - (player.tireness / 100.0) # 1.0 (0%) down to 0.0 (100%)
+        base_multiplier = 1 + (self.melee['level'] / 100.0)
+        tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_multiplier * tireness_modifier
 
     def get_unarmed_damage(self, player):
-        base_damage = 1 + (self.strength['level'] * 0.1)
+        base_damage = 1 + (self.strength['level'] / 100.0)
         tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_damage * tireness_modifier
 
     def get_ranged_damage_multiplier(self, player):
         # Ranged level gives a small bonus
-        base_multiplier = 1 + (self.ranged['level'] * 0.05)
+        base_multiplier = 1 + (self.ranged['level'] / 100.0)
         # Tiredness reduces it
         tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_multiplier * tireness_modifier
@@ -163,20 +163,18 @@ class PlayerProgression:
         return 0.1 + (self.ranged['level'] * 0.04)
 
     def get_weapon_durability_loss(self):
-        if random.randint(0, 10) < self.melee['level']:
+        if random.randint(0, 10) < (self.melee['level'] / 100.0):
             return 0.5
         else:
             return 2.0
     
     def get_stamina_consumption(self, is_running):
-        # Renamed 'is_walking' to 'is_running'
-        # Now returns 0.0 if not running, and 0.08 if running
         base_consumption = 0.08 if is_running else 0.0
-        modifier = 1 - (self.speed * 0.05)
+        modifier = 1 - (self.speed / 100.0)
         return base_consumption * modifier
 
     def get_stamina_regeneration(self):
-        return 0.03 + (self.fitness['level'] * 0.1)
+        return 0.03 + (self.fitness['level'] / 100.0)
 
     def get_xp_bonus(self):
         return 1 + (self.lucky * 0.01)

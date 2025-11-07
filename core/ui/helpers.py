@@ -10,11 +10,11 @@ from faker import Faker
 fake = Faker()
 
 TRAIT_DEFINITIONS = {
-    "vaccine": {"cost": 1, "stats": {"infection": -15}}, # Example cost, adjust as needed
+    "vaccine": {"cost": 1, "stats": {"infection": -5}}, # Example cost, adjust as needed
     "athletic": {"cost": 2, "stats": {"stamina": 10}}, # XML says -10%, let's make it +10%
     "strong": {"cost": 2, "attributes": {"strength": 2}},
     "weak": {"cost": -2, "attributes": {"strength": -2}},
-    "luck": {"cost": 2, "attributes": {"lucky": 1}}, # Bonus logic is in progression
+    "luck": {"cost": 2, "attributes": {"lucky": 2}}, # Bonus logic is in progression
     "unlucky": {"cost": -2, "attributes": {"lucky": -1}},
     "runner": {"cost": 1, "attributes": {"speed": 1}},
     "smoker": {"cost": -1, "stats": {"stamina": -15, "anxiety": 15}},
@@ -337,7 +337,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     #preset_rect = pygame.Rect(col1_x, 50, col1_width, 170)
     #pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_rect)
     #pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1, border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
-    preset_rect = pygame.Rect(col1_x, 50, col1_width, 210)
+    preset_rect = pygame.Rect(col1_x, 50, col1_width, 280)
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -387,10 +387,38 @@ def _draw_player_build_screen(game, state, mouse_pos):
     load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 125, preset_body_rect.width - padding*2, 30)
     clickable_rects['load_dropdown_button'] = load_dd_rect
     
+    sex_y = load_dd_rect.bottom + 10
+    game.virtual_screen.blit(font.render("Sex:", True, WHITE), (preset_body_rect.x + padding, sex_y))
+    
+    sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
+    male_btn_rect = pygame.Rect(preset_body_rect.x + padding, sex_y + 25, sex_btn_width, 30)
+    female_btn_rect = pygame.Rect(male_btn_rect.right + padding, sex_y + 25, sex_btn_width, 30)
+    
+    current_sex = state['base_data'].get('sex', 'Male')
+    
+    # Draw Male Button
+    if current_sex == 'Male':
+        pygame.draw.rect(game.virtual_screen, (80, 80, 80), male_btn_rect, 0, border_radius=3) # Highlight active
+        pygame.draw.rect(game.virtual_screen, WHITE, male_btn_rect, 2, border_radius=3)
+    else:
+        pygame.draw.rect(game.virtual_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.virtual_screen, WHITE, male_btn_rect, 1, border_radius=3)
+    game.virtual_screen.blit(font.render("Male", True, WHITE), (male_btn_rect.centerx - 20, male_btn_rect.y + 5))
+    
+    # Draw Female Button
+    if current_sex == 'Female':
+        pygame.draw.rect(game.virtual_screen, (80, 80, 80), female_btn_rect, 0, border_radius=3) # Highlight active
+        pygame.draw.rect(game.virtual_screen, WHITE, female_btn_rect, 2, border_radius=3)
+    else:
+        pygame.draw.rect(game.virtual_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.virtual_screen, WHITE, female_btn_rect, 1, border_radius=3)
+    game.virtual_screen.blit(font.render("Female", True, WHITE), (female_btn_rect.centerx - 28, female_btn_rect.y + 5))
+    
+    clickable_rects['sex_buttons'] = {'Male': male_btn_rect, 'Female': female_btn_rect}
  
 
     # --- Column 1, Block 2: Gear Selection (Bottom-Left) ---
-    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 410) # Bottom half
+    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 340) # Bottom half
 
     gear_header_rect = pygame.Rect(gear_rect.x, gear_rect.y, gear_rect.width, header_height)
     gear_body_rect = pygame.Rect(gear_rect.x, gear_rect.y + header_height, gear_rect.width, gear_rect.height - header_height)
@@ -545,9 +573,26 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 text_x = 0 # No icon, start text at left edge
             
             # Format value
-            val_str = f"{value:.1f}" if value != 0 else "0.0"
-            text_surf = font.render(f"{stat.capitalize()}: {val_str}", True, WHITE)
-            content_surface.blit(text_surf, (text_x, y_offset +3))
+            base_value = state['base_data']['stats'].get(stat, 100.0)
+            trait_mod = value - base_value
+            
+            stat_name_str = f"{stat.capitalize()}:".ljust(12) # Align stat names
+            base_str = f"{int(base_value)}%".rjust(5)      # Align base values
+            trait_str = f"{int(trait_mod):+}%".rjust(5)   # Align trait modifiers
+            
+            # Set color based on modifier
+            mod_color = WHITE
+            if trait_mod > 0:
+                mod_color = (100, 255, 100) # Green
+            elif trait_mod < 0:
+                mod_color = (255, 100, 100) # Red
+            
+            text_surf = font.render(f"{stat_name_str} {base_str}", True, WHITE)
+            mod_surf = font.render(f"| {trait_str}", True, mod_color)
+            
+            content_surface.blit(text_surf, (text_x, y_offset + 3))
+            content_surface.blit(mod_surf, (text_x + text_surf.get_width() + 10, y_offset + 3))
+            
             y_offset += line_height
 
         for attr, value in current_attrs.items():
@@ -558,9 +603,26 @@ def _draw_player_build_screen(game, state, mouse_pos):
             else:
                 text_x = 0
                 
-            val_str = f"{value:.1f}" if value != 0 else "0.0"
-            text_surf = font.render(f"{attr.capitalize()}: {val_str}", True, WHITE)
-            content_surface.blit(text_surf, (text_x, y_offset))
+            base_value = state['base_data']['attributes'].get(attr, 0.0)
+            trait_mod = value - base_value
+            
+            attr_name_str = f"{attr.capitalize()}:".ljust(12) # Align attr names
+            base_str = f"{int(base_value)}%".rjust(5)       # Align base values (as %)
+            trait_str = f"{int(trait_mod):+}%".rjust(5)    # Align trait modifiers (as %)
+            
+            # Set color based on modifier
+            mod_color = WHITE
+            if trait_mod > 0:
+                mod_color = (100, 255, 100) # Green
+            elif trait_mod < 0:
+                mod_color = (255, 100, 100) # Red
+            
+            text_surf = font.render(f"{attr_name_str} {base_str}", True, WHITE)
+            mod_surf = font.render(f"| {trait_str}", True, mod_color)
+            
+            content_surface.blit(text_surf, (text_x, y_offset + 3))
+            content_surface.blit(mod_surf, (text_x + text_surf.get_width() + 10, y_offset + 3))
+            
             y_offset += line_height
     
     # Draw Stats Scrollbar
@@ -901,6 +963,16 @@ def run_player_setup(game):
                 state['preset_dropdown_active'] = False
             
 
+            if 'sex_buttons' in clickable_rects:
+                for sex, rect in clickable_rects['sex_buttons'].items():
+                    if rect.collidepoint(mouse_pos):
+                        state['base_data']['sex'] = sex
+                        # If name is default, randomize it to match the new sex
+                        if state['player_name'] == "Survivor" or not state['player_name']:
+                             state['player_name'] = fake.name_male() if sex == 'Male' else fake.name_female()
+                        dropdown_clicked = True # Prevent other clicks
+                        break
+
             if dropdown_clicked: continue
             
             # (Check Add/Remove Trait buttons - unchanged)
@@ -1021,7 +1093,9 @@ def _save_preset(state):
     
     # Save name
     ET.SubElement(root, "name").text = player_name
-    
+
+    ET.SubElement(root, "sex").text = state['base_data'].get('sex', 'Male')
+
     # Save traits
     traits_node = ET.SubElement(root, "traits")
     for trait in state['chosen_traits']:
@@ -1066,6 +1140,10 @@ def _load_preset(state):
         if name_node is not None:
             state['player_name'] = name_node.text
         
+        sex_node = root.find('sex')
+        if sex_node is not None:
+            state['base_data']['sex'] = sex_node.text
+
         # Load traits
         new_traits = []
         traits_node = root.find('traits')
@@ -1113,8 +1191,12 @@ def _randomize_character(state):
     """Randomizes the character's name, traits, and clothes."""
     print("Generating random character...")
     
-    # 1. Randomize Name (simple)
-    state['player_name'] = fake.name()
+    state['base_data']['sex'] = random.choice(['Male', 'Female'])
+    if state['base_data']['sex'] == 'Male':
+        state['player_name'] = fake.name_male()
+    else:
+        state['player_name'] = fake.name_female()
+ 
     
     # 2. Randomize Traits
     all_traits = list(state['all_traits'].keys())

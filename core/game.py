@@ -115,6 +115,8 @@ class Game:
         self.all_map_layers = {} # Will store {1: data, 2: data, ...}
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
+        self.layer_spawn_triggers = {} # Stores triggered spawns for each layer
+        self.triggered_spawns = set()
         
         self.player_setup_state = {}
         
@@ -208,6 +210,7 @@ class Game:
                 print("Warning: Could not create 'ID' item. Check item XML.")
         except Exception as e:
             print(f"Error creating starting wallet: {e}")
+        
 
         self.zombies_killed = 0
         self.modals = []

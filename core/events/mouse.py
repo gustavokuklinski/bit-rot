@@ -215,6 +215,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     is_allowed_type = (
                                         dragged_type == 'container' or
                                         dragged_type == 'utility' or
+                                        dragged_type == 'mobile' or
                                         (dragged_type == 'consumable' and dragged_ammo_type is not None)
                                     )
                                     if is_allowed_type:
@@ -497,19 +498,24 @@ def handle_mouse_motion(game, event, mouse_pos):
             item_to_drag, origin_tuple = game.drag_candidate
             i_orig, type_orig, *container_info = origin_tuple
             
-            if hasattr(item_to_drag, 'is_stackable') and item_to_drag.is_stackable() and item_to_drag.load > 1:
+            keys = pygame.key.get_pressed()
+            is_splitting = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
+
+            if hasattr(item_to_drag, 'is_stackable') and item_to_drag.is_stackable() and item_to_drag.load > 1 and is_splitting:
+                # This is the stack-splitting logic (now on SHIFT-drag)
                 item_to_drag.load -= 1
                 new_item = Item.create_from_name(item_to_drag.name)
                 new_item.load = 1
                 new_item.durability = item_to_drag.durability
                 game.dragged_item = new_item
-                # --- NEW GEAR LOGIC: Add gear_stack_split type ---
+
                 if type_orig == 'gear':
                     game.drag_origin = (i_orig, "gear_stack_split", *container_info)
                 else:
                     game.drag_origin = (i_orig, f"{type_orig}_stack_split", *container_info)
             
             else:
+                # This is the "grab whole stack" logic (now the default)
                 game.dragged_item, game.drag_origin = game.drag_candidate
                 if type_orig == 'inventory':
                     game.player.inventory.pop(i_orig)
@@ -531,6 +537,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
             
+
             game.drag_candidate = None 
 
     for modal in reversed(game.modals):

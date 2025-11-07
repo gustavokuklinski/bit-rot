@@ -93,7 +93,16 @@ class MapManager:
 
         current_state = current_def.get('state')
         new_state = "open" if current_state == "close" else "close"
-        
+
+
+        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        # Check if we are trying to close the door
+        if new_state == "close":
+            # Check if the player's collision box is overlapping with the tile
+            if self.game.player.rect.colliderect(tile_rect):
+                print("Player is in the doorway, cannot close.")
+                return # Stop the function
         # Assumes naming convention: "char_name_close" <-> "char_name_open"
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"

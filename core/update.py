@@ -194,6 +194,23 @@ def check_zombie_respawn(game):
     if current_map not in game.map_states:
         print(f"First visit to {current_map}. Performing initial zombie spawn.")
         
+
+        if current_map not in game.map_states:
+            print(f"First visit to {current_map}. Performing initial zombie spawn.")
+        
+            # --- [FIX START] ---
+            # Calculate how many zombies can be spawned
+            current_zombie_count = len(game.zombies)
+            zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - current_zombie_count)
+            
+            if zombie_spawn_limit == 0:
+                print(f"Global zombie limit ({MAX_ZOMBIES_GLOBAL}) reached. No initial zombies will spawn.")
+                initial_zombies = []
+            else:
+                print(f"Global limit: {MAX_ZOMBIES_GLOBAL}, Current: {current_zombie_count}, Can spawn: {zombie_spawn_limit}")
+                initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies, zombie_spawn_limit)
+
+
         initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies)
         
         game.zombies.extend(initial_zombies)
@@ -226,13 +243,18 @@ def check_zombie_respawn(game):
     # Check if respawn timer has elapsed
     if current_time - last_respawn > ZOMBIE_RESPAWN_TIMER_MS:
         print(f"Respawn timer expired for {current_map}. Respawning zombies.")
-        
-        # Get all entities to avoid spawning on top of them
         all_current_entities = game.items_on_ground + game.zombies
-        
-        # Spawn new zombies
-        new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities)
-        
+        current_zombie_count = len(game.zombies)
+        zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - current_zombie_count)
+
+        if zombie_spawn_limit == 0:
+            print(f"Global zombie limit ({MAX_ZOMBIES_GLOBAL}) reached. No zombies will respawn.")
+            new_zombies = []
+        else:
+            print(f"Global limit: {MAX_ZOMBIES_GLOBAL}, Current: {current_zombie_count}, Can spawn: {zombie_spawn_limit}")
+            new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities, zombie_spawn_limit)
+
+
         game.zombies.extend(new_zombies)
         game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
         
