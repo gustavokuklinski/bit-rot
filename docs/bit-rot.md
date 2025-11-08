@@ -90,7 +90,7 @@ even free housing at the beach.
 
 ## Marechal Souza
 A Senior Military from the Army facility. 
-Worked on the distribution for ONU, WHO and other human organizations. 
+Worked on the distribution for ONU, WHO and other human organizations.
 
 ```
     Hello! I'm Marechal Souza! On head of NS_X0A6!
@@ -114,9 +114,22 @@ Worked on the distribution for ONU, WHO and other human organizations.
     Good luck!
 ```
 
-## Doc Yu
+## Doc. Yu
 Yu is a chinese doctor from the middle wing of the underground platform.
+His main work was at the immunization sample processing.
 
 ```
+    We had made a one shot vaccine here, the only sample.
+    It still a working in progress but can be also lethal.
 
+    You can try to bring me some samples and the vaccine
+    to try something new.
+
+    I'll need:
+    - Dead bloddy samples
+    - Vaccine (the common one)
+    - Special Vaccine
+    - Your bloddy sample
+
+    With this we can try to make you immune.
 ```

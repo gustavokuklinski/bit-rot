@@ -10,8 +10,7 @@ MINIMAP_COLORS = {
     'W': (30, 30, 30),    # Water
     'R': (80, 80, 80),     # Road
     'F': (30, 30, 30),     # Forest
-    # Add other tile characters you want to color
-    'default': (60, 60, 60) # Default for walls/obstacles
+    'default': (80, 80, 80) # Default for walls/obstacles
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255) # Bright cyan for player
 

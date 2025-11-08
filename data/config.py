@@ -14,7 +14,7 @@ GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
-MAP_DIR = "game/map/"
+MAP_DIR = "game/map/" # Game map files
 DATA_PATH = "game/data/" # Folders with XML data files
 SPRITE_PATH = "game/sprites/" # Folders with PNG sprites
 
