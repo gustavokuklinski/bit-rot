@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Money 5" chance="1" />
+        <item item="Money 5" chance="0.1" />
         <item item="Money 20" chance="0.2" />
         <item item="Bible" chance="0.1" />
         <item item="Family Photo" chance="0.2" />

@@ -4,20 +4,21 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Pistol 9mm" chance="0.5" />
-        <item item="9mm Ammo" chance="0.5" />
-        <item item="Military Pants" chance="0.5" />
+        <item item="Pistol 9mm" chance="0.2" />
+        <item item="9mm Ammo" chance="0.2" />
+        <item item="Military Pants" chance="0.2" />
         <item item="Leather Black Gloves" chance="0.5" />
         <item item="Military Jacket" chance="0.5" />
         <item item="Military Boots" chance="0.5" />
         <item item="Black Tshirt" chance="0.5" />
         <item item="Powerbank" chance="0.5" />
-        <item item="Large Backpack" chance="0.7" />
+        <item item="Large Backpack" chance="0.2" />
         <item item="Vaccine" chance="0.2" />
         <item item="Shotgun" chance="0.1" />
         <item item="Shotgun Shells" chance="0.1" />
         <item item="Family Photo" chance="0.01" />
         <item item="Axe" chance="0.1" />
         <item item="Knife" chance="0.1" />
+        <item item="Medkit" chance="0.5" />
     </loot>
 </map>

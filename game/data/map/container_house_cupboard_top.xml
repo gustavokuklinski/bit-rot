@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Canned Food" chance="1" />
-        <item item="Matches" chance="1" />
+        <item item="Canned Food" chance="0.1" />
+        <item item="Matches" chance="0.1" />
     </loot>
 </map>

@@ -1,6 +1,6 @@
 <cloth name="Yellow Pants" type="cloth" id="legs">
     <properties>
-        <defence value="50" />
+        <defence value="1" />
         <durability min="1" max="100" />
         <sprite file="yellow_pants.png" />
     </properties>

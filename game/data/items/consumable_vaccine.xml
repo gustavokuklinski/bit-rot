@@ -2,7 +2,7 @@
     <properties>
         <load value="1" />
         <cure min="1" max="100" />
-        <capacity value="1" />
+        <capacity value="5" />
         <sprite file="vaccine.png" />
     </properties>
     <spawn chance="1" />

@@ -4,10 +4,11 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Water Bottle" chance="2" />
-        <item item="Knife" chance="2" />
-        <item item="Matches" chance="2" />
-        <item item="Lantern off" chance="2" />
-        <item item="Vaccine" chance="1" />
+        <item item="Water Bottle" chance="0.2" />
+        <item item="Knife" chance="0.2" />
+        <item item="Matches" chance="0.2" />
+        <item item="Lantern off" chance="0.2" />
+        <item item="Vaccine" chance="0.1" />
+        <item item="Medkit" chance="0.1" />
     </loot>
 </map>
