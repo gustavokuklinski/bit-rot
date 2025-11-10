@@ -14,11 +14,17 @@ class PlayerProgression:
         self.lucky = player_data['attributes'].get('lucky', 0.0)
         self.speed = player_data['attributes'].get('speed', 0.0)
 
+    def _get_xp_for_next_level(self, current_level):
+        """Calculates the XP needed to reach the next level."""
+
+        return 100 * (current_level + 1)
+
     def _create_attribute(self, player_data, attr_name):
+        start_level = player_data['attributes'].get(attr_name, 0.0) # Get starting level (e.g., 0, or 2 from "strong")
         return {
-            "level": player_data['attributes'].get(attr_name, 0.0),
+            "level": start_level,
             "xp": 0,
-            "xp_to_next_level": 100
+            "xp_to_next_level": self._get_xp_for_next_level(start_level) # Use the formula
         }
 
     def _add_xp(self, attribute, amount):
@@ -30,18 +36,36 @@ class PlayerProgression:
     def _level_up(self, attribute):
         attribute['level'] += 1
         attribute['xp'] = 0
-        attribute['xp_to_next_level'] = 100 * attribute['level']
+        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level']) # Use the formula
         print(f"Leveled up an attribute to level {attribute['level']}!")
 
     def process_kill(self, player, weapon, zombie):
         xp_amount = zombie.xp_value
-        final_xp = xp_amount * self.get_xp_bonus()
+        
+        # Base XP (includes lucky bonus)
+        base_xp = xp_amount * self.get_xp_bonus() 
 
         if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:  # Ranged
-            self._add_xp(self.ranged, final_xp)
+            # Apply ranged skill modifier (level is the percentage, e.g., -10 or +5)
+            ranged_skill_percent = self.ranged['level']
+            ranged_xp_modifier = 1.0 + (ranged_skill_percent / 100.0)
+            final_ranged_xp = max(0, base_xp * ranged_xp_modifier) # Ensure XP isn't negative
+            
+            self._add_xp(self.ranged, final_ranged_xp)
+            
         else:  # Melee or bare hands
-            self._add_xp(self.strength, final_xp / 2)
-            self._add_xp(self.melee, final_xp)
+            # Apply melee skill modifier
+            melee_skill_percent = self.melee['level']
+            melee_xp_modifier = 1.0 + (melee_skill_percent / 100.0)
+            final_melee_xp = max(0, base_xp * melee_xp_modifier)
+            
+            # Apply strength skill modifier (for the strength XP portion)
+            strength_skill_percent = self.strength['level']
+            strength_xp_modifier = 1.0 + (strength_skill_percent / 100.0)
+            final_strength_xp = max(0, (base_xp / 2) * strength_xp_modifier) # Strength gets half
+            
+            self._add_xp(self.strength, final_strength_xp)
+            self._add_xp(self.melee, final_melee_xp)
 
     def update(self, player, is_moving, game):
         self.update_stamina(player, is_moving)
@@ -111,27 +135,6 @@ class PlayerProgression:
             player.infection += 0.005 # Progressive infection
             if player.infection >= 100:
                 player.health = 1 # Player dies
-
-    def update_tireness(self, player, game):
-        world_state = game.world_time.state
-        base_gain = 0.0
-
-        # Tireness increases at night, recovers during the day
-        if world_state == "NIGHT" or world_state == "TRANSITION_TO_NIGHT":
-            base_gain = 0.005 # Rate of getting tired
-        else: # DAY or TRANSITION_TO_DAY
-            base_gain = -0.01 # Rate of recovery (faster)
-
-        # Anxiety makes you more tired
-        anxiety_modifier = 1.0 + (player.anxiety / 100.0) # 0-100% increase
-        
-        # Being exhausted makes you more tired
-        stamina_modifier = 0.0
-        if player.stamina <= 0:
-            stamina_modifier = 0.01 # Extra penalty for being exhausted
-
-        final_gain = (base_gain * anxiety_modifier) + stamina_modifier
-        player.tireness = max(0, min(100, player.tireness + final_gain))
 
     def handle_melee_attack(self, player):
         if player.stamina >= 10:

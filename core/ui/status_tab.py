@@ -65,17 +65,3 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
 
     y_pos = y_offset + len(stats) * 28
 
-    try:
-        if '_kills_img' not in globals() or _kills_img is None:
-            _kills_img = pygame.image.load(f'{SPRITE_PATH}zombie/dead.png').convert_alpha()
-            _kills_img = pygame.transform.scale(_kills_img, (24, 24))
-    except Exception:
-        _kills_img = None
-
-    if _kills_img:
-        surface.blit(_kills_img, (x_offset, y_pos + 35))
-        num_text = font_small.render(f"{str(zombies_killed)} Killed", True, WHITE)
-        surface.blit(num_text, (x_offset + _kills_img.get_width() + 10, y_pos + 35 + 6))
-    else:
-        zombies_killed_text = font_small.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
-        surface.blit(zombies_killed_text, (x_offset, y_pos))
