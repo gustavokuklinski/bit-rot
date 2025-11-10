@@ -1,7 +1,17 @@
 <config>
+
+    <!-- Game System config settings -->
     <system>
-        
+        <display_resolution>
+            <resolution width="1280" height="720" />
+            <resolution width="1920" height="1080" />
+        </display_resolution>
+        <display_game>
+            <window value="window" />
+            <window value="fullscreen" />
+        </display_game>
     </system>
+
     <!-- Player and game Config -->
     <player>
         <speed value="2" /> <!-- Player speed -->

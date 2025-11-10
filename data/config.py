@@ -61,13 +61,12 @@ MOBILE_MODAL_HEIGHT = 400
 
 
 FONT_FACE = "game/font/Oxanium-Regular.ttf"
-FONT_TITLE = "game/font/VT323-Regular.ttf"
 
 # Fonts
 font = pygame.font.Font(FONT_FACE, 16)
 font_small = pygame.font.Font(FONT_FACE, 16)
 large_font = pygame.font.Font(FONT_FACE, 16)
-title_font = pygame.font.Font(FONT_TITLE, 16)
+title_font = pygame.font.Font(FONT_FACE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 10)
 
 # Game XML Config
