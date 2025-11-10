@@ -4,15 +4,15 @@ import xml.etree.ElementTree as ET
 pygame.init()
 
 # --- Scalable Screen Setup ---
-VIRTUAL_SCREEN_WIDTH = 1312
+VIRTUAL_SCREEN_WIDTH = 1280
 VIRTUAL_GAME_HEIGHT = 720
-
-# Tile size
-TILE_SIZE = 16
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
+
+# Tile size
+TILE_SIZE = 16
 
 MAP_DIR = "game/map/" # Game map files
 DATA_PATH = "game/data/" # Folders with XML data files
@@ -107,7 +107,7 @@ ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == '
 ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
 ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
 
-ZOMBIE_SPAWN_TRIGGER_RADIUS = 200
+ZOMBIE_SPAWN_TRIGGER_RADIUS = 100
 
 # Durability settings
 durability_config = root.find('durability')

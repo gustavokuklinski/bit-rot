@@ -3,8 +3,8 @@
         <sprite file="family_photo_1.png" />
     </properties>
         <stats>
-            <anxiety value="0.5" />
-            <tireness value="0.1" />
+            <anxiety value="-0.5" />
+            <tireness value="-0.1" />
         </stats>
     <spawn chance="10" />
 </item>

@@ -63,7 +63,7 @@ Sprite types and codes:
 
 - **type="consumable"** (Ranged: 9mm ammo, Shotgun Shells...)
 ```xml
-<item name="9mm Ammo" type="consumable">
+<item name="[AMMO NAME]" type="consumable">
     <properties>
         <load min="10" max="50" /> <!-- weapon default load  -->
         <capacity value="100" /><!-- weapon max bullet  -->
@@ -73,9 +73,9 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="consumable"** (Ranged: 9mm ammo, Shotgun Shells...)
+- **type="skill"**
 ```xml
-<item name="Bible" type="skill">
+<item name="[SKILL NAME]" type="skill">
     <properties>
         <sprite file="bible_1.png" /> <!-- Skill sprite -->
     </properties>

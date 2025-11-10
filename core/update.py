@@ -192,28 +192,25 @@ def check_dynamic_zombie_spawns(game):
         # Use ZOMBIE_DETECTION_RADIUS as the trigger distance (with a small buffer)
         if dist_to_player < ZOMBIE_DETECTION_RADIUS * 1.5: 
             
-            # Check global limit *before* spawning this one
-            if len(game.zombies) >= MAX_ZOMBIES_GLOBAL:
+            zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - len(game.zombies))
+            
+            if zombie_spawn_limit == 0:
                 print("Global zombie limit reached during dynamic spawn.")
                 return # Stop spawning this frame
 
             print(f"Player near spawn marker at {spawn_pos}. Spawning zombie.")
             triggered_spawns_for_layer.add(spawn_pos)
             
-            zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - len(game.zombies))
-            limit_for_this_call = min(1, zombie_spawn_limit) # Set to 1
-            
-            if limit_for_this_call == 0:
-                continue 
-
+            # This was the bug. We pass the *remaining global limit* to the spawner.
+            # The spawner will correctly spawn *up to* ZOMBIES_PER_SPAWN
+            # without exceeding the global limit.
             new_zombies = spawn_initial_zombies(
                 game.obstacles, 
-                [spawn_pos],
+                [spawn_pos], # Only spawn at this one 'Z' marker
                 entities_to_avoid,
-                limit_for_this_call,
-                spawns_per_marker=ZOMBIES_PER_SPAWN # <-- Tell the function to spawn only 1
+                zombie_spawn_limit, # Pass the remaining global limit
+                spawns_per_marker=ZOMBIES_PER_SPAWN # Tell it how many to spawn at this marker
             )
-            # --- END MODIFICATION ---
             
             if new_zombies:
                 game.zombies.extend(new_zombies)
@@ -259,31 +256,11 @@ def check_zombie_respawn(game):
     # If this is the first time visiting this map, map_states won't exist.
     if current_map not in game.map_states:
         print(f"First visit to {current_map}. Performing initial zombie spawn.")
+
+        # --- [FIX START] ---
+        # The faulty logic block that skipped the spawn has been removed.
+        # This code block will now execute on the first visit.
         
-
-        if current_map not in game.map_states:
-            print(f"First visit to {current_map}. Initializing map state.")
-        
-            # We no longer spawn zombies here.
-            # initial_zombies = spawn_initial_zombies(...) # <-- REMOVED
-            # game.zombies.extend(initial_zombies) # <-- REMOVED
-            
-            # Make sure the layer_zombies list is initialized empty
-            if game.current_layer_index not in game.layer_zombies:
-                game.layer_zombies[game.current_layer_index] = []
-
-            print(f"Initial zombie spawn skipped. Will spawn near player.")
-            
-            game.map_states[current_map] = {
-                'items': game.items_on_ground, 
-                'zombies': game.zombies, # This will be an empty list, which is correct
-                'killed_zombies': [], 
-                'picked_up_items': [],
-                'last_respawn_time': current_time # Initialize timer
-            }
-            # --- END OF MODIFIED BLOCK ---
-            return
-
         initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies)
         
         game.zombies.extend(initial_zombies)
@@ -300,6 +277,7 @@ def check_zombie_respawn(game):
             'last_respawn_time': current_time # Initialize timer
         }
         return 
+        # --- [FIX END] ---
 
     # --- Handle RESPAWNING (if map state already exists) ---
     

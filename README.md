@@ -19,8 +19,8 @@ $ python editor.py # Edit game maps
 
 **Basic controls**:
 - **W/A/S/D**: Walk
-- **ALT + W/A/S/D**: Run
-- **SHIFT + R-Click**: Shoot/Attack
+- **SHIFT + W/A/S/D**: Run
+- **CTRL + R-Click**: Shoot/Attack
 - **SHIFT + L-Click + Drag**: Get only one item from stack
 - **R-Click + Drag**: Place or Drop
 - **L-Click**: Opens menu 

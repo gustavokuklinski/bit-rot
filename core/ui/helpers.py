@@ -99,7 +99,7 @@ def draw_nearby_button(surface):
     return button_nearby_rect
 
 
-def draw_menu(screen):
+def draw_menu(screen, mouse_pos):
     global _logo_img
     screen.fill(DARK_GRAY)
 
@@ -125,19 +125,17 @@ def draw_menu(screen):
     start_rect = start_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2))
     quit_text = large_font.render("QUIT", True, WHITE)
     quit_rect = quit_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 60))
-    mouse_pos = pygame.mouse.get_pos()
-    scale_x = VIRTUAL_SCREEN_WIDTH / screen.get_width()
-    scale_y = VIRTUAL_GAME_HEIGHT / screen.get_height()
-    scaled_mouse_pos = (mouse_pos[0] * scale_x, mouse_pos[1] * scale_y)
-    if start_rect.collidepoint(scaled_mouse_pos):
+    
+    if start_rect.collidepoint(mouse_pos):
         pygame.draw.rect(screen, GRAY, start_rect.inflate(20, 10))
-    if quit_rect.collidepoint(scaled_mouse_pos):
+    if quit_rect.collidepoint(mouse_pos):
         pygame.draw.rect(screen, GRAY, quit_rect.inflate(20, 10))
+
     screen.blit(start_text, start_rect)
     screen.blit(quit_text, quit_rect)
     return start_rect, quit_rect
 
-def draw_game_over(screen, zombies_killed):
+def draw_game_over(screen, zombies_killed, mouse_pos):
     screen.fill(DARK_GRAY)
     # draw same logo at top for game over screen (fallback to text if missing)
     global _logo_img
@@ -161,17 +159,15 @@ def draw_game_over(screen, zombies_killed):
     score_text = large_font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 - 60))
     screen.blit(score_text, score_rect)
+
     restart_text = large_font.render("Restart", True, WHITE)
     restart_rect = restart_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 20))
     quit_text = large_font.render("Quit", True, WHITE)
     quit_rect = quit_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT // 2 + 80))
-    mouse_pos = pygame.mouse.get_pos()
-    scale_x = VIRTUAL_SCREEN_WIDTH / screen.get_width()
-    scale_y = VIRTUAL_GAME_HEIGHT / screen.get_height()
-    scaled_mouse_pos = (mouse_pos[0] * scale_x, mouse_pos[1] * scale_y)
-    if restart_rect.collidepoint(scaled_mouse_pos):
+
+    if restart_rect.collidepoint(mouse_pos):
         pygame.draw.rect(screen, GRAY, restart_rect.inflate(20, 10))
-    if quit_rect.collidepoint(scaled_mouse_pos):
+    if quit_rect.collidepoint(mouse_pos):
         pygame.draw.rect(screen, GRAY, quit_rect.inflate(20, 10))
     screen.blit(restart_text, restart_rect)
     screen.blit(quit_text, quit_rect)
@@ -334,9 +330,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
     padding = 10
     
     # --- Column 1, Block 1: Preset Management Panel (Top-Left) ---
-    #preset_rect = pygame.Rect(col1_x, 50, col1_width, 170)
-    #pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_rect)
-    #pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1, border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     preset_rect = pygame.Rect(col1_x, 50, col1_width, 280)
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)

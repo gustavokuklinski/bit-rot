@@ -9,7 +9,7 @@ def handle_movement(game):
     keys = pygame.key.get_pressed()
     current_speed = 0
 
-    is_running = (keys[pygame.K_LALT] or keys[pygame.K_RALT])
+    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
     game.player.is_running = is_running
 
     if game.player.stamina <= 0:
@@ -91,19 +91,18 @@ def handle_input(game):
 
                     elif modal.get('type') == 'text' and not modal.get('minimized', False):
                         content_rect = modal.get('content_rect')
+                        if content_rect and content_rect.collidepoint(mouse_pos):
+                            # Get pre-calculated max from the draw function
+                            max_scroll_offset = modal.get('max_scroll_offset', 0) 
+                            current_offset = modal.get('scroll_offset_y', 0)
+                            
+                            line_height = font_small.get_height() + 2
+                            scroll_amount = event.y * line_height * 3 # Scroll 3 lines
+                            new_offset = current_offset - scroll_amount # Subtract to move in correct direction
 
-                    #if content_rect and content_rect.collidepoint(mouse_pos):
-                    #    # Read the max_scroll from the modal (set during draw)
-                    #    max_scroll_offset = modal.get('max_scroll_offset', 0)
-                    #    current_offset = modal.get('scroll_offset_y', 0)
-                    #
-                    #    # Use the same line height as the draw function
-                    #    line_height = font_small.get_height() + 2
-                    #    scroll_amount = event.y * line_height * 3 # Scroll 3 lines
-                    #
-                    #    new_offset = current_offset - scroll_amount
-                    #    modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
-                    #    break 
+                            # Clamp the new offset
+                            modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                            break
 
                     elif modal.get('type') == 'mobile' and not modal.get('minimized', False) and modal.get('active_tab') == 'Map':
                         

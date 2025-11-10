@@ -5,7 +5,7 @@ from core.ui.tabs import Tabs
 from core.ui.container import draw_container_content
 from core.entities.zombie.corpse import Corpse
 
-def draw_nearby_modal(surface, game, modal, assets):
+def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Nearby")
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
@@ -104,7 +104,7 @@ def draw_nearby_modal(surface, game, modal, assets):
         # pygame.draw.rect(surface, (30,30,30), content_rect) # Darker background
 
         # print(f"    Drawing content for container: {container.name}") # DEBUG
-        draw_container_content(surface, game, container, container_modal_view, assets)
+        draw_container_content(surface, game, container, container_modal_view, assets, mouse_pos)
     # else:
         # print(f"    No active_tab_data found to draw content for '{active_tab_label_to_draw}'") # DEBUG
 

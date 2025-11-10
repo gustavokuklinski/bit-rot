@@ -183,7 +183,11 @@ def draw_game(game):
     top_tooltip = None
     game.modal_buttons = []
     mouse_pos = game._get_scaled_mouse_pos()
+    topmost_modal_id = game.modals[-1]['id'] if game.modals else None
+
     for modal in game.modals:
+        modal['is_active'] = (modal['id'] == topmost_modal_id)
+        
         if modal['type'] == 'status':
             buttons = draw_status_modal(game.virtual_screen, game.player, modal, game.assets, game.zombies_killed, mouse_pos)
             game.modal_buttons.extend(buttons)
@@ -192,10 +196,12 @@ def draw_game(game):
             top_tooltip = tooltip or top_tooltip
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'container':
-            buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets)
+            #buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets)
+            buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'nearby':
-            buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)
+            #buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)
+            buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'messages':
             _, close_button, minimize_button = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
@@ -339,7 +345,7 @@ def draw_game(game):
 
     # Set cursor
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+    if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
         pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
     else:
         pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

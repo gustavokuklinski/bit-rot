@@ -143,4 +143,9 @@ def draw_text_modal(surface, game, modal, assets):
         scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
         pygame.draw.rect(surface, GRAY, scrollbar_handle_rect, 0, 2)
 
+        modal['scrollbar_handle_rect'] = scrollbar_handle_rect
+        
+    else:
+        modal['scrollbar_handle_rect'] = None
+
     return None, close_button, minimize_button

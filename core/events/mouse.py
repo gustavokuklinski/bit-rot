@@ -16,21 +16,6 @@ from core.placement import find_free_tile
 
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
-        # Check for tab clicks (This part is correct)
-        for modal in reversed(game.modals):
-            if modal['type'] in ['nearby', 'status', 'inventory', 'mobile'] and 'tab_rects' in modal and 'tabs_data' in modal:
-                tab_rects = modal.get('tab_rects', [])
-                tabs_data = modal.get('tabs_data', [])
-                clicked_tab = False
-                for i, tab_rect in enumerate(tab_rects):
-                    if tab_rect.collidepoint(mouse_pos):
-                        if i < len(tabs_data):
-                            modal['active_tab'] = tabs_data[i]['label']
-                            clicked_tab = True
-                            break 
-                if clicked_tab:
-                    return 
-
         # (Existing code for modal buttons: close, minimize)
         for button in getattr(game, 'modal_buttons', []):
             if button['rect'].collidepoint(mouse_pos):
@@ -96,6 +81,17 @@ def handle_mouse_down(game, event, mouse_pos):
                             game.modals.append(new_container_modal)
                         return
 
+        for modal in reversed(game.modals):
+            if modal.get('minimized', False):
+                continue
+            
+            # Check for text/message scrollbar
+            scrollbar_rect = modal.get('scrollbar_handle_rect') 
+            if scrollbar_rect and scrollbar_rect.collidepoint(mouse_pos):
+                modal['is_dragging_scrollbar'] = True
+                modal['scrollbar_drag_last_y'] = mouse_pos[1] # Store initial mouse Y
+                return
+
         # (Existing code for modal dragging)
         for modal in reversed(game.modals):
             modal_header_rect = pygame.Rect(modal['position'][0], modal['position'][1], modal['rect'].width, 35)
@@ -106,6 +102,41 @@ def handle_mouse_down(game, event, mouse_pos):
                 game.modals.append(modal)
                 return
 
+
+        topmost_clicked_modal = None
+        for modal in reversed(game.modals):
+            if modal['rect'].collidepoint(mouse_pos):
+                topmost_clicked_modal = modal
+                break # Found the topmost modal under the mouse
+
+        if topmost_clicked_modal:
+            # a. Bring it to the front (if it's not already)
+            if game.modals[-1] != topmost_clicked_modal:
+                game.modals.remove(topmost_clicked_modal)
+                game.modals.append(topmost_clicked_modal)
+            
+            # b. NOW, check for tab clicks *only on this modal*
+            if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile'] and 'tab_rects' in topmost_clicked_modal and 'tabs_data' in topmost_clicked_modal:
+                tab_rects = topmost_clicked_modal.get('tab_rects', [])
+                tabs_data = topmost_clicked_modal.get('tabs_data', [])
+                for i, tab_rect in enumerate(tab_rects):
+                    if tab_rect.collidepoint(mouse_pos):
+                        if i < len(tabs_data):
+                            topmost_clicked_modal['active_tab'] = tabs_data[i]['label']
+                            return
+            
+            if game.context_menu['active']:
+                handle_context_menu_click(game, mouse_pos)
+                return
+            
+            handle_left_click_drag_candidate(game, mouse_pos)
+
+            if not game.drag_candidate and (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
+                handle_attack(game, mouse_pos)
+            
+            return
+
+
         if game.context_menu['active']:
             handle_context_menu_click(game, mouse_pos)
             return
@@ -113,7 +144,7 @@ def handle_mouse_down(game, event, mouse_pos):
         # This function now checks the active tab
         handle_left_click_drag_candidate(game, mouse_pos)
 
-        if (pygame.key.get_pressed()[pygame.K_LSHIFT] or pygame.key.get_pressed()[pygame.K_RSHIFT]):
+        if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
             handle_attack(game, mouse_pos)
 
     elif event.button == 3:
@@ -127,6 +158,7 @@ def handle_mouse_down(game, event, mouse_pos):
 def handle_mouse_up(game, event, mouse_pos):
     for modal in reversed(game.modals):
         modal['is_dragging'] = False
+        modal['is_dragging_scrollbar'] = False
 
     if event.button == 1:
         dropped_successfully = False
@@ -483,6 +515,8 @@ def find_item_at_pos(game, mouse_pos):
                 for i, item in enumerate(active_container.inventory):
                     if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
                         return item
+        
+        return None
 
     return None
 
@@ -498,6 +532,29 @@ def handle_mouse_motion(game, event, mouse_pos):
 
     if game.context_menu['active']:
         pass
+
+    for modal in reversed(game.modals):
+        if modal.get('is_dragging_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - modal['scrollbar_drag_last_y']
+            modal['scrollbar_drag_last_y'] = mouse_pos[1]
+            
+            # Get scroll properties from the modal
+            content_rect = modal.get('content_rect')
+            max_scroll = modal.get('max_scroll_offset', 0)
+            handle_rect = modal.get('scrollbar_handle_rect')
+            
+            if content_rect and max_scroll > 0 and handle_rect:
+                # Calculate pixel-to-scroll ratio
+                content_height = content_rect.height
+                # Total track height is the content area minus the handle height
+                track_height = content_height - handle_rect.height 
+                
+                if track_height > 0:
+                    scroll_per_pixel = max_scroll / track_height
+                    current_offset = modal.get('scroll_offset_y', 0)
+                    new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
+                    modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll))
+            return
 
     if game.drag_candidate and not game.is_dragging:
         dist = math.hypot(mouse_pos[0] - game.drag_start_pos[0], mouse_pos[1] - game.drag_start_pos[1])
@@ -1076,96 +1133,93 @@ def handle_right_click(game, mouse_pos):
         return
 
 def handle_left_click_drag_candidate(game, mouse_pos):
-    # Check container/nearby first
+    # --- NEW: Find the topmost modal under the mouse first ---
+    topmost_modal = None
     for modal in reversed(game.modals):
-        if modal['type'] == 'nearby':
-            active_tab_label = modal.get('active_tab')
-            active_container = None
-            for tab_data in modal.get('tabs_data', []):
-                if tab_data['label'] == active_tab_label:
-                    active_container = tab_data['container']
-                    break
-            
-            if active_container and hasattr(active_container, 'inventory'):
-                content_rect = modal.get('content_rect')
-                if content_rect and content_rect.collidepoint(mouse_pos):
-                    pos = content_rect.topleft
-                    for i, item in enumerate(active_container.inventory):
+        if modal['rect'].collidepoint(mouse_pos):
+            topmost_modal = modal
+            break
+    
+    if not topmost_modal:
+        return # Click was not on any modal, nothing to drag
+
+    # --- Run drag checks ONLY on the topmost_modal ---
+    modal = topmost_modal
+
+    if modal['type'] == 'nearby':
+        active_tab_label = modal.get('active_tab')
+        active_container = None
+        for tab_data in modal.get('tabs_data', []):
+            if tab_data['label'] == active_tab_label:
+                active_container = tab_data['container']
+                break
+        
+        if active_container and hasattr(active_container, 'inventory'):
+            content_rect = modal.get('content_rect')
+            if content_rect and content_rect.collidepoint(mouse_pos):
+                pos = content_rect.topleft
+                for i, item in enumerate(active_container.inventory):
+                    if item: # Added check if item exists
                         slot_rect = get_container_slot_rect(pos, i)
                         if slot_rect.collidepoint(mouse_pos):
                             game.drag_candidate = (item, (i, 'nearby', active_container, modal['id']))
                             game.drag_start_pos = mouse_pos
                             game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                            break
-            if game.drag_candidate: break
+                            return # Found in 'nearby'
 
-        if modal['type'] == 'container':
-            container_item = modal['item']
-            for i, item in enumerate(container_item.inventory):
+    elif modal['type'] == 'container':
+        container_item = modal['item']
+        for i, item in enumerate(container_item.inventory):
+            if item: # Added check if item exists
                 slot_rect = get_container_slot_rect(modal['position'], i)
                 if slot_rect.collidepoint(mouse_pos):
                     game.drag_candidate = (item, (i, 'container', container_item, modal['id']))
                     game.drag_start_pos = mouse_pos
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                    break
-            if game.drag_candidate: break
-    if game.drag_candidate: return
+                    return # Found in 'container'
 
-    # Check inventory modal (inventory, belt, gear, etc.)
-    for modal in reversed(game.modals):
-        if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
-            
-            # --- MODIFIED: Check active tab FIRST ---
-            if modal.get('active_tab', 'Inventory') == 'Inventory':
-                # Check inventory slots
-                for i, item in enumerate(game.player.inventory):
-                    if item:
-                        slot_rect = get_inventory_slot_rect(i, modal['position'])
-                        if slot_rect.collidepoint(mouse_pos):
-                            game.drag_candidate = (item, (i, 'inventory'))
-                            game.drag_start_pos = mouse_pos
-                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                            break
-                if game.drag_candidate: break
-
-                # Check belt slots
-                for i, item in enumerate(game.player.belt):
-                    if item:
-                        slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
-                        if slot_rect.collidepoint(mouse_pos):
-                            game.drag_candidate = (item, (i, 'belt'))
-                            game.drag_start_pos = mouse_pos
-                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                            break
-                if game.drag_candidate: break
-
-                # Check invcontainer slot
-                if game.player.invcontainer:
-                    slot_rect = get_invcontainer_slot_rect(modal['position'])
+    elif modal['type'] == 'inventory':
+        if modal.get('active_tab', 'Inventory') == 'Inventory':
+            # Check inventory slots
+            for i, item in enumerate(game.player.inventory):
+                if item:
+                    slot_rect = get_inventory_slot_rect(i, modal['position'])
                     if slot_rect.collidepoint(mouse_pos):
-                        game.drag_candidate = (game.player.invcontainer, (0, 'invcontainer'))
+                        game.drag_candidate = (item, (i, 'inventory'))
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                        break # Found candidate
-            
-            elif modal.get('active_tab') == 'Gear':
-                # Check gear slots
-                # Use the stored rects from the modal, which draw_inventory_modal should add
-                if 'gear_slot_rects' in modal:
-                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                        if slot_rect.collidepoint(mouse_pos):
-                            item = game.player.clothes.get(slot_name)
-                            if item:
-                                game.drag_candidate = (item, (slot_name, 'gear')) # (slot_name, 'gear')
-                                game.drag_start_pos = mouse_pos
-                                game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                                break # Found item to drag
-            # --- END MODIFIED BLOCK ---
+                        return # Found in 'inventory'
 
-            if game.drag_candidate: break
-    
-    if game.drag_candidate:
-        return
+            # Check belt slots
+            for i, item in enumerate(game.player.belt):
+                if item:
+                    slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
+                    if slot_rect.collidepoint(mouse_pos):
+                        game.drag_candidate = (item, (i, 'belt'))
+                        game.drag_start_pos = mouse_pos
+                        game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                        return # Found in 'belt'
+
+            # Check invcontainer slot
+            if game.player.invcontainer:
+                slot_rect = get_invcontainer_slot_rect(modal['position'])
+                if slot_rect.collidepoint(mouse_pos):
+                    game.drag_candidate = (game.player.invcontainer, (0, 'invcontainer'))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                    return # Found in 'invcontainer'
+        
+        elif modal.get('active_tab') == 'Gear':
+            # Check gear slots
+            if 'gear_slot_rects' in modal:
+                for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                    if slot_rect.collidepoint(mouse_pos):
+                        item = game.player.clothes.get(slot_name)
+                        if item:
+                            game.drag_candidate = (item, (slot_name, 'gear'))
+                            game.drag_start_pos = mouse_pos
+                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                            return # Found in 'gear'
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):

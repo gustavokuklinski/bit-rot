@@ -11,6 +11,7 @@ class BaseModal:
         self.modal_x, self.modal_y = modal['position']
         self.header_h = 35
         self.minimized = modal.get('minimized', False)
+        self.is_active = modal.get('is_active', False)
         self.modal_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h if self.minimized else self.modal_h)
         self.close_button_rect = self.assets['close_button'].get_rect(topright=(self.modal_x + self.modal_w - 10, self.modal_y + 10))
         self.minimize_button_rect = self.assets['minimize_button'].get_rect(topright=(self.close_button_rect.left - 10, self.modal_y + 10))
@@ -34,9 +35,17 @@ class BaseModal:
 
     def draw_header(self):
         header_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h)
-        pygame.draw.rect(self.surface, GRAY_60, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-        pygame.draw.rect(self.surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+
+        #pygame.draw.rect(self.surface, GRAY_60, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+        #pygame.draw.rect(self.surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+        header_color = GRAY if self.is_active else GRAY_60 # Active: (128,128,128), Inactive: (60,60,60)
+        border_color = WHITE if self.is_active else GRAY     # Active: WHITE, Inactive: (128,128,128)
+        
+        pygame.draw.rect(self.surface, header_color, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
+        pygame.draw.rect(self.surface, border_color, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
+        
         title_text = font.render(self.title, True, WHITE)
+
         self.surface.blit(title_text, (self.modal_x + 10, self.modal_y + 10))
         self.surface.blit(self.assets['close_button'], self.close_button_rect)
         self.surface.blit(self.assets['minimize_button'], self.minimize_button_rect)
@@ -46,7 +55,11 @@ class BaseModal:
         s = pygame.Surface((self.modal_w, height), pygame.SRCALPHA)
         s.fill((20, 20, 20, 230))
         self.surface.blit(s, (self.modal_x, self.modal_y))
-        pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)
+
+        # pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)
+        border_color = WHITE if self.is_active else GRAY
+        pygame.draw.rect(self.surface, border_color, self.modal_rect, 1, 4)
+
         self.draw_header()
 
     def get_buttons(self):

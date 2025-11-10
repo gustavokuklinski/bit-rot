@@ -77,17 +77,17 @@ class Game:
 
         self.last_modal_positions = {
             'status': (65, 10),
-            'inventory': (1000, 10),
+            'inventory': (970, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (1000, 360),
+            'nearby': (970, 360),
             'messages': (10, 560)
         }
 
         self.last_modal_positions = {
             'status': (65, 10),
-            'inventory': (1000, 10),
+            'inventory': (970, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (1000, 360),
+            'nearby': (970, 360),
             'messages': (10, 560),
             'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200)
@@ -305,7 +305,8 @@ class Game:
         # pygame.quit()
 
     def run_menu(self):
-        start_button, quit_button = draw_menu(self.virtual_screen)
+        mouse_pos = self._get_scaled_mouse_pos()
+        start_button, quit_button = draw_menu(self.virtual_screen, mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -326,7 +327,8 @@ class Game:
         run_player_setup(self)
 
     def run_game_over(self):
-        restart_button, quit_button = draw_game_over(self.virtual_screen, self.zombies_killed)
+        mouse_pos = self._get_scaled_mouse_pos()
+        restart_button, quit_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -432,7 +434,7 @@ class Game:
         current_w, current_h = self.screen.get_size()
         scale = min(current_w / VIRTUAL_SCREEN_WIDTH, current_h / VIRTUAL_GAME_HEIGHT)
         scaled_w, scaled_h = int(VIRTUAL_SCREEN_WIDTH * scale), int(VIRTUAL_GAME_HEIGHT * scale)
-        scaled_surf = pygame.transform.scale(self.virtual_screen, (scaled_w, scaled_h))
+        scaled_surf = pygame.transform.smoothscale(self.virtual_screen, (scaled_w, scaled_h))
         blit_x = (current_w - scaled_w) // 2
         blit_y = (current_h - scaled_h) // 2
         self.screen.fill(BLACK)
