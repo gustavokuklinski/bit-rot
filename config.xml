@@ -49,7 +49,7 @@
 
     <!-- Spawning Config -->
     <spawning>
-        <item_spawn_chance_multiplier value="1.0" /> <!-- Item spawn change based on chance="1" XML item -->
+        <item_spawn_chance_multiplier value="1.0" /> <!-- 1.0 = 100% - Item spawn change based on chance="1" XML item -->
     </spawning>
 
     <!-- Zombies Config -->
@@ -60,7 +60,7 @@
         <wander value="true" /> <!-- Zombie wander true = wander, false = follow the player -->
         <wander_interval value="2000" /> <!-- wandering interval in MS -->
         <sight_check value="true" />  <!-- Zombie spot the player and go to -->
-        <spawn value="10" /> <!-- How many zombies per spawn -->
+        <spawn value="5" /> <!-- How many zombies per spawn -->
         <respawn_timer value="300000" /> <!-- 300000 = Every 5 minutes / Time to Reaspawn Zombie in MS-->
         <max_zombies value="250" /> <!-- Max Zombies on map-->
         

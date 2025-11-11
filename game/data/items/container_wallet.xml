@@ -4,9 +4,9 @@
         <sprite file="wallet.png" />
     </properties>
     <loot>
-        <item name="ID" chance="100" />
-        <item name="Safety Guide" chance="49.9" />
-        <item name="Mobile on" chance="50" />
+        <item name="ID" chance="1" />
+        <item name="Safety Guide" chance="1" />
+        <item name="Mobile off" chance="0.1" />
         <item name="Money 100" chance="0.1" />
     </loot>
     <spawn chance="1" />

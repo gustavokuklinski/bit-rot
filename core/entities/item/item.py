@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, hp=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, skill_stats=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, skill_stats=None, status_effect=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -29,7 +29,8 @@ class Item:
         self.max_damage = max_damage
         self.min_cure = min_cure
         self.max_cure = max_cure
-        self.hp = hp
+        self.min_restore = min_restore
+        self.max_restore = max_restore
 
         self.slot = slot       # e.g., "head", "torso"
         self.defence = defence # e.g., 0.0
@@ -41,6 +42,7 @@ class Item:
         self.fuel_type = fuel_type  # e.g., "Matches"
         self.skill_stats = skill_stats
         self.text = text
+        self.status_effect = status_effect
 
     @property
     def damage(self):
@@ -189,8 +191,18 @@ class Item:
                     template['text'] = "\n".join(line.strip() for line in text_node.text.strip().split('\n'))
                 else:
                     template['text'] = None
-                    
+                
+                status_node = props_node.find('status')
+                if status_node is not None:
+                    template['properties']['status'] = {'value': status_node.get('value')}
 
+                restore_node = props_node.find('restore')
+                if restore_node is not None:
+                    template['properties']['restore'] = {
+                        'min': restore_node.get('min', '0'),
+                        'max': restore_node.get('max', '0')
+                    }
+                    
             spawn_node = root.find('spawn')
 
             if spawn_node is not None:
@@ -346,8 +358,8 @@ class Item:
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
         min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
         max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
-        hp = random.randint(int(props['hp']['min']), int(props['hp']['max'])) if 'hp' in props and 'min' in props['hp'] and 'max' in props['hp'] else None
-        
+        min_restore = int(props['restore']['min']) if 'restore' in props and 'min' in props['restore'] else None
+        max_restore = int(props['restore']['max']) if 'restore' in props and 'max' in props['restore'] else None        
         slot = props.get('slot', {}).get('value')
         defence = float(props.get('defence', {}).get('value', 0))
         speed = float(props.get('speed', {}).get('value', 0))
@@ -362,8 +374,9 @@ class Item:
         text = template.get('text')
 
         skill_stats = template.get('stats')
+        status_effect = props.get('status', {}).get('value')
 
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, hp=hp, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, skill_stats=skill_stats)
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, skill_stats=skill_stats, status_effect=status_effect)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

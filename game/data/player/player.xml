@@ -34,8 +34,8 @@
         <fitness value="0.0" />
         <melee value="0.0"  />
         <ranged value="0.0" />
-        <lucky value="0.0" />
-        <speed value="0.0" />
+        <lucky value="0.0" /> <!-- Passive Skill -->
+        <speed value="0.0" /> <!-- Passive Skill -->
     </attributes>
 
     <initial_loot>

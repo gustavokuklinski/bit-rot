@@ -1,5 +1,7 @@
 <item name="Water Bottle" type="consumable">
     <properties>
+        <status value="water" />
+        <restore min="25" max="25" />
         <load min="15" max="25" />
         <capacity value="25" />
         <sprite file="water_bottle.png" />

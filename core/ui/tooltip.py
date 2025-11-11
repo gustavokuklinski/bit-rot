@@ -19,8 +19,12 @@ def draw_tooltip(surface, item, pos):
     if item.min_damage is not None and item.max_damage is not None:
         min_damage, max_damage = item.current_damage_range
         lines.append(f"Damage: {min_damage}-{max_damage}")
-    if item.hp is not None:
-        lines.append(f"HP: {item.hp}")
+    if item.min_restore is not None and item.max_restore is not None:
+        stat = getattr(item, 'status_effect', 'Stat').capitalize()
+        if item.min_restore == item.max_restore:
+            lines.append(f"Restores: {item.min_restore} {stat}")
+        else:
+            lines.append(f"Restores: {item.min_restore}-{item.max_restore} {stat}")
     if item.min_cure is not None and item.max_cure is not None:
         lines.append(f"Cure: {item.min_cure}-{item.max_cure}%")
         

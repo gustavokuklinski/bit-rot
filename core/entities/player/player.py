@@ -499,53 +499,68 @@ class Player:
 
     def consume_item(self, item, source_type, item_index, container_item=None):
         source_inventory = self._get_source_inventory(source_type, container_item)
-        if item.item_type == 'consumable':
-            if 'Water' in item.name:
-                if item.load <= 0: # Check if stack is empty first
-                    print(f"Cannot use {item.name}, it is empty.")
-                    return False # Stop consumption if empty
+        if not item.item_type == 'consumable':
+            return False
 
-                water_restored_per_use = 25 # Define how much water one 'use' restores (e.g., 25%)
-                self.water = min(100.0, self.water + water_restored_per_use)
-                item.load -= 1 # Decrement stack count by 1
-                print(f"Consumed 1 use of {item.name}. Restored {water_restored_per_use} Water. Water: {self.water:.0f}%, Remaining uses: {item.load:.0f}")
-            elif 'Food' in item.name:
-                amount_needed = 100.0 - self.food
-                amount_to_consume = min(amount_needed, item.load)
-                self.food = min(100.0, self.food + amount_to_consume)
-                item.load -= amount_to_consume
-                print(f"Consumed {amount_to_consume:.0f}% Food. Food: {self.food:.0f}%")
-            elif item.hp is not None:
-                if item.load <= 0:
-                    print(f"Cannot use {item.name}, it is empty.")
-                    return False
-                self.health = min(self.max_health, self.health + item.hp)
-                print(f"Used {item.name} and restored {item.hp} HP.")
-                item.load -= 1
-            elif 'Vaccine' in item.name:
-                if item.load <= 0:
-                    print(f"Cannot use {item.name}, it is empty.")
-                    return False
+        if item.load <= 0:
+            print(f"Cannot use {item.name}, it is empty.")
+            return False
+
+        status_effect = getattr(item, 'status_effect', None)
+        ammo_type = getattr(item, 'ammo_type', None) # Keep this for reload logic
+        consumed = False
+
+        if status_effect == 'ammo' or ammo_type is not None:
+            # Item is ammo, trigger a reload
+            self.reload_active_weapon()
+            return True # Return early, reload handles its own logic
+
+        elif status_effect == 'infection':
+            # Item is a cure (Vaccine)
+            if item.min_cure is not None:
                 cure_chance = random.uniform(item.min_cure, item.max_cure)
-                if random.random() < cure_chance:
+                if random.random() < (cure_chance / 100.0): # Assuming 1-100
                     self.infection = 0
                     print("The vaccine worked! Infection cured.")
                 else:
                     print("The vaccine had no effect.")
-                item.load -= 1
-            elif 'Ammo' in item.name or 'Shells' in item.name:
-                self.reload_active_weapon()
-                return True
+                consumed = True
+        
+        elif status_effect is not None and hasattr(self, status_effect) and item.min_restore is not None and item.max_restore is not None:
+            # Generic handler for health, water, food
+            stat_name = status_effect # e.g., "health", "water", "food"
+            
+            amount = random.randint(item.min_restore, item.max_restore) # Calculate amount on use
+            
+            current_val = getattr(self, stat_name)
+            max_val = 100.0
+            if stat_name == 'health':
+                max_val = self.max_health
+            
+            new_val = min(max_val, current_val + amount)
+            setattr(self, stat_name, new_val)
+            
+            print(f"Used {item.name}. Restored {amount} {stat_name.capitalize()}.")
+            consumed = True
+        
+        else:
+            print(f"Cannot consume {item.name}: unknown or misconfigured item (status='{status_effect}').")
+            return False
+
+        # If consumed, decrement load and handle empty stack
+        if consumed:
+            item.load -= 1
             if item.load <= 0:
                 if source_type == 'belt':
                     self.belt[item_index] = None
                 elif source_type == 'inventory':
                     if item_index < len(self.inventory) and self.inventory[item_index] == item:
                         self.inventory.pop(item_index)
-                elif source_type == 'container' and container_item:
+                elif (source_type == 'container' or source_type == 'nearby') and container_item:
                     if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
                         container_item.inventory.pop(item_index)
             return True
+        
         return False
 
 

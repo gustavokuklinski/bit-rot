@@ -1,8 +1,9 @@
 <item name="Canned Food" type="consumable">
     <properties>
-        <load value="15" />
-        <capacity value="15" />
-        <color r="50" g="200" b="50" />
+        <status value="food" />
+        <restore min="15" max="15" />
+        <load value="1" />
+        <capacity value="1" />
         <sprite file="canned_food.png" />
     </properties>
     <spawn chance="1" />
