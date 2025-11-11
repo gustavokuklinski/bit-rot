@@ -430,10 +430,10 @@ class Zombie:
     @staticmethod
     def create_random(x, y):
         """Creates a zombie instance from a random template."""
-        if not ZOMBIE_TEMPLATES or not ALL_ITEM_TEMPLATES: # <-- Check both lists
-            Zombie.load_templates()
-        if not ZOMBIE_TEMPLATES:
-            Zombie.load_templates() # Load templates if not already loaded
+        #if not ZOMBIE_TEMPLATES or not ALL_ITEM_TEMPLATES: # <-- Check both lists
+        #    Zombie.load_templates()
+        #if not ZOMBIE_TEMPLATES:
+        #    Zombie.load_templates() # Load templates if not already loaded
         if not ZOMBIE_TEMPLATES:
             # Fallback if loading failed or no templates exist
             print("Error: No zombie templates loaded. Creating default zombie.")

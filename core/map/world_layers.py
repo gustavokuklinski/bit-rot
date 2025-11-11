@@ -149,6 +149,19 @@ def set_active_layer(game, layer_index):
         print(f"Error: Attempted to switch to non-existent layer {layer_index}")
         return False
 
+    # Find and set the new current_map_filename for the map manager
+    current_filename = game.map_manager.current_map_filename
+    # Construct the new filename by replacing the layer number (e.g., "map_L1_..." -> "map_L2_...")
+    new_filename = re.sub(r'map_L(\d+)_', f'map_L{layer_index}_', current_filename)
+
+    if new_filename in game.map_manager.map_files:
+        game.map_manager.current_map_filename = new_filename
+        print(f"MapManager current_map_filename set to: {new_filename}") # Debug print
+    else:
+        # This case should be rare if all_map_layers is populated correctly
+        print(f"Error: Could not find matching filename {new_filename} for layer {layer_index} in map_manager.map_files")
+        return False
+
     # --- State Saving ---
     if game.current_layer_index in game.layer_items:
         game.layer_items[game.current_layer_index] = game.items_on_ground[:]
@@ -181,6 +194,17 @@ def set_active_layer(game, layer_index):
     game.current_zombie_spawns = zombie_spawns
     # Ensure the triggered set exists for this layer
     game.layer_spawn_triggers.setdefault(layer_index, set())
+
+    game.spawn_point_grid.clear()
+    GRID_SIZE_SPAWNS = game.SPAWN_GRID_SIZE # 512
+    for sp_pos in game.current_zombie_spawns:
+        grid_x = int(sp_pos[0] // GRID_SIZE_SPAWNS)
+        grid_y = int(sp_pos[1] // GRID_SIZE_SPAWNS)
+        cell = (grid_x, grid_y)
+        if cell not in game.spawn_point_grid:
+            game.spawn_point_grid[cell] = [sp_pos]
+        else:
+            game.spawn_point_grid[cell].append(sp_pos)
 
     # --- State Loading ---
     # Items: Load if they exist for the new layer, otherwise spawn them

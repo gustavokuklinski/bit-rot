@@ -17,6 +17,20 @@ Sprite types and codes:
 </item>
 ```
 
+- **type="consumable"**
+```xml
+<item name="[CONSUMABLE NAME]" type="consumable">
+    <properties>
+        <status value="water" /> <!-- Player Status modifier: water, food, ... -->
+        <restore min="25" max="25" /> <!-- Min and Max restore by status -->
+        <load min="15" max="25" /> <!-- Min and Max consumable Load -->
+        <capacity value="25" /> <!-- Max consumable Load -->
+        <sprite file="water_bottle.png" />
+    </properties>
+    <spawn chance="1" />
+</item>
+```
+
 - **type="conainer"**
 ```xml
 <item name="[ITEM NAME]" type="container">
@@ -69,7 +83,7 @@ Sprite types and codes:
         <capacity value="100" /><!-- weapon max bullet  -->
         <sprite file="9mm_ammo.png" /> <!-- consumable sprite  -->
     </properties>
-    <spawn chance="12" /><!-- chance to spawn by [I] on map, or inside a type="container" -->
+    <spawn chance="1" /><!-- chance to spawn by [I] on map, or inside a type="container" -->
 </item>
 ```
 

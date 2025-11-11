@@ -120,7 +120,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                         is_valid_spawn = False # Don't spawn on empty space
                     elif tile_def['is_obstacle']:
                         is_valid_spawn = False # Don't spawn on obstacles
-                    elif base_char == 'bg' or base_char.startswith('water_') or base_char.startswith('petrol_'):
+                    elif base_char.startswith('water_') or base_char.startswith('petrol_'):
                         is_valid_spawn = False # Don't spawn on forbidden tiles
                         
                     if is_valid_spawn:

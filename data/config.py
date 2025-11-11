@@ -105,8 +105,7 @@ ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('v
 ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == 'true'
 ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
 ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
-
-ZOMBIE_SPAWN_TRIGGER_RADIUS = 100
+ZOMBIE_DETECTION_RADIUS = 100
 
 # Durability settings
 durability_config = root.find('durability')

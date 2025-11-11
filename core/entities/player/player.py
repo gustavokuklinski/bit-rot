@@ -717,7 +717,7 @@ class Player:
     def transfer_item_stack(self, source, index, container_item, target_container):
         """Transfers an entire stack to another container, merging if possible."""
         
-        # --- [FIX START] ---
+
         # Get the item and its actual source list
         item = None
         source_inventory = self._get_source_inventory(source, container_item) # Get the real inventory list
@@ -728,7 +728,6 @@ class Player:
             item = self.invcontainer
         elif source_inventory and 0 <= index < len(source_inventory):
             item = source_inventory[index] # Get the item from the list
-        # --- [FIX END] ---
 
         target_inv = None
         target_cap = 0
@@ -768,14 +767,12 @@ class Player:
         if item.load <= 0:
             # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
             
-            # --- [FIX START] ---
             if source == 'backpack':
                 self.backpack = None
             elif source == 'invcontainer':
                 self.invcontainer = None
             elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                 source_inventory.pop(index) # Use pop(index) to be precise
-            # --- [FIX END] ---
             
             print(f"Merged all of {item.name} into {target_name}.")
             return
@@ -792,7 +789,6 @@ class Player:
                 
                 # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
 
-                # --- [FIX START] ---
                 # The original item is now empty, remove it from its source.
                 if source == 'backpack':
                     self.backpack = None
@@ -800,7 +796,6 @@ class Player:
                     self.invcontainer = None
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                      source_inventory.pop(index) # Use pop(index)
-                # --- [FIX END] ---
 
                 print(f"Sent {remaining_load} {item.name} to {target_name}.")
             else:

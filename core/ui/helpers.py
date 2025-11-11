@@ -5,6 +5,7 @@ import xml.dom.minidom
 from data.config import *
 import data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
+from core.entities.zombie.zombie import Zombie
 import random
 from faker import Faker
 fake = Faker()
@@ -237,13 +238,13 @@ def _draw_dropdown(surface, state, slot_name, rect, mouse_pos):
         
         # Define rects
         list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
-        # --- FIX: Content rect needs to be clipped by the *screen* edge ---
+        # Content rect needs to be clipped by the *screen* edge
         if list_rect.bottom > VIRTUAL_GAME_HEIGHT:
             list_rect.height = VIRTUAL_GAME_HEIGHT - list_rect.top
         
         content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height) # Room for scrollbar
         
-        # --- FIX: Handle ValueError by clipping content_rect to surface ---
+        # Handle ValueError by clipping content_rect to surface
         drawable_rect = surface.get_rect().clip(content_rect)
         if drawable_rect.width <= 0 or drawable_rect.height <= 0:
              return clickable_rects # Cannot draw subsurface
@@ -759,6 +760,7 @@ def run_player_setup(game):
         state['stats_scroll_drag_last_y'] = 0
         
         Item.load_item_templates()
+        Zombie.load_templates()
 
         state['clothes_slots'] = ['head','legs', 'feet',  'torso' ,'body', 'hands']
         

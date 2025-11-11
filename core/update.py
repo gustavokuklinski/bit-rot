@@ -12,6 +12,40 @@ from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies
 
+
+def build_zombie_grid(zombies, grid_size):
+    """Sorts all zombies into a spatial grid (dictionary)."""
+    grid = {}
+    for z in zombies:
+        # Get the grid cell coordinates for the zombie's center
+        grid_x = int(z.rect.centerx // grid_size)
+        grid_y = int(z.rect.centery // grid_size)
+        cell = (grid_x, grid_y)
+        
+        # Add the zombie to the list for that cell
+        if cell not in grid:
+            grid[cell] = [z]
+        else:
+            grid[cell].append(z)
+    return grid
+
+
+def get_nearby_zombies(zombie, grid, grid_size):
+    """Gets all zombies from the 9-cell area around a given zombie."""
+    nearby_zombies = []
+    grid_x = int(zombie.rect.centerx // grid_size)
+    grid_y = int(zombie.rect.centery // grid_size)
+    
+    # Loop through the 3x3 grid centered on the zombie
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            cell = (grid_x + i, grid_y + j)
+            if cell in grid:
+                nearby_zombies.extend(grid[cell])
+                
+    return nearby_zombies
+
+
 def update_game_state(game):
     game.player.update_position(game.obstacles, game.zombies)
 
@@ -53,20 +87,48 @@ def update_game_state(game):
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
 
-    zombies_alive = game.zombies[:]
+
+
+    #zombies_alive = game.zombies[:]
+    #for zombie in zombies_alive:
+
+    #    # 1. Call the new AI function. This function ALSO handles movement.
+    #    zombie.update_ai(game.player.rect, game.obstacles, game.zombies)
+
+    #    # 2. Handle attack logic (checks distance AFTER AI movement)
+    #    distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx,
+    #                                    game.player.rect.centery - zombie.rect.centery)
+    #    if distance_to_player < zombie.attack_range:
+    #        current_time = pygame.time.get_ticks()
+    #        if current_time - zombie.last_attack_time > 500: # 500ms cooldown
+    #            zombie.attack(game.player, game)
+    #            zombie.last_attack_time = current_time
+
+    # TILE_SIZE * 3 = 48 * 3 = 144. Let's use 128.
+    GRID_SIZE = 128 
+    
+    # 1. Build the spatial grid *once* per frame
+    zombie_grid = build_zombie_grid(game.zombies, GRID_SIZE)
+
+    zombies_alive = game.zombies[:] # 
     for zombie in zombies_alive:
 
-        # 1. Call the new AI function. This function ALSO handles movement.
-        zombie.update_ai(game.player.rect, game.obstacles, game.zombies)
+        # 2. Get *only* the zombies in the 9-cell area around this zombie
+        nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
+        
+        # 3. Call the AI function, passing the *small list*
+        # This is the N*9 check (O(N)), which is much, much faster.
+        zombie.update_ai(game.player.rect, game.obstacles, nearby_zombies) # 
 
-        # 2. Handle attack logic (checks distance AFTER AI movement)
-        distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx,
-                                        game.player.rect.centery - zombie.rect.centery)
-        if distance_to_player < zombie.attack_range:
-            current_time = pygame.time.get_ticks()
-            if current_time - zombie.last_attack_time > 500: # 500ms cooldown
-                zombie.attack(game.player, game)
+        # 4. Handle attack logic (This is fine, no changes)
+        distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, # 
+                                        game.player.rect.centery - zombie.rect.centery) # 
+        if distance_to_player < zombie.attack_range: # 
+            current_time = pygame.time.get_ticks() # 
+            if current_time - zombie.last_attack_time > 500: # 500ms cooldown # 
+                zombie.attack(game.player, game) # 
                 zombie.last_attack_time = current_time
+
 
 
     now_ms = pygame.time.get_ticks()
@@ -168,11 +230,28 @@ def check_dynamic_zombie_spawns(game):
         game.layer_spawn_triggers[game.current_layer_index] = set()
         triggered_spawns_for_layer = game.layer_spawn_triggers[game.current_layer_index]
 
-    potential_spawns = getattr(game, 'current_zombie_spawns', [])
-    if not potential_spawns:
-        return # No 'Z' markers on this map layer
 
     player_pos = game.player.rect.center
+    GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
+    player_grid_x = int(player_pos[0] // GRID_SIZE_SPAWNS)
+    player_grid_y = int(player_pos[1] // GRID_SIZE_SPAWNS)
+    spawn_grid = getattr(game, 'spawn_point_grid', {})
+
+    potential_spawns = []
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            cell = (player_grid_x + i, player_grid_y + j)
+            if cell in spawn_grid:
+                potential_spawns.extend(spawn_grid[cell])
+    
+    if not potential_spawns:
+        return
+
+    #potential_spawns = getattr(game, 'current_zombie_spawns', [])
+    #if not potential_spawns:
+    #    return # No 'Z' markers on this map layer
+
+    #player_pos = game.player.rect.center
     
     # Check for global zombie limit
     current_zombie_count = len(game.zombies)
@@ -184,6 +263,7 @@ def check_dynamic_zombie_spawns(game):
 
     for spawn_pos in potential_spawns:
         # spawn_pos is an (x, y) tuple (pixel coordinates)
+        print(f"Checking potential spawn at: {spawn_pos}")
         if spawn_pos in triggered_spawns_for_layer:
             continue # Already spawned from this marker
 
@@ -191,12 +271,12 @@ def check_dynamic_zombie_spawns(game):
         
         # Use ZOMBIE_DETECTION_RADIUS as the trigger distance (with a small buffer)
         if dist_to_player < ZOMBIE_DETECTION_RADIUS * 1.5: 
-            
+        #if dist_to_player < (TILE_SIZE * 20):
             zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - len(game.zombies))
             
             if zombie_spawn_limit == 0:
                 print("Global zombie limit reached during dynamic spawn.")
-                return # Stop spawning this frame
+                break # Stop spawning this frame
 
             print(f"Player near spawn marker at {spawn_pos}. Spawning zombie.")
             triggered_spawns_for_layer.add(spawn_pos)
@@ -217,9 +297,8 @@ def check_dynamic_zombie_spawns(game):
                 entities_to_avoid.extend(new_zombies) 
                 game.layer_zombies[game.current_layer_index] = game.zombies[:]
                 
-                # --- ADD THIS LINE ---
-                # Only trigger one 'Z' marker per frame to stagger the spawning
-                break
+            
+               
 
 def check_zombie_respawn(game):
     """
@@ -232,13 +311,14 @@ def check_zombie_respawn(game):
     
     # --- Extract spawn points ---
     # (This is the "un-validated" logic that we know works from the respawn)
-    zombie_spawns = []
-    if hasattr(game, 'spawn_data'):
-        for y, row in enumerate(game.spawn_data):
-            for x, char in enumerate(row):
-                if char == 'Z':
-                    zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-    
+    #zombie_spawns = []
+    #if hasattr(game, 'spawn_data'):
+    #    for y, row in enumerate(game.spawn_data):
+    #        for x, char in enumerate(row):
+    #            if char == 'Z':
+    #                zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+    zombie_spawns = game.current_zombie_spawns
+
     if not zombie_spawns:
         # No 'Z' markers on this map layer, nothing to do.
         # We still need to initialize map_states to prevent this from running again.
@@ -257,17 +337,17 @@ def check_zombie_respawn(game):
     if current_map not in game.map_states:
         print(f"First visit to {current_map}. Performing initial zombie spawn.")
 
-        # --- [FIX START] ---
         # The faulty logic block that skipped the spawn has been removed.
         # This code block will now execute on the first visit.
         
-        initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies)
+        #initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies)
         
-        game.zombies.extend(initial_zombies)
-        game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
+        #game.zombies.extend(initial_zombies)
+        #game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
         
-        print(f"Spawned {len(initial_zombies)} initial zombies. Total: {len(game.zombies)}")
-        
+        # print(f"Spawned {len(initial_zombies)} initial zombies. Total: {len(game.zombies)}")
+
+        print(f"Initial zombie spawn skipped. Dynamic spawner will handle it.")
         # Initialize map state *after* spawning
         game.map_states[current_map] = {
             'items': game.items_on_ground, 
@@ -277,9 +357,6 @@ def check_zombie_respawn(game):
             'last_respawn_time': current_time # Initialize timer
         }
         return 
-        # --- [FIX END] ---
-
-    # --- Handle RESPAWNING (if map state already exists) ---
     
     # If timer is disabled, do not respawn.
     if ZOMBIE_RESPAWN_TIMER_MS <= 0:
@@ -294,22 +371,23 @@ def check_zombie_respawn(game):
     # Check if respawn timer has elapsed
     if current_time - last_respawn > ZOMBIE_RESPAWN_TIMER_MS:
         print(f"Respawn timer expired for {current_map}. Respawning zombies.")
-        all_current_entities = game.items_on_ground + game.zombies
-        current_zombie_count = len(game.zombies)
-        zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - current_zombie_count)
-
-        if zombie_spawn_limit == 0:
-            print(f"Global zombie limit ({MAX_ZOMBIES_GLOBAL}) reached. No zombies will respawn.")
-            new_zombies = []
-        else:
-            print(f"Global limit: {MAX_ZOMBIES_GLOBAL}, Current: {current_zombie_count}, Can spawn: {zombie_spawn_limit}")
-            new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities, zombie_spawn_limit)
-
-
-        game.zombies.extend(new_zombies)
-        game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
         
-        print(f"Spawned {len(new_zombies)} new zombies. Total: {len(game.zombies)}")
+        #all_current_entities = game.items_on_ground + game.zombies
+        #current_zombie_count = len(game.zombies)
+        #zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - current_zombie_count)
+
+        #if zombie_spawn_limit == 0:
+        #    print(f"Global zombie limit ({MAX_ZOMBIES_GLOBAL}) reached. No zombies will respawn.")
+        #    new_zombies = []
+        #else:
+        #    print(f"Global limit: {MAX_ZOMBIES_GLOBAL}, Current: {current_zombie_count}, Can spawn: {zombie_spawn_limit}")
+        #    new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities, zombie_spawn_limit)
+
+
+        #game.zombies.extend(new_zombies)
+        #game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
+        
+        #print(f"Spawned {len(new_zombies)} new zombies. Total: {len(game.zombies)}")
         
         # Reset the timer
         game.map_states[current_map]['last_respawn_time'] = current_time

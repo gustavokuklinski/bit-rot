@@ -120,6 +120,9 @@ class Game:
         
         self.current_zombie_spawns = []
 
+        self.spawn_point_grid = {}
+        self.SPAWN_GRID_SIZE = 512
+
         self.player_setup_state = {}
         
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
