@@ -86,24 +86,6 @@ def update_game_state(game):
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
-
-
-
-    #zombies_alive = game.zombies[:]
-    #for zombie in zombies_alive:
-
-    #    # 1. Call the new AI function. This function ALSO handles movement.
-    #    zombie.update_ai(game.player.rect, game.obstacles, game.zombies)
-
-    #    # 2. Handle attack logic (checks distance AFTER AI movement)
-    #    distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx,
-    #                                    game.player.rect.centery - zombie.rect.centery)
-    #    if distance_to_player < zombie.attack_range:
-    #        current_time = pygame.time.get_ticks()
-    #        if current_time - zombie.last_attack_time > 500: # 500ms cooldown
-    #            zombie.attack(game.player, game)
-    #            zombie.last_attack_time = current_time
-
     # TILE_SIZE * 3 = 48 * 3 = 144. Let's use 128.
     GRID_SIZE = 128 
     
@@ -247,12 +229,7 @@ def check_dynamic_zombie_spawns(game):
     if not potential_spawns:
         return
 
-    #potential_spawns = getattr(game, 'current_zombie_spawns', [])
-    #if not potential_spawns:
-    #    return # No 'Z' markers on this map layer
-
-    #player_pos = game.player.rect.center
-    
+   
     # Check for global zombie limit
     current_zombie_count = len(game.zombies)
     if current_zombie_count >= MAX_ZOMBIES_GLOBAL:
@@ -309,14 +286,6 @@ def check_zombie_respawn(game):
     current_time = pygame.time.get_ticks()
     current_map = game.map_manager.current_map_filename
     
-    # --- Extract spawn points ---
-    # (This is the "un-validated" logic that we know works from the respawn)
-    #zombie_spawns = []
-    #if hasattr(game, 'spawn_data'):
-    #    for y, row in enumerate(game.spawn_data):
-    #        for x, char in enumerate(row):
-    #            if char == 'Z':
-    #                zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
     zombie_spawns = game.current_zombie_spawns
 
     if not zombie_spawns:
@@ -337,15 +306,6 @@ def check_zombie_respawn(game):
     if current_map not in game.map_states:
         print(f"First visit to {current_map}. Performing initial zombie spawn.")
 
-        # The faulty logic block that skipped the spawn has been removed.
-        # This code block will now execute on the first visit.
-        
-        #initial_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground + game.zombies)
-        
-        #game.zombies.extend(initial_zombies)
-        #game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
-        
-        # print(f"Spawned {len(initial_zombies)} initial zombies. Total: {len(game.zombies)}")
 
         print(f"Initial zombie spawn skipped. Dynamic spawner will handle it.")
         # Initialize map state *after* spawning
@@ -372,22 +332,6 @@ def check_zombie_respawn(game):
     if current_time - last_respawn > ZOMBIE_RESPAWN_TIMER_MS:
         print(f"Respawn timer expired for {current_map}. Respawning zombies.")
         
-        #all_current_entities = game.items_on_ground + game.zombies
-        #current_zombie_count = len(game.zombies)
-        #zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - current_zombie_count)
-
-        #if zombie_spawn_limit == 0:
-        #    print(f"Global zombie limit ({MAX_ZOMBIES_GLOBAL}) reached. No zombies will respawn.")
-        #    new_zombies = []
-        #else:
-        #    print(f"Global limit: {MAX_ZOMBIES_GLOBAL}, Current: {current_zombie_count}, Can spawn: {zombie_spawn_limit}")
-        #    new_zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, all_current_entities, zombie_spawn_limit)
-
-
-        #game.zombies.extend(new_zombies)
-        #game.layer_zombies[game.current_layer_index] = game.zombies[:] # Save to layer state
-        
-        #print(f"Spawned {len(new_zombies)} new zombies. Total: {len(game.zombies)}")
         
         # Reset the timer
         game.map_states[current_map]['last_respawn_time'] = current_time

@@ -20,10 +20,10 @@ $ python editor.py # Edit game maps
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
-- **CTRL + R-Click**: Shoot/Attack
+- **CTRL + L-Click**: Shoot/Attack
 - **SHIFT + L-Click + Drag**: Get only one item from stack
-- **R-Click + Drag**: Place or Drop
-- **L-Click**: Opens menu 
+- **L-Click + Drag**: Place or Drop
+- **R-Click**: Opens menu 
 - **1/2/3/4/5**: Equip and use item from Belt
 
 - **E**: Get item from floor, open/close door

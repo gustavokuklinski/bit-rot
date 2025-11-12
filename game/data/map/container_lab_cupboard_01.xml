@@ -1,0 +1,13 @@
+<map name="lab_cupboard_01" type="maptile_container" char="lab_cupboard_01" is_obstacle="true">
+    <visuals>
+        <sprite file="lab_cupboard_01.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="Vaccine" chance="0.2" />
+        <item item="Matches" chance="0.1" />
+        <item item="Medkit" chance="0.1" />
+        <item item="Powerbank" chance="0.1" />
+        <item item="Baton" chance="0.1" />
+    </loot>
+</map>

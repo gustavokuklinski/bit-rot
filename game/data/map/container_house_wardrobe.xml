@@ -13,5 +13,7 @@
         <item item="Pistol 9mm" chance="0.1" />
         <item item="9mm Ammo" chance="0.1" />
         <item item="Medkit" chance="0.1" />
+        <item item="Baton" chance="0.1" />
+        
     </loot>
 </map>

@@ -56,13 +56,13 @@
     <zombie>
         <speed value="1" /> <!-- Zombie Speed -->
         <drop value="1" />  <!-- Zombie Drop 0 to 100 (full drop) -->
-        <detection value="20" /> <!-- Zombie detect player radius -->
+        <detection value="10" /> <!-- Zombie detect player radius -->
         <wander value="true" /> <!-- Zombie wander true = wander, false = follow the player -->
         <wander_interval value="2000" /> <!-- wandering interval in MS -->
-        <sight_check value="true" />  <!-- Zombie spot the player and go to -->
-        <spawn value="5" /> <!-- How many zombies per spawn -->
-        <respawn_timer value="300000" /> <!-- 300000 = Every 5 minutes / Time to Reaspawn Zombie in MS-->
-        <max_zombies value="250" /> <!-- Max Zombies on map-->
+        <sight_check value="false" />  <!-- Zombie spot the player and go to: true / false -->
+        <spawn value="2" /> <!-- How many zombies per spawn -->
+        <respawn_timer value="600000" /> <!-- 300000 = 5 minutes | 600000 = 10 minutes / Time to Reaspawn Zombie in MS-->
+        <max_zombies value="2024" /> <!-- Max Zombies on map-->
         
     </zombie>
 

@@ -20,5 +20,7 @@
         <item item="Axe" chance="0.1" />
         <item item="Knife" chance="0.1" />
         <item item="Medkit" chance="0.5" />
+        <item item="Baton" chance="0.5" />
+        
     </loot>
 </map>

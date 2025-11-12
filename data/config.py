@@ -100,9 +100,9 @@ ZOMBIE_SPEED = float(zombie_config.find('speed').get('value'))
 MAX_ZOMBIES_GLOBAL = int(zombie_config.find('max_zombies').get('value'))
 ZOMBIE_DROP = int(zombie_config.find('drop').get('value'))
 ZOMBIE_DETECTION_RADIUS = int(zombie_config.find('detection').get('value')) * TILE_SIZE
-ZOMBIE_WANDER_ENABLED = zombie_config.find('wander').get('value') == 'true'
+ZOMBIE_WANDER_ENABLED = zombie_config.find('wander').get('value')
 ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
-ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value') == 'true'
+ZOMBIE_LINE_OF_SIGHT_CHECK = zombie_config.find('sight_check').get('value')
 ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
 ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
 ZOMBIE_DETECTION_RADIUS = 100

@@ -127,7 +127,7 @@ class Zombie:
             self.show_health_bar_timer -= 1
 
         if self.melee_swing_timer > 0:
-            swing_radius = TILE_SIZE * 0.8
+            swing_radius = TILE_SIZE * 1
             center_x, center_y = draw_rect.center
             start_angle = self.melee_swing_angle - (3.1415 / 4)
             end_angle = self.melee_swing_angle + (3.1415 / 4)
