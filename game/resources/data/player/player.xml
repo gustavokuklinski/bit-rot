@@ -34,12 +34,11 @@
         <fitness value="0.0" />
         <melee value="0.0"  />
         <ranged value="0.0" />
-        <lucky value="0.0" /> <!-- Passive Skill -->
-        <speed value="0.0" /> <!-- Passive Skill -->
+        <lucky value="0.0" /> <!-- Passive Skill - Better sort of loot -->
+        <speed value="0.0" /> <!-- Passive Skill - Boost Stamina -->
     </attributes>
 
     <initial_loot>
-        <item name="Wallet" chance="1" />
     </initial_loot>
 
     <visuals>

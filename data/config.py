@@ -14,6 +14,7 @@ GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 MAP_DIR = "./game/resources/map/" # Game map files
 DATA_PATH = "./game/resources/data/" # Folders with XML data files
 SPRITE_PATH = "./game/resources/sprites/" # Folders with PNG sprites
+SOUND_PATH = "./game/resources/sfx/" # Sound OGG files
 
 # Colors
 WHITE = (255, 255, 255)

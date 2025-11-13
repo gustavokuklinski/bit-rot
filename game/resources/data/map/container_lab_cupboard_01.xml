@@ -8,6 +8,6 @@
         <item item="Matches" chance="0.1" />
         <item item="Medkit" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
-        <item item="Baton" chance="0.1" />
+        <item item="Batton" chance="0.1" />
     </loot>
 </map>

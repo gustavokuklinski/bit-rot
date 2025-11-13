@@ -72,9 +72,22 @@ class Zombie:
         self.melee_swing_timer = 0
         self.melee_swing_angle = 0
 
+        self.last_hit_sound_time = 0
+        self.hit_sound_cooldown = 300 # 300ms cooldown for hit sound
+        self.last_wander_sound_time = 0
+        self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
+        
+        # Load sound filenames from template
+        sounds = template.get('sounds', {})
+        self.sound_hit = sounds.get('hit', None)
+        self.sound_wander = sounds.get('wander', None)
+        self.sound_dead = sounds.get('dead', None)
+        self.sound_attack = sounds.get('attack', None)
+
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
         self.wander_target = None # (x, y) coordinate
         self.last_wander_change = 0 # Timestamp for changing wander direction
+
 
     def load_sprite(self, sprite_file):
         if not sprite_file: return None
@@ -86,10 +99,17 @@ class Zombie:
             print(f"Error loading zombie sprite {sprite_file}: {e}")
             return None
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, game):
         self.health -= amount
         self.health = max(0, self.health)
         self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)
+
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_hit_sound_time > self.hit_sound_cooldown:
+            if self.sound_hit: # Check if a sound is defined
+                game.sound_manager.play_sound(self.sound_hit, subdir='zombie')
+            self.last_hit_sound_time = current_time
+
         return self.health <= 0 # Return True if dead
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
@@ -161,7 +181,7 @@ class Zombie:
 
         return True # Line of sight is clear
 
-    def update_ai(self, player_rect, obstacles, other_zombies):
+    def update_ai(self, player_rect, obstacles, other_zombies, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
         dist_to_player = math.hypot(player_rect.centerx - self.rect.centerx,
@@ -176,6 +196,12 @@ class Zombie:
             target_pos = player_rect.center # Chase the player directly
         else:
             self.state = 'wandering'
+            
+            if ZOMBIE_WANDER_ENABLED and current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
+                if self.sound_wander: # Check if a sound is defined
+                    game.sound_manager.play_sound(self.sound_wander, subdir='zombie', volume=0.3)
+                self.last_wander_sound_time = current_time
+                self.wander_sound_cooldown = random.randint(4000, 12000)
 
             # Update wander target if needed
             if ZOMBIE_WANDER_ENABLED:
@@ -193,6 +219,13 @@ class Zombie:
                     self.last_wander_change = current_time
 
                 target_pos = self.wander_target # Wander towards the target point
+
+                #if self.wander_target and (current_time - self.last_wander_sound_time > self.wander_sound_interval):
+                #    # Play at a low volume
+                #    game.sound_manager.play_sound('zombie_wandering', volume=0.3)
+                #    self.last_wander_sound_time = current_time
+                #    # Set a new random interval for the next sound
+                #    self.wander_sound_interval = random.randint(4000, 12000)
             else:
                 target_pos = None # Wandering disabled, stand still
 
@@ -263,6 +296,9 @@ class Zombie:
         damage = random.randint(self.min_attack, self.max_attack)
         infection = random.randint(self.min_infection, self.max_infection)
         player.take_durability_damage(damage, game)
+
+        if self.sound_attack: # Check if a sound is defined
+            game.sound_manager.play_sound(self.sound_attack, subdir='zombie')
 
         total_defence = player.get_total_defence() # Get defence from player
         
@@ -378,7 +414,7 @@ class Zombie:
                             xp_node = root.find('xp')
                             loot_node = root.find('loot')
                             clothes_node = root.find('clothes')
-
+                            sound_node = root.find('sound')
                             template['name'] = name_node.get('value') if name_node is not None else 'Unknown Zombie'
 
                             health_node = stats_node.find('health')
@@ -417,6 +453,24 @@ class Zombie:
                                     # slot_node.tag will be "head", "torso", etc.
                                     template['clothes_slots'].append(slot_node.tag)
 
+
+                            template['sounds'] = {}
+                            if sound_node is not None:
+                                hit_node = sound_node.find('hit')
+                                if hit_node is not None:
+                                    template['sounds']['hit'] = hit_node.get('src')
+                                
+                                wander_node = sound_node.find('wander')
+                                if wander_node is not None:
+                                    template['sounds']['wander'] = wander_node.get('src')
+                                    
+                                dead_node = sound_node.find('dead')
+                                if dead_node is not None:
+                                    template['sounds']['dead'] = dead_node.get('src')
+                                    
+                                attack_node = sound_node.find('attack')
+                                if attack_node is not None:
+                                    template['sounds']['attack'] = attack_node.get('src')
 
 
                             ZOMBIE_TEMPLATES.append(template)

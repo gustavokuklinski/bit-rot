@@ -1,9 +1,12 @@
-<item name="Baton" type="weapon_melee">
+<item name="Batton" type="weapon_melee">
     <properties>
         <durability min="2" max="5" />
         <damage min="1" max="10" />
         <skill type="melee" />
-        <sprite file="baton.png" />
+        <sprite file="batton.png" />
     </properties>
     <spawn chance="1" />
+    <sound>
+        <swing src="batton.ogg" />
+    </sound>
 </item>

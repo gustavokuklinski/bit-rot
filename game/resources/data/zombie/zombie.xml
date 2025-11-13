@@ -30,4 +30,10 @@
         <item name="Wallet" chance="100.0" />
     </loot>
 
+    <sound>
+        <hit src="zombie_hit.ogg" />
+        <wander src="zombie_wandering.ogg" />
+        <dead src="zombie_dead.ogg" />
+        <attack src="zombie_attack.ogg" />
+    </sound>
 </zombie>

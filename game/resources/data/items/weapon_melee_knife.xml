@@ -6,4 +6,7 @@
         <sprite file="knife.png" />
     </properties>
     <spawn chance="1" />
+    <sound>
+        <swing src="knife.ogg" />
+    </sound>
 </item>

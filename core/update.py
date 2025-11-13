@@ -77,7 +77,7 @@ def update_game_state(game):
         hit_zombie = next((z for z in game.zombies if z not in zombies_to_remove and p.rect.colliderect(z.rect)), None)
 
         if hit_zombie:
-            if player_hit_zombie(game.player, hit_zombie):
+            if player_hit_zombie(game.player, hit_zombie, game):
                 zombies_to_remove.append(hit_zombie)
                 handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
                 game.zombies_killed += 1
@@ -100,7 +100,7 @@ def update_game_state(game):
         
         # 3. Call the AI function, passing the *small list*
         # This is the N*9 check (O(N)), which is much, much faster.
-        zombie.update_ai(game.player.rect, game.obstacles, nearby_zombies) # 
+        zombie.update_ai(game.player.rect, game.obstacles, nearby_zombies, game) # 
 
         # 4. Handle attack logic (This is fine, no changes)
         distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, # 
@@ -140,7 +140,7 @@ def update_game_state(game):
                     game.modals.remove(modal)
                     print(f"Closed {container_item.name} because you moved away.")
 
-def player_hit_zombie(player, zombie):
+def player_hit_zombie(player, zombie, game):
     progression = player.progression
     active_weapon = player.active_weapon
     
@@ -168,7 +168,7 @@ def player_hit_zombie(player, zombie):
 
     final_damage = base_damage * damage_multiplier
 
-    if zombie.take_damage(final_damage):
+    if zombie.take_damage(final_damage, game):
         return True
 
     hit_type = "Headshot" if is_headshot else "Hit"
@@ -193,6 +193,9 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     # append corpse to world items (it behaves like an item on ground)
     if find_free_tile(corpse.rect, obstacles, items_on_ground_list, initial_pos=zombie.rect.topleft):
         items_on_ground_list.append(corpse)
+
+    if zombie.sound_dead:
+        game.sound_manager.play_sound(zombie.sound_dead, subdir='zombie')
 
     game.player.process_kill(weapon, zombie)
 

@@ -8,6 +8,10 @@
         <firing pellets="1" spread_angle="0" />
         <skill type="range" />
         <sprite file="pistol_9mm.png" />
-    </properties> 
+    </properties>
+    <sound>
+        <shoot src="pistol_9mm.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
     <spawn chance="1" />
 </item>

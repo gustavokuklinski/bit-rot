@@ -9,5 +9,9 @@
         <skill type="range" />
         <sprite file="shotgun.png" />
     </properties>
+    <sound>
+        <shoot src="shotgun.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
     <spawn chance="1" />
 </item>

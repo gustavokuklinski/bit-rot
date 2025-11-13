@@ -16,3 +16,21 @@
 # Features
 - XP Debuf in percentage instead of level down
 - Only Spawn Zombies when player get near them
+
+# Sound:
+Ajust some random 'Pitch'
+
+- Zombie:
+    * Wandering
+    * Attack
+    * Dead
+
+- Ranged weapon:
+    * Equip
+    * Reload
+    * Shoot
+
+- Melee weapon:
+    * Equip
+    * Hit
+    * Miss

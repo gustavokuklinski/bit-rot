@@ -45,9 +45,9 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="weapon"** (Melee: Axe, Knife, Baton...)
+- **type="weapon_melee"** (Melee: Axe, Knife, Batton...)
 ```xml
-<item name="[WEAPON NAME]" type="weapon">
+<item name="[WEAPON NAME]" type="weapon_melee">
     <properties>
         <durability min="10" max="100" /><!-- weapon durabilitie  -->
         <damage min="20" max="50" /><!-- weapon damage  -->
@@ -58,9 +58,9 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="weapon"** (Ranged: Piston, Shotgun...)
+- **type="weapon_ranged"** (Ranged: Piston, Shotgun...)
 ```xml
-<item name="[WEAPON NAME]" type="weapon">
+<item name="[WEAPON NAME]" type="weapon_ranged">
     <properties>
         <durability min="5" max="100" /><!-- weapon durabilitie  -->
         <load min="5" max="12" /><!-- weapon default load  -->

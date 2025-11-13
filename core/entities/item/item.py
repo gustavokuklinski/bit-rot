@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, skill_stats=None, status_effect=None, min_reduce=None, max_reduce=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, skill_stats=None, status_effect=None, min_reduce=None, max_reduce=None, sounds=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -46,6 +46,7 @@ class Item:
         self.skill_stats = skill_stats
         self.text = text
         self.status_effect = status_effect
+        self.sounds = sounds if sounds is not None else {}
 
     @property
     def damage(self):
@@ -235,6 +236,22 @@ class Item:
                     loot_item_name = loot_item_node.attrib.get('name')
                     loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
                     template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
+            
+            template['sounds'] = {}
+            sound_node = root.find('sound')
+            if sound_node is not None:
+                shoot_node = sound_node.find('shoot')
+                if shoot_node is not None:
+                    template['sounds']['shoot'] = shoot_node.get('src')
+                
+                noammo_node = sound_node.find('noammo')
+                if noammo_node is not None:
+                    template['sounds']['noammo'] = noammo_node.get('src')
+                
+                swing_node = sound_node.find('swing') # For melee
+                if swing_node is not None:
+                    template['sounds']['swing'] = swing_node.get('src')
+
 
             ITEM_TEMPLATES[name] = template
         # silent on count to avoid spam
@@ -388,8 +405,9 @@ class Item:
 
         skill_stats = template.get('stats')
         status_effect = props.get('status', {}).get('value')
+        sounds = template.get('sounds', {})
 
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, skill_stats=skill_stats, status_effect=status_effect, min_reduce=min_reduce, max_reduce=max_reduce)
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, skill_stats=skill_stats, status_effect=status_effect, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

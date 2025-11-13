@@ -6,4 +6,7 @@
         <sprite file="axe.png" />
     </properties>
     <spawn chance="1" />
+    <sound>
+        <swing src="axe.ogg" />
+    </sound>
 </item>

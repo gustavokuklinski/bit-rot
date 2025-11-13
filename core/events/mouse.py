@@ -1256,6 +1256,9 @@ def handle_attack(game, mouse_pos):
         # if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
             if weapon.load > 0 and weapon.durability > 0:
+                if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
+                    game.sound_manager.play_sound(weapon.sounds['shoot'], subdir='items')
+
                 target_world_x, target_world_y = game.screen_to_world(mouse_pos)
                 
                 dx = target_world_x - game.player.rect.centerx
@@ -1277,10 +1280,20 @@ def handle_attack(game, mouse_pos):
                 if weapon.durability <= 0:
                     print(f"{weapon.name} broke!")
                     game.player.destroy_broken_weapon(weapon)
-            elif weapon.load <= 0: print(f"**CLICK!** {weapon.name} is out of ammo.")
+            elif weapon.load <= 0: 
+                if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
+                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items')
+
+                print(f"**CLICK!** {weapon.name} is out of ammo.")
+
             else: print(f"**CLUNK!** {weapon.name} is broken.")
         else:
             if game.player.progression.handle_melee_attack(game.player):
+                
+                if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
+                    game.sound_manager.play_sound(weapon.sounds['swing'], subdir='items')
+
+
                 game.player.melee_swing_timer = 10
                 player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
                 player_screen_y = GAME_HEIGHT / 2
@@ -1291,7 +1304,7 @@ def handle_attack(game, mouse_pos):
                 hit_a_zombie = False
                 for zombie in game.zombies:
                     if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
-                        if player_hit_zombie(game.player, zombie):
+                        if player_hit_zombie(game.player, zombie, game):
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
                             game.zombies.remove(zombie)
                             game.zombies_killed += 1

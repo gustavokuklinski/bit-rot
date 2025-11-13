@@ -28,9 +28,12 @@ from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 from core.map.world_layers import load_all_map_layers, set_active_layer
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
+from core.sound_manager import SoundManager
 
 class Game:
     def __init__(self):
+        pygame.mixer.pre_init(22050, -16, 2, 512)
+
         pygame.init()
         self.screen = pygame.display.set_mode((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.RESIZABLE)
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
@@ -129,7 +132,7 @@ class Game:
         
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.world_time = WorldTime(self)
-
+        self.sound_manager = SoundManager()
 
     def load_map(self, map_filename):
         # Clear all game state
@@ -222,6 +225,36 @@ class Game:
             # Assumes your item name in the XML is "ID"
             # If your item is named "Wallet", change "ID" to "Wallet"
             wallet_item = Item.create_from_name("Knife") 
+            if wallet_item:
+                # Check if there's space
+                if len(self.player.inventory) < self.player.get_total_inventory_slots():
+                    self.player.inventory.append(wallet_item)
+                else:
+                    print("Could not add wallet; inventory is full!")
+            else:
+                print("Warning: Could not create 'ID' item. Check item XML.")
+        except Exception as e:
+            print(f"Error creating starting wallet: {e}")
+        
+        try:
+            # Assumes your item name in the XML is "ID"
+            # If your item is named "Wallet", change "ID" to "Wallet"
+            wallet_item = Item.create_from_name("Axe") 
+            if wallet_item:
+                # Check if there's space
+                if len(self.player.inventory) < self.player.get_total_inventory_slots():
+                    self.player.inventory.append(wallet_item)
+                else:
+                    print("Could not add wallet; inventory is full!")
+            else:
+                print("Warning: Could not create 'ID' item. Check item XML.")
+        except Exception as e:
+            print(f"Error creating starting wallet: {e}")
+        
+        try:
+            # Assumes your item name in the XML is "ID"
+            # If your item is named "Wallet", change "ID" to "Wallet"
+            wallet_item = Item.create_from_name("Batton") 
             if wallet_item:
                 # Check if there's space
                 if len(self.player.inventory) < self.player.get_total_inventory_slots():
