@@ -146,7 +146,7 @@ class Item:
         if not sprite_file:
             return None
         try:
-            if sprite_file.startswith("game/"):
+            if sprite_file.startswith("./game/"):
                 path = sprite_file
             else:
                 #path = SPRITE_PATH + "items/" + sprite_file

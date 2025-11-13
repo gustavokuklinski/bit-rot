@@ -107,7 +107,7 @@ def draw_menu(screen, mouse_pos):
     # try to load and draw logo image instead of text title
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
+            _logo_img = pygame.image.load('./game/icons/logo.png').convert_alpha()
             logo_w = 400
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
@@ -142,7 +142,7 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
     global _logo_img
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load(SPRITE_PATH + 'ui/logo.png').convert_alpha()
+            _logo_img = pygame.image.load('./game/icons/logo.png').convert_alpha()
             logo_w = 500
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))
@@ -1058,7 +1058,7 @@ def run_player_setup(game):
 
 def _load_presets(state):
     """Loads all .xml preset files from the save/player directory."""
-    preset_dir = "save/player"
+    preset_dir = "./game/save/player"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
     
@@ -1078,7 +1078,7 @@ def _save_preset(state):
         print("Cannot save preset with default name.")
         return # Add a message to the user later
 
-    preset_dir = "save/player"
+    preset_dir = "./game/save/player"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
         
@@ -1121,7 +1121,7 @@ def _load_preset(state):
     if not preset_name or preset_name == "None":
         return
 
-    filepath = os.path.join("save/player", f"{preset_name}.xml")
+    filepath = os.path.join("./game/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return
@@ -1169,7 +1169,7 @@ def _delete_preset(state):
         print("No preset selected to delete.")
         return
 
-    filepath = os.path.join("save/player", f"{preset_name}.xml")
+    filepath = os.path.join("./game/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return

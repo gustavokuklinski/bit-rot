@@ -4,7 +4,7 @@ import pygame
 from data.config import *
 
 class MapManager:
-    def __init__(self, game, map_folder='game/map'):
+    def __init__(self, game, map_folder='./game/resources/map'):
         self.game = game
         self.map_folder = map_folder
         self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename

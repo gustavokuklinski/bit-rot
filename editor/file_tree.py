@@ -14,7 +14,7 @@ class FileTree:
         self.font = font
         self.line_height = 25
         self.scroll_offset = 0
-        self.icons = load_editor_icons("game/sprites/editor")
+        self.icons = load_editor_icons("./game/resources/sprites/editor")
 
         self.grouped_maps = self._group_maps(available_maps)
         self.map_names = sorted(self.grouped_maps.keys())

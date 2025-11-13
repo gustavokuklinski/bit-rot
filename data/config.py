@@ -11,9 +11,9 @@ GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
-MAP_DIR = "game/map/" # Game map files
-DATA_PATH = "game/data/" # Folders with XML data files
-SPRITE_PATH = "game/sprites/" # Folders with PNG sprites
+MAP_DIR = "./game/resources/map/" # Game map files
+DATA_PATH = "./game/resources/data/" # Folders with XML data files
+SPRITE_PATH = "./game/resources/sprites/" # Folders with PNG sprites
 
 # Colors
 WHITE = (255, 255, 255)
@@ -57,7 +57,7 @@ MOBILE_MODAL_WIDTH = 250
 MOBILE_MODAL_HEIGHT = 400
 
 
-FONT_FACE = "game/font/Oxanium-Regular.ttf"
+FONT_FACE = "./game/resources/font/Oxanium-Regular.ttf"
 
 # Fonts
 font = pygame.font.Font(FONT_FACE, 16)
@@ -67,7 +67,7 @@ title_font = pygame.font.Font(FONT_FACE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 10)
 
 # Game XML Config
-tree = ET.parse('save/config/default.xml')
+tree = ET.parse('./game/save/config/default.xml')
 root = tree.getroot()
 
 # System settings

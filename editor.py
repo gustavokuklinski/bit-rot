@@ -109,16 +109,16 @@ def main():
     """Main function for the map editor."""
     # Load assets
 
-    game_root = os.path.abspath(os.path.join('game'))
+    game_root = os.path.abspath(os.path.join('./game'))
     
-    xml_map_data_path = os.path.join(game_root, 'data', 'map')
-    sprite_map_path = os.path.join(game_root, 'sprites', 'map')
+    xml_map_data_path = os.path.join(game_root, 'resources', 'data', 'map')
+    sprite_map_path = os.path.join(game_root, 'resources', 'sprites', 'map')
     map_tiles = load_map_tiles_from_xml(xml_map_data_path, sprite_map_path)
 
     # Set up map and UI components
     game_map = Map(width=MAP_DEFAULT_WIDTH, height=MAP_DEFAULT_HEIGHT) # Correct map dimensions
 
-    map_dir = os.path.join(game_root, 'map')
+    map_dir = os.path.join(game_root, 'resources', 'map')
     
     # Dynamically find all .csv files in map_dir for the file tree
     all_map_files = sorted([f for f in os.listdir(map_dir) if f.endswith('.csv')])

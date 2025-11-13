@@ -35,6 +35,8 @@ class Game:
         self.screen = pygame.display.set_mode((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.RESIZABLE)
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
         pygame.display.set_caption("Bit Rot")
+        icon_image = pygame.image.load('./game/icons/favicon.png')
+        pygame.display.set_icon(icon_image)
         self.clock = pygame.time.Clock()
         self.assets = load_assets()
         self.game_state = 'MENU'

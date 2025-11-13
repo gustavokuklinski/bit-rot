@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<preset>
+    <name>Dante Klaus</name>
+    <sex>Male</sex>
+    <traits>
+        <trait>luck</trait>
+        <trait>smoker</trait>
+        <trait>drunk</trait>
+    </traits>
+    <clothes>
+        <slot name="head">None</slot>
+        <slot name="legs">Military Pants</slot>
+        <slot name="feet">Military Boots</slot>
+        <slot name="torso">Military Tshirt</slot>
+        <slot name="body">Military Jacket</slot>
+        <slot name="hands">Leather Black Gloves</slot>
+    </clothes>
+</preset>

@@ -63,7 +63,7 @@ class Toolbar:
         self.height = height
         self.font = font
         self.buttons = []
-        self.icons = load_editor_icons("game/sprites/editor")
+        self.icons = load_editor_icons("./game/resources/sprites/editor")
 
         button_definitions = [
             {"label": "NEW MAP", "icon": "new", "action": "NEW MAP"},
