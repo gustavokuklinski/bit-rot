@@ -2,6 +2,7 @@ import time
 import pygame
 import os
 import random
+import math
 
 from data.config import *
 from core.entities.item.item import Item
@@ -72,7 +73,7 @@ class Player:
         self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
 
         self.layer_switch_cooldown = 0
-
+        self.aim_angle = 0
         self.facing_direction = (0, 1)
 
     def _load_sprite(self, sprite_path):
@@ -159,7 +160,7 @@ class Player:
                     self.rect.top = obstacle.bottom
                 self.y = self.rect.y
 
-    def draw(self, surface, offset_x, offset_y):
+    def draw(self, surface, offset_x, offset_y, is_aiming=False):
         draw_rect = self.rect.move(offset_x, offset_y)
         
         if self.image:
@@ -172,14 +173,65 @@ class Player:
             if item and item.image:
                 surface.blit(item.image, draw_rect)
 
+
+        if is_aiming and self.active_weapon and self.active_weapon.image and \
+           self.active_weapon.item_type == 'weapon_ranged':
+            # 1. Get the original weapon image
+            original_image = self.active_weapon.image
+            
+            # 2. Rotate the image
+            angle_degrees = math.degrees(self.aim_angle)
+            rotated_image = pygame.transform.rotate(original_image, angle_degrees)
+            
+            # 3. Get the rect of the rotated image, centered at the player's draw center
+            rotated_rect = rotated_image.get_rect(center=draw_rect.center)
+            
+            # 4. Offset the rect so it looks "held"
+            # We use the angle to push it outwards from the center
+            offset_radius = TILE_SIZE * 0.8 # How far from the center
+            offset_x_weapon = math.cos(self.aim_angle) * offset_radius
+            offset_y_weapon = -math.sin(self.aim_angle) * offset_radius # -sin because pygame Y is inverted
+            
+            rotated_rect.centerx += offset_x_weapon
+            rotated_rect.centery += offset_y_weapon
+
+            # 5. Blit it
+            surface.blit(rotated_image, rotated_rect)
+
+
         # Melee arc
         if self.melee_swing_timer > 0:
-            swing_radius = TILE_SIZE * 1
+            if self.active_weapon and self.active_weapon.image and \
+               self.active_weapon.item_type in ['weapon_melee', 'tool']:
+            # [END MODIFICATION]
+                
+                # 1. Get the original weapon image
+                original_image = self.active_weapon.image
+                
+                # 2. Rotate the image (use melee_swing_angle, negate for pygame)
+                angle_degrees = math.degrees(self.melee_swing_angle)
+                rotated_image = pygame.transform.rotate(original_image, angle_degrees) # Negate angle
+                
+                # 3. Get the rect, centered at the player's draw center
+                rotated_rect = rotated_image.get_rect(center=draw_rect.center)
+                
+                # 4. Offset the rect
+                offset_radius = TILE_SIZE * 0.8 
+                offset_x_weapon = math.cos(self.melee_swing_angle) * offset_radius
+                offset_y_weapon = -math.sin(self.melee_swing_angle) * offset_radius
+                
+                rotated_rect.centerx += offset_x_weapon
+                rotated_rect.centery += offset_y_weapon
+                
+                # 5. Blit it
+                surface.blit(rotated_image, rotated_rect)
+
+            swing_radius = TILE_SIZE * 0.7
             center_x, center_y = draw_rect.center
             start_angle = self.melee_swing_angle - (3.1415 / 4)
             end_angle = self.melee_swing_angle + (3.1415 / 4)
             arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
-            pygame.draw.arc(surface, YELLOW, arc_bounds, start_angle, end_angle, 3)
+            pygame.draw.arc(surface, YELLOW, arc_bounds, start_angle, end_angle, 1)
             self.melee_swing_timer -= 1
 
         # Reloading bar
@@ -430,7 +482,7 @@ class Player:
             options.append('Open')
             if not self.backpack:
                 options.append('Equip')
-        elif item.item_type in ['weapon', 'tool']:
+        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
             options.append('Equip')
         elif item.item_type == 'container':
             options.append('Open')

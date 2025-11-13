@@ -150,7 +150,7 @@ def player_hit_zombie(player, zombie):
 
     if active_weapon:
         base_damage = active_weapon.damage
-        if 'Gun' in active_weapon.name: # Ranged
+        if active_weapon.item_type == 'weapon_ranged': # Ranged
             damage_multiplier = progression.get_ranged_damage_multiplier(player)
             if random.random() < progression.get_headshot_chance():
                 is_headshot = True

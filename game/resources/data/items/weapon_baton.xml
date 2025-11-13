@@ -1,4 +1,4 @@
-<item name="Baton" type="weapon">
+<item name="Baton" type="weapon_melee">
     <properties>
         <durability min="2" max="5" />
         <damage min="1" max="10" />

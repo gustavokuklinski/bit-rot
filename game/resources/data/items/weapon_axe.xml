@@ -1,4 +1,4 @@
-<item name="Axe" type="weapon">
+<item name="Axe" type="weapon_melee">
     <properties>
         <durability min="10" max="100" />
         <damage min="20" max="50" />

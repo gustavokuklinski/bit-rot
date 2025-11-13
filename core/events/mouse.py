@@ -521,10 +521,23 @@ def find_item_at_pos(game, mouse_pos):
     return None
 
 def handle_mouse_motion(game, event, mouse_pos):
+
+    if game.player:
+        # Calculate angle relative to the screen center (where player is)
+        player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
+        player_screen_y = GAME_HEIGHT / 2
+        dx = mouse_pos[0] - player_screen_x
+        dy = mouse_pos[1] - player_screen_y
+        game.player.aim_angle = math.atan2(-dy, dx) # Angle in radians, 0 is right
+
+
     game.hovered_item = find_item_at_pos(game, mouse_pos)
 
     game.hovered_container = None
+
     world_pos = game.screen_to_world(mouse_pos)
+    
+
     for container in game.containers:
         if container.rect.collidepoint(world_pos):
             game.hovered_container = container
@@ -1240,7 +1253,8 @@ def handle_attack(game, mouse_pos):
             print("Cannot shoot while reloading.")
             return
 
-        if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:
+        # if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:
+        if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
             if weapon.load > 0 and weapon.durability > 0:
                 target_world_x, target_world_y = game.screen_to_world(mouse_pos)
                 

@@ -1,4 +1,4 @@
-<item name="Shotgun" type="weapon">
+<item name="Shotgun" type="weapon_ranged">
     <properties>
         <durability min="10" max="100" />
         <load min="2" max="8" />

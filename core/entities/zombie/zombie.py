@@ -127,12 +127,12 @@ class Zombie:
             self.show_health_bar_timer -= 1
 
         if self.melee_swing_timer > 0:
-            swing_radius = TILE_SIZE * 1
+            swing_radius = TILE_SIZE * 0.9
             center_x, center_y = draw_rect.center
             start_angle = self.melee_swing_angle - (3.1415 / 4)
             end_angle = self.melee_swing_angle + (3.1415 / 4)
             arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
-            pygame.draw.arc(surface, RED, arc_bounds, start_angle, end_angle, 3)
+            pygame.draw.arc(surface, RED, arc_bounds, start_angle, end_angle, 1)
             self.melee_swing_timer -= 1
 
     def load_clothe_sprite(self, sprite_file):

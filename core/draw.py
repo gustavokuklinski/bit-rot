@@ -36,6 +36,10 @@ def draw_game(game):
     light_mask.fill((10, 10, 10)) # <-- This was the fix from last time
     ambient = int(game.world_time.current_ambient_light) 
     
+
+    keys = pygame.key.get_pressed()
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+
     light_texture = game.assets.get('light_texture')
     
     light_sources = []
@@ -151,7 +155,7 @@ def draw_game(game):
 
 
 
-    game.player.draw(world_view_surface, offset_x, offset_y)
+    game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
     if game.hovered_container:
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
@@ -342,6 +346,11 @@ def draw_game(game):
 
     if game.context_menu['active']:
         draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
+
+    if is_aiming:
+        pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
+    else:
+        pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
 
     # Set cursor
     keys = pygame.key.get_pressed()

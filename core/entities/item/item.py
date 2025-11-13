@@ -73,7 +73,7 @@ class Item:
                 # Apply multipliers just like in create_from_name
                 max_dur = float(props['durability']['max'])
                 multiplier = DURABILITY_MULTIPLIER
-                if template['type'] == 'weapon':
+                if template['type'] in ['weapon_melee', 'weapon_ranged']:
                     multiplier *= WEAPON_DURABILITY_MULTIPLIER
                 elif template['type'] == 'tool':
                     multiplier *= TOOL_DURABILITY_MULTIPLIER
@@ -315,8 +315,7 @@ class Item:
             return None
         template = ITEM_TEMPLATES[item_name]
 
-        # if template['type'] == 'weapon':
-        if template['type'] in ['weapon', 'utility', 'cloth']:
+        if template['type'] in ['weapon_melee', 'weapon_ranged', 'utility', 'cloth']:
             randomize_durability = True
             
         props = template['properties']
@@ -340,7 +339,7 @@ class Item:
         if needs_durability:
             # Apply multipliers
             multiplier = DURABILITY_MULTIPLIER
-            if template['type'] == 'weapon':
+            if template['type'] in ['weapon_melee', 'weapon_ranged']:
                 multiplier *= WEAPON_DURABILITY_MULTIPLIER
             elif template['type'] == 'tool':
                 multiplier *= TOOL_DURABILITY_MULTIPLIER

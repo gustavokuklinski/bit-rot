@@ -121,7 +121,7 @@ def handle_keyboard_events(game, event):
             if item:
                 if item.item_type == 'consumable':
                     game.player.consume_item(item, 'belt', slot_index)
-                elif item.item_type == 'weapon' or item.item_type == 'tool':
+                elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
                     if game.player.active_weapon == item:
                         game.player.active_weapon = None
                         print(f"Unequipped {item.name}.")
