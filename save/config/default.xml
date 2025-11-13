@@ -1,20 +1,14 @@
 <config>
-
-    <!-- Game System config settings -->
+    <!-- System game config -->
     <system>
-        <display_resolution>
-            <resolution width="1280" height="720" />
-            <resolution width="1920" height="1080" />
-        </display_resolution>
-        <display_game>
-            <window value="window" />
-            <window value="fullscreen" />
-        </display_game>
+        <tile_size value="16" /> <!-- Default: 16 game tilesize -->
+        <zoom_start value="3.0" /> <!-- Zoom start game -->
+        <zoom_far value="1.3" /> <!-- Zoom Far on game -->
+        <zoom_near value="5.0" /> <!-- Zoom Near on game -->
     </system>
 
     <!-- Player and game Config -->
     <player>
-        <speed value="2" /> <!-- Player speed -->
 
         <!-- Food and Water modifier -->
         <food_water_decay_seconds value="5.0" /> <!-- Seconds to decay water -->
@@ -24,10 +18,7 @@
         <water_threshold value="90" /> <!-- Percentage to start auto-drink -->
         <food_water_multiplier_decay value="1.5" /> <!-- Seconds to decay food and water -->
 
-        <!-- Setup Zoom, View Radius and Fog of War -->
-        <zoom_start value="3.0" /> <!-- Zoom start game -->
-        <zoom_far value="1.3" /> <!-- Zoom Far on game -->
-        <zoom_near value="5.0" /> <!-- Zoom Near on game -->
+        <!-- View Radius and Fog of War -->
         <view_radius value="4" /> <!-- How long items and zombies get on player POV -->
         <fow_radius value="10" /> <!-- Fog radius -->
 
@@ -63,7 +54,6 @@
         <spawn value="2" /> <!-- How many zombies per spawn -->
         <respawn_timer value="600000" /> <!-- 300000 = 5 minutes | 600000 = 10 minutes / Time to Reaspawn Zombie in MS-->
         <max_zombies value="2024" /> <!-- Max Zombies on map-->
-        
     </zombie>
 
 </config>

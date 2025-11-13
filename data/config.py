@@ -11,9 +11,6 @@ GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
-# Tile size
-TILE_SIZE = 16
-
 MAP_DIR = "game/map/" # Game map files
 DATA_PATH = "game/data/" # Folders with XML data files
 SPRITE_PATH = "game/sprites/" # Folders with PNG sprites
@@ -70,25 +67,33 @@ title_font = pygame.font.Font(FONT_FACE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 10)
 
 # Game XML Config
-tree = ET.parse('config.xml')
+tree = ET.parse('save/config/default.xml')
 root = tree.getroot()
+
+# System settings
+system_config = root.find('system')
+
+# Tile size
+TILE_SIZE = int(system_config.find('tile_size').get('value'))
+
+# Zoom
+START_ZOOM = float(system_config.find('zoom_start').get('value'))
+FAR_ZOOM = float(system_config.find('zoom_far').get('value'))
+NEAR_ZOOM = float(system_config.find('zoom_near').get('value'))
 
 # Player settings
 player_config = root.find('player')
-PLAYER_SPEED = float(player_config.find('speed').get('value'))
+
+PLAYER_SPEED = 1.5
+
 DECAY_RATE_SECONDS = float(player_config.find('food_water_decay_seconds').get('value'))
 FOOD_WATER_MULTIPLIER_DECAY = float(player_config.find('food_water_multiplier_decay').get('value'))
 FOOD_DECAY_AMOUNT = float(player_config.find('food_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY
 WATER_DECAY_AMOUNT = float(player_config.find('water_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY * 1.5
-START_ZOOM = float(player_config.find('zoom_start').get('value'))
-FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
-NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
-AUTO_DRINK = player_config.find('water_autodrink').get('value') == 'true'
+AUTO_DRINK = player_config.find('water_autodrink').get('value')
 AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
-
 BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
 PLAYER_FOW_RADIUS = int(player_config.find('fow_radius').get('value'))
-
 START_HOUR = int(player_config.find('start_hour').get('value'))
 DAY_NIGHT_CYCLE_MS = int(player_config.find('day_night_cycle').get('value'))
 TRANSITION_DURATION_MS = int(player_config.find('day_night_cycle_transition').get('value'))

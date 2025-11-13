@@ -1,0 +1,10 @@
+<item name="Cigarette" type="consumable">
+    <properties>
+        <status value="anxiety" />
+        <reduce min="1" max="15" />
+        <load min="2" max="20" />
+        <capacity value="20" />
+        <sprite file="cigarette.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

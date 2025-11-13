@@ -186,35 +186,20 @@ class Game:
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Wallet") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-        
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Powerbank") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
+        #try:
+        #    # Assumes your item name in the XML is "ID"
+        #    # If your item is named "Wallet", change "ID" to "Wallet"
+        #    wallet_item = Item.create_from_name("Wallet") 
+        #    if wallet_item:
+        #        # Check if there's space
+        #        if len(self.player.inventory) < self.player.get_total_inventory_slots():
+        #            self.player.inventory.append(wallet_item)
+        #        else:
+        #            print("Could not add wallet; inventory is full!")
+        #    else:
+        #        print("Warning: Could not create 'ID' item. Check item XML.")
+        #except Exception as e:
+        #    print(f"Error creating starting wallet: {e}")
         
 
         self.zombies_killed = 0

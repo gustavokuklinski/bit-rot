@@ -1,0 +1,8 @@
+<cloth name="Medical Pants" type="cloth" id="legs">
+    <properties>
+        <defence value="0" />
+        <durability min="1" max="100" />
+        <sprite file="medical_pants.png" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

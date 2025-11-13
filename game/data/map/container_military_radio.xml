@@ -1,0 +1,11 @@
+<map name="military_radio" type="maptile_container" char="military_radio" is_obstacle="true">
+    <visuals>
+        <sprite file="military_radio.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="Powerbank" chance="0.5" />
+        
+        
+    </loot>
+</map>

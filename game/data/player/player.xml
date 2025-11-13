@@ -39,7 +39,7 @@
     </attributes>
 
     <initial_loot>
-        <item name="wallet" chance="100" />
+        <item name="Wallet" chance="1" />
     </initial_loot>
 
     <visuals>

@@ -1,0 +1,13 @@
+<map name="npc_Doc_Yu" type="maptile_container" char="npc_Doc_Yu" is_obstacle="true">
+    <visuals>
+        <sprite file="npc_Doc_Yu.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="npc_Doc_Yu" chance="100" />
+        <item item="Wallet" chance="100" />
+        <item item="Water Bottle" chance="0.5" />
+        <item item="Matches" chance="0.5" />
+        <item item="Powerbank" chance="0.8" />
+    </loot>
+</map>

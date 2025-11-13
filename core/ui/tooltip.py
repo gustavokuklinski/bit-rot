@@ -25,6 +25,12 @@ def draw_tooltip(surface, item, pos):
             lines.append(f"Restores: {item.min_restore} {stat}")
         else:
             lines.append(f"Restores: {item.min_restore}-{item.max_restore} {stat}")
+    if item.min_reduce is not None and item.max_reduce is not None:
+        stat = getattr(item, 'status_effect', 'Stat').capitalize()
+        if item.min_reduce == item.max_reduce:
+            lines.append(f"Reduce: {item.min_reduce} {stat}")
+        else:
+            lines.append(f"Reduce: {item.min_reduce}-{item.max_reduce} {stat}")
     if item.min_cure is not None and item.max_cure is not None:
         lines.append(f"Cure: {item.min_cure}-{item.max_cure}%")
         

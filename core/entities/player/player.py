@@ -526,22 +526,42 @@ class Player:
                     print("The vaccine had no effect.")
                 consumed = True
         
-        elif status_effect is not None and hasattr(self, status_effect) and item.min_restore is not None and item.max_restore is not None:
-            # Generic handler for health, water, food
-            stat_name = status_effect # e.g., "health", "water", "food"
-            
-            amount = random.randint(item.min_restore, item.max_restore) # Calculate amount on use
-            
+        elif status_effect is not None and hasattr(self, status_effect):
+            stat_name = status_effect
             current_val = getattr(self, stat_name)
-            max_val = 100.0
-            if stat_name == 'health':
-                max_val = self.max_health
+
+            # Check for RESTORE (increase stat)
+            # This assumes your Item class has min_restore and max_restore
+            if hasattr(item, 'min_restore') and hasattr(item, 'max_restore') and item.min_restore is not None:
+                amount = random.randint(item.min_restore, item.max_restore)
+                
+                max_val = 100.0
+                if stat_name == 'health':
+                    max_val = self.max_health
+                
+                new_val = min(max_val, current_val + amount) # Add to stat
+                setattr(self, stat_name, new_val)
+                
+                print(f"Used {item.name}. Restored {amount} {stat_name.capitalize()}.")
+                consumed = True
+
+            # Check for REDUCE (decrease stat)
+            # This assumes your Item class can also have min_reduce and max_reduce
+            elif hasattr(item, 'min_reduce') and hasattr(item, 'max_reduce') and item.min_reduce is not None:
+                amount = random.randint(item.min_reduce, item.max_reduce)
+                
+                min_val = 0.0 # Stats shouldn't go below zero
+                
+                new_val = max(min_val, current_val - amount) # Subtract from stat
+                setattr(self, stat_name, new_val)
+                
+                print(f"Used {item.name}. Reduced {stat_name.capitalize()} by {amount}.")
+                consumed = True
             
-            new_val = min(max_val, current_val + amount)
-            setattr(self, stat_name, new_val)
-            
-            print(f"Used {item.name}. Restored {amount} {stat_name.capitalize()}.")
-            consumed = True
+            else:
+                # Item has a status but neither restore nor reduce properties
+                print(f"Cannot consume {item.name}: misconfigured item (status='{status_effect}' has no restore/reduce properties).")
+                return False
         
         else:
             print(f"Cannot consume {item.name}: unknown or misconfigured item (status='{status_effect}').")

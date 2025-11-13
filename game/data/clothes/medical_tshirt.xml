@@ -1,0 +1,8 @@
+<cloth name="Medical Tshirt" type="cloth" id="torso">
+    <properties>
+        <defence value="0" />
+        <durability min="1" max="100" />
+        <sprite file="medical_tshirt.png" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

@@ -8,7 +8,7 @@ Now the world runs on a thin, fragile supply of power and trust.
 
 You work at Next Petrol, an offshore Brazilian firm running an underground 
 petrol mine in a volcanic island chain. It’s supposed to be safe. Today, 
-it isn’t. The chopper left. The boats are gone. The tunnels might be intact. 
+it isn’t. The helichopper left. The boats are gone. The tunnels might be intact. 
 Your choices are simple and brutal: survive, call for help, go to shore, 
 or secure the factory and hope Rio notices.
 
@@ -47,7 +47,7 @@ I was doing my daily paperwork in the main house when people came from
 the heliport wing reporting a breach — another day in paradise. We keep 
 a counter showing the years since the last breach, but this one felt different. 
 Maybe the large groups were trying to turn the facility into a flu 
-research site. The chopper had left full, as if a state was collapsing again.
+research site. The helichopper had left full, as if a state was collapsing again.
 
 I heard strange engine noises fade away; when I looked, there was no boat 
 to the mainland. For my luck, the Next Petrol Manufacturing Plant was close 
@@ -71,9 +71,9 @@ you can, and go rogue — trust is rare.
 
 ### Go to the heliport and try to call help
 
-The chopper just left with some of the rich. The boats were prioritized for, quote, 
+The helichopper just left with some of the rich. The boats were prioritized for, quote, 
 "required and assistant personnel."
-I’m the first one at Next Petrol. Maybe I can use the radio to call a boat or another chopper.
+I’m the first one at Next Petrol. Maybe I can use the radio to call a boat or another helichopper.
 
 ### Go to the mainland to check if everything is okay
 
@@ -94,12 +94,12 @@ Worked on the distribution for ONU, WHO and other human organizations.
 
 ```
     Hello! I'm Marechal Souza! On head of NS_X0A6!
-    We were luck to be here when the choper leave.
+    We were luck to be here when the helichopper leave.
 
     Hope you are smart.
     Get my gear, I wont need them now.
 
-    If you try to get the choper, keep in mind: 100.000 for the landing back.
+    If you try to get the helichopper, keep in mind: 100.000 for the landing back.
     Be brave to try out.
     Well, for our luck we have an infinite stock of Vaccine.
     If someday it ends, or anyone need Vacs, I'll be here to serve

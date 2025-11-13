@@ -240,7 +240,7 @@ def check_dynamic_zombie_spawns(game):
 
     for spawn_pos in potential_spawns:
         # spawn_pos is an (x, y) tuple (pixel coordinates)
-        print(f"Checking potential spawn at: {spawn_pos}")
+        # print(f"Checking potential spawn at: {spawn_pos}")
         if spawn_pos in triggered_spawns_for_layer:
             continue # Already spawned from this marker
 
