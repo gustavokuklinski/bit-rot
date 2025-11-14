@@ -54,6 +54,7 @@
         <spawn value="2" /> <!-- How many zombies per spawn -->
         <respawn_timer value="600000" /> <!-- 300000 = 5 minutes | 600000 = 10 minutes / Time to Reaspawn Zombie in MS-->
         <max_zombies value="2024" /> <!-- Max Zombies on map-->
+        <infection_chance value="0.10" /> <!-- Default: 0.10 - 10% chance of bite -->
     </zombie>
 
 </config>

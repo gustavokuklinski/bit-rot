@@ -296,13 +296,13 @@ class Player:
                 self._finish_reload()
 
 
-        for item in self.inventory:
-            if item and item.item_type == 'skill' and item.skill_stats:
-                for stat_name, value in item.skill_stats.items():
-                    # Set the player's stat directly
-                    # This will overwrite current values with the buff
-                    # e.g., self.anxiety = 0.0, self.health = 100.0
-                    setattr(self, stat_name, value)
+        #for item in self.inventory:
+        #    if item and item.item_type == 'skill' and item.skill_stats:
+        #        for stat_name, value in item.skill_stats.items():
+        #            # Set the player's stat directly
+        #            # This will overwrite current values with the buff
+        #            # e.g., self.anxiety = 0.0, self.health = 100.0
+        #            setattr(self, stat_name, value)
 
 
         if self.health <= 1:
@@ -567,16 +567,7 @@ class Player:
             self.reload_active_weapon()
             return True # Return early, reload handles its own logic
 
-        elif status_effect == 'infection':
-            # Item is a cure (Vaccine)
-            if item.min_cure is not None:
-                cure_chance = random.uniform(item.min_cure, item.max_cure)
-                if random.random() < (cure_chance / 100.0): # Assuming 1-100
-                    self.infection = 0
-                    print("The vaccine worked! Infection cured.")
-                else:
-                    print("The vaccine had no effect.")
-                consumed = True
+        
         
         elif status_effect is not None and hasattr(self, status_effect):
             stat_name = status_effect

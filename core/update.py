@@ -152,12 +152,12 @@ def player_hit_zombie(player, zombie, game):
         base_damage = active_weapon.damage
         if active_weapon.item_type == 'weapon_ranged': # Ranged
             damage_multiplier = progression.get_ranged_damage_multiplier(player)
-            if random.random() < progression.get_headshot_chance():
+            if random.random() < progression.get_headshot_chance(player):
                 is_headshot = True
                 damage_multiplier *= 2.0 # Headshot bonus stacks
         else: # Melee
             damage_multiplier = progression.get_melee_damage_multiplier(player)
-            durability_loss = progression.get_weapon_durability_loss()
+            durability_loss = progression.get_weapon_durability_loss(player)
             if active_weapon.durability is not None and active_weapon.durability > 0:
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
@@ -195,7 +195,7 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
         items_on_ground_list.append(corpse)
 
     if zombie.sound_dead:
-        game.sound_manager.play_sound(zombie.sound_dead, subdir='zombie')
+        game.sound_manager.play_sound(zombie.sound_dead, subdir='zombie', game=game, source_pos=zombie.rect.center)
 
     game.player.process_kill(weapon, zombie)
 

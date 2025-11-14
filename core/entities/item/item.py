@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_cure=None, max_cure=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, skill_stats=None, status_effect=None, min_reduce=None, max_reduce=None, sounds=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -27,8 +27,6 @@ class Item:
         self.color = color
         self.min_damage = min_damage
         self.max_damage = max_damage
-        self.min_cure = min_cure
-        self.max_cure = max_cure
         self.min_restore = min_restore
         self.max_restore = max_restore
 
@@ -43,10 +41,12 @@ class Item:
         self.min_light = min_light  # e.g., 0
         self.max_light = max_light  # e.g., 15 (in tiles)
         self.fuel_type = fuel_type  # e.g., "Matches"
-        self.skill_stats = skill_stats
+
         self.text = text
-        self.status_effect = status_effect
+        self.attribute_modifiers = attribute_modifiers if attribute_modifiers is not None else {} 
         self.sounds = sounds if sounds is not None else {}
+
+        self.status_effect = status_effect
 
     @property
     def damage(self):
@@ -222,11 +222,18 @@ class Item:
 
             template['stats'] = None
             if ttype == 'skill':
-                stats_node = root.find('stats')
-                if stats_node is not None:
-                    template['stats'] = {}
-                    for stat in stats_node:
-                        template['stats'][stat.tag] = float(stat.get('value', 0))
+                #stats_node = root.find('stats')
+                #if stats_node is not None:
+                #    template['stats'] = {}
+                #    for stat in stats_node:
+                #        template['stats'][stat.tag] = float(stat.get('value', 0))
+                template['attribute_modifiers'] = {}
+                attr_node = root.find('attributes')
+                if attr_node is not None:
+                    for attr in attr_node:
+                        # attr.tag will be "lucky", "strength", etc.
+                        # attr.get('value') will be "0.5", "1.0", etc.
+                        template['attribute_modifiers'][attr.tag] = float(attr.get('value', 0))
 
 
             loot_node = root.find('loot')
@@ -382,8 +389,7 @@ class Item:
         sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
         min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
         max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
-        min_cure = int(props['cure']['min']) if 'cure' in props and 'min' in props['cure'] else None
-        max_cure = int(props['cure']['max']) if 'cure' in props and 'max' in props['cure'] else None
+
         min_restore = int(props['restore']['min']) if 'restore' in props and 'min' in props['restore'] else None
         max_restore = int(props['restore']['max']) if 'restore' in props and 'max' in props['restore'] else None      
 
@@ -403,11 +409,12 @@ class Item:
         fuel_type = props.get('fuel', {}).get('type')
         text = template.get('text')
 
-        skill_stats = template.get('stats')
+        attribute_modifiers = template.get('attribute_modifiers', {})
         status_effect = props.get('status', {}).get('value')
+        
         sounds = template.get('sounds', {})
 
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_cure=min_cure, max_cure=max_cure, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, skill_stats=skill_stats, status_effect=status_effect, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds)
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

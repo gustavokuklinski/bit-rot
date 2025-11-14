@@ -30,6 +30,15 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         ("SPD", player.progression.speed, GRAY),
     ]
 
+    attr_name_map = {
+        "STR": "strength",
+        "FIT": "fitness",
+        "MLE": "melee",
+        "RNG": "ranged",
+        "LCK": "lucky",
+        "SPD": "speed",
+    }
+
     for i, (name, attr_data, color) in enumerate(skills):
         y_pos = y_offset + i * 28
         
@@ -41,6 +50,16 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             text = font.render(f"{name}:", True, WHITE)
             surface.blit(text, (x_offset, y_pos))
             label_x = x_offset + 110
+
+        bonus_perc = 0.0
+        attr_key = attr_name_map.get(name) # Get "lucky" from "LCK"
+        if attr_key:
+            # Get the total bonus from all skill items
+            bonus_perc = player.progression.get_total_attribute_bonus(player, attr_key)
+
+        # Set the X position for the bonus text
+        # Default position is 5px after the 100px XP bar
+        bonus_x_pos = label_x + 40 + 100 + 5 
 
         if isinstance(attr_data, dict): # Leveled attribute
             level = attr_data['level']
@@ -68,7 +87,20 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             value = attr_data
             text = font_small.render(f"[{int(value)}]", True, WHITE)
             surface.blit(text, (label_x, y_pos + 3))
+
+            bonus_x_pos = label_x + 45
     
+
+        if bonus_perc != 0:
+            bonus_str = f"+{bonus_perc:.1f}%"
+            bonus_color = (100, 255, 100) # Green
+            if bonus_perc < 0:
+                bonus_str = f"{bonus_perc:.1f}%" # Will include minus sign
+                bonus_color = (255, 100, 100) # Red
+            
+            bonus_surf = font_small.render(bonus_str, True, bonus_color)
+            surface.blit(bonus_surf, (bonus_x_pos, y_pos + 3))
+            
     if tooltip_to_draw:
         text, pos = tooltip_to_draw
         

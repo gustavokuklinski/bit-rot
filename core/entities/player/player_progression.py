@@ -14,9 +14,61 @@ class PlayerProgression:
         self.lucky = player_data['attributes'].get('lucky', 0.0)
         self.speed = player_data['attributes'].get('speed', 0.0)
 
+
+
+
+
+    def get_total_attribute_bonus(self, player, attr_name):
+        """Calculates the total percentage bonus from 'skill' items in player's inventory."""
+        total_bonus = 0.0
+        
+        # Check main inventory
+        for item in player.inventory:
+            if item and item.item_type == 'skill' and item.attribute_modifiers:
+                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
+        
+        # Check belt
+        for item in player.belt:
+            if item and item.item_type == 'skill' and item.attribute_modifiers:
+                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
+        
+        return total_bonus
+
+    def get_strength(self, player):
+        base = self.strength['level']
+        bonus_perc = self.get_total_attribute_bonus(player, 'strength')
+        return base * (1 + (bonus_perc / 100.0))
+
+    def get_fitness(self, player):
+        base = self.fitness['level']
+        bonus_perc = self.get_total_attribute_bonus(player, 'fitness')
+        return base * (1 + (bonus_perc / 100.0))
+
+    def get_melee(self, player):
+        base = self.melee['level']
+        bonus_perc = self.get_total_attribute_bonus(player, 'melee')
+        return base * (1 + (bonus_perc / 100.0))
+
+    def get_ranged(self, player):
+        base = self.ranged['level']
+        bonus_perc = self.get_total_attribute_bonus(player, 'ranged')
+        return base * (1 + (bonus_perc / 100.0))
+
+    def get_lucky(self, player):
+        base = self.lucky
+        bonus_perc = self.get_total_attribute_bonus(player, 'lucky')
+        return base * (1 + (bonus_perc / 100.0))
+    
+    def get_speed(self, player):
+        base = self.speed
+        bonus_perc = self.get_total_attribute_bonus(player, 'speed')
+        return base * (1 + (bonus_perc / 100.0))
+
+
+
+
     def _get_xp_for_next_level(self, current_level):
         """Calculates the XP needed to reach the next level."""
-
         return 100 * (current_level + 1)
 
     def _create_attribute(self, player_data, attr_name):
@@ -43,11 +95,11 @@ class PlayerProgression:
         xp_amount = zombie.xp_value
         
         # Base XP (includes lucky bonus)
-        base_xp = xp_amount * self.get_xp_bonus() 
+        base_xp = xp_amount * self.get_xp_bonus(player)
 
-        if weapon and weapon.item_type == 'weapon' and weapon.ammo_type:  # Ranged
+        if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:  # Ranged
             # Apply ranged skill modifier (level is the percentage, e.g., -10 or +5)
-            ranged_skill_percent = self.ranged['level']
+            ranged_skill_percent = self.get_ranged(player)
             ranged_xp_modifier = 1.0 + (ranged_skill_percent / 100.0)
             final_ranged_xp = max(0, base_xp * ranged_xp_modifier) # Ensure XP isn't negative
             
@@ -55,12 +107,12 @@ class PlayerProgression:
             
         else:  # Melee or bare hands
             # Apply melee skill modifier
-            melee_skill_percent = self.melee['level']
+            melee_skill_percent = self.get_melee(player)
             melee_xp_modifier = 1.0 + (melee_skill_percent / 100.0)
             final_melee_xp = max(0, base_xp * melee_xp_modifier)
             
             # Apply strength skill modifier (for the strength XP portion)
-            strength_skill_percent = self.strength['level']
+            strength_skill_percent = self.get_strength(player)
             strength_xp_modifier = 1.0 + (strength_skill_percent / 100.0)
             final_strength_xp = max(0, (base_xp / 2) * strength_xp_modifier) # Strength gets half
             
@@ -77,10 +129,10 @@ class PlayerProgression:
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)
         if is_moving and player.stamina > 0:
-            consumption = self.get_stamina_consumption(player.is_running)
+            consumption = self.get_stamina_consumption(player.is_running, player)
             player.stamina = max(0, player.stamina - consumption)
         elif not is_moving and player.stamina < stamina_cap:
-            regeneration = self.get_stamina_regeneration()
+            regeneration = self.get_stamina_regeneration(player)
             player.stamina = min(stamina_cap, player.stamina + regeneration)
 
     def update_hp(self, player):
@@ -132,7 +184,7 @@ class PlayerProgression:
 
     def update_infection(self, player):
         if player.infection > 0:
-            player.infection += 0.005 # Progressive infection
+            player.infection += 0.0005 # Progressive infection
             if player.infection >= 100:
                 player.health = 1 # Player dies
 
@@ -146,41 +198,41 @@ class PlayerProgression:
 
     # --- HELPER FUNCTIONS ---
     def get_melee_damage_multiplier(self, player):
-        base_multiplier = 1 + (self.melee['level'] / 100.0)
+        base_multiplier = 1 + (self.get_melee(player) / 100.0)
         tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_multiplier * tireness_modifier
 
     def get_unarmed_damage(self, player):
-        base_damage = 1 + (self.strength['level'] / 100.0)
+        base_damage = 1 + (self.get_strength(player) / 100.0)
         tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_damage * tireness_modifier
 
     def get_ranged_damage_multiplier(self, player):
         # Ranged level gives a small bonus
-        base_multiplier = 1 + (self.ranged['level'] / 100.0)
+        base_multiplier = 1 + (self.get_ranged(player) / 100.0)
         # Tiredness reduces it
         tireness_modifier = 1.0 - (player.tireness / 100.0)
         return base_multiplier * tireness_modifier
 
-    def get_headshot_chance(self):
-        return 0.1 + (self.ranged['level'] * 0.04)
+    def get_headshot_chance(self, player):
+        return 0.1 + (self.get_ranged(player) * 0.004)
 
-    def get_weapon_durability_loss(self):
-        if random.randint(0, 10) < (self.melee['level'] / 100.0):
+    def get_weapon_durability_loss(self, player):
+        if random.randint(0, 10) < (self.get_melee(player) / 100.0):
             return 0.5
         else:
             return 2.0
     
-    def get_stamina_consumption(self, is_running):
+    def get_stamina_consumption(self, is_running, player):
         base_consumption = 0.08 if is_running else 0.0
-        modifier = 1 - (self.speed / 100.0)
+        modifier = 1 - (self.get_speed(player) / 100.0)
         return base_consumption * modifier
 
-    def get_stamina_regeneration(self):
-        return 0.03 + (self.fitness['level'] / 100.0)
+    def get_stamina_regeneration(self, player):
+        return 0.03 + (self.get_fitness(player) / 100.0)
 
-    def get_xp_bonus(self):
-        return 1 + (self.lucky * 0.01)
+    def get_xp_bonus(self, player):
+        return 1 + (self.get_lucky(player) * 0.01)
 
     def get_hp_regeneration(self, infection_level):
         hp_regen_rate = 0.01

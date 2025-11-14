@@ -1,6 +1,7 @@
 import pygame
 import os
 import random
+import math  # <-- [ADD THIS]
 from data.config import *
 
 class SoundManager:
@@ -34,59 +35,80 @@ class SoundManager:
             print(f"Warning: Could not load sound '{name}' from '{full_path}': {e}")
             return False
 
-    def play_sound(self, name, subdir=None, volume=1.0, loops=0, pan_variance=0.1, volume_variance=0.1):
+    # [START MODIFICATION]
+    def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0):
         """
         Plays a sound by its name. Loads it if not already loaded.
         'subdir' specifies the subfolder within SOUND_PATH (e.g., 'zombie' or 'items').
+        'game' and 'source_pos' are used to calculate spatial audio.
         """
+    # [END MODIFICATION]
         
         if not name: # Don't try to play None or empty string
             return
             
-        # Use a unique key for the dictionary, e.g., "zombie/zombie_hit.ogg"
         sound_key = name
         if subdir:
             sound_key = f"{subdir}/{name}"
 
-        # --- On-Demand Loading ---
         if sound_key not in self.sounds:
-            # Construct the relative path from SOUND_PATH
             sound_path = name
             if subdir:
                 sound_path = os.path.join(subdir, name)
             
             if not self.load_sound(sound_key, sound_path):
                 print(f"Warning: Sound '{name}' could not be found or loaded from {sound_path}.")
-                return # Can't play a sound that doesn't exist
+                return
                 
         sound = self.sounds[sound_key]
 
-        # Find a free channel
         channel = pygame.mixer.find_channel()
         if not channel:
             return
+        
+        # --- Spatial Audio Logic ---
+        # We only apply spatial audio if we know *where* the sound is and *who* is listening.
+        if game and source_pos and game.player:
+            player_pos = game.player.rect.center
+            dx = source_pos[0] - player_pos[0]
+            dy = source_pos[1] - player_pos[1]
+            distance = math.hypot(dx, dy)
 
-        # --- Randomization for non-repetitive sound ---
-        
-        # 1. Randomize Panning
-        # -1.0 is full left, 1.0 is full right.
-        # We'll pan slightly left or right.
-        base_pan = 0.5 # Center
-        pan_left = max(0.0, base_pan - pan_variance)
-        pan_right = min(1.0, base_pan + pan_variance)
-        random_pan = random.uniform(pan_left, pan_right)
-        
-        # channel.set_volume(LEFT, RIGHT)
-        channel.set_volume(random_pan, 1.0 - random_pan)
-        
-        # 2. Randomize Volume
-        # We vary the sound's *base* volume by the variance.
-        min_vol = max(0.0, volume - volume_variance)
-        max_vol = min(1.0, volume + volume_variance)
-        random_volume = random.uniform(min_vol, max_vol)
-        
-        # Apply the randomized volume to the sound itself before playing
-        sound.set_volume(random_volume)
+            # 1. Volume Falloff
+            # Sounds fade to nothing at about half the game screen's width
+            max_dist = GAME_WIDTH / 2 
+            if distance > max_dist:
+                return # Too far to hear
 
+            # Use a quadratic falloff (more natural)
+            volume_falloff = (1.0 - (distance / max_dist)) ** 2
+            final_volume = base_volume * volume_falloff
+
+            # 2. Panning (Stereo)
+            # How far left/right a sound needs to be to be fully panned
+            pan_range = TILE_SIZE * 10 # e.g., 10 tiles
+            
+            # Get pan_factor: -1.0 (full left) to 1.0 (full right)
+            pan_factor = max(-1.0, min(1.0, dx / pan_range))
+            
+            left_vol = 0.0
+            right_vol = 0.0
+
+            if pan_factor < 0: # Sound is to the left
+                left_vol = final_volume
+                right_vol = final_volume * (1.0 + pan_factor) # (1.0 + -1.0) = 0.0
+            else: # Sound is to the right
+                right_vol = final_volume
+                left_vol = final_volume * (1.0 - pan_factor) # (1.0 - 1.0) = 0.0
+            
+            channel.set_volume(left_vol, right_vol)
+            
+        else:
+            # --- Non-Spatial (UI/Player) Sound ---
+            # Play centered at the requested base volume
+            channel.set_volume(base_volume, base_volume)
+        
         # 3. Play
         channel.play(sound, loops=loops)
+
+        return channel

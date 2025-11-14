@@ -77,6 +77,8 @@ class Zombie:
         self.last_wander_sound_time = 0
         self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
         
+        self.wandering_channel = None
+
         # Load sound filenames from template
         sounds = template.get('sounds', {})
         self.sound_hit = sounds.get('hit', None)
@@ -107,7 +109,7 @@ class Zombie:
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_sound_time > self.hit_sound_cooldown:
             if self.sound_hit: # Check if a sound is defined
-                game.sound_manager.play_sound(self.sound_hit, subdir='zombie')
+                game.sound_manager.play_sound(self.sound_hit, subdir='zombie', game=game, source_pos=self.rect.center)
             self.last_hit_sound_time = current_time
 
         return self.health <= 0 # Return True if dead
@@ -194,14 +196,25 @@ class Zombie:
         if dist_to_player < ZOMBIE_DETECTION_RADIUS and can_see_player:
             self.state = 'chasing'
             target_pos = player_rect.center # Chase the player directly
+            if self.wandering_channel:
+                self.wandering_channel.stop()
+                self.wandering_channel = None
+
         else:
             self.state = 'wandering'
             
-            if ZOMBIE_WANDER_ENABLED and current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
-                if self.sound_wander: # Check if a sound is defined
-                    game.sound_manager.play_sound(self.sound_wander, subdir='zombie', volume=0.3)
-                self.last_wander_sound_time = current_time
-                self.wander_sound_cooldown = random.randint(4000, 12000)
+            if ZOMBIE_WANDER_ENABLED and self.sound_wander:
+                # Check if the channel doesn't exist or has stopped playing
+                if self.wandering_channel is None or not self.wandering_channel.get_busy():
+                    # Play the sound on loop and store the channel
+                    self.wandering_channel = game.sound_manager.play_sound(
+                        self.sound_wander, 
+                        subdir='zombie', 
+                        game=game, 
+                        source_pos=self.rect.center, 
+                        base_volume=0.3, 
+                        loops=-1 # Loop forever
+                    )
 
             # Update wander target if needed
             if ZOMBIE_WANDER_ENABLED:
@@ -220,12 +233,6 @@ class Zombie:
 
                 target_pos = self.wander_target # Wander towards the target point
 
-                #if self.wander_target and (current_time - self.last_wander_sound_time > self.wander_sound_interval):
-                #    # Play at a low volume
-                #    game.sound_manager.play_sound('zombie_wandering', volume=0.3)
-                #    self.last_wander_sound_time = current_time
-                #    # Set a new random interval for the next sound
-                #    self.wander_sound_interval = random.randint(4000, 12000)
             else:
                 target_pos = None # Wandering disabled, stand still
 
@@ -294,11 +301,15 @@ class Zombie:
         dy = player.rect.centery - self.rect.centery
         self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
-        infection = random.randint(self.min_infection, self.max_infection)
+
+        infection = 0 # Default to no infection
+        
+        if random.random() < ZOMBIE_INFECTION_CHANCE:
+            # If the check passes, *then* calculate the amount
+            infection = random.randint(self.min_infection, self.max_infection)
         player.take_durability_damage(damage, game)
 
-        if self.sound_attack: # Check if a sound is defined
-            game.sound_manager.play_sound(self.sound_attack, subdir='zombie')
+
 
         total_defence = player.get_total_defence() # Get defence from player
         
@@ -318,6 +329,9 @@ class Zombie:
         player.health = max(0, player.health)
         if infection > 0:
             player.infection = min(100, player.infection + infection)
+            if self.sound_attack: # Check if a sound is defined
+                game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
+
             display_message(game, f"**HIT!** Player takes {damage} damage and {infection}% infection.")
         else:
             display_message(game, f"**HIT!** Player takes {damage} damage.")

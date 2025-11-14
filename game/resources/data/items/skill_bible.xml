@@ -2,8 +2,9 @@
     <properties>
         <sprite file="bible_1.png" />
     </properties>
-        <stats>
-            <anxiety value="0.0" />
-        </stats>
+    <attributes>
+        <lucky value="2.5" />
+        <strength value="100" />
+    </attributes>
     <spawn chance="1" />
 </item>

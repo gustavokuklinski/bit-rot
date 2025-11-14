@@ -31,15 +31,14 @@ def draw_tooltip(surface, item, pos):
             lines.append(f"Reduce: {item.min_reduce} {stat}")
         else:
             lines.append(f"Reduce: {item.min_reduce}-{item.max_reduce} {stat}")
-    if item.min_cure is not None and item.max_cure is not None:
-        lines.append(f"Cure: {item.min_cure}-{item.max_cure}%")
+    
         
-    if item.item_type == 'skill' and hasattr(item, 'skill_stats') and item.skill_stats:
+    if item.item_type == 'skill' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line
         lines.append("Passive (in Inventory):")
-        for stat_name, value in item.skill_stats.items():
-            # Format the stat name and value (e.g., "Anxiety: 0")
-            lines.append(f"  {stat_name.capitalize()}: {value:.0f}")
+        for attr_name, value in item.attribute_modifiers.items():
+            # Format as: "  Lucky: +0.5%"
+            lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")
 
 
     font = pygame.font.Font(None, 24)
