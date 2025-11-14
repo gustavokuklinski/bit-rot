@@ -17,7 +17,7 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="consumable"**
+- **type="consumable"** - Status modiefier
 ```xml
 <item name="[CONSUMABLE NAME]" type="consumable">
     <properties>
