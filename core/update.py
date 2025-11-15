@@ -50,7 +50,7 @@ def update_game_state(game):
     game.player.update_position(game.obstacles, game.zombies)
 
     check_for_layer_teleport(game)
-
+    
 
     game.hovered_interactable_tile_rect = None # Reset
     facing_x, facing_y = game.get_player_facing_tile()
@@ -69,7 +69,12 @@ def update_game_state(game):
     projectiles_to_remove = []
     zombies_to_remove = []
     for p in game.projectiles:
-        if p.update(game.map_width_pixels, game.map_height_pixels) or any(p.rect.colliderect(ob) for ob in game.obstacles):
+
+        world_max_x = game.world_min_x + game.map_width_pixels
+        world_max_y = game.world_min_y + game.map_height_pixels
+
+        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or any(p.rect.colliderect(ob) for ob in game.obstacles):
+        # if p.update(game.map_width_pixels, game.map_height_pixels) or any(p.rect.colliderect(ob) for ob in game.obstacles):
         #if p.update() or any(p.rect.colliderect(ob) for ob in game.obstacles):
             projectiles_to_remove.append(p)
             continue
@@ -251,7 +256,7 @@ def check_dynamic_zombie_spawns(game):
         
         # Use ZOMBIE_DETECTION_RADIUS as the trigger distance (with a small buffer)
         if dist_to_player < ZOMBIE_DETECTION_RADIUS * 1.5: 
-        #if dist_to_player < (TILE_SIZE * 20):
+
             zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - len(game.zombies))
             
             if zombie_spawn_limit == 0:
@@ -269,7 +274,9 @@ def check_dynamic_zombie_spawns(game):
                 [spawn_pos], # Only spawn at this one 'Z' marker
                 entities_to_avoid,
                 zombie_spawn_limit, # Pass the remaining global limit
-                spawns_per_marker=ZOMBIES_PER_SPAWN # Tell it how many to spawn at this marker
+                spawns_per_marker=ZOMBIES_PER_SPAWN,  # Tell it how many to spawn at this marker
+                map_width_px=game.map_width_pixels,
+                map_height_px=game.map_height_pixels
             )
             
             if new_zombies:

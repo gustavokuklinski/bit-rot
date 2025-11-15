@@ -1,5 +1,5 @@
-<map name="wooden_door_01_close" type="maptile" char="wooden_door_01_close" is_obstacle="true">
+<map name="outside_wooden_fence_2" type="maptile" char="outside_wooden_fence_2" is_obstacle="true">
     <visuals>
-        <sprite id="close" file="wooden_door_01_close.png" />
+        <sprite file="outside_wooden_fence_2.png" />
     </visuals>
 </map>

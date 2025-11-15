@@ -14,7 +14,7 @@ class SoundManager:
         # We still pre-init the mixer for better performance
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.mixer.init()
-        pygame.mixer.set_num_channels(8) # 8 simultaneous sounds
+        pygame.mixer.set_num_channels(32) # 32 simultaneous sounds
 
     def load_sound(self, name, sound_path):
         """

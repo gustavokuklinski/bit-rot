@@ -21,8 +21,11 @@ def draw_game(game):
     # --- World Rendering with Pixelated Zoom ---
     # 1. Create a temporary surface for the world view.
     zoom = game.zoom_level
-    view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
-    view_h = int(VIRTUAL_GAME_HEIGHT / zoom)
+    view_w = int(GAME_WIDTH / zoom)
+    view_h = int(GAME_HEIGHT / zoom)
+
+    #view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
+    #view_h = int(VIRTUAL_GAME_HEIGHT / zoom)
     world_view_surface = pygame.Surface((view_w, view_h))
     world_view_surface.fill(GAME_BG_COLOR) # Set the world background color
 
@@ -115,7 +118,29 @@ def draw_game(game):
     for image, rect in game.renderable_tiles:
 
         world_view_surface.blit(image, rect.move(offset_x, offset_y))
+    
+    for container in game.containers:
+        dist = math.hypot(container.rect.centerx - game.player.rect.centerx, container.rect.centery - game.player.rect.centery)
         
+        if dist > game.player_view_radius:
+            continue
+            
+        draw_pos = container.rect.move(offset_x, offset_y)
+        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
+        
+        if getattr(container, 'image', None):
+            try:
+                temp_image = container.image.copy()
+                temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+                world_view_surface.blit(temp_image, draw_pos)
+            except Exception as e:
+                print(f"Error drawing container image: {e}")
+        else:
+            # Fallback drawing
+            color = getattr(container, 'color', WHITE)
+            temp_surface = pygame.Surface(container.rect.size, pygame.SRCALPHA)
+            temp_surface.fill((color[0], color[1], color[2], opacity))
+            world_view_surface.blit(temp_surface, draw_pos)
 
     for item in game.items_on_ground:
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)

@@ -25,7 +25,7 @@ from core.map.tile_manager import TileManager
 from core.map.map_manager import MapManager
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
-from core.map.world_layers import load_all_map_layers, set_active_layer
+from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
 from core.sound_manager import SoundManager
@@ -134,12 +134,18 @@ class Game:
         self.world_time = WorldTime(self)
         self.sound_manager = SoundManager()
 
+        self.world_min_x = 0
+        self.world_min_y = 0
+
+        self.is_giant_map = False
+
     def load_map(self, map_filename):
         # Clear all game state
-        self.obstacles.clear()
-        self.containers.clear()
-        self.items_on_ground.clear()
-        self.zombies.clear()
+        #self.obstacles.clear()
+        #self.containers.clear()
+        #self.items_on_ground.clear()
+        #self.zombies.clear()
+        
         #self.corpses.clear()
 
         # Clear all layer data dictionaries
@@ -161,23 +167,8 @@ class Game:
 
         set_active_layer(self, 1)
 
-        # --- Find Player Spawn ('P') *only on Layer 1* ---
-        player_spawn_pos = None
-        # Note: self.spawn_data is already set to layer 1's spawn data by set_active_layer(1)
-        for y, row in enumerate(self.spawn_data):
-            for x, tile in enumerate(row):
-                if tile == 'P':
-                    player_spawn_pos = (x * TILE_SIZE, y * TILE_SIZE)
-                    print(f"Player spawn 'P' found at {player_spawn_pos} on layer 1.")
-                    break
-            if player_spawn_pos:
-                break
-
-        if not player_spawn_pos:
-            print("Warning: No player spawn 'P' found on Layer 1. Defaulting position.")
-            player_spawn_pos = (GAME_WIDTH // 2, GAME_HEIGHT // 2)
-
-        return player_spawn_pos
+        return None
+        
 
     def start_new_game(self, player_data):
         
@@ -254,7 +245,7 @@ class Game:
         try:
             # Assumes your item name in the XML is "ID"
             # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Batton") 
+            wallet_item = Item.create_from_name("Mobile on") 
             if wallet_item:
                 # Check if there's space
                 if len(self.player.inventory) < self.player.get_total_inventory_slots():
@@ -271,11 +262,22 @@ class Game:
         self.modals = []
         self.map_states = {}
         
-        player_spawn = self.load_map(self.map_manager.current_map_filename)
+        self.load_map(self.map_manager.current_map_filename)
+        load_giant_map(self)
+
+        #player_spawn = self.load_map(self.map_manager.current_map_filename)
         
-        if player_spawn:
-            self.player.rect.topleft = player_spawn
-            self.player.x, self.player.y = player_spawn
+        #if player_spawn:
+        #    self.player.rect.topleft = player_spawn
+        #    self.player.x, self.player.y = player_spawn
+        if self.player_spawn:
+            print(f"Player spawn point found at {self.player_spawn}. Setting player position.")
+            self.player.x, self.player.y = self.player_spawn
+            self.player.rect.topleft = self.player_spawn
+        else:
+            print("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
+            self.player.x, self.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
+            self.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
@@ -304,41 +306,6 @@ class Game:
         }
         self.modals.append(nearby_modal)
 
-    def check_map_transition(self):
-        new_map = None
-        new_player_pos = None
-        if self.player.rect.top <= 0:
-            new_map = self.map_manager.transition('top')
-            if new_map:
-                new_player_pos = (self.player.rect.x, GAME_HEIGHT - self.player.rect.height)
-        elif self.player.rect.bottom >= GAME_HEIGHT:
-            new_map = self.map_manager.transition('bottom')
-            if new_map:
-                new_player_pos = (self.player.rect.x, 0)
-        elif self.player.rect.left <= 0:
-            new_map = self.map_manager.transition('left')
-            if new_map:
-                new_player_pos = (GAME_WIDTH - self.player.rect.width, self.player.rect.y)
-            elif self.player.rect.right >= GAME_WIDTH:
-                new_map = self.map_manager.transition('right')
-            if new_map:
-                new_player_pos = (0, self.player.rect.y)
-            if new_map and new_player_pos:
-                current_map_filename = self.map_manager.current_map_filename
-
-            if current_map_filename not in self.map_states:
-                self.map_states[current_map_filename] = {}
-
-                self.map_states[current_map_filename]['items'] = self.items_on_ground
-                self.map_states[current_map_filename]['zombies'] = self.zombies
-                self.map_states[current_map_filename]['containers'] = self.containers
-
-                self.load_map(new_map)
-                    
-                self.player.rect.topleft = new_player_pos
-                self.player.x, self.player.y = new_player_pos
-                self.player.vx = 0
-                self.player.vy = 0
 
     async def run(self):
         while self.running:
@@ -403,7 +370,7 @@ class Game:
 
         handle_input(self)
         update_game_state(self)
-        self.check_map_transition()
+  
         draw_game(self)
         self._update_screen()
 

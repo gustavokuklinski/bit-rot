@@ -1257,7 +1257,12 @@ def handle_attack(game, mouse_pos):
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
             if weapon.load > 0 and weapon.durability > 0:
                 if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
-                    game.sound_manager.play_sound(weapon.sounds['shoot'], subdir='items')
+                    game.sound_manager.play_sound(
+                        weapon.sounds['shoot'], 
+                        subdir='items',
+                        game=game,
+                        source_pos=game.player.rect.center
+                    )
 
                 target_world_x, target_world_y = game.screen_to_world(mouse_pos)
                 
@@ -1291,7 +1296,12 @@ def handle_attack(game, mouse_pos):
             if game.player.progression.handle_melee_attack(game.player):
                 
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
-                    game.sound_manager.play_sound(weapon.sounds['swing'], subdir='items')
+                    game.sound_manager.play_sound(
+                        weapon.sounds['swing'], 
+                        subdir='items',
+                        game=game,
+                        source_pos=game.player.rect.center
+                    )
 
 
                 game.player.melee_swing_timer = 10

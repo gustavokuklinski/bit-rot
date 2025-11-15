@@ -10,6 +10,12 @@ class MapManager:
         self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
         self.map_files = self._discover_maps()
 
+    def refresh_maps(self):
+        """Re-scans the map folder and updates the map_files list."""
+        print("Refreshing map file list...")
+        self.map_files = self._discover_maps()
+        print(f"Found {len(self.map_files)} map files.")
+
     def _discover_maps(self):
         maps = {}
         # Regex to match the new naming convention: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
@@ -24,6 +30,7 @@ class MapManager:
                     position = int(match.group(2))
                     connections = tuple(int(x) for x in match.groups()[2:])
                     maps[filename] = {
+                        'filename': filename,
                         'layer': layer,
                         'position': position,
                         'connections': connections
@@ -39,6 +46,7 @@ class MapManager:
     def transition(self, direction):
         current_map_info = self.map_files.get(self.current_map_filename)
         if not current_map_info:
+            print(f"Error: Could not find current map info for {self.current_map_filename}")
             return None
 
         connections = current_map_info['connections']
@@ -59,17 +67,38 @@ class MapManager:
             connection_index = 3
             opposite_index = 1 # right
 
+        if connection_index == -1:
+            print(f"Error: Invalid transition direction '{direction}'")
+            return None
+            
         connection_id = connections[connection_index]
         if connection_id == 0:
+            # print("No connection in that direction.")
             return None
 
         for filename, map_info in self.map_files.items():
             if filename == self.current_map_filename:
                 continue
+                
             # Check if the target map has a matching connection ID and is on the same layer
             if map_info['connections'][opposite_index] == connection_id and map_info['layer'] == current_layer:
+                
+                # --- [THIS IS THE FIX] ---
+                
+                # 1. Update the manager's state to the new map
                 self.current_map_filename = filename
-                return filename
+                
+                # 2. Get the base name (e.g., "map_L1_P0_0_0_0_1")
+                base_name = filename.rsplit('_map.csv', 1)[0]
+                
+                # 3. Construct the other filenames
+                ground_filename = f"{base_name}_ground.csv"
+                spawn_filename = f"{base_name}_spawn.csv"
+                
+                # 4. Return all three so the game can fully load them
+                print(f"Transitioning to map: {filename}")
+                return (filename, ground_filename, spawn_filename)
+                # --- [END FIX] ---
         
         print(f"Warning: No map found for transition '{direction}' from {self.current_map_filename}")
         return None

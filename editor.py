@@ -28,6 +28,106 @@ YELLOW = (255, 255, 0)
 
 FONT = pygame.font.Font(None, 24) # Default font for UI text
 
+
+def get_max_id(map_dir):
+    """Finds the highest ID used in any map filename (for connections or position)."""
+    max_id = 0
+    # Pattern from game's MapManager: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>
+    pattern = re.compile(r"map_L\d+_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)")
+    for filename in os.listdir(map_dir):
+        match = pattern.match(filename)
+        if match:
+            try:
+                # Check all 5 ID numbers (pos, t, r, b, l)
+                ids = [int(g) for g in match.groups()]
+                map_max = max(ids)
+                if map_max > max_id:
+                    max_id = map_max
+            except ValueError:
+                continue
+    return max_id
+
+def find_connecting_map(target_id, opposite_side, current_layer, map_dir):
+    """Finds the base name of a map that connects to the target ID."""
+    pattern = re.compile(r"map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)")
+    for filename in os.listdir(map_dir):
+        match = pattern.match(filename)
+        if match:
+            try:
+                layer = int(match.group(1))
+                if layer != current_layer:
+                    continue
+                
+                connections = {
+                    'TOP': int(match.group(3)),
+                    'RIGHT': int(match.group(4)),
+                    'BOTTOM': int(match.group(5)),
+                    'LEFT': int(match.group(6)),
+                }
+                
+                if connections[opposite_side] == target_id:
+                    # Found the map. Return its base name.
+                    return f"map_L{layer}_P{match.group(2)}_{connections['TOP']}_{connections['RIGHT']}_{connections['BOTTOM']}_{connections['LEFT']}"
+            except ValueError:
+                continue
+    return None
+
+def draw_connection_ui(surface, map_view_rect, font, current_map_name):
+    """Draws the connection helper UI on the map edges."""
+    # Parse current map connections
+    connections = {'TOP': 0, 'RIGHT': 0, 'BOTTOM': 0, 'LEFT': 0}
+    layer = 0
+    pos_id = 0
+    match = re.match(r"map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)", current_map_name)
+    if match:
+        layer = int(match.group(1))
+        pos_id = int(match.group(2))
+        connections['TOP'] = int(match.group(3))
+        connections['RIGHT'] = int(match.group(4))
+        connections['BOTTOM'] = int(match.group(5))
+        connections['LEFT'] = int(match.group(6))
+    
+    # Store rects for click detection
+    connection_rects = {}
+
+    # Helper to draw text
+    def draw_text(text, center_pos, color):
+        surf = font.render(text, True, color)
+        rect = surf.get_rect(center=center_pos)
+        # Draw a dark, semi-transparent background for readability
+        bg_rect = rect.inflate(10, 6)
+        s = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+        s.fill((0, 0, 0, 150))
+        surface.blit(s, bg_rect.topleft)
+        surface.blit(surf, rect.topleft)
+        return bg_rect
+
+    # Draw TOP
+    top_pos = (map_view_rect.centerx, map_view_rect.top + 20)
+    top_id = connections['TOP']
+    top_color = YELLOW if top_id > 0 else (150, 150, 150)
+    connection_rects['TOP'] = draw_text(f"TOP ({top_id})", top_pos, top_color)
+
+    # Draw BOTTOM
+    bottom_pos = (map_view_rect.centerx, map_view_rect.bottom - 20)
+    bottom_id = connections['BOTTOM']
+    bottom_color = YELLOW if bottom_id > 0 else (150, 150, 150)
+    connection_rects['BOTTOM'] = draw_text(f"BOTTOM ({bottom_id})", bottom_pos, bottom_color)
+
+    # Draw LEFT
+    left_pos = (map_view_rect.left + 45, map_view_rect.centery)
+    left_id = connections['LEFT']
+    left_color = YELLOW if left_id > 0 else (150, 150, 150)
+    connection_rects['LEFT'] = draw_text(f"LEFT ({left_id})", left_pos, left_color)
+
+    # Draw RIGHT
+    right_pos = (map_view_rect.right - 45, map_view_rect.centery)
+    right_id = connections['RIGHT']
+    right_color = YELLOW if right_id > 0 else (150, 150, 150)
+    connection_rects['RIGHT'] = draw_text(f"RIGHT ({right_id})", right_pos, right_color)
+    
+    return connection_rects, connections, layer
+
 def load_map(game_map, map_name, map_dir):
     # Clear existing layers before loading new ones
     game_map.layers = {}
@@ -120,17 +220,24 @@ def main():
 
     map_dir = os.path.join(game_root, 'resources', 'map')
     
-    # Dynamically find all .csv files in map_dir for the file tree
-    all_map_files = sorted([f for f in os.listdir(map_dir) if f.endswith('.csv')])
+    # Find all map files using the *game's* pattern ---
+    map_pattern = re.compile(r"map_L\d+_P(?:\d+_)*\d+(_map|_spawn|_ground)?\.csv")
+    all_map_files = sorted([f for f in os.listdir(map_dir) if map_pattern.match(f)])
 
     file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
     toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
-    new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 75, 300, 150, FONT)
 
-    current_base_map_name = file_tree.selected_map or "new_map"
+    # Initialize modal with first map name ---
+    current_base_map_name = file_tree.selected_map.replace("_map.csv", "") if file_tree.selected_map else "map_L1_P0_0_0_0_0"
+    
+    # Pass current map name to modal ---
+    new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 125, 300, 250, FONT, current_base_map_name)
+
+    # Load map using the base name ---
     load_map(game_map, current_base_map_name, map_dir)
 
     sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, map_tiles, FONT)
+
 
     # Camera and Zoom variables
     camera_offset_x = FILE_TREE_WIDTH
@@ -167,6 +274,12 @@ def main():
     tile_to_place = None # This will store "[1]", "[2]", etc.
     # sidebar.selected_tile will still be used by the sidebar UI, but we'll sync it
 
+
+    connection_ui_rects = {}
+    current_map_connections = {}
+    current_map_layer = 1
+
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -174,16 +287,70 @@ def main():
                 running = False
             
             if new_map_modal.active:
-                new_map_name = new_map_modal.handle_event(event)
-                if new_map_name:
-                    for layer in ["map", "ground", "spawn"]:
-                        new_filepath = os.path.join(map_dir, f"{new_map_name}_{layer}.csv")
-                        with open(new_filepath, 'w') as f:
-                            f.write("") # Create empty file
-                    all_map_files = sorted([f for f in os.listdir(map_dir) if f.endswith('.csv')])
-                    file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
-                    current_base_map_name = new_map_name
-                    load_map(game_map, current_base_map_name, map_dir)
+                modal_action = new_map_modal.handle_event(event)
+                if modal_action:
+                    if modal_action['action'] == 'create_map':
+                        # 1. Get info from modal
+                        source_map = modal_action['source_map']
+                        source_conns = modal_action['source_connections']
+                        source_pos_id = modal_action['source_pos_id']
+                        source_layer = modal_action['source_layer']
+                        direction = modal_action['direction']
+                        new_layer = modal_action['layer']
+                        
+                        # 2. Generate new IDs
+                        new_conn_id = get_max_id(map_dir) + 1
+                        new_pos_id = get_max_id(map_dir) + 1 # Simple unique ID
+                        
+                        # 3. Define opposite direction and new map's connections
+                        opposite_dir_map = {'TOP': 'BOTTOM', 'BOTTOM': 'TOP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT'}
+                        opposite_dir = opposite_dir_map[direction]
+                        
+                        new_map_conns = {'TOP': 0, 'RIGHT': 0, 'BOTTOM': 0, 'LEFT': 0}
+                        new_map_conns[opposite_dir] = new_conn_id
+                        
+                        # 4. Create new map base name
+                        new_map_name = f"map_L{new_layer}_P{new_pos_id}_{new_map_conns['TOP']}_{new_map_conns['RIGHT']}_{new_map_conns['BOTTOM']}_{new_map_conns['LEFT']}"
+                        
+                        # 5. Update old map's connections
+                        source_conns[direction] = new_conn_id
+                        updated_source_name = f"map_L{source_layer}_P{source_pos_id}_{source_conns['TOP']}_{source_conns['RIGHT']}_{source_conns['BOTTOM']}_{source_conns['LEFT']}"
+
+                        # 6. Rename old map files
+                        try:
+                            for layer_suffix in ['map', 'ground', 'spawn']:
+                                old_file = os.path.join(map_dir, f"{source_map}_{layer_suffix}.csv")
+                                if os.path.exists(old_file):
+                                    new_file = os.path.join(map_dir, f"{updated_source_name}_{layer_suffix}.csv")
+                                    os.rename(old_file, new_file)
+                            status_message = f"Updated {source_map}."
+                            status_message_timer = pygame.time.get_ticks() + 4000
+                        except Exception as e:
+                            status_message = f"Error renaming {source_map}: {e}"
+                            status_message_timer = pygame.time.get_ticks() + 4000
+                            continue # Abort if rename fails
+                        
+                        # 7. Create new empty map files
+                        for layer_suffix in ['map', 'ground', 'spawn']:
+                            new_filepath = os.path.join(map_dir, f"{new_map_name}_{layer_suffix}.csv")
+                            with open(new_filepath, 'w', newline='') as f:
+                                # Create an empty 100x100 grid
+                                writer = csv.writer(f)
+                                for _ in range(MAP_DEFAULT_HEIGHT):
+                                    writer.writerow([''] * MAP_DEFAULT_WIDTH)
+                        
+                        # 8. Refresh FileTree
+                        all_map_files = sorted([f for f in os.listdir(map_dir) if map_pattern.match(f)])
+                        file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
+                        
+                        # 9. Load the new map
+                        current_base_map_name = new_map_name
+                        file_tree.selected_map = f"{new_map_name}_map.csv" # Select it in the tree
+                        load_map(game_map, current_base_map_name, map_dir)
+                        modified_maps.add(current_base_map_name) # Mark new map as modified
+                        
+                    elif modal_action['action'] == 'cancel':
+                        pass # Just close the modal
                 continue
 
             # Handle events for UI components
@@ -197,7 +364,7 @@ def main():
             tree_action = file_tree.handle_event(event)
             if tree_action:
                 if tree_action['action'] == 'select_map':
-                    selected_map_from_tree = tree_action['map_name']
+                    selected_map_from_tree = tree_action['map_name'].replace("_map.csv", "")
                     if selected_map_from_tree and selected_map_from_tree != current_base_map_name:
                         current_base_map_name = selected_map_from_tree
                         load_map(game_map, current_base_map_name, map_dir)
@@ -220,6 +387,7 @@ def main():
             action = toolbar.handle_event(event)
             if action:
                 if action == "NEW MAP":
+                    new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 125, 300, 250, FONT, current_base_map_name)
                     new_map_modal.active = True
                 elif action == "DELETE MAP":
                     for filename in os.listdir(map_dir):
@@ -227,9 +395,9 @@ def main():
                             os.remove(os.path.join(map_dir, filename))
                     if current_base_map_name in modified_maps:
                         modified_maps.remove(current_base_map_name)
-                    all_map_files = sorted([f for f in os.listdir(map_dir) if f.endswith('.csv')])
+                    all_map_files = sorted([f for f in os.listdir(map_dir) if map_pattern.match(f)])
                     file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
-                    current_base_map_name = file_tree.selected_map or "new_map"
+                    current_base_map_name = file_tree.selected_map.replace("_map.csv", "") if file_tree.selected_map else "map_L1_P0_0_0_0_0"
                     load_map(game_map, current_base_map_name, map_dir)
                 
                 # --- MODIFIED: All tools now sync variables ---
@@ -263,7 +431,7 @@ def main():
                     sidebar.selected_tile = None # Deactivate sidebar tool
                     status_message = "Stair tool: [2] (To Layer 2)"
                     status_message_timer = pygame.time.get_ticks()
-                # --- END MODIFICATION ---
+
                     
                 elif action == "SAVE MAP":
                     save_map(game_map, current_base_map_name, map_dir)
@@ -271,6 +439,45 @@ def main():
                     status_message_timer = pygame.time.get_ticks() + 2000
                     if current_base_map_name in modified_maps:
                         modified_maps.remove(current_base_map_name)
+
+                elif action == "EXPORT PNG":
+                    if game_map and current_base_map_name:
+                        try:
+                            print("Exporting map to PNG...")
+                            # 1. Calculate full map size in pixels
+                            map_width_px = game_map.width * TILE_SIZE
+                            map_height_px = game_map.height * TILE_SIZE
+                            
+                            # 2. Create a new surface for the export
+                            #    Using pygame.SRCALPHA allows layers with opacity to blend correctly
+                            export_surface = pygame.Surface((map_width_px, map_height_px), pygame.SRCALPHA)
+                            export_surface.fill((0, 0, 0, 0)) # Fill with transparency
+
+                            # 3. Render the map at 1:1 scale (zoom_scale=1.0)
+                            #    This uses your existing render function, which respects
+                            #    layer visibility and opacity from the file tree.
+                            game_map.render(
+                                surface=export_surface,
+                                tiles=map_tiles,
+                                font=toolbar.font,
+                                offset=(0, 0),
+                                zoom_scale=1.0
+                            )
+
+                            # 4. Define filename and save
+                            export_filename = f"{current_base_map_name}_export.png"
+                            pygame.image.save(export_surface, export_filename)
+                            
+                            # 5. Set status message
+                            status_message = f"Saved {export_filename}"
+                            status_message_timer = pygame.time.get_ticks()
+                            print(f"Successfully exported map to {export_filename}")
+
+                        except Exception as e:
+                            status_message = f"Error exporting map: {e}"
+                            status_message_timer = pygame.time.get_ticks()
+                            print(e)
+
 
             if event.type == pygame.KEYDOWN:
                 mods = pygame.key.get_mods()
@@ -329,6 +536,39 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = event.pos
+
+                clicked_ui_element = False
+                for direction, rect in connection_ui_rects.items():
+                    if rect.collidepoint(mouse_x, mouse_y):
+                        conn_id = current_map_connections[direction]
+                        if conn_id > 0:
+                            # Find and load the connected map
+                            opposite_dir_map = {'TOP': 'BOTTOM', 'BOTTOM': 'TOP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT'}
+                            opposite_dir = opposite_dir_map[direction]
+                            
+                            found_map = find_connecting_map(conn_id, opposite_dir, current_map_layer, map_dir)
+                            
+                            if found_map:
+                                current_base_map_name = found_map
+                                file_tree.selected_map = f"{found_map}_map.csv"
+                                load_map(game_map, current_base_map_name, map_dir)
+                                status_message = f"Switched to connected map: {found_map}"
+                                status_message_timer = pygame.time.get_ticks() + 2000
+                            else:
+                                status_message = f"Error: No map found for connection {direction} ({conn_id})"
+                                status_message_timer = pygame.time.get_ticks() + 2000
+                        else:
+                            # ID is 0, open the new map modal pre-filled
+                            new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 125, 300, 250, FONT, current_base_map_name)
+                            new_map_modal.preselect_direction(direction)
+                            new_map_modal.active = True
+                        
+                        clicked_ui_element = True
+                        break
+                
+                if clicked_ui_element:
+                    continue
+
                 # Scroll wheel for zoom
                 if event.button == 4: # Scroll up (zoom in)
                     zoom_level_index = min(len(ZOOM_LEVELS) - 1, zoom_level_index + 1)
@@ -450,6 +690,8 @@ def main():
 
         # Draw rulers
         draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom_scale, game_map.width, game_map.height, map_view_rect, FONT)
+
+        connection_ui_rects, current_map_connections, current_map_layer = draw_connection_ui(screen, map_view_rect, FONT, current_base_map_name)
 
         # Draw File Tree
         file_tree.draw(screen, current_base_map_name, game_map.active_layer_name, modified_maps)

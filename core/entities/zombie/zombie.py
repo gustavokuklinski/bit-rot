@@ -77,7 +77,7 @@ class Zombie:
         self.last_wander_sound_time = 0
         self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
         
-        self.wandering_channel = None
+        #self.wandering_channel = None
 
         # Load sound filenames from template
         sounds = template.get('sounds', {})
@@ -196,25 +196,28 @@ class Zombie:
         if dist_to_player < ZOMBIE_DETECTION_RADIUS and can_see_player:
             self.state = 'chasing'
             target_pos = player_rect.center # Chase the player directly
-            if self.wandering_channel:
-                self.wandering_channel.stop()
-                self.wandering_channel = None
+            #if self.wandering_channel:
+            #    self.wandering_channel.stop()
+                #self.wandering_channel = None
 
         else:
             self.state = 'wandering'
             
             if ZOMBIE_WANDER_ENABLED and self.sound_wander:
-                # Check if the channel doesn't exist or has stopped playing
-                if self.wandering_channel is None or not self.wandering_channel.get_busy():
-                    # Play the sound on loop and store the channel
-                    self.wandering_channel = game.sound_manager.play_sound(
+                # Check if the sound cooldown has passed
+                if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
+                    # Play the sound as a one-shot (loops=0 is default)
+                    game.sound_manager.play_sound(
                         self.sound_wander, 
                         subdir='zombie', 
                         game=game, 
                         source_pos=self.rect.center, 
-                        base_volume=0.3, 
-                        loops=-1 # Loop forever
+                        base_volume=0.3
                     )
+                    # Reset the timer
+                    self.last_wander_sound_time = current_time
+                    # Pick a new random delay
+                    self.wander_sound_cooldown = random.randint(4000, 12000)
 
             # Update wander target if needed
             if ZOMBIE_WANDER_ENABLED:

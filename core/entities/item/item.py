@@ -448,16 +448,20 @@ class Projectile:
         else:
             self.vx = self.vy = 0
 
-    def update(self, game_width=None, game_height=None, game_offset_x=0):
-  
-        if game_width is None or game_height is None:
+    def update(self, world_min_x=0, world_min_y=0, world_max_x=None, world_max_y=None):
+    # def update(self, game_width=None, game_height=None, game_offset_x=0):
+
+        if world_max_x is None or world_max_y is None:
+        #if game_width is None or game_height is None:
             print("Error: Projectile.update() called without game_width/game_height. Projectile will be removed.")
             return True # Remove projectile if bounds are unknown
 
         self.x += self.vx
         self.y += self.vy
         self.rect.topleft = (int(self.x), int(self.y))
-        if self.x < 0 or self.x > game_width or self.y < 0 or self.y > game_height:
+
+        if self.x < world_min_x or self.x > world_max_x or self.y < world_min_y or self.y > world_max_y:
+        # if self.x < 0 or self.x > game_width or self.y < 0 or self.y > game_height:
             return True
         return False
 

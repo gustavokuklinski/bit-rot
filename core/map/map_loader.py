@@ -112,7 +112,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                          print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
                     player_spawn = (x * TILE_SIZE, y * TILE_SIZE)
                 elif char == 'Z':
-                    base_char = base_layout[y][x]
+                    base_char = ground_layout[y][x]
                     tile_def = tile_manager.definitions.get(base_char)
                     
                     is_valid_spawn = True
