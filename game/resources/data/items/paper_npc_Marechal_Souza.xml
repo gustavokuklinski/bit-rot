@@ -8,7 +8,7 @@
             Hope you are smart.
             Get my gear, I wont need them now.
 
-            If you try to get the choper, keep in mind: 100.000 for the landing back.
+            If you try to get the helichoper, keep in mind: 100.000 for the landing back.
             Be brave to try out.
             Well, for our luck we have an infinite stock of Vaccine.
             If someday it ends, or anyone need Vacs, I'll be here to serve
@@ -23,5 +23,5 @@
             Good luck!
         </text>
     </properties>
-    <spawn chance="1" />
+    <spawn chance="0" />
 </item>

@@ -1,0 +1,10 @@
+<item name="Infection Pills" type="consumable">
+    <properties>
+        <status value="infection" />
+        <load value="1" />
+        <reduce min="1" max="5" />
+        <capacity value="10" />
+        <sprite file="infection_pills.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

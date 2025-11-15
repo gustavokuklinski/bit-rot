@@ -3,8 +3,7 @@
         <sprite file="bible_1.png" />
     </properties>
     <attributes>
-        <lucky value="2.5" />
-        <strength value="100" />
+        <lucky value="0.5" />
     </attributes>
     <spawn chance="1" />
 </item>

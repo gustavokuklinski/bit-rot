@@ -17,5 +17,5 @@
             With this we can try to make you immune.
         </text>
     </properties>
-    <spawn chance="1" />
+    <spawn chance="0" />
 </item>

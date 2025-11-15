@@ -21,6 +21,6 @@
         <item item="Knife" chance="0.1" />
         <item item="Medkit" chance="0.5" />
         <item item="Batton" chance="0.5" />
-        
+        <item item="Infection Pills" chance="0.2" />
     </loot>
 </map>
