@@ -182,6 +182,25 @@ def draw_game(game):
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
+    player_tile_x = game.player.rect.centerx // TILE_SIZE
+    player_tile_y = game.player.rect.centery // TILE_SIZE
+    # This hides a 3x3 grid (-1, 0, +1) centered on the player
+    # roof_hide_radius = BASE_PLAYER_VIEW_RADIUS // TILE_SIZE
+
+    roof_hide_radius = 3
+
+
+    for image, rect, (tile_x, tile_y) in game.roof_tiles:
+        dx = abs(tile_x - player_tile_x)
+        dy = abs(tile_y - player_tile_y)
+        
+        # If the tile is within the radius, skip drawing it
+        if dx <= roof_hide_radius and dy <= roof_hide_radius:
+            continue
+            
+        world_view_surface.blit(image, rect.move(offset_x, offset_y))
+
+
     if game.hovered_container:
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
@@ -225,11 +244,9 @@ def draw_game(game):
             top_tooltip = tooltip or top_tooltip
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'container':
-            #buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets)
             buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'nearby':
-            #buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets)
             buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'messages':
@@ -242,7 +259,6 @@ def draw_game(game):
             if minimize_button: game.modal_buttons.append(minimize_button)
         
         elif modal['type'] == 'mobile':
-            # draw_mobile_modal now returns a list of buttons
             buttons = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
 

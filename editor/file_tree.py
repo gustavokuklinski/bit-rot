@@ -29,7 +29,7 @@ class FileTree:
 
     def _group_maps(self, map_files):
         grouped = {}
-        pattern = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_map|_spawn|_ground)?\.csv")
+        pattern = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_roof|_map|_spawn|_ground)?\.csv")
 
         for f in map_files:
             match = pattern.match(f)
@@ -70,7 +70,7 @@ class FileTree:
 
             # Draw layers if expanded
             if self.expanded_maps.get(map_name):
-                layer_order = ['map', 'spawn', 'ground']
+                layer_order = ['roof', 'map', 'spawn', 'ground']
                 
                 layer_file_lookup = {}
                 for lf in self.grouped_maps[map_name]:
@@ -131,7 +131,7 @@ class FileTree:
                         # Check click on layers if expanded
                         if self.expanded_maps.get(map_name):
                             # --- MODIFIED: Iterate in fixed order to match draw() ---
-                            layer_order = ['map', 'spawn', 'ground']
+                            layer_order = ['roof', 'map', 'spawn', 'ground']
                 
                             layer_file_lookup = {}
                             for lf in self.grouped_maps[map_name]:

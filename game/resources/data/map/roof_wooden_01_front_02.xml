@@ -1,0 +1,5 @@
+<map name="roof_wooden_01_front_02" type="maptile" char="roof_wooden_01_front_02" is_obstacle="true">
+    <visuals>
+        <sprite file="roof_wooden_01_front_02.png" />
+    </visuals>
+</map>

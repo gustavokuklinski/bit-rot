@@ -15,7 +15,7 @@ class Map:
         self.undo_stack = []
 
         if default_layers is None:
-            default_layers = ['map', 'ground', 'spawn'] # Default layers
+            default_layers = ['roof', 'map', 'ground', 'spawn'] # Default layers
 
         for layer_name in default_layers:
             self.layers[layer_name] = [[None for _ in range(width)] for _ in range(height)]

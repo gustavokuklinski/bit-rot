@@ -1,0 +1,5 @@
+<map name="roof_concrete_01_middle_top_01" type="maptile" char="roof_concrete_01_middle_top_01" is_obstacle="false">
+    <visuals>
+        <sprite file="roof_concrete_01_middle_top_01.png" />
+    </visuals>
+</map>

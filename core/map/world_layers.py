@@ -89,12 +89,13 @@ def load_giant_map(game):
             base_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_map.csv"))
             ground_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_ground.csv"))
             spawn_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_spawn.csv"))
-            
-            if not base_layout or not ground_layout or not spawn_layout:
+            roof_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_roof.csv"))
+
+            if not base_layout or not ground_layout or not spawn_layout or not roof_layout:
                 print(f"Warning: Missing layout files for {base_name}. Skipping chunk.")
                 continue
                 
-            layouts[(cx, cy)] = (base_layout, ground_layout, spawn_layout)
+            layouts[(cx, cy)] = (base_layout, ground_layout, spawn_layout, roof_layout)
         except Exception as e:
             print(f"Error loading layouts for {c_info['filename']}: {e}")
             continue
@@ -146,9 +147,10 @@ def load_giant_map(game):
     mega_base = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_ground = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_spawn = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
+    mega_roof = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
 
     # 4. Loop 3: Blit all chunks onto the Mega-Layouts
-    for (grid_x, grid_y), (base, ground, spawn) in layouts.items():
+    for (grid_x, grid_y), (base, ground, spawn, roof) in layouts.items():
         # Calculate offset from the top-left (min_x, min_y)
         offset_x = (grid_x - min_x) * chunk_w
         offset_y = (grid_y - min_y) * chunk_h
@@ -173,6 +175,9 @@ def load_giant_map(game):
                     else:
                         mega_spawn[offset_y + r][offset_x + c] = char
 
+                if r < len(roof) and c < len(roof[r]) and roof[r][c] and roof[r][c] != ' ':
+                    mega_roof[offset_y + r][offset_x + c] = roof[r][c]
+
     # 5. Parse the single Mega-Layout
     print("Parsing mega-layouts...")
     (game.obstacles, 
@@ -180,8 +185,9 @@ def load_giant_map(game):
      game.player_spawn, 
      game.zombie_spawns, 
      game.item_spawns, 
-     game.containers) = parse_layered_map_layout(
-         mega_base, mega_ground, mega_spawn, game.tile_manager
+     game.containers,
+     game.roof_tiles) = parse_layered_map_layout(
+         mega_base, mega_ground, mega_spawn, mega_roof, game.tile_manager
      )
     
     # Store the final map data for lookups (e.g., toggling doors)
@@ -235,6 +241,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     all_map_layers = {}
     all_ground_layers = {}
     all_spawn_layers = {}
+    all_roof_layers = {}
 
     # Use the same regex as MapManager to correctly parse the filename
     pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
@@ -242,7 +249,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     
     if not base_name_match:
         print(f"CRITICAL: Base map filename does not match expected pattern: {base_map_filename}")
-        return {}, {}, {}
+        return {}, {}, {}, {}
 
     # Correctly separate all components
     base_pos_id = base_name_match.group(2)          # e.g., 0
@@ -273,12 +280,12 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
                     break
             if not found_any:
                  print(f"CRITICAL: No map files found at all for base prefix P{base_pos_id}.")
-                 return {}, {}, {}
+                 return {}, {}, {}, {}
         
         base_map_data = load_map_from_file(base_map_file)
         if not base_map_data or not base_map_data[0]:
             print(f"CRITICAL: Base map file is empty or invalid: {base_map_file}")
-            return {}, {}, {}
+            return {}, {}, {}, {}
 
         target_height = len(base_map_data)
         target_width = 0
@@ -302,6 +309,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         layer_map_file_relative = f"{layer_prefix}_map.csv"
         layer_ground_file_relative = f"{layer_prefix}_ground.csv"
         layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
+        layer_roof_file_relative = f"{layer_prefix}_roof.csv"
         
         # --- START FIX ---
         # We must check for all 3 files *independently*
@@ -310,13 +318,15 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         layer_map_file = os.path.join(MAP_DIR, layer_map_file_relative)
         layer_ground_file = os.path.join(MAP_DIR, layer_ground_file_relative)
         layer_spawn_file = os.path.join(MAP_DIR, layer_spawn_file_relative)
+        layer_roof_file = os.path.join(MAP_DIR, layer_roof_file_relative)
 
         map_data = load_map_from_file(layer_map_file)
         ground_data = load_map_from_file(layer_ground_file)
         spawn_data = load_map_from_file(layer_spawn_file)
+        roof_data = load_map_from_file(layer_roof_file)
 
         # If ALL files for this layer are empty, *then* we can skip
-        if not map_data and not ground_data and not spawn_data:
+        if not map_data and not ground_data and not spawn_data and not roof_data:
             continue
             
         print(f"Processing layer {i} from prefix {layer_prefix}...")
@@ -333,9 +343,12 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         if spawn_data:
             spawn_data = resize_map_layer(spawn_data, target_width, target_height, fill_value=' ') 
             all_spawn_layers[i] = spawn_data
-        # --- END FIX ---
 
-    return all_map_layers, all_ground_layers, all_spawn_layers
+        if roof_data:
+            roof_data = resize_map_layer(roof_data, target_width, target_height, fill_value=' ') 
+            all_roof_layers[i] = roof_data
+
+    return all_map_layers, all_ground_layers, all_spawn_layers, all_roof_layers
 
 def _rebuild_world_from_data(game):
     """
@@ -347,13 +360,14 @@ def _rebuild_world_from_data(game):
     game.containers.clear()
 
     # Call parse_layered_map_layout to get the new world data
-    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers = \
-        parse_layered_map_layout(game.map_data, game.ground_data, game.spawn_data, game.tile_manager)
+    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles = \
+        parse_layered_map_layout(game.map_data, game.ground_data, game.spawn_data, game.roof_data, game.tile_manager)
 
     # Assign the new data to the game object
     game.obstacles = obstacles
     game.renderable_tiles = renderable_tiles
     game.containers = containers
+    game.roof_tiles = roof_tiles
 
     # Return spawn points for set_active_layer to handle
     return item_spawns, zombie_spawns
@@ -392,6 +406,7 @@ def set_active_layer(game, layer_index):
     game.map_data = game.all_map_layers[layer_index]
     game.ground_data = game.all_ground_layers.get(layer_index, [])
     game.spawn_data = game.all_spawn_layers.get(layer_index, [])
+    game.roof_data = game.all_roof_layers.get(layer_index, [])
 
     if not getattr(game, 'is_giant_map', False) and layer_index == 1:
         if game.map_data:
@@ -540,7 +555,7 @@ def check_for_map_transition(game):
 
         # 4. Reload all map layers from the new base map file
         # This repopulates all_map_layers, all_ground_layers, etc.
-        game.all_map_layers, game.all_ground_layers, game.all_spawn_layers = \
+        game.all_map_layers, game.all_ground_layers, game.all_spawn_layers, game.all_roof_layers = \
             load_all_map_layers(new_map_filename)
 
         # 5. Clear all stored layer states for the *previous map*

@@ -22,7 +22,7 @@ def load_map_from_file(filepath):
         print(f"Error reading map layer file {filepath}: {e}")
     return layout # Return list (possibly empty if file not found/error)
 
-def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_manager):
+def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layout, tile_manager):
     """
     Creates lists of tiles, obstacles, and spawn points from layered map layouts.
     - ground_layout defines floor tiles (never obstacles).
@@ -35,6 +35,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
     zombie_spawns = []
     item_spawns = []
     containers = []
+    roof_renderables = []
 
     # Use dimensions from the base layout (assuming all layers match)
     map_height = len(base_layout)
@@ -157,7 +158,24 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
                         container.rect = rect
                         container.image = tile_def['image']
                         containers.append(container)
-                # --- END CHANGE ---
+              
+
+    if len(roof_layout) != map_height or (map_height > 0 and len(roof_layout[0]) != map_width):
+        print("Warning: Roof layout dimensions mismatch base layout.")
+
+    for y, row in enumerate(roof_layout):
+         if y >= map_height: break # Prevent index error if mismatch
+         for x, char in enumerate(row):
+            if x >= map_width: break
+            if char and char != ' ': # Ignore empty cells
+                if char in tile_manager.definitions:
+                    tile_def = tile_manager.definitions[char]
+                    pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+                    rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
+                    # Add to roof list WITH grid coordinates for the fade logic
+                    roof_renderables.append((tile_def['image'], rect, (x, y)))
+                else:
+                    print(f"Warning: Undefined roof tile character '{char}' at ({x},{y}).")
 
     if not player_spawn:
         print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at a random available spawn point.")
@@ -167,4 +185,4 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, tile_mana
         # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
 
 
-    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers
+    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables

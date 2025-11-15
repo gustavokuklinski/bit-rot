@@ -120,10 +120,13 @@ class Game:
         self.all_map_layers = {} # Will store {1: data, 2: data, ...}
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
+        self.all_roof_layers = {}
         self.layer_spawn_triggers = {} # Stores triggered spawns for each layer
         self.triggered_spawns = set()
         
         self.current_zombie_spawns = []
+        self.roof_data = []
+        self.roof_tiles = []
 
         self.spawn_point_grid = {}
         self.SPAWN_GRID_SIZE = 512
@@ -158,7 +161,7 @@ class Game:
         self.map_manager.current_map_filename = map_filename
 
 
-        self.all_map_layers, self.all_ground_layers, self.all_spawn_layers = \
+        self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers = \
             load_all_map_layers(map_filename)
 
         if 1 not in self.all_map_layers:

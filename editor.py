@@ -154,7 +154,7 @@ def load_map(game_map, map_name, map_dir):
     else:
         print(f"No layers found for map '{map_name}'. Initializing with default empty layers.")
         # If no layers found, re-initialize with default empty layers
-        game_map.default_layers = ['ground', 'spawn', 'map']
+        game_map.default_layers = ['roof' ,'ground', 'spawn', 'map']
         for layer_name in game_map.default_layers:
             game_map.layers[layer_name] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
         game_map.set_active_layer(game_map.default_layers[0])
@@ -221,7 +221,7 @@ def main():
     map_dir = os.path.join(game_root, 'resources', 'map')
     
     # Find all map files using the *game's* pattern ---
-    map_pattern = re.compile(r"map_L\d+_P(?:\d+_)*\d+(_map|_spawn|_ground)?\.csv")
+    map_pattern = re.compile(r"map_L\d+_P(?:\d+_)*\d+(_roof|_map|_spawn|_ground)?\.csv")
     all_map_files = sorted([f for f in os.listdir(map_dir) if map_pattern.match(f)])
 
     file_tree = FileTree(0, TOOLBAR_HEIGHT, FILE_TREE_WIDTH, SCREEN_HEIGHT - TOOLBAR_HEIGHT, all_map_files, FONT)
@@ -318,7 +318,7 @@ def main():
 
                         # 6. Rename old map files
                         try:
-                            for layer_suffix in ['map', 'ground', 'spawn']:
+                            for layer_suffix in ['roof','map', 'ground', 'spawn']:
                                 old_file = os.path.join(map_dir, f"{source_map}_{layer_suffix}.csv")
                                 if os.path.exists(old_file):
                                     new_file = os.path.join(map_dir, f"{updated_source_name}_{layer_suffix}.csv")
@@ -331,7 +331,7 @@ def main():
                             continue # Abort if rename fails
                         
                         # 7. Create new empty map files
-                        for layer_suffix in ['map', 'ground', 'spawn']:
+                        for layer_suffix in ['roof','map', 'ground', 'spawn']:
                             new_filepath = os.path.join(map_dir, f"{new_map_name}_{layer_suffix}.csv")
                             with open(new_filepath, 'w', newline='') as f:
                                 # Create an empty 100x100 grid

@@ -1,4 +1,4 @@
-![BitRot logo](https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/game/sprites/ui/logo.png)
+![BitRot logo](https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/game/icons/logo.png)
 
 # Bit Rot
 
