@@ -177,7 +177,7 @@ class PlayerProgression:
         self.update_hp(player)
         self.update_infection(player)
         self.update_anxiety(player, game)
-        self.update_tireness(player, game)
+        self.update_tireness(player, game, is_moving)
 
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)
@@ -219,32 +219,47 @@ class PlayerProgression:
         player.anxiety = min(100, player.anxiety + final_anxiety_gain)
         # Note: Anxiety doesn't decrease on its own here, only via items (e.g., smoker trait)
     
-    def update_tireness(self, player, game):
+    def update_tireness(self, player, game, is_moving):
         world_state = game.world_time.state
-        base_gain = 0.0
-
-        # Tireness increases at night, recovers during the day
+        base_change = 0.0
         if world_state == "NIGHT" or world_state == "TRANSITION_TO_NIGHT":
-            base_gain = 0.005 # Rate of getting tired
+            base_change = -0.05 # Rate of getting tired (negative)
         else: # DAY or TRANSITION_TO_DAY
-            base_gain = -0.01 # Rate of recovery (faster)
+            base_change = 0.001 # Rate of recovery (positive)
 
-        # Anxiety makes you more tired
-        anxiety_modifier = 1.0 + (player.anxiety / 100.0) # 0-100% increase
-        
-        # Being exhausted makes you more tired
-        stamina_modifier = 0.0
+        # 2. Modifiers that *decrease* tireness (penalties)
+        stamina_penalty = 0.0
         if player.stamina <= 0:
-            stamina_modifier = 0.01 # Extra penalty for being exhausted
+            stamina_penalty = -0.01 # Extra penalty for being exhausted
+            
+        running_penalty = 0.0
+        if is_moving and player.is_running:
+            running_penalty = -0.05 # Tireness drain from running
 
-        final_gain = (base_gain * anxiety_modifier) + stamina_modifier
-        tireness_bonus_perc = self.get_tireness_bonus(player)
-        tireness_modifier = 1.0 + (tireness_bonus_perc / 100.0)
-
-        # Apply modifier to both base gain/recovery and stamina penalty
-        final_gain_modified = final_gain * tireness_modifier
+        # 3. Anxiety modifier
+        # Anxiety makes you more tired (makes recovery slower, decay faster)
+        anxiety_modifier = 1.0 + (player.anxiety / 100.0) # 1.0 (calm) to 2.0 (max anxiety)
         
-        player.tireness = max(0, min(100, player.tireness + final_gain_modified))
+        if base_change < 0: # If decaying (at night)
+            base_change *= anxiety_modifier # Make decay faster
+        else: # If recovering (during day)
+            base_change /= anxiety_modifier # Make recovery slower
+            
+        # 4. Trait modifier
+        # "rested" (+15) -> 1.15 multiplier
+        # "sleepy" (-20) -> 0.80 multiplier
+        tireness_bonus_perc = self.get_tireness_bonus(player) 
+        tireness_modifier = 1.0 + (tireness_bonus_perc / 100.0) 
+
+        if base_change < 0: # If decaying (at night)
+            base_change /= tireness_modifier # Rested (1.15) makes decay slower
+        else: # If recovering (during day)
+            base_change *= tireness_modifier # Rested (1.15) makes recovery faster
+        
+        # 5. Combine all changes
+        final_gain_modified = base_change + stamina_penalty + running_penalty
+        
+        player.tireness = max(0, min(player.max_tireness, player.tireness + final_gain_modified))
 
 
     def update_infection(self, player):
@@ -255,9 +270,8 @@ class PlayerProgression:
                 player.health = 1 # Player dies
 
     def handle_melee_attack(self, player):
-        if player.stamina >= 10:
-            player.stamina = max(0, player.stamina - 0.01)
-            player.tireness = min(100, player.tireness + 0.01)
+        if player.tireness > 1:
+            player.tireness = max(0, player.tireness - 0.1)
             return True
         print("Too tired to swing!")
         return False
@@ -265,19 +279,19 @@ class PlayerProgression:
     # --- HELPER FUNCTIONS ---
     def get_melee_damage_multiplier(self, player):
         base_multiplier = 1 + (self.get_melee(player) / 100.0)
-        tireness_modifier = 1.0 - (player.tireness / 100.0)
+        tireness_modifier = player.tireness / player.max_tireness
         return base_multiplier * tireness_modifier
 
     def get_unarmed_damage(self, player):
         base_damage = 1 + (self.get_strength(player) / 100.0)
-        tireness_modifier = 1.0 - (player.tireness / 100.0)
+        tireness_modifier = player.tireness / player.max_tireness
         return base_damage * tireness_modifier
 
     def get_ranged_damage_multiplier(self, player):
         # Ranged level gives a small bonus
         base_multiplier = 1 + (self.get_ranged(player) / 100.0)
         # Tiredness reduces it
-        tireness_modifier = 1.0 - (player.tireness / 100.0)
+        tireness_modifier = player.tireness / player.max_tireness
         return base_multiplier * tireness_modifier
 
     def get_headshot_chance(self, player):
@@ -308,6 +322,5 @@ class PlayerProgression:
         hp_regen_rate = 0.01
         if infection_level > 0:
             hp_regen_rate /= (1 + infection_level / 25)
-        
         
         return hp_regen_rate

@@ -8,5 +8,8 @@
         <item item="Matches" chance="0.1" />
         <item item="Medkit" chance="0.1" />
         <item item="Infection Pills" chance="0.2" />
+        <item item="Cola Drink" chance="0.2" />
+        <item item="Energy Drink" chance="0.2" />
+        <item item="Cigarette" chance="0.1" />
     </loot>
 </map>

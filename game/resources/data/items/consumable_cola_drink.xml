@@ -1,0 +1,10 @@
+<item name="Cola Drink" type="consumable">
+    <properties>
+        <status value="tireness" />
+        <restore min="15" max="15" />
+        <load value="1" />
+        <capacity value="1" />
+        <sprite file="cola_drink.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

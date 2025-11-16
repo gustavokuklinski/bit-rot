@@ -37,7 +37,8 @@ class Player:
         self.max_stamina = stats.get('stamina', 100.0)
         self.stamina = stats.get('stamina', self.max_stamina)
         self.anxiety = stats.get('anxiety', 0.0)
-        self.tireness = stats.get('tireness', 0.0)
+        self.max_tireness = stats.get('tireness', 100.0) # NEW
+        self.tireness = stats.get('tireness', self.max_tireness)
 
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])

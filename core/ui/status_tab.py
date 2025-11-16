@@ -18,12 +18,12 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     icon_files = {
         "HP": SPRITE_PATH + "ui/hp.png",
         "STM": SPRITE_PATH + "ui/stamina.png",
+        "TIR": SPRITE_PATH + "ui/tireness.png",
         "WTR": SPRITE_PATH + "ui/water.png",
         "FOD": SPRITE_PATH + "ui/food.png",
         "INF": SPRITE_PATH + "ui/infection.png",
         "XP": SPRITE_PATH + "ui/xp.png",
         "ANX": SPRITE_PATH + "ui/axiety.png",
-        "TIR": SPRITE_PATH + "ui/tireness.png",
         "DEF": SPRITE_PATH + "ui/strength.png"
     }
     for k, path in icon_files.items():
@@ -36,11 +36,11 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     stats = [
         ("HP", player.health, player.max_health, RED),
         ("STM", player.stamina, player.max_stamina, GRAY),
+        ("TIR", player.tireness, 100, (100, 100, 150)),
         ("WTR", player.water, 100, BLUE),
         ("FOD", player.food, 100, GREEN),
         ("INF", player.infection, 100, YELLOW),
         ("ANX", player.anxiety, 100, (150, 0, 150)),
-        ("TIR", player.tireness, 100, (100, 100, 150)),
         ("DEF", player.get_total_defence(), 100, (160, 160, 160))
     ]
     for i, (name, value, max_value, color) in enumerate(stats):

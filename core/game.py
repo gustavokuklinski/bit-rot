@@ -248,7 +248,7 @@ class Game:
         try:
             # Assumes your item name in the XML is "ID"
             # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Mobile on") 
+            wallet_item = Item.create_from_name("Cola Drink") 
             if wallet_item:
                 # Check if there's space
                 if len(self.player.inventory) < self.player.get_total_inventory_slots():

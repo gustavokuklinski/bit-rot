@@ -18,11 +18,12 @@ TRAIT_DEFINITIONS = {
     "luck": {"cost": 2, "attributes": {"lucky": 2}},
     "runner": {"cost": 2, "attributes": {"speed": 2}},
     "healthy": {"cost": 2, "stats": {"health": 15}}, 
-    "rested": {"cost": 1, "stats": {"tireness": -15}},
+    "rested": {"cost": 1, "stats": {"tireness": 15}},
     "camel": {"cost": 1, "stats": {"water": 20}},
     "iron_stomach": {"cost": 1, "stats": {"food": 15}},
     "fit": {"cost": 2, "attributes": {"fitness": 2}},
     "brawler": {"cost": 2, "attributes": {"melee": 2}},
+    "shooter": {"cost": 2, "attributes": {"ranged": 2}},
 
     # --- Negative Traits ---
     "weak": {"cost": -2, "attributes": {"strength": -2}},
@@ -30,10 +31,10 @@ TRAIT_DEFINITIONS = {
     "smoker": {"cost": -1, "stats": {"stamina": -15, "anxiety": 15}},
     "drunk": {"cost": -1, "attributes": {"speed": -15}, "stats": {"anxiety": 15}},
     "illnes": {"cost": -1, "stats": {"infection": 15}},
-    "sedentary": {"cost": -2, "stats": {"stamina": -15}, "attributes": {"strength": -1}},
+    "sedentary": {"cost": -2, "stats": {"stamina": -15, "tireness": 15}, "attributes": {"strength": -1}},
     "myopia": {"cost": -1, "attributes": {"ranged": -10}},
     "frail": {"cost": -2, "stats": {"health": -15}},
-    "sleepy": {"cost": -1, "stats": {"tireness": 20}},
+    "sleepy": {"cost": -1, "stats": {"tireness": -20}},
     "high_thirst": {"cost": -1, "stats": {"water": -25}},
     "sweet_tooth": {"cost": -1, "stats": {"food": -20}},
     "unfit": {"cost": -2, "attributes": {"fitness": -2}},
@@ -544,7 +545,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
             # --- Clipping Check ---
             # Only blit if the item is vertically visible
             if row_rect_rel.bottom > 0 and row_rect_rel.top < traits_content_rect.height:
-                content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (row_rect_rel.x, row_rect_rel.y))
+                #content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (row_rect_rel.x, row_rect_rel.y))
+                trait_cost = TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
+                cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
+                
+                name_surf = font.render(trait_name.capitalize(), True, WHITE)
+                cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
+                
+                content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
+                content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
+
                 pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel)
                 content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
             
@@ -586,6 +596,17 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.virtual_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.virtual_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
     game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (header_rect.x + 10, header_rect.y + 7)) # Adjusted y for padding
+
+    total_cost = 0
+    for trait_name in state['chosen_traits']:
+        total_cost += TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
+    state['total_trait_cost'] = total_cost # Store for event handler
+
+    cost_text = f"Points: {total_cost}"
+    cost_color = (100, 255, 100) if total_cost == 0 else (255, 100, 100) # Green if 0, else Red
+    cost_surf = font.render(cost_text, True, cost_color)
+    cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
+    game.virtual_screen.blit(cost_surf, cost_rect)
 
     y_offset = chosen_rect.y + 40
     for i, trait_name in enumerate(state['chosen_traits']):
@@ -740,10 +761,20 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Start Button (Bottom Right) ---
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70) # Below stats
-    pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
-    if start_btn_rect.collidepoint(mouse_pos):
-        pygame.draw.rect(game.virtual_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4))
-    start_text = large_font.render("START GAME", True, WHITE)
+    is_balanced = (state.get('total_trait_cost', 0) == 0)
+    
+    if is_balanced:
+        # Draw enabled button
+        pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
+        if start_btn_rect.collidepoint(mouse_pos):
+            pygame.draw.rect(game.virtual_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4), border_radius=border_radius)
+        start_text = large_font.render("START GAME", True, WHITE)
+    else:
+        # Draw disabled button
+        pygame.draw.rect(game.virtual_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius) # Dark gray
+        pygame.draw.rect(game.virtual_screen, GRAY, start_btn_rect, 1, border_radius=border_radius) # Gray border
+        start_text = large_font.render("START GAME", True, (100, 100, 100)) # Gray text
+    
     text_rect = start_text.get_rect(center=start_btn_rect.center)
     game.virtual_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
@@ -868,6 +899,8 @@ def run_player_setup(game):
         state['is_dragging_traits_scrollbar'] = False
         state['traits_scroll_drag_last_y'] = 0
         state['traits_scrollbar_handle_rect'] = None
+
+        state['total_trait_cost'] = 0
 
         Item.load_item_templates()
         Zombie.load_templates()
@@ -1119,25 +1152,29 @@ def run_player_setup(game):
 
             # Check Start Button
             if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
-                final_player_data = state['base_data'].copy() # Start with base
-                #final_player_data['stats'] = state['final_stats']
-                final_player_data['attributes'] = state['final_attrs']
-                final_player_data['clothes'] = state['chosen_clothes']
-                final_player_data['name'] = state.get('player_name', "Player") # Pass the name
-                final_player_data['sex'] = state['base_data'].get('sex', 'Male') # Pass the sex
-                final_player_data['traits'] = state['chosen_traits']
+                if state.get('total_trait_cost', 0) == 0:
+                    final_player_data = state['base_data'].copy() # Start with base
+                    #final_player_data['stats'] = state['final_stats']
+                    final_player_data['attributes'] = state['final_attrs']
+                    final_player_data['clothes'] = state['chosen_clothes']
+                    final_player_data['name'] = state.get('player_name', "Player") # Pass the name
+                    final_player_data['sex'] = state['base_data'].get('sex', 'Male') # Pass the sex
+                    final_player_data['traits'] = state['chosen_traits']
 
-                final_player_data['visuals'] = {
-                    'center': 'player.png',
-                    'left': 'player_left.png',
-                    'right': 'player_right.png'
-                }
-                
-                final_player_data['sounds'] = { 'steps': 'steps.ogg' }
+                    final_player_data['visuals'] = {
+                        'center': 'player.png',
+                        'left': 'player_left.png',
+                        'right': 'player_right.png'
+                    }
+                    
+                    final_player_data['sounds'] = { 'steps': 'steps.ogg' }
 
-                game.start_new_game(final_player_data)
-                game.game_state = 'PLAYING'
-                return
+                    game.start_new_game(final_player_data)
+                    game.game_state = 'PLAYING'
+                    return
+                else:
+                    # Optional: Play a "disabled" sound or just print
+                    print("Cannot start: Trait points must be 0.")
         
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             state['is_dragging_stats_scrollbar'] = False

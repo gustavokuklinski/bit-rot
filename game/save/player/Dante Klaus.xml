@@ -5,7 +5,7 @@
     <traits>
         <trait>luck</trait>
         <trait>smoker</trait>
-        <trait>drunk</trait>
+        <trait>illnes</trait>
     </traits>
     <clothes>
         <slot name="head">None</slot>
