@@ -76,6 +76,12 @@ class Player:
         self.aim_angle = 0
         self.facing_direction = (0, 1)
 
+        sounds = data.get('sounds', {})
+        self.sound_steps = sounds.get('steps') # e.g., "steps.ogg"
+        self.last_step_sound_time = 0
+        # Cooldown in seconds, since update_stats uses time.time()
+        #self.step_sound_cooldown = 0.4
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -254,6 +260,28 @@ class Player:
         current_time = time.time()
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+
+        if is_moving and self.sound_steps:
+
+            if current_time > self.last_step_sound_time:
+                # Play sound (subdir 'player' based on your path)
+                game.sound_manager.play_sound(
+                    self.sound_steps,
+                    subdir='player',
+                    game=game,
+                    source_pos=self.rect.center,
+                    base_volume=random.uniform(0.2, 0.4)
+                )
+
+                if self.is_running:
+                    # Tighter, faster steps when running
+                    next_delay = random.uniform(0.25, 0.35) # e.g., 250-350ms
+                else:
+                    # Slower, more varied steps when walking
+                    next_delay = random.uniform(0.35, 0.5)
+
+                self.last_step_sound_time = current_time + next_delay
+
 
         self.progression.update(self, is_moving, game)
 

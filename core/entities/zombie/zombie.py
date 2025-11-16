@@ -7,6 +7,7 @@ import uuid
 from faker import Faker
 from data.config import *
 from core.messages import display_message
+import random
 
 fake = Faker()
 ZOMBIE_TEMPLATES = []
@@ -77,7 +78,7 @@ class Zombie:
         self.last_wander_sound_time = 0
         self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
         
-        #self.wandering_channel = None
+        self.is_ambiently_noisy = random.random() < 0.4 # 60% of zombies noisy
 
         # Load sound filenames from template
         sounds = template.get('sounds', {})
@@ -85,6 +86,8 @@ class Zombie:
         self.sound_wander = sounds.get('wander', None)
         self.sound_dead = sounds.get('dead', None)
         self.sound_attack = sounds.get('attack', None)
+        self.sound_steps = sounds.get('steps', None) 
+        self.last_step_sound_time = 0
 
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
         self.wander_target = None # (x, y) coordinate
@@ -203,7 +206,7 @@ class Zombie:
         else:
             self.state = 'wandering'
             
-            if ZOMBIE_WANDER_ENABLED and self.sound_wander:
+            if self.is_ambiently_noisy and ZOMBIE_WANDER_ENABLED and self.sound_wander:
                 # Check if the sound cooldown has passed
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
                     # Play the sound as a one-shot (loops=0 is default)
@@ -212,7 +215,7 @@ class Zombie:
                         subdir='zombie', 
                         game=game, 
                         source_pos=self.rect.center, 
-                        base_volume=0.3
+                        base_volume=random.uniform(0.05, 0.08)
                     )
                     # Reset the timer
                     self.last_wander_sound_time = current_time
@@ -241,12 +244,12 @@ class Zombie:
 
         # If we have a valid target (player or wander point), move towards it
         if target_pos:
-            self.move_towards(target_pos, obstacles, other_zombies)
+            self.move_towards(target_pos, obstacles, other_zombies, game)
         else:
             # No target, do nothing (or add idle animation later)
             pass
 
-    def move_towards(self, target_pos, obstacles, other_zombies):
+    def move_towards(self, target_pos, obstacles, other_zombies, game):
         """Calculates movement vector towards a target_pos and handles collisions."""
         dx = target_pos[0] - self.rect.centerx
         dy = target_pos[1] - self.rect.centery
@@ -263,6 +266,28 @@ class Zombie:
             move_y = (dy / dist) * self.speed
         else:
             move_x, move_y = 0, 0
+        
+        is_moving = move_x != 0 or move_y != 0
+        if is_moving and self.is_ambiently_noisy and self.sound_steps:
+            current_time = pygame.time.get_ticks()
+            # Set cooldown based on state (faster steps when chasing)
+           
+            
+            if current_time > self.last_step_sound_time:
+                game.sound_manager.play_sound(
+                    self.sound_steps,
+                    subdir='zombie', # Assuming same dir as player: 'game/sfx/player/'
+                    game=game,
+                    source_pos=self.rect.center,
+                    base_volume=random.uniform(0.02, 0.06)
+                )
+
+                if self.state == 'chasing':
+                    next_delay = random.randint(280, 380) # Faster steps
+                else:
+                    next_delay = random.randint(420, 520) # Slower steps
+                
+                self.last_step_sound_time = current_time + next_delay
 
         # Collision Handling (separated X and Y checks)
         old_x, old_y = self.x, self.y
@@ -488,6 +513,10 @@ class Zombie:
                                 attack_node = sound_node.find('attack')
                                 if attack_node is not None:
                                     template['sounds']['attack'] = attack_node.get('src')
+
+                                steps_node = sound_node.find('steps') # Find the <steps> tag
+                                if steps_node is not None:
+                                    template['sounds']['steps'] = steps_node.get('src')
 
 
                             ZOMBIE_TEMPLATES.append(template)

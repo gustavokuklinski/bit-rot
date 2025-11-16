@@ -2,4 +2,5 @@
     <visuals>
         <sprite id="open" file="outside_metal_door_01_open.png" />
     </visuals>
+    <sound src="door_open.ogg" />
 </map>

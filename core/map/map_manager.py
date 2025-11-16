@@ -1,6 +1,7 @@
 import os
 import re
 import pygame
+import random
 from data.config import *
 
 class MapManager:
@@ -161,5 +162,15 @@ class MapManager:
                     # Found the exact tile (e.g., the closed door, not the floor beneath it)
                     self.game.renderable_tiles[i] = (new_def['image'], rect)
                     break
+            
+            if new_def.get('sound_src'):
+                self.game.sound_manager.play_sound(
+                    new_def['sound_src'],
+                    subdir='map', # As requested: game/resources/sfx/map/
+                    game=self.game,
+                    source_pos=tile_rect.center,
+                    base_volume=random.uniform(0.2, 0.7)
+                )
+
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")

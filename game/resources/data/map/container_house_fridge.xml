@@ -6,6 +6,9 @@
     <loot>
         <item item="Canned Food" chance="0.1" />
         <item item="Water Bottle" chance="0.1" />
-
+        <item item="Cheese" chance="0.1" />
+        <item item="Chicken" chance="0.1" />
+        <item item="Meat" chance="0.1" />
+        <item item="Fish" chance="0.1" />
     </loot>
 </map>

@@ -1003,6 +1003,9 @@ def run_player_setup(game):
                 final_player_data['sex'] = state['base_data'].get('sex', 'Male') # Pass the sex
                 final_player_data['traits'] = state['chosen_traits']
 
+                
+                final_player_data['sounds'] = { 'steps': 'steps.ogg' }
+
                 game.start_new_game(final_player_data)
                 game.game_state = 'PLAYING'
                 return

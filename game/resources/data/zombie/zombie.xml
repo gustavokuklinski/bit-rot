@@ -35,5 +35,6 @@
         <wander src="zombie_wandering.ogg" />
         <dead src="zombie_dead.ogg" />
         <attack src="zombie_attack.ogg" />
+        <steps src="zombie_steps.ogg" />
     </sound>
 </zombie>

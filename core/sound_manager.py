@@ -1,7 +1,7 @@
 import pygame
 import os
 import random
-import math  # <-- [ADD THIS]
+import math 
 from data.config import *
 
 class SoundManager:
@@ -62,6 +62,28 @@ class SoundManager:
                 
         sound = self.sounds[sound_key]
 
+
+        zoom_multiplier = 1.0 # Default if no game object
+        if game:
+            # 1. Define our desired volume range
+            MAX_ZOOM_VOLUME = 1.0 # At nearest zoom (e.g., 2.0)
+            MIN_ZOOM_VOLUME = 0.2 # At farthest zoom (e.g., 0.5)
+            
+            # 2. Get the current zoom level (clamped)
+            current_zoom = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
+            
+            # 3. Calculate how far 'current_zoom' is through the zoom range (0.0 to 1.0)
+            if (NEAR_ZOOM - FAR_ZOOM) != 0:
+                zoom_progress = (current_zoom - FAR_ZOOM) / (NEAR_ZOOM - FAR_ZOOM)
+            else:
+                zoom_progress = 1.0 # Avoid division by zero
+            
+            # 4. Map this progress to our volume range
+            # When zoom_progress is 0 (far), multiplier is 0.2
+            # When zoom_progress is 1 (near), multiplier is 1.0
+            zoom_multiplier = MIN_ZOOM_VOLUME + (zoom_progress * (MAX_ZOOM_VOLUME - MIN_ZOOM_VOLUME))
+
+
         channel = pygame.mixer.find_channel()
         if not channel:
             return
@@ -82,7 +104,8 @@ class SoundManager:
 
             # Use a quadratic falloff (more natural)
             volume_falloff = (1.0 - (distance / max_dist)) ** 2
-            final_volume = base_volume * volume_falloff
+            # final_volume = base_volume * volume_falloff
+            final_volume = base_volume * volume_falloff * zoom_multiplier
 
             # 2. Panning (Stereo)
             # How far left/right a sound needs to be to be fully panned
@@ -106,7 +129,9 @@ class SoundManager:
         else:
             # --- Non-Spatial (UI/Player) Sound ---
             # Play centered at the requested base volume
-            channel.set_volume(base_volume, base_volume)
+            # channel.set_volume(base_volume, base_volume)
+            final_ui_volume = base_volume * zoom_multiplier
+            channel.set_volume(final_ui_volume, final_ui_volume)
         
         # 3. Play
         channel.play(sound, loops=loops)

@@ -37,6 +37,11 @@ class TileManager:
                                     'state': root.get('state'), # Added: Read the 'state' attribute
                                     'is_statable': root.get('state') is not None # Added: True if 'state' exists
                                 }
+
+                                sound_node = root.find('sound')
+                                if sound_node is not None:
+                                    definition['sound_src'] = sound_node.get('src')
+
                                 if root.get('type') == 'maptile_container':
                                     capacity_node = root.find('capacity')
                                     if capacity_node is not None:

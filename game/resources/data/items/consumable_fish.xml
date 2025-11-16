@@ -1,0 +1,10 @@
+<item name="Fish" type="consumable">
+    <properties>
+        <status value="food" />
+        <restore min="5" max="8" />
+        <load value="1" />
+        <capacity value="3" />
+        <sprite file="fish.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

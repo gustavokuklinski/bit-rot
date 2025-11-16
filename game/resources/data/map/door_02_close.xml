@@ -2,4 +2,5 @@
     <visuals>
         <sprite id="close" file="door_02_close.png" />
     </visuals>
+    <sound src="door_close.ogg" />
 </map>
