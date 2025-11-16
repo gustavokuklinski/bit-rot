@@ -42,7 +42,9 @@
     </initial_loot>
 
     <visuals>
-        <sprite file="player.png" />
+        <sprite id="center" file="player.png" />
+        <sprite id="left" file="player_left.png" />
+        <sprite id="right" file="player_right.png" />
     </visuals>
 
     <clothes>

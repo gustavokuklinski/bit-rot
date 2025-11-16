@@ -1003,6 +1003,11 @@ def run_player_setup(game):
                 final_player_data['sex'] = state['base_data'].get('sex', 'Male') # Pass the sex
                 final_player_data['traits'] = state['chosen_traits']
 
+                final_player_data['visuals'] = {
+                    'center': 'player.png',
+                    'left': 'player_left.png',
+                    'right': 'player_right.png'
+                }
                 
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
 

@@ -23,7 +23,9 @@
     </clothes>
 
     <visuals>
-        <sprite file="zombie.png" />
+        <sprite id="center" file="zombie.png" />
+        <sprite id="left" file="zombie_left.png" />
+        <sprite id="right" file="zombie_right.png" />
     </visuals>
     
     <loot>

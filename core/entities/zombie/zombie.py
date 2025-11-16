@@ -59,7 +59,25 @@ class Zombie:
         self.speed = template.get('speed', ZOMBIE_SPEED)
         self.loot_table = template.get('loot', [])
         self.xp_value = random.uniform(template.get('min_xp'), template.get('max_xp'))
-        self.image = self.load_sprite(template.get('sprite'))
+
+        self.images = {} # Use a dict to store multiple sprites
+        sprites_data = template.get('sprites', {}) # e.g., {'center': 'zombie.png', ...}
+        
+        if sprites_data:
+            # Load all sprites defined in the new XML structure
+            for sprite_id, sprite_file in sprites_data.items():
+                self.images[sprite_id] = self.load_sprite(sprite_file)
+        else:
+            # Fallback for old templates that might still use the single 'sprite' key
+            old_sprite_file = template.get('sprite')
+            fallback_image = self.load_sprite(old_sprite_file)
+            self.images['center'] = fallback_image
+            self.images['left'] = fallback_image
+            self.images['right'] = fallback_image
+
+        # Set a default image (self.image is no longer the main one, but good to have)
+        self.image = self.images.get('center')
+
         self.clothes = template.get('clothes', {})
         self.color = RED
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
@@ -88,6 +106,9 @@ class Zombie:
         self.sound_attack = sounds.get('attack', None)
         self.sound_steps = sounds.get('steps', None) 
         self.last_step_sound_time = 0
+
+        self.vx = 0 # Track velocity for drawing
+        self.vy = 0 # Track velocity for drawing
 
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
         self.wander_target = None # (x, y) coordinate
@@ -121,8 +142,18 @@ class Zombie:
         # This draw method is for the pixelated zoom approach
         draw_rect = self.rect.move(offset_x, offset_y)
 
-        if self.image:
-            temp_image = self.image.copy()
+        current_image = None
+        if self.vx < -0.1: # Moving left (using a small threshold)
+            current_image = self.images.get('left')
+        elif self.vx > 0.1: # Moving right
+            current_image = self.images.get('right')
+        
+        # Default to 'center' if moving vertically or standing still
+        if current_image is None:
+            current_image = self.images.get('center')
+
+        if current_image:
+            temp_image = current_image.copy()
             temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
             surface.blit(temp_image, draw_rect)
 
@@ -266,6 +297,9 @@ class Zombie:
             move_y = (dy / dist) * self.speed
         else:
             move_x, move_y = 0, 0
+        
+        self.vx = move_x # Store velocity
+        self.vy = move_y # Store velocity
         
         is_moving = move_x != 0 or move_y != 0
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
@@ -475,7 +509,16 @@ class Zombie:
                             template['min_infection'] = int(infection_node.get('min'))
                             template['max_infection'] = int(infection_node.get('max'))
 
-                            template['sprite'] = visuals_node.find('sprite').get('file') if visuals_node and visuals_node.find('sprite') is not None else None
+                            #template['sprite'] = visuals_node.find('sprite').get('file') if visuals_node and visuals_node.find('sprite') is not None else None
+
+                            template['sprites'] = {} # Use a dict to store multiple sprites
+                            if visuals_node is not None:
+                                # Find all <sprite> tags
+                                for sprite_node in visuals_node.findall('sprite'):
+                                    sprite_id = sprite_node.get('id') # e.g., "center", "left"
+                                    sprite_file = sprite_node.get('file') # e.g., "zombie.png"
+                                    if sprite_id and sprite_file:
+                                        template['sprites'][sprite_id] = sprite_file
 
                             template['min_xp'] = float(xp_node.get('min'))
                             template['max_xp'] = float(xp_node.get('max'))

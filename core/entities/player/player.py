@@ -70,7 +70,26 @@ class Player:
         self.reload_timer = 0
         self.reload_duration = 120
 
-        self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
+        #self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
+
+        self.images = {} # Store all player sprites
+        visuals_data = data.get('visuals', {})
+        
+        # Load all sprites defined in the data
+        if 'center' in visuals_data:
+            self.images['center'] = self._load_sprite(visuals_data.get('center'))
+            self.images['left'] = self._load_sprite(visuals_data.get('left'))
+            self.images['right'] = self._load_sprite(visuals_data.get('right'))
+        else:
+            # Fallback for old data structure
+            old_sprite = self._load_sprite(visuals_data.get('sprite'))
+            self.images['center'] = old_sprite
+            self.images['left'] = old_sprite
+            self.images['right'] = old_sprite
+
+        # Set a default image (self.image is no longer the main one)
+        self.image = self.images.get('center')
+
 
         self.layer_switch_cooldown = 0
         self.aim_angle = 0
@@ -85,7 +104,9 @@ class Player:
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
-            image = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
+            #image = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
+            path = SPRITE_PATH + "player/" + sprite_path
+            image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             return image
         except pygame.error as e:
@@ -169,8 +190,22 @@ class Player:
     def draw(self, surface, offset_x, offset_y, is_aiming=False):
         draw_rect = self.rect.move(offset_x, offset_y)
         
-        if self.image:
-            surface.blit(self.image, draw_rect)
+        #if self.image:
+        #    surface.blit(self.image, draw_rect)
+        current_image = None
+        if self.facing_direction[0] < 0: # Facing left
+            current_image = self.images.get('left')
+        elif self.facing_direction[0] > 0: # Facing right
+            current_image = self.images.get('right')
+        
+        # Default to 'center' if facing up/down or if directional sprites are missing
+        if current_image is None:
+            current_image = self.images.get('center')
+
+        # Now use current_image for all drawing
+        if current_image:
+            surface.blit(current_image, draw_rect)
+        
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
 
