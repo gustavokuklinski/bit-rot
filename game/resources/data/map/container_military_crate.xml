@@ -4,6 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
+        <item item="Canned Food" chance="0.5" />
         <item item="Pistol 9mm" chance="0.2" />
         <item item="9mm Ammo" chance="0.2" />
         <item item="Military Pants" chance="0.2" />

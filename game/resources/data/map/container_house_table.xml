@@ -8,5 +8,7 @@
         <item item="Water Bottle" chance="0.1" />
         <item item="Batton" chance="0.1" />
         <item item="Family Photo" chance="0.2" />
+        <item item="Apple" chance="0.1" />
+        <item item="Carrot" chance="0.1" />
     </loot>
 </map>

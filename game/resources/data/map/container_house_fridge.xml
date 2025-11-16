@@ -10,5 +10,7 @@
         <item item="Chicken" chance="0.1" />
         <item item="Meat" chance="0.1" />
         <item item="Fish" chance="0.1" />
+        <item item="Apple" chance="0.1" />
+        <item item="Carrot" chance="0.1" />
     </loot>
 </map>

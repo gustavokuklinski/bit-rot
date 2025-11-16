@@ -10,5 +10,6 @@
         <item item="Medkit" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
         <item item="Batton" chance="0.1" />
+        <item item="Apple" chance="0.1" />
     </loot>
 </map>
