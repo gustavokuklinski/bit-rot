@@ -387,16 +387,15 @@ class Zombie:
             final_damage = max(0, damage * damage_reduction) # Ensure damage doesn't go negative
             final_infection = max(0, infection * infection_reduction) # Ensure infection doesn't go negative
 
-        player.health -= damage
-        player.health = max(0, player.health)
-        if infection > 0:
-            player.infection = min(100, player.infection + infection)
+        final_damage_taken, final_infection_taken = player.take_damage(game, final_damage, final_infection)
+
+        if final_infection_taken > 0:
             if self.sound_attack: # Check if a sound is defined
                 game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
 
-            display_message(game, f"**HIT!** Player takes {damage} damage and {infection}% infection.")
+            display_message(game, f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
         else:
-            display_message(game, f"**HIT!** Player takes {damage} damage.")
+            display_message(game, f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
 
 
     @staticmethod
@@ -508,8 +507,6 @@ class Zombie:
                             infection_node = stats_node.find('infection')
                             template['min_infection'] = int(infection_node.get('min'))
                             template['max_infection'] = int(infection_node.get('max'))
-
-                            #template['sprite'] = visuals_node.find('sprite').get('file') if visuals_node and visuals_node.find('sprite') is not None else None
 
                             template['sprites'] = {} # Use a dict to store multiple sprites
                             if visuals_node is not None:

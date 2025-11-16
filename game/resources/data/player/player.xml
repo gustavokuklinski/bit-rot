@@ -4,19 +4,30 @@
     <profession value="Civilian" />
 
     <traits>
-        <vaccine value="false" /> <!-- IF TRUE: -15% infection; -->
-        <athletic value="false" /> <!-- IF TRUE: -10% stamina;  -->
-        <strong value="false" /> <!-- IF TRUE: +2 strength; -->
-        <weak value="false" /> <!-- IF TRUE: -2 strength; -->
-        <luck value="false" /> <!-- IF TRUE: +1 lucky +15% bonus; -->
-        <unlucky value="false" /> <!-- IF TRUE: -1 lucky; -15% lucky bonus; -->
-        <runner value="false" /> <!-- IF TRUE: +1 speed; -->
-        <smoker value="false" /> <!-- IF TRUE: -15% stamina; +15% anxiety -->
-        <drunk value="false" /> <!-- IF TRUE: -15% speed; +15% anxiety -->
-        <illnes value="false" /> <!-- IF TRUE: +15% infection rate; -->
-        <sedentary value="false" /> <!-- IF TRUE: -15% stamina, -2 strenght  -->
-        <myopia value="false" /> <!-- IF TRUE: -10% view radius, -10% ranged -->
-        <collateral_effect value="false" /> <!-- IF TRUE: -1 stregth; -1 fitness; -1 ranged; -1 melee; -30 health; -60 infection; -15 stamina; +15 anxiety -->
+        <vaccine value="false" />
+        <athletic value="false" />
+        <strong value="false" />
+        <luck value="false" />
+        <runner value="false" />
+        <healthy value="false" />
+        <rested value="false" />
+        <camel value="false" />
+        <iron_stomach value="false" />
+        <fit value="false" />
+        <brawler value="false" />
+        <weak value="false" />
+        <unlucky value="false" />
+        <smoker value="false" />
+        <drunk value="false" />
+        <illnes value="false" />
+        <sedentary value="false" />
+        <myopia value="false" />
+        <frail value="false" />
+        <sleepy value="false" />
+        <high_thirst value="false" />
+        <sweet_tooth value="false" />
+        <unfit value="false" />
+        <clumsy value="false" />
     </traits>
 
     <stats>

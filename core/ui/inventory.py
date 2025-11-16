@@ -120,18 +120,18 @@ def get_gear_slot_rects(modal_position):
     modal_center_x = modal_x + (INVENTORY_MODAL_WIDTH / 2) 
 
     # Content Y start is 80 (Header 35 + Tab 30 + Padding 15)
-    y1 = modal_y + 80 
-    y2 = y1 + slot_size + gap
-    y3 = y2 + slot_size + gap
+    y1 = modal_y + 80 + 10
+    y2 = y1 + slot_size + gap + 20
+    y3 = y2 + slot_size + gap + 20
 
     rects = {
         # [HEAD]
         'head': pygame.Rect(modal_center_x - (slot_size / 2), y1, slot_size, slot_size),
         
         # [HANDS][TORSO][BODY]
-        'hands': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size, y2, slot_size, slot_size),
+        'hands': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 15, y2, slot_size, slot_size),
         'torso': pygame.Rect(modal_center_x - (slot_size / 2), y2, slot_size, slot_size),
-        'body': pygame.Rect(modal_center_x + (slot_size / 2) + gap, y2, slot_size, slot_size),
+        'body': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 15, y2, slot_size, slot_size),
         
         # [LEGS][FEET] (PANTS maps to LEGS)
         'legs': pygame.Rect(modal_center_x - (slot_size / 2) - (gap/2) - (slot_size/2), y3, slot_size, slot_size),

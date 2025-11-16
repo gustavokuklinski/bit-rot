@@ -157,6 +157,36 @@ class Player:
                     display_message(game, f"Your {item_hit.name} broke!")
 
 
+    def take_damage(self, game, base_damage, base_infection):
+        """
+        Calculates and applies final damage and infection to the player,
+        including modifiers from traits.
+        """
+        
+        # 1. Get bonus percentages from progression
+        # e.g., "Health: -30", "Infection: +15"
+        health_bonus_perc = self.progression.get_health_bonus(self)
+        infection_bonus_perc = self.progression.get_infection_bonus(self)
+        
+        # 2. Calculate modifiers
+        # "Health -30" means +30% damage taken
+        damage_modifier = 1.0 - (health_bonus_perc / 100.0) # e.g., 1.0 - (-30 / 100) = 1.3
+        
+        # "Infection +15" means +15% infection taken
+        infection_modifier = 1.0 + (infection_bonus_perc / 100.0) # e.g., 1.0 + (15 / 100) = 1.15
+        
+        # 3. Calculate final amounts
+        final_damage_taken = max(0, base_damage * damage_modifier)
+        final_infection_taken = max(0, base_infection * infection_modifier)
+        
+        # 4. Apply to player
+        self.health = max(0, self.health - final_damage_taken)
+        if final_infection_taken > 0:
+            self.infection = min(100, self.infection + final_infection_taken)
+            
+        return final_damage_taken, final_infection_taken
+
+
     def process_kill(self, weapon, zombie):
         self.progression.process_kill(self, weapon, zombie)
 
@@ -321,8 +351,17 @@ class Player:
         self.progression.update(self, is_moving, game)
 
         if current_time - self.last_decay_time >= DECAY_RATE_SECONDS:
-            self.water = max(0, self.water - WATER_DECAY_AMOUNT)
-            self.food = max(0, self.food - FOOD_DECAY_AMOUNT)
+
+            water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
+            food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
+            
+            # Apply modifier (a negative bonus reduces decay)
+            water_decay = max(0, WATER_DECAY_AMOUNT * water_mod)
+            food_decay = max(0, FOOD_DECAY_AMOUNT * food_mod)
+            
+            self.water = max(0, self.water - water_decay)
+            self.food = max(0, self.food - food_decay)
+
             self.last_decay_time = current_time
             if self.water <= 0 or self.food <= 0:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)

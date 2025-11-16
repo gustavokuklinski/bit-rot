@@ -4,7 +4,7 @@ from data.config import *
 def draw_record_tab(surface, player, modal, assets, mouse_pos):
     y_offset = modal['rect'].y + 80
     x_offset = modal['rect'].x + 10
-    tooltip_to_draw = None
+
     skill_icons = {}
     icon_files = {
         "STR": SPRITE_PATH + "ui/strength.png",
@@ -39,58 +39,75 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         "SPD": "speed",
     }
 
+    line_height = 38 # Was 28
+
     for i, (name, attr_data, color) in enumerate(skills):
-        y_pos = y_offset + i * 28
+        y_pos = y_offset + i * line_height # Use new line height
         
         icon = skill_icons.get(name)
         if icon:
-            surface.blit(icon, (x_offset, y_pos))
+            surface.blit(icon, (x_offset, y_pos)) # Y-pos is top of the slot
             label_x = x_offset + 28
         else:
-            text = font.render(f"{name}:", True, WHITE)
+            text = font.render(f"{name}:", True, WHITE) # Fallback text
             surface.blit(text, (x_offset, y_pos))
-            label_x = x_offset + 110
+            label_x = x_offset + 110 # Should not happen if icons are correct
 
+        # --- Bonus Percentage (Calculated first, drawn later) ---
         bonus_perc = 0.0
         attr_key = attr_name_map.get(name) # Get "lucky" from "LCK"
         if attr_key:
-            # Get the total bonus from all skill items
-            bonus_perc = player.progression.get_total_attribute_bonus(player, attr_key)
+            bonus_perc = player.progression.get_item_attribute_bonus(player, attr_key)
+            
+        # --- Layout Logic ---
+        top_line_y = y_pos
+        bottom_line_y = y_pos + 18 # 18px down from the top line
 
-        # Set the X position for the bonus text
-        # Default position is 5px after the 100px XP bar
-        bonus_x_pos = label_x + 40 + 100 + 5 
+        bonus_x_pos = 0 # Will be set below
 
-        if isinstance(attr_data, dict): # Leveled attribute
+        if isinstance(attr_data, dict): # Leveled attribute (STR, FIT, etc.)
             level = attr_data['level']
             xp = attr_data['xp']
             xp_to_next = attr_data['xp_to_next_level']
             
-            text = font_small.render(f"[{int(level)}]", True, WHITE)
-            surface.blit(text, (label_x, y_pos + 3))
+            # 1. Draw Text: "Strength | Level: 0 | XP: 0 / 100"
+            text_str = f"Level: {int(level)} | XP: {int(xp)} / {int(xp_to_next)}"
+            text_surf = font_notification.render(text_str, True, WHITE)
+            surface.blit(text_surf, (label_x, top_line_y))
 
-            bar_x = label_x + 40
-
-            full_bar_rect = pygame.Rect(bar_x, y_pos + 5, 100, 10)
-
-            bar_width = int(100 * (xp / xp_to_next)) if xp_to_next > 0 else 0
-            bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
+            # 2. Draw Bar
+            bar_x = label_x
+            # Bar width calculation to leave space for bonus
+            bar_width_total = modal['rect'].width - (label_x - modal['rect'].x) - 55 
+            
+            full_bar_rect = pygame.Rect(bar_x, bottom_line_y, bar_width_total, 10)
+            
+            bar_width = int(bar_width_total * (xp / xp_to_next)) if xp_to_next > 0 else 0
+            bar_rect = pygame.Rect(bar_x, bottom_line_y, bar_width, 10)
+            
             pygame.draw.rect(surface, color, bar_rect)
-            pygame.draw.rect(surface, WHITE, full_bar_rect, 1) # Use full_bar_rect for the border
+            pygame.draw.rect(surface, WHITE, full_bar_rect, 1) # Border
 
-            # --- [FIX START] Check for hover and prepare tooltip
-            if full_bar_rect.collidepoint(mouse_pos):
-                tooltip_text = f"XP: {int(xp)} / {int(xp_to_next)}"
-                tooltip_to_draw = (tooltip_text, full_bar_rect.midtop)
+            # 3. Set bonus text X pos (to the right of the bar)
+            bonus_x_pos = full_bar_rect.right + 8
+            
 
-        else: # Static attribute
+        else: # Static attribute (LCK, SPD)
             value = attr_data
-            text = font_small.render(f"[{int(value)}]", True, WHITE)
-            surface.blit(text, (label_x, y_pos + 3))
+            
+            # 1. Draw Text: "Lucky | Level: 0"
+            text_str = f"Level: {int(value)}"
+            text_surf = font_notification.render(text_str, True, WHITE)
+            surface.blit(text_surf, (label_x, top_line_y))
+            
+            # 2. Draw "Passive skill" text
+            passive_surf = font_notification.render("Passive skill", True, GRAY)
+            surface.blit(passive_surf, (label_x, bottom_line_y))
+            
+            # 3. Set bonus text X pos (to the right of the level text)
+            bonus_x_pos = label_x + text_surf.get_width() + 15
 
-            bonus_x_pos = label_x + 45
-    
-
+        # --- Bonus Text Drawing ---
         if bonus_perc != 0:
             bonus_str = f"+{bonus_perc:.1f}%"
             bonus_color = (100, 255, 100) # Green
@@ -98,27 +115,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                 bonus_str = f"{bonus_perc:.1f}%" # Will include minus sign
                 bonus_color = (255, 100, 100) # Red
             
-            bonus_surf = font_small.render(bonus_str, True, bonus_color)
-            surface.blit(bonus_surf, (bonus_x_pos, y_pos + 3))
+            bonus_surf = font_notification.render(bonus_str, True, bonus_color)
+            # Draw it aligned with the *top* text line
+            surface.blit(bonus_surf, (bonus_x_pos, top_line_y)) 
             
-    if tooltip_to_draw:
-        text, pos = tooltip_to_draw
-        
-        # Render the text
-        tip_surf = font_small.render(text, True, BLACK) # Black text
-        
-        # Create a padded rect for the background
-        # Position it 10px above the middle of the bar
-        tip_rect = tip_surf.get_rect(midbottom=(pos[0], pos[1] - 10))
-        tip_rect.inflate_ip(10, 6) # Add padding
-        
-        # Adjust position to stay on screen
-        if tip_rect.right > VIRTUAL_SCREEN_WIDTH:
-            tip_rect.right = VIRTUAL_SCREEN_WIDTH
-        if tip_rect.top < 0:
-            tip_rect.top = 0
-        
-        # Draw background and text
-        pygame.draw.rect(surface, (230, 230, 230), tip_rect, 0, 3) # Light grey background
-        pygame.draw.rect(surface, BLACK, tip_rect, 1, 3) # Black border
-        surface.blit(tip_surf, (tip_rect.x + 5, tip_rect.y + 3))

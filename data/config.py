@@ -65,7 +65,7 @@ font = pygame.font.Font(FONT_FACE, 16)
 font_small = pygame.font.Font(FONT_FACE, 16)
 large_font = pygame.font.Font(FONT_FACE, 16)
 title_font = pygame.font.Font(FONT_FACE, 16)
-font_notification = pygame.font.Font(FONT_FACE, 10)
+font_notification = pygame.font.Font(FONT_FACE, 14)
 
 # Game XML Config
 tree = ET.parse('./game/save/config/default.xml')

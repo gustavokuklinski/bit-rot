@@ -1,6 +1,7 @@
 import random
 import math
 from data.config import *
+from core.ui.helpers import TRAIT_DEFINITIONS
 
 class PlayerProgression:
     def __init__(self, player_data):
@@ -13,9 +14,6 @@ class PlayerProgression:
         # Passive skills
         self.lucky = player_data['attributes'].get('lucky', 0.0)
         self.speed = player_data['attributes'].get('speed', 0.0)
-
-
-
 
 
     def get_total_attribute_bonus(self, player, attr_name):
@@ -32,27 +30,49 @@ class PlayerProgression:
             if item and item.item_type == 'skill' and item.attribute_modifiers:
                 total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
         
+        for trait in player.traits:
+            if trait in TRAIT_DEFINITIONS:
+                # Check BOTH 'attributes' (for skills) and 'stats' (for core stats)
+                if attr_name in TRAIT_DEFINITIONS[trait].get('attributes', {}):
+                    total_bonus += TRAIT_DEFINITIONS[trait]['attributes'][attr_name]
+                if attr_name in TRAIT_DEFINITIONS[trait].get('stats', {}):
+                    total_bonus += TRAIT_DEFINITIONS[trait]['stats'][attr_name]
+
         return total_bonus
 
+
+
+    def get_item_attribute_bonus(self, player, attr_name):
+        """
+        Calculates the total percentage bonus from 'skill' items ONLY.
+        This is used for display on the Record tab.
+        """
+        total_bonus = 0.0
+        
+        # Check main inventory
+        for item in player.inventory:
+            if item and item.item_type == 'skill' and item.attribute_modifiers:
+                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
+        
+        # Check belt
+        for item in player.belt:
+            if item and item.item_type == 'skill' and item.attribute_modifiers:
+                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
+        
+        return total_bonus
+
+
     def get_strength(self, player):
-        base = self.strength['level']
-        bonus_perc = self.get_total_attribute_bonus(player, 'strength')
-        return base * (1 + (bonus_perc / 100.0))
+        return self.strength['level']
 
     def get_fitness(self, player):
-        base = self.fitness['level']
-        bonus_perc = self.get_total_attribute_bonus(player, 'fitness')
-        return base * (1 + (bonus_perc / 100.0))
+        return self.fitness['level']
 
     def get_melee(self, player):
-        base = self.melee['level']
-        bonus_perc = self.get_total_attribute_bonus(player, 'melee')
-        return base * (1 + (bonus_perc / 100.0))
+        return self.melee['level']
 
     def get_ranged(self, player):
-        base = self.ranged['level']
-        bonus_perc = self.get_total_attribute_bonus(player, 'ranged')
-        return base * (1 + (bonus_perc / 100.0))
+        return self.ranged['level']
 
     def get_lucky(self, player):
         base = self.lucky
@@ -64,6 +84,33 @@ class PlayerProgression:
         bonus_perc = self.get_total_attribute_bonus(player, 'speed')
         return base * (1 + (bonus_perc / 100.0))
 
+    def get_stamina_bonus(self, player):
+        """Gets bonus from 'stamina' traits (e.g., athletic)."""
+        return self.get_total_attribute_bonus(player, 'stamina')
+
+    def get_anxiety_bonus(self, player):
+        """Gets bonus from 'anxiety' traits (e.g., smoker)."""
+        return self.get_total_attribute_bonus(player, 'anxiety')
+
+    def get_infection_bonus(self, player):
+        """Gets bonus from 'infection' traits (e.g., vaccine)."""
+        return self.get_total_attribute_bonus(player, 'infection')
+
+    def get_health_bonus(self, player):
+        """Gets bonus from 'health' traits."""
+        return self.get_total_attribute_bonus(player, 'health')
+        
+    def get_tireness_bonus(self, player):
+        """Gets bonus from 'tireness' traits."""
+        return self.get_total_attribute_bonus(player, 'tireness')
+        
+    def get_food_bonus(self, player):
+        """Gets bonus from 'food' traits (e.g., slower metabolism)."""
+        return self.get_total_attribute_bonus(player, 'food')
+        
+    def get_water_bonus(self, player):
+        """Gets bonus from 'water' traits (e.g., slower metabolism)."""
+        return self.get_total_attribute_bonus(player, 'water')
 
 
 
@@ -72,16 +119,37 @@ class PlayerProgression:
         return 100 * (current_level + 1)
 
     def _create_attribute(self, player_data, attr_name):
-        start_level = player_data['attributes'].get(attr_name, 0.0) # Get starting level (e.g., 0, or 2 from "strong")
+        base_level_from_traits = player_data['attributes'].get(attr_name, 0.0)
+        start_level = max(0.0, base_level_from_traits)
         return {
             "level": start_level,
             "xp": 0,
             "xp_to_next_level": self._get_xp_for_next_level(start_level) # Use the formula
         }
 
-    def _add_xp(self, attribute, amount):
-        attribute['xp'] += amount
-        print(f"Gained {amount} XP for an {attribute}.")
+    def _add_xp(self, player, attribute, attr_name, base_amount):
+        """Adds XP to an attribute, modified by the attribute's level and bonuses."""
+        
+        # 1. Get the skill modifier (e.g., -10% or +5%)
+        #    We use get_total_attribute_bonus here, NOT get_melee(), 
+        #    because the level itself shouldn't affect XP gain.
+        skill_bonus_perc = self.get_total_attribute_bonus(player, attr_name)
+        
+        # 2. Calculate the modifier (e.g., 1.0 + (-10 / 100.0) = 0.9)
+        xp_modifier = 1.0 + (skill_bonus_perc / 100.0)
+
+        # 3. Calculate final XP, ensuring it's never negative
+        final_xp_gain = max(0, base_amount * xp_modifier)
+
+        attribute['xp'] += final_xp_gain
+        print(f"Gained {final_xp_gain:.2f} XP for {attr_name}.")
+        
+        # 4. Check for level up
+        #    We calculate a modified XP-to-next-level to apply the penalty/bonus
+        
+        # This is the base amount needed (e.g., 100)
+        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level']) 
+
         if attribute['xp'] >= attribute['xp_to_next_level']:
             self._level_up(attribute)
 
@@ -98,26 +166,11 @@ class PlayerProgression:
         base_xp = xp_amount * self.get_xp_bonus(player)
 
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:  # Ranged
-            # Apply ranged skill modifier (level is the percentage, e.g., -10 or +5)
-            ranged_skill_percent = self.get_ranged(player)
-            ranged_xp_modifier = 1.0 + (ranged_skill_percent / 100.0)
-            final_ranged_xp = max(0, base_xp * ranged_xp_modifier) # Ensure XP isn't negative
-            
-            self._add_xp(self.ranged, final_ranged_xp)
+            self._add_xp(player, self.ranged, 'ranged', base_xp)
             
         else:  # Melee or bare hands
-            # Apply melee skill modifier
-            melee_skill_percent = self.get_melee(player)
-            melee_xp_modifier = 1.0 + (melee_skill_percent / 100.0)
-            final_melee_xp = max(0, base_xp * melee_xp_modifier)
-            
-            # Apply strength skill modifier (for the strength XP portion)
-            strength_skill_percent = self.get_strength(player)
-            strength_xp_modifier = 1.0 + (strength_skill_percent / 100.0)
-            final_strength_xp = max(0, (base_xp / 2) * strength_xp_modifier) # Strength gets half
-            
-            self._add_xp(self.strength, final_strength_xp)
-            self._add_xp(self.melee, final_melee_xp)
+            self._add_xp(player, self.melee, 'melee', base_xp)
+            self._add_xp(player, self.strength, 'strength', base_xp * 0.5)
 
     def update(self, player, is_moving, game):
         self.update_stamina(player, is_moving)
@@ -157,7 +210,13 @@ class PlayerProgression:
             # Slow base anxiety gain
             anxiety_gain = 0.001 # User's 0.01% is 0.0001 which is too slow
             
-        player.anxiety = min(100, player.anxiety + anxiety_gain)
+
+        anxiety_bonus_perc = self.get_anxiety_bonus(player) # e.g., +15%
+        anxiety_modifier = 1.0 + (anxiety_bonus_perc / 100.0) # e.g., 1.15
+        
+        final_anxiety_gain = anxiety_gain * anxiety_modifier
+        
+        player.anxiety = min(100, player.anxiety + final_anxiety_gain)
         # Note: Anxiety doesn't decrease on its own here, only via items (e.g., smoker trait)
     
     def update_tireness(self, player, game):
@@ -179,12 +238,19 @@ class PlayerProgression:
             stamina_modifier = 0.01 # Extra penalty for being exhausted
 
         final_gain = (base_gain * anxiety_modifier) + stamina_modifier
-        player.tireness = max(0, min(100, player.tireness + final_gain))
+        tireness_bonus_perc = self.get_tireness_bonus(player)
+        tireness_modifier = 1.0 + (tireness_bonus_perc / 100.0)
+
+        # Apply modifier to both base gain/recovery and stamina penalty
+        final_gain_modified = final_gain * tireness_modifier
+        
+        player.tireness = max(0, min(100, player.tireness + final_gain_modified))
 
 
     def update_infection(self, player):
         if player.infection > 0:
-            player.infection += 0.0005 # Progressive infection
+            player.infection += 0.0005
+
             if player.infection >= 100:
                 player.health = 1 # Player dies
 
@@ -229,7 +295,11 @@ class PlayerProgression:
         return base_consumption * modifier
 
     def get_stamina_regeneration(self, player):
-        return 0.03 + (self.get_fitness(player) / 100.0)
+        base_regen = 0.03 + (self.get_fitness(player) / 100.0)
+        stamina_bonus_perc = self.get_stamina_bonus(player) # e.g., +10%
+        regen_modifier = 1.0 + (stamina_bonus_perc / 100.0) # e.g., 1.1
+        # A negative bonus (e.g., -15%) will make this 0.85
+        return max(0, base_regen * regen_modifier)
 
     def get_xp_bonus(self, player):
         return 1 + (self.get_lucky(player) * 0.01)
@@ -238,4 +308,6 @@ class PlayerProgression:
         hp_regen_rate = 0.01
         if infection_level > 0:
             hp_regen_rate /= (1 + infection_level / 25)
+        
+        
         return hp_regen_rate

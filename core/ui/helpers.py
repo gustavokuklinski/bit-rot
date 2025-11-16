@@ -11,19 +11,33 @@ from faker import Faker
 fake = Faker()
 
 TRAIT_DEFINITIONS = {
-    "vaccine": {"cost": 1, "stats": {"infection": -5}}, # Example cost, adjust as needed
-    "athletic": {"cost": 2, "stats": {"stamina": 10}}, # XML says -10%, let's make it +10%
+    # --- Positive Traits ---
+    "vaccine": {"cost": 1, "stats": {"infection": -5}},
+    "athletic": {"cost": 2, "stats": {"stamina": 10}},
     "strong": {"cost": 2, "attributes": {"strength": 2}},
+    "luck": {"cost": 2, "attributes": {"lucky": 2}},
+    "runner": {"cost": 2, "attributes": {"speed": 2}},
+    "healthy": {"cost": 2, "stats": {"health": 15}}, 
+    "rested": {"cost": 1, "stats": {"tireness": -15}},
+    "camel": {"cost": 1, "stats": {"water": 20}},
+    "iron_stomach": {"cost": 1, "stats": {"food": 15}},
+    "fit": {"cost": 2, "attributes": {"fitness": 2}},
+    "brawler": {"cost": 2, "attributes": {"melee": 2}},
+
+    # --- Negative Traits ---
     "weak": {"cost": -2, "attributes": {"strength": -2}},
-    "luck": {"cost": 2, "attributes": {"lucky": 2}}, # Bonus logic is in progression
     "unlucky": {"cost": -2, "attributes": {"lucky": -1}},
-    "runner": {"cost": 1, "attributes": {"speed": 1}},
     "smoker": {"cost": -1, "stats": {"stamina": -15, "anxiety": 15}},
     "drunk": {"cost": -1, "attributes": {"speed": -15}, "stats": {"anxiety": 15}},
-    "illnes": {"cost": -1, "stats": {"infection": 15}}, # This is infection rate, logic not fully here
-    "sedentary": {"cost": -2, "stats": {"stamina": -15}, "attributes": {"strength": -2}},
+    "illnes": {"cost": -1, "stats": {"infection": 15}},
+    "sedentary": {"cost": -2, "stats": {"stamina": -15}, "attributes": {"strength": -1}},
     "myopia": {"cost": -1, "attributes": {"ranged": -10}},
-    "collateral_effect": {"cost": -5, "attributes": {"strength": -1, "fitness": -1, "ranged": -1, "melee": -1}, "stats": {"health": -30, "infection": 60,"stamina": -15, "anxiety": 15}}, # Vaccine colateral effect: -1 stregth, -1 fitness, -1 ranged, -1 melee, -30 health, -60 infection, -15 stamina, +15 anxiety
+    "frail": {"cost": -2, "stats": {"health": -15}},
+    "sleepy": {"cost": -1, "stats": {"tireness": 20}},
+    "high_thirst": {"cost": -1, "stats": {"water": -25}},
+    "sweet_tooth": {"cost": -1, "stats": {"food": -20}},
+    "unfit": {"cost": -2, "attributes": {"fitness": -2}},
+    "clumsy": {"cost": -2, "attributes": {"melee": -2}}
 }
 
 # cached logo image
@@ -468,16 +482,97 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.virtual_screen, WHITE, available_rect, 1, border_radius=border_radius)
     game.virtual_screen.blit(font.render("Available Traits", True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
 
-    y_offset = available_rect.y + 40
-    for i, trait_name in enumerate(state['available_traits']):
-        row_rect = pygame.Rect(available_rect.x + 10, y_offset, available_rect.width - 20, 30)
-        game.virtual_screen.blit(font.render(trait_name.capitalize(), True, WHITE), (row_rect.x, row_rect.y))
-        add_btn_rect = pygame.Rect(row_rect.right - 25, row_rect.y, 25, 25)
-        pygame.draw.rect(game.virtual_screen, GREEN, add_btn_rect)
-        game.virtual_screen.blit(font.render(">", True, WHITE), (add_btn_rect.x + 7, add_btn_rect.y + 2))
-        clickable_rects["add_trait"].append((trait_name, add_btn_rect))
-        y_offset += 35
-        if y_offset > available_rect.bottom - 30: break
+    traits_content_rect = pygame.Rect(
+        available_rect.x + padding, 
+        available_rect.y + header_height + padding, 
+        available_rect.width - (padding * 2) - 10, # -10 for scrollbar
+        available_rect.height - header_height - (padding * 2)
+    )
+    state['traits_content_rect'] = traits_content_rect
+    line_height = 35 # The existing loop uses this
+    state['traits_line_height'] = line_height
+
+    total_items = len(state['available_traits'])
+    total_text_height = total_items * line_height
+    
+    visible_height = traits_content_rect.height
+    max_scroll_offset = max(0, total_text_height - visible_height)
+    state['traits_max_scroll'] = max_scroll_offset
+    
+    scroll_offset_y = max(0, min(state.get('traits_scroll_offset_y', 0), max_scroll_offset))
+    state['traits_scroll_offset_y'] = scroll_offset_y
+
+    # --- Create Subsurface for clipping ---
+    drawable_traits_rect = game.virtual_screen.get_rect().clip(traits_content_rect)
+    if drawable_traits_rect.width > 0 and drawable_traits_rect.height > 0:
+        content_surface = game.virtual_screen.subsurface(drawable_traits_rect)
+        content_surface.fill((30, 30, 30)) # Panel body color
+    else:
+        content_surface = None # Cannot draw
+
+    # --- Modified Drawing Loop ---
+    y_offset = 0 - scroll_offset_y # Start relative to subsurface
+    
+    if content_surface: # Only draw if surface is valid
+        for i, trait_name in enumerate(state['available_traits']):
+            # Calculate positions relative to the content_surface
+            row_rect_rel = pygame.Rect(0, y_offset, traits_content_rect.width, 30)
+            
+            # Absolute rect for click detection
+            row_rect_abs = pygame.Rect(
+                traits_content_rect.x, 
+                traits_content_rect.y + y_offset, 
+                traits_content_rect.width, 
+                30
+            )
+            
+            add_btn_rect_rel = pygame.Rect(
+                row_rect_rel.right - 25, 
+                row_rect_rel.y, 
+                25, 
+                25
+            )
+            
+            # Absolute rect for click detection
+            add_btn_rect_abs = pygame.Rect(
+                traits_content_rect.x + add_btn_rect_rel.x,
+                traits_content_rect.y + add_btn_rect_rel.y,
+                25,
+                25
+            )
+
+            # --- Clipping Check ---
+            # Only blit if the item is vertically visible
+            if row_rect_rel.bottom > 0 and row_rect_rel.top < traits_content_rect.height:
+                content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (row_rect_rel.x, row_rect_rel.y))
+                pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel)
+                content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
+            
+            # Add the *absolute* rect for clicking
+            clickable_rects["add_trait"].append((trait_name, add_btn_rect_abs))
+            
+            y_offset += line_height # Use the stored line_height
+            # (Old break condition removed)
+
+    # --- Draw Traits Scrollbar ---
+    if total_text_height > visible_height:
+        scrollbar_area_height = traits_content_rect.height
+        scrollbar_area_rect = pygame.Rect(traits_content_rect.right + 2, traits_content_rect.top, 8, scrollbar_area_height)
+        
+        handle_height_ratio = visible_height / total_text_height
+        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
+        
+        handle_pos_ratio = 0
+        if max_scroll_offset > 0: 
+            handle_pos_ratio = scroll_offset_y / max_scroll_offset
+        
+        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
+        
+        traits_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
+        pygame.draw.rect(game.virtual_screen, GRAY, traits_scrollbar_handle_rect, 0, 2)
+        state['traits_scrollbar_handle_rect'] = traits_scrollbar_handle_rect 
+    else:
+        state['traits_scrollbar_handle_rect'] = None
 
 
     # --- Column 3: Chosen Traits (Middle-Right) ---
@@ -546,7 +641,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['final_attrs'] = current_attrs
     line_height = 25
     state['stats_line_height'] = line_height
-    total_text_height = (len(current_stats) + len(current_attrs)) * line_height
+    # total_text_height = (len(current_stats) + len(current_attrs)) * line_height
+    total_items = len(current_stats) + len(current_attrs)
+    total_text_height = total_items * line_height
+
     visible_height = stats_content_rect.height
     max_scroll_offset = max(0, total_text_height - visible_height)
     state['stats_max_scroll'] = max_scroll_offset
@@ -570,9 +668,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
             base_value = state['base_data']['stats'].get(stat, 100.0)
             trait_mod = value - base_value
             
-            stat_name_str = f"{stat.capitalize()}:".ljust(12) # Align stat names
-            base_str = f"{int(base_value)}%".rjust(5)      # Align base values
-            trait_str = f"{int(trait_mod):+}%".rjust(5)   # Align trait modifiers
+            stat_name_str = f"{stat.capitalize()}" # Align stat names
+        # Align base values
+            trait_str = f"{int(trait_mod):+}%"  # Align trait modifiers
             
             # Set color based on modifier
             mod_color = WHITE
@@ -581,14 +679,15 @@ def _draw_player_build_screen(game, state, mouse_pos):
             elif trait_mod < 0:
                 mod_color = (255, 100, 100) # Red
             
-            text_surf = font.render(f"{stat_name_str} {base_str}", True, WHITE)
-            mod_surf = font.render(f"| {trait_str}", True, mod_color)
+            text_surf = font.render(f"{stat_name_str}", True, WHITE)
+            mod_surf = font.render(f"{trait_str}", True, mod_color)
             
             content_surface.blit(text_surf, (text_x, y_offset + 3))
-            content_surface.blit(mod_surf, (text_x + text_surf.get_width() + 10, y_offset + 3))
+            content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
             
             y_offset += line_height
-
+        
+        # Loop 2: Draw ATTRIBUTES (base 0)
         for attr, value in current_attrs.items():
             icon = _stat_icons_cache.get(attr)
             if icon:
@@ -596,13 +695,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 text_x = icon_padding
             else:
                 text_x = 0
-                
-            base_value = state['base_data']['attributes'].get(attr, 0.0)
+            
+            # Format value
+            base_value = state['base_data']['attributes'].get(attr, 0.0) # Base is 0
             trait_mod = value - base_value
             
-            attr_name_str = f"{attr.capitalize()}:".ljust(12) # Align attr names
-            base_str = f"{int(base_value)}%".rjust(5)       # Align base values (as %)
-            trait_str = f"{int(trait_mod):+}%".rjust(5)    # Align trait modifiers (as %)
+            stat_name_str = f"{attr.capitalize()}"
+            base_str = f"{int(base_value)}"      # No percentage
+            trait_str = f"{int(trait_mod):+}"    # No percentage
             
             # Set color based on modifier
             mod_color = WHITE
@@ -611,13 +711,15 @@ def _draw_player_build_screen(game, state, mouse_pos):
             elif trait_mod < 0:
                 mod_color = (255, 100, 100) # Red
             
-            text_surf = font.render(f"{attr_name_str} {base_str}", True, WHITE)
-            mod_surf = font.render(f"| {trait_str}", True, mod_color)
+            text_surf = font.render(f"{stat_name_str}", True, WHITE)
+            mod_surf = font.render(f"{trait_str}", True, mod_color)
             
             content_surface.blit(text_surf, (text_x, y_offset + 3))
-            content_surface.blit(mod_surf, (text_x + text_surf.get_width() + 10, y_offset + 3))
+            content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
             
             y_offset += line_height
+
+        
     
     # Draw Stats Scrollbar
     if total_text_height > visible_height:
@@ -759,6 +861,14 @@ def run_player_setup(game):
         state['is_dragging_stats_scrollbar'] = False
         state['stats_scroll_drag_last_y'] = 0
         
+        state['traits_scroll_offset_y'] = 0
+        state['traits_content_rect'] = None
+        state['traits_line_height'] = 35 # Matches the loop's y_offset += 35
+        state['traits_max_scroll'] = 0
+        state['is_dragging_traits_scrollbar'] = False
+        state['traits_scroll_drag_last_y'] = 0
+        state['traits_scrollbar_handle_rect'] = None
+
         Item.load_item_templates()
         Zombie.load_templates()
 
@@ -869,6 +979,14 @@ def run_player_setup(game):
                     new_offset = current_offset - scroll_amount
                     scroll_state['offset'] = max(0, min(new_offset, max_scroll))
 
+            elif state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
+                line_height = state.get('traits_line_height', 35)
+                max_scroll = state.get('traits_max_scroll', 0)
+                current_offset = state.get('traits_scroll_offset_y', 0)
+                scroll_amount = event.y * line_height * 2 # Scroll 2 lines
+                new_offset = current_offset - scroll_amount
+                state['traits_scroll_offset_y'] = max(0, min(new_offset, max_scroll))
+
             # If not scrolling dropdown, check stats panel
             elif stats_rect and stats_rect.collidepoint(mouse_pos):
                 line_height = state.get('stats_line_height', 25)
@@ -897,6 +1015,12 @@ def run_player_setup(game):
                 state['stats_scroll_drag_last_y'] = mouse_pos[1] # Store initial mouse Y
                 scrollbar_clicked = True
             
+            traits_scrollbar_rect = state.get('traits_scrollbar_handle_rect')
+            if not scrollbar_clicked and traits_scrollbar_rect and traits_scrollbar_rect.collidepoint(mouse_pos):
+                state['is_dragging_traits_scrollbar'] = True
+                state['traits_scroll_drag_last_y'] = mouse_pos[1]
+                scrollbar_clicked = True
+
             active_dropdown_slot = state.get('active_dropdown')
             if active_dropdown_slot:
                 scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
@@ -996,7 +1120,7 @@ def run_player_setup(game):
             # Check Start Button
             if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
                 final_player_data = state['base_data'].copy() # Start with base
-                final_player_data['stats'] = state['final_stats']
+                #final_player_data['stats'] = state['final_stats']
                 final_player_data['attributes'] = state['final_attrs']
                 final_player_data['clothes'] = state['chosen_clothes']
                 final_player_data['name'] = state.get('player_name', "Player") # Pass the name
@@ -1017,6 +1141,7 @@ def run_player_setup(game):
         
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             state['is_dragging_stats_scrollbar'] = False
+            state['is_dragging_traits_scrollbar'] = False
             # Also reset all dropdown scroll drags
             for slot in state['gear_dropdown_scrolls']:
                 state['gear_dropdown_scrolls'][slot]['is_dragging'] = False
@@ -1036,6 +1161,20 @@ def run_player_setup(game):
                     current_offset = state.get('stats_scroll_offset_y', 0)
                     new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
                     state['stats_scroll_offset_y'] = max(0, min(new_offset, state['stats_max_scroll']))
+            
+            elif state.get('is_dragging_traits_scrollbar'):
+                mouse_delta_y = mouse_pos[1] - state['traits_scroll_drag_last_y']
+                state['traits_scroll_drag_last_y'] = mouse_pos[1]
+                
+                content_height = state['traits_content_rect'].height
+                handle_rect = state['traits_scrollbar_handle_rect']
+                track_height = content_height - handle_rect.height
+                
+                if track_height > 0:
+                    scroll_per_pixel = state['traits_max_scroll'] / track_height
+                    current_offset = state.get('traits_scroll_offset_y', 0)
+                    new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
+                    state['traits_scroll_offset_y'] = max(0, min(new_offset, state['traits_max_scroll']))
 
             active_dropdown_slot = state.get('active_dropdown')
             if active_dropdown_slot:
