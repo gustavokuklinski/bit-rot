@@ -17,6 +17,9 @@
 - XP Debuf in percentage instead of level down
 - Only Spawn Zombies when player get near them
 
+# Graphics:
+- Some angle walk animations for player and Zombie
+
 # Sound:
 Ajust some random 'Pitch'
 

@@ -113,7 +113,6 @@ class PlayerProgression:
         return self.get_total_attribute_bonus(player, 'water')
 
 
-
     def _get_xp_for_next_level(self, current_level):
         """Calculates the XP needed to reach the next level."""
         return 100 * (current_level + 1)
