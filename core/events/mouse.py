@@ -683,6 +683,10 @@ def handle_context_menu_click(game, mouse_pos):
 
             print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
 
+            if option == 'Sleep':
+                print("You go to sleep...")
+                game.player.is_sleeping = True
+
             if option == 'Use':
                 game.player.consume_item(item, source, index, container_item)
             elif option == 'Reload':
@@ -1074,6 +1078,24 @@ def handle_right_click(game, mouse_pos):
                         display_message(game, "Item is too far away to interact with.")
                         print("Container is too far away to interact with.")
 
+        if not clicked_item:
+            world_pos = game.screen_to_world(mouse_pos)
+            grid_x = int(world_pos[0] // TILE_SIZE)
+            grid_y = int(world_pos[1] // TILE_SIZE)
+            
+            tile = game.map_manager.get_tile_at(grid_x, grid_y)
+            
+            # Check distance to tile center
+            tile_center_x = (grid_x * TILE_SIZE) + (TILE_SIZE / 2)
+            tile_center_y = (grid_y * TILE_SIZE) + (TILE_SIZE / 2)
+            dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+
+            if tile and tile.get('sleep') and dist < TILE_SIZE * 2:
+                # Create a dummy object to represent the tile for the context menu
+                clicked_item = {'name': 'Bed', 'type': 'map_tile'} 
+                click_source = 'map_tile'
+
+
     if clicked_item:
         game.context_menu['active'] = True
         game.context_menu['item'] = clicked_item
@@ -1082,7 +1104,12 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['container_item'] = click_container_item
         game.context_menu['position'] = mouse_pos
 
-        options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
+        #options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
+        if click_source == 'map_tile':
+            options = [] # Skip the player method for map tiles
+        else:
+            options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
+
 
         if click_source == 'belt':
             if 'Unequip' not in options:
@@ -1140,6 +1167,8 @@ def handle_right_click(game, mouse_pos):
                 if 'Place on Backpack' not in options:
                     options.append('Place on Backpack')
 
+        elif click_source == 'map_tile':
+            options = ['Sleep']
 
         game.context_menu['options'] = options
         game.context_menu['rects'] = []

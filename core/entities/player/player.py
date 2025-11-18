@@ -96,6 +96,8 @@ class Player:
         self.aim_angle = 0
         self.facing_direction = (0, 1)
 
+        self.is_sleeping = False
+
         sounds = data.get('sounds', {})
         self.sound_steps = sounds.get('steps') # e.g., "steps.ogg"
         self.last_step_sound_time = 0
@@ -270,6 +272,22 @@ class Player:
             # 5. Blit it
             surface.blit(rotated_image, rotated_rect)
 
+        if self.is_sleeping:
+            # Calculate progress (0.0 to 1.0) - assuming tireness is 0..max
+            progress = min(1.0, max(0.0, self.tireness / self.max_tireness))
+            
+            bar_total_width = TILE_SIZE * 2
+            bar_x = draw_rect.centerx - (bar_total_width / 2)
+            bar_y = draw_rect.top - 20 # Position above the player
+            
+            # Background
+            bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
+            pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+            
+            # Foreground (Restoring)
+            bar_progress_width = int(bar_total_width * progress)
+            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
+            pygame.draw.rect(surface, (100, 150, 255), bar_rect)
 
         # Melee arc
         if self.melee_swing_timer > 0:
@@ -324,6 +342,43 @@ class Player:
         
 
         current_time = time.time()
+
+
+        if not self.is_sleeping: # Only check passive rest if not already sleeping
+            grid_x = int(self.rect.centerx // TILE_SIZE)
+            grid_y = int(self.rect.centery // TILE_SIZE)
+            tile = game.map_manager.get_tile_at(grid_x, grid_y)
+            
+            if tile and tile.get('rest'):
+                 # Passive resting: slowly restore tireness
+                 self.tireness = min(self.max_tireness, self.tireness + 0.05)
+
+        if self.is_sleeping:
+            # Active sleeping: fast restore
+            restore_amount = 0.2
+            
+            # [START MODIFICATION]
+            # Calculate time jump: 8 hours (1/3 of 24h) for 100% tireness
+            # 1. Calculate what fraction of the bar we are restoring this frame
+            restore_fraction = restore_amount / self.max_tireness
+
+            # 2. Calculate 8 hours in game milliseconds
+            # day_length_ms represents 24 hours
+            eight_hours_ms = game.world_time.day_length_ms / 3
+
+            # 3. Apply the proportional time jump
+            time_jump = restore_fraction * eight_hours_ms
+            game.world_time.game_time_ms += time_jump
+            # [END MODIFICATION]
+
+            self.tireness = min(self.max_tireness, self.tireness + restore_amount)
+            
+            # Wake up condition
+            if self.tireness >= 100:
+                self.is_sleeping = False
+                print("You wake up refreshed.")
+
+
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
 

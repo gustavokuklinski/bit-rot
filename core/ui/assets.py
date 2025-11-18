@@ -21,6 +21,16 @@ def load_assets():
         assets['aim_cursor'] = None
 
     try:
+        assets['day_icon'] = pygame.image.load(SPRITE_PATH + 'ui/day.png').convert_alpha()
+        assets['night_icon'] = pygame.image.load(SPRITE_PATH + 'ui/night.png').convert_alpha()
+
+    except pygame.error as e:
+        print(f"Error loading day/night icons: {e}")
+        assets['day_icon'] = None
+        assets['night_icon'] = None
+
+
+    try:
         assets['close_button'] = pygame.image.load(SPRITE_PATH + 'ui/close.png').convert_alpha()
         assets['minimize_button'] = pygame.image.load(SPRITE_PATH + 'ui/minimize.png').convert_alpha()
     except pygame.error as e:

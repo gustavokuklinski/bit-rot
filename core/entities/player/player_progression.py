@@ -113,8 +113,10 @@ class PlayerProgression:
         return self.get_total_attribute_bonus(player, 'water')
 
 
-    def _get_xp_for_next_level(self, current_level):
+    def _get_xp_for_next_level(self, current_level, attr_name=None):
         """Calculates the XP needed to reach the next level."""
+        if attr_name in ['strength', 'fitness']:
+            multiplier = 1000
         return 100 * (current_level + 1)
 
     def _create_attribute(self, player_data, attr_name):
@@ -155,8 +157,8 @@ class PlayerProgression:
     def _level_up(self, attribute):
         attribute['level'] += 1
         attribute['xp'] = 0
-        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level']) # Use the formula
-        print(f"Leveled up an attribute to level {attribute['level']}!")
+        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name')) # Use the formula
+        print(f"Leveled up {attribute.get('name', 'attribute')} to level {attribute['level']}!")
 
     def process_kill(self, player, weapon, zombie):
         xp_amount = zombie.xp_value
@@ -202,7 +204,7 @@ class PlayerProgression:
                 nearby_zombies += 1
         
         anxiety_gain = 0.0
-        if nearby_zombies > 5:
+        if nearby_zombies > 2:
             # High anxiety gain when seeing a horde
             anxiety_gain = 0.05 # 20% of 0.01% is unclear, using a balanced rate
         else:
@@ -222,9 +224,9 @@ class PlayerProgression:
         world_state = game.world_time.state
         base_change = 0.0
         if world_state == "NIGHT" or world_state == "TRANSITION_TO_NIGHT":
-            base_change = -0.05 # Rate of getting tired (negative)
+            base_change = -0.03 # Rate of getting tired (negative)
         else: # DAY or TRANSITION_TO_DAY
-            base_change = 0.001 # Rate of recovery (positive)
+            base_change = 0.002 # Rate of recovery (positive)
 
         # 2. Modifiers that *decrease* tireness (penalties)
         stamina_penalty = 0.0
@@ -233,7 +235,7 @@ class PlayerProgression:
             
         running_penalty = 0.0
         if is_moving and player.is_running:
-            running_penalty = -0.05 # Tireness drain from running
+            running_penalty = -0.02 # Tireness drain from running
 
         # 3. Anxiety modifier
         # Anxiety makes you more tired (makes recovery slower, decay faster)

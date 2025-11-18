@@ -6,6 +6,9 @@ from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
 
 def handle_movement(game):
+    if game.player.is_sleeping:
+        return
+        
     keys = pygame.key.get_pressed()
     current_speed = 0
 

@@ -18,7 +18,7 @@
 - Only Spawn Zombies when player get near them
 
 # Graphics:
-- Some angle walk animations for player and Zombie
+- Some angle walk animations for player and Zombie, move 3° left and right
 
 # Sound:
 Ajust some random 'Pitch'

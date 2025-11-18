@@ -82,6 +82,17 @@ START_ZOOM = float(system_config.find('zoom_start').get('value'))
 FAR_ZOOM = float(system_config.find('zoom_far').get('value'))
 NEAR_ZOOM = float(system_config.find('zoom_near').get('value'))
 
+
+TIME_DAYLENGTH = int(system_config.find('time_daylength').get('value'))
+TIME_SUNRISE_HR = float(system_config.find('time_sunrise_hr').get('value'))
+TIME_SUNSET_HR = float(system_config.find('time_sunset_hr').get('value'))
+TIME_TRANSITION_HR = float(system_config.find('time_transition_hr').get('value'))
+TIME_START_HR = float(system_config.find('time_start_hr').get('value'))
+
+MAX_DARKNESS_OPACITY = int(system_config.find('day_night_cycle_darkness').get('value'))
+
+
+
 # Player settings
 player_config = root.find('player')
 
@@ -95,10 +106,6 @@ AUTO_DRINK = player_config.find('water_autodrink').get('value')
 AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
 BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
 PLAYER_FOW_RADIUS = int(player_config.find('fow_radius').get('value'))
-START_HOUR = int(player_config.find('start_hour').get('value'))
-DAY_NIGHT_CYCLE_MS = int(player_config.find('day_night_cycle').get('value'))
-TRANSITION_DURATION_MS = int(player_config.find('day_night_cycle_transition').get('value'))
-MAX_DARKNESS_OPACITY = int(player_config.find('day_night_cycle_darkness').get('value'))
 
 # Zombie settings
 zombie_config = root.find('zombie')

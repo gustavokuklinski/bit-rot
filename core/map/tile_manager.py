@@ -34,8 +34,10 @@ class TileManager:
                                     'is_obstacle': is_obstacle,
                                     'image': image,
                                     'type': root.get('type'),
-                                    'state': root.get('state'), # Added: Read the 'state' attribute
-                                    'is_statable': root.get('state') is not None # Added: True if 'state' exists
+                                    'state': root.get('state'),
+                                    'is_statable': root.get('state') is not None,
+                                    'rest': root.get('rest', 'false').lower() == 'true',
+                                    'sleep': root.get('sleep', 'false').lower() == 'true'
                                 }
 
                                 sound_node = root.find('sound')

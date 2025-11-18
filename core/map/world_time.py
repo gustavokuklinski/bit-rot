@@ -9,97 +9,111 @@ class WorldTime:
         
         # State machine: DAY, TRANSITION_TO_NIGHT, NIGHT, TRANSITION_TO_DAY
         self.state = "DAY" 
-        self.day_duration = DAY_NIGHT_CYCLE_MS
-        self.night_duration = DAY_NIGHT_CYCLE_MS
-        self.transition_duration = TRANSITION_DURATION_MS
         
-        self.last_state_change_time = pygame.time.get_ticks()
+        # --- NEW CONFIGURATION ---
+        # Total length of a full 24h game day in real milliseconds
+        # 180000 ms = 3 minutes per day. Adjust as needed in config or here.
+        self.day_length_ms = TIME_DAYLENGTH # Example: 5 minutes per game day
         
-        # Define the min/max values for radius and darkness
+        self.game_time_ms = 0 # 0 to day_length_ms
+        
+        # Define key times (0.0 to 24.0)
+        self.sunrise_hour = TIME_SUNRISE_HR  # 5:30 AM
+        self.sunset_hour = TIME_SUNSET_HR  # 17:30 (5:30 PM)
+        self.transition_duration_hours = TIME_TRANSITION_HR # How long the fade lasts in game-hours
+        
+        # Calculate start time (6 AM = 6.0)
+        start_hour = TIME_START_HR
+        self.game_time_ms = (start_hour / 24.0) * self.day_length_ms
+
+        self.last_update_time = pygame.time.get_ticks()
+        
+        self.day_count = 0 # Track full days survived
+
+        # Visual settings
         self.day_radius = BASE_PLAYER_VIEW_RADIUS * 1.5
         self.night_radius = BASE_PLAYER_VIEW_RADIUS * 0.5
-
-        self.day_ambient = 255 # Full brightness
-        # Calculate night ambient from the old darkness value
+        self.day_ambient = 255 
         self.night_ambient = 255 - MAX_DARKNESS_OPACITY 
-        
-        self.total_cycle_duration = self.day_duration + self.transition_duration + self.night_duration + self.transition_duration
-        self.game_time_ms = 180000 # Represents current time within the 24h cycle (Start at 6 AM)
-        self.current_hour = START_HOUR # Start at 6 AM
-        self.last_update_time = pygame.time.get_ticks()
 
-        # Set initial values on the game object
+        # Set initial values
         self.game.player_view_radius = self.day_radius
-        self.current_ambient_light = self.day_ambient # New variable
+        self.current_ambient_light = self.day_ambient 
+        self.current_hour = int(start_hour)
+        
+        # Helper to track state changes to avoid spamming messages
+        self._last_state = self.state
 
 
     def update(self):
-        """Runs the day/night state machine."""
-        current_time = pygame.time.get_ticks()
+        """Runs the day/night state machine based on specific clock times."""
+        current_real_time = pygame.time.get_ticks()
+        delta_time = current_real_time - self.last_update_time
+        self.last_update_time = current_real_time
+        
+        # Advance game time
+        self.game_time_ms += delta_time
+        
+        # Check for day wrap
+        if self.game_time_ms >= self.day_length_ms:
+            self.game_time_ms %= self.day_length_ms
+            self.day_count += 1
+            
+        # Calculate current game hour (0.0 - 24.0)
+        exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
+        self.current_hour = int(exact_hour)
+        
+        # Determine State and Fade Factor (0.0 = Night, 1.0 = Day)
+        # We want:
+        # Night: 18:30 to 05:30 (approx, after transition)
+        # Sunrise: 05:30 to 06:30
+        # Day: 06:30 to 17:30
+        # Sunset: 17:30 to 18:30
+        
+        fade = 0.0 # Default to full night
+        new_state = "NIGHT"
+        
+        # Dawn Transition (5:30 to 6:30)
+        if self.sunrise_hour <= exact_hour < (self.sunrise_hour + self.transition_duration_hours):
+            new_state = "TRANSITION_TO_DAY"
+            # Progress 0.0 to 1.0
+            progress = (exact_hour - self.sunrise_hour) / self.transition_duration_hours
+            fade = self.ease_in_out(progress)
+            
+        # Day (6:30 to 17:30)
+        elif (self.sunrise_hour + self.transition_duration_hours) <= exact_hour < self.sunset_hour:
+            new_state = "DAY"
+            fade = 1.0
+            
+        # Dusk Transition (17:30 to 18:30)
+        elif self.sunset_hour <= exact_hour < (self.sunset_hour + self.transition_duration_hours):
+            new_state = "TRANSITION_TO_NIGHT"
+            # Progress 0.0 to 1.0
+            progress = (exact_hour - self.sunset_hour) / self.transition_duration_hours
+            fade = 1.0 - self.ease_in_out(progress) # Fade out
+            
+        # Night (18:30 to 5:30)
+        else:
+            new_state = "NIGHT"
+            fade = 0.0
 
-        delta_time = current_time - self.last_update_time
-        self.last_update_time = current_time
-        # Scale game time to be faster (e.g., 20x real time)
-        scaled_delta_time = delta_time * 20 
-        self.game_time_ms = (self.game_time_ms + scaled_delta_time) % self.total_cycle_duration
-        time_percentage = self.game_time_ms / self.total_cycle_duration
-        self.current_hour = int(time_percentage * 24)
+        self.state = new_state
+        
+        # Apply Visuals based on 'fade' (0.0 = Night, 1.0 = Day)
+        self.game.player_view_radius = self.lerp(self.night_radius, self.day_radius, fade)
+        self.current_ambient_light = self.lerp(self.night_ambient, self.day_ambient, fade)
 
-        time_since_change = current_time - self.last_state_change_time
-
-        # --- State: DAY ---
-        if self.state == "DAY":
-            if time_since_change > self.day_duration:
-                self.state = "TRANSITION_TO_NIGHT"
-                self.last_state_change_time = current_time
+        # Handle State Change Messages
+        if self.state != self._last_state:
+            if self.state == "TRANSITION_TO_NIGHT":
                 display_message(self.game, "Dusk falls...")
-
-        # --- State: TRANSITION_TO_NIGHT ---
-        elif self.state == "TRANSITION_TO_NIGHT":
-            if time_since_change >= self.transition_duration:
-                # Transition complete
-                self.state = "NIGHT"
-                self.last_state_change_time = current_time
-                self.game.player_view_radius = self.night_radius
-                #self.current_darkness_overlay = self.max_darkness
-                self.current_ambient_light = self.night_ambient
+            elif self.state == "NIGHT":
                 display_message(self.game, "It is now Night.")
-            else:
-                # In progress, calculate fades
-                progress = time_since_change / self.transition_duration
-                eased_progress = self.ease_in_out(progress) # 0.0 -> 1.0
-
-                # Lerp (linear interpolation)
-                self.game.player_view_radius = self.lerp(self.day_radius, self.night_radius, eased_progress)
-                #self.current_darkness_overlay = self.lerp(self.min_darkness, self.max_darkness, eased_progress)
-                self.current_ambient_light = self.lerp(self.day_ambient, self.night_ambient, eased_progress)
-
-        # --- State: NIGHT ---
-        elif self.state == "NIGHT":
-            if time_since_change > self.night_duration:
-                self.state = "TRANSITION_TO_DAY"
-                self.last_state_change_time = current_time
+            elif self.state == "TRANSITION_TO_DAY":
                 display_message(self.game, "The sky lightens...")
-
-        # --- State: TRANSITION_TO_DAY ---
-        elif self.state == "TRANSITION_TO_DAY":
-            if time_since_change >= self.transition_duration:
-                # Transition complete
-                self.state = "DAY"
-                self.last_state_change_time = current_time
-                self.game.player_view_radius = self.day_radius
-                # self.current_darkness_overlay = self.min_darkness
-                self.current_ambient_light = self.day_ambient
+            elif self.state == "DAY":
                 display_message(self.game, "It is now Day.")
-            else:
-                # In progress, calculate fades
-                progress = time_since_change / self.transition_duration
-                eased_progress = self.ease_in_out(progress) # 0.0 -> 1.0
-
-                # Lerp (linear interpolation)
-                self.game.player_view_radius = self.lerp(self.night_radius, self.day_radius, eased_progress)
-                #self.current_darkness_overlay = self.lerp(self.max_darkness, self.min_darkness, eased_progress)
-                self.current_ambient_light = self.lerp(self.night_ambient, self.day_ambient, eased_progress)
+            self._last_state = self.state
 
     def lerp(self, a, b, t):
         """Linearly interpolates between a and b by t."""

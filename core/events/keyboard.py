@@ -110,6 +110,11 @@ def handle_keyboard_events(game, event):
         if event.key == pygame.K_e:
             from core.events.game_actions import try_grab_item
             try_grab_item(game)
+        
+        if event.key == pygame.K_SPACE:
+            if game.player.is_sleeping:
+                game.player.is_sleeping = False
+                print("You woke up manually.")
 
         if event.key == pygame.K_ESCAPE:
             if game.modals:
