@@ -186,6 +186,11 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     # create corpse at zombie position
     dead_sprite_path = "./game/resources/sprites/zombie/dead.png"
     corpse = Corpse(name="Dead corpse", capacity=10, image_path=dead_sprite_path, pos=zombie.rect.center)
+    
+    if hasattr(zombie, 'inventory'):
+        for item in zombie.inventory:
+            corpse.inventory.append(item)
+
     # build its inventory from the zombie loot table
     if hasattr(zombie, 'loot_table'):
         for drop in zombie.loot_table:

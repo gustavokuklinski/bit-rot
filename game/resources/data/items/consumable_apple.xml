@@ -1,7 +1,12 @@
 <item name="Apple" type="consumable">
     <properties>
         <status value="food" />
-        <restore min="1" max="5" />
+        <restore min="15" max="15" />
+
+        <reduce status="[tireness]" min="5" max="10" />
+        <restore status="[health, stamina]" min="1" max="2" />
+        <restore status="[water]" min="1" max="10" />
+
         <load value="1" />
         <capacity value="3" />
         <sprite file="apple.png" />

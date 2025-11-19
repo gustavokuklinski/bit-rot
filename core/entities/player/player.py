@@ -716,57 +716,56 @@ class Player:
             print(f"Cannot use {item.name}, it is empty.")
             return False
 
-        status_effect = getattr(item, 'status_effect', None)
+        status_effect_legacy = getattr(item, 'status_effect', None)
         ammo_type = getattr(item, 'ammo_type', None) # Keep this for reload logic
         consumed = False
 
-        if status_effect == 'ammo' or ammo_type is not None:
+        if status_effect_legacy == 'ammo' or ammo_type is not None:
             # Item is ammo, trigger a reload
             self.reload_active_weapon()
             return True # Return early, reload handles its own logic
 
         
         
-        elif status_effect is not None and hasattr(self, status_effect):
-            stat_name = status_effect
-            current_val = getattr(self, stat_name)
+        if hasattr(item, 'effects') and item.effects:
+            for effect in item.effects:
+                eff_type = effect['type'] # 'restore' or 'reduce'
+                targets = effect['targets'] # list e.g. ['health', 'tireness']
+                val = random.randint(effect['min'], effect['max'])
+                
+                for target_stat in targets:
+                    if hasattr(self, target_stat):
+                        current_val = getattr(self, target_stat)
+                        
+                        if eff_type == 'restore':
+                            # Determine cap
+                            stat_cap = 100.0
+                            if target_stat == 'health': stat_cap = self.max_health
+                            elif target_stat == 'stamina': stat_cap = self.max_stamina
+                            elif target_stat == 'tireness': stat_cap = self.max_tireness
+                            
+                            new_val = min(stat_cap, current_val + val)
+                            setattr(self, target_stat, new_val)
+                            print(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                            consumed = True
 
-            # Check for RESTORE (increase stat)
-            # This assumes your Item class has min_restore and max_restore
-            if hasattr(item, 'min_restore') and hasattr(item, 'max_restore') and item.min_restore is not None:
-                amount = random.randint(item.min_restore, item.max_restore)
-                
-                max_val = 100.0
-                if stat_name == 'health':
-                    max_val = self.max_health
-                
-                new_val = min(max_val, current_val + amount) # Add to stat
-                setattr(self, stat_name, new_val)
-                
-                print(f"Used {item.name}. Restored {amount} {stat_name.capitalize()}.")
-                consumed = True
-
-            # Check for REDUCE (decrease stat)
-            # This assumes your Item class can also have min_reduce and max_reduce
-            elif hasattr(item, 'min_reduce') and hasattr(item, 'max_reduce') and item.min_reduce is not None:
-                amount = random.randint(item.min_reduce, item.max_reduce)
-                
-                min_val = 0.0 # Stats shouldn't go below zero
-                
-                new_val = max(min_val, current_val - amount) # Subtract from stat
-                setattr(self, stat_name, new_val)
-                
-                print(f"Used {item.name}. Reduced {stat_name.capitalize()} by {amount}.")
-                consumed = True
-            
-            else:
-                # Item has a status but neither restore nor reduce properties
-                print(f"Cannot consume {item.name}: misconfigured item (status='{status_effect}' has no restore/reduce properties).")
-                return False
+                        elif eff_type == 'reduce':
+                            min_cap = 0.0
+                            new_val = max(min_cap, current_val - val)
+                            setattr(self, target_stat, new_val)
+                            print(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
+                            consumed = True
+        
+        # Fallback for items without new effects structure (if any remain)
+        elif status_effect_legacy and hasattr(self, status_effect_legacy):
+             # (Existing logic for single status effect fallback)
+             pass
         
         else:
-            print(f"Cannot consume {item.name}: unknown or misconfigured item (status='{status_effect}').")
-            return False
+            # Only print error if NO effects were processed
+            if not consumed:
+                print(f"Cannot consume {item.name}: no valid effects found.")
+                return False
 
         # If consumed, decrement load and handle empty stack
         if consumed:

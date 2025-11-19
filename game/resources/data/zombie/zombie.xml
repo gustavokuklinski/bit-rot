@@ -29,7 +29,6 @@
     </visuals>
     
     <loot>
-        <item name="Wallet" chance="100.0" />
     </loot>
 
     <sound>

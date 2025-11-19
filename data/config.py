@@ -2,9 +2,10 @@ import pygame
 import xml.etree.ElementTree as ET
 
 pygame.init()
+infoObject = pygame.display.Info()
 
 # --- Scalable Screen Setup ---
-VIRTUAL_SCREEN_WIDTH = 1280
+VIRTUAL_SCREEN_WIDTH = 1360
 VIRTUAL_GAME_HEIGHT = 720
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)

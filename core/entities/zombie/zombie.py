@@ -8,6 +8,7 @@ from faker import Faker
 from data.config import *
 from core.messages import display_message
 import random
+from core.entities.item.item import Item
 
 fake = Faker()
 ZOMBIE_TEMPLATES = []
@@ -114,6 +115,28 @@ class Zombie:
         self.wander_target = None # (x, y) coordinate
         self.last_wander_change = 0 # Timestamp for changing wander direction
 
+        self.inventory = []
+        try:
+            # Attempt to create the ID item (assumes an item with name="ID" exists in XML)
+            id_item = Item.create_from_name("ID")
+            if id_item:
+                # Customize the ID card
+                id_item.name = f"ID: {self.name}"
+                
+                # Build the description text
+                info_text = f"Name: {self.name}\nSex: {self.sex}\nProfession: {self.profession}"
+                if self.vaccine:
+                    info_text += "\nVaccinated: Yes"
+                else:
+                    info_text += "\nVaccinated: No"
+                
+                id_item.text = info_text
+                
+                # Add to zombie's direct inventory
+                self.inventory.append(id_item)
+        except Exception as e:
+            print(f"Warning: Could not generate ID for zombie: {e}")
+            
 
     def load_sprite(self, sprite_file):
         if not sprite_file: return None

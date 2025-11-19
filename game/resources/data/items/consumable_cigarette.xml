@@ -2,6 +2,11 @@
     <properties>
         <status value="anxiety" />
         <reduce min="1" max="15" />
+
+        <restore status="[tireness]" min="5" max="10" />
+        <reduce status="[stamina]" min="5" max="15" />
+        <reduce status="[water]" min="5" max="10" />
+
         <load min="2" max="20" />
         <capacity value="20" />
         <sprite file="cigarette.png" />

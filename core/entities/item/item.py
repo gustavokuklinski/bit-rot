@@ -10,7 +10,7 @@ ITEM_TEMPLATES = {}  # loaded templates
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None):
         self.name = name
         self.item_type = item_type  # 'consumable', 'weapon', 'tool', 'backpack', ...
         self.id = str(uuid.uuid4())
@@ -47,6 +47,7 @@ class Item:
         self.sounds = sounds if sounds is not None else {}
 
         self.status_effect = status_effect
+        self.effects = effects if effects is not None else []
 
     @property
     def damage(self):
@@ -196,23 +197,63 @@ class Item:
                 else:
                     template['text'] = None
                 
+
+
+
+
+                template['effects'] = []
+
+                # Helper to parse "[a, b]" string into list
+                def parse_status_list(s):
+                    if not s: return []
+                    return [t.strip() for t in s.replace('[', '').replace(']', '').split(',')]
+
+                # Capture global status for backward compatibility
+                global_status = None
                 status_node = props_node.find('status')
                 if status_node is not None:
-                    template['properties']['status'] = {'value': status_node.get('value')}
+                    global_status = status_node.get('value')
+                    template['properties']['status'] = {'value': global_status}
 
-                restore_node = props_node.find('restore')
-                if restore_node is not None:
-                    template['properties']['restore'] = {
-                        'min': restore_node.get('min', '0'),
-                        'max': restore_node.get('max', '0')
-                    }
-                
-                reduce_node = props_node.find('reduce')
-                if reduce_node is not None:
-                    template['properties']['reduce'] = {
-                        'min': reduce_node.get('min', '0'),
-                        'max': reduce_node.get('max', '0')
-                    }
+                # Parse Restore effects
+                for node in props_node.findall('restore'):
+                    status_str = node.get('status')
+                    targets = parse_status_list(status_str) if status_str else ([global_status] if global_status else [])
+                    
+                    if targets:
+                        template['effects'].append({
+                            'type': 'restore',
+                            'targets': targets,
+                            'min': int(node.get('min', '0')),
+                            'max': int(node.get('max', '0'))
+                        })
+                    
+                    # Keep legacy props for safety
+                    if not status_str and global_status:
+                         template['properties']['restore'] = {
+                            'min': node.get('min', '0'),
+                            'max': node.get('max', '0')
+                        }
+
+                # Parse Reduce effects
+                for node in props_node.findall('reduce'):
+                    status_str = node.get('status')
+                    targets = parse_status_list(status_str) if status_str else ([global_status] if global_status else [])
+                    
+                    if targets:
+                        template['effects'].append({
+                            'type': 'reduce',
+                            'targets': targets,
+                            'min': int(node.get('min', '0')),
+                            'max': int(node.get('max', '0'))
+                        })
+                    
+                    # Keep legacy props for safety
+                    if not status_str and global_status:
+                         template['properties']['reduce'] = {
+                            'min': node.get('min', '0'),
+                            'max': node.get('max', '0')
+                        }
                     
             spawn_node = root.find('spawn')
 
@@ -414,7 +455,9 @@ class Item:
         
         sounds = template.get('sounds', {})
 
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect)
+        effects = list(template.get('effects', []))
+
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:

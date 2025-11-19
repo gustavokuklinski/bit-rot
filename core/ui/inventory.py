@@ -2,6 +2,7 @@ import pygame
 from data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs # Import the Tabs class
+from core.ui.container import _draw_slots
 
 # Helper function to draw the content of the 'Inventory' tab
 def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
@@ -105,7 +106,12 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     if player.active_weapon:
         active_weapon_text = f"Equipped: {player.active_weapon.name.split('(')[0]}"
         if player.active_weapon.durability is not None:
-            active_weapon_text += f" | Dur: {player.active_weapon.durability:.0f}%"
+            max_dur = player.active_weapon.max_durability
+            if max_dur > 0:
+                pct = (player.active_weapon.durability / max_dur) * 100
+                active_weapon_text += f" | Dur: {int(pct)}%"
+            else:
+                active_weapon_text += f" | Dur: {player.active_weapon.durability:.0f}"
         if player.active_weapon.item_type == 'weapon' and player.active_weapon.load is not None:
             active_weapon_text += f" | Ammo: {player.active_weapon.load:.0f}/{player.active_weapon.capacity:.0f}"
     status_text = font_small.render(active_weapon_text, True, YELLOW)
@@ -178,6 +184,29 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
             except Exception as e:
                 print(f"Error drawing gear item {item.name}: {e}")
 
+
+def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
+    if not player.backpack:
+        return
+
+    # Define content area (aligns with where tabs start)
+    padding = 10
+    start_x = modal['rect'].x + padding
+    start_y = modal['rect'].y + 80 # Header(35) + Tabs(30) + Padding(15)
+    
+    # Reuse the container drawing logic from core.ui.container
+    # This draws the grid of slots
+    _draw_slots(
+        surface, 
+        game, 
+        player.backpack, 
+        start_x, 
+        start_y, 
+        modal['rect'].height, 
+        80, # Header offset for calculation
+        mouse_pos
+    )
+
 # --- Slot Position Getters (Modified for Tab Bar) ---
 # Content now starts ~30px lower to accommodate the tab bar
 
@@ -220,7 +249,7 @@ def get_invcontainer_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
 
 # --- Main Modal Function (Refactored for Tabs) ---
 
-def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
+def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory")
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
@@ -233,6 +262,16 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
         {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'},
         {'label': 'Gear', 'icon_path': SPRITE_PATH + 'ui/gear_tab.png'} # Using status icon for gear
     ]
+
+    if player.backpack:
+        bag_tab = {
+            'label': 'Bag',
+            # Use the item's image as the icon if available
+            'icon': player.backpack.image if player.backpack.image else None 
+        }
+        tabs_data.append(bag_tab)
+
+
     modal['tabs_data'] = tabs_data
 
     # Ensure active_tab is set correctly
@@ -250,6 +289,7 @@ def draw_inventory_modal(surface, player, modal, assets, mouse_pos):
     elif modal['active_tab'] == 'Gear':
         # Draw the new 6-slot gear layout
         _draw_gear_tab(surface, player, modal, assets, mouse_pos)
-
+    elif modal['active_tab'] == 'Bag':
+        _draw_backpack_tab(surface, game, player, modal, mouse_pos)
     
     return None, close_button, minimize_button

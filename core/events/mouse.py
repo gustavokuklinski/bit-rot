@@ -346,6 +346,52 @@ def handle_mouse_up(game, event, mouse_pos):
                                         
                                         break # Slot was found, stop checking
                             if dropped_successfully: break
+                        
+                        elif modal.get('active_tab') == 'Bag':
+                            if game.player.backpack:
+                                container = game.player.backpack
+                                
+                                # Prevent dropping backpack into itself
+                                if game.dragged_item is container: break
+
+                                target_index = -1
+                                # Calculate start pos exactly like Mouse Down
+                                pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                                
+                                for i in range(container.capacity or 0):
+                                    if get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                                        target_index = i
+                                        break
+                                
+                                if target_index != -1:
+                                    # Logic for dropping into a specific slot (swap or stack)
+                                    if target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            # Stack
+                                            available = item_in_slot.capacity - item_in_slot.load
+                                            transfer = min(available, game.dragged_item.load)
+                                            item_in_slot.load += transfer
+                                            game.dragged_item.load -= transfer
+                                            if game.dragged_item.load <= 0: dropped_successfully = True
+                                        else:
+                                            # Swap
+                                            item_to_swap = container.inventory.pop(target_index)
+                                            container.inventory.insert(target_index, game.dragged_item)
+                                            game.dragged_item = item_to_swap
+                                            dropped_successfully = False
+                                    else:
+                                        # Empty slot (but within list bounds if list was sparse, which it isn't here)
+                                        # Since inventory is a list, we can only insert if index == len, or append
+                                        container.inventory.insert(target_index, game.dragged_item)
+                                        dropped_successfully = True
+                                
+                                elif len(container.inventory) < (container.capacity or 0):
+                                    # Dropped in empty white space of the tab
+                                    container.inventory.append(game.dragged_item)
+                                    dropped_successfully = True
+                                
+                                if dropped_successfully: break
                         # --- END TAB-BASED LOGIC ---
 
                 if dropped_successfully:
@@ -493,6 +539,13 @@ def find_item_at_pos(game, mouse_pos):
                     for slot_name, slot_rect in modal['gear_slot_rects'].items():
                         if slot_rect.collidepoint(mouse_pos):
                             return game.player.clothes.get(slot_name)
+            
+            elif modal.get('active_tab') == 'Bag':
+                if game.player.backpack:
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                    for i, item in enumerate(game.player.backpack.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            return item
         
         elif modal['type'] == 'container':
             container = modal['item']
@@ -1024,6 +1077,20 @@ def handle_right_click(game, mouse_pos):
                             item = game.player.clothes.get(slot_name)
                             if item:
                                 clicked_item, click_source, click_index = item, 'gear', slot_name; break
+
+            elif modal.get('active_tab') == 'Bag':
+                if game.player.backpack:
+                    # Match the position calculation used in draw/drag logic (modal_y + 40 + header/padding offsets)
+                    # In drag logic we used (modal['rect'].x, modal['rect'].y + 40) which results in the correct +80 visual offset
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                    
+                    for i, item in enumerate(game.player.backpack.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            clicked_item = item
+                            click_source = 'container' # Treat it as a container source
+                            click_index = i
+                            click_container_item = game.player.backpack # The container is the backpack
+                            break
         
         elif modal['type'] == 'container':
             container = modal['item']
@@ -1262,6 +1329,34 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                             game.drag_start_pos = mouse_pos
                             game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                             return # Found in 'gear'
+        
+        elif modal.get('active_tab') == 'Bag':
+            if game.player.backpack:
+                # Define start position (Must match _draw_backpack_tab in inventory.py)
+                padding = 10
+                start_x = modal['rect'].x + padding
+                start_y = modal['rect'].y + 80 
+                
+                # Check slots
+                for i, item in enumerate(game.player.backpack.inventory):
+                    if item:
+                        slot_rect = get_container_slot_rect((start_x - padding, start_y - 40), i)
+                        # The utility function get_container_slot_rect adds padding/header internally, 
+                        # so we adjust the input pos to match visually.
+                        # Actually, let's just construct the rect manually or ensure alignment.
+                        # Looking at container.py: start_y = container_pos[1] + 40.
+                        # So if we pass (modal_x, modal_y + 40), it adds 40 = modal_y + 80. Correct.
+                        
+                        # Let's calculate explicitly to be safe/clean:
+                        pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                        slot_rect = get_container_slot_rect(pos_for_calc, i)
+                        
+                        if slot_rect.collidepoint(mouse_pos):
+                            # Source type is 'container', passing the backpack object
+                            game.drag_candidate = (item, (i, 'container', game.player.backpack, modal['id']))
+                            game.drag_start_pos = mouse_pos
+                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                            return
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):

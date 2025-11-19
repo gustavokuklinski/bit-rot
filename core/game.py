@@ -35,8 +35,14 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
 
         pygame.init()
+        
+        
         self.screen = pygame.display.set_mode((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.RESIZABLE)
+        #self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
+        
+        
         pygame.display.set_caption("Bit Rot")
         icon_image = pygame.image.load('./game/icons/favicon.png')
         pygame.display.set_icon(icon_image)
@@ -143,14 +149,6 @@ class Game:
         self.is_giant_map = False
 
     def load_map(self, map_filename):
-        # Clear all game state
-        #self.obstacles.clear()
-        #self.containers.clear()
-        #self.items_on_ground.clear()
-        #self.zombies.clear()
-        
-        #self.corpses.clear()
-
         # Clear all layer data dictionaries
         self.all_map_layers.clear()
         self.all_ground_layers.clear()
