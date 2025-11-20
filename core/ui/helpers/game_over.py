@@ -39,4 +39,12 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
         pygame.draw.rect(screen, GRAY, quit_rect.inflate(20, 10))
     screen.blit(restart_text, restart_rect)
     screen.blit(quit_text, quit_rect)
+
+    current_year = datetime.now().year
+    footer_str = f"Developed by: Gustavo Kuklinski - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
+    footer_text = font_notification.render(footer_str, True, GRAY)
+    footer_rect = footer_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT - 20))
+    screen.blit(footer_text, footer_rect)
+
+
     return restart_rect, quit_rect

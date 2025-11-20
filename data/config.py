@@ -1,6 +1,7 @@
 import pygame
 import xml.etree.ElementTree as ET
 import os
+import subprocess
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -190,6 +191,12 @@ def load_settings(preset="default"):
 
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
+
+try:
+    # Get the short hash (e.g., "a1b2c3d")
+    GAME_VERSION =  "git+" + subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip() + "(main)"
+except Exception:
+    GAME_VERSION = "Dev"
 
 # Initial load
 load_settings()

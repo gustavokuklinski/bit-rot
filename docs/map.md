@@ -9,12 +9,12 @@ All item design is stored at: ```game/sprites/map/[MAP_TILE]```
 #### Map container
 
 ```xml
-<map name="[MAP CSV UNIQUE NAME]" type="maptile_container" char="[MAP CSV UNIQUE CHAR]" is_obstacle="true">  <!-- is_obstacle="true" or "false" -->
+<map name="military_crate" type="maptile_container" char="military_crate" is_obstacle="true">  <!-- is_obstacle="true" or "false" -->
     <visuals>
         <sprite file="military_crate.png" /> <!-- map container sprite -->
     </visuals>
     <capacity value="10" /> <!-- map container capacity -->
-    <loot>
+    <loot> <!-- Item loot table -->
         <item item="Pistol 9mm" chance="1" />  <!-- items to spawn -->
         <item item="Leather Black Gloves" chance="1" /> <!-- clothes pass as items to spawn -->
     </loot>

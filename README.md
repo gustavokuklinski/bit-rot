@@ -21,27 +21,3 @@ Build executable system target
 $ pyinstaller --onefile --noconsole --icon=./game/icons/favicon.ico main.py # Compile the Game
 $ pyinstaller --onefile --noconsole --icon=./game/icons/favicon.ico editor.py # Compile map editor
 ```
-
-----
-
-**Basic controls**:
-- **W/A/S/D**: Walk
-- **SHIFT + W/A/S/D**: Run
-- **CTRL + L-Click**: Shoot/Attack
-- **SHIFT + L-Click + Drag**: Get only one item from stack
-- **L-Click + Drag**: Place or Drop
-- **R-Click**: Opens menu 
-- **1/2/3/4/5**: Equip and use item from Belt
-
-- **E**: Get item from floor, open/close door
-- **R**: Reload weapon or item
-
-- **I**: Opens Inventory and Belt
-- **H**: Open Status
-- **N**: Open Nearby
-- **M**: Open Messages
-
-- **F2**: Pause game
-
-- **MOUSE SCROLL**: Zoom in/Zoom out
-- **-/=**: Keyboard Zoom in/Zoom out

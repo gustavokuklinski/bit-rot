@@ -1,6 +1,6 @@
 import pygame
 from data.config import *
-
+from datetime import datetime
 _logo_img = None
 
 def draw_menu(screen, mouse_pos):
@@ -37,4 +37,11 @@ def draw_menu(screen, mouse_pos):
 
     screen.blit(start_text, start_rect)
     screen.blit(quit_text, quit_rect)
+
+    current_year = datetime.now().year
+    footer_str = f"Developed by: Gustavo Kuklinski - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
+    footer_text = font_notification.render(footer_str, True, GRAY)
+    footer_rect = footer_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT - 20))
+    screen.blit(footer_text, footer_rect)
+
     return start_rect, quit_rect

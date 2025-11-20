@@ -8,6 +8,7 @@
 - **L-Click + Drag**: Place or Drop
 - **R-Click**: Opens menu 
 - **1/2/3/4/5**: Equip and use item from Belt
+- **SPACE**: Wake up from sleep
 
 - **E**: Get item from floor, open/close door
 - **R**: Reload weapon or item
