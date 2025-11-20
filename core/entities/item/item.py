@@ -5,6 +5,7 @@ import pygame
 import uuid
 
 from data.config import *
+import data.config
 
 ITEM_TEMPLATES = {}  # loaded templates
 
@@ -74,13 +75,13 @@ class Item:
             if 'durability' in props and 'max' in props['durability']:
                 # Apply multipliers just like in create_from_name
                 max_dur = float(props['durability']['max'])
-                multiplier = DURABILITY_MULTIPLIER
+                multiplier = data.config.DURABILITY_MULTIPLIER
                 if template['type'] in ['weapon_melee', 'weapon_ranged']:
-                    multiplier *= WEAPON_DURABILITY_MULTIPLIER
+                    multiplier *= data.config.WEAPON_DURABILITY_MULTIPLIER
                 elif template['type'] == 'tool':
-                    multiplier *= TOOL_DURABILITY_MULTIPLIER
+                    multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
                 elif template['type'] == 'cloth':
-                    multiplier *= DURABILITY_MULTIPLIER
+                    multiplier *= data.config.DURABILITY_MULTIPLIER
                 
                 return max_dur * multiplier
                 
@@ -367,7 +368,7 @@ class Item:
         if not spawnable:
             return None
         names = list(spawnable.keys())
-        chances = [d['spawn_chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER for d in spawnable.values()]
+        chances = [d['spawn_chance'] * data.config.ITEM_SPAWN_CHANCE_MULTIPLIER for d in spawnable.values()]
         chosen_name = random.choices(names, weights=chances, k=1)[0]
         return Item.create_from_name(chosen_name, randomize_durability=True)
 
@@ -403,11 +404,11 @@ class Item:
         
         if needs_durability:
             # Apply multipliers
-            multiplier = DURABILITY_MULTIPLIER
+            multiplier = data.config.DURABILITY_MULTIPLIER
             if template['type'] in ['weapon_melee', 'weapon_ranged']:
-                multiplier *= WEAPON_DURABILITY_MULTIPLIER
+                multiplier *= data.config.WEAPON_DURABILITY_MULTIPLIER
             elif template['type'] == 'tool':
-                multiplier *= TOOL_DURABILITY_MULTIPLIER
+                multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
             
             min_dur *= multiplier
             max_dur *= multiplier

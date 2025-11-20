@@ -2,6 +2,7 @@ import os
 import xml.etree.ElementTree as ET
 import pygame
 from data.config import *
+import data.config
 
 class TileManager:
     """Manages tile definitions, loading them from XML and handling image assets."""
@@ -57,7 +58,7 @@ class TileManager:
                                                 'chance': float(item_node.get('chance', '0'))
                                             })
                                 self.definitions[char] = definition
-                                print(f"Loaded tile definition for '{char}' from {filename}. Image loaded from: {image_path}")
+                                #print(f"Loaded tile definition for '{char}' from {filename}. Image loaded from: {image_path}")
                             except pygame.error as e:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
                 except ET.ParseError as e:

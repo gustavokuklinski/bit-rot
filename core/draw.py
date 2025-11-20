@@ -1,14 +1,15 @@
 import pygame
 import math
 from data.config import *
-from core.ui.helpers import draw_menu, draw_game_over
 from core.entities.item.item import Item
+from core.ui.helpers.main_menu import draw_menu
+from core.ui.helpers.game_over import draw_game_over
 from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby import draw_nearby_modal
-from core.ui.helpers import draw_inventory_button, draw_status_button, draw_nearby_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.messages_modal import draw_messages_modal, draw_messages_button
 from core.ui.text_modal import draw_text_modal

@@ -3,6 +3,7 @@ import os
 import re
 import pygame
 from data.config import *
+import data.config
 from core.entities.item.item import Item
 from core.entities.zombie.zombie import Zombie
 from core.entities.zombie.corpse import Corpse
@@ -439,7 +440,6 @@ def set_active_layer(game, layer_index):
         pass
     else:
         # We are on a non-giant-map layer (L2, etc.). Build a new, local grid.
-        print(f"[DEBUG] Building spawn grid for non-giant layer {layer_index}")
         game.spawn_point_grid.clear()
         GRID_SIZE_SPAWNS = game.SPAWN_GRID_SIZE # 512
         for sp_pos in game.current_zombie_spawns:

@@ -1,6 +1,6 @@
 import pygame
 import uuid
-from data.config import *
+import data.config
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -140,7 +140,7 @@ def handle_keyboard_events(game, event):
         zoom_step = 1
         if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: # Handles '+' (often requires shift=equals)
             game.zoom_level += zoom_step
-            game.zoom_level = min(game.zoom_level, NEAR_ZOOM) # Clamp to max zoom
+            game.zoom_level = min(game.zoom_level, data.config.NEAR_ZOOM) # Clamp to max zoom
         elif event.key == pygame.K_MINUS: # Handles '-'
             game.zoom_level -= zoom_step
-            game.zoom_level = max(FAR_ZOOM, game.zoom_level) # Clamp to min zoom
+            game.zoom_level = max(data.config.FAR_ZOOM, game.zoom_level) # Clamp to min zoom

@@ -1,63 +1,44 @@
+<?xml version="1.0" ?>
 <config>
-    <!-- System game config -->
-    <system>
-        <language value="en" /> <!-- Game dafault language -->
-        <tile_size value="16" /> <!-- Default: 16 game tilesize -->
-    </system>
-
     <game>
-        <!-- Day/Night cycles Time -->
-        <time_daylength value="300000" /> <!-- Long as the game day: 5 minutes in MS Default: 30000 -->
-        <time_sunrise_hr value="5.5" /> <!-- Default: 5.5 (5:30 AM) -->
-        <time_sunset_hr value="17.5" /> <!-- Default: 17.5 (5:30 PM) -->
-        <time_transition_hr value="1.0" /> <!-- Default: 1.0 (1 hour) -->
-        <time_start_hr value="6.0" /> <!-- Default: 6.0 (6:00 AM) -->
-        <day_night_cycle_darkness value="255" /> <!-- Night darkness in RGB(255,255,255) - WHITE -->
-
-        <zoom_start value="3.0" /> <!-- Zoom start game -->
-        <zoom_far value="1.3" /> <!-- Zoom Far on game -->
-        <zoom_near value="5.0" /> <!-- Zoom Near on game -->
+        <time_daylength value="300000"/>
+        <time_sunrise_hr value="5.5"/>
+        <time_sunset_hr value="17.5"/>
+        <time_transition_hr value="1.0"/>
+        <time_start_hr value="6.0"/>
+        <day_night_cycle_darkness value="255"/>
+        <zoom_start value="3.0"/>
+        <zoom_far value="1.3"/>
+        <zoom_near value="5.0"/>
     </game>
-
-    <!-- Player and game Config -->
     <player>
-        <!-- Food and Water modifier -->
-        <food_water_decay_seconds value="5.0" /> <!-- Seconds to decay water -->
-        <food_decay value="0.2" /> <!-- Seconds to decay food -->
-        <water_decay value="0.3" /> <!-- Seconds to decay water -->
-        <water_autodrink value="true" /> <!-- Enable water auto-drink -->
-        <water_threshold value="90" /> <!-- Percentage to start auto-drink -->
-        <food_water_multiplier_decay value="1.5" /> <!-- Seconds to decay food and water -->
-
-        <!-- View Radius and Fog of War -->
-        <view_radius value="4" /> <!-- How long items and zombies get on player POV -->
-        <fow_radius value="10" /> <!-- Fog radius -->
+        <food_water_decay_seconds value="5.0"/>
+        <food_decay value="0.2"/>
+        <water_decay value="0.3"/>
+        <water_autodrink value="true"/>
+        <water_threshold value="90"/>
+        <food_water_multiplier_decay value="1.5"/>
+        <view_radius value="4"/>
+        <fow_radius value="10"/>
     </player>
-
-    <!-- Items Durabilitie Config -->
     <durability>
-        <multiplier value="1.0" />
-        <weapon_multiplier value="1.0" />
-        <tool_multiplier value="1.0" />
+        <multiplier value="1.0"/>
+        <weapon_multiplier value="1.0"/>
+        <tool_multiplier value="1.0"/>
     </durability>
-
-    <!-- Spawning Config -->
     <spawning>
-        <item_spawn_chance_multiplier value="1.0" /> <!-- 1.0 = 100% - Item spawn change based on chance="1" XML item -->
+        <item_spawn_chance_multiplier value="1.0"/>
     </spawning>
-
-    <!-- Zombies Config -->
     <zombie>
-        <speed value="1" /> <!-- Zombie Speed -->
-        <drop value="1" />  <!-- Zombie Drop 0 to 100 (full drop) -->
-        <detection value="10" /> <!-- Zombie detect player radius -->
-        <wander value="true" /> <!-- Zombie wander true = wander, false = follow the player -->
-        <wander_interval value="2000" /> <!-- wandering interval in MS -->
-        <sight_check value="false" />  <!-- Zombie spot the player and go to: true / false -->
-        <spawn value="2" /> <!-- How many zombies per spawn -->
-        <respawn_timer value="600000" /> <!-- 300000 = 5 minutes | 600000 = 10 minutes / Time to Reaspawn Zombie in MS-->
-        <max_zombies value="2024" /> <!-- Max Zombies on map-->
-        <infection_chance value="0.10" /> <!-- Default: 0.10 - 10% chance of bite -->
+        <speed value="1"/>
+        <drop value="1"/>
+        <detection value="10"/>
+        <wander value="true"/>
+        <wander_interval value="2000"/>
+        <sight_check value="false"/>
+        <spawn value="2"/>
+        <respawn_timer value="600000"/>
+        <max_zombies value="2024"/>
+        <infection_chance value="0.10"/>
     </zombie>
-
 </config>

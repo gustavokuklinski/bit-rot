@@ -2,6 +2,7 @@ import pygame
 import sys
 import math
 from data.config import *
+import data.config
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
 
@@ -17,13 +18,13 @@ def handle_movement(game):
 
     if game.player.stamina <= 0:
         # Exhausted speed
-        current_speed = PLAYER_SPEED / 3
+        current_speed = data.config.PLAYER_SPEED / 3
     elif is_running:
         # Running speed
-        current_speed = PLAYER_SPEED
+        current_speed = data.config.PLAYER_SPEED
     else:
         # Normal walk speed
-        current_speed = PLAYER_SPEED / 2
+        current_speed = data.config.PLAYER_SPEED / 2
 
 
     dx, dy = 0, 0
@@ -70,7 +71,7 @@ def handle_input(game):
                     game.zoom_level += 0.1
                 elif event.y < 0:
                     game.zoom_level -= 0.1
-                game.zoom_level = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
+                game.zoom_level = max(data.config.FAR_ZOOM, min(game.zoom_level, data.config.NEAR_ZOOM))
             else:
                 # Mouse is over a modal, check if it's the messages modal content area
                 for modal in reversed(game.modals): # Check topmost modal first

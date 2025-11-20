@@ -7,11 +7,14 @@ import os
 import asyncio
 
 from data.config import *
+import data.config
 from core.entities.player.player import Player
 from core.entities.zombie.zombie import Zombie
 from core.entities.item.item import Item, Projectile
 from core.entities.zombie.corpse import Corpse
-from core.ui.helpers import draw_menu, draw_game_over, run_player_setup
+from core.ui.helpers.main_menu import draw_menu
+from core.ui.helpers.game_over import draw_game_over
+from core.ui.helpers.player_setup import run_player_setup
 from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
@@ -29,6 +32,7 @@ from core.map.world_layers import load_all_map_layers, set_active_layer, load_gi
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
 from core.sound_manager import SoundManager
+
 
 class Game:
     def __init__(self):
@@ -172,12 +176,14 @@ class Game:
         
 
     def start_new_game(self, player_data):
-        
+        preset = self.player_setup_state.get('selected_config_preset', 'default')
+        load_settings(preset)
+
         # The player_data dict is now fully constructed by the setup screen.
         self.player_name = player_data.get('name', "Player") # Ensure game obj has name
         
         self.player = Player(player_data=player_data)
-        self.zoom_level = START_ZOOM
+        self.zoom_level = data.config.START_ZOOM
         
         # The setup screen should have put initial_loot in the dict.
         initial_loot = player_data.get('initial_loot', [])

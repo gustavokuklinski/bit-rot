@@ -3,6 +3,7 @@ import os
 import random
 import math 
 from data.config import *
+import data.config
 
 class SoundManager:
     def __init__(self):
@@ -70,11 +71,11 @@ class SoundManager:
             MIN_ZOOM_VOLUME = 0.2 # At farthest zoom (e.g., 0.5)
             
             # 2. Get the current zoom level (clamped)
-            current_zoom = max(FAR_ZOOM, min(game.zoom_level, NEAR_ZOOM))
+            current_zoom = max(data.config.FAR_ZOOM, min(game.zoom_level, data.config.NEAR_ZOOM))
             
             # 3. Calculate how far 'current_zoom' is through the zoom range (0.0 to 1.0)
-            if (NEAR_ZOOM - FAR_ZOOM) != 0:
-                zoom_progress = (current_zoom - FAR_ZOOM) / (NEAR_ZOOM - FAR_ZOOM)
+            if (data.config.NEAR_ZOOM - data.config.FAR_ZOOM) != 0:
+                zoom_progress = (current_zoom - data.config.FAR_ZOOM) / (data.config.NEAR_ZOOM - data.config.FAR_ZOOM)
             else:
                 zoom_progress = 1.0 # Avoid division by zero
             

@@ -4,6 +4,7 @@ import random
 import math
 
 from data.config import *
+import data.config
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.zombie.zombie import Zombie
@@ -194,7 +195,7 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     # build its inventory from the zombie loot table
     if hasattr(zombie, 'loot_table'):
         for drop in zombie.loot_table:
-            if random.random() < drop.get('chance', 0) * (ZOMBIE_DROP / 100.0):
+            if random.random() < drop.get('chance', 0) * (data.config.ZOMBIE_DROP / 100.0):
                 item_inst = Item.create_from_name(drop.get('item'))
                 if item_inst:
                     corpse.inventory.append(item_inst)
@@ -245,7 +246,7 @@ def check_dynamic_zombie_spawns(game):
    
     # Check for global zombie limit
     current_zombie_count = len(game.zombies)
-    if current_zombie_count >= MAX_ZOMBIES_GLOBAL:
+    if current_zombie_count >= data.config.MAX_ZOMBIES_GLOBAL:
         return # Global limit reached, don't spawn more.
 
     # Combine all entities that a new zombie cannot spawn on top of
@@ -260,9 +261,9 @@ def check_dynamic_zombie_spawns(game):
         dist_to_player = math.hypot(player_pos[0] - spawn_pos[0], player_pos[1] - spawn_pos[1])
         
         # Use ZOMBIE_DETECTION_RADIUS as the trigger distance (with a small buffer)
-        if dist_to_player < ZOMBIE_DETECTION_RADIUS * 1.5: 
+        if dist_to_player < data.config.ZOMBIE_DETECTION_RADIUS * 1.5: 
 
-            zombie_spawn_limit = max(0, MAX_ZOMBIES_GLOBAL - len(game.zombies))
+            zombie_spawn_limit = max(0, data.config.MAX_ZOMBIES_GLOBAL - len(game.zombies))
             
             if zombie_spawn_limit == 0:
                 print("Global zombie limit reached during dynamic spawn.")
@@ -279,7 +280,7 @@ def check_dynamic_zombie_spawns(game):
                 [spawn_pos], # Only spawn at this one 'Z' marker
                 entities_to_avoid,
                 zombie_spawn_limit, # Pass the remaining global limit
-                spawns_per_marker=ZOMBIES_PER_SPAWN,  # Tell it how many to spawn at this marker
+                spawns_per_marker=data.config.ZOMBIES_PER_SPAWN,  # Tell it how many to spawn at this marker
                 map_width_px=game.map_width_pixels,
                 map_height_px=game.map_height_pixels
             )
@@ -334,7 +335,7 @@ def check_zombie_respawn(game):
         return 
     
     # If timer is disabled, do not respawn.
-    if ZOMBIE_RESPAWN_TIMER_MS <= 0:
+    if data.config.ZOMBIE_RESPAWN_TIMER_MS <= 0:
         return # This now correctly skips *only* respawning
 
     # Check if timer has been initialized (for older save states)
@@ -344,7 +345,7 @@ def check_zombie_respawn(game):
     last_respawn = game.map_states[current_map]['last_respawn_time']
 
     # Check if respawn timer has elapsed
-    if current_time - last_respawn > ZOMBIE_RESPAWN_TIMER_MS:
+    if current_time - last_respawn > data.config.ZOMBIE_RESPAWN_TIMER_MS:
         print(f"Respawn timer expired for {current_map}. Respawning zombies.")
         
         
