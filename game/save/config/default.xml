@@ -1,27 +1,26 @@
 <config>
     <!-- System game config -->
     <system>
+        <language value="en" /> <!-- Game dafault language -->
         <tile_size value="16" /> <!-- Default: 16 game tilesize -->
-        <zoom_start value="3.0" /> <!-- Zoom start game -->
-        <zoom_far value="1.3" /> <!-- Zoom Far on game -->
-        <zoom_near value="5.0" /> <!-- Zoom Near on game -->
+    </system>
 
+    <game>
         <!-- Day/Night cycles Time -->
         <time_daylength value="300000" /> <!-- Long as the game day: 5 minutes in MS Default: 30000 -->
         <time_sunrise_hr value="5.5" /> <!-- Default: 5.5 (5:30 AM) -->
         <time_sunset_hr value="17.5" /> <!-- Default: 17.5 (5:30 PM) -->
         <time_transition_hr value="1.0" /> <!-- Default: 1.0 (1 hour) -->
         <time_start_hr value="6.0" /> <!-- Default: 6.0 (6:00 AM) -->
-
-        
         <day_night_cycle_darkness value="255" /> <!-- Night darkness in RGB(255,255,255) - WHITE -->
 
-
-    </system>
+        <zoom_start value="3.0" /> <!-- Zoom start game -->
+        <zoom_far value="1.3" /> <!-- Zoom Far on game -->
+        <zoom_near value="5.0" /> <!-- Zoom Near on game -->
+    </game>
 
     <!-- Player and game Config -->
     <player>
-
         <!-- Food and Water modifier -->
         <food_water_decay_seconds value="5.0" /> <!-- Seconds to decay water -->
         <food_decay value="0.2" /> <!-- Seconds to decay food -->
@@ -33,8 +32,6 @@
         <!-- View Radius and Fog of War -->
         <view_radius value="4" /> <!-- How long items and zombies get on player POV -->
         <fow_radius value="10" /> <!-- Fog radius -->
-
-
     </player>
 
     <!-- Items Durabilitie Config -->

@@ -12,6 +12,7 @@ GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
+
 MAP_DIR = "./game/resources/map/" # Game map files
 DATA_PATH = "./game/resources/data/" # Folders with XML data files
 SPRITE_PATH = "./game/resources/sprites/" # Folders with PNG sprites
@@ -78,20 +79,19 @@ system_config = root.find('system')
 # Tile size
 TILE_SIZE = int(system_config.find('tile_size').get('value'))
 
+
+game_config = root.find('game')
+TIME_DAYLENGTH = int(game_config.find('time_daylength').get('value'))
+TIME_SUNRISE_HR = float(game_config.find('time_sunrise_hr').get('value'))
+TIME_SUNSET_HR = float(game_config.find('time_sunset_hr').get('value'))
+TIME_TRANSITION_HR = float(game_config.find('time_transition_hr').get('value'))
+TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
+MAX_DARKNESS_OPACITY = int(game_config.find('day_night_cycle_darkness').get('value'))
+
 # Zoom
-START_ZOOM = float(system_config.find('zoom_start').get('value'))
-FAR_ZOOM = float(system_config.find('zoom_far').get('value'))
-NEAR_ZOOM = float(system_config.find('zoom_near').get('value'))
-
-
-TIME_DAYLENGTH = int(system_config.find('time_daylength').get('value'))
-TIME_SUNRISE_HR = float(system_config.find('time_sunrise_hr').get('value'))
-TIME_SUNSET_HR = float(system_config.find('time_sunset_hr').get('value'))
-TIME_TRANSITION_HR = float(system_config.find('time_transition_hr').get('value'))
-TIME_START_HR = float(system_config.find('time_start_hr').get('value'))
-
-MAX_DARKNESS_OPACITY = int(system_config.find('day_night_cycle_darkness').get('value'))
-
+START_ZOOM = float(game_config.find('zoom_start').get('value'))
+FAR_ZOOM = float(game_config.find('zoom_far').get('value'))
+NEAR_ZOOM = float(game_config.find('zoom_near').get('value'))
 
 
 # Player settings

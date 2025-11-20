@@ -45,7 +45,7 @@ def draw_messages_modal(surface, game, modal, assets):
     # Draw messages adjusted by scroll offset
     y_pos = 0 - scroll_offset_y # Start drawing from the scrolled position
     for msg_text in reversed(game.message_log): # Newest messages first still works
-        text_surface = font_small.render(msg_text, True, WHITE)
+        text_surface = font_notification.render(msg_text, True, WHITE)
         # Calculate draw position *within the content_surface*
         draw_pos_in_subsurface = (0, y_pos) # X is always 0 in the subsurface
 

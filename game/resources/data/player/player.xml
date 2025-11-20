@@ -4,30 +4,6 @@
     <profession value="Civilian" />
 
     <traits>
-        <vaccine value="false" />
-        <athletic value="false" />
-        <strong value="false" />
-        <luck value="false" />
-        <runner value="false" />
-        <healthy value="false" />
-        <rested value="false" />
-        <camel value="false" />
-        <iron_stomach value="false" />
-        <fit value="false" />
-        <brawler value="false" />
-        <weak value="false" />
-        <unlucky value="false" />
-        <smoker value="false" />
-        <drunk value="false" />
-        <illnes value="false" />
-        <sedentary value="false" />
-        <myopia value="false" />
-        <frail value="false" />
-        <sleepy value="false" />
-        <high_thirst value="false" />
-        <sweet_tooth value="false" />
-        <unfit value="false" />
-        <clumsy value="false" />
     </traits>
 
     <stats>

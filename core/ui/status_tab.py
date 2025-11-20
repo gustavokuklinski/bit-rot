@@ -9,7 +9,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     surface.blit(name_text, (x_offset, y_offset))
     y_offset += 20
 
-    profession_text = font_small.render(f"Profession: {player.profession}", True, WHITE)
+    profession_text = font_notification.render(f"Profession: {player.profession}", True, WHITE)
     surface.blit(profession_text, (x_offset, y_offset))
     y_offset += 20
 
@@ -24,7 +24,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "INF": SPRITE_PATH + "ui/infection.png",
         "XP": SPRITE_PATH + "ui/xp.png",
         "ANX": SPRITE_PATH + "ui/axiety.png",
-        "DEF": SPRITE_PATH + "ui/strength.png"
+        "DEF": SPRITE_PATH + "ui/defence.png"
     }
     for k, path in icon_files.items():
         try:
@@ -50,11 +50,11 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
             surface.blit(icon, (x_offset, y_pos))
             label_x = x_offset + 28
         else:
-            text = font.render(f"{name}:", True, WHITE)
+            text = font_notification.render(f"{name}:", True, WHITE)
             surface.blit(text, (x_offset, y_pos))
             label_x = x_offset + 110
 
-        text = font_small.render(f"[{int(value)}%]", True, WHITE)
+        text = font_notification.render(f"[{int(value)}%]", True, WHITE)
         surface.blit(text, (label_x, y_pos + 3))
 
         bar_x = label_x + 12
