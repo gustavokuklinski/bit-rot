@@ -1,4 +1,4 @@
-<item name="Sparkling Water" type="consumable">
+<item name="Sparkling Water" type="consumable_drink">
     <properties>
         <status value="water" />
         <restore min="5" max="25" />

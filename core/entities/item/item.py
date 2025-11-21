@@ -76,12 +76,14 @@ class Item:
                 # Apply multipliers just like in create_from_name
                 max_dur = float(props['durability']['max'])
                 multiplier = data.config.DURABILITY_MULTIPLIER
-                if template['type'] in ['weapon_melee', 'weapon_ranged']:
-                    multiplier *= data.config.WEAPON_DURABILITY_MULTIPLIER
+                if template['type'] == 'weapon_melee':
+                    multiplier *= data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
+                elif template['type'] == 'weapon_ranged':
+                    multiplier *= data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
                 elif template['type'] == 'tool':
                     multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
                 elif template['type'] == 'cloth':
-                    multiplier *= data.config.DURABILITY_MULTIPLIER
+                    multiplier *= data.config.CLOTH_DURABILITY_MULTIPLIER
                 
                 return max_dur * multiplier
                 
@@ -368,7 +370,47 @@ class Item:
         if not spawnable:
             return None
         names = list(spawnable.keys())
-        chances = [d['spawn_chance'] * data.config.ITEM_SPAWN_CHANCE_MULTIPLIER for d in spawnable.values()]
+
+        chances = []
+        for d in spawnable.values():
+            base_chance = d['spawn_chance']
+            # Apply Global Multiplier
+            multiplier = data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
+            
+            # Apply Type Specific Multipliers
+            t_type = d.get('type')
+            
+            if t_type == 'weapon_melee':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
+            elif t_type == 'weapon_ranged':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
+            elif t_type == 'mobile':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
+            elif t_type == 'container':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
+            elif t_type == 'backpack':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
+            elif t_type == 'currency':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
+            elif t_type == 'text':
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
+            
+            # Consumables hierarchy
+            elif t_type and t_type.startswith('consumable'):
+                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
+                
+                if t_type == 'consumable_food':
+                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
+                elif t_type == 'consumable_drink':
+                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
+                elif t_type == 'consumable_medication':
+                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
+                elif t_type == 'consumable_ammo':
+                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
+            
+            chances.append(base_chance * multiplier)
+
+
         chosen_name = random.choices(names, weights=chances, k=1)[0]
         return Item.create_from_name(chosen_name, randomize_durability=True)
 
@@ -396,19 +438,19 @@ class Item:
             min_dur = float(props['durability'].get('min', 0))
             max_dur = float(props['durability']['max'])
             needs_durability = True
-        elif template['type'] == 'cloth':
-            # Item is cloth, give it default durability even if not in XML
-            min_dur = 50.0 # Default min
-            max_dur = 100.0 # Default max
-            needs_durability = True
+        
         
         if needs_durability:
             # Apply multipliers
             multiplier = data.config.DURABILITY_MULTIPLIER
-            if template['type'] in ['weapon_melee', 'weapon_ranged']:
-                multiplier *= data.config.WEAPON_DURABILITY_MULTIPLIER
+            if template['type'] == 'weapon_melee':
+                    multiplier *= data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
+            elif template['type'] == 'weapon_ranged':
+                multiplier *= data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
             elif template['type'] == 'tool':
                 multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
+            elif template['type'] == 'cloth':
+                multiplier *= data.config.CLOTH_DURABILITY_MULTIPLIER
             
             min_dur *= multiplier
             max_dur *= multiplier
@@ -477,10 +519,10 @@ class Container(Item):
 
 class Projectile:
     """Represents a bullet fired by the player."""
-    def __init__(self, start_x, start_y, target_x, target_y, speed=8, color=YELLOW):
+    def __init__(self, start_x, start_y, target_x, target_y, speed=10, color=WHITE):
         self.x = start_x
         self.y = start_y
-        self.rect = pygame.Rect(start_x, start_y, 5, 5)
+        self.rect = pygame.Rect(start_x, start_y, 1, 2)
         self.color = color
         self.speed = speed
         dx = target_x - start_x
@@ -505,10 +547,9 @@ class Projectile:
         self.rect.topleft = (int(self.x), int(self.y))
 
         if self.x < world_min_x or self.x > world_max_x or self.y < world_min_y or self.y > world_max_y:
-        # if self.x < 0 or self.x > game_width or self.y < 0 or self.y > game_height:
             return True
         return False
 
     def draw(self, surface, offset_x=0, offset_y=0):
         draw_center = (int(self.x) + offset_x, int(self.y) + offset_y)
-        pygame.draw.circle(surface, self.color, draw_center, 5)
+        pygame.draw.circle(surface, self.color, draw_center, 1)

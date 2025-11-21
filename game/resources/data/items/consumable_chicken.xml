@@ -1,4 +1,4 @@
-<item name="Chicken" type="consumable">
+<item name="Chicken" type="consumable_food">
     <properties>
         <status value="food" />
         <restore min="3" max="8" />

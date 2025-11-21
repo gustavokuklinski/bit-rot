@@ -1,106 +1,106 @@
 <traits>
     <!-- Positive traits -->
-    <trait id="vaccine" cost="1">
+    <trait id="vaccine" name="Vaccine" cost="1">
         <stats infection="-5" />
     </trait>
 
-    <trait id="athletic" cost="2">
+    <trait id="athletic" name="Athletic"  cost="2">
         <stats stamina="10" />
     </trait>
 
-    <trait id="strong" cost="2">
+    <trait id="strong" name="Strong" cost="2">
         <attributes strength="2" />
     </trait>
 
-    <trait id="luck" cost="2">
+    <trait id="luck" name="Luck" cost="2">
         <attributes lucky="2" />
     </trait>
 
-    <trait id="runner" cost="2">
+    <trait id="runner" name="Runner" cost="2">
         <attributes speed="2" />
     </trait>
 
-    <trait id="healthy" cost="2">
+    <trait id="healthy" name="Healthy"  cost="2">
         <stats health="15" />
     </trait>
 
-    <trait id="rested" cost="1">
+    <trait id="rested" name="Rested" cost="1">
         <stats tireness="15" />
     </trait>
 
-    <trait id="camel" cost="1">
+    <trait id="camel" name="Camel" cost="1">
         <stats water="20" />
     </trait>
 
-    <trait id="iron_stomach" cost="1">
+    <trait id="iron_stomach" name="Iron Stomach" cost="1">
         <stats food="15" />
     </trait>
 
-    <trait id="fit" cost="2">
+    <trait id="fit" name="Fit" cost="2">
         <attributes fitness="2" />
     </trait>
 
-    <trait id="brawler" cost="2">
+    <trait id="brawler" name="Browler" cost="2">
         <attributes melee="2" />
     </trait>
 
-    <trait id="shooter" cost="2">
+    <trait id="shooter" name="Shooter" cost="2">
         <attributes ranged="2" />
     </trait>
 
 
     <!-- Negative traits -->
-    <trait id="weak" cost="-2">
+    <trait id="weak" name="Weak" cost="-2">
         <attributes strength="-2" />
     </trait>
 
-    <trait id="unlucky" cost="-2">
+    <trait id="unlucky" name="Unlucky" cost="-2">
         <attributes lucky="-1" />
     </trait>
 
-    <trait id="smoker" cost="-1">
+    <trait id="smoker" name="Smoker" cost="-1">
         <stats stamina="-15" anxiety="15" />
     </trait>
 
-    <trait id="drunk" cost="-1">
+    <trait id="drunk" name="Drunk" cost="-1">
         <attributes speed="-15" />
         <stats anxiety="15" />
     </trait>
 
-    <trait id="illnes" cost="-1">
+    <trait id="illnes" name="Illnes" cost="-1">
         <stats infection="15" />
     </trait>
 
-    <trait id="sedentary" cost="-2">
+    <trait id="sedentary" name="Sedentary" cost="-2">
         <stats stamina="-15" tireness="15" />
         <attributes strength="-1" />
     </trait>
 
-    <trait id="myopia" cost="-1">
+    <trait id="myopia" name="Myopia" cost="-1">
         <attributes ranged="-10" />
     </trait>
 
-    <trait id="frail" cost="-2">
+    <trait id="frail" name="Frail" cost="-2">
         <stats health="-15" />
     </trait>
 
-    <trait id="sleepy" cost="-1">
+    <trait id="sleepy" name="Sleepy" cost="-1">
         <stats tireness="-20" />
     </trait>
 
-    <trait id="high_thirst" cost="-1">
+    <trait id="high_thirst" name="High thirst" cost="-1">
         <stats water="-25" />
     </trait>
 
-    <trait id="sweet_tooth" cost="-1">
+    <trait id="sweet_tooth" name="Sweet tooth" cost="-1">
         <stats food="-20" />
     </trait>
 
-    <trait id="unfit" cost="-2">
+    <trait id="unfit" name="Unfit" cost="-2">
         <attributes fitness="-2" />
     </trait>
 
-    <trait id="clumsy" cost="-2">
+    <trait id="clumsy" name="Clumsy" cost="-2">
         <attributes melee="-2" />
     </trait>
 

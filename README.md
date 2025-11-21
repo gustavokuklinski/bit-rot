@@ -18,6 +18,7 @@ $ python editor.py # Map editor
 Build executable system target
 
 ```shell
-$ pyinstaller --onefile --noconsole --icon=./game/icons/favicon.ico main.py # Compile the Game
-$ pyinstaller --onefile --noconsole --icon=./game/icons/favicon.ico editor.py # Compile map editor
+# Nuitka
+$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico main.py # Compile the Game
+$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico editor.py # Compile map editor
 ```

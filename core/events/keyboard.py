@@ -1,6 +1,7 @@
 import pygame
 import uuid
 import data.config
+from data.config import *
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False

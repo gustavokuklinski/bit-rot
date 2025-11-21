@@ -1,4 +1,4 @@
-<item name="Money 5" type="text">
+<item name="Money 5" type="currency">
     <properties>
         <sprite file="money_5.png" />
         <text>

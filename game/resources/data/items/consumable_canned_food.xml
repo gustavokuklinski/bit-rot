@@ -1,4 +1,4 @@
-<item name="Canned Food" type="consumable">
+<item name="Canned Food" type="consumable_food">
     <properties>
         <status value="food" />
         <restore min="15" max="15" />

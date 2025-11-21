@@ -1,4 +1,4 @@
-<item name="Cheese" type="consumable">
+<item name="Cheese" type="consumable_food">
     <properties>
         <status value="food" />
         <restore min="3" max="5" />

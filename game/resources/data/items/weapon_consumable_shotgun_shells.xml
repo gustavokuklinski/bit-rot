@@ -1,4 +1,4 @@
-<item name="Shotgun Shells" type="consumable">
+<item name="Shotgun Shells" type="consumable_ammo">
     <properties>
         <status value="ammo" />
         <load min="5" max="25" />

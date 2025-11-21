@@ -225,8 +225,17 @@ def draw_game(game):
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
         center_y = GAME_HEIGHT // 2
-        flash_radius = (TILE_SIZE // 2) * zoom 
-        pygame.draw.circle(game.virtual_screen, YELLOW, (center_x, center_y), flash_radius)
+        flash_distance = (TILE_SIZE * 1.4) * zoom 
+        
+        # Calculate new position based on aim angle
+        # (Note: -sin because screen Y coordinates are inverted relative to math Y)
+        flash_x = center_x + math.cos(game.player.aim_angle) * flash_distance
+        flash_y = center_y - math.sin(game.player.aim_angle) * flash_distance
+        
+        # Smaller flash radius (was TILE_SIZE // 2)
+        flash_radius = (TILE_SIZE // 5) * zoom 
+        
+        pygame.draw.circle(game.virtual_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
 
     top_tooltip = None

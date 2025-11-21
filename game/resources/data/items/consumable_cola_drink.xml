@@ -1,4 +1,4 @@
-<item name="Cola Drink" type="consumable">
+<item name="Cola Drink" type="consumable_drink">
     <properties>
         <status value="tireness" />
         <restore min="15" max="15" />

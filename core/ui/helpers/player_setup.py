@@ -748,15 +748,37 @@ def run_player_setup(game):
                     else: state['config_name'] += event.unicode
                 elif state.get('active_setting'):
                     block, key = state['active_setting']
-                    current_val = state['settings_data'][block][key]
-                    if event.key == pygame.K_BACKSPACE: state['settings_data'][block][key] = current_val[:-1]
-                    elif event.key == pygame.K_RETURN: state['active_setting'] = None
-                    else: state['settings_data'][block][key] = current_val + event.unicode
+
+                    setting_obj = state['settings_data'][block][key]
+                    
+                    # Robustness check: if it's not a dict for some reason, wrap it
+                    if not isinstance(setting_obj, dict):
+                         setting_obj = {'value': setting_obj, 'name': key}
+                         state['settings_data'][block][key] = setting_obj
+                    
+                    current_val = str(setting_obj['value'])
+
+                    if event.key == pygame.K_BACKSPACE:
+                        setting_obj['value'] = current_val[:-1]
+                        #state['settings_data'][block][key] = current_val[:-1]
+
+                    elif event.key == pygame.K_RETURN: 
+                        state['active_setting'] = None
+
+                    else: 
+                        #state['settings_data'][block][key] = current_val + event.unicode
+                        setting_obj['value'] = current_val + event.unicode
+                        
             elif state['current_tab'] == 'Player':
                 if state.get('name_input_active'):
-                    if event.key == pygame.K_BACKSPACE: state['player_name'] = state['player_name'][:-1]
-                    elif event.key == pygame.K_RETURN: state['name_input_active'] = False
-                    elif len(state['player_name']) <= 20: state['player_name'] += event.unicode
+                    if event.key == pygame.K_BACKSPACE: 
+                        state['player_name'] = state['player_name'][:-1]
+
+                    elif event.key == pygame.K_RETURN: 
+                        state['name_input_active'] = False
+
+                    elif len(state['player_name']) <= 20: 
+                        state['player_name'] += event.unicode
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if player_btn.collidepoint(mouse_pos):
@@ -837,7 +859,13 @@ def run_player_setup(game):
                     if not clicked_input:
                         for block, key, rect in clickable_rects.get('config_bools', []):
                             if rect.collidepoint(mouse_pos):
-                                current_val = state['settings_data'][block][key]
+                                setting_obj = state['settings_data'][block][key]
+                                
+                                if not isinstance(setting_obj, dict):
+                                     setting_obj = {'value': setting_obj, 'name': key}
+                                     state['settings_data'][block][key] = setting_obj
+
+                                current_val = setting_obj['value']
                                 # Toggle value
                                 new_val = "false" if str(current_val).lower() == "true" else "true"
                                 state['settings_data'][block][key] = new_val

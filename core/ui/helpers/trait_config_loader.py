@@ -77,7 +77,8 @@ def load_config_data(filepath):
                 # Assumes structure <setting_name value="..."/>
                 key = setting.tag
                 val = setting.get('value')
-                data[block_name][key] = val
+                display_name = setting.get('name', key)
+                data[block_name][key] = {'value': val, 'name': display_name}
         return data
     except Exception as e:
         print(f"Error loading config {filepath}: {e}")
@@ -89,8 +90,17 @@ def save_config_xml(data, filepath):
     
     for block_name, settings in data.items():
         block_node = ET.SubElement(root, block_name)
-        for key, val in settings.items():
-            ET.SubElement(block_node, key, value=str(val))
+        for key, val_data in settings.items():
+            # [CHANGE] Handle the new dictionary structure
+            if isinstance(val_data, dict):
+                val = val_data.get('value', '')
+                name = val_data.get('name', '')
+                elem = ET.SubElement(block_node, key, value=str(val))
+                if name:
+                    elem.set('name', name)
+            else:
+                # Fallback for legacy/simple data
+                ET.SubElement(block_node, key, value=str(val_data))
 
     try:
         raw_xml = ET.tostring(root, 'utf-8')

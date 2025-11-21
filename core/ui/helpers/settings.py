@@ -93,7 +93,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     config_data = state.get('settings_data', {})
     
     # Order of blocks
-    block_order = ['game', 'player', 'spawning', 'zombie']
+    block_order = ['game', 'player', 'item_spawning', 'zombie']
     for k in config_data:
         if k not in block_order: block_order.append(k)
 
@@ -125,8 +125,12 @@ def _draw_settings_screen(game, state, mouse_pos):
             else:
                 block, key, val_data = item[1], item[2], item[3]
                 
-                display_label = val_data.get('name') if isinstance(val_data, dict) and val_data.get('name') else key
-                val = val_data['value'] if isinstance(val_data, dict) else val_data
+                if isinstance(val_data, dict):
+                    display_label = val_data.get('name', key)
+                    val = val_data.get('value')
+                else:
+                    display_label = key
+                    val = val_data
                 
                 lbl = font_small.render(display_label + ":", True, WHITE)
                 sub.blit(lbl, (20, y_off + 12))

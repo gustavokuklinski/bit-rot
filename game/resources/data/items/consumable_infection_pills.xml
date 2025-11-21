@@ -1,4 +1,4 @@
-<item name="Infection Pills" type="consumable">
+<item name="Infection Pills" type="consumable_medication">
     <properties>
         <status value="infection" />
         <load value="1" />

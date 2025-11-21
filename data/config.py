@@ -103,9 +103,23 @@ ZOMBIES_PER_SPAWN = 0
 ZOMBIE_RESPAWN_TIMER_MS = 0
 ZOMBIE_INFECTION_CHANCE = 0.0
 DURABILITY_MULTIPLIER = 1.0
-WEAPON_DURABILITY_MULTIPLIER = 1.0
+WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
+WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
 TOOL_DURABILITY_MULTIPLIER = 1.0
+CLOTH_DURABILITY_MULTIPLIER = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = 1.0
 
 
 def load_settings(preset="default"):
@@ -117,8 +131,15 @@ def load_settings(preset="default"):
     global ZOMBIE_SPEED, MAX_ZOMBIES_GLOBAL, ZOMBIE_DROP, ZOMBIE_DETECTION_RADIUS
     global ZOMBIE_WANDER_ENABLED, ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
     global ZOMBIES_PER_SPAWN, ZOMBIE_RESPAWN_TIMER_MS, ZOMBIE_INFECTION_CHANCE
-    global DURABILITY_MULTIPLIER, WEAPON_DURABILITY_MULTIPLIER, TOOL_DURABILITY_MULTIPLIER
+    global DURABILITY_MULTIPLIER, WEAPON_MELEE_DURABILITY_MULTIPLIER, TOOL_DURABILITY_MULTIPLIER
+    global WEAPON_RANGED_DURABILITY_MULTIPLIER, CLOTH_DURABILITY_MULTIPLIER
     global ITEM_SPAWN_CHANCE_MULTIPLIER
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE, ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE, ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -181,11 +202,25 @@ def load_settings(preset="default"):
 
         durability_config = root.find('durability')
         DURABILITY_MULTIPLIER = float(durability_config.find('multiplier').get('value'))
-        WEAPON_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_multiplier').get('value'))
+        WEAPON_MELEE_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_melee_multiplier').get('value'))
+        WEAPON_RANGED_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_ranged_multiplier').get('value'))
         TOOL_DURABILITY_MULTIPLIER = float(durability_config.find('tool_multiplier').get('value'))
+        CLOTH_DURABILITY_MULTIPLIER = float(durability_config.find('cloth_multiplier').get('value'))
 
-        spawning_config = root.find('spawning')
+        spawning_config = root.find('item_spawning')
         ITEM_SPAWN_CHANCE_MULTIPLIER = float(spawning_config.find('item_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE = float(spawning_config.find('item_weapon_melee_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED = float(spawning_config.find('item_weapon_ranged_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE = float(spawning_config.find('item_mobile_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = float(spawning_config.find('item_container_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK = float(spawning_config.find('item_backpack_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE = float(spawning_config.find('item_consumable_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = float(spawning_config.find('item_consumable_food_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK = float(spawning_config.find('item_consumable_drink_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = float(spawning_config.find('item_consumable_medication_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = float(spawning_config.find('item_consumable_ammo_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = float(spawning_config.find('item_currency_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = float(spawning_config.find('item_text_spawn_chance_multiplier').get('value'))
         
         print(f"Configuration loaded from {filepath}")
 
