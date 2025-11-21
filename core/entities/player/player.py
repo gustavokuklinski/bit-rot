@@ -486,7 +486,7 @@ class Player:
 
     def find_consumable_at_mouse(self, mouse_pos):
         for i, item in enumerate(self.inventory):
-            if item and item.item_type == 'consumable':
+            if item and item.item_type.startswith('consumable'):
                 slot_rect = get_inventory_slot_rect(i)
                 if slot_rect.collidepoint(mouse_pos):
                     return item, i
@@ -518,8 +518,8 @@ class Player:
         if not weapon or not weapon.ammo_type:
             return None, None, None
         ammo_type_needed = weapon.ammo_type
-        search_list = [(item, 'belt', i) for i, item in enumerate(self.belt) if item and item.item_type == 'consumable']
-        search_list.extend([(item, 'inventory', i) for i, item in enumerate(self.inventory) if item and item.item_type == 'consumable'])
+        search_list = [(item, 'belt', i) for i, item in enumerate(self.belt) if item and item.item_type.startswith('consumable')]
+        search_list.extend([(item, 'inventory', i) for i, item in enumerate(self.inventory) if item and item.item_type.startswith('consumable')])
         for item, source_type, index in search_list:
             if item.load is not None and item.name == ammo_type_needed and item.load > 0:
                 return item, source_type, index
@@ -613,15 +613,8 @@ class Player:
                 options.append('Drop')
             return options # Return immediately
 
-        #if item.item_type == 'consumable':
-        #    if 'Ammo' in item.name or 'Shells' in item.name:
-        #        options.append('Reload')
-        #    else:
-        #        options.append('Use')
-        #    options.append('Equip')
-
-        if item.item_type == 'consumable':
-            if 'Ammo' in item.name or 'Shells' in item.name:
+        if item.item_type.startswith('consumable'):
+            if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
                 options.append('Reload') # This is for guns
             else:
                 options.append('Use')
@@ -710,7 +703,7 @@ class Player:
 
     def consume_item(self, item, source_type, item_index, container_item=None):
         source_inventory = self._get_source_inventory(source_type, container_item)
-        if not item.item_type == 'consumable':
+        if not item.item_type.startswith('consumable'):
             return False
 
         if item.load <= 0:
@@ -721,7 +714,7 @@ class Player:
         ammo_type = getattr(item, 'ammo_type', None) # Keep this for reload logic
         consumed = False
 
-        if status_effect_legacy == 'ammo' or ammo_type is not None:
+        if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
             # Item is ammo, trigger a reload
             self.reload_active_weapon()
             return True # Return early, reload handles its own logic

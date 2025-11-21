@@ -231,7 +231,7 @@ try:
     # Get the short hash (e.g., "a1b2c3d")
     GAME_VERSION =  "git+" + subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip() + "(main)"
 except Exception:
-    GAME_VERSION = "Dev"
+    GAME_VERSION = "pre+Alpha(0.0.1)"
 
 # Initial load
 load_settings()
