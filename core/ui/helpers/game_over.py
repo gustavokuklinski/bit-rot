@@ -1,5 +1,6 @@
 import pygame
 from data.config import *
+from datetime import datetime
 
 _logo_img = None
 
