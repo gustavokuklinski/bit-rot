@@ -77,6 +77,8 @@ class Player:
         self.images = {} # Store all player sprites
         visuals_data = data.get('visuals', {})
         
+        self.visuals = visuals_data
+
         # Load all sprites defined in the data
         if 'center' in visuals_data:
             self.images['center'] = self._load_sprite(visuals_data.get('center'))
@@ -99,11 +101,12 @@ class Player:
 
         self.is_sleeping = False
 
-        sounds = data.get('sounds', {})
-        self.sound_steps = sounds.get('steps') # e.g., "steps.ogg"
+        self.sounds_data = data.get('sounds', {})
+        if not self.sounds_data or 'steps' not in self.sounds_data:
+             self.sounds_data = {'steps': 'steps.ogg'} # Default fallback
+
+        self.sound_steps = self.sounds_data.get('steps')
         self.last_step_sound_time = 0
-        # Cooldown in seconds, since update_stats uses time.time()
-        #self.step_sound_cooldown = 0.4
 
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None

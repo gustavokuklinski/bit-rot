@@ -9,6 +9,11 @@ class Corpse(Item):
     def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000):
         super().__init__(name, 'container', capacity=capacity, sprite_file=image_path)
         self.rect.center = pos
+        
+        # [FIX] Initialize x and y so the save system can read them
+        self.x = self.rect.x
+        self.y = self.rect.y
+        
         self.spawn_time = pygame.time.get_ticks()
         self.decay_ms = decay_ms
         self.color = DARK_GRAY
@@ -30,6 +35,9 @@ class Corpse(Item):
         for it in list(self.inventory):
             try:
                 it.rect.center = (drop_x + 4, drop_y + 4)
+                # Ensure items spilled also have valid coordinates
+                it.x = it.rect.x
+                it.y = it.rect.y
             except Exception:
                 pass
             items_on_ground.append(it)

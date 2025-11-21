@@ -3,6 +3,10 @@ import uuid
 import data.config
 from data.config import *
 
+# Import game actions (Moved to top for cleaner code, assuming no circular dependency)
+# If circular dependency errors occur, move this back inside handle_keyboard_events
+from core.events.game_actions import try_grab_item
+
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
     for modal in game.modals:
@@ -18,7 +22,8 @@ def toggle_inventory_modal(game):
             'position': game.last_modal_positions['inventory'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+            'minimized': False
         }
         game.modals.append(new_inventory_modal)
 
@@ -85,63 +90,78 @@ def toggle_messages_modal(game):
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
+        # Calls the method we added to Game class in the previous step
+        game.capture_pause_screen() 
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
+        # --- Global Keys (Work in Play/Pause) ---
         if event.key == pygame.K_F2:
             toggle_pause(game)
-
-        if event.key == pygame.K_i:
-            toggle_inventory_modal(game)
-
-        if event.key == pygame.K_h:
-            toggle_status_modal(game)
-        
-        if event.key == pygame.K_n:
-            toggle_nearby_modal(game)
-        
-        if event.key == pygame.K_m:
-            toggle_messages_modal(game)
-        
-        if event.key == pygame.K_r:
-            game.player.reload_active_weapon()
-
-        if event.key == pygame.K_e:
-            from core.events.game_actions import try_grab_item
-            try_grab_item(game)
-        
-        if event.key == pygame.K_SPACE:
-            if game.player.is_sleeping:
-                game.player.is_sleeping = False
-                print("You woke up manually.")
+            return # Stop processing other keys if pausing
 
         if event.key == pygame.K_ESCAPE:
             if game.modals:
                 game.modals.pop()
-
-        if pygame.K_1 <= event.key <= pygame.K_5:
-            slot_index = event.key - pygame.K_1
-            item = game.player.belt[slot_index]
-            if item:
-                if item.item_type == 'consumable':
-                    game.player.consume_item(item, 'belt', slot_index)
-                elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
-                    if game.player.active_weapon == item:
-                        game.player.active_weapon = None
-                        print(f"Unequipped {item.name}.")
-                    else:
-                        game.player.active_weapon = item
-                        print(f"Equipped {item.name}.")
+                return
             else:
-                game.player.active_weapon = None
-                print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
+                toggle_pause(game)
+                return
 
-        zoom_step = 1
-        if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: # Handles '+' (often requires shift=equals)
-            game.zoom_level += zoom_step
-            game.zoom_level = min(game.zoom_level, data.config.NEAR_ZOOM) # Clamp to max zoom
-        elif event.key == pygame.K_MINUS: # Handles '-'
-            game.zoom_level -= zoom_step
-            game.zoom_level = max(data.config.FAR_ZOOM, game.zoom_level) # Clamp to min zoom
+
+        # --- Play Mode Keys ---
+        if game.game_state == 'PLAYING':
+            if event.key == pygame.K_i:
+                toggle_inventory_modal(game)
+
+            if event.key == pygame.K_h:
+                toggle_status_modal(game)
+            
+            if event.key == pygame.K_n:
+                toggle_nearby_modal(game)
+            
+            if event.key == pygame.K_m:
+                toggle_messages_modal(game)
+            
+            if event.key == pygame.K_r:
+                if game.player:
+                    game.player.reload_active_weapon()
+
+            if event.key == pygame.K_e:
+                try_grab_item(game)
+            
+            if event.key == pygame.K_SPACE:
+                if game.player and game.player.is_sleeping:
+                    game.player.is_sleeping = False
+                    print("You woke up manually.")
+
+            
+
+            if pygame.K_1 <= event.key <= pygame.K_5:
+                slot_index = event.key - pygame.K_1
+                if game.player:
+                    item = game.player.belt[slot_index]
+                    if item:
+                        if item.item_type.startswith('consumable'):
+                            game.player.consume_item(item, 'belt', slot_index)
+                        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
+                            if game.player.active_weapon == item:
+                                game.player.active_weapon = None
+                                print(f"Unequipped {item.name}.")
+                            else:
+                                game.player.active_weapon = item
+                                print(f"Equipped {item.name}.")
+                    else:
+                        game.player.active_weapon = None
+                        print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
+
+            # Zoom controls
+            zoom_step = 0.1
+            if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 
+                game.zoom_level += zoom_step
+                game.zoom_level = min(game.zoom_level, data.config.NEAR_ZOOM) 
+            elif event.key == pygame.K_MINUS: 
+                game.zoom_level -= zoom_step
+                game.zoom_level = max(data.config.FAR_ZOOM, game.zoom_level)

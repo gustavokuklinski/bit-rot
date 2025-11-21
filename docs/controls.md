@@ -13,12 +13,12 @@
 - **E**: Get item from floor, open/close door
 - **R**: Reload weapon or item
 
-- **I**: Opens Inventory and Belt
+- **I**: Opens Inventory
 - **H**: Open Status
 - **N**: Open Nearby
 - **M**: Open Messages
 
-- **F2**: Pause game
+- **F2**: Pause game and Save Menu
 
 - **MOUSE SCROLL**: Zoom in/Zoom out
 - **-/=**: Keyboard Zoom in/Zoom out

@@ -5,6 +5,11 @@ import math
 import uuid
 import os
 import asyncio
+import shutil
+import json
+import glob
+import re
+from datetime import datetime
 
 from data.config import *
 import data.config
@@ -32,31 +37,32 @@ from core.map.world_layers import load_all_map_layers, set_active_layer, load_gi
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
 from core.sound_manager import SoundManager
+from core.ui.helpers.trait_config_loader import load_config_data
+# [NEW IMPORT]
+from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_files, delete_save
 
 
 class Game:
     def __init__(self):
         pygame.mixer.pre_init(22050, -16, 2, 512)
-
         pygame.init()
         
-        
         self.screen = pygame.display.set_mode((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.RESIZABLE)
-        #self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
         
-        
         pygame.display.set_caption("Bit Rot")
-        icon_image = pygame.image.load('./game/icons/favicon.png')
-        pygame.display.set_icon(icon_image)
+        try:
+            icon_image = pygame.image.load('./game/icons/favicon.png')
+            pygame.display.set_icon(icon_image)
+        except:
+            pass
+
         self.clock = pygame.time.Clock()
         self.assets = load_assets()
         self.game_state = 'MENU'
         self.running = True
 
         self.map_manager = MapManager(self)
-        #self.map_manager = MapManager()
         self.tile_manager = TileManager()
 
         self.player = None
@@ -68,7 +74,6 @@ class Game:
         self.containers = []
         self.corpses = []
         
-
         self.zombies_killed = 0
 
         self.modals = []
@@ -89,14 +94,6 @@ class Game:
         self.drag_candidate = None
         self.drag_start_pos = (0, 0)
         self.DRAG_THRESHOLD = 5
-
-        self.last_modal_positions = {
-            'status': (65, 10),
-            'inventory': (970, 10),
-            'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (970, 360),
-            'messages': (10, 560)
-        }
 
         self.last_modal_positions = {
             'status': (65, 10),
@@ -127,11 +124,11 @@ class Game:
         self.message_log = []
 
         self.current_layer_index = 1
-        self.all_map_layers = {} # Will store {1: data, 2: data, ...}
+        self.all_map_layers = {} 
         self.all_ground_layers = {}
         self.all_spawn_layers = {}
         self.all_roof_layers = {}
-        self.layer_spawn_triggers = {} # Stores triggered spawns for each layer
+        self.layer_spawn_triggers = {} 
         self.triggered_spawns = set()
         
         self.current_zombie_spawns = []
@@ -143,6 +140,9 @@ class Game:
 
         self.player_setup_state = {}
         
+        # [NEW] State for the Load Game menu
+        self.load_game_state = {} 
+
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.world_time = WorldTime(self)
         self.sound_manager = SoundManager()
@@ -151,9 +151,292 @@ class Game:
         self.world_min_y = 0
 
         self.is_giant_map = False
+        self.paused_surface = None
+        
+        # Track the current save folder to overwrite it
+        self.current_save_folder_name = None
+
+    def capture_pause_screen(self):
+        """Creates a black and white version of the current screen for the pause menu."""
+        self.paused_surface = self.virtual_screen.copy()
+        try:
+            # Pygame 2.1.4+
+            self.paused_surface = pygame.transform.grayscale(self.paused_surface)
+        except AttributeError:
+            # Fallback for older pygame
+            bw = pygame.Surface(self.paused_surface.get_size())
+            bw.fill((255, 255, 255))
+            self.paused_surface.blit(bw, (0,0), special_flags=pygame.BLEND_RGB_MULT)
+
+    def save_game(self):
+        """Saves the current game state to a folder (overwrites if exists, else new timestamp)."""
+        
+        if self.current_save_folder_name:
+            # Overwrite existing save
+            save_name = self.current_save_folder_name
+        else:
+            # Create new timestamped save
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            save_name = f"save_{timestamp}"
+            self.current_save_folder_name = save_name
+
+        # Save to game/save/game/
+        save_path = os.path.join("game", "save", "game", save_name)
+        
+        print(f"Saving game to {save_path}...")
+
+        try:
+            # 1. Create directory
+            os.makedirs(save_path, exist_ok=True)
+
+            # 2. Copy Map Files (Preserve generated chunks)
+            map_src = os.path.abspath(self.map_manager.map_folder)
+            map_dst = os.path.abspath(os.path.join(save_path, "map"))
+            
+            if map_src != map_dst:
+                if os.path.exists(map_dst):
+                     shutil.rmtree(map_dst)
+                shutil.copytree(map_src, map_dst, dirs_exist_ok=True)
+                # Update map manager to point to the new save folder
+                self.map_manager.map_folder = map_dst
+            else:
+                print("Map folder is already in the save directory. Skipping map copy.")
+            
+            # 3. Save Player Data
+            attributes_base = {
+                "strength": self.player.progression.strength['level'],
+                "fitness": self.player.progression.fitness['level'],
+                "melee": self.player.progression.melee['level'],
+                "ranged": self.player.progression.ranged['level'],
+                "lucky": self.player.progression.lucky,
+                "speed": self.player.progression.speed
+            }
+            
+            progression_data = {
+                "strength": self.player.progression.strength,
+                "fitness": self.player.progression.fitness,
+                "melee": self.player.progression.melee,
+                "ranged": self.player.progression.ranged,
+            }
+
+            player_data = {
+                "name": self.player.name,
+                "profession": self.player.profession,
+                "sex": self.player.sex,
+                "x": self.player.x,
+                "y": self.player.y,
+                "map_filename": self.map_manager.current_map_filename,
+                # [NEW] Save Zombie Kill Counter
+                "zombies_killed": self.zombies_killed,
+                "stats": {
+                    "health": self.player.health,
+                    "water": self.player.water,
+                    "food": self.player.food,
+                    "stamina": self.player.stamina,
+                    "tireness": self.player.tireness,
+                    "infection": self.player.infection,
+                    "anxiety": self.player.anxiety
+                },
+                "attributes": attributes_base,
+                "progression": progression_data,
+                "traits": self.player.traits,
+                "visuals": self.player.visuals,
+                # [FIX] Save sound configuration
+                "sounds": self.player.sounds_data,
+                "inventory": [item.name for item in self.player.inventory if item],
+                "belt": [item.name if item else None for item in self.player.belt],
+                "clothes": {slot: (item.name if item else None) for slot, item in self.player.clothes.items()},
+            }
+            
+            if self.player.backpack:
+                 player_data["backpack"] = {
+                     "name": self.player.backpack.name,
+                     "inventory": [i.name for i in self.player.backpack.inventory]
+                 }
+
+            with open(os.path.join(save_path, "player.json"), "w") as f:
+                json.dump(player_data, f, indent=4)
+
+            # 4. Save World Entities
+            
+            # Serialize layer_spawn_triggers
+            triggers_export = {}
+            for layer_idx, coords_set in self.layer_spawn_triggers.items():
+                triggers_export[str(layer_idx)] = list(coords_set)
+
+            world_data = {
+                "time": {
+                    "game_time_ms": self.world_time.game_time_ms,
+                    "day_count": self.world_time.day_count
+                },
+                "layer_spawn_triggers": triggers_export,
+                "items": [{"name": i.name, "x": i.x, "y": i.y} for i in self.items_on_ground],
+                "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
+            }
+            with open(os.path.join(save_path, "world.json"), "w") as f:
+                json.dump(world_data, f, indent=4)
+
+            print("Game saved successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Error saving game: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def load_game(self, save_folder_name):
+        """Loads the game from a specific save folder."""
+        # Load from game/save/game/
+        save_path = os.path.join("game", "save", "game", save_folder_name)
+        map_path = os.path.join(save_path, "map")
+        
+        print(f"Loading game from {save_path}...")
+
+        try:
+            with open(os.path.join(save_path, "player.json"), "r") as f:
+                player_data = json.load(f)
+
+            # 1. Initialize core game structures with player data
+            self.start_new_game(player_data)
+            
+            # Set the current save folder so subsequent saves overwrite this one
+            self.current_save_folder_name = save_folder_name
+            
+            self.zombies_killed = player_data.get('zombies_killed', 0)
+            
+            # 2. Restore extended progression (XP)
+            if 'progression' in player_data:
+                prog_data = player_data['progression']
+                self.player.progression.strength = prog_data.get('strength', self.player.progression.strength)
+                self.player.progression.fitness = prog_data.get('fitness', self.player.progression.fitness)
+                self.player.progression.melee = prog_data.get('melee', self.player.progression.melee)
+                self.player.progression.ranged = prog_data.get('ranged', self.player.progression.ranged)
+            
+            # 3. Redirect map manager to the saved map folder
+            self.map_manager.map_folder = map_path
+            self.map_manager.refresh_maps()
+            
+            # 4. Restore Player State specifics
+            self.player.x = player_data['x']
+            self.player.y = player_data['y']
+            self.player.rect.topleft = (self.player.x, self.player.y)
+            
+            self.player.inventory = [Item.create_from_name(name) for name in player_data['inventory'] if Item.create_from_name(name)]
+            self.player.belt = [Item.create_from_name(name) if name else None for name in player_data.get('belt', [None]*5)]
+            
+            for slot, item_name in player_data.get('clothes', {}).items():
+                self.player.clothes[slot] = Item.create_from_name(item_name) if item_name else None
+
+            if "backpack" in player_data:
+                 bp_data = player_data["backpack"]
+                 self.player.backpack = Item.create_from_name(bp_data["name"])
+                 if self.player.backpack:
+                     self.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data["inventory"] if Item.create_from_name(name)]
+
+            # 5. Restore World State
+            with open(os.path.join(save_path, "world.json"), "r") as f:
+                world_data = json.load(f)
+            
+            time_data = world_data.get('time', {})
+            self.world_time.game_time_ms = time_data.get('game_time_ms', 0)
+            self.world_time.day_count = time_data.get('day_count', 0)
+            
+            raw_layer_triggers = world_data.get('layer_spawn_triggers', {})
+            self.layer_spawn_triggers = {}
+            for layer_str, coords_list in raw_layer_triggers.items():
+                try:
+                    layer_int = int(layer_str)
+                    self.layer_spawn_triggers[layer_int] = set(tuple(c) for c in coords_list)
+                except Exception as e:
+                    print(f"Error restoring triggers for layer {layer_str}: {e}")
+            
+            self.items_on_ground = []
+            for i_data in world_data.get('items', []):
+                item = Item.create_from_name(i_data['name'])
+                if item:
+                    item.x, item.y = i_data['x'], i_data['y']
+                    item.rect.topleft = (item.x, item.y)
+                    self.items_on_ground.append(item)
+            
+            self.zombies = []
+            for z_data in world_data.get('zombies', []):
+                z = Zombie.create_random(z_data['x'], z_data['y']) 
+                if z:
+                    z.health = z_data['health']
+                    self.zombies.append(z)
+
+            # 6. Ensure we are on the right map file AND correct layer
+            target_map = player_data.get('map_filename')
+            if target_map and target_map != self.map_manager.current_map_filename:
+                self.load_map(target_map)
+            
+            self.game_state = 'PLAYING'
+            print("Game loaded successfully!")
+
+        except Exception as e:
+            print(f"Error loading game: {e}")
+            import traceback
+            traceback.print_exc()
+            self.game_state = 'MENU'
+
+    def run_paused(self):
+        """Draws the pause menu with B/W filter and options."""
+        # 1. Draw the frozen B/W game state
+        if self.paused_surface:
+            self.virtual_screen.blit(self.paused_surface, (0, 0))
+        else:
+            self.virtual_screen.fill((50, 50, 50))
+
+        # 2. Draw UI Overlay
+        overlay = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        self.virtual_screen.blit(overlay, (0, 0))
+
+        # 3. Draw Buttons
+        center_x = VIRTUAL_SCREEN_WIDTH // 2
+        center_y = VIRTUAL_GAME_HEIGHT // 2
+        btn_w, btn_h = 220, 50
+        spacing = 20
+        
+        # Define buttons
+        btn_continue = pygame.Rect(center_x - btn_w//2, center_y - btn_h - spacing, btn_w, btn_h)
+        btn_save     = pygame.Rect(center_x - btn_w//2, center_y, btn_w, btn_h)
+        btn_quit     = pygame.Rect(center_x - btn_w//2, center_y + btn_h + spacing, btn_w, btn_h)
+
+        mouse_pos = self._get_scaled_mouse_pos()
+
+        # Helper to draw button
+        def draw_btn(rect, text, color_base, color_hover):
+            color = color_hover if rect.collidepoint(mouse_pos) else color_base
+            pygame.draw.rect(self.virtual_screen, color, rect, border_radius=5)
+            pygame.draw.rect(self.virtual_screen, WHITE, rect, 1, border_radius=5)
+            txt_surf = large_font.render(text, True, WHITE)
+            self.virtual_screen.blit(txt_surf, txt_surf.get_rect(center=rect.center))
+
+        draw_btn(btn_continue, "Continue", (50, 50, 150), (70, 70, 200))
+        draw_btn(btn_save, "Save Game", (50, 150, 50), (70, 200, 70))
+        draw_btn(btn_quit, "Quit", (150, 50, 50), (200, 70, 70))
+
+        # 4. Handle Events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
+                self.game_state = 'PLAYING' # Unpause via key
+            
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_continue.collidepoint(mouse_pos):
+                    self.game_state = 'PLAYING'
+                elif btn_save.collidepoint(mouse_pos):
+                    if self.save_game():
+                        pass
+                elif btn_quit.collidepoint(mouse_pos):
+                    self.running = False
+
+        self._update_screen()
 
     def load_map(self, map_filename):
-        # Clear all layer data dictionaries
         self.all_map_layers.clear()
         self.all_ground_layers.clear()
         self.all_spawn_layers.clear()
@@ -161,109 +444,51 @@ class Game:
         self.layer_zombies.clear()
 
         self.map_manager.current_map_filename = map_filename
-
-
         self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers = \
             load_all_map_layers(map_filename)
 
         if 1 not in self.all_map_layers:
             raise FileNotFoundError(f"Base map file {map_filename} (Layer 1) could not be loaded.")
 
-
-        set_active_layer(self, 1)
-
-        return None
+        match = re.search(r'map_L(\d+)_', map_filename)
+        layer_index = int(match.group(1)) if match else 1
         
+        set_active_layer(self, layer_index)
+        return None
 
     def start_new_game(self, player_data):
-        preset = self.player_setup_state.get('selected_config_preset', 'default')
-        load_settings(preset)
+        self.current_save_folder_name = None
 
-        # The player_data dict is now fully constructed by the setup screen.
-        self.player_name = player_data.get('name', "Player") # Ensure game obj has name
+        if 'attributes' not in player_data:
+            player_data['attributes'] = {} 
+
+        preset = self.player_setup_state.get('selected_config_preset', 'default')
         
+        # [CHANGE] Use the built-in load_settings which correctly updates globals
+        try:
+            print(f"Loading config preset: {preset}")
+            data.config.load_settings(preset)
+        except Exception as e:
+            print(f"Error applying custom config '{preset}': {e}")
+
+        self.player_name = player_data.get('name', "Player")
         self.player = Player(player_data=player_data)
+        
+        # Now this will use the updated config value
         self.zoom_level = data.config.START_ZOOM
         
-        # The setup screen should have put initial_loot in the dict.
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Pistol 9mm") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Shotgun") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Knife") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-        
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Axe") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-        
-        try:
-            # Assumes your item name in the XML is "ID"
-            # If your item is named "Wallet", change "ID" to "Wallet"
-            wallet_item = Item.create_from_name("Mobile off") 
-            if wallet_item:
-                # Check if there's space
-                if len(self.player.inventory) < self.player.get_total_inventory_slots():
-                    self.player.inventory.append(wallet_item)
-                else:
-                    print("Could not add wallet; inventory is full!")
-            else:
-                print("Warning: Could not create 'ID' item. Check item XML.")
-        except Exception as e:
-            print(f"Error creating starting wallet: {e}")
-        
+        # Add starter items if not present
+        starter_items = ["Pistol 9mm", "Shotgun", "Knife", "Axe", "Mobile off"]
+        for name in starter_items:
+             try:
+                item = Item.create_from_name(name)
+                if item and len(self.player.inventory) < self.player.get_total_inventory_slots():
+                    if not any(i.name == name for i in self.player.inventory):
+                        self.player.inventory.append(item)
+             except: pass
 
         self.zombies_killed = 0
         self.modals = []
@@ -272,11 +497,6 @@ class Game:
         self.load_map(self.map_manager.current_map_filename)
         load_giant_map(self)
 
-        #player_spawn = self.load_map(self.map_manager.current_map_filename)
-        
-        #if player_spawn:
-        #    self.player.rect.topleft = player_spawn
-        #    self.player.x, self.player.y = player_spawn
         if self.player_spawn:
             print(f"Player spawn point found at {self.player_spawn}. Setting player position.")
             self.player.x, self.player.y = self.player_spawn
@@ -289,35 +509,26 @@ class Game:
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
 
-        inventory_modal = {
-            'id': uuid.uuid4(),
-            'type': 'inventory',
-            'item': None,
-            'position': self.last_modal_positions['inventory'],
-            'is_dragging': False,
-            'drag_offset': (0, 0),
+        # Init UI
+        self.modals.append({
+            'id': uuid.uuid4(), 'type': 'inventory', 'item': None,
+            'position': self.last_modal_positions['inventory'], 'is_dragging': False, 'drag_offset': (0, 0),
             'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
             'minimized': False
-        }
-        self.modals.append(inventory_modal)
-
-        nearby_modal = {
-            'id': uuid.uuid4(),
-            'type': 'nearby',
-            'item': None,
-            'position': self.last_modal_positions['nearby'],
-            'is_dragging': False,
-            'drag_offset': (0, 0),
+        })
+        self.modals.append({
+            'id': uuid.uuid4(), 'type': 'nearby', 'item': None,
+            'position': self.last_modal_positions['nearby'], 'is_dragging': False, 'drag_offset': (0, 0),
             'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
             'minimized': False
-        }
-        self.modals.append(nearby_modal)
-
+        })
 
     async def run(self):
         while self.running:
             if self.game_state == 'MENU':
                 self.run_menu()
+            elif self.game_state == 'LOAD_GAME_MENU': # [NEW]
+                self.run_load_game_menu()
             elif self.game_state == 'PLAYER_SETUP':
                 self.run_player_setup()
             elif self.game_state == 'PLAYING':
@@ -326,14 +537,17 @@ class Game:
                 self.run_paused()
             elif self.game_state == 'GAME_OVER':
                 self.run_game_over()
-            
             await asyncio.sleep(0)
-
-        # pygame.quit()
 
     def run_menu(self):
         mouse_pos = self._get_scaled_mouse_pos()
-        start_button, quit_button = draw_menu(self.virtual_screen, mouse_pos)
+        # Check game/save/game/
+        save_dir = os.path.join("game", "save", "game")
+        # Basic check for saves just to enable the button visually
+        saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
+        has_save = len(saves) > 0
+
+        start_button, load_button, quit_button = draw_menu(self.virtual_screen, mouse_pos, has_save)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -345,9 +559,67 @@ class Game:
                 mouse_pos = self._get_scaled_mouse_pos()
                 if start_button.collidepoint(mouse_pos):
                     self.game_state = 'PLAYER_SETUP'
+                elif load_button and load_button.collidepoint(mouse_pos):
+                    # [CHANGE] Switch to the Load Game screen state instead of loading immediately
+                    self.game_state = 'LOAD_GAME_MENU'
+                    # Clear cache to ensure fresh list
+                    if 'save_list' in self.load_game_state:
+                         del self.load_game_state['save_list']
                 elif quit_button.collidepoint(mouse_pos):
                     self.running = False
                     return
+        self._update_screen()
+
+    def run_load_game_menu(self):
+        """Handles input and drawing for the Load Game screen."""
+        mouse_pos = self._get_scaled_mouse_pos()
+        
+        # Draw the screen and get clickable areas
+        clickable_rects = draw_load_game_screen(self, self.load_game_state, mouse_pos)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                return
+            if event.type == pygame.VIDEORESIZE:
+                self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            
+            if event.type == pygame.MOUSEWHEEL:
+                 # Handle scrolling the save list
+                 scroll_amount = event.y * 35 # approx one item height
+                 current_scroll = self.load_game_state.get('scroll_y', 0)
+                 max_scroll = self.load_game_state.get('max_scroll', 0)
+                 self.load_game_state['scroll_y'] = max(0, min(current_scroll - scroll_amount, max_scroll))
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouse_pos = self._get_scaled_mouse_pos()
+                
+                # Check Save Items
+                for index, filename, rect in clickable_rects['save_items']:
+                    if rect.collidepoint(mouse_pos):
+                        self.load_game_state['selected_save_index'] = index
+                        break
+                
+                # Check Buttons
+                if clickable_rects['load_button'] and clickable_rects['load_button'].collidepoint(mouse_pos):
+                    idx = self.load_game_state.get('selected_save_index')
+                    if idx is not None and idx < len(self.load_game_state['save_list']):
+                        save_folder = self.load_game_state['save_list'][idx]['filename']
+                        self.load_game(save_folder)
+                        # load_game sets state to PLAYING if successful
+                
+                elif clickable_rects['delete_button'] and clickable_rects['delete_button'].collidepoint(mouse_pos):
+                    idx = self.load_game_state.get('selected_save_index')
+                    if idx is not None and idx < len(self.load_game_state['save_list']):
+                        filename = self.load_game_state['save_list'][idx]['filename']
+                        if delete_save(filename):
+                            # Refresh list
+                            self.load_game_state['save_list'] = get_save_files()
+                            self.load_game_state['selected_save_index'] = None
+                
+                elif clickable_rects['back_button'] and clickable_rects['back_button'].collidepoint(mouse_pos):
+                    self.game_state = 'MENU'
+
         self._update_screen()
 
     def run_player_setup(self):
@@ -374,57 +646,26 @@ class Game:
 
     def run_playing(self):
         self.world_time.update()
-
         handle_input(self)
         update_game_state(self)
-  
         draw_game(self)
-        self._update_screen()
-
-    def run_paused(self):
-        handle_input(self)
-        draw_game(self)
-        font = pygame.font.Font(None, 50)
-        text = font.render("PAUSED", True, WHITE)
-        text_rect = text.get_rect(center=(VIRTUAL_SCREEN_WIDTH / 2, VIRTUAL_GAME_HEIGHT / 2))
-        self.virtual_screen.blit(text, text_rect)
         self._update_screen()
 
     def _get_scaled_mouse_pos(self):
         real_mouse_pos = pygame.mouse.get_pos()
         current_w, current_h = self.screen.get_size()
-
         scale = min(current_w / VIRTUAL_SCREEN_WIDTH, current_h / VIRTUAL_GAME_HEIGHT)
-        
         scaled_w, scaled_h = int(VIRTUAL_SCREEN_WIDTH * scale), int(VIRTUAL_GAME_HEIGHT * scale)
         blit_x = (current_w - scaled_w) // 2
         blit_y = (current_h - scaled_h) // 2
-
-        mouse_on_surf_x = real_mouse_pos[0] - blit_x
-        mouse_on_surf_y = real_mouse_pos[1] - blit_y
-
-        scaled_x = mouse_on_surf_x / scale
-        scaled_y = mouse_on_surf_y / scale
-
-        return (scaled_x, scaled_y)
+        return ((real_mouse_pos[0] - blit_x) / scale, (real_mouse_pos[1] - blit_y) / scale)
 
     def get_player_facing_tile(self):
-        if not self.player:
-            return None, None
-        
-        # Get player's center grid position
+        if not self.player: return None, None
         player_grid_x = self.player.rect.centerx // TILE_SIZE
         player_grid_y = self.player.rect.centery // TILE_SIZE
-        
-        # Get facing direction (default to down if not set)
         facing_x, facing_y = getattr(self.player, 'facing_direction', (0, 1))
-        
-        # Calculate the tile in front
-        target_grid_x = player_grid_x + facing_x
-        target_grid_y = player_grid_y + facing_y
-        
-        return target_grid_x, target_grid_y
-
+        return player_grid_x + facing_x, player_grid_y + facing_y
 
     def find_nearby_containers(self):
         nearby_containers = []
@@ -436,26 +677,12 @@ class Game:
         return nearby_containers
 
     def screen_to_world(self, screen_pos):
-        """Converts screen coordinates to world coordinates."""
         screen_x, screen_y = screen_pos
-        
-        # Adjust for the game area's offset on the virtual screen
         screen_x -= GAME_OFFSET_X
-        
-        # Calculate mouse position relative to the screen center (where the player is)
         relative_screen_x = screen_x - (GAME_WIDTH / 2)
         relative_screen_y = screen_y - (GAME_HEIGHT / 2)
-        
-        # Scale this relative position down by the zoom level to get world offset
-        relative_world_x = relative_screen_x / self.zoom_level
-        relative_world_y = relative_screen_y / self.zoom_level
-        
-        # Add to the player's world position to get the final world coordinate
-        world_x = self.player.rect.centerx + relative_world_x
-        world_y = self.player.rect.centery + relative_world_y
-        
-        return (world_x, world_y)
-
+        return (self.player.rect.centerx + relative_screen_x / self.zoom_level,
+                self.player.rect.centery + relative_screen_y / self.zoom_level)
 
     def _update_screen(self):
         current_w, current_h = self.screen.get_size()
@@ -470,6 +697,4 @@ class Game:
         self.clock.tick(60)
 
     def update_messages(self):
-        self.active_messages = [msg for msg in self.active_messages if msg.duration > 0]
-        for msg in self.active_messages:
-            msg.update()
+        pass
