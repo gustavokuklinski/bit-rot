@@ -5,7 +5,6 @@ from editor.assets import load_editor_icons
 
 class NewMapModal:
     def __init__(self, x, y, width, height, font, current_map_name):
-        self.rect = pygame.Rect(x, y, width, height)
         self.font = font
         self.active = False
         self.current_map_name = current_map_name
@@ -18,7 +17,6 @@ class NewMapModal:
         self.current_layer = 1
         self.current_pos_id = 0
         
-        # Pattern from game's MapManager: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>
         match = re.match(r"map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)", current_map_name)
         if match:
             self.current_layer = int(match.group(1))
@@ -28,9 +26,30 @@ class NewMapModal:
             self.current_connections['BOTTOM'] = int(match.group(5))
             self.current_connections['LEFT'] = int(match.group(6))
 
-        # Define button rects
-        conn_title_y = self.rect.y + 65
-        conn_btn_y = conn_title_y + 25
+        # --- LAYOUT CALCULATIONS ---
+        # Define positions relative to 'y' to ensure they fit
+        self.conn_title_y = y + 65
+        conn_btn_y = self.conn_title_y + 25
+        
+        # Connection buttons occupy roughly 70px height (30px btn + 10px gap + 30px btn)
+        conn_section_bottom = conn_btn_y + 70
+        
+        self.layer_title_y = conn_section_bottom + 15
+        layer_btn_y = self.layer_title_y + 25
+        
+        # Layer buttons occupy 30px
+        layer_section_bottom = layer_btn_y + 30
+        
+        # Calculate minimum required height to fit everything with padding
+        # 20px gap before create buttons, 30px buttons, 20px bottom padding
+        min_required_height = (layer_section_bottom + 20 + 30 + 20) - y
+        
+        if height < min_required_height:
+            height = min_required_height
+
+        self.rect = pygame.Rect(x, y, width, height)
+
+        # Define button rects using calculated Y positions
         self.conn_buttons = {
             'TOP': pygame.Rect(x + 20, conn_btn_y, 100, 30),
             'RIGHT': pygame.Rect(x + 140, conn_btn_y, 100, 30),
@@ -38,19 +57,15 @@ class NewMapModal:
             'LEFT': pygame.Rect(x + 140, conn_btn_y + 40, 100, 30),
         }
         
-        layer_title_y = conn_btn_y + 80 + 15
-        layer_btn_y = layer_title_y + 25
         self.layer_buttons = {
             1: pygame.Rect(x + 20, layer_btn_y, 100, 30),
             2: pygame.Rect(x + 140, layer_btn_y, 100, 30),
         }
 
-        self.create_button_rect = pygame.Rect(x + 20, y + height - 50, 100, 30)
-        self.cancel_button_rect = pygame.Rect(x + 140, y + height - 50, 100, 30)
-        
-        # Store for drawing
-        self.conn_title_y = conn_title_y
-        self.layer_title_y = layer_title_y
+        # Place Create/Cancel buttons at the bottom of the (potentially resized) rect
+        btn_y = y + height - 50
+        self.create_button_rect = pygame.Rect(x + 20, btn_y, 100, 30)
+        self.cancel_button_rect = pygame.Rect(x + 140, btn_y, 100, 30)
 
 
     def preselect_direction(self, direction):
@@ -247,6 +262,11 @@ class Sidebar:
         # Y-coordinate where tiles start drawing, below the search bar
         self.tile_area_y = self.y + self.search_rect.height + 20 
 
+        # Scrolling
+        self.scroll_offset = 0
+        self.max_scroll = 0
+        self.scroll_speed = 30
+
     def _filter_tiles(self):
         """Filters the displayed tiles based on the search text."""
         if not self.search_text:
@@ -256,6 +276,7 @@ class Sidebar:
             for name, image in self.all_tiles.items():
                 if self.search_text.lower() in name.lower():
                     self.tiles[name] = image
+        self.scroll_offset = 0 # Reset scroll on search
 
     def draw(self, surface):
         # Draw sidebar background
@@ -283,63 +304,111 @@ class Sidebar:
         surface.set_clip(None) # Reset clipping area
         
         # --- Draw Tiles ---
+        
+        # Set clipping for the tile area so they don't draw over the search bar or off screen
+        tile_view_rect = pygame.Rect(self.x, self.tile_area_y, SIDEBAR_WIDTH, SCREEN_HEIGHT - self.tile_area_y)
+        surface.set_clip(tile_view_rect)
+
         row, col = 0, 0
         
-        # --- MODIFIED: Sort tiles alphabetically by name ---
+        # --- Sort tiles alphabetically by name ---
         for name, image in sorted(self.tiles.items()):
             tile_x = self.x + col * (TILE_SIZE + 10) + 10
-            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) # Use tile_area_y
+            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) - self.scroll_offset # Apply scroll
             
-            # Stop drawing if tiles go off-screen (simple vertical check)
-            if tile_y > self.y + SCREEN_HEIGHT:
-                break
-
-            tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
-            surface.blit(image, (tile_x, tile_y))
-            
-            # Draw border if this is the selected tile
-            if self.selected_tile == name:
-                pygame.draw.rect(surface, (255, 255, 0), tile_rect, 3) # Yellow border, 3 pixels thick
+            # Only draw if visible
+            if tile_y + TILE_SIZE > self.tile_area_y and tile_y < self.y + SCREEN_HEIGHT:
+                tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
+                surface.blit(image, (tile_x, tile_y))
+                
+                # Draw border if this is the selected tile
+                if self.selected_tile == name:
+                    pygame.draw.rect(surface, (255, 255, 0), tile_rect, 3) # Yellow border, 3 pixels thick
 
             col += 1
             if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
                 col = 0
                 row += 1
+        
+        surface.set_clip(None)
+
+        # Calculate total content height and update max_scroll
+        total_rows = row + (1 if col > 0 else 0)
+        content_height = total_rows * (TILE_SIZE + 10)
+        view_height = SCREEN_HEIGHT - self.tile_area_y
+        self.max_scroll = max(0, content_height - view_height)
+
+        # --- Draw Scrollbar ---
+        if self.max_scroll > 0:
+            scrollbar_width = 10
+            scrollbar_x = self.x + SIDEBAR_WIDTH - scrollbar_width
+            
+            # Draw Track
+            track_rect = pygame.Rect(scrollbar_x, self.tile_area_y, scrollbar_width, view_height)
+            pygame.draw.rect(surface, (40, 40, 40), track_rect)
+            
+            # Draw Thumb
+            # Calculate thumb height based on viewport ratio
+            full_content_height = self.max_scroll + view_height
+            thumb_height = max(20, (view_height / full_content_height) * view_height)
+            
+            # Calculate thumb position
+            scroll_ratio = self.scroll_offset / self.max_scroll
+            thumb_y = self.tile_area_y + scroll_ratio * (view_height - thumb_height)
+            
+            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+            pygame.draw.rect(surface, (100, 100, 100), thumb_rect)
+
 
     def handle_event(self, event):
+        """
+        Returns True if the event was consumed by the sidebar, False otherwise.
+        """
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                mouse_x, mouse_y = event.pos
-                
-                # Check search box click
-                if self.search_rect.collidepoint(mouse_x, mouse_y):
-                    self.search_active = True
-                else:
-                    self.search_active = False
-                
-                # Check tile selection click (must be in the tile area)
-                if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH and mouse_y >= self.tile_area_y:
-                    row, col = 0, 0
-                    
-                    # --- MODIFIED: Sort tiles alphabetically for click detection ---
-                    for name, image in sorted(self.tiles.items()):
-                        tile_x = self.x + col * (TILE_SIZE + 10) + 10
-                        tile_y = self.tile_area_y + row * (TILE_SIZE + 10) # Use tile_area_y
-                        
-                        tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
-                        if tile_rect.collidepoint(mouse_x, mouse_y):
-                            self.selected_tile = name
-                            break # Found the tile
-                        
-                        col += 1
-                        if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
-                            col = 0
-                            row += 1
-                            
-                        # Stop checking if tiles would be off-screen
-                        if tile_y > self.y + SCREEN_HEIGHT:
-                            break
+            mouse_x, mouse_y = event.pos
+            
+            # Check if mouse is in sidebar
+            if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH:
+                # Handle Scroll
+                if event.button in (4, 5):
+                    if event.button == 4: # Scroll up
+                        self.scroll_offset = max(0, self.scroll_offset - self.scroll_speed)
+                    elif event.button == 5: # Scroll down
+                        self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.scroll_speed)
+                    return True # Event consumed
 
+                if event.button == 1:
+                    # Check search box click
+                    if self.search_rect.collidepoint(mouse_x, mouse_y):
+                        self.search_active = True
+                    else:
+                        self.search_active = False
+                    
+                    # Check tile selection click (must be in the tile area)
+                    if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH and mouse_y >= self.tile_area_y:
+                        row, col = 0, 0
+                        
+                        # --- Sort tiles alphabetically for click detection ---
+                        for name, image in sorted(self.tiles.items()):
+                            tile_x = self.x + col * (TILE_SIZE + 10) + 10
+                            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) - self.scroll_offset # Apply scroll
+                            
+                            tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
+                            if tile_rect.collidepoint(mouse_x, mouse_y):
+                                self.selected_tile = name
+                                break # Found the tile
+                            
+                            col += 1
+                            if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
+                                col = 0
+                                row += 1
+                                
+                            # Stop checking if we've passed the click point (rough optimization)
+                            if tile_y > mouse_y: 
+                                break
+                    
+                    return True # Event consumed (clicked in sidebar)
+        
         if event.type == pygame.KEYDOWN and self.search_active:
             # Handle typing in the search box
             if event.key == pygame.K_BACKSPACE:
@@ -347,3 +416,6 @@ class Sidebar:
             else:
                 self.search_text += event.unicode
             self._filter_tiles() # Update the filtered list
+            return True # Event consumed
+
+        return False

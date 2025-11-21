@@ -2,6 +2,7 @@ import pygame
 import sys
 import os
 import re
+import csv
 
 from editor.config import SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT
 from editor.assets import load_map_tiles_from_xml
@@ -231,7 +232,8 @@ def main():
     current_base_map_name = file_tree.selected_map.replace("_map.csv", "") if file_tree.selected_map else "map_L1_P0_0_0_0_0"
     
     # Pass current map name to modal ---
-    new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 125, 300, 250, FONT, current_base_map_name)
+    # --- MODIFIED: Increased height from 250 to 350 to prevent button overlap ---
+    new_map_modal = NewMapModal(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 175, 300, 350, FONT, current_base_map_name)
 
     # Load map using the base name ---
     load_map(game_map, current_base_map_name, map_dir)
@@ -355,10 +357,12 @@ def main():
 
             # Handle events for UI components
             # --- MODIFIED: Sync sidebar selection with tile_to_place ---
-            sidebar.handle_event(event)
-            if sidebar.selected_tile:
-                tile_to_place = None # Deactivate stair tool if a sidebar tile is clicked
-                selection_mode = False
+            # If sidebar consumed the event (click or scroll), skip map interaction
+            if sidebar.handle_event(event):
+                if sidebar.selected_tile:
+                    tile_to_place = None # Deactivate stair tool if a sidebar tile is clicked
+                    selection_mode = False
+                continue 
             # --- END MODIFICATION ---
 
             tree_action = file_tree.handle_event(event)
