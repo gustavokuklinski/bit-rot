@@ -20,7 +20,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     }
 
     # 1. Preset Management Panel (Top Left of content area)
-    preset_rect = pygame.Rect(col_start_x, 50, col_width, 180)
+    preset_rect = pygame.Rect(col_start_x, 50, col_width, 200)
     preset_header = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
 
@@ -48,12 +48,12 @@ def _draw_settings_screen(game, state, mouse_pos):
     # Buttons
     btn_w = 100
     save_rect = pygame.Rect(preset_body.x + padding, preset_body.y + 80, btn_w, 30)
-    pygame.draw.rect(game.virtual_screen, GREEN, save_rect)
+    pygame.draw.rect(game.virtual_screen, GREEN, save_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Save", True, WHITE), (save_rect.x + 30, save_rect.y + 5))
     clickable_rects['save_config'] = save_rect
 
     del_rect = pygame.Rect(save_rect.right + padding, preset_body.y + 80, btn_w, 30)
-    pygame.draw.rect(game.virtual_screen, RED, del_rect)
+    pygame.draw.rect(game.virtual_screen, RED, del_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Delete", True, WHITE), (del_rect.x + 25, del_rect.y + 5))
     clickable_rects['delete_config'] = del_rect
 

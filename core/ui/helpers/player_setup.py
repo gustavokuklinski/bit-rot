@@ -240,17 +240,17 @@ def _draw_player_build_screen(game, state, mouse_pos):
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
     
     save_btn_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, GREEN, save_btn_rect)
+    pygame.draw.rect(game.virtual_screen, GREEN, save_btn_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
     clickable_rects['save_button'] = save_btn_rect
     
     random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, (0, 100, 150), random_btn_rect)
+    pygame.draw.rect(game.virtual_screen, (0, 100, 150), random_btn_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Random", True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
     clickable_rects['random_button'] = random_btn_rect
 
     delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, RED, delete_btn_rect)
+    pygame.draw.rect(game.virtual_screen, RED, delete_btn_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
     clickable_rects['delete_button'] = delete_btn_rect
     
@@ -312,8 +312,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     )
     state['gear_content_rect'] = gear_content_rect 
 
-    # ... (Rest of Col 1 (Subsurface) and Columns 2/3/4 remains the same) ...
-    # [Abbreviated for clarity, copy existing code from original file for Columns 2,3,4 here]
+    
     drawable_gear_rect = game.virtual_screen.get_rect().clip(gear_content_rect)
     dropdown_draw_list = []
     if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
@@ -329,12 +328,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 dropdown_draw_list.append((slot_name, dropdown_rect))
             y_offset += 35
 
-    # ... (Cols 2, 3, 4 code here is unchanged) ...
-    # Copy paste the original logic for Available Traits, Chosen Traits, Sprite, Stats, Start Button.
     
     # --- Column 2: Available Traits (Middle-Left) ---
     available_rect = pygame.Rect(col2_x, 50, col2_width, 640)
-    # ... (draw logic same as before) ...
+    
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
@@ -371,7 +368,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
                 content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
                 content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
-                pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel)
+                pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel, border_radius=4)
                 content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
             clickable_rects["add_trait"].append((trait_name, add_btn_rect_abs))
             y_offset += line_height
@@ -402,16 +399,69 @@ def _draw_player_build_screen(game, state, mouse_pos):
     cost_surf = font.render(cost_text, True, cost_color)
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
     game.virtual_screen.blit(cost_surf, cost_rect)
-    y_offset = chosen_rect.y + 40
-    for i, trait_name in enumerate(state['chosen_traits']):
-        row_rect = pygame.Rect(chosen_rect.x + 10, y_offset, chosen_rect.width - 20, 30)
-        remove_btn_rect = pygame.Rect(row_rect.x, row_rect.y, 25, 25)
-        pygame.draw.rect(game.virtual_screen, RED, remove_btn_rect)
-        game.virtual_screen.blit(font.render("<", True, WHITE), (remove_btn_rect.x + 7, remove_btn_rect.y + 2))
-        clickable_rects["remove_trait"].append((trait_name, remove_btn_rect))
-        game.virtual_screen.blit(font.render(trait_name.capitalize(), True, WHITE), (remove_btn_rect.right + 10, row_rect.y))
-        y_offset += 35
-        if y_offset > chosen_rect.bottom - 30: break
+    
+    # [CHANGE] New Scrolling Logic for Chosen Traits
+    chosen_content_rect = pygame.Rect(chosen_rect.x + padding, chosen_rect.y + header_height + padding, chosen_rect.width - (padding * 2) - 10, chosen_rect.height - header_height - (padding * 2))
+    state['chosen_content_rect'] = chosen_content_rect # Store for input handling
+
+    line_height = 35
+    total_items = len(state['chosen_traits'])
+    total_text_height = total_items * line_height
+    visible_height = chosen_content_rect.height
+    
+    max_scroll_offset = max(0, total_text_height - visible_height)
+    state['chosen_max_scroll'] = max_scroll_offset
+    
+    scroll_offset_y = max(0, min(state.get('chosen_scroll_offset_y', 0), max_scroll_offset))
+    state['chosen_scroll_offset_y'] = scroll_offset_y
+    
+    # Clipping
+    drawable_chosen_rect = game.virtual_screen.get_rect().clip(chosen_content_rect)
+    if drawable_chosen_rect.width > 0 and drawable_chosen_rect.height > 0:
+        content_surface = game.virtual_screen.subsurface(drawable_chosen_rect)
+        content_surface.fill((30, 30, 30))
+    else:
+        content_surface = None
+
+    y_offset = 0 - scroll_offset_y
+    
+    if content_surface:
+        for i, trait_name in enumerate(state['chosen_traits']):
+            # Relative to content_surface for drawing
+            row_rect_rel = pygame.Rect(0, y_offset, chosen_content_rect.width, 30)
+            
+            # Absolute for click detection
+            row_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, chosen_content_rect.width, 30)
+            
+            remove_btn_rect_rel = pygame.Rect(0, row_rect_rel.y, 25, 25)
+            remove_btn_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, 25, 25)
+
+            # Draw if visible
+            if row_rect_rel.bottom > 0 and row_rect_rel.top < chosen_content_rect.height:
+                pygame.draw.rect(content_surface, RED, remove_btn_rect_rel, border_radius=4)
+                content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + 7, remove_btn_rect_rel.y + 2))
+                content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
+
+            clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
+            y_offset += 35
+            
+    # Draw Scrollbar for Chosen Traits
+    if total_text_height > visible_height:
+        scrollbar_area_height = chosen_content_rect.height
+        scrollbar_area_rect = pygame.Rect(chosen_content_rect.right + 2, chosen_content_rect.top, 8, scrollbar_area_height)
+        
+        handle_height_ratio = visible_height / total_text_height
+        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
+        
+        handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
+        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
+        
+        chosen_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
+        pygame.draw.rect(game.virtual_screen, GRAY, chosen_scrollbar_handle_rect, 0, 2)
+        state['chosen_scrollbar_handle_rect'] = chosen_scrollbar_handle_rect
+    else:
+        state['chosen_scrollbar_handle_rect'] = None
+    # [END CHANGE]
 
     # --- Column 4 ---
     sprite_rect_container = pygame.Rect(col4_x, 50, col4_width, 310)
@@ -631,6 +681,9 @@ def run_player_setup(game):
         
         state['stats_scroll_offset_y'] = 0; state['stats_content_rect'] = None; state['stats_line_height'] = 25; state['stats_max_scroll'] = 0
         state['traits_scroll_offset_y'] = 0; state['traits_content_rect'] = None; state['traits_line_height'] = 35; state['traits_max_scroll'] = 0
+        # [NEW] Chosen Traits Scroll State
+        state['chosen_scroll_offset_y'] = 0; state['chosen_content_rect'] = None; state['chosen_max_scroll'] = 0; state['is_dragging_chosen_scrollbar'] = False; state['chosen_scroll_drag_last_y'] = 0
+        
         state['is_dragging_stats_scrollbar'] = False; state['stats_scroll_drag_last_y'] = 0
         state['is_dragging_traits_scrollbar'] = False; state['traits_scroll_drag_last_y'] = 0
         state['total_trait_cost'] = 0
@@ -701,7 +754,8 @@ def run_player_setup(game):
     btn_h = 40
     player_btn = pygame.Rect(10, 50, sidebar_width, btn_h)
     settings_btn = pygame.Rect(10, 100, sidebar_width, btn_h)
-    
+    back_btn = pygame.Rect(10, VIRTUAL_GAME_HEIGHT - 70, sidebar_width, btn_h)
+
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
     pygame.draw.rect(game.virtual_screen, p_col, player_btn, border_radius=4)
@@ -710,6 +764,14 @@ def run_player_setup(game):
     pygame.draw.rect(game.virtual_screen, s_col, settings_btn, border_radius=4)
     pygame.draw.rect(game.virtual_screen, WHITE, settings_btn, 1, border_radius=4)
     game.virtual_screen.blit(font.render("Settings", True, WHITE), (settings_btn.x + 10, settings_btn.y + 10))
+
+    b_col = GRAY_80
+    pygame.draw.rect(game.virtual_screen, b_col, back_btn, border_radius=4)
+  
+    # Center text
+    back_txt = font.render("Back", True, WHITE)
+    txt_rect = back_txt.get_rect(center=back_btn.center)
+    game.virtual_screen.blit(back_txt, txt_rect)
 
     clickable_rects = {}
     if state['current_tab'] == 'Player':
@@ -731,7 +793,9 @@ def run_player_setup(game):
                      state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] - (event.y * 30), state.get('settings_max_scroll', 0)))
             elif state['current_tab'] == 'Player':
                 stats_rect = state.get('stats_content_rect')
+                chosen_rect = state.get('chosen_content_rect') # [NEW]
                 active_dropdown_slot = state.get('active_dropdown')
+                
                 if active_dropdown_slot:
                      scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
                      scroll_state['offset'] = max(0, min(scroll_state['offset'] - event.y * 50, scroll_state['max_scroll']))
@@ -739,6 +803,10 @@ def run_player_setup(game):
                      state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * 70, state.get('traits_max_scroll', 0)))
                 elif stats_rect and stats_rect.collidepoint(mouse_pos):
                      state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * 50, state.get('stats_max_scroll', 0)))
+                # [NEW] Chosen Traits Scroll
+                elif chosen_rect and chosen_rect.collidepoint(mouse_pos):
+                     state['chosen_scroll_offset_y'] = max(0, min(state['chosen_scroll_offset_y'] - event.y * 70, state.get('chosen_max_scroll', 0)))
+
         
         if event.type == pygame.KEYDOWN:
             if state['current_tab'] == 'Settings':
@@ -781,6 +849,9 @@ def run_player_setup(game):
                         state['player_name'] += event.unicode
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if back_btn.collidepoint(mouse_pos):
+                game.game_state = 'MENU'
+                return
             if player_btn.collidepoint(mouse_pos):
                 state['current_tab'] = 'Player'
                 continue
@@ -879,6 +950,10 @@ def run_player_setup(game):
                     state['is_dragging_stats_scrollbar'] = True; state['stats_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
                 if not scrollbar_clicked and state.get('traits_scrollbar_handle_rect') and state['traits_scrollbar_handle_rect'].collidepoint(mouse_pos):
                     state['is_dragging_traits_scrollbar'] = True; state['traits_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
+                
+                # [NEW] Chosen Traits Scroll Drag
+                if not scrollbar_clicked and state.get('chosen_scrollbar_handle_rect') and state['chosen_scrollbar_handle_rect'].collidepoint(mouse_pos):
+                     state['is_dragging_chosen_scrollbar'] = True; state['chosen_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
 
                 active_dropdown_slot = state.get('active_dropdown')
                 if active_dropdown_slot:
@@ -971,6 +1046,7 @@ def run_player_setup(game):
         if event.type == pygame.MOUSEBUTTONUP:
             state['is_dragging_stats_scrollbar'] = False
             state['is_dragging_traits_scrollbar'] = False
+            state['is_dragging_chosen_scrollbar'] = False # [NEW]
             state['is_dragging_settings_scrollbar'] = False
             for slot in state.get('gear_dropdown_scrolls', {}):
                 state['gear_dropdown_scrolls'][slot]['is_dragging'] = False
@@ -987,6 +1063,13 @@ def run_player_setup(game):
                 track_height = state['traits_content_rect'].height - state['traits_scrollbar_handle_rect'].height
                 if track_height > 0:
                     state['traits_scroll_offset_y'] = max(0, min(state.get('traits_scroll_offset_y', 0) + (mouse_delta_y * (state['traits_max_scroll'] / track_height)), state['traits_max_scroll']))
+
+            # [NEW] Chosen Traits Dragging
+            elif state.get('is_dragging_chosen_scrollbar'):
+                mouse_delta_y = mouse_pos[1] - state['chosen_scroll_drag_last_y']; state['chosen_scroll_drag_last_y'] = mouse_pos[1]
+                track_height = state['chosen_content_rect'].height - state['chosen_scrollbar_handle_rect'].height
+                if track_height > 0:
+                     state['chosen_scroll_offset_y'] = max(0, min(state.get('chosen_scroll_offset_y', 0) + (mouse_delta_y * (state['chosen_max_scroll'] / track_height)), state['chosen_max_scroll']))
 
             if state.get('is_dragging_settings_scrollbar'):
                 mouse_delta_y = mouse_pos[1] - state['settings_scroll_drag_last_y']

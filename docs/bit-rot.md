@@ -88,6 +88,7 @@ the platform: “What would you do if you owned the company?” People come and 
 always selling the idea of heroism. The retirement plan promises everything — 
 even free housing at the beach.
 
+# NPCs
 ## Marechal Souza
 A Senior Military from the Army facility. 
 Worked on the distribution for ONU, WHO and other human organizations.

@@ -17,9 +17,15 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="consumable"** - Status modiefier
+- **type="consumable_[SUFIX]"** 
+Types of consumables:
+
+* _drink: Water and drinkable
+* _food: Eatable items
+* _mediacation: Medication items
+
 ```xml
-<item name="Water bottle" type="consumable">
+<item name="Water bottle" type="consumable_drink">
     <properties>
         <!-- The basic item purpose -->
         <status value="water" /> <!-- Player Status modifier: water, food, ... -->
@@ -42,7 +48,7 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="conainer"**
+- **type="conainer"** - Container items to store another items
 ```xml
 <item name="Wallet" type="container">
     <properties>
@@ -56,7 +62,7 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="weapon_melee"** (Melee: Axe, Knife, Batton...)
+- **type="weapon_melee"** Melee weapons
 ```xml
 <item name="Axe" type="weapon_melee">
     <properties>
@@ -69,7 +75,7 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="weapon_ranged"** (Ranged: Piston, Shotgun...)
+- **type="weapon_ranged"** Ranged weapons
 ```xml
 <item name="Pistol 9mm" type="weapon_ranged">
     <properties>
@@ -86,15 +92,29 @@ Sprite types and codes:
 </item>
 ```
 
-- **type="consumable"** (Ranged: 9mm ammo, Shotgun Shells...)
+- **type="consumable"** Weapons ammo
 ```xml
-<item name="9mm ammo" type="consumable">
+<item name="9mm ammo" type="consumable_ammo">
     <properties>
         <load min="10" max="50" /> <!-- weapon default load  -->
         <capacity value="100" /><!-- weapon max bullet  -->
         <sprite file="9mm_ammo.png" /> <!-- consumable sprite  -->
     </properties>
     <spawn chance="1" /> <!-- Chance to spawn by [I] on map -->
+</item>
+```
+
+
+- **type="text"**
+```xml
+<item name="Safety Guide" type="text">
+    <properties>
+        <sprite file="newspaper.png" /><!-- Text sprite -->
+        <text> <!-- Main text of the item: Newspaper, NPC dialog, etc... -->
+           Some item text
+        </text>
+    </properties>
+    <spawn chance="1" />
 </item>
 ```
 
@@ -108,5 +128,17 @@ Sprite types and codes:
         <lucky value="0.1" />  <!-- Lucky modifier in % (Can be negative) -->
     </attributes>
     <spawn chance="1" /> <!-- Chance to spawn by [I] on map -->
+</item>
+```
+
+- **type="currency"**
+```xml
+<item name="Money 5" type="currency"> <!-- Currency sprite -->
+    <properties>
+        <sprite file="money_5.png" /> <!-- Currency sprite -->
+        <load min="5" max="5">  <!-- Currency value -->
+        <capacity value="1000" /> <!-- Currency max capacity of this value (stack) -->
+    </properties>
+    <spawn chance="0" />
 </item>
 ```

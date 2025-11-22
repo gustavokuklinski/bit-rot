@@ -1,0 +1,5 @@
+<map name="misc_sign" type="maptile" char="misc_sign" is_obstacle="true">
+    <visuals>
+        <sprite file="misc_sign.png" />
+    </visuals>
+</map>

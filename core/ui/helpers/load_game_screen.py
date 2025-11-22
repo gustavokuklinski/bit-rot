@@ -142,52 +142,45 @@ def draw_load_game_screen(game, state, mouse_pos):
             
             y_offset += item_height
 
-    # Scrollbar
     if max_scroll > 0:
         scrollbar_bg = pygame.Rect(list_rect.right - 10, list_rect.top, 10, list_rect.height)
         pygame.draw.rect(game.virtual_screen, (40, 40, 40), scrollbar_bg)
         
+        clickable_rects['scrollbar_track'] = scrollbar_bg # Store track
+
         handle_h = max(20, (list_rect.height / total_content_height) * list_rect.height)
         scroll_pct = state['scroll_y'] / max_scroll
         handle_y = list_rect.y + (scroll_pct * (list_rect.height - handle_h))
         
         handle_rect = pygame.Rect(list_rect.right - 10, handle_y, 10, handle_h)
         pygame.draw.rect(game.virtual_screen, GRAY, handle_rect)
+        
+        clickable_rects['scrollbar_handle'] = handle_rect # Store handle for clicking
 
-    # --- Buttons Area ---
+    # Buttons
     button_area_y = list_rect.bottom + 10
     btn_width = 120
     btn_height = 35
     
-    # Load Button (Center)
     load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
-    
-    # Only enabled if something is selected
     load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
     pygame.draw.rect(game.virtual_screen, load_color, load_btn_rect, border_radius=4)
-    
-    load_txt_surf = large_font.render("LOAD GAME", True, WHITE)
-    load_txt_rect = load_txt_surf.get_rect(center=load_btn_rect.center)
-    game.virtual_screen.blit(load_txt_surf, load_txt_rect)
-    
+    load_txt = large_font.render("LOAD GAME", True, WHITE)
+    game.virtual_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
     if state['selected_save_index'] is not None:
         clickable_rects['load_button'] = load_btn_rect
 
-    # Delete Button (Left)
     del_btn_rect = pygame.Rect(panel_rect.x + padding, button_area_y, btn_width - 20, btn_height)
     if state['selected_save_index'] is not None:
         pygame.draw.rect(game.virtual_screen, RED, del_btn_rect, border_radius=4)
         del_txt = font.render("Delete", True, WHITE)
-        del_rect = del_txt.get_rect(center=del_btn_rect.center)
-        game.virtual_screen.blit(del_txt, del_rect)
+        game.virtual_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
         clickable_rects['delete_button'] = del_btn_rect
     
-    # Back Button (Right)
     back_btn_rect = pygame.Rect(panel_rect.right - padding - (btn_width - 20), button_area_y, btn_width - 20, btn_height)
     pygame.draw.rect(game.virtual_screen, GRAY_80, back_btn_rect, border_radius=4)
     back_txt = font.render("Back", True, WHITE)
-    back_rect = back_txt.get_rect(center=back_btn_rect.center)
-    game.virtual_screen.blit(back_txt, back_rect)
+    game.virtual_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
     clickable_rects['back_button'] = back_btn_rect
 
     return clickable_rects
