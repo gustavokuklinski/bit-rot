@@ -8,14 +8,19 @@ def draw_tooltip(surface, item, pos):
     lines = [item.name]
     if item.item_type:
         lines.append(f"Type: {item.item_type}")
+    
+    # --- MODIFIED: Logic to trigger bar rendering ---
     if item.durability is not None:
         max_dur = item.max_durability # Get max from item property
         if max_dur > 0:
-            pct = (item.durability / max_dur) * 100
-            lines.append(f"Durability: {int(pct)}%")
+            pct = item.durability / max_dur
+            # Insert a dictionary to signal the renderer to draw a bar
+            lines.append({'type': 'durability_bar', 'pct': pct})
         else:
             # Fallback if max is 0 or undefined
-            lines.append(f"Durability: {item.durability:.0f}")
+            lines.append(f"{item.durability:.0f}")
+    # ------------------------------------------------
+
     if hasattr(item, 'effects') and item.effects:
         for effect in item.effects:
             # Format targets nicely: "Health, Tireness"
@@ -47,20 +52,6 @@ def draw_tooltip(surface, item, pos):
         min_damage, max_damage = item.current_damage_range
         lines.append(f"Damage: {min_damage}-{max_damage}")
     
-    #if item.min_restore is not None and item.max_restore is not None:
-    #    stat = getattr(item, 'status_effect', 'Stat').capitalize()
-    #    if item.min_restore == item.max_restore:
-    #        lines.append(f"Restores: {item.min_restore} {stat}")
-    #    else:
-    #        lines.append(f"Restores: {item.min_restore}-{item.max_restore} {stat}")
-    #if item.min_reduce is not None and item.max_reduce is not None:
-    #    stat = getattr(item, 'status_effect', 'Stat').capitalize()
-    #    if item.min_reduce == item.max_reduce:
-    #        lines.append(f"Reduce: {item.min_reduce} {stat}")
-    #    else:
-    #        lines.append(f"Reduce: {item.min_reduce}-{item.max_reduce} {stat}")
-    
-        
     if item.item_type == 'skill' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line
         lines.append("Passive (in Inventory):")
@@ -69,10 +60,50 @@ def draw_tooltip(surface, item, pos):
             lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")
 
 
-    font = pygame.font.Font(None, 24)
+    # font = pygame.font.Font(None, 24) # Unused in original code effectively
     rendered_lines = []
     for line in lines:
-        if isinstance(line, list):
+        # --- NEW: Handle Durability Bar ---
+        if isinstance(line, dict) and line.get('type') == 'durability_bar':
+            # Settings
+            bar_w = 100
+            bar_h = 10
+            pct = max(0, min(1, line['pct']))
+            
+            # Colors (Matching Inventory)
+            if pct > 0.5: col = (0, 255, 0) # Green
+            elif pct > 0.2: col = (255, 255, 0) # Yellow
+            else: col = (255, 0, 0) # Red
+
+            # Render Label "Durability:"
+            label_surf = font_notification.render("", True, WHITE)
+            
+            # Create Surface for the whole line (Text + Spacing + Bar)
+            total_w = label_surf.get_width() + 5 + bar_w
+            total_h = max(label_surf.get_height(), bar_h)
+            line_surf = pygame.Surface((total_w, total_h), pygame.SRCALPHA)
+            
+            # Blit Label (Vertically Centered)
+            label_y = (total_h - label_surf.get_height()) // 2
+            line_surf.blit(label_surf, (0, label_y))
+            
+            # Draw Bar
+            bar_x = label_surf.get_width()
+            bar_y = (total_h - bar_h) // 2
+            
+            # Background
+            pygame.draw.rect(line_surf, (60, 60, 60), (bar_x, bar_y, bar_w, bar_h))
+            # Fill
+            fill_w = int(bar_w * pct)
+            if fill_w > 0:
+                pygame.draw.rect(line_surf, col, (bar_x, bar_y, fill_w, bar_h))
+            # Border
+            pygame.draw.rect(line_surf, (150, 150, 150), (bar_x, bar_y, bar_w, bar_h), 1)
+            
+            rendered_lines.append(line_surf)
+        # ----------------------------------
+
+        elif isinstance(line, list):
             # Handle composite line: [(text, color), (text, color)]
             parts = [font_notification.render(text, True, color) for text, color in line]
             total_w = sum(p.get_width() for p in parts)
@@ -87,8 +118,11 @@ def draw_tooltip(surface, item, pos):
             rendered_lines.append(line_surf)
         else:
             # Handle standard string line (Default White)
-            rendered_lines.append(font_notification.render(line, True, WHITE))
+            rendered_lines.append(font_notification.render(str(line), True, WHITE))
     
+    if not rendered_lines:
+        return
+
     width = max(line.get_width() for line in rendered_lines) + 20
     height = sum(line.get_height() for line in rendered_lines) + 20
     
@@ -100,7 +134,7 @@ def draw_tooltip(surface, item, pos):
     if tooltip_rect.bottom > VIRTUAL_GAME_HEIGHT:
         tooltip_rect.bottom = VIRTUAL_GAME_HEIGHT
 
-    pygame.draw.rect(surface, (0, 0, 0, 200), tooltip_rect)
+    pygame.draw.rect(surface, (0, 0, 0, 220), tooltip_rect) # Slightly darker opacity
     pygame.draw.rect(surface, WHITE, tooltip_rect, 1)
 
     y_offset = tooltip_rect.y + 10

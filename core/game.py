@@ -20,9 +20,9 @@ from core.entities.zombie.corpse import Corpse
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
 from core.ui.helpers.player_setup import run_player_setup
-from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
-from core.ui.container import draw_container_view, get_container_slot_rect
-from core.ui.status import draw_status_modal
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
+from core.ui.container_modal import draw_container_view, get_container_slot_rect
+from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.data.player_xml_parser import parse_player_data
 from core.ui.assets import load_assets

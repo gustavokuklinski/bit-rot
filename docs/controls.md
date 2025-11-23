@@ -17,6 +17,7 @@
 - **H**: Open Status
 - **N**: Open Nearby
 - **M**: Open Messages
+- **G**: Open Clothes
 
 - **F2/ESC**: Pause game and Save Menu
 

@@ -2,7 +2,7 @@ import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
-from core.ui.container import draw_container_content
+from core.ui.container_modal import draw_container_content
 from core.entities.zombie.corpse import Corpse
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):

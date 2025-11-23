@@ -5,11 +5,11 @@ import core.data.config
 from core.entities.item.item import Item
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
-from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
-from core.ui.container import draw_container_view, get_container_slot_rect
-from core.ui.status import draw_status_modal
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect, draw_belt_hud, get_belt_hud_slot_rect
+from core.ui.container_modal import draw_container_view, get_container_slot_rect
+from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
-from core.ui.nearby import draw_nearby_modal
+from core.ui.nearby_modal import draw_nearby_modal
 from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button, draw_messages_button, draw_gear_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.gear_modal import draw_gear_modal
@@ -268,6 +268,9 @@ def draw_game(game):
         pygame.draw.circle(game.virtual_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
 
+    if game.game_state == 'PLAYING':
+        draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
+
     top_tooltip = None
     game.modal_buttons = []
     mouse_pos = game._get_scaled_mouse_pos()
@@ -355,20 +358,22 @@ def draw_game(game):
                         )
                         break
                 
-                elif modal.get('active_tab') == 'Gear':
-                    # Only check these slots if Gear tab is active
-                    if 'gear_slot_rects' in modal:
-                        for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                            if slot_rect.collidepoint(game._get_scaled_mouse_pos()):
-                                highlighted_rect = slot_rect
-                                # Check if item is allowed
-                                item_slot = getattr(preview_item, 'slot', None)
-                                if item_slot == 'hand': item_slot = 'hands'
-                                highlighted_allowed = (item_slot == slot_name)
-                                break
-                    if highlighted_rect:
-                        break
-                        
+
+            elif modal['type'] == 'gear':
+                if 'gear_slot_rects' in modal:
+                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                        if slot_rect.collidepoint(game._get_scaled_mouse_pos()):
+                            highlighted_rect = slot_rect
+                            
+                            # Check if the item belongs in this slot
+                            item_slot = getattr(preview_item, 'slot', None)
+                            if item_slot == 'hand': item_slot = 'hands' # Handle alias
+                            
+                            highlighted_allowed = (item_slot == slot_name)
+                            break
+                if highlighted_rect:
+                    break
+
             elif modal['type'] == 'container':
                 cont = modal['item']
                 for i in range(min(cont.capacity, len(cont.inventory) + 16)):
@@ -381,6 +386,16 @@ def draw_game(game):
                     break
             elif modal['type'] == 'messages':
                 pass
+
+
+        if not highlighted_rect:
+            for i in range(5):
+                slot = get_belt_hud_slot_rect(i)
+                if slot.collidepoint(game._get_scaled_mouse_pos()):
+                    highlighted_rect = slot
+                    highlighted_allowed = (preview_item.item_type != 'backpack')
+                    break
+
 
         if highlighted_rect:
             overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)

@@ -7,8 +7,8 @@ from core.data.config import *
 from core.entities.item.item import Item, Projectile
 from core.entities.zombie.corpse import Corpse
 from core.update import player_hit_zombie, handle_zombie_death
-from core.ui.inventory import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect
-from core.ui.container import get_container_slot_rect
+from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect, get_belt_hud_slot_rect
+from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.placement import find_free_tile
@@ -64,6 +64,16 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.messages_button_rect and game.messages_button_rect.collidepoint(mouse_pos):
             toggle_messages_modal(game)
             return
+
+        for i, item in enumerate(game.player.belt):
+            slot_rect = get_belt_hud_slot_rect(i)
+            if slot_rect.collidepoint(mouse_pos):
+                if item:
+                    # Start Dragging
+                    game.drag_candidate = (item, (i, 'belt'))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                    return
 
         # (Existing code for opening backpack from inventory)
         for modal in reversed(game.modals):
@@ -179,7 +189,11 @@ def handle_mouse_up(game, event, mouse_pos):
                
                 # --- 1. Check for Drop on BELT ---
                 for i_target in range(len(game.player.belt)):
-                    if any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals)):
+                    is_modal_slot = any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals))
+                    is_hud_slot = get_belt_hud_slot_rect(i_target).collidepoint(mouse_pos)
+
+                    # if any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals)):
+                    if is_modal_slot or is_hud_slot:
                         if getattr(game.dragged_item, 'item_type', None) == 'backpack':
                             print("Cannot place backpacks on the belt.")
                             break 
@@ -515,6 +529,10 @@ def handle_mouse_up(game, event, mouse_pos):
         game.drag_candidate = None
 
 def find_item_at_pos(game, mouse_pos):
+    for i, item in enumerate(game.player.belt):
+        if item and get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+            return item
+
     for modal in reversed(game.modals):
         if not modal['rect'].collidepoint(mouse_pos):
             continue
@@ -1049,6 +1067,13 @@ def handle_right_click(game, mouse_pos):
     click_index = -1
     click_container_item = None
 
+    for i, item in enumerate(game.player.belt):
+        if item and get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+            clicked_item = item
+            click_source = 'belt'
+            click_index = i
+            break
+
     for modal in reversed(game.modals):
         if not modal['rect'].collidepoint(mouse_pos): continue
 
@@ -1122,6 +1147,8 @@ def handle_right_click(game, mouse_pos):
                         clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container; break
         
         if clicked_item: break
+
+
 
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
@@ -1387,6 +1414,13 @@ def handle_attack(game, mouse_pos):
         if modal_rect.collidepoint(mouse_pos):
             click_in_modal = True
             break
+    
+    if not click_in_modal:
+        for i in range(5):
+            if get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+                click_in_modal = True
+                break
+
     if click_in_modal:
         return
 

@@ -1,7 +1,7 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
-from core.ui.container import _draw_slots
+from core.ui.container_modal import _draw_slots
 
 def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Clothes")
