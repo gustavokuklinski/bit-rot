@@ -1,6 +1,7 @@
 import pygame
 import math
-from data.config import *
+from core.data.config import *
+import core.data.config
 from core.entities.item.item import Item
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
@@ -9,9 +10,10 @@ from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button, draw_messages_button, draw_gear_button
 from core.ui.tooltip import draw_tooltip
-from core.ui.messages_modal import draw_messages_modal, draw_messages_button
+from core.ui.gear_modal import draw_gear_modal
+from core.ui.messages_modal import draw_messages_modal
 from core.ui.text_modal import draw_text_modal
 from core.ui.mobile_modal import draw_mobile_modal
 
@@ -40,9 +42,37 @@ def draw_game(game):
     light_mask.fill((10, 10, 10)) # <-- This was the fix from last time
     ambient = int(game.world_time.current_ambient_light) 
     
-
+    mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
+
+    # Panning Camera
+    target_pan_x = 0
+    target_pan_y = 0
+
+    if is_aiming and game.player:
+        # Calculate max pan distance (e.g., 30% of the view dimension)
+        pan_distance = min(view_w, view_h) * 0.3
+        
+        # Calculate offset based on aim angle
+        # Note: -sin because screen Y is inverted vs standard math plane
+        target_pan_x = math.cos(game.player.aim_angle) * pan_distance
+        target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
+
+    # Smoothly interpolate current pan towards target (Lerp)
+    lerp_speed = 0.1
+    game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
+    game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
+
+    # Calculate a single camera offset to center the player + Pan Offset.
+    # We subtract the pan so the camera moves towards the aim direction relative to the player
+    offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
+    offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
+
+
+    light_mask = pygame.Surface((view_w, view_h))
+
+
 
     light_texture = game.assets.get('light_texture')
     
@@ -253,6 +283,9 @@ def draw_game(game):
             tooltip, *buttons = draw_inventory_modal(game.virtual_screen, game, game.player, modal, game.assets, game._get_scaled_mouse_pos())
             top_tooltip = tooltip or top_tooltip
             game.modal_buttons.extend(buttons)
+        elif modal['type'] == 'gear':
+            buttons = draw_gear_modal(game.virtual_screen, game, game.player, modal, game.assets, mouse_pos)
+            game.modal_buttons.extend(buttons)
         elif modal['type'] == 'container':
             buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
@@ -275,6 +308,7 @@ def draw_game(game):
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
     game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
+    game.gear_button_rect = draw_gear_button(game.virtual_screen)
     game.messages_button_rect = draw_messages_button(game.virtual_screen)
 
     highlighted_rect = None
@@ -405,7 +439,7 @@ def draw_game(game):
 
     # Set cursor
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+    if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]:
         pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
     else:
         pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

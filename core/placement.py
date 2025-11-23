@@ -1,5 +1,5 @@
 import random
-from data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
+from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
 def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None, max_radius=10):
     """

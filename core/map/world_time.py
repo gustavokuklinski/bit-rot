@@ -1,7 +1,7 @@
 import pygame
 import math
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.messages import display_message
 
 class WorldTime:
@@ -14,17 +14,17 @@ class WorldTime:
         # --- NEW CONFIGURATION ---
         # Total length of a full 24h game day in real milliseconds
         # 180000 ms = 3 minutes per day. Adjust as needed in config or here.
-        self.day_length_ms = data.config.TIME_DAYLENGTH # Example: 5 minutes per game day
+        self.day_length_ms = core.data.config.TIME_DAYLENGTH # Example: 5 minutes per game day
         
         self.game_time_ms = 0 # 0 to day_length_ms
         
         # Define key times (0.0 to 24.0)
-        self.sunrise_hour = data.config.TIME_SUNRISE_HR  # 5:30 AM
-        self.sunset_hour = data.config.TIME_SUNSET_HR  # 17:30 (5:30 PM)
-        self.transition_duration_hours = data.config.TIME_TRANSITION_HR # How long the fade lasts in game-hours
+        self.sunrise_hour = core.data.config.TIME_SUNRISE_HR  # 5:30 AM
+        self.sunset_hour = core.data.config.TIME_SUNSET_HR  # 17:30 (5:30 PM)
+        self.transition_duration_hours = core.data.config.TIME_TRANSITION_HR # How long the fade lasts in game-hours
         
         # Calculate start time (6 AM = 6.0)
-        start_hour = data.config.TIME_START_HR
+        start_hour = core.data.config.TIME_START_HR
         self.game_time_ms = (start_hour / 24.0) * self.day_length_ms
 
         self.last_update_time = pygame.time.get_ticks()
@@ -32,10 +32,10 @@ class WorldTime:
         self.day_count = 0 # Track full days survived
 
         # Visual settings
-        self.day_radius = data.config.BASE_PLAYER_VIEW_RADIUS * 1.5
-        self.night_radius = data.config.BASE_PLAYER_VIEW_RADIUS * 0.5
+        self.day_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 1.5
+        self.night_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 0.5
         self.day_ambient = 255 
-        self.night_ambient = 255 - data.config.MAX_DARKNESS_OPACITY 
+        self.night_ambient = 255 - core.data.config.MAX_DARKNESS_OPACITY 
 
         # Set initial values
         self.game.player_view_radius = self.day_radius

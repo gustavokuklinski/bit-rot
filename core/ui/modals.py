@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 class BaseModal:
     def __init__(self, surface, modal, assets, title):
@@ -29,6 +29,8 @@ class BaseModal:
             return MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT
         elif self.modal['type'] == 'text':
             return TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT
+        elif self.modal['type'] == 'gear':
+            return GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT
         elif self.modal['type'] == 'mobile':
             return MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT
         return 300, 300

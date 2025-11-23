@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
 from core.ui.clock_tab import draw_clock_tab

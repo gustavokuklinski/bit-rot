@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def _draw_settings_screen(game, state, mouse_pos):
     """Draws the Settings configuration screen."""

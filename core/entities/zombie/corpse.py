@@ -1,6 +1,6 @@
 import pygame
 import os
-from data.config import TILE_SIZE, DARK_GRAY
+from core.data.config import TILE_SIZE, DARK_GRAY
 from core.entities.item.item import Item
 
 class Corpse(Item):

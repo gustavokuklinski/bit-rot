@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from data.config import DATA_PATH, SPRITE_PATH
+from core.data.config import DATA_PATH, SPRITE_PATH
 
 PLAYER_XML_PATH = DATA_PATH + 'player/player.xml'
 

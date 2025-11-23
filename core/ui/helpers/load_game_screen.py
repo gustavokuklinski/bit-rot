@@ -2,7 +2,7 @@ import pygame
 import os
 import shutil
 from datetime import datetime
-from data.config import *
+from core.data.config import *
 
 def get_save_files():
     """Scans the save directory and returns a sorted list of save folders (newest first)."""

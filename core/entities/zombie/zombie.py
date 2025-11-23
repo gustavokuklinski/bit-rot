@@ -5,8 +5,8 @@ import pygame
 import xml.etree.ElementTree as ET
 import uuid
 from faker import Faker
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.messages import display_message
 import random
 from core.entities.item.item import Item
@@ -58,7 +58,7 @@ class Zombie:
 
         self.max_health = template.get('health')
         self.health = self.max_health
-        self.speed = template.get('speed', data.config.ZOMBIE_SPEED)
+        self.speed = template.get('speed', core.data.config.ZOMBIE_SPEED)
         self.loot_table = template.get('loot', [])
         self.xp_value = random.uniform(template.get('min_xp'), template.get('max_xp'))
 
@@ -227,7 +227,7 @@ class Zombie:
 
     def has_line_of_sight(self, target_rect, obstacles):
         """Checks if there is an uninterrupted line between zombie and target."""
-        if not data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
+        if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
             return True # Skip check if disabled in config
 
         start_pos = self.rect.center
@@ -251,7 +251,7 @@ class Zombie:
         target_pos = None # Reset target each frame
 
         # Decide state: Chasing or Wandering
-        if dist_to_player < data.config.ZOMBIE_DETECTION_RADIUS and can_see_player:
+        if dist_to_player < core.data.config.ZOMBIE_DETECTION_RADIUS and can_see_player:
             self.state = 'chasing'
             target_pos = player_rect.center # Chase the player directly
             #if self.wandering_channel:
@@ -261,7 +261,7 @@ class Zombie:
         else:
             self.state = 'wandering'
             
-            if self.is_ambiently_noisy and data.config.ZOMBIE_WANDER_ENABLED and self.sound_wander:
+            if self.is_ambiently_noisy and core.data.config.ZOMBIE_WANDER_ENABLED and self.sound_wander:
                 # Check if the sound cooldown has passed
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
                     # Play the sound as a one-shot (loops=0 is default)
@@ -278,10 +278,10 @@ class Zombie:
                     self.wander_sound_cooldown = random.randint(4000, 12000)
 
             # Update wander target if needed
-            if data.config.ZOMBIE_WANDER_ENABLED:
+            if core.data.config.ZOMBIE_WANDER_ENABLED:
                 # If interval passed, no target exists, or target was reached
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
-                if (current_time - self.last_wander_change > data.config.ZOMBIE_WANDER_CHANGE_INTERVAL) or \
+                if (current_time - self.last_wander_change > core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL) or \
                    (self.wander_target is None) or target_reached:
 
                     # Pick a new random point within ~5 tiles
@@ -390,7 +390,7 @@ class Zombie:
 
         infection = 0 # Default to no infection
         
-        if random.random() < data.config.ZOMBIE_INFECTION_CHANCE:
+        if random.random() < core.data.config.ZOMBIE_INFECTION_CHANCE:
             # If the check passes, *then* calculate the amount
             infection = random.randint(self.min_infection, self.max_infection)
         player.take_durability_damage(damage, game)
@@ -604,7 +604,7 @@ class Zombie:
             default_template = {
                 'name':'Jogn Doe',
                 'health':10,
-                'speed':data.config.ZOMBIE_SPEED, 
+                'speed':core.data.config.ZOMBIE_SPEED, 
                 'loot':[], 
                 'min_xp':1,
                 'max_xp':5, 

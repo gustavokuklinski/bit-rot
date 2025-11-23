@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
-from data.config import *
+from core.data.config import *
 
 def load_trait_definitions():
     traits = {}

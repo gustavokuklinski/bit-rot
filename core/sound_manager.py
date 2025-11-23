@@ -2,8 +2,8 @@ import pygame
 import os
 import random
 import math 
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 
 class SoundManager:
     def __init__(self):
@@ -68,14 +68,14 @@ class SoundManager:
         if game:
             # 1. Define our desired volume range
             MAX_ZOOM_VOLUME = 1.0 # At nearest zoom (e.g., 2.0)
-            MIN_ZOOM_VOLUME = 0.2 # At farthest zoom (e.g., 0.5)
+            MIN_ZOOM_VOLUME = 0.3 # At farthest zoom (e.g., 0.5)
             
             # 2. Get the current zoom level (clamped)
-            current_zoom = max(data.config.FAR_ZOOM, min(game.zoom_level, data.config.NEAR_ZOOM))
+            current_zoom = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
             
             # 3. Calculate how far 'current_zoom' is through the zoom range (0.0 to 1.0)
-            if (data.config.NEAR_ZOOM - data.config.FAR_ZOOM) != 0:
-                zoom_progress = (current_zoom - data.config.FAR_ZOOM) / (data.config.NEAR_ZOOM - data.config.FAR_ZOOM)
+            if (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM) != 0:
+                zoom_progress = (current_zoom - core.data.config.FAR_ZOOM) / (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM)
             else:
                 zoom_progress = 1.0 # Avoid division by zero
             

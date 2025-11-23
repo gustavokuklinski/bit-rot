@@ -4,8 +4,8 @@ import xml.etree.ElementTree as ET
 import pygame
 import uuid
 
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 
 ITEM_TEMPLATES = {}  # loaded templates
 
@@ -75,15 +75,15 @@ class Item:
             if 'durability' in props and 'max' in props['durability']:
                 # Apply multipliers just like in create_from_name
                 max_dur = float(props['durability']['max'])
-                multiplier = data.config.DURABILITY_MULTIPLIER
+                multiplier = core.data.config.DURABILITY_MULTIPLIER
                 if template['type'] == 'weapon_melee':
-                    multiplier *= data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
+                    multiplier *= core.data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
                 elif template['type'] == 'weapon_ranged':
-                    multiplier *= data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
+                    multiplier *= core.data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
                 elif template['type'] == 'tool':
-                    multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
+                    multiplier *= core.data.config.TOOL_DURABILITY_MULTIPLIER
                 elif template['type'] == 'cloth':
-                    multiplier *= data.config.CLOTH_DURABILITY_MULTIPLIER
+                    multiplier *= core.data.config.CLOTH_DURABILITY_MULTIPLIER
                 
                 return max_dur * multiplier
                 
@@ -375,38 +375,38 @@ class Item:
         for d in spawnable.values():
             base_chance = d['spawn_chance']
             # Apply Global Multiplier
-            multiplier = data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
+            multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
             
             # Apply Type Specific Multipliers
             t_type = d.get('type')
             
             if t_type == 'weapon_melee':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
             elif t_type == 'weapon_ranged':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
             elif t_type == 'mobile':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
             elif t_type == 'container':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
             elif t_type == 'backpack':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
             elif t_type == 'currency':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
             elif t_type == 'text':
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
             
             # Consumables hierarchy
             elif t_type and t_type.startswith('consumable'):
-                multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
                 
                 if t_type == 'consumable_food':
-                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
+                    multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
                 elif t_type == 'consumable_drink':
-                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
+                    multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
                 elif t_type == 'consumable_medication':
-                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
+                    multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
                 elif t_type == 'consumable_ammo':
-                    multiplier *= data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
+                    multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
             
             chances.append(base_chance * multiplier)
 
@@ -442,15 +442,15 @@ class Item:
         
         if needs_durability:
             # Apply multipliers
-            multiplier = data.config.DURABILITY_MULTIPLIER
+            multiplier = core.data.config.DURABILITY_MULTIPLIER
             if template['type'] == 'weapon_melee':
-                    multiplier *= data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
+                    multiplier *= core.data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
             elif template['type'] == 'weapon_ranged':
-                multiplier *= data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
+                multiplier *= core.data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
             elif template['type'] == 'tool':
-                multiplier *= data.config.TOOL_DURABILITY_MULTIPLIER
+                multiplier *= core.data.config.TOOL_DURABILITY_MULTIPLIER
             elif template['type'] == 'cloth':
-                multiplier *= data.config.CLOTH_DURABILITY_MULTIPLIER
+                multiplier *= core.data.config.CLOTH_DURABILITY_MULTIPLIER
             
             min_dur *= multiplier
             max_dur *= multiplier

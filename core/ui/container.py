@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 from core.ui.modals import BaseModal
 
 def get_container_slot_rect(container_pos, i):

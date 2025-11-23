@@ -2,7 +2,7 @@ import os
 import re
 import pygame
 import random
-from data.config import *
+from core.data.config import *
 
 class MapManager:
     def __init__(self, game, map_folder='./game/resources/map'):

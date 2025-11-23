@@ -2,7 +2,7 @@ import csv
 import pygame
 import random
 
-from data.config import *
+from core.data.config import *
 from core.entities.item.item import Item, Container
 from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile

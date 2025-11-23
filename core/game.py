@@ -11,8 +11,8 @@ import glob
 import re
 from datetime import datetime
 
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.entities.player.player import Player
 from core.entities.zombie.zombie import Zombie
 from core.entities.item.item import Item, Projectile
@@ -24,7 +24,7 @@ from core.ui.inventory import draw_inventory_modal, get_inventory_slot_rect, get
 from core.ui.container import draw_container_view, get_container_slot_rect
 from core.ui.status import draw_status_modal
 from core.ui.dropdown import draw_context_menu
-from data.player_xml_parser import parse_player_data
+from core.data.player_xml_parser import parse_player_data
 from core.ui.assets import load_assets
 from core.input import handle_input
 from core.update import update_game_state
@@ -96,9 +96,10 @@ class Game:
 
         self.last_modal_positions = {
             'status': (65, 10),
-            'inventory': (970, 10),
+            'inventory': (1050, 10),
+            'gear': (830, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (970, 360),
+            'nearby': (1050, 360),
             'messages': (10, 560),
             'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200)
@@ -151,6 +152,10 @@ class Game:
         self.paused_surface = None
         
         self.current_save_folder_name = None
+
+        self.is_aiming = False
+        self.camera_pan_x = 0
+        self.camera_pan_y = 0
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""
@@ -428,13 +433,13 @@ class Game:
         preset = self.player_setup_state.get('selected_config_preset', 'default')
         try:
             print(f"Loading config preset: {preset}")
-            data.config.load_settings(preset)
+            core.data.load_settings(preset)
         except Exception as e:
             print(f"Error applying custom config '{preset}': {e}")
 
         self.player_name = player_data.get('name', "Player")
         self.player = Player(player_data=player_data)
-        self.zoom_level = data.config.START_ZOOM
+        self.zoom_level = core.data.config.START_ZOOM
         
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
@@ -658,8 +663,12 @@ class Game:
         screen_x -= GAME_OFFSET_X
         relative_screen_x = screen_x - (GAME_WIDTH / 2)
         relative_screen_y = screen_y - (GAME_HEIGHT / 2)
-        return (self.player.rect.centerx + relative_screen_x / self.zoom_level,
-                self.player.rect.centery + relative_screen_y / self.zoom_level)
+
+        return (self.player.rect.centerx + self.camera_pan_x + relative_screen_x / self.zoom_level,
+                self.player.rect.centery + self.camera_pan_y + relative_screen_y / self.zoom_level)
+
+        #return (self.player.rect.centerx + relative_screen_x / self.zoom_level,
+        #        self.player.rect.centery + relative_screen_y / self.zoom_level)
 
     def _update_screen(self):
         current_w, current_h = self.screen.get_size()

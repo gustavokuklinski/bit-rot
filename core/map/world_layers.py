@@ -2,8 +2,8 @@
 import os
 import re
 import pygame
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.entities.item.item import Item
 from core.entities.zombie.zombie import Zombie
 from core.entities.zombie.corpse import Corpse

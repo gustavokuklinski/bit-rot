@@ -1,7 +1,7 @@
 import pygame
 import uuid
-import data.config
-from data.config import *
+import core.data.config
+from core.data.config import *
 
 # Import game actions (Moved to top for cleaner code, assuming no circular dependency)
 # If circular dependency errors occur, move this back inside handle_keyboard_events
@@ -87,6 +87,30 @@ def toggle_messages_modal(game):
         }
         game.modals.append(new_messages_modal)
 
+
+def toggle_gear_modal(game):
+    gear_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'gear':
+            game.modals.remove(modal)
+            gear_modal_exists = True
+            break
+    if not gear_modal_exists:
+        new_gear_modal = {
+            'id': uuid.uuid4(),
+            'type': 'gear',
+            'item': None,
+            'position': game.last_modal_positions.get('gear', (700, 10)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(game.last_modal_positions.get('gear', (700, 10))[0], 
+                                game.last_modal_positions.get('gear', (700, 10))[1], 
+                                GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+            'minimized': False
+        }
+        game.modals.append(new_gear_modal)
+
+
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
@@ -118,6 +142,9 @@ def handle_keyboard_events(game, event):
 
             if event.key == pygame.K_h:
                 toggle_status_modal(game)
+            
+            if event.key == pygame.K_g:
+                toggle_gear_modal(game)
             
             if event.key == pygame.K_n:
                 toggle_nearby_modal(game)
@@ -161,7 +188,7 @@ def handle_keyboard_events(game, event):
             zoom_step = 0.1
             if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 
                 game.zoom_level += zoom_step
-                game.zoom_level = min(game.zoom_level, data.config.NEAR_ZOOM) 
+                game.zoom_level = min(game.zoom_level, core.dataNEAR_ZOOM) 
             elif event.key == pygame.K_MINUS: 
                 game.zoom_level -= zoom_step
-                game.zoom_level = max(data.config.FAR_ZOOM, game.zoom_level)
+                game.zoom_level = max(core.dataFAR_ZOOM, game.zoom_level)

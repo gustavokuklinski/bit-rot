@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def draw_tooltip(surface, item, pos):
     if not item:

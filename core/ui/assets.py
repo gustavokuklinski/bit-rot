@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 
 def load_assets():

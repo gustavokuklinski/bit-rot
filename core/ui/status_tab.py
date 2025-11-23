@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def draw_status_tab(surface, player, modal, assets, zombies_killed):
     y_offset = modal['rect'].y + 80

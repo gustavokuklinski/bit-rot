@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def draw_context_menu(surface, menu_state, mouse_pos):
     if not menu_state['active']:

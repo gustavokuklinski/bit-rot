@@ -1,8 +1,9 @@
 import pygame
-from data.config import *
+from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs # Import the Tabs class
 from core.ui.container import _draw_slots
+
 
 # Helper function to draw the content of the 'Inventory' tab
 def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
@@ -117,73 +118,6 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     status_text = font_small.render(active_weapon_text, True, YELLOW)
     surface.blit(status_text, (base_modal.modal_x + 10, belt_y_start + 80))
 
-# Helper function to get rects for the 'Gear' tab
-def get_gear_slot_rects(modal_position):
-    modal_x, modal_y = modal_position
-    slot_size = 48
-    gap = 8
-    # Use INVENTORY_MODAL_WIDTH from config or modals.py, hardcoding 300 as a fallback
-    modal_center_x = modal_x + (INVENTORY_MODAL_WIDTH / 2) 
-
-    # Content Y start is 80 (Header 35 + Tab 30 + Padding 15)
-    y1 = modal_y + 80 + 10
-    y2 = y1 + slot_size + gap + 20
-    y3 = y2 + slot_size + gap + 20
-
-    rects = {
-        # [HEAD]
-        'head': pygame.Rect(modal_center_x - (slot_size / 2), y1, slot_size, slot_size),
-        
-        # [HANDS][TORSO][BODY]
-        'hands': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 15, y2, slot_size, slot_size),
-        'torso': pygame.Rect(modal_center_x - (slot_size / 2), y2, slot_size, slot_size),
-        'body': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 15, y2, slot_size, slot_size),
-        
-        # [LEGS][FEET] (PANTS maps to LEGS)
-        'legs': pygame.Rect(modal_center_x - (slot_size / 2) - (gap/2) - (slot_size/2), y3, slot_size, slot_size),
-        'feet': pygame.Rect(modal_center_x + (gap/2) + (slot_size/2) - (slot_size/2), y3, slot_size, slot_size)
-    }
-    
-    # Correcting legs/feet logic to be perfectly centered
-    # Total width of 2 slots = 48*2 + 8 = 104
-    # Start X = center_x - 104/2 = center_x - 52
-    rects['legs'] = pygame.Rect(modal_center_x - 52, y3, slot_size, slot_size)
-    rects['feet'] = pygame.Rect(modal_center_x + 4, y3, slot_size, slot_size) # -52 + 48 + 8 = +4
-
-    return rects
-
-# Helper function to draw the content of the 'Gear' tab
-def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
-    modal['gear_slot_rects'] = get_gear_slot_rects(modal['position'])
-    
-    if not hasattr(player, 'clothes'):
-         player.clothes = {} # Safeguard
-
-    for slot_name, slot_rect in modal['gear_slot_rects'].items():
-        # Draw empty slot
-        pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-
-        # Draw label
-        label_text = font_small.render(slot_name.upper(), True, GRAY)
-        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.bottom + 5)
-        surface.blit(label_text, label_rect)
-
-        # Get item from player's clothes
-        # Assumes player.clothes stores Item objects, similar to player.inventory
-        item = player.clothes.get(slot_name) 
-
-        if item:
-            try:
-                if item.image:
-                    thumb = pygame.transform.scale(item.image, (slot_rect.width - 8, slot_rect.height - 8))
-                    thumb_rect = thumb.get_rect(center=slot_rect.center)
-                    surface.blit(thumb, thumb_rect)
-                else:
-                    pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-            except Exception as e:
-                print(f"Error drawing gear item {item.name}: {e}")
-
 
 def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
     if not player.backpack:
@@ -259,8 +193,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
 
     # --- Tabs ---
     tabs_data = [
-        {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'},
-        {'label': 'Gear', 'icon_path': SPRITE_PATH + 'ui/gear_tab.png'} # Using status icon for gear
+        {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'}
     ]
 
     if player.backpack:
@@ -286,9 +219,6 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
         # Draw the original inventory/belt/backpack content
         # *** FIX: Pass base_modal to the helper function ***
         _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal)
-    elif modal['active_tab'] == 'Gear':
-        # Draw the new 6-slot gear layout
-        _draw_gear_tab(surface, player, modal, assets, mouse_pos)
     elif modal['active_tab'] == 'Bag':
         _draw_backpack_tab(surface, game, player, modal, mouse_pos)
     

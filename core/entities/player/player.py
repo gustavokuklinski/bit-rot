@@ -4,8 +4,8 @@ import os
 import random
 import math
 
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.player.player_progression import PlayerProgression
@@ -410,14 +410,14 @@ class Player:
 
         self.progression.update(self, is_moving, game)
 
-        if current_time - self.last_decay_time >= data.config.DECAY_RATE_SECONDS:
+        if current_time - self.last_decay_time >= core.data.config.DECAY_RATE_SECONDS:
 
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
             food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
             
             # Apply modifier (a negative bonus reduces decay)
-            water_decay = max(0, data.config.WATER_DECAY_AMOUNT * water_mod)
-            food_decay = max(0, data.config.FOOD_DECAY_AMOUNT * food_mod)
+            water_decay = max(0, core.data.config.WATER_DECAY_AMOUNT * water_mod)
+            food_decay = max(0, core.data.config.FOOD_DECAY_AMOUNT * food_mod)
             
             self.water = max(0, self.water - water_decay)
             self.food = max(0, self.food - food_decay)
@@ -427,8 +427,8 @@ class Player:
                 self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
                 self.health = max(0, self.health)
 
-            if AUTO_DRINK and self.water <= data.config.AUTO_DRINK_THRESHOLD:
-                print(f"Water level {self.water} <= threshold {data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
+            if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:
+                print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
                     print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print

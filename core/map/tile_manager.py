@@ -1,8 +1,8 @@
 import os
 import xml.etree.ElementTree as ET
 import pygame
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 
 class TileManager:
     """Manages tile definitions, loading them from XML and handling image assets."""

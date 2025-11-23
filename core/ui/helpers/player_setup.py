@@ -3,9 +3,9 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom
 import os
 from datetime import datetime
-from data.config import *
-import data.config
-import data.player_xml_parser
+from core.data.config import *
+import core.data.config
+import core.data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 import random
@@ -661,7 +661,7 @@ def run_player_setup(game):
     if 'base_data' not in game.player_setup_state:
         state = game.player_setup_state
         try:
-            state['base_data'], trait_names = data.player_xml_parser.parse_player_data()
+            state['base_data'], trait_names = core.data.player_xml_parser.parse_player_data()
         except Exception as e:
             print(f"FATAL: Could not parse player.xml: {e}")
             game.running = False

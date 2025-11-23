@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def draw_record_tab(surface, player, modal, assets, mouse_pos):
     y_offset = modal['rect'].y + 80

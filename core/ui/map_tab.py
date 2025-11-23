@@ -1,7 +1,7 @@
 # core/ui/map_tab.py
 
 import pygame
-from data.config import *
+from core.data.config import *
 
 # Define colors for the minimap
 MINIMAP_COLORS = {

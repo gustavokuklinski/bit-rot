@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 from core.ui.modals import BaseModal
 
 _message_icon = None
@@ -72,19 +72,3 @@ def draw_messages_modal(surface, game, modal, assets):
         pygame.draw.rect(surface, GRAY, scrollbar_handle_rect, 0, 2) # Draw the handle
 
     return None, close_button, minimize_button
-
-def draw_messages_button(surface):
-    global _message_icon
-    if _message_icon is None:
-        try:
-            _message_icon = pygame.image.load(SPRITE_PATH + 'ui/messages.png').convert_alpha()
-            _message_icon = pygame.transform.scale(_message_icon, (40, 40))
-        except pygame.error as e:
-            print(f"Warning: Could not load message icon: {e}")
-            _message_icon = pygame.Surface((40, 40), pygame.SRCALPHA)
-            _message_icon.fill(GRAY)
-    
-    # Position below nearby button
-    button_messages_rect = pygame.Rect(10, 170, 60, 60) # Below nearby (110 + 60 = 170)
-    surface.blit(_message_icon, button_messages_rect)
-    return button_messages_rect

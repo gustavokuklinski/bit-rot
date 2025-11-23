@@ -1,7 +1,7 @@
 import random
 import math
-from data.config import *
-import data.config
+from core.data.config import *
+import core.data.config
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 class PlayerProgression:
@@ -201,7 +201,7 @@ class PlayerProgression:
         for zombie in game.zombies:
             dist = math.hypot(player.rect.centerx - zombie.rect.centerx, player.rect.centery - zombie.rect.centery)
             # Using ZOMBIE_DETECTION_RADIUS as the "seeing" range
-            if dist < data.config.ZOMBIE_DETECTION_RADIUS:
+            if dist < core.data.config.ZOMBIE_DETECTION_RADIUS:
                 nearby_zombies += 1
         
         anxiety_gain = 0.0

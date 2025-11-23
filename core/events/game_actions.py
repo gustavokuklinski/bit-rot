@@ -1,6 +1,6 @@
 import math
 import pygame
-from data.config import *
+from core.data.config import *
 from core.entities.zombie.corpse import Corpse
 
 def try_grab_item(game):

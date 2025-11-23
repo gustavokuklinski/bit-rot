@@ -1,5 +1,5 @@
 import pygame
-from data.config import *
+from core.data.config import *
 
 def draw_clock_tab(surface, game, modal, assets):
     # Adjust offsets to start inside the mobile screen area
