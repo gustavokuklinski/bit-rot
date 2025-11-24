@@ -16,6 +16,7 @@ from core.ui.gear_modal import draw_gear_modal
 from core.ui.messages_modal import draw_messages_modal
 from core.ui.text_modal import draw_text_modal
 from core.ui.mobile_modal import draw_mobile_modal
+from core.ui.alerts import draw_player_alerts
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -27,8 +28,7 @@ def draw_game(game):
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
 
-    #view_w = int(VIRTUAL_SCREEN_WIDTH / zoom)
-    #view_h = int(VIRTUAL_GAME_HEIGHT / zoom)
+
     world_view_surface = pygame.Surface((view_w, view_h))
     world_view_surface.fill(GAME_BG_COLOR) # Set the world background color
 
@@ -36,28 +36,72 @@ def draw_game(game):
     offset_x = view_w / 2 - game.player.rect.centerx
     offset_y = view_h / 2 - game.player.rect.centery
 
+   
+
     light_mask = pygame.Surface((view_w, view_h))
     
     # Fill the mask with pitch black.
-    light_mask.fill((10, 10, 10)) # <-- This was the fix from last time
-    ambient = int(game.world_time.current_ambient_light) 
+    light_mask.fill((12, 12, 12))
+    ambient = int(game.world_time.current_ambient_light)
+
+    light_texture = game.assets.get('light_texture')
     
+    light_sources = []
+
+
+    # [START MODIFICATION]
+    mouse_pos = game._get_scaled_mouse_pos()
+
+    # Check if mouse is over any UI modal to prevent aiming through it
+    is_over_modal = False
+    for modal in game.modals:
+        if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+            is_over_modal = True
+            break
+
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
+    
+    # Only allow right-click aiming if NOT hovering over a modal
+    right_click_aim = mouse_buttons[2] and not is_over_modal
+    
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or right_click_aim)
+    # [END MODIFICATION]
 
     # Panning Camera
     target_pan_x = 0
     target_pan_y = 0
 
     if is_aiming and game.player:
-        # Calculate max pan distance (e.g., 30% of the view dimension)
-        pan_distance = min(view_w, view_h) * 0.3
+        # [START MODIFICATION]
+        # 1. Get Mouse Position relative to the Player (Screen Center)
+        # mouse_pos = game._get_scaled_mouse_pos() # Removed (moved up)
         
-        # Calculate offset based on aim angle
-        # Note: -sin because screen Y is inverted vs standard math plane
-        target_pan_x = math.cos(game.player.aim_angle) * pan_distance
-        target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
+        # Player is conceptually at the center of the screen
+        screen_center_x = GAME_WIDTH / 2
+        screen_center_y = GAME_HEIGHT / 2
+        
+        dx = mouse_pos[0] - screen_center_x
+        dy = mouse_pos[1] - screen_center_y
+        
+        # Distance in Screen Pixels
+        mouse_dist_screen = math.hypot(dx, dy)
+        
+        # 2. Calculate Threshold (Fog of War Radius) in Screen Pixels
+        # game.player_view_radius is in World Pixels.
+        # On screen, World Pixels are multiplied by Zoom.
+        pan_threshold_screen = game.player_view_radius * zoom
+        
+        # 3. Only pan if mouse is OUTSIDE the threshold
+        if mouse_dist_screen > pan_threshold_screen:
+            # Calculate max pan distance (e.g., 30% of the view dimension)
+            pan_distance = min(view_w, view_h) * 0.3
+            
+            # Calculate offset based on aim angle
+            # Note: -sin because screen Y is inverted vs standard math plane
+            target_pan_x = math.cos(game.player.aim_angle) * pan_distance
+            target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
+        # [END MODIFICATION]
 
     # Smoothly interpolate current pan towards target (Lerp)
     lerp_speed = 0.1
@@ -70,13 +114,6 @@ def draw_game(game):
     offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
 
 
-    light_mask = pygame.Surface((view_w, view_h))
-
-
-
-    light_texture = game.assets.get('light_texture')
-    
-    light_sources = []
 
     # 1. Add the player's base vision as a light source (Fog of War)
     if light_texture:
@@ -270,6 +307,7 @@ def draw_game(game):
 
     if game.game_state == 'PLAYING':
         draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
+        draw_player_alerts(game.virtual_screen, game.player)
 
     top_tooltip = None
     game.modal_buttons = []

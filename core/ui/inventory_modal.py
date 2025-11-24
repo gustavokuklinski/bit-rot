@@ -150,7 +150,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
     
     # "Backpack" Label with Shadow
-    backpack_label = font_small.render("Backpack", True, GRAY)
+    backpack_label = font_notification.render("Backpack", True, GRAY)
     surface.blit(backpack_label, (backpack_slot_rect.x + 3, backpack_slot_rect.y + 1))
 
     if (backpack := player.backpack):

@@ -472,18 +472,19 @@ class Game:
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
 
-        self.modals.append({
-            'id': uuid.uuid4(), 'type': 'inventory', 'item': None,
-            'position': self.last_modal_positions['inventory'], 'is_dragging': False, 'drag_offset': (0, 0),
-            'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
-            'minimized': False
-        })
-        self.modals.append({
-            'id': uuid.uuid4(), 'type': 'nearby', 'item': None,
-            'position': self.last_modal_positions['nearby'], 'is_dragging': False, 'drag_offset': (0, 0),
-            'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
-            'minimized': False
-        })
+        # Startup modals when play
+        #self.modals.append({
+        #    'id': uuid.uuid4(), 'type': 'inventory', 'item': None,
+        #    'position': self.last_modal_positions['inventory'], 'is_dragging': False, 'drag_offset': (0, 0),
+        #    'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+        #    'minimized': False
+        #})
+        #self.modals.append({
+        #    'id': uuid.uuid4(), 'type': 'nearby', 'item': None,
+        #    'position': self.last_modal_positions['nearby'], 'is_dragging': False, 'drag_offset': (0, 0),
+        #    'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
+        #    'minimized': False
+        #})
 
     async def run(self):
         while self.running:
@@ -507,7 +508,8 @@ class Game:
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
-        start_button, load_button, quit_button = draw_menu(self.virtual_screen, mouse_pos, has_save)
+        # Unpack the 4 return values (start, load, settings, quit)
+        start_btn, load_btn, settings_btn, quit_btn = draw_menu(self.virtual_screen, mouse_pos, has_save)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -517,13 +519,23 @@ class Game:
                 self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
-                if start_button.collidepoint(mouse_pos):
+                
+                if start_btn.collidepoint(mouse_pos):
                     self.game_state = 'PLAYER_SETUP'
-                elif load_button and load_button.collidepoint(mouse_pos):
+                    # Ensure we start on the player tab if returning from elsewhere
+                    self.player_setup_state['current_tab'] = 'Player' 
+                    
+                elif has_save and load_btn.collidepoint(mouse_pos):
                     self.game_state = 'LOAD_GAME_MENU'
                     if 'save_list' in self.load_game_state:
                          del self.load_game_state['save_list']
-                elif quit_button.collidepoint(mouse_pos):
+                         
+                elif settings_btn.collidepoint(mouse_pos):
+                    self.game_state = 'PLAYER_SETUP'
+                    # Force the state to the Settings tab
+                    self.player_setup_state['current_tab'] = 'Settings'
+                    
+                elif quit_btn.collidepoint(mouse_pos):
                     self.running = False
                     return
         self._update_screen()
@@ -609,7 +621,7 @@ class Game:
 
     def run_game_over(self):
         mouse_pos = self._get_scaled_mouse_pos()
-        restart_button, quit_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
+        restart_button, menu_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -621,8 +633,8 @@ class Game:
                 mouse_pos = self._get_scaled_mouse_pos()
                 if restart_button.collidepoint(mouse_pos):
                     self.game_state = 'PLAYER_SETUP'
-                elif quit_button.collidepoint(mouse_pos):
-                    self.running = False
+                elif menu_button.collidepoint(mouse_pos):
+                    self.game_state = 'MENU'
                     return
         self._update_screen()
 

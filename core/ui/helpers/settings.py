@@ -1,6 +1,39 @@
 import pygame
 from core.data.config import *
 
+def _get_friendly_value_display(key, value):
+    """Returns a formatted string (unit/conversion) based on the setting key."""
+    try:
+        val_float = float(value)
+    except (ValueError, TypeError):
+        return ""
+
+    # Milliseconds -> Minutes/Seconds (Day length, timers)
+    if key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms']: 
+        seconds = val_float / 1000.0
+        if seconds >= 60:
+            return f"({seconds/60:.1f} min)"
+        return f"({seconds:.0f} sec)"
+    
+    # Seconds explicit: Convert to minutes if >= 60
+    if 'seconds' in key or '_sec' in key: 
+        if val_float >= 60:
+             return f"({val_float/60:.1f} min)"
+        return "(sec)"
+        
+    # Hours: Convert decimal (5.5) to Clock (05:30)
+    if '_hr' in key: 
+        hours = int(val_float)
+        minutes = int((val_float - hours) * 60)
+        return f"({hours:02d}:{minutes:02d})"
+        
+    # Multipliers / Chances
+    if 'multiplier' in key or 'chance' in key:
+        # Assume 1.0 = 100%
+        return f"({val_float*100:.0f}%)"
+        
+    return ""
+
 def _draw_settings_screen(game, state, mouse_pos):
     """Draws the Settings configuration screen."""
     # Reuse styles from player build screen
@@ -179,6 +212,16 @@ def _draw_settings_screen(game, state, mouse_pos):
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['config_inputs'].append((block, key, abs_rect))
+
+                    # --- USER FRIENDLY DISPLAY HELPER ---
+                    friendly_text = _get_friendly_value_display(key, val)
+                    if friendly_text:
+                        info_surf = font_small.render(friendly_text, True, GRAY)
+                        # Draw to the left of the input box
+                        info_pos_x = input_rect.x - info_surf.get_width() - 10
+                        info_pos_y = input_rect.y + 7
+                        sub.blit(info_surf, (info_pos_x, info_pos_y))
+                    # ------------------------------------
                 
             y_off += line_h
 

@@ -16,7 +16,7 @@
         <food_decay name="Food decay %" value="0.2"/>
         <water_decay name="Water decay %" value="0.3"/>
         <water_autodrink name="Allow autodrink" value="true"/>
-        <water_threshold name="Minimum % to start autodrink" value="90"/>
+        <water_threshold name="Minimum % to start autodrink" value="100"/>
         <food_water_multiplier_decay value="1.5"/>
         <view_radius name="View radius tiles" value="5"/>
         <fow_radius name="Fog of War radius tiles" value="8"/>

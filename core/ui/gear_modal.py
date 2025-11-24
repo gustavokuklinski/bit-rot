@@ -68,8 +68,8 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # Draw label
-        label_text = font_small.render(slot_name.upper(), True, GRAY)
-        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.bottom + 2)
+        label_text = font_notification.render(slot_name.capitalize(), True, GRAY)
+        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.bottom - 42)
         surface.blit(label_text, label_rect)
 
         # Get item from player's clothes
