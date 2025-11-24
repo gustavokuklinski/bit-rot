@@ -185,7 +185,7 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
     print(f"A {zombie.name} died. Creating corpse and checking for loot...")
     # create corpse at zombie position
-    dead_sprite_path = "./game/resources/sprites/zombie/dead.png"
+    dead_sprite_path = "./game/lib/sprites/zombie/dead.png"
     corpse = Corpse(name="Dead corpse", capacity=10, image_path=dead_sprite_path, pos=zombie.rect.center)
     
     if hasattr(zombie, 'inventory'):

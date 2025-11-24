@@ -15,10 +15,10 @@ GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
 
-MAP_DIR = "./game/resources/map/" # Game map files
-DATA_PATH = "./game/resources/data/" # Folders with XML data files
-SPRITE_PATH = "./game/resources/sprites/" # Folders with PNG sprites
-SOUND_PATH = "./game/resources/sfx/" # Sound OGG files
+MAP_DIR = "./game/lib/map/" # Game map files
+DATA_PATH = "./game/lib/data/" # Folders with XML data files
+SPRITE_PATH = "./game/lib/sprites/" # Folders with PNG sprites
+SOUND_PATH = "./game/lib/sfx/" # Sound OGG files
 
 # Colors
 WHITE = (255, 255, 255)
@@ -68,7 +68,7 @@ GEAR_MODAL_WIDTH = 200
 GEAR_MODAL_HEIGHT = 290
 
 
-FONT_FACE = "./game/resources/font/Oxanium-Regular.ttf"
+FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 
 # Fonts
 font = pygame.font.Font(FONT_FACE, 16)

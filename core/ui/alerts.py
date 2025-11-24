@@ -86,8 +86,6 @@ def draw_player_alerts(surface, player):
         
         icon = _get_alert_icon(icon_file)
         
-        
-        
         # Determine final positions
         draw_x = int(x)
         draw_y = int(y)

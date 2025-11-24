@@ -5,7 +5,7 @@ import random
 from core.data.config import *
 
 class MapManager:
-    def __init__(self, game, map_folder='./game/resources/map'):
+    def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game
         self.map_folder = map_folder
         self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
@@ -166,7 +166,7 @@ class MapManager:
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
                     new_def['sound_src'],
-                    subdir='map', # As requested: game/resources/sfx/map/
+                    subdir='map', # As requested: game/lib/sfx/map/
                     game=self.game,
                     source_pos=tile_rect.center,
                     base_volume=random.uniform(0.2, 0.7)
