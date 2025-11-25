@@ -134,9 +134,46 @@ def handle_keyboard_events(game, event):
                 toggle_pause(game)
                 return
 
+        if event.key == pygame.K_RETURN:
+            toggle_messages_modal(game)
+
+        if game.chat_active:
+            if event.key == pygame.K_RETURN:
+                # Send Message
+                if game.chat_input_text.strip():
+                    game.player.chat_text = game.chat_input_text
+                    game.player.chat_timer = game.player.chat_duration
+                    from core.messages import display_message_chat
+                    display_message_chat(game, f"{game.player.name}: {game.chat_input_text}")
+                
+                # Clear and Deactivate
+                game.chat_input_text = ""
+                game.chat_active = False
+                
+                # Optional: Close the modal when sending
+                # Check if modal is open, if so, close it (toggle)
+                # This creates the "Enter closes chat" behavior
+                # Remove this if you want the window to stay open.
+                for modal in game.modals:
+                    if modal['type'] == 'messages':
+                        toggle_messages_modal(game)
+                        break
+            
+            elif event.key == pygame.K_BACKSPACE:
+                game.chat_input_text = game.chat_input_text[:-1]
+            elif event.key == pygame.K_ESCAPE:
+                game.chat_active = False
+            else:
+                if len(game.chat_input_text) < 50:
+                    game.chat_input_text += event.unicode
+            return
 
         # --- Play Mode Keys ---
         if game.game_state == 'PLAYING':
+            if event.key == pygame.K_RETURN or event.key == pygame.K_t:
+                game.chat_active = True
+                return
+
             if event.key == pygame.K_i:
                 toggle_inventory_modal(game)
 
@@ -148,10 +185,7 @@ def handle_keyboard_events(game, event):
             
             if event.key == pygame.K_n:
                 toggle_nearby_modal(game)
-            
-            if event.key == pygame.K_m:
-                toggle_messages_modal(game)
-            
+                        
             if event.key == pygame.K_r:
                 if game.player:
                     game.player.reload_active_weapon()

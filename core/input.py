@@ -9,6 +9,13 @@ from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_m
 def handle_movement(game):
     if game.player.is_sleeping:
         return
+    
+    if game.chat_active:
+        game.player.vx = 0
+        game.player.vy = 0
+        game.player.is_running = False
+        return
+
         
     keys = pygame.key.get_pressed()
     current_speed = 0
@@ -78,6 +85,14 @@ def handle_input(game):
                     if modal.get('type') == 'messages' and not modal.get('minimized', False):
                         content_rect = modal.get('content_rect') # Get rect calculated in draw step
                         if content_rect and content_rect.collidepoint(mouse_pos):
+
+                            active_tab = modal.get('active_tab', 'All')
+                            active_log = game.message_logs.get(active_tab, [])
+
+                            line_height = font_small.get_height() + 2
+                            total_text_height = len(active_log) * line_height # Use active_log
+                            visible_height = content_rect.height
+
                             # --- Calculate scroll limits within the handler ---
                             line_height = font_small.get_height() + 2
                             total_text_height = len(game.message_log) * line_height
@@ -129,13 +144,14 @@ def handle_input(game):
             handle_keyboard_events(game, event) # Call existing handler for other keys
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_e: # Interaction key
-                    player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
-                    if player_facing_grid_x is not None and player_facing_grid_y is not None:
-                        tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
-                        if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
-                            # Assuming 'maptile' type for doors
-                            game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
+                # Block interactions if chatting
+                if not game.chat_active:
+                    if event.key == pygame.K_e:
+                        player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
+                        if player_facing_grid_x is not None and player_facing_grid_y is not None:
+                            tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
+                            if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                                game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
 
             handle_movement(game)
             if event.type == pygame.MOUSEBUTTONDOWN:

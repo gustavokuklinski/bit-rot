@@ -108,6 +108,10 @@ class Player:
         self.sound_steps = self.sounds_data.get('steps')
         self.last_step_sound_time = 0
 
+        self.chat_text = None
+        self.chat_timer = 0
+        self.chat_duration = 300
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -347,6 +351,11 @@ class Player:
 
         current_time = time.time()
 
+        
+        if self.chat_timer > 0:
+            self.chat_timer -= 1
+            if self.chat_timer <= 0:
+                self.chat_text = None
 
         if not self.is_sleeping: # Only check passive rest if not already sleeping
             grid_x = int(self.rect.centerx // TILE_SIZE)

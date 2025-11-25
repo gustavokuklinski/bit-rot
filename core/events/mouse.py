@@ -48,6 +48,28 @@ def handle_mouse_down(game, event, mouse_pos):
                         modal_to_affect['map_zoom'] = max(2, current_zoom - 1) # Zoom out, min 2px
                         return # Click handled
 
+                if button['type'] == 'send_msg':
+                    # Trigger send message logic (same as Enter key)
+                    if game.chat_input_text.strip():
+                        game.player.chat_text = game.chat_input_text
+                        game.player.chat_timer = game.player.chat_duration
+                        # Log to Player tab
+                        from core.messages import display_message_player
+                        display_message_player(game, f"You: {game.chat_input_text}")
+                        
+                        game.chat_input_text = ""
+                        # Keep chat active after sending via button? usually yes
+                        game.chat_active = True 
+                    return
+
+                elif button['type'] == 'chat_input':
+                    game.chat_active = True
+                    return
+
+    
+
+
+
         # (Existing code for UI buttons: status, inventory, etc.)
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game)
@@ -130,8 +152,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 game.modals.append(topmost_clicked_modal)
             
             # b. NOW, check for tab clicks *only on this modal*
-            if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile'] and 'tab_rects' in topmost_clicked_modal:
-            # if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile'] and 'tab_rects' in topmost_clicked_modal and 'tabs_data' in topmost_clicked_modal:
+            if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages'] and 'tab_rects' in topmost_clicked_modal:
                 tab_rects = topmost_clicked_modal.get('tab_rects', [])
                 tabs_data = topmost_clicked_modal.get('tabs_data', [])
                 for i, tab_rect in enumerate(tab_rects):

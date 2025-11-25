@@ -115,6 +115,37 @@ def draw_game(game):
 
 
 
+    if game.chat_active:
+        chat_box_width = 400
+        chat_box_height = 35
+        chat_x = (GAME_WIDTH - chat_box_width) // 2
+        chat_y = GAME_HEIGHT - 100
+        
+        chat_rect = pygame.Rect(chat_x, chat_y, chat_box_width, chat_box_height)
+        
+        # Background (Semi-transparent black)
+        s = pygame.Surface((chat_box_width, chat_box_height), pygame.SRCALPHA)
+        s.fill((0, 0, 0, 200))
+        game.virtual_screen.blit(s, (chat_x, chat_y))
+        
+        # Border
+        pygame.draw.rect(game.virtual_screen, WHITE, chat_rect, 1)
+        
+        # Input Text
+        if game.chat_input_text:
+            txt_surf = font.render(game.chat_input_text, True, WHITE)
+            game.virtual_screen.blit(txt_surf, (chat_rect.x + 5, chat_rect.y + 8))
+            
+            # Cursor (blinking)
+            if int(pygame.time.get_ticks() / 500) % 2 == 0:
+                cursor_x = chat_rect.x + 5 + txt_surf.get_width()
+                pygame.draw.line(game.virtual_screen, WHITE, (cursor_x, chat_rect.y + 5), (cursor_x, chat_rect.bottom - 5))
+        else:
+            # Cursor at start if text is empty
+            if int(pygame.time.get_ticks() / 500) % 2 == 0:
+                pygame.draw.line(game.virtual_screen, WHITE, (chat_rect.x + 5, chat_rect.y + 5), (chat_rect.x + 5, chat_rect.bottom - 5))
+
+
     # 1. Add the player's base vision as a light source (Fog of War)
     if light_texture:
         try:
@@ -258,6 +289,8 @@ def draw_game(game):
     roof_hide_radius = 3
 
 
+
+
     for image, rect, (tile_x, tile_y) in game.roof_tiles:
         dx = abs(tile_x - player_tile_x)
         dy = abs(tile_y - player_tile_y)
@@ -305,6 +338,49 @@ def draw_game(game):
         pygame.draw.circle(game.virtual_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
 
+
+    if game.player and game.player.chat_text and game.player.chat_timer > 0:
+        # Player world pos on the view surface (unscaled)
+        # view_w/2 - pan_x, view_h/2 - pan_y
+        
+        # Convert to screen coordinates
+        player_view_x = (view_w / 2) - game.camera_pan_x
+        player_view_y = (view_h / 2) - game.camera_pan_y
+        
+        screen_x = (player_view_x * zoom) + GAME_OFFSET_X
+        screen_y = (player_view_y * zoom)
+        
+        # Bubble setup
+        font_bubble = game.assets.get('font') or font
+        text_surf = font_bubble.render(game.player.chat_text, True, BLACK)
+        
+        bubble_w = text_surf.get_width() + 20
+        bubble_h = text_surf.get_height() + 10
+        
+        # Position above player head
+        # 0.5 * TILE_SIZE * zoom centers it horizontally relative to the scaled tile
+        bubble_x = screen_x - (bubble_w / 2) + (TILE_SIZE * zoom / 2)
+        bubble_y = screen_y - bubble_h - 15 
+        
+        bubble_rect = pygame.Rect(bubble_x, bubble_y, bubble_w, bubble_h)
+        
+        # Draw Bubble
+        pygame.draw.rect(game.virtual_screen, WHITE, bubble_rect, border_radius=8)
+        
+        # Triangle Pointer
+        tri_center_x = screen_x + (TILE_SIZE * zoom / 2)
+        tri_points = [
+            (tri_center_x - 6, bubble_rect.bottom),
+            (tri_center_x + 6, bubble_rect.bottom),
+            (tri_center_x, bubble_rect.bottom + 8)
+        ]
+        pygame.draw.polygon(game.virtual_screen, WHITE, tri_points)
+        
+        # Text
+        text_rect = text_surf.get_rect(center=bubble_rect.center)
+        game.virtual_screen.blit(text_surf, text_rect)
+
+
     if game.game_state == 'PLAYING':
         draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
         draw_player_alerts(game.virtual_screen, game.player)
@@ -334,7 +410,14 @@ def draw_game(game):
             buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'messages':
-            _, close_button, minimize_button = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
+            result = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
+            if len(result) == 5:
+                _, close_button, minimize_button, send_btn, input_box = result
+                if send_btn: game.modal_buttons.append(send_btn)
+                if input_box: game.modal_buttons.append(input_box)
+            else:
+                _, close_button, minimize_button = result # Fallback
+
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
         elif modal['type'] == 'text':

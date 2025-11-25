@@ -100,7 +100,7 @@ class Game:
             'gear': (830, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'nearby': (1050, 360),
-            'messages': (10, 560),
+            'messages': (10, 360),
             'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200)
         }
@@ -156,6 +156,19 @@ class Game:
         self.is_aiming = False
         self.camera_pan_x = 0
         self.camera_pan_y = 0
+
+        self.message_logs = {
+            'All': [],
+            'Chat': [],
+            'Player': [],
+            'Zombie': []
+        }
+        # Keep this property for backward compatibility if needed, 
+        # but we will primarily use message_logs['All']
+        self.message_log = self.message_logs['All']
+
+        self.chat_active = False
+        self.chat_input_text = ""
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""
