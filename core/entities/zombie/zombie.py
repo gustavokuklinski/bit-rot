@@ -417,9 +417,9 @@ class Zombie:
             if self.sound_attack: # Check if a sound is defined
                 game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
 
-            display_message(game, f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
+            display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
         else:
-            display_message(game, f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
+            display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
 
 
     @staticmethod

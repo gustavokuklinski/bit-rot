@@ -39,7 +39,7 @@ from core.ui.mobile_modal import draw_mobile_modal
 from core.sound_manager import SoundManager
 from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_files, delete_save
-
+from core.messages import display_message, init_messages
 
 class Game:
     def __init__(self):
@@ -55,6 +55,8 @@ class Game:
             pygame.display.set_icon(icon_image)
         except:
             pass
+        
+        init_messages(self)
 
         self.clock = pygame.time.Clock()
         self.assets = load_assets()
@@ -169,6 +171,7 @@ class Game:
 
         self.chat_active = False
         self.chat_input_text = ""
+        
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""

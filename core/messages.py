@@ -1,22 +1,44 @@
 import pygame
 from core.data.config import *
 
-def display_message(game, text):
-    """Global message (appears in All)."""
-    # Add to All
-    game.message_logs['All'].append(text)
+# [NEW] Global variable to store the game instance
+_game_instance = None
 
-def display_message_player(game, text):
-    """Player specific message."""
-    game.message_logs['All'].append(text)
-    game.message_logs['Player'].append(text)
+# [NEW] Initialization function called by Game
+def init_messages(game):
+    global _game_instance
+    _game_instance = game
 
-def display_message_chat(game, text):
-    """Chat specific message."""
-    game.message_logs['All'].append(text)
-    game.message_logs['Chat'].append(text)
+# [NEW] Helper to resolve arguments for backward compatibility
+def _resolve_args(arg1, arg2):
+    """
+    - If arg1 is the Game object, return (arg1, arg2) [Old Syntax]
+    - If arg1 is text, return (_game_instance, arg1) [New Syntax]
+    """
+    if hasattr(arg1, 'message_logs'):
+        return arg1, arg2
+    return _game_instance, arg1
 
-def display_message_zombie(game, text):
-    """Zombie specific message."""
-    game.message_logs['All'].append(text)
-    game.message_logs['Zombie'].append(text)
+# [UPDATED] Message functions use _resolve_args
+def display_message(arg1, arg2=None):
+    game, text = _resolve_args(arg1, arg2)
+    if game:
+        game.message_logs['All'].append(text)
+
+def display_message_player(arg1, arg2=None):
+    game, text = _resolve_args(arg1, arg2)
+    if game:
+        game.message_logs['All'].append(text)
+        game.message_logs['Player'].append(text)
+
+def display_message_chat(arg1, arg2=None):
+    game, text = _resolve_args(arg1, arg2)
+    if game:
+        game.message_logs['All'].append(text)
+        game.message_logs['Chat'].append(text)
+
+def display_message_zombie(arg1, arg2=None):
+    game, text = _resolve_args(arg1, arg2)
+    if game:
+        game.message_logs['All'].append(text)
+        game.message_logs['Zombie'].append(text) 

@@ -568,10 +568,37 @@ def draw_game(game):
     if game.context_menu['active']:
         draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
-    if is_aiming:
-        pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
+    #if is_aiming:
+    #    pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
     else:
         pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
+
+
+    if game.player.is_aiming:
+        # [NEW] Draw Dynamic Reticle
+        pygame.mouse.set_visible(False) # Hide default cursor
+        
+        reticle_img = game.assets.get('aim_reticle')
+        if reticle_img:
+            # Scale based on aim factor:
+            # 1.0 (bad aim) -> 1.5x size
+            # 0.0 (good aim) -> 0.5x size
+            base_w = reticle_img.get_width()
+            base_h = reticle_img.get_height()
+            
+            scale_mult = 1.5 + (game.player.current_aim_factor * 2.0)
+            new_w = max(1, int(base_w * scale_mult))
+            new_h = max(1, int(base_h * scale_mult))
+            
+            # Scale and Draw
+            scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))
+            rect = scaled_reticle.get_rect(center=game._get_scaled_mouse_pos())
+            game.virtual_screen.blit(scaled_reticle, rect)
+    else:
+        # [NEW] Restore standard cursor
+        pygame.mouse.set_visible(True)
+        pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
+
 
     # Set cursor
     keys = pygame.key.get_pressed()

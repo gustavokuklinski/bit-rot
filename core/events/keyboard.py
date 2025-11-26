@@ -1,10 +1,6 @@
 import pygame
 import uuid
-import core.data.config
 from core.data.config import *
-
-# Import game actions (Moved to top for cleaner code, assuming no circular dependency)
-# If circular dependency errors occur, move this back inside handle_keyboard_events
 from core.events.game_actions import try_grab_item
 
 def toggle_inventory_modal(game):
@@ -87,7 +83,6 @@ def toggle_messages_modal(game):
         }
         game.modals.append(new_messages_modal)
 
-
 def toggle_gear_modal(game):
     gear_modal_exists = False
     for modal in game.modals:
@@ -110,21 +105,19 @@ def toggle_gear_modal(game):
         }
         game.modals.append(new_gear_modal)
 
-
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
-        # Calls the method we added to Game class in the previous step
         game.capture_pause_screen() 
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
-        # --- Global Keys (Work in Play/Pause) ---
+        # --- Global Keys ---
         if event.key == pygame.K_F2:
             toggle_pause(game)
-            return # Stop processing other keys if pausing
+            return
 
         if event.key == pygame.K_ESCAPE:
             if game.modals:
@@ -134,71 +127,74 @@ def handle_keyboard_events(game, event):
                 toggle_pause(game)
                 return
 
-        if event.key == pygame.K_RETURN:
-            toggle_messages_modal(game)
-
+        # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:
             if event.key == pygame.K_RETURN:
-                # Send Message
+                # Send message
                 if game.chat_input_text.strip():
                     game.player.chat_text = game.chat_input_text
                     game.player.chat_timer = game.player.chat_duration
-                    from core.messages import display_message_chat
-                    display_message_chat(game, f"{game.player.name}: {game.chat_input_text}")
+                    
+                    from core.messages import display_message_player
+                    display_message_player(game, f"{game.player.name}: {game.chat_input_text}")
                 
-                # Clear and Deactivate
+                # Clear text and deactivate input mode, but keep modal open
                 game.chat_input_text = ""
                 game.chat_active = False
-                
-                # Optional: Close the modal when sending
-                # Check if modal is open, if so, close it (toggle)
-                # This creates the "Enter closes chat" behavior
-                # Remove this if you want the window to stay open.
-                for modal in game.modals:
-                    if modal['type'] == 'messages':
-                        toggle_messages_modal(game)
-                        break
-            
+                # REMOVED: toggle_messages_modal(game) to keep it open
+
             elif event.key == pygame.K_BACKSPACE:
                 game.chat_input_text = game.chat_input_text[:-1]
+            
             elif event.key == pygame.K_ESCAPE:
                 game.chat_active = False
+                
             else:
+                # Type characters
                 if len(game.chat_input_text) < 50:
                     game.chat_input_text += event.unicode
-            return
+            
+            return # CRITICAL: Return here prevents walking/interacting while typing
 
-        # --- Play Mode Keys ---
+        # --- 2. GAMEPLAY KEYS (Only if Chat is NOT active) ---
         if game.game_state == 'PLAYING':
+            
+            # Open Chat
             if event.key == pygame.K_RETURN or event.key == pygame.K_t:
                 game.chat_active = True
+                # Ensure window opens if it isn't already
+                if not any(m['type'] == 'messages' for m in game.modals):
+                    toggle_messages_modal(game)
                 return
 
             if event.key == pygame.K_i:
                 toggle_inventory_modal(game)
-
             if event.key == pygame.K_h:
                 toggle_status_modal(game)
-            
             if event.key == pygame.K_g:
                 toggle_gear_modal(game)
-            
             if event.key == pygame.K_n:
                 toggle_nearby_modal(game)
-                        
+            if event.key == pygame.K_m:
+                toggle_messages_modal(game)
+
             if event.key == pygame.K_r:
                 if game.player:
                     game.player.reload_active_weapon()
 
             if event.key == pygame.K_e:
-                try_grab_item(game)
+                nearby_containers = game.find_nearby_containers()
+                if nearby_containers:
+                    # If containers are nearby, toggle the inspection window
+                    toggle_nearby_modal(game)
+                else:
+                    # Otherwise, try to grab a loose item on the ground
+                    try_grab_item(game)
             
             if event.key == pygame.K_SPACE:
                 if game.player and game.player.is_sleeping:
                     game.player.is_sleeping = False
                     print("You woke up manually.")
-
-            
 
             if pygame.K_1 <= event.key <= pygame.K_5:
                 slot_index = event.key - pygame.K_1
@@ -222,7 +218,7 @@ def handle_keyboard_events(game, event):
             zoom_step = 0.1
             if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 
                 game.zoom_level += zoom_step
-                game.zoom_level = min(game.zoom_level, core.dataNEAR_ZOOM) 
+                game.zoom_level = min(game.zoom_level, core.data.config.NEAR_ZOOM) 
             elif event.key == pygame.K_MINUS: 
                 game.zoom_level -= zoom_step
-                game.zoom_level = max(core.dataFAR_ZOOM, game.zoom_level)
+                game.zoom_level = max(core.data.config.FAR_ZOOM, game.zoom_level)

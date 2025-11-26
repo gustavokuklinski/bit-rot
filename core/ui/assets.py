@@ -16,10 +16,12 @@ def load_assets():
         aim_cursor_image = pygame.image.load(SPRITE_PATH + 'ui/aim.png').convert_alpha()
         aim_cursor_hotspot = (aim_cursor_image.get_width() // 2, aim_cursor_image.get_height() // 2)
         assets['aim_cursor'] = pygame.cursors.Cursor(aim_cursor_hotspot, aim_cursor_image)
+        assets['aim_reticle'] = aim_cursor_image
+
     except pygame.error as e:
         print(f"Error loading aim cursor: {e}")
         assets['aim_cursor'] = None
-
+        assets['aim_reticle'] = None
     try:
         assets['day_icon'] = pygame.image.load(SPRITE_PATH + 'ui/day.png').convert_alpha()
         assets['night_icon'] = pygame.image.load(SPRITE_PATH + 'ui/night.png').convert_alpha()

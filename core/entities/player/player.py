@@ -112,6 +112,9 @@ class Player:
         self.chat_timer = 0
         self.chat_duration = 300
 
+        self.current_aim_factor = 1.0 
+        self.is_aiming = False
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -123,6 +126,26 @@ class Player:
         except pygame.error as e:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
+
+
+    def update_aim(self, is_moving):
+        if not self.is_aiming:
+            # Reset if not aiming
+            self.current_aim_factor = 1.0
+            return
+
+        # Calculate shrink speed based on Ranged skill
+        # Example: Level 0 = 0.01 speed, Level 10 = 0.03 speed
+        ranged_level = self.progression.get_ranged(self)
+        shrink_speed = 0.01 + (ranged_level * 0.002)
+
+        if is_moving:
+            # Penalty: Moving increases aim factor (bigger reticle)
+            self.current_aim_factor = min(1.0, self.current_aim_factor + 0.05)
+        else:
+            # Stabilize: Shrink reticle over time
+            self.current_aim_factor = max(0.0, self.current_aim_factor - shrink_speed)
+
 
     def get_total_defence(self):
         """Calculates the total defence value from all equipped clothes."""
@@ -165,7 +188,7 @@ class Player:
                 
                 if slot_to_clear:
                     self.clothes[slot_to_clear] = None
-                    display_message(game, f"Your {item_hit.name} broke!")
+                    display_message(f"Your {item_hit.name} broke!")
 
 
     def take_damage(self, game, base_damage, base_infection):
@@ -351,7 +374,7 @@ class Player:
 
         current_time = time.time()
 
-        
+
         if self.chat_timer > 0:
             self.chat_timer -= 1
             if self.chat_timer <= 0:
@@ -395,6 +418,8 @@ class Player:
         keys = pygame.key.get_pressed()
         is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
 
+        self.update_aim(is_moving)
+        
         if is_moving and self.sound_steps:
 
             if current_time > self.last_step_sound_time:

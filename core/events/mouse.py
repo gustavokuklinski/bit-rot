@@ -21,6 +21,9 @@ def handle_mouse_down(game, event, mouse_pos):
                 modal_to_affect = next((m for m in game.modals if m['id'] == button['id']), None)
                 if modal_to_affect:
                     if button['type'] == 'close':
+                        if modal_to_affect['type'] == 'messages':
+                            game.chat_active = False
+
                         game.modals.remove(modal_to_affect)
                         return
                     elif button['type'] == 'minimize':
@@ -66,7 +69,8 @@ def handle_mouse_down(game, event, mouse_pos):
                     game.chat_active = True
                     return
 
-    
+        if game.chat_active:
+            game.chat_active = False
 
 
 
@@ -408,18 +412,21 @@ def handle_mouse_up(game, event, mouse_pos):
                                         game.player.clothes[slot_name] = dragged_item
                                         
                                         if item_in_slot:
-                                            # Swap / Bounce back
                                             if type_orig == 'inventory' and 0 <= i_orig <= len(game.player.inventory):
                                                 game.player.inventory.insert(i_orig, item_in_slot)
                                             elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
                                                 game.player.belt[i_orig] = item_in_slot
+                                            elif type_orig == 'backpack':
+                                                game.player.backpack = item_in_slot
+                                            elif type_orig == 'invcontainer':
+                                                game.player.invcontainer = item_in_slot
                                             elif type_orig == 'gear':
                                                 game.player.clothes[i_orig] = item_in_slot
+                                            elif (type_orig == 'container' or type_orig == 'nearby') and container_obj:
+                                                 container_obj.inventory.insert(i_orig, item_in_slot)
                                             else:
+                                                # Fallback: Append to inventory
                                                 game.player.inventory.append(item_in_slot)
-                                            game.dragged_item = None
-                                        else:
-                                            game.dragged_item = None
                                         
                                         dropped_successfully = True
                                     else:
@@ -772,6 +779,13 @@ def handle_context_menu_click(game, mouse_pos):
             container_item = game.context_menu.get('container_item')
 
             print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
+
+            if option == 'Status':
+                toggle_status_modal(game)
+            elif option == 'Inventory':
+                toggle_inventory_modal(game)
+            elif option == 'Gear':
+                toggle_gear_modal(game)
 
             if option == 'Sleep':
                 print("You go to sleep...")
@@ -1184,7 +1198,7 @@ def handle_right_click(game, mouse_pos):
                     click_container_item = None
                     break
                 else:
-                    display_message(game, "Item is too far away to interact with.")
+                    display_message("Item is too far away to interact with.")
                     print("Item is too far away to interact with.")
         
         if not clicked_item:
@@ -1198,8 +1212,15 @@ def handle_right_click(game, mouse_pos):
                         click_container_item = None
                         break
                     else:
-                        display_message(game, "Item is too far away to interact with.")
+                        display_message("Item is too far away to interact with.")
                         print("Container is too far away to interact with.")
+
+        if not clicked_item:
+            if game.player.rect.collidepoint(world_pos):
+                clicked_item = game.player
+                click_source = 'player_self'
+                click_index = 0
+                click_container_item = None
 
         if not clicked_item:
             world_pos = game.screen_to_world(mouse_pos)
@@ -1229,10 +1250,14 @@ def handle_right_click(game, mouse_pos):
 
         #options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
         if click_source == 'map_tile':
-            options = [] # Skip the player method for map tiles
+            options = ['Sleep']
+            
+        elif click_source == 'player_self':  # <--- THIS BLOCK WAS MISSING OR SKIPPED
+            options = ['Status', 'Inventory', 'Gear']
+            
         else:
+            # This is only for actual Items/Containers
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
-
 
         if click_source == 'belt':
             if 'Unequip' not in options:
@@ -1292,6 +1317,11 @@ def handle_right_click(game, mouse_pos):
 
         elif click_source == 'map_tile':
             options = ['Sleep']
+        elif click_source == 'player_self':
+            options = ['Status', 'Inventory', 'Gear']
+        else:
+            # This is only for actual Items/Containers
+            options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
 
         game.context_menu['options'] = options
         game.context_menu['rects'] = []
@@ -1468,8 +1498,12 @@ def handle_attack(game, mouse_pos):
                 dy = target_world_y - game.player.rect.centery
                 base_angle = math.atan2(dy, dx)
 
+                aim_modifier = 0.2 + (game.player.current_aim_factor * 1.3)
+                current_spread_deg = weapon.spread_angle * aim_modifier
+
                 for _ in range(weapon.pellets):
-                    spread = math.radians(random.uniform(-weapon.spread_angle / 2, weapon.spread_angle / 2))
+                    # Use current_spread_deg
+                    spread = math.radians(random.uniform(-current_spread_deg / 2, current_spread_deg / 2))
                     angle = base_angle + spread
                     
                     target_x = game.player.rect.centerx + math.cos(angle) * 1000

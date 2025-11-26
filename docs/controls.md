@@ -16,10 +16,10 @@
 - **I**: Opens Inventory
 - **H**: Open Status
 - **N**: Open Nearby
-- **M**: Open Messages
+- **M / ENTER**: Open Messages (enter enable chat mode)
 - **G**: Open Clothes
 
-- **F2/ESC**: Pause game and Save Menu
+- **F2 / ESC**: Pause, save, back to menu
 
 - **MOUSE SCROLL**: Zoom in/Zoom out
 - **-/=**: Keyboard Zoom in/Zoom out

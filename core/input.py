@@ -16,12 +16,15 @@ def handle_movement(game):
         game.player.is_running = False
         return
 
-        
+
     keys = pygame.key.get_pressed()
+    mouse_buttons = pygame.mouse.get_pressed()
     current_speed = 0
 
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
     game.player.is_running = is_running
+
+    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
 
     if game.player.stamina <= 0:
         # Exhausted speed
@@ -29,6 +32,9 @@ def handle_movement(game):
     elif is_running:
         # Running speed
         current_speed = core.data.config.PLAYER_SPEED
+    elif game.player.is_aiming:
+        # [NEW] Aiming speed penalty (slower than walking)
+        current_speed = core.data.config.PLAYER_SPEED / 3.5
     else:
         # Normal walk speed
         current_speed = core.data.config.PLAYER_SPEED / 2
