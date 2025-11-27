@@ -1,4 +1,4 @@
-<item name="Family Photo" type="skill">
+<item name="Family Photo" type="charm">
     <properties>
         <sprite file="family_photo_1.png" />
     </properties>

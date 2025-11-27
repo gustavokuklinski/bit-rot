@@ -17,6 +17,9 @@ class Map:
         if default_layers is None:
             default_layers = ['roof', 'map', 'ground', 'spawn'] # Default layers
 
+        # FIX: Store default_layers as an instance attribute so editor.py can access it
+        self.default_layers = default_layers 
+
         for layer_name in default_layers:
             self.layers[layer_name] = [[None for _ in range(width)] for _ in range(height)]
             self.layer_properties[layer_name] = {"visible": True, "opacity": 255}
@@ -24,6 +27,24 @@ class Map:
         if default_layers:
             self.active_layer_name = default_layers[0]
 
+    def resize(self, new_width, new_height):
+        """Resizes the map and all its layers to the new dimensions."""
+        self.width = new_width
+        self.height = new_height
+        
+        # Re-initialize grids for existing layers with new dimensions
+        # Note: This clears the map content. Only call before loading new content.
+        # We prefer using self.default_layers to ensure all required layers exist
+        layers_to_init = self.default_layers if hasattr(self, 'default_layers') else self.layers.keys()
+        
+        self.layers = {}
+        for layer_name in layers_to_init:
+            self.layers[layer_name] = [[None for _ in range(new_width)] for _ in range(new_height)]
+            # Preserve properties if they existed, else default
+            if layer_name not in self.layer_properties:
+                self.layer_properties[layer_name] = {"visible": True, "opacity": 255}
+            
+        self.undo_stack.clear()
 
     def _push_to_undo(self, changes):
         """Internal helper to add a list of changes as a single undo step."""
@@ -51,6 +72,7 @@ class Map:
         return self.layers.get(self.active_layer_name)
 
     def load_from_csv(self, filepath, layer_name):
+        # Create layer if it doesn't exist (e.g. loading a layer not in defaults)
         if layer_name not in self.layers:
             self.layers[layer_name] = [[None for _ in range(self.width)] for _ in range(self.height)]
             self.layer_properties[layer_name] = {"visible": True, "opacity": 255}
@@ -78,7 +100,6 @@ class Map:
                 row_data = [tile if tile is not None else '' for tile in self.layers[layer_name][y]]
                 writer.writerow(row_data)
 
-    # --- MODIFIED: Added 'undoing=False' parameter to fix bug ---
     def set_tile(self, x, y, tile_name, layer_name=None, undoing=False):
         if layer_name is None:
             layer_name = self.active_layer_name
@@ -86,11 +107,9 @@ class Map:
         if layer_name in self.layers and 0 <= x < self.width and 0 <= y < self.height:
             if not undoing:
                 old_tile_name = self.layers[layer_name][y][x]
-                # Don't log if the tile isn't actually changing
                 if old_tile_name != tile_name:
                     self._push_to_undo([(x, y, layer_name, old_tile_name)])
             
-            # --- MODIFIED: This was indented under the 'if not undoing' block, moved out ---
             self.layers[layer_name][y][x] = tile_name
         else:
             pass
@@ -111,7 +130,6 @@ class Map:
         
         self._push_to_undo(changes)
     
-    # --- NEW: Added fill_rect method ---
     def fill_rect(self, rect, tile_name, layer_name):
         """Fills all tiles in the given rect with the given tile_name."""
         if layer_name not in self.layers:
@@ -140,7 +158,7 @@ class Map:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     row.append(self.layers[layer_name][y][x])
                 else:
-                    row.append(None) # Add None for parts of rect outside map
+                    row.append(None)
             clipboard.append(row)
         return clipboard
 
@@ -155,13 +173,10 @@ class Map:
         for y_offset, row in enumerate(clipboard_data):
             for x_offset, tile_name in enumerate(row):
                 
-                # Calculate target map coordinates
                 map_x = start_x + x_offset
                 map_y = start_y + y_offset
 
-                # Check bounds
                 if 0 <= map_x < self.width and 0 <= map_y < self.height:
-                    # Log the change for undo
                     old_tile = self.layers[layer_name][map_y][map_x]
                     if old_tile != tile_name:
                         changes.append((map_x, map_y, layer_name, old_tile))
@@ -171,9 +186,6 @@ class Map:
 
     def render(self, surface, tiles, font, offset=(0, 0), zoom_scale=1.0):
         scaled_tile_size = int(TILE_SIZE * zoom_scale)
-
-        # --- MODIFIED: Ensure layers are rendered in a consistent order ---
-        # Sorting by key ('ground', 'map', 'spawn') is a good default
         sorted_layers = sorted(self.layers.items())
 
         for layer_name, layer_grid in sorted_layers:
@@ -195,8 +207,7 @@ class Map:
                         scaled_image = pygame.transform.scale(tiles[tile_name], (scaled_tile_size, scaled_tile_size))
                         layer_surface.blit(scaled_image, tile_rect.topleft)
                     else:
-                        # If not a regular tile, render as text (for Z, P, I, etc.)
-                        pygame.draw.rect(layer_surface, (240, 240, 240, 100), tile_rect) # Draw a light grey background for visibility
+                        pygame.draw.rect(layer_surface, (240, 240, 240, 100), tile_rect)
                         text_surf = font.render(tile_name, True, (0, 0, 0))
                         text_rect = text_surf.get_rect(center=tile_rect.center)
                         layer_surface.blit(text_surf, text_rect)

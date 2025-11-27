@@ -52,7 +52,7 @@ def draw_tooltip(surface, item, pos):
         min_damage, max_damage = item.current_damage_range
         lines.append(f"Damage: {min_damage}-{max_damage}")
     
-    if item.item_type == 'skill' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
+    if item.item_type == 'charm' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line
         lines.append("Passive (in Inventory):")
         for attr_name, value in item.attribute_modifiers.items():

@@ -168,6 +168,7 @@ def player_hit_zombie(player, zombie, game):
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
                     print(f"{active_weapon.name} broke!")
+                    player.progression._add_xp(player, player.progression.maintenance, 'maintenance', 50)
                     player.destroy_broken_weapon(active_weapon)
     else: # Unarmed
         base_damage = progression.get_unarmed_damage(player)

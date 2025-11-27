@@ -1,0 +1,17 @@
+<item name="Ducktype" type="consumable_repair">
+    <properties>
+        <status value="durability" />
+        <load value="1" />
+        <restore min="1" max="35" />
+        <capacity value="60" />
+        <sprite file="ducktype.png" />
+    </properties>
+    <repair>
+        <item name="Pistol 9mm"  />
+        <item name="Shotgun"  />
+        <item name="Axe"  />
+        <item name="Knife"  />
+        <item name="batton"  />
+    </repair>
+    <spawn chance="1" />
+</item>

@@ -7,7 +7,8 @@
         <item item="Vaccine" chance="0.1" />
         <item item="Infection Pills" chance="0.2" />
         <item item="Matches" chance="0.1" />
-        <item item="Medkit" chance="0.5" />
+        <item item="Medkit" chance="0.2" />
         <item item="Powerbank" chance="0.1" />
+        <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

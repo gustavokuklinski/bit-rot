@@ -11,29 +11,29 @@ class PlayerProgression:
         self.fitness = self._create_attribute(player_data, 'fitness')
         self.melee = self._create_attribute(player_data, 'melee')
         self.ranged = self._create_attribute(player_data, 'ranged')
-
+        self.maintenance = self._create_attribute(player_data, 'maintenance')
         # Passive skills
         self.lucky = player_data['attributes'].get('lucky', 0.0)
         self.speed = player_data['attributes'].get('speed', 0.0)
 
 
     def get_total_attribute_bonus(self, player, attr_name):
-        """Calculates the total percentage bonus from 'skill' items in player's inventory."""
+        """Calculates the total percentage bonus from 'charm' items in player's inventory."""
         total_bonus = 0.0
         
         # Check main inventory
         for item in player.inventory:
-            if item and item.item_type == 'skill' and item.attribute_modifiers:
+            if item and item.item_type == 'charm' and item.attribute_modifiers:
                 total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
         
         # Check belt
         for item in player.belt:
-            if item and item.item_type == 'skill' and item.attribute_modifiers:
+            if item and item.item_type == 'charm' and item.attribute_modifiers:
                 total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
         
         for trait in player.traits:
             if trait in TRAIT_DEFINITIONS:
-                # Check BOTH 'attributes' (for skills) and 'stats' (for core stats)
+                # Check BOTH 'attributes' (for charm) and 'stats' (for core stats)
                 if attr_name in TRAIT_DEFINITIONS[trait].get('attributes', {}):
                     total_bonus += TRAIT_DEFINITIONS[trait]['attributes'][attr_name]
                 if attr_name in TRAIT_DEFINITIONS[trait].get('stats', {}):
@@ -45,19 +45,19 @@ class PlayerProgression:
 
     def get_item_attribute_bonus(self, player, attr_name):
         """
-        Calculates the total percentage bonus from 'skill' items ONLY.
+        Calculates the total percentage bonus from 'charm' items ONLY.
         This is used for display on the Record tab.
         """
         total_bonus = 0.0
         
         # Check main inventory
         for item in player.inventory:
-            if item and item.item_type == 'skill' and item.attribute_modifiers:
+            if item and item.item_type == 'charm' and item.attribute_modifiers:
                 total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
         
         # Check belt
         for item in player.belt:
-            if item and item.item_type == 'skill' and item.attribute_modifiers:
+            if item and item.item_type == 'charm' and item.attribute_modifiers:
                 total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
         
         return total_bonus
@@ -74,6 +74,9 @@ class PlayerProgression:
 
     def get_ranged(self, player):
         return self.ranged['level']
+
+    def get_maintenance(self, player):
+        return self.maintenance['level']
 
     def get_lucky(self, player):
         base = self.lucky
@@ -115,18 +118,32 @@ class PlayerProgression:
 
 
     def _get_xp_for_next_level(self, current_level, attr_name=None):
-        """Calculates the XP needed to reach the next level."""
+        if current_level >= 100: return 999999 # Cap at level 100
+
+        # Default base
+        base_xp = 100
+
+        # Specific XP requirements for Level 1 (scaling from there)
         if attr_name in ['strength', 'fitness']:
-            multiplier = 1000
-        return 100 * (current_level + 1)
+            base_xp = 1000
+        elif attr_name == 'ranged':
+            base_xp = 200
+        elif attr_name == 'maintenance':
+            base_xp = 50
+        elif attr_name == 'melee':
+            base_xp = 100
+            
+        # Linear scaling: Level 0->1 = Base. Level 1->2 = Base * 2.
+        return base_xp * (current_level + 1)
 
     def _create_attribute(self, player_data, attr_name):
         base_level_from_traits = player_data['attributes'].get(attr_name, 0.0)
         start_level = max(0.0, base_level_from_traits)
         return {
+            "name": attr_name,
             "level": start_level,
             "xp": 0,
-            "xp_to_next_level": self._get_xp_for_next_level(start_level) # Use the formula
+            "xp_to_next_level": self._get_xp_for_next_level(start_level, attr_name)
         }
 
     def _add_xp(self, player, attribute, attr_name, base_amount):
@@ -191,9 +208,15 @@ class PlayerProgression:
             player.stamina = min(stamina_cap, player.stamina + regeneration)
 
     def update_hp(self, player):
+        health_cap = player.max_health * (1 - player.infection / 100)
+        
+        # Clamp current health if it exceeds the new cap
+        if player.health > health_cap:
+            player.health = health_cap
+
         regen_rate = self.get_hp_regeneration(player.infection)
-        if player.health < player.max_health:
-            player.health = min(player.max_health, player.health + regen_rate)
+        if player.health < health_cap:
+            player.health = min(health_cap, player.health + regen_rate)
 
     def update_anxiety(self, player, game):
         nearby_zombies = 0
@@ -300,10 +323,24 @@ class PlayerProgression:
         return 0.1 + (self.get_ranged(player) * 0.004)
 
     def get_weapon_durability_loss(self, player):
+        """Calculates melee durability loss, reduced by Maintenance."""
+        # Maintenance Chance to save durability
+        # Level 0 = 0%, Level 10 = 10%, Level 50 = 50%
+        maintenance_lvl = self.get_maintenance(player)
+        if random.randint(0, 100) < maintenance_lvl:
+            return 0 # Saved by maintenance skill!
+
         if random.randint(0, 10) < (self.get_melee(player) / 100.0):
             return 0.5
         else:
             return 2.0
+    
+    def get_ranged_durability_loss(self, player):
+        """Calculates ranged durability loss, reduced by Maintenance."""
+        maintenance_lvl = self.get_maintenance(player)
+        if random.randint(0, 100) < maintenance_lvl:
+            return 0 # Saved by maintenance skill!
+        return 0.5 # Standard loss per shot
     
     def get_stamina_consumption(self, is_running, player):
         base_consumption = 0.08 if is_running else 0.0

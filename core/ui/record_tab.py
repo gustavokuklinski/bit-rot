@@ -11,6 +11,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         "FIT": SPRITE_PATH + "ui/fitness.png",
         "MLE": SPRITE_PATH + "ui/melee.png",
         "RNG": SPRITE_PATH + "ui/range.png",
+        "MNT": SPRITE_PATH + "ui/maintenance.png",
         "LCK": SPRITE_PATH + "ui/lucky.png",
         "SPD": SPRITE_PATH + "ui/speed.png",
     }
@@ -26,6 +27,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         ("FIT", player.progression.fitness, GREEN),
         ("MLE", player.progression.melee, BLUE),
         ("RNG", player.progression.ranged, YELLOW),
+        ("MNT", player.progression.maintenance, GRAY),
         ("LCK", player.progression.lucky, WHITE),
         ("SPD", player.progression.speed, GRAY),
     ]
@@ -35,6 +37,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         "FIT": "fitness",
         "MLE": "melee",
         "RNG": "ranged",
+        "MNT": "maintenance",
         "LCK": "lucky",
         "SPD": "speed",
     }

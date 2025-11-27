@@ -11,5 +11,6 @@
         <item item="Lantern off" chance="0.2" />
         <item item="Vaccine" chance="0.1" />
         <item item="Medkit" chance="0.1" />
+        <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

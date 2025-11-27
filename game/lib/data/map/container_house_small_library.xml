@@ -10,5 +10,6 @@
         <item item="Family Photo" chance="0.2" />
         <item item="Energy Drink" chance="0.1" />
         <item item="Cigarette" chance="0.1" />
+        <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

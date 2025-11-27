@@ -5,5 +5,6 @@
     <capacity value="10" />
     <loot>
         <item item="Water Bottle" chance="1" />
+        <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

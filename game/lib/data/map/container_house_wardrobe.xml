@@ -16,5 +16,6 @@
         <item item="Batton" chance="0.1" />
         <item item="Infection Pills" chance="0.1" />
         <item item="Cigarette" chance="0.1" />
+        <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

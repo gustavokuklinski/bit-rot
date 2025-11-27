@@ -797,7 +797,11 @@ def handle_context_menu_click(game, mouse_pos):
                 if getattr(item, 'item_type', None) in ['utility', 'mobile']:
                     game.player.reload_utility_item(item, source, index, container_item)
                 else:
-                    game.player.reload_active_weapon() 
+                    game.player.reload_active_weapon()
+            elif option == 'Repair':
+                game.player.repair_item(game, item)
+            elif option == 'Get bullets':
+                game.player.unload_weapon(game, item)
             elif option == 'Turn on' or option == 'Turn off':
                 game.player.toggle_utility_item(item, source, index, container_item)
             elif option == 'Equip':
@@ -1498,12 +1502,29 @@ def handle_attack(game, mouse_pos):
                 dy = target_world_y - game.player.rect.centery
                 base_angle = math.atan2(dy, dx)
 
-                aim_modifier = 0.2 + (game.player.current_aim_factor * 1.3)
-                current_spread_deg = weapon.spread_angle * aim_modifier
+                # 1. Calculate base inaccuracy from aim factor (0.0 to 1.0 based on movement/time)
+                # Max penalty is 25 degrees spread
+                base_aim_inaccuracy = game.player.current_aim_factor * 25.0
+                
+                # 2. Retrieve Ranged Level
+                ranged_level = game.player.progression.get_ranged(game.player)
+
+                # 3. Calculate Skill Modifier
+                # Each level reduces the aim penalty by 5%.
+                # Level 0: 1.0 multiplier (Full penalty)
+                # Level 10: 0.5 multiplier (Half penalty)
+                # Minimum multiplier is 0.1 (Always some slight penalty if not fully aimed)
+                skill_modifier = max(0.1, 1.0 - (ranged_level * 0.05))
+                
+                # 4. Apply modifier to the inaccuracy
+                final_inaccuracy = base_aim_inaccuracy * skill_modifier
+
+                # 5. Combine weapon's natural spread (e.g. shotgun spread) with player's aim error
+                total_spread_deg = weapon.spread_angle + final_inaccuracy
 
                 for _ in range(weapon.pellets):
-                    # Use current_spread_deg
-                    spread = math.radians(random.uniform(-current_spread_deg / 2, current_spread_deg / 2))
+                    # Apply random spread within the calculated range
+                    spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
                     angle = base_angle + spread
                     
                     target_x = game.player.rect.centerx + math.cos(angle) * 1000
@@ -1512,10 +1533,14 @@ def handle_attack(game, mouse_pos):
                     game.projectiles.append(Projectile(game.player.rect.centerx, game.player.rect.centery, target_x, target_y))
 
                 weapon.load -= 1
-                weapon.durability = max(0, weapon.durability - 0.5)
+
+                dur_loss = game.player.progression.get_ranged_durability_loss(game.player)
+                weapon.durability = max(0, weapon.durability - dur_loss)
+
                 game.player.gun_flash_timer = 5
                 if weapon.durability <= 0:
                     print(f"{weapon.name} broke!")
+                    game.player.progression._add_xp(game.player, game.player.progression.maintenance, 'maintenance', 50)
                     game.player.destroy_broken_weapon(weapon)
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:

@@ -69,6 +69,7 @@ class Player:
         self.drop_cooldown = 0
 
         self.is_reloading = False
+        self.reloading_weapon = None
         self.reload_timer = 0
         self.reload_duration = 120
 
@@ -553,14 +554,32 @@ class Player:
 
     def find_matching_ammo(self, weapon):
         if not weapon or not weapon.ammo_type:
-            return None, None, None
+            return None, None, None, None
         ammo_type_needed = weapon.ammo_type
-        search_list = [(item, 'belt', i) for i, item in enumerate(self.belt) if item and item.item_type.startswith('consumable')]
-        search_list.extend([(item, 'inventory', i) for i, item in enumerate(self.inventory) if item and item.item_type.startswith('consumable')])
-        for item, source_type, index in search_list:
-            if item.load is not None and item.name == ammo_type_needed and item.load > 0:
-                return item, source_type, index
-        return None, None, None
+        
+        # 1. Search Belt
+        for i, item in enumerate(self.belt):
+            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                return item, 'belt', i, None
+
+        # 2. Search Inventory
+        for i, item in enumerate(self.inventory):
+            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                return item, 'inventory', i, None
+
+        # 3. Search Backpack
+        if self.backpack and hasattr(self.backpack, 'inventory'):
+            for i, item in enumerate(self.backpack.inventory):
+                 if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                    return item, 'container', i, self.backpack
+
+        # 4. Search Utility/InvContainer
+        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
+             for i, item in enumerate(self.invcontainer.inventory):
+                 if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                    return item, 'container', i, self.invcontainer
+        
+        return None, None, None, None
 
     def find_fuel(self, fuel_name):
         """Searches all inventories for a fuel item (like 'Matches')."""
@@ -592,46 +611,133 @@ class Player:
         return None, None, None, None
 
 
-    def reload_active_weapon(self):
+    def reload_active_weapon(self, weapon=None):
+        """Reloads the specified weapon, or the active weapon if None."""
         if self.is_reloading:
             print("Already reloading.")
             return
-        weapon = self.active_weapon
-        if not weapon or not weapon.ammo_type:
-            print("Cannot reload: No gun equipped.")
+            
+        # Determine target weapon
+        target_weapon = weapon if weapon else self.active_weapon
+        
+        if not target_weapon or not getattr(target_weapon, 'ammo_type', None):
+            print("Cannot reload: No gun specified or equipped.")
             return
-        if weapon.load >= weapon.capacity:
-            print(f"{weapon.name} is already full ({weapon.load:.0f}/{weapon.capacity:.0f}).")
+            
+        if target_weapon.load >= target_weapon.capacity:
+            print(f"{target_weapon.name} is already full ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
             return
-        ammo_item, _, _ = self.find_matching_ammo(weapon)
+        
+        # Find ammo for the target weapon
+        ammo_item, _, _, _ = self.find_matching_ammo(target_weapon)
+        
         if not ammo_item:
-            print(f"No {weapon.ammo_type} found.")
+            print(f"No {target_weapon.ammo_type} found.")
             return
+            
         self.is_reloading = True
+        self.reloading_weapon = target_weapon # Store the specific weapon
         self.reload_timer = self.reload_duration
-        print(f"Reloading {weapon.name}...")
+        print(f"Reloading {target_weapon.name}...")
 
     def _finish_reload(self):
         self.is_reloading = False
-        weapon = self.active_weapon
+        
+        # Use the stored weapon, fallback to active for safety
+        weapon = getattr(self, 'reloading_weapon', self.active_weapon)
+        self.reloading_weapon = None # Reset
+        
         if not weapon: return
-        ammo_item, source_type, index = self.find_matching_ammo(weapon)
+        
+        # Find the specific ammo item again
+        ammo_item, source_type, index, container_obj = self.find_matching_ammo(weapon)
+        
         if not ammo_item: return
         needed = int(weapon.capacity - weapon.load)
         available = int(ammo_item.load)
         transfer_amount = min(needed, available)
+        
         if transfer_amount > 0:
             weapon.load += transfer_amount
             ammo_item.load -= transfer_amount
-            print(f"Finished reloading. Load: {weapon.load:.0f}/{weapon.capacity:.0f}.")
+            print(f"Finished reloading {weapon.name}. Load: {weapon.load:.0f}/{weapon.capacity:.0f}.")
+            
             if ammo_item.load <= 0:
                 if source_type == 'inventory':
                     try:
                         self.inventory.remove(ammo_item)
-                    except ValueError:
-                        pass
+                    except ValueError: pass
                 elif source_type == 'belt':
                     self.belt[index] = None
+                elif source_type == 'container' and container_obj:
+                    try:
+                        container_obj.inventory.remove(ammo_item)
+                    except ValueError: pass
+    
+
+    def find_repair_kit(self, target_item):
+        """Finds a consumable_repair item that can repair the target_item."""
+        if not target_item: return None, None, None, None
+
+        def is_valid_kit(it):
+            return (it and it.item_type == 'consumable_repair' and 
+                    hasattr(it, 'repair_list') and 
+                    target_item.name in it.repair_list and 
+                    it.load > 0)
+
+        # 1. Search Belt
+        for i, item in enumerate(self.belt):
+            if is_valid_kit(item): return item, 'belt', i, None
+        
+        # 2. Search Inventory
+        for i, item in enumerate(self.inventory):
+            if is_valid_kit(item): return item, 'inventory', i, None
+
+        # 3. Search Backpack
+        if self.backpack:
+             for i, item in enumerate(self.backpack.inventory):
+                if is_valid_kit(item): return item, 'container', i, self.backpack
+
+        # 4. Search InvContainer
+        if self.invcontainer:
+             for i, item in enumerate(self.invcontainer.inventory):
+                if is_valid_kit(item): return item, 'container', i, self.invcontainer
+        
+        return None, None, None, None
+
+    # [NEW METHOD]
+    def repair_item(self, game, target_item):
+        """Repairs the target item using a kit found in inventory."""
+        kit, source, index, container = self.find_repair_kit(target_item)
+        
+        if not kit:
+            print(f"No repair kit found for {target_item.name}.")
+            return
+
+        if target_item.durability >= target_item.max_durability:
+            print(f"{target_item.name} is already in perfect condition.")
+            return
+
+        # Calculate repair amount
+        restore_amount = random.randint(kit.min_restore, kit.max_restore)
+        old_dur = target_item.durability
+        target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
+        restored = target_item.durability - old_dur
+        
+        print(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
+        
+        # Grant Maintenance XP
+        self.progression._add_xp(self, self.progression.maintenance, 'maintenance', 20)
+
+        # Consume 1 use of the kit
+        kit.load -= 1
+        if kit.load <= 0:
+            # Remove empty kit
+            inv = self._get_source_inventory(source, container)
+            if inv:
+                if source == 'belt': self.belt[index] = None
+                else: inv.pop(index)
+            print(f"{kit.name} used up.")
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
@@ -673,6 +779,18 @@ class Player:
                 options.append('Equip')
         elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
             options.append('Equip')
+
+            if item.item_type == 'weapon_ranged':
+                options.append('Reload')
+            
+            if item.durability is not None and item.durability < item.max_durability:
+                kit, _, _, _ = self.find_repair_kit(item)
+                if kit:
+                    options.append('Repair')
+
+            if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0:
+                options.append('Get bullets')
+
         elif item.item_type == 'container':
             options.append('Open')
 
@@ -697,6 +815,50 @@ class Player:
             # Not stackable, add normal 'Drop'
             options.append('Drop')
         return options
+
+    def unload_weapon(self, game, weapon):
+        """Unloads ammo from a ranged weapon into the inventory."""
+        if not weapon.ammo_type or weapon.load <= 0:
+            return
+
+        # Create the specific ammo item
+        ammo = Item.create_from_name(weapon.ammo_type)
+        if not ammo:
+            print(f"Error creating ammo: {weapon.ammo_type}")
+            return
+
+        # Transfer load
+        ammo.load = weapon.load
+        weapon.load = 0
+        
+        print(f"Unloaded {int(ammo.load)} {ammo.name} from {weapon.name}.")
+
+        # 1. Try to stack into existing inventory/belt slots
+        self.stack_item_in_inventory(ammo)
+        
+        if ammo.load <= 0:
+            return # Fully stacked
+
+        # 2. Try to add remaining to main inventory
+        if len(self.inventory) < self.base_inventory_slots:
+             self.inventory.append(ammo)
+             return
+        
+        # 3. Try backpack
+        if self.backpack and len(self.backpack.inventory) < (self.backpack.capacity or 0):
+             self.backpack.inventory.append(ammo)
+             print("Moved to backpack.")
+             return
+
+        # 4. Drop to ground
+        ammo.rect.center = self.rect.center
+        if find_free_tile(ammo.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+            game.items_on_ground.append(ammo)
+            print("Inventory full. Dropped ammo on ground.")
+        else:
+             # Restore if absolutely nowhere to go (prevent loss)
+             weapon.load = ammo.load
+             print("No space to unload ammo!")
 
     def _get_source_inventory(self, source_type, container_item=None):
         if source_type == 'inventory':

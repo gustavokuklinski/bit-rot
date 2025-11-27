@@ -1,7 +1,134 @@
 import pygame
 import re
-from editor.config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE
+import os
+import csv
+from editor.config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
 from editor.assets import load_editor_icons
+
+class ModeTabs:
+    def __init__(self, x, y, width, height, font):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.font = font
+        self.modes = ["MAP", "BUILDING"]
+        self.active_mode = "MAP"
+        self.tabs = []
+        
+        tab_w = 150
+        for i, mode in enumerate(self.modes):
+            self.tabs.append({
+                "mode": mode,
+                "rect": pygame.Rect(x + i*tab_w, y, tab_w, height),
+                "label": f"{mode} EDITOR"
+            })
+
+    def draw(self, surface):
+        # Draw background bar
+        pygame.draw.rect(surface, (40, 40, 40), self.rect)
+        
+        for tab in self.tabs:
+            is_active = (tab["mode"] == self.active_mode)
+            # visual style for active vs inactive
+            color = (80, 80, 100) if is_active else (50, 50, 50)
+            pygame.draw.rect(surface, color, tab["rect"])
+            pygame.draw.rect(surface, (20, 20, 20), tab["rect"], 1)
+            
+            text_color = (255, 255, 255) if is_active else (150, 150, 150)
+            lbl = self.font.render(tab["label"], True, text_color)
+            surface.blit(lbl, (tab["rect"].centerx - lbl.get_width()//2, tab["rect"].centery - lbl.get_height()//2))
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for tab in self.tabs:
+                if tab["rect"].collidepoint(event.pos):
+                    if self.active_mode != tab["mode"]:
+                        self.active_mode = tab["mode"]
+                        return self.active_mode
+        return None
+
+# --- New Building Modal ---
+class NewBuildingModal:
+    def __init__(self, x, y, width, height, font):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.font = font
+        self.active = False
+        
+        self.name_text = "Building"
+        self.width_text = "10"
+        self.height_text = "10"
+        
+        self.active_field = "name" # name, width, height
+        
+        # Rects for inputs
+        self.name_rect = pygame.Rect(x + 70, y + 50, 200, 30)
+        self.width_rect = pygame.Rect(x + 70, y + 100, 80, 30)
+        self.height_rect = pygame.Rect(x + 70, y + 150, 80, 30)
+        
+        self.create_btn = pygame.Rect(x + 50, y + 200, 80, 30)
+        self.cancel_btn = pygame.Rect(x + 170, y + 200, 80, 30)
+
+    def handle_event(self, event):
+        if not self.active: return None
+        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.name_rect.collidepoint(event.pos): self.active_field = "name"
+            elif self.width_rect.collidepoint(event.pos): self.active_field = "width"
+            elif self.height_rect.collidepoint(event.pos): self.active_field = "height"
+            elif self.create_btn.collidepoint(event.pos):
+                try:
+                    w = int(self.width_text)
+                    h = int(self.height_text)
+                    self.active = False
+                    return {"action": "create_building", "name": self.name_text, "width": w, "height": h}
+                except ValueError:
+                    print("Invalid dimensions")
+            elif self.cancel_btn.collidepoint(event.pos):
+                self.active = False
+        
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_BACKSPACE:
+                if self.active_field == "name": self.name_text = self.name_text[:-1]
+                elif self.active_field == "width": self.width_text = self.width_text[:-1]
+                elif self.active_field == "height": self.height_text = self.height_text[:-1]
+            else:
+                if self.active_field == "name": self.name_text += event.unicode
+                elif self.active_field == "width" and event.unicode.isdigit(): self.width_text += event.unicode
+                elif self.active_field == "height" and event.unicode.isdigit(): self.height_text += event.unicode
+        return None
+
+    def draw(self, surface):
+        if not self.active: return
+        
+        # Draw background
+        s = pygame.Surface((self.rect.width, self.rect.height))
+        s.fill((60, 60, 60))
+        surface.blit(s, self.rect.topleft)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        
+        # Title
+        surface.blit(self.font.render("New Building", True, (255, 255, 255)), (self.rect.x + 20, self.rect.y + 10))
+        
+        # Labels and Inputs
+        surface.blit(self.font.render("Name:", True, (200, 200, 200)), (self.rect.x + 10, self.name_rect.y + 5))
+        pygame.draw.rect(surface, (255, 255, 255) if self.active_field == "name" else (200, 200, 200), self.name_rect, 2)
+        surface.blit(self.font.render(self.name_text, True, (255, 255, 255)), (self.name_rect.x + 5, self.name_rect.y + 5))
+
+        surface.blit(self.font.render("W:", True, (200, 200, 200)), (self.rect.x + 10, self.width_rect.y + 5))
+        pygame.draw.rect(surface, (255, 255, 255) if self.active_field == "width" else (200, 200, 200), self.width_rect, 2)
+        surface.blit(self.font.render(self.width_text, True, (255, 255, 255)), (self.width_rect.x + 5, self.width_rect.y + 5))
+
+        surface.blit(self.font.render("H:", True, (200, 200, 200)), (self.rect.x + 10, self.height_rect.y + 5))
+        pygame.draw.rect(surface, (255, 255, 255) if self.active_field == "height" else (200, 200, 200), self.height_rect, 2)
+        surface.blit(self.font.render(self.height_text, True, (255, 255, 255)), (self.height_rect.x + 5, self.height_rect.y + 5))
+
+        # Buttons
+        pygame.draw.rect(surface, (0, 150, 0), self.create_btn)
+        create_txt = self.font.render("Create", True, (255, 255, 255))
+        surface.blit(create_txt, (self.create_btn.centerx - create_txt.get_width()//2, self.create_btn.centery - create_txt.get_height()//2))
+
+        pygame.draw.rect(surface, (150, 0, 0), self.cancel_btn)
+        cancel_txt = self.font.render("Cancel", True, (255, 255, 255))
+        surface.blit(cancel_txt, (self.cancel_btn.centerx - cancel_txt.get_width()//2, self.cancel_btn.centery - cancel_txt.get_height()//2))
+
 
 class NewMapModal:
     def __init__(self, x, y, width, height, font, current_map_name):
@@ -184,24 +311,27 @@ class Toolbar:
         self.height = height
         self.font = font
         self.buttons = []
-        self.icons = load_editor_icons("./game/resources/sprites/editor")
+        self.icons = load_editor_icons("./game/lib/sprites/editor")
 
         button_definitions = [
+            # Added FILL button
             {"label": "NEW MAP", "icon": "new", "action": "NEW MAP"},
-            {"label": "SAVE MAP", "icon": "save", "action": "SAVE MAP"},
-            {"label": "EXPORT PNG", "icon": "new", "action": "EXPORT PNG"},
-            {"label": "DELETE MAP", "icon": "delete", "action": "DELETE MAP"},
+            {"label": "NEW BUILDING", "icon": "new", "action": "NEW BUILDING"},
+            {"label": "SAVE", "icon": "save", "action": "SAVE MAP"},
+            {"label": "EXPORT", "icon": "new", "action": "EXPORT PNG"},
+            {"label": "DELETE", "icon": "delete", "action": "DELETE MAP"},
             {"label": "ERASER", "icon": "eraser", "action": "ERASER"},
             {"label": "UNDO", "icon": "undo", "action": "UNDO"},
             {"label": "COPY", "icon": "copy", "action": "COPY"},
             {"label": "PASTE", "icon": "paste", "action": "PASTE"},
+            {"label": "FILL", "icon": "paste", "action": "FILL"}, # Reuse paste icon if fill doesn't exist
             {"label": "CLEAR", "icon": "clear", "action": "CLEAR"},
-            {"label": "PLAYER SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
-            {"label": "ZOMBIE SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
-            {"label": "ITEM SPAWN", "icon": "item", "action": "ITEM SPAWN"},
-            {"label": "STAIR L1", "icon": "stair", "action": "STAIR L1"},
-            {"label": "STAIR L2", "icon": "stair", "action": "STAIR L2"},
-            {"label": "SELECTION", "icon": "selection", "action": "SELECTION"}
+            {"label": "P_SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
+            {"label": "Z_SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
+            {"label": "ITEM", "icon": "item", "action": "ITEM SPAWN"},
+            {"label": "L1", "icon": "stair", "action": "STAIR L1"},
+            {"label": "L2", "icon": "stair", "action": "STAIR L2"},
+            {"label": "SELECT", "icon": "selection", "action": "SELECTION"}
         ]
 
         button_width = ICON_SIZE + 10
@@ -214,7 +344,7 @@ class Toolbar:
             self.buttons.append({
                 "rect": rect,
                 "label": btn_def["label"],
-                "icon": self.icons[btn_def["icon"]],
+                "icon": self.icons.get(btn_def["icon"], self.icons['new']),
                 "action": btn_def["action"]
             })
             current_x += button_width + padding
@@ -254,18 +384,95 @@ class Sidebar:
         self.all_tiles = tiles.copy() # Store all tiles
         self.tiles = tiles.copy() # Tiles to be displayed (filtered)
         self.selected_tile = None
+        
+        # Tabs
+        self.tabs = ["Tiles", "Builds"]
+        self.active_tab = "Tiles"
+        self.tab_height = 30
+        self.tab_rects = {
+            "Tiles": pygame.Rect(x, y, SIDEBAR_WIDTH // 2, self.tab_height),
+            "Builds": pygame.Rect(x + SIDEBAR_WIDTH // 2, y, SIDEBAR_WIDTH // 2, self.tab_height)
+        }
 
-        self.search_rect = pygame.Rect(self.x + 10, self.y + 10, SIDEBAR_WIDTH - 20, 30)
+        # Search / Filter
+        self.search_rect = pygame.Rect(self.x + 10, self.y + self.tab_height + 10, SIDEBAR_WIDTH - 20, 30)
         self.search_text = ""
         self.search_active = False
         
-        # Y-coordinate where tiles start drawing, below the search bar
-        self.tile_area_y = self.y + self.search_rect.height + 20 
+        # Y-coordinate where content starts drawing
+        self.content_area_y = self.y + self.tab_height + self.search_rect.height + 20 
 
         # Scrolling
         self.scroll_offset = 0
         self.max_scroll = 0
         self.scroll_speed = 30
+        
+        # Building Previews
+        self.building_previews = {} # {name: surface}
+        self.building_dimensions = {} # {name: (cols, rows)}
+        self.selected_building = None
+
+    def refresh_buildings(self, building_dir, tile_map):
+        """Loads/Reloads building previews and dimensions."""
+        self.building_previews = {}
+        self.building_dimensions = {}
+        if not os.path.exists(building_dir):
+            os.makedirs(building_dir)
+            
+        # Group files
+        building_groups = {}
+        for f in os.listdir(building_dir):
+            if f.endswith(".csv"):
+                # Pattern: Name_Layer.csv
+                parts = f.rsplit('_', 1)
+                if len(parts) == 2:
+                    name = parts[0]
+                    if name not in building_groups: building_groups[name] = []
+                    building_groups[name].append(f)
+
+        # Generate previews
+        for name, files in building_groups.items():
+            # Create a small surface
+            preview = pygame.Surface(BUILDING_PREVIEW_SIZE, pygame.SRCALPHA)
+            preview.fill((30, 30, 30))
+            
+            try:
+                # Load one representative layer
+                target_file = None
+                layer_priority = ['ground', 'map', 'roof']
+                for prio in layer_priority:
+                    fname = f"{name}_{prio}.csv"
+                    if fname in files:
+                        target_file = fname
+                        break
+                
+                rows, cols = 0, 0
+                if target_file:
+                    path = os.path.join(building_dir, target_file)
+                    with open(path, 'r') as f:
+                        reader = list(csv.reader(f))
+                        rows = len(reader)
+                        cols = len(reader[0]) if rows > 0 else 0
+                        
+                        scale = min(BUILDING_PREVIEW_SIZE[0] / (cols * TILE_SIZE), BUILDING_PREVIEW_SIZE[1] / (rows * TILE_SIZE))
+                        scale = min(scale, 1.0) # Don't zoom in too much
+                        
+                        scaled_size = int(TILE_SIZE * scale)
+                        
+                        for r, row in enumerate(reader):
+                            for c, tile in enumerate(row):
+                                if tile and tile in tile_map:
+                                    img = pygame.transform.scale(tile_map[tile], (scaled_size, scaled_size))
+                                    preview.blit(img, (c * scaled_size, r * scaled_size))
+                
+                # Store dimensions
+                self.building_dimensions[name] = (cols, rows)
+                
+            except Exception as e:
+                print(f"Failed preview for {name}: {e}")
+                self.building_dimensions[name] = (1, 1) # Default
+            
+            self.building_previews[name] = preview
 
     def _filter_tiles(self):
         """Filters the displayed tiles based on the search text."""
@@ -279,143 +486,145 @@ class Sidebar:
         self.scroll_offset = 0 # Reset scroll on search
 
     def draw(self, surface):
-        # Draw sidebar background
+        # Background
         pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, SIDEBAR_WIDTH, SCREEN_HEIGHT))
         
-        # --- Draw Search Bar ---
-        # Draw border (yellow if active, black otherwise)
+        # Tabs
+        for tab in self.tabs:
+            rect = self.tab_rects[tab]
+            color = (80, 80, 80) if self.active_tab == tab else (40, 40, 40)
+            pygame.draw.rect(surface, color, rect)
+            pygame.draw.rect(surface, (0, 0, 0), rect, 1)
+            text = self.font.render(tab, True, (255, 255, 255))
+            surface.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
+
+        # Search Bar
         border_color = (255, 255, 0) if self.search_active else (0, 0, 0)
         pygame.draw.rect(surface, (255, 255, 255), self.search_rect)
         pygame.draw.rect(surface, border_color, self.search_rect, 2)
         
-        # Draw search text or placeholder
         if self.search_text:
             search_surf = self.font.render(self.search_text, True, (0, 0, 0))
         else:
-            search_surf = self.font.render("Search tiles...", True, (150, 150, 150)) # Placeholder text
+            search_surf = self.font.render("Search...", True, (150, 150, 150))
         
-        # Blit text, clipping it if it's too long
         text_rect = search_surf.get_rect(centery=self.search_rect.centery)
         text_rect.x = self.search_rect.x + 5
-        # Create a clipping area so text doesn't overflow the search box
-        clip_rect = self.search_rect.inflate(-10, -10) # Small margin
-        surface.set_clip(clip_rect)
+        surface.set_clip(self.search_rect.inflate(-10, -10))
         surface.blit(search_surf, text_rect)
-        surface.set_clip(None) # Reset clipping area
+        surface.set_clip(None)
         
-        # --- Draw Tiles ---
-        
-        # Set clipping for the tile area so they don't draw over the search bar or off screen
-        tile_view_rect = pygame.Rect(self.x, self.tile_area_y, SIDEBAR_WIDTH, SCREEN_HEIGHT - self.tile_area_y)
-        surface.set_clip(tile_view_rect)
+        # Content Area
+        view_rect = pygame.Rect(self.x, self.content_area_y, SIDEBAR_WIDTH, SCREEN_HEIGHT - self.content_area_y)
+        surface.set_clip(view_rect)
 
-        row, col = 0, 0
+        content_height = 0
         
-        # --- Sort tiles alphabetically by name ---
-        for name, image in sorted(self.tiles.items()):
-            tile_x = self.x + col * (TILE_SIZE + 10) + 10
-            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) - self.scroll_offset # Apply scroll
-            
-            # Only draw if visible
-            if tile_y + TILE_SIZE > self.tile_area_y and tile_y < self.y + SCREEN_HEIGHT:
-                tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
-                surface.blit(image, (tile_x, tile_y))
+        if self.active_tab == "Tiles":
+            row, col = 0, 0
+            for name, image in sorted(self.tiles.items()):
+                tile_x = self.x + col * (TILE_SIZE + 10) + 10
+                tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
                 
-                # Draw border if this is the selected tile
-                if self.selected_tile == name:
-                    pygame.draw.rect(surface, (255, 255, 0), tile_rect, 3) # Yellow border, 3 pixels thick
+                if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + SCREEN_HEIGHT:
+                    surface.blit(image, (tile_x, tile_y))
+                    if self.selected_tile == name:
+                        pygame.draw.rect(surface, (255, 255, 0), (tile_x, tile_y, TILE_SIZE, TILE_SIZE), 3)
 
-            col += 1
-            if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
-                col = 0
-                row += 1
-        
+                col += 1
+                if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
+                    col = 0
+                    row += 1
+            content_height = (row + 1) * (TILE_SIZE + 10)
+
+        elif self.active_tab == "Builds":
+            y_off = self.content_area_y - self.scroll_offset
+            for name, preview in self.building_previews.items():
+                if self.search_text.lower() in name.lower():
+                    # Draw Name
+                    name_surf = self.font.render(name, True, (255, 255, 255))
+                    surface.blit(name_surf, (self.x + 10, y_off))
+                    
+                    # Draw Preview
+                    p_rect = pygame.Rect(self.x + 10, y_off + 20, BUILDING_PREVIEW_SIZE[0], BUILDING_PREVIEW_SIZE[1])
+                    surface.blit(preview, p_rect.topleft)
+                    pygame.draw.rect(surface, (100, 100, 100), p_rect, 1)
+                    
+                    if self.selected_building == name:
+                         pygame.draw.rect(surface, (255, 255, 0), p_rect, 3)
+
+                    y_off += BUILDING_PREVIEW_SIZE[1] + 30
+            content_height = y_off - (self.content_area_y - self.scroll_offset)
+
         surface.set_clip(None)
 
-        # Calculate total content height and update max_scroll
-        total_rows = row + (1 if col > 0 else 0)
-        content_height = total_rows * (TILE_SIZE + 10)
-        view_height = SCREEN_HEIGHT - self.tile_area_y
-        self.max_scroll = max(0, content_height - view_height)
-
-        # --- Draw Scrollbar ---
+        # Scrollbar
+        self.max_scroll = max(0, content_height - view_rect.height)
         if self.max_scroll > 0:
-            scrollbar_width = 10
-            scrollbar_x = self.x + SIDEBAR_WIDTH - scrollbar_width
+            track = pygame.Rect(self.x + SIDEBAR_WIDTH - 10, self.content_area_y, 10, view_rect.height)
+            pygame.draw.rect(surface, (40, 40, 40), track)
             
-            # Draw Track
-            track_rect = pygame.Rect(scrollbar_x, self.tile_area_y, scrollbar_width, view_height)
-            pygame.draw.rect(surface, (40, 40, 40), track_rect)
-            
-            # Draw Thumb
-            # Calculate thumb height based on viewport ratio
-            full_content_height = self.max_scroll + view_height
-            thumb_height = max(20, (view_height / full_content_height) * view_height)
-            
-            # Calculate thumb position
-            scroll_ratio = self.scroll_offset / self.max_scroll
-            thumb_y = self.tile_area_y + scroll_ratio * (view_height - thumb_height)
-            
-            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
-            pygame.draw.rect(surface, (100, 100, 100), thumb_rect)
-
+            thumb_h = max(20, (view_rect.height / (content_height + view_rect.height)) * view_rect.height) # Simplified
+            ratio = self.scroll_offset / self.max_scroll
+            thumb_y = self.content_area_y + ratio * (view_rect.height - thumb_h)
+            pygame.draw.rect(surface, (100, 100, 100), (track.x, thumb_y, 10, thumb_h))
 
     def handle_event(self, event):
-        """
-        Returns True if the event was consumed by the sidebar, False otherwise.
-        """
         if event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_x, mouse_y = event.pos
-            
-            # Check if mouse is in sidebar
-            if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH:
-                # Handle Scroll
-                if event.button in (4, 5):
-                    if event.button == 4: # Scroll up
-                        self.scroll_offset = max(0, self.scroll_offset - self.scroll_speed)
-                    elif event.button == 5: # Scroll down
-                        self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.scroll_speed)
-                    return True # Event consumed
+            mx, my = event.pos
+            if self.x <= mx <= self.x + SIDEBAR_WIDTH:
+                # Check Tabs
+                if my < self.y + self.tab_height:
+                    if mx < self.x + SIDEBAR_WIDTH // 2: self.active_tab = "Tiles"
+                    else: self.active_tab = "Builds"
+                    self.scroll_offset = 0
+                    return True
+                
+                # Check Search
+                if self.search_rect.collidepoint(mx, my):
+                    self.search_active = True
+                    return True
+                else:
+                    self.search_active = False
 
-                if event.button == 1:
-                    # Check search box click
-                    if self.search_rect.collidepoint(mouse_x, mouse_y):
-                        self.search_active = True
-                    else:
-                        self.search_active = False
-                    
-                    # Check tile selection click (must be in the tile area)
-                    if self.x <= mouse_x <= self.x + SIDEBAR_WIDTH and mouse_y >= self.tile_area_y:
+                # Content Scroll
+                if event.button == 4:
+                    self.scroll_offset = max(0, self.scroll_offset - self.scroll_speed)
+                    return True
+                if event.button == 5:
+                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.scroll_speed)
+                    return True
+
+                # Click Selection
+                if my > self.content_area_y:
+                    if self.active_tab == "Tiles":
                         row, col = 0, 0
-                        
-                        # --- Sort tiles alphabetically for click detection ---
                         for name, image in sorted(self.tiles.items()):
                             tile_x = self.x + col * (TILE_SIZE + 10) + 10
-                            tile_y = self.tile_area_y + row * (TILE_SIZE + 10) - self.scroll_offset # Apply scroll
-                            
-                            tile_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
-                            if tile_rect.collidepoint(mouse_x, mouse_y):
+                            tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
+                            if pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE).collidepoint(mx, my):
                                 self.selected_tile = name
-                                break # Found the tile
-                            
+                                self.selected_building = None
+                                return True
                             col += 1
                             if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
                                 col = 0
                                 row += 1
-                                
-                            # Stop checking if we've passed the click point (rough optimization)
-                            if tile_y > mouse_y: 
-                                break
-                    
-                    return True # Event consumed (clicked in sidebar)
+                    elif self.active_tab == "Builds":
+                        y_off = self.content_area_y - self.scroll_offset
+                        for name in self.building_previews.keys():
+                            if self.search_text.lower() in name.lower():
+                                rect = pygame.Rect(self.x + 10, y_off + 20, BUILDING_PREVIEW_SIZE[0], BUILDING_PREVIEW_SIZE[1])
+                                if rect.collidepoint(mx, my):
+                                    self.selected_building = name
+                                    self.selected_tile = None
+                                    return True
+                                y_off += BUILDING_PREVIEW_SIZE[1] + 30
+                return True
         
         if event.type == pygame.KEYDOWN and self.search_active:
-            # Handle typing in the search box
-            if event.key == pygame.K_BACKSPACE:
-                self.search_text = self.search_text[:-1]
-            else:
-                self.search_text += event.unicode
-            self._filter_tiles() # Update the filtered list
-            return True # Event consumed
-
+            if event.key == pygame.K_BACKSPACE: self.search_text = self.search_text[:-1]
+            else: self.search_text += event.unicode
+            self._filter_tiles()
+            return True
         return False

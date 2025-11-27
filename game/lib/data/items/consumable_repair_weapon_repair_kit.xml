@@ -1,0 +1,14 @@
+<item name="Weapon Repair Kit" type="consumable_repair">
+    <properties>
+        <status value="durability" />
+        <load value="1" />
+        <restore min="1" max="100" />
+        <capacity value="5" />
+        <sprite file="weapon_repair_kit.png" />
+    </properties>
+    <repair>
+        <item name="Pistol 9mm"  />
+        <item name="Shotgun"  />
+    </repair>
+    <spawn chance="1" />
+</item>
