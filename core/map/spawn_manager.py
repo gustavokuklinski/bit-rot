@@ -22,6 +22,9 @@ def spawn_initial_items(obstacles, item_spawns):
         item = Item.generate_random()
         item.rect.topleft = pos
         
+        item.x = pos[0]
+        item.y = pos[1]
+
         # Check against the set (much faster)
         item_tile = (item.rect.x // TILE_SIZE, item.rect.y // TILE_SIZE)
         

@@ -3,7 +3,7 @@ import re
 import os
 
 from editor.assets import load_editor_icons
-from editor.config import ICON_SIZE
+from editor.config import ICON_SIZE, GAME_ROOT
 
 YELLOW = (255, 255, 0)
 LIGHT_BLUE = (180, 180, 220)
@@ -21,206 +21,326 @@ class FileTree:
         self.scroll_offset = 0
         self.icons = load_editor_icons("./game/lib/sprites/editor")
 
+        # Data structures
+        self.folders = []          # List of folder names (or absolute paths for saves). "" for root.
+        self.map_data = {}         # { folder: { map_name: [files] } }
+        self.expanded_folders = {} # { folder: bool }
+        self.expanded_maps = {}    # { (folder, map_name): bool }
+        self.layer_properties = {} # { relative_path: dict }
+        
+        self.selected_map = None   # (folder, map_name)
+        
         self.refresh()
-        
-        self.selected_map = self.map_names[0] if self.map_names else None
-        self.expanded_maps = {}
-        self.layer_properties = {}
-        
-        # Initialize default properties
-        for base_name, layers in self.grouped_maps.items():
-            self.expanded_maps[base_name] = False
-            for layer_file in layers:
-                self.layer_properties[layer_file] = {"visible": True, "opacity": 255}
 
     def refresh(self):
         """Refreshes the file list from the directory."""
         if not os.path.exists(self.root_dir):
             os.makedirs(self.root_dir)
             
-        files = sorted([f for f in os.listdir(self.root_dir) if self.file_pattern.match(f)])
-        self.grouped_maps = self._group_maps(files)
-        self.map_names = sorted(self.grouped_maps.keys())
+        self.folders = []
+        self.map_data = {}
+        
+        # --- 1. Standard Maps (Root Directory) ---
+        try:
+            items = sorted(os.listdir(self.root_dir))
+        except OSError:
+            items = []
+            
+        # Root files
+        root_files = [f for f in items if os.path.isfile(os.path.join(self.root_dir, f)) and self.file_pattern.match(f)]
+        if root_files:
+            folder = ""
+            self.folders.append(folder)
+            self.map_data[folder] = self._group_maps(root_files)
+            self.expanded_folders[folder] = True
 
-    def _group_maps(self, map_files):
+        # Standard Subdirectories
+        for item in items:
+            path = os.path.join(self.root_dir, item)
+            if os.path.isdir(path):
+                try:
+                    sub_files = sorted([f for f in os.listdir(path) if self.file_pattern.match(f)])
+                    if sub_files:
+                        self.folders.append(item)
+                        self.map_data[item] = self._group_maps(sub_files)
+                        if item not in self.expanded_folders:
+                            self.expanded_folders[item] = False
+                except OSError:
+                    continue
+
+        # --- 2. Save Folders (External Directory) ---
+        # Scan: ./game/save/game/save_TIMESTAMP/map
+        save_root = os.path.join(GAME_ROOT, 'save', 'game')
+        if os.path.exists(save_root):
+            try:
+                # Sort reverse to show newest saves first
+                save_folders = sorted(os.listdir(save_root), reverse=True)
+                for sf in save_folders:
+                    sf_path = os.path.join(save_root, sf)
+                    map_sub = os.path.join(sf_path, 'map')
+                    
+                    if os.path.isdir(map_sub):
+                        try:
+                            # Check for map files inside the 'map' subdirectory
+                            save_maps = sorted([f for f in os.listdir(map_sub) if self.file_pattern.match(f)])
+                            if save_maps:
+                                # Use absolute path as the key so editor.py can load it
+                                # os.path.join(base, absolute) returns absolute, bypassing base
+                                folder_key = os.path.abspath(map_sub)
+                                
+                                self.folders.append(folder_key)
+                                self.map_data[folder_key] = self._group_maps(save_maps)
+                                
+                                if folder_key not in self.expanded_folders:
+                                    self.expanded_folders[folder_key] = False
+                        except OSError:
+                            pass
+            except OSError:
+                pass
+
+        # Initialize default properties for new files
+        for folder in self.folders:
+            for map_name, files in self.map_data[folder].items():
+                map_key = (folder, map_name)
+                if map_key not in self.expanded_maps:
+                    self.expanded_maps[map_key] = False
+                
+                for f in files:
+                    rel_path = os.path.join(folder, f) if folder else f
+                    if rel_path not in self.layer_properties:
+                        self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
+
+        # Validate selection
+        if self.selected_map:
+            sf, sm = self.selected_map
+            if sf not in self.map_data or sm not in self.map_data[sf]:
+                self.selected_map = None
+        
+        if not self.selected_map and self.folders:
+            first_folder = self.folders[0]
+            maps = sorted(self.map_data[first_folder].keys())
+            if maps:
+                self.selected_map = (first_folder, maps[0])
+                if first_folder != "":
+                    self.expanded_folders[first_folder] = True
+
+    def _group_maps(self, file_list):
         grouped = {}
-        for f in map_files:
+        for f in file_list:
             match = self.file_pattern.match(f)
             if match:
-                # Group 1 is the base name (e.g., "map_L1..." or "House1")
                 base_name = match.group(1)
                 if base_name not in grouped:
                     grouped[base_name] = []
                 grouped[base_name].append(f)
         return grouped
 
-    def draw(self, surface, current_map_name, active_layer_name, modified_maps=None):
+    def draw(self, surface, current_map_name, current_folder, active_layer_name, modified_maps=None):
         if modified_maps is None:
             modified_maps = set()
+            
         pygame.draw.rect(surface, (200, 200, 200), (self.x, self.y, self.width, self.height))
 
-        # Display current map and layer info
+        # Header
         map_info_y = self.y + 5
-        map_text = f"Active: {current_map_name}"
-        layer_text = f"Layer: {active_layer_name}"
-        map_surf = self.font.render(map_text, True, (0, 0, 0))
-        layer_surf = self.font.render(layer_text, True, (0, 0, 0))
-        surface.blit(map_surf, (self.x + 10, map_info_y))
-        surface.blit(layer_surf, (self.x + 10, map_info_y + self.line_height))
+        
+        # Make display name cleaner if it's a long absolute path
+        display_current_folder = current_folder
+        if os.path.isabs(current_folder) and current_folder.endswith("map"):
+             try:
+                 display_current_folder = os.path.basename(os.path.dirname(current_folder))
+             except: pass
 
-        # Clipping area for the list
+        disp_name = f"{display_current_folder}/{current_map_name}" if display_current_folder else current_map_name
+        
+        map_text = f"Active: {disp_name}"
+        layer_text = f"Layer: {active_layer_name}"
+        
+        surface.blit(self.font.render(map_text, True, (0, 0, 0)), (self.x + 10, map_info_y))
+        surface.blit(self.font.render(layer_text, True, (0, 0, 0)), (self.x + 10, map_info_y + self.line_height))
+
+        # List Area
         list_rect = pygame.Rect(self.x, self.y + (self.line_height * 2.5), self.width, self.height - (self.line_height * 2.5))
         surface.set_clip(list_rect)
 
         display_y = list_rect.y - self.scroll_offset
         
-        for map_name in self.map_names:
-            # Draw base map name
-            icon = "[-]" if self.expanded_maps.get(map_name) else "[+]"
-            modified_indicator = "*" if map_name in modified_maps else ""
-            text = f"{icon} {map_name}{modified_indicator}"
+        for folder in self.folders:
+            indent = 10
             
-            # Highlight selected
-            if map_name == current_map_name: # Highlight active map
-                pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 10, self.line_height - 2))
-            
-            text_surface = self.font.render(text, True, (0, 0, 0))
-            surface.blit(text_surface, (self.x + 10, display_y))
-            display_y += self.line_height
-
-            # Draw layers if expanded
-            if self.expanded_maps.get(map_name):
-                layer_order = ['roof', 'map', 'spawn', 'ground']
+            if folder != "":
+                display_folder = folder
                 
-                layer_file_lookup = {}
-                for lf in self.grouped_maps[map_name]:
-                    # Attempt to extract layer suffix
-                    # Check against known suffixes
-                    found_layer = None
-                    for suffix in layer_order:
-                        if lf.endswith(f"_{suffix}.csv"):
-                            found_layer = suffix
-                            break
-                    if found_layer:
-                        layer_file_lookup[found_layer] = lf
+                # Check if this is a save folder (Absolute path ending in /map)
+                if os.path.isabs(folder) and folder.endswith("map"):
+                    try:
+                        # Extract "save_TIMESTAMP" from ".../save_TIMESTAMP/map"
+                        parent = os.path.dirname(folder)
+                        display_folder = os.path.basename(parent)
+                    except:
+                        pass
+                
+                icon = "[-]" if self.expanded_folders.get(folder) else "[+]"
+                text = f"{icon} {display_folder}"
+                surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + 10, display_y))
+                display_y += self.line_height
+                indent = 25
 
-                for layer_name in layer_order:
-                    layer_file = layer_file_lookup.get(layer_name)
-                    if not layer_file: 
-                        continue
-
-                    # Ensure properties exist (for new files refreshed)
-                    if layer_file not in self.layer_properties:
-                        self.layer_properties[layer_file] = {"visible": True, "opacity": 255}
+            # Draw Maps
+            if folder == "" or self.expanded_folders.get(folder):
+                maps = self.map_data[folder]
+                for map_name in sorted(maps.keys()):
+                    map_key = (folder, map_name)
                     
-                    prop = self.layer_properties[layer_file]
+                    is_modified = map_key in modified_maps
+                    if not is_modified and isinstance(modified_maps, set):
+                         if map_name in modified_maps:
+                             is_modified = True
+                    modified_indicator = "*" if is_modified else ""
                     
-                    # Highlight active layer
-                    if layer_name == active_layer_name and map_name == current_map_name:
-                        pygame.draw.rect(surface, LIGHT_BLUE, (self.x + 10, display_y, self.width - 20, self.line_height - 2))
-
-                    # Layer name
-                    layer_text_str = f"    {layer_name}"
-                    layer_surf = self.font.render(layer_text_str, True, (50, 50, 50))
-                    surface.blit(layer_surf, (self.x + 15, display_y))
-
-                    # View/Hide button
-                    icon = self.icons["hide"] if prop["visible"] else self.icons["view"]
-                    vh_rect = pygame.Rect(self.x + self.width - 150, display_y - 6, ICON_SIZE, ICON_SIZE)
-                    surface.blit(icon, vh_rect)
-
-                    # Opacity controls
-                    op_rect = pygame.Rect(self.x + self.width - 80, display_y, 70, self.line_height - 5)
-                    op_text = f"OP:{prop['opacity']}"
-                    op_surf = self.font.render(op_text, True, (0,0,0))
-                    surface.blit(op_surf, (op_rect.x + 5, op_rect.y + 2))
-
+                    if map_name == current_map_name and folder == current_folder: 
+                        pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 10, self.line_height - 2))
+                    
+                    icon = "[-]" if self.expanded_maps.get(map_key) else "[+]"
+                    text = f"{icon} {map_name}{modified_indicator}"
+                    
+                    surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + indent, display_y))
                     display_y += self.line_height
+
+                    # Draw Layers
+                    if self.expanded_maps.get(map_key):
+                        layer_order = ['roof', 'map', 'spawn', 'ground']
+                        layer_file_lookup = {}
+                        for lf in maps[map_name]:
+                            for suffix in layer_order:
+                                if lf.endswith(f"_{suffix}.csv"):
+                                    layer_file_lookup[suffix] = lf
+                                    break
+                        
+                        for layer_name in layer_order:
+                            layer_file = layer_file_lookup.get(layer_name)
+                            if not layer_file: continue
+                            
+                            rel_path = os.path.join(folder, layer_file) if folder else layer_file
+                            if rel_path not in self.layer_properties:
+                                self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
+                            
+                            prop = self.layer_properties[rel_path]
+                            
+                            if layer_name == active_layer_name and map_name == current_map_name and folder == current_folder:
+                                pygame.draw.rect(surface, LIGHT_BLUE, (self.x + indent + 5, display_y, self.width - (indent + 15), self.line_height - 2))
+
+                            layer_text_str = f"    {layer_name}"
+                            layer_surf = self.font.render(layer_text_str, True, (50, 50, 50))
+                            surface.blit(layer_surf, (self.x + indent + 5, display_y))
+
+                            icon = self.icons["hide"] if prop["visible"] else self.icons["view"]
+                            vh_rect = pygame.Rect(self.x + self.width - 150, display_y - 6, ICON_SIZE, ICON_SIZE)
+                            surface.blit(icon, vh_rect)
+
+                            op_rect = pygame.Rect(self.x + self.width - 80, display_y, 70, self.line_height - 5)
+                            op_text = f"OP:{prop['opacity']}"
+                            op_surf = self.font.render(op_text, True, (0,0,0))
+                            surface.blit(op_surf, (op_rect.x + 5, op_rect.y + 2))
+
+                            display_y += self.line_height
         
         surface.set_clip(None)
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Left click
+            if event.button == 1:
                 mouse_x, mouse_y = event.pos
                 if self.x <= mouse_x <= self.x + self.width and self.y <= mouse_y <= self.y + self.height:
                     
                     list_start_y = self.y + (self.line_height * 2.5)
                     if mouse_y < list_start_y:
-                        return None # Clicked header
+                        return None 
 
                     current_y = list_start_y - self.scroll_offset
-                    for map_name in self.map_names:
-                        # Check click on base map name
-                        base_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
-                        if base_rect.collidepoint(mouse_x, mouse_y):
-                            # Toggle expand/collapse
-                            if mouse_x < self.x + 30:
-                                self.expanded_maps[map_name] = not self.expanded_maps.get(map_name, False)
+                    
+                    for folder in self.folders:
+                        # Folder Click
+                        if folder != "":
+                            folder_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
+                            if folder_rect.collidepoint(mouse_x, mouse_y):
+                                self.expanded_folders[folder] = not self.expanded_folders.get(folder, False)
                                 return None
-                            else:
-                                self.selected_map = map_name
-                                return {"action": "select_map", "map_name": map_name}
+                            current_y += self.line_height
                         
-                        current_y += self.line_height
-
-                        # Check click on layers if expanded
-                        if self.expanded_maps.get(map_name):
-                            layer_order = ['roof', 'map', 'spawn', 'ground']
-                            layer_file_lookup = {}
-                            for lf in self.grouped_maps[map_name]:
-                                for suffix in layer_order:
-                                    if lf.endswith(f"_{suffix}.csv"):
-                                        layer_file_lookup[suffix] = lf
-                                        break
-
-                            for layer_name in layer_order:
-                                layer_file = layer_file_lookup.get(layer_name)
-                                if not layer_file: continue
+                        # Maps
+                        if folder == "" or self.expanded_folders.get(folder):
+                            maps = self.map_data[folder]
+                            for map_name in sorted(maps.keys()):
+                                map_key = (folder, map_name)
                                 
-                                if layer_file not in self.layer_properties:
-                                    self.layer_properties[layer_file] = {"visible": True, "opacity": 255}
-
-                                layer_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
-                                if layer_rect.collidepoint(mouse_x, mouse_y):
-                                    # Check view/hide click
-                                    vh_rect = pygame.Rect(self.x + self.width - 150, current_y, ICON_SIZE, ICON_SIZE)
-                                    if vh_rect.collidepoint(mouse_x, mouse_y):
-                                        self.layer_properties[layer_file]["visible"] = not self.layer_properties[layer_file]["visible"]
-                                        # Pass back clean layer_name so editor can update Map
-                                        return {
-                                            "action": "toggle_visibility", 
-                                            "layer_file": layer_file, 
-                                            "layer_name": layer_name,
-                                            "properties": self.layer_properties[layer_file]
-                                        }
-                                    
-                                    # Check opacity click (placeholder)
-                                    op_rect = pygame.Rect(self.x + self.width - 80, current_y, 70, self.line_height - 5)
-                                    if op_rect.collidepoint(mouse_x, mouse_y):
-                                        # Simple opacity toggle for now
-                                        current_op = self.layer_properties[layer_file]["opacity"]
-                                        self.layer_properties[layer_file]["opacity"] = 0 if current_op == 255 else 255
-                                        return {
-                                            "action": "set_opacity", 
-                                            "layer_file": layer_file, 
-                                            "layer_name": layer_name,
-                                            "properties": self.layer_properties[layer_file]
-                                        }
+                                map_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
+                                if map_rect.collidepoint(mouse_x, mouse_y):
+                                    toggle_width = 40 if folder else 30
+                                    if mouse_x < self.x + toggle_width: 
+                                        self.expanded_maps[map_key] = not self.expanded_maps.get(map_key, False)
+                                        return None
                                     else:
-                                        # Clicked on layer name
-                                        return {"action": "set_active_layer", "layer_name": layer_name}
-
+                                        self.selected_map = map_key
+                                        return {"action": "select_map", "folder": folder, "map_name": map_name}
+                                
                                 current_y += self.line_height
+                                
+                                # Layers
+                                if self.expanded_maps.get(map_key):
+                                    layer_order = ['roof', 'map', 'spawn', 'ground']
+                                    layer_file_lookup = {}
+                                    for lf in maps[map_name]:
+                                        for suffix in layer_order:
+                                            if lf.endswith(f"_{suffix}.csv"):
+                                                layer_file_lookup[suffix] = lf
+                                                break
+
+                                    for layer_name in layer_order:
+                                        layer_file = layer_file_lookup.get(layer_name)
+                                        if not layer_file: continue
+                                        
+                                        rel_path = os.path.join(folder, layer_file) if folder else layer_file
+                                        if rel_path not in self.layer_properties:
+                                            self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
+
+                                        layer_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
+                                        if layer_rect.collidepoint(mouse_x, mouse_y):
+                                            vh_rect = pygame.Rect(self.x + self.width - 150, current_y, ICON_SIZE, ICON_SIZE)
+                                            if vh_rect.collidepoint(mouse_x, mouse_y):
+                                                self.layer_properties[rel_path]["visible"] = not self.layer_properties[rel_path]["visible"]
+                                                return {
+                                                    "action": "toggle_visibility", 
+                                                    "layer_name": layer_name,
+                                                    "properties": self.layer_properties[rel_path]
+                                                }
+                                            
+                                            op_rect = pygame.Rect(self.x + self.width - 80, current_y, 70, self.line_height - 5)
+                                            if op_rect.collidepoint(mouse_x, mouse_y):
+                                                current_op = self.layer_properties[rel_path]["opacity"]
+                                                self.layer_properties[rel_path]["opacity"] = 0 if current_op == 255 else 255
+                                                return {
+                                                    "action": "set_opacity", 
+                                                    "layer_name": layer_name,
+                                                    "properties": self.layer_properties[rel_path]
+                                                }
+                                            else:
+                                                return {"action": "set_active_layer", "layer_name": layer_name}
+
+                                        current_y += self.line_height
 
             elif event.button == 4:  # Scroll up
                 self.scroll_offset = max(0, self.scroll_offset - self.line_height)
             elif event.button == 5:  # Scroll down
-                # Recalculate total height
-                total_height = len(self.map_names) * self.line_height
-                for name, expanded in self.expanded_maps.items():
-                    if expanded:
-                        total_height += len(self.grouped_maps[name]) * self.line_height
+                total_height = 0
+                for f in self.folders:
+                    if f != "": total_height += self.line_height
+                    if f == "" or self.expanded_folders.get(f):
+                         for m in self.map_data[f]:
+                             total_height += self.line_height
+                             if self.expanded_maps.get((f, m)):
+                                 total_height += 4 * self.line_height
+                
                 max_scroll = max(0, total_height - (self.height - self.line_height * 3))
                 self.scroll_offset = min(max_scroll, self.scroll_offset + self.line_height)
         return None

@@ -1258,6 +1258,8 @@ class Player:
         if item_to_drop:
             # --- MODIFIED: Check for valid drop location ---
             if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+                item_to_drop.x = item_to_drop.rect.x
+                item_to_drop.y = item_to_drop.rect.y
                 return item_to_drop # Success
             else:
                 # No space, put it back

@@ -40,6 +40,7 @@ from core.sound_manager import SoundManager
 from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_files, delete_save
 from core.messages import display_message, init_messages
+from core.map.generator import ProceduralGenerator
 
 class Game:
     def __init__(self):
@@ -270,7 +271,7 @@ class Game:
                     "day_count": self.world_time.day_count
                 },
                 "layer_spawn_triggers": triggers_export,
-                "items": [{"name": i.name, "x": i.x, "y": i.y} for i in self.items_on_ground],
+                "items": [{"name": i.name, "x": i.rect.x, "y": i.rect.y} for i in self.items_on_ground],
                 "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
             }
             with open(os.path.join(save_path, "world.json"), "w") as f:
@@ -295,9 +296,9 @@ class Game:
             with open(os.path.join(save_path, "player.json"), "r") as f:
                 player_data = json.load(f)
 
-            self.start_new_game(player_data)
+            self.start_new_game(player_data, save_dir_name=save_folder_name)
             
-            self.current_save_folder_name = save_folder_name
+            # self.current_save_folder_name = save_folder_name
             
             self.zombies_killed = player_data.get('zombies_killed', 0)
             
@@ -426,13 +427,15 @@ class Game:
         self.all_spawn_layers.clear()
         self.layer_items.clear()
         self.layer_zombies.clear()
-
+        # self.current_save_folder_name = None
         self.map_manager.current_map_filename = map_filename
+        
+        # [FIX] Pass the current map folder (save folder) to the loader
         self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers = \
-            load_all_map_layers(map_filename)
+            load_all_map_layers(map_filename, base_path=self.map_manager.map_folder)
 
         if 1 not in self.all_map_layers:
-            raise FileNotFoundError(f"Base map file {map_filename} (Layer 1) could not be loaded.")
+            raise FileNotFoundError(f"Base map file {map_filename} (Layer 1) could not be loaded from {self.map_manager.map_folder}.")
 
         match = re.search(r'map_L(\d+)_', map_filename)
         layer_index = int(match.group(1)) if match else 1
@@ -440,8 +443,37 @@ class Game:
         set_active_layer(self, layer_index)
         return None
 
-    def start_new_game(self, player_data):
-        self.current_save_folder_name = None
+    def start_new_game(self, player_data, save_dir_name=None):
+
+        if save_dir_name:
+            # We are loading an existing game
+            save_name = save_dir_name
+            regenerate_map = False # Don't overwrite existing map
+            should_initial_save = False # Don't save immediately (wait for load_game to finish)
+        else:
+            # We are starting a brand new game
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            save_name = f"save_{timestamp}"
+            regenerate_map = True
+            should_initial_save = True
+        self.current_save_folder_name = save_name
+        
+        # 2. Create the specific save directory structure
+        # Path: game/save/game/save_YYYYMMDD_HHMMSS/map/
+        save_path = os.path.join("game", "save", "game", save_name)
+        map_path = os.path.join(save_path, "map")
+        
+        try:
+            os.makedirs(map_path, exist_ok=True)
+            print(f"Created new save environment at: {map_path}")
+        except OSError as e:
+            print(f"Error creating save directory: {e}")
+            # Fallback to default if write fails, though this is critical
+            map_path = MAP_DIR 
+
+        # 3. Point the MapManager to this new folder
+        # The manager will now look for maps here, not in lib/map
+        self.map_manager.map_folder = map_path
 
         if 'attributes' not in player_data:
             player_data['attributes'] = {} 
@@ -453,14 +485,33 @@ class Game:
         except Exception as e:
             print(f"Error applying custom config '{preset}': {e}")
 
+        # 4. Initialize Generator with the specific OUTPUT folder
+        generator = ProceduralGenerator(self, output_folder=map_path)
+
+        world_seed = player_data.get('world_seed', "30DEFAULT") # Default pattern if missing
+        print(f"Generating world with Pattern/Seed: {world_seed}")
+        
+        # Generate the world directly into the save folder
+        start_map = generator.generate_world(seed_pattern=world_seed, regenerate=regenerate_map)
+
+        # 5. Refresh MapManager to see the newly generated files in the save folder
+        self.map_manager.refresh_maps()
+
+        if start_map:
+            self.map_manager.current_map_filename = start_map
+            print(f"Starting map set to generated file: {start_map}")
+        else:
+            print("Warning: Generator did not return a start map.")
+
         self.player_name = player_data.get('name', "Player")
         self.player = Player(player_data=player_data)
         self.zoom_level = core.data.config.START_ZOOM
         
+        # ... (Rest of the function remains exactly the same: inventory setup, etc.) ...
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-        starter_items = ["Pistol 9mm", "Shotgun", "Knife", "Axe", "Mobile off"]
+        starter_items = ["Pistol 9mm", "Shotgun", "ID", "Axe", "Mobile off"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
@@ -488,19 +539,12 @@ class Game:
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
 
-        # Startup modals when play
-        #self.modals.append({
-        #    'id': uuid.uuid4(), 'type': 'inventory', 'item': None,
-        #    'position': self.last_modal_positions['inventory'], 'is_dragging': False, 'drag_offset': (0, 0),
-        #    'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
-        #    'minimized': False
-        #})
-        #self.modals.append({
-        #    'id': uuid.uuid4(), 'type': 'nearby', 'item': None,
-        #    'position': self.last_modal_positions['nearby'], 'is_dragging': False, 'drag_offset': (0, 0),
-        #    'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
-        #    'minimized': False
-        #})
+        if should_initial_save:
+            if self.current_save_folder_name is None:
+                 self.current_save_folder_name = save_name
+            self.save_game()
+
+
 
     async def run(self):
         while self.running:
@@ -676,6 +720,45 @@ class Game:
         player_grid_y = self.player.rect.centery // TILE_SIZE
         facing_x, facing_y = getattr(self.player, 'facing_direction', (0, 1))
         return player_grid_x + facing_x, player_grid_y + facing_y
+
+    def find_interactable_tile(self):
+        """Finds a statable tile (door) in front of or near the player."""
+        if not self.player: return None
+
+        # 1. Check Facing Tile (Priority)
+        facing_x, facing_y = self.get_player_facing_tile()
+        if facing_x is not None:
+            t = self.map_manager.get_tile_at(facing_x, facing_y)
+            if t and t.get('is_statable'):
+                 return (facing_x, facing_y)
+
+        # 2. Check Surrounding Tiles (Radius Check)
+        # If facing tile isn't valid, check immediate surroundings (3x3 grid)
+        player_pos = self.player.rect.center
+        p_grid_x = int(player_pos[0] // TILE_SIZE)
+        p_grid_y = int(player_pos[1] // TILE_SIZE)
+        
+        best_tile = None
+        best_dist = float('inf')
+        
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                tx, ty = p_grid_x + dx, p_grid_y + dy
+                t = self.map_manager.get_tile_at(tx, ty)
+                
+                # Must be statable (e.g. a door)
+                if t and t.get('is_statable'):
+                     tile_center_x = (tx * TILE_SIZE) + (TILE_SIZE / 2)
+                     tile_center_y = (ty * TILE_SIZE) + (TILE_SIZE / 2)
+                     dist = math.hypot(player_pos[0] - tile_center_x, player_pos[1] - tile_center_y)
+                     
+                     # Radius threshold (1.5 tiles covers adjacent and diagonals comfortably)
+                     if dist <= TILE_SIZE * 1.5 and dist < best_dist:
+                         best_dist = dist
+                         best_tile = (tx, ty)
+        
+        return best_tile    
+
 
     def find_nearby_containers(self):
         nearby_containers = []

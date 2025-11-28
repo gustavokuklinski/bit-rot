@@ -55,11 +55,10 @@ def update_game_state(game):
 
     game.hovered_interactable_tile_rect = None # Reset
     facing_x, facing_y = game.get_player_facing_tile()
-    if facing_x is not None:
-        tile_def = game.map_manager.get_tile_at(facing_x, facing_y)
-        if tile_def and tile_def.get('is_statable'):
-            game.hovered_interactable_tile_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-
+    target_tile = game.find_interactable_tile()
+    if target_tile:
+        tx, ty = target_tile
+        game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
     check_zombie_respawn(game)
     check_dynamic_zombie_spawns(game)

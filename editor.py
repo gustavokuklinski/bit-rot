@@ -14,6 +14,7 @@ from editor.map import Map
 from editor.ui import Sidebar, Toolbar, NewMapModal, NewBuildingModal, ModeTabs
 from editor.file_tree import FileTree
 
+# ... [Init, Colors, Fonts, Regex Patterns, Helper Functions remain unchanged] ...
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
@@ -38,16 +39,19 @@ BUILDING_PATTERN = re.compile(r"(.+)(_roof|_map|_spawn|_ground)\.csv")
 
 def get_map_dimensions(map_name, map_dir):
     """Attempts to determine map width and height by reading one of its files."""
-    for f in os.listdir(map_dir):
-        if f.startswith(f"{map_name}_") and f.endswith(".csv"):
-             try:
-                 with open(os.path.join(map_dir, f), 'r') as csvfile:
-                     reader = list(csv.reader(csvfile))
-                     height = len(reader)
-                     width = len(reader[0]) if height > 0 else 0
-                     return width, height
-             except:
-                 continue
+    try:
+        for f in os.listdir(map_dir):
+            if f.startswith(f"{map_name}_") and f.endswith(".csv"):
+                 try:
+                     with open(os.path.join(map_dir, f), 'r') as csvfile:
+                         reader = list(csv.reader(csvfile))
+                         height = len(reader)
+                         width = len(reader[0]) if height > 0 else 0
+                         return width, height
+                 except:
+                     continue
+    except OSError:
+        pass
     return None
 
 def load_map_layers(game_map, map_name, map_dir):
@@ -67,17 +71,19 @@ def load_map_layers(game_map, map_name, map_dir):
     game_map.active_layer_name = None
     detected_layers = []
 
-    for filename in os.listdir(map_dir):
-        if filename.startswith(f'{map_name}_') and filename.endswith('.csv'):
-            for suffix in ['roof', 'map', 'ground', 'spawn']:
-                 if filename.endswith(f"_{suffix}.csv"):
-                     if filename == f"{map_name}_{suffix}.csv":
-                         detected_layers.append(suffix)
-                         game_map.load_from_csv(os.path.join(map_dir, filename), suffix)
+    if os.path.exists(map_dir):
+        for filename in os.listdir(map_dir):
+            if filename.startswith(f'{map_name}_') and filename.endswith('.csv'):
+                for suffix in ['roof', 'map', 'ground', 'spawn']:
+                     if filename.endswith(f"_{suffix}.csv"):
+                         # Check strict match to avoid partial matches
+                         if filename == f"{map_name}_{suffix}.csv":
+                             detected_layers.append(suffix)
+                             game_map.load_from_csv(os.path.join(map_dir, filename), suffix)
 
     if detected_layers:
         detected_layers.sort()
-        # Restore default layers if missing (load_from_csv handles existing keys, this ensures structure)
+        # Restore default layers if missing
         for l in ['roof', 'map', 'spawn', 'ground']:
              if l not in game_map.layers:
                  game_map.layers[l] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
@@ -96,7 +102,8 @@ def save_map_layers(game_map, map_name, map_dir):
         path = os.path.join(map_dir, f"{map_name}_{layer}.csv")
         game_map.save_to_csv(path, layer)
         print(f"Saved {path}")
-
+        
+# ... [draw_rulers, draw_grid, paste_building_on_map remain unchanged] ...
 def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
     size = int(TILE_SIZE * scale)
     # Top
@@ -116,8 +123,6 @@ def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
 
 def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, map_view_rect):
     scaled_tile_size = int(TILE_SIZE * zoom_scale)
-    
-    # Draw Vertical Lines
     for x in range(map_width + 1):
         line_x = offset_x + x * scaled_tile_size
         if map_view_rect.left <= line_x <= map_view_rect.right:
@@ -125,8 +130,6 @@ def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, ma
             end_y = min(map_view_rect.bottom, offset_y + map_height * scaled_tile_size)
             if start_y < end_y:
                 pygame.draw.line(surface, LIGHT_GREY, (line_x, start_y), (line_x, end_y))
-
-    # Draw Horizontal Lines
     for y in range(map_height + 1):
         line_y = offset_y + y * scaled_tile_size
         if map_view_rect.top <= line_y <= map_view_rect.bottom:
@@ -137,7 +140,7 @@ def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, ma
 
 def paste_building_on_map(game_map, building_name, building_dir, target_x, target_y):
     """Pastes all layers of a building onto the map."""
-    # Load building data
+    if not os.path.exists(building_dir): return
     for f in os.listdir(building_dir):
         if f.startswith(f"{building_name}_") and f.endswith(".csv"):
              for suffix in ['roof', 'map', 'ground', 'spawn']:
@@ -179,26 +182,35 @@ def main():
     
     sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
 
-    # Initial Load
-    if map_file_tree.map_names:
-        current_map_name = map_file_tree.map_names[0]
-        load_map_layers(main_map, current_map_name, MAP_DIR)
-        map_file_tree.selected_map = current_map_name
-    else:
-        current_map_name = "map_L1_P0_0_0_0_0"
-    
-    if building_file_tree.map_names:
-        current_building_name = building_file_tree.map_names[0]
-        load_map_layers(building_map, current_building_name, BUILDINGS_DIR)
-        building_file_tree.selected_map = current_building_name
-    else:
-        current_building_name = "NewBuilding"
-
     # Current State Pointers
     current_map_obj = main_map
     current_file_tree = map_file_tree
-    current_base_name = current_map_name
-    current_root_dir = MAP_DIR
+    current_root_dir = MAP_DIR 
+    current_folder = ""
+    current_base_name = "map_L1_P0_0_0_0_0" # Default
+
+    # Initial Load from Tree
+    if map_file_tree.selected_map:
+        folder, map_name = map_file_tree.selected_map
+        current_folder = folder
+        current_base_name = map_name
+        current_root_dir = os.path.join(MAP_DIR, folder) if folder else MAP_DIR
+        load_map_layers(main_map, current_base_name, current_root_dir)
+    else:
+        # Fallback if tree is empty
+        load_map_layers(main_map, current_base_name, current_root_dir)
+
+    # Building tree init
+    current_building_name = "NewBuilding"
+    if building_file_tree.selected_map:
+        folder, map_name = building_file_tree.selected_map
+        current_building_name = map_name
+        # Buildings likely flat, so folder is ""
+        b_root = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
+        load_map_layers(building_map, current_building_name, b_root)
+
+    # Current Names
+    current_map_name = current_base_name
 
     # Modals
     new_map_modal = NewMapModal(SCREEN_WIDTH//2-150, SCREEN_HEIGHT//2-175, 300, 350, FONT, current_map_name)
@@ -214,13 +226,11 @@ def main():
     dragging = False
     drag_start = (0,0)
     
-    modified_maps = set()
+    modified_maps = set() # Stores tuple: (folder, map_name)
     status_msg = ""
     status_timer = 0
     
     tile_to_place = None
-    
-    # Selection
     selection_start = None
     selection_rect = None
     is_selecting = False
@@ -235,7 +245,6 @@ def main():
             
             # Global Keyboard Shortcuts
             if event.type == pygame.KEYDOWN:
-                # Use event.mod for robust modifier detection
                 ctrl_held = (event.mod & pygame.KMOD_CTRL)
                 
                 if ctrl_held and event.key == pygame.K_z: # Undo
@@ -244,7 +253,7 @@ def main():
                     status_timer = pygame.time.get_ticks() + 1000
                 elif ctrl_held and event.key == pygame.K_s: # Save
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
-                    modified_maps.discard(current_base_name)
+                    modified_maps.discard((current_folder, current_base_name))
                     status_msg = "Saved!"
                     status_timer = pygame.time.get_ticks() + 1000
                     if editor_mode == "BUILDING":
@@ -260,9 +269,11 @@ def main():
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
                         status_msg = "Pasted!"
                         status_timer = pygame.time.get_ticks() + 1000
+                        modified_maps.add((current_folder, current_base_name))
                 elif event.key == pygame.K_DELETE: # Delete/Clear
                      if selection_rect:
                         current_map_obj.clear_rect(selection_rect, current_map_obj.active_layer_name)
+                        modified_maps.add((current_folder, current_base_name))
                         status_msg = "Cleared Selection"
                         status_timer = pygame.time.get_ticks() + 1000
                 elif event.key == pygame.K_ESCAPE:
@@ -277,7 +288,7 @@ def main():
             if new_map_modal.active:
                 res = new_map_modal.handle_event(event)
                 if res and res['action'] == 'create_map':
-                     # ... [Existing create map logic] ...
+                     # ... [Implementation depends on NewMapModal details] ...
                      pass
                 elif res and res['action'] == 'cancel': new_map_modal.active = False
                 continue
@@ -301,15 +312,16 @@ def main():
                     editor_mode = "BUILDING"
                     current_file_tree = building_file_tree
                     current_map_obj = building_map
-                    current_root_dir = BUILDINGS_DIR
                     
-                    # Refresh tree and load new building (resizing handled in load_map_layers)
                     building_file_tree.refresh()
-                    load_map_layers(building_map, b_name, BUILDINGS_DIR)
                     
+                    current_folder = "" # Buildings are flat
+                    current_root_dir = BUILDINGS_DIR
                     current_base_name = b_name
                     current_building_name = b_name
-                    building_file_tree.selected_map = b_name
+                    
+                    load_map_layers(building_map, b_name, BUILDINGS_DIR)
+                    building_file_tree.selected_map = ("", b_name)
                     
                     sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
                     sidebar.active_tab = "Tiles" 
@@ -326,12 +338,31 @@ def main():
                     current_file_tree = map_file_tree
                     current_map_obj = main_map
                     current_base_name = current_map_name
-                    current_root_dir = MAP_DIR
+                    
+                    # Restore map context
+                    if map_file_tree.selected_map:
+                        fld, name = map_file_tree.selected_map
+                        current_folder = fld
+                        current_base_name = name
+                    else:
+                        current_folder = ""
+                        # Keep existing base name or default
+                    
+                    current_root_dir = os.path.join(MAP_DIR, current_folder) if current_folder else MAP_DIR
+                    
                 else:
                     current_file_tree = building_file_tree
                     current_map_obj = building_map
                     current_base_name = current_building_name
-                    current_root_dir = BUILDINGS_DIR
+                    
+                    if building_file_tree.selected_map:
+                        fld, name = building_file_tree.selected_map
+                        current_folder = fld
+                        current_base_name = name
+                    else:
+                        current_folder = ""
+                        
+                    current_root_dir = os.path.join(BUILDINGS_DIR, current_folder) if current_folder else BUILDINGS_DIR
                     sidebar.active_tab = "Tiles"
             
             # Sidebar
@@ -348,15 +379,22 @@ def main():
             ft_res = current_file_tree.handle_event(event)
             if ft_res:
                 if ft_res['action'] == 'select_map':
-                    current_base_name = ft_res['map_name']
-                    if editor_mode == "MAP": current_map_name = current_base_name
-                    else: current_building_name = current_base_name
+                    folder = ft_res['folder']
+                    map_name = ft_res['map_name']
                     
-                    load_map_layers(current_map_obj, current_base_name, current_root_dir)
-                    modified_maps.discard(current_base_name)
+                    current_folder = folder
+                    current_base_name = map_name
+                    
+                    root_base = MAP_DIR if editor_mode == "MAP" else BUILDINGS_DIR
+                    current_root_dir = os.path.join(root_base, folder) if folder else root_base
+                    
+                    if editor_mode == "MAP": current_map_name = map_name
+                    else: current_building_name = map_name
+                    
+                    load_map_layers(current_map_obj, map_name, current_root_dir)
+                    modified_maps.discard((folder, map_name))
                     
                 elif ft_res['action'] == 'toggle_visibility':
-                     # FIX: Update Map object properties based on FileTree action
                      layer_name = ft_res['layer_name']
                      properties = ft_res['properties']
                      if layer_name in current_map_obj.layer_properties:
@@ -372,7 +410,7 @@ def main():
                 elif tb_action == "NEW BUILDING": new_building_modal.active = True
                 elif tb_action == "SAVE MAP":
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
-                    modified_maps.discard(current_base_name)
+                    modified_maps.discard((current_folder, current_base_name))
                     status_msg = "Saved!"
                     status_timer = pygame.time.get_ticks() + 1000
                     if editor_mode == "BUILDING":
@@ -387,6 +425,7 @@ def main():
                 elif tb_action == "FILL":
                     if selection_rect and sidebar.selected_tile:
                         current_map_obj.fill_rect(selection_rect, sidebar.selected_tile, current_map_obj.active_layer_name)
+                        modified_maps.add((current_folder, current_base_name))
                         status_msg = "Filled Selection!"
                         status_timer = pygame.time.get_ticks() + 1000
                     elif not selection_rect:
@@ -409,9 +448,9 @@ def main():
                     if selection_rect:
                         current_map_obj.clear_rect(selection_rect, current_map_obj.active_layer_name)
                     else:
-                        # Clear whole layer
                         r = pygame.Rect(0, 0, current_map_obj.width, current_map_obj.height)
                         current_map_obj.clear_rect(r, current_map_obj.active_layer_name)
+                    modified_maps.add((current_folder, current_base_name))
                         
                 elif tb_action == "COPY":
                     if selection_rect:
@@ -421,18 +460,19 @@ def main():
 
                 elif tb_action == "PASTE":
                     if clipboard:
-                        # Paste at top-left of screen or center? Let's assume selection rect top left or 0,0
                         tx, ty = (selection_rect.x, selection_rect.y) if selection_rect else (0,0)
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
+                        modified_maps.add((current_folder, current_base_name))
                         status_msg = "Pasted!"
                         status_timer = pygame.time.get_ticks() + 1000
 
-                # Spawns
-                elif tb_action == "PLAYER SPAWN": tile_to_place = "P_SPAWN"; is_selecting=False
-                elif tb_action == "ZOMBIE SPAWN": tile_to_place = "Z_SPAWN"; is_selecting=False
-                elif tb_action == "ITEM SPAWN": tile_to_place = "ITEM"; is_selecting=False
-                elif tb_action == "STAIR L1": tile_to_place = "L1"; is_selecting=False
-                elif tb_action == "STAIR L2": tile_to_place = "L2"; is_selecting=False
+                elif tb_action in ["PLAYER SPAWN", "ZOMBIE SPAWN", "ITEM SPAWN", "STAIR L1", "STAIR L2"]:
+                     map_map = {
+                         "PLAYER SPAWN": "P_SPAWN", "ZOMBIE SPAWN": "Z_SPAWN",
+                         "ITEM SPAWN": "ITEM", "STAIR L1": "L1", "STAIR L2": "L2"
+                     }
+                     tile_to_place = map_map[tb_action]
+                     is_selecting = False
 
             # Map Interaction
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -451,18 +491,18 @@ def main():
                         
                         elif editor_mode == "MAP" and sidebar.selected_building and sidebar.active_tab == "Builds":
                             paste_building_on_map(current_map_obj, sidebar.selected_building, BUILDINGS_DIR, map_x, map_y)
-                            modified_maps.add(current_base_name)
+                            modified_maps.add((current_folder, current_base_name))
                         
                         elif sidebar.selected_tile or tile_to_place:
                             t = tile_to_place if tile_to_place else sidebar.selected_tile
                             t = None if t == "eraser" else t
                             current_map_obj.set_tile(map_x, map_y, t)
-                            modified_maps.add(current_base_name)
+                            modified_maps.add((current_folder, current_base_name))
 
             if event.type == pygame.MOUSEBUTTONUP: 
                 dragging = False
                 if event.button == 1 and is_selecting and selection_start:
-                    selection_start = None # Finish selection drag
+                    selection_start = None
 
             if event.type == pygame.MOUSEMOTION:
                 mx, my = event.pos
@@ -477,7 +517,6 @@ def main():
                         map_x = int(((mx - camera_offset_x) / current_zoom) // TILE_SIZE)
                         map_y = int(((my - camera_offset_y) / current_zoom) // TILE_SIZE)
                         
-                        # Update selection rect
                         x1, y1 = selection_start
                         x2, y2 = map_x, map_y
                         selection_rect = pygame.Rect(min(x1, x2), min(y1, y2), abs(x2-x1)+1, abs(y2-y1)+1)
@@ -490,7 +529,6 @@ def main():
         current_map_obj.render(screen, map_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
         draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
 
-        # Selection highlight
         if selection_rect:
              sx = selection_rect.x * TILE_SIZE * current_zoom + camera_offset_x
              sy = selection_rect.y * TILE_SIZE * current_zoom + camera_offset_y
@@ -498,14 +536,13 @@ def main():
              sh = selection_rect.height * TILE_SIZE * current_zoom
              pygame.draw.rect(screen, YELLOW, (sx, sy, sw, sh), 2)
 
-        # Ghost Building Preview (Only in MAP mode)
+        # Ghost Building Preview
         if editor_mode == "MAP" and sidebar.selected_building and sidebar.active_tab == "Builds" and map_view_rect.collidepoint(pygame.mouse.get_pos()):
              mx, my = pygame.mouse.get_pos()
              gx = int(((mx - camera_offset_x) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_x
              gy = int(((my - camera_offset_y) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_y
              
-             # Draw a box indicating placement with CORRECT SIZE
-             dims = sidebar.building_dimensions.get(sidebar.selected_building, (1, 1)) # (cols, rows)
+             dims = sidebar.building_dimensions.get(sidebar.selected_building, (1, 1))
              b_w = dims[0] * TILE_SIZE * current_zoom
              b_h = dims[1] * TILE_SIZE * current_zoom
              
@@ -513,7 +550,9 @@ def main():
 
         draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect, FONT)
         
-        current_file_tree.draw(screen, current_base_name, current_map_obj.active_layer_name, modified_maps)
+        # Pass current_folder to file tree draw to properly highlight selection
+        current_file_tree.draw(screen, current_base_name, current_folder, current_map_obj.active_layer_name, modified_maps)
+        
         sidebar.draw(screen)
         toolbar.draw(screen)
         

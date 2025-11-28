@@ -1,0 +1,10 @@
+dirty_top_right_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_01,dirty_top_left_01
+dirty_right_01,@@,@@,window_02,@@,@@,window_02,@@,@@,dirty_left_01
+dirty_right_01,@@,house_wardrobe,house_small_library,house_fridge,house_cupboard_01,house_stove,house_shink,@@,dirty_left_01
+dirty_right_01,window_02,house_bed_right,,,,,,window_02,dirty_left_01
+dirty_right_01,@@,,,,,,house_table,@@,dirty_left_01
+dirty_right_01,@@,,crate,crate,,,house_bench,@@,dirty_left_01
+dirty_right_01,@@,door_02_close,@@,@@,door_02_close,@@,window_02,@@,dirty_left_01
+dirty_right_01,@@,house_toilet_right,house_bath_left,@@,dirty_01,dirty_bottom_01,dirty_bottom_01,dirty_bottom_01,dirty_bottom_left_01
+dirty_right_01,@@,@@,window_02,@@,dirty_left_01,,,,
+dirty_bottom_right_01,dirty_bottom_01,dirty_bottom_01,dirty_bottom_01,dirty_bottom_01,dirty_bottom_left_01,,,,

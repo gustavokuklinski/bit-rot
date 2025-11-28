@@ -235,6 +235,46 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     clickable_rects['name_input'] = name_input_rect
 
+    # --- NEW: Draw World Seed Input ---
+    seed_y = name_input_rect.bottom + 10
+    game.virtual_screen.blit(font.render("World Seed (N0Seed):", True, WHITE), (preset_body_rect.x + padding, seed_y))
+    
+    seed_input_rect = pygame.Rect(preset_body_rect.x + padding, seed_y + 25, preset_body_rect.width - padding*2, 30)
+    pygame.draw.rect(game.virtual_screen, (50, 50, 50), seed_input_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, seed_input_rect, 1)
+    
+    seed_text = state.get('world_seed', "")
+    # Placeholder text if empty
+    if not seed_text:
+        placeholder = font.render("Ex: 30XYZ (Random if empty)", True, GRAY)
+        game.virtual_screen.blit(placeholder, (seed_input_rect.x + 5, seed_input_rect.y + 5))
+    else:
+        seed_surf = font.render(seed_text, True, WHITE)
+        game.virtual_screen.blit(seed_surf, (seed_input_rect.x + 5, seed_input_rect.y + 5))
+
+    if state.get('seed_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
+        cx = seed_input_rect.x + 5 + font.size(seed_text)[0]
+        pygame.draw.line(game.virtual_screen, WHITE, (cx, seed_input_rect.y + 5), (cx, seed_input_rect.bottom - 5), 2)
+        
+    clickable_rects['seed_input'] = seed_input_rect
+    # ----------------------------------
+
+    # [Adjust Buttons Y position to account for the new input field]
+    # Update y + 80 to y + 150 (approx) or use seed_input_rect.bottom
+    buttons_y = seed_input_rect.bottom + 15 
+
+    btn_width = 80
+    btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
+    
+    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, buttons_y, btn_width, 30)
+    # ... rest of button definitions using buttons_y ...
+    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
+    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
+    
+    # [Update Load Dropdown position]
+    load_dd_rect = pygame.Rect(preset_body_rect.x + padding, save_btn_rect.bottom + 15, preset_body_rect.width - padding*2, 30)
+
+
     # 2. Buttons
     btn_width = 80
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
@@ -723,6 +763,8 @@ def run_player_setup(game):
 
         state['player_name'] = fake.name()
         state['name_input_active'] = False
+        state['world_seed'] = ""
+        state['seed_input_active'] = False
         state['preset_list'] = ["None"]
         state['selected_preset'] = "None"
         state['preset_dropdown_active'] = False
@@ -847,6 +889,16 @@ def run_player_setup(game):
 
                     elif len(state['player_name']) <= 20: 
                         state['player_name'] += event.unicode
+                    
+                if state.get('seed_input_active'):
+                    if event.key == pygame.K_BACKSPACE:
+                        state['world_seed'] = state['world_seed'][:-1]
+                    elif event.key == pygame.K_RETURN:
+                        state['seed_input_active'] = False
+                    elif len(state.get('world_seed', "")) <= 10: # Limit length
+                        # Allow alphanumeric and 0 only
+                        if event.unicode.isalnum():
+                            state['world_seed'] += event.unicode.upper()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if back_btn.collidepoint(mouse_pos):
@@ -965,6 +1017,40 @@ def run_player_setup(game):
 
                 if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos): state['name_input_active'] = True
                 else: state['name_input_active'] = False
+
+                if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
+                    state['seed_input_active'] = True
+                    state['name_input_active'] = False # Deactivate name
+                else:
+                    state['seed_input_active'] = False
+                # ------------------------------------
+                
+                if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
+                    if state.get('total_trait_cost', 0) == 0:
+                        # 1. [MOVED UP] Define final_player_data FIRST
+                        final_player_data = state['base_data'].copy()
+                        final_player_data['attributes'] = state['final_attrs']
+                        final_player_data['clothes'] = state['chosen_clothes']
+                        final_player_data['name'] = state.get('player_name', "Player")
+                        final_player_data['sex'] = state['base_data'].get('sex', 'Male')
+                        final_player_data['traits'] = state['chosen_traits']
+                        final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
+                        final_player_data['sounds'] = { 'steps': 'steps.ogg' }
+                        
+                        # --- NEW: Generate Seed if empty ---
+                        raw_seed = state.get('world_seed', "").strip()
+                        if not raw_seed:
+                            # Generate random: Grid size 3-6, Separator 0, Random alphanumeric 5 chars
+                            rnd_size = random.randint(3, 8)
+                            rnd_str = "".join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=5))
+                            raw_seed = f"{rnd_size}0{rnd_str}"
+                        
+                        final_player_data['world_seed'] = raw_seed
+                        # -----------------------------------
+
+                        game.start_new_game(final_player_data)
+                        game.game_state = 'PLAYING'
+                        return
 
                 if state.get('active_dropdown'):
                     for slot_name, option_name, option_rect in clickable_rects["dropdown_options"]:

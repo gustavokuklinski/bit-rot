@@ -23,6 +23,10 @@ class Item:
         self.spread_angle = spread_angle
         self.image = self.load_sprite(sprite_file)
         self.rect = pygame.Rect(0, 0, TILE_SIZE, TILE_SIZE)
+        
+        self.x = 0
+        self.y = 0
+
         if self.item_type in ['backpack', 'container']:
             self.inventory = []
         self.color = color

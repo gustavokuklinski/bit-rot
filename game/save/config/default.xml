@@ -44,7 +44,7 @@
         <item_text_spawn_chance_multiplier name="Text (ID, Newspaper)" value="1.0"/>
     </item_spawning>
     <zombie>
-        <speed name="Speed" value="1"/>
+        <speed name="Speed" value="0.8"/>
         <drop name="Drop" value="1"/>
         <detection name="Player detection tiles" value="10"/>
         <wander name="Wandering" value="true"/>
