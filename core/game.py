@@ -487,9 +487,19 @@ class Game:
 
         # 4. Initialize Generator with the specific OUTPUT folder
         generator = ProceduralGenerator(self, output_folder=map_path)
+        raw_seed = player_data.get('world_seed', "DEFAULT")
+        if not raw_seed: 
+            raw_seed = "DEFAULT"
+        if '0' in raw_seed:
+            parts = raw_seed.split('0', 1)
+            # If the first part is digits, it's likely a size prefix
+            if parts[0].isdigit():
+                raw_seed = parts[1]
+                if not raw_seed: raw_seed = "DEFAULT"
 
-        world_seed = player_data.get('world_seed', "30DEFAULT") # Default pattern if missing
-        print(f"Generating world with Pattern/Seed: {world_seed}")
+        # Prepend '30' to force 3x3 grid size for the generator
+        world_seed = f"40{raw_seed}"
+        print(f"Generating world with Forced 3x3 Pattern/Seed: {world_seed}")
         
         # Generate the world directly into the save folder
         start_map = generator.generate_world(seed_pattern=world_seed, regenerate=regenerate_map)

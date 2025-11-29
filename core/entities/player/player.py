@@ -116,6 +116,8 @@ class Player:
         self.current_aim_factor = 1.0 
         self.is_aiming = False
 
+        self.vehicle = None
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -128,6 +130,30 @@ class Player:
             print(f"Warning: Could not load player sprite '{sprite_path}': {e}")
             return None
 
+    def enter_vehicle(self, vehicle, game):
+        # TODO: Check for Key here in future
+        self.vehicle = vehicle
+        self.x = vehicle.x 
+        self.y = vehicle.y
+        self.rect.topleft = (self.x, self.y)
+        
+        # Remove the car from obstacles so we can move "inside" it
+        if vehicle.rect in game.obstacles:
+            game.obstacles.remove(vehicle.rect)
+        print(f"Entered {vehicle.name}")
+    
+    # [FIX] Updated exit_vehicle to modify game obstacles
+    def exit_vehicle(self, game):
+        if self.vehicle:
+            # Add car back to obstacles
+            if self.vehicle.rect not in game.obstacles:
+                game.obstacles.append(self.vehicle.rect)
+            
+            # Place player slightly to the side (right) to avoid stuck logic
+            self.x += TILE_SIZE 
+            self.rect.topleft = (self.x, self.y)
+            self.vehicle = None
+            print("Exited vehicle")
 
     def update_aim(self, is_moving):
         if not self.is_aiming:
@@ -226,35 +252,69 @@ class Player:
         self.progression.process_kill(self, weapon, zombie)
 
     def update_position(self, obstacles, zombies):
-        # Move on X axis first
-        self.x += self.vx
-        self.rect.x = round(self.x)
+        if self.vehicle:
+            # --- DRIVE MODE ---
+            # Move Vehicle X
+            self.vehicle.x += self.vx
+            self.vehicle.rect.x = round(self.vehicle.x)
+            
+            # Vehicle Collision X
+            for obstacle in obstacles:
+                if self.vehicle.rect.colliderect(obstacle):
+                    if self.vx > 0: self.vehicle.rect.right = obstacle.left
+                    elif self.vx < 0: self.vehicle.rect.left = obstacle.right
+                    self.vehicle.x = self.vehicle.rect.x
+            
+            # Move Vehicle Y
+            self.vehicle.y += self.vy
+            self.vehicle.rect.y = round(self.vehicle.y)
+            
+            # Vehicle Collision Y
+            for obstacle in obstacles:
+                if self.vehicle.rect.colliderect(obstacle):
+                    if self.vy > 0: self.vehicle.rect.bottom = obstacle.top
+                    elif self.vy < 0: self.vehicle.rect.top = obstacle.bottom
+                    self.vehicle.y = self.vehicle.rect.y
+            
+            # Sync Player to Vehicle
+            self.x = self.vehicle.x
+            self.y = self.vehicle.y
+            self.rect.topleft = (int(self.x), int(self.y))
+            
+        else:
+            # --- WALK MODE (Existing) ---
+            self.x += self.vx
+            self.rect.x = round(self.x)
 
-        # Check for X-axis collisions with obstacles
-        for obstacle in obstacles:
-            if self.rect.colliderect(obstacle):
-                if self.vx > 0:  # Moving right
-                    self.rect.right = obstacle.left
-                elif self.vx < 0:  # Moving left
-                    self.rect.left = obstacle.right
-                self.x = self.rect.x
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    if self.vx > 0: self.rect.right = obstacle.left
+                    elif self.vx < 0: self.rect.left = obstacle.right
+                    self.x = self.rect.x
 
-        # Move on Y axis separately
-        self.y += self.vy
-        self.rect.y = round(self.y)
+            self.y += self.vy
+            self.rect.y = round(self.y)
 
-        # Check for Y-axis collisions with obstacles
-        for obstacle in obstacles:
-            if self.rect.colliderect(obstacle):
-                if self.vy > 0:  # Moving down
-                    self.rect.bottom = obstacle.top
-                elif self.vy < 0:  # Moving up
-                    self.rect.top = obstacle.bottom
-                self.y = self.rect.y
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    if self.vy > 0: self.rect.bottom = obstacle.top
+                    elif self.vy < 0: self.rect.top = obstacle.bottom
+                    self.y = self.rect.y
 
     def draw(self, surface, offset_x, offset_y, is_aiming=False):
         draw_rect = self.rect.move(offset_x, offset_y)
         
+        
+        if self.vehicle:
+            # We don't draw the player rect/sprite, we draw the vehicle image
+            # Vehicle position is already updated in update_position
+            # Draw using vehicle coords + offset
+            veh_draw_pos = (self.vehicle.x + offset_x, self.vehicle.y + offset_y)
+            surface.blit(self.vehicle.image, veh_draw_pos)
+            return # Skip drawing player sprite
+
+        draw_rect = self.rect.move(offset_x, offset_y)
+
         #if self.image:
         #    surface.blit(self.image, draw_rect)
         current_image = None

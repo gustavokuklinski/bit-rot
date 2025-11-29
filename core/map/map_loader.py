@@ -6,6 +6,7 @@ from core.data.config import *
 from core.entities.item.item import Item, Container
 from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
+from core.entities.vehicle.vehicle import Vehicle
 
 def load_map_from_file(filepath):
     """Loads a map layout from a CSV file."""
@@ -55,11 +56,13 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
             if char and char != ' ': # Ignore empty cells in ground layer
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
+                    
                     #if tile_def['is_obstacle']:
                         #print(f"Warning: Ground layer tile '{char}' at ({x},{y}) is marked as obstacle. Ground tiles should not be obstacles.")
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     renderable_tiles.append((tile_def['image'], rect))
+                    
                 else:
                     print(f"Warning: Undefined ground tile character '{char}' at ({x},{y}).")
 

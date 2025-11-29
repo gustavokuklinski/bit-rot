@@ -1,0 +1,22 @@
+<map name="car_jeep" type="maptile_car" char="car_jeep" is_obstacle="true">
+    <capacity value="10" />
+    <car>
+        <capacity value="4" />
+        <max_speed value="5" />
+        <key value="true" />
+        <gas value="1.0" />
+        <motor value="1.0" />
+        <battery value="1.0" />
+        <tire_front_left value="1.0" />
+        <tire_front_right value="1.0" />
+        <tire_back_left value="1.0" />
+        <tire_back_right value="1.0" />
+        <light_back_left value="1.0" />
+        <light_back_right value="1.0" />
+        <light_front_left value="1.0" />
+        <light_back_right value="1.0" />
+    </car>
+    <visuals>
+        <sprite file="car_jeep.png" />
+    </visuals>
+</map>
