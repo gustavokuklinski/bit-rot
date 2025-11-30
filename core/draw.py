@@ -17,6 +17,7 @@ from core.ui.messages_modal import draw_messages_modal
 from core.ui.text_modal import draw_text_modal
 from core.ui.mobile_modal import draw_mobile_modal
 from core.ui.alerts import draw_player_alerts
+from core.ui.vehicle_modal import draw_vehicle_modal
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -178,13 +179,37 @@ def draw_game(game):
     for item in game.items_on_ground:
          if getattr(item, 'state', 'off') == 'on':
             light_sources.append({'item': item, 'owner': 'ground'})
+    
+    # [NEW] Add Vehicle Lights - Checking both vehicles list AND containers
+    if hasattr(game, 'vehicles'):
+        for vehicle in game.vehicles:
+            if getattr(vehicle, 'lights', 'off') == 'on' and vehicle.battery > 0:
+                light_sources.append({'item': vehicle, 'owner': 'vehicle'})
+
+    # Also check containers for vehicles (as vehicles behave as containers)
+    for container in game.containers:
+        if getattr(container, 'item_type', '') == 'vehicle':
+             # Only add if not already added (avoid duplicates)
+             if not any(ls['item'] == container for ls in light_sources):
+                 if getattr(container, 'lights', 'off') == 'on' and container.battery > 0:
+                     light_sources.append({'item': container, 'owner': 'vehicle'})
 
     if light_texture:
         # 3. Draw all dynamic lights (lanterns)
         # (This section is correct)
         for light_info in light_sources:
             light = light_info['item']
-            radius_world_pixels = light.current_light_radius
+            
+            # [FIX] Ensure we have a valid radius, using property for vehicles
+            if hasattr(light, 'current_light_radius'):
+                 radius_world_pixels = light.current_light_radius
+            else:
+                 radius_world_pixels = 0
+            
+            # Skip if 0 radius (lights off or no battery)
+            if radius_world_pixels <= 0:
+                continue
+                
             radius_view_pixels = int(radius_world_pixels / zoom)
             
             if radius_view_pixels <= 0:
@@ -200,6 +225,11 @@ def draw_game(game):
                     offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.75
                     offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.75
                     light_rect.center = (px_view + offset_lx, py_view + offset_ly)
+                elif light_info['owner'] == 'vehicle':
+                    # [NEW] Calculate center for vehicle
+                    pos_x_view = light.rect.centerx + offset_x
+                    pos_y_view = light.rect.centery + offset_y
+                    light_rect.center = (pos_x_view, pos_y_view)
                 else:
                     pos_x_view = light.rect.centerx + offset_x
                     pos_y_view = light.rect.centery + offset_y
@@ -391,6 +421,8 @@ def draw_game(game):
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
     for modal in game.modals:
+        
+
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
         if modal['type'] == 'status':
@@ -428,6 +460,11 @@ def draw_game(game):
         elif modal['type'] == 'mobile':
             buttons = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
+        
+        elif modal['type'] == 'vehicle':
+            buttons = draw_vehicle_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
+            game.modal_buttons.extend(buttons)
+        
 
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)

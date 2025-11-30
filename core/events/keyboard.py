@@ -182,14 +182,22 @@ def handle_keyboard_events(game, event):
                 if game.player:
                     game.player.reload_active_weapon()
 
-            if event.key == pygame.K_e:
-                nearby_containers = game.find_nearby_containers()
-                if nearby_containers:
-                    # If containers are nearby, toggle the inspection window
-                    toggle_nearby_modal(game)
+            if event.key == pygame.K_q:
+                # 1. Check if a vehicle modal is open
+                vehicle_found = None
+                for modal in game.modals:
+                    if modal['type'] == 'vehicle':
+                        vehicle_found = modal['vehicle']
+                        break
+                
+                if vehicle_found:
+                    vehicle_found.toggle_engine()
                 else:
-                    # Otherwise, try to grab a loose item on the ground
-                    try_grab_item(game)
+                    print("No vehicle nearby.")
+
+            if event.key == pygame.K_e:
+                
+                try_grab_item(game)
             
             if event.key == pygame.K_SPACE:
                 if game.player and game.player.is_sleeping:

@@ -13,6 +13,7 @@ from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.placement import find_free_tile
 
+
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
         # (Existing code for modal buttons: close, minimize)
@@ -147,16 +148,20 @@ def handle_mouse_down(game, event, mouse_pos):
         for modal in reversed(game.modals):
             if modal['rect'].collidepoint(mouse_pos):
                 topmost_clicked_modal = modal
-                break # Found the topmost modal under the mouse
+                break
 
         if topmost_clicked_modal:
             # a. Bring it to the front (if it's not already)
             if game.modals[-1] != topmost_clicked_modal:
                 game.modals.remove(topmost_clicked_modal)
                 game.modals.append(topmost_clicked_modal)
-            
+
+            if hasattr(topmost_clicked_modal, 'handle_event'):
+                if topmost_clicked_modal.handle_event(event):
+                    return
+
             # b. NOW, check for tab clicks *only on this modal*
-            if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages'] and 'tab_rects' in topmost_clicked_modal:
+            if topmost_clicked_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle'] and 'tab_rects' in topmost_clicked_modal:
                 tab_rects = topmost_clicked_modal.get('tab_rects', [])
                 tabs_data = topmost_clicked_modal.get('tabs_data', [])
                 for i, tab_rect in enumerate(tab_rects):
@@ -165,6 +170,20 @@ def handle_mouse_down(game, event, mouse_pos):
                             topmost_clicked_modal['active_tab'] = tabs_data[i]['label']
                             return
             
+            if topmost_clicked_modal['type'] == 'vehicle' and topmost_clicked_modal.get('active_tab') == 'Info':
+                # Light Toggles
+                rects = topmost_clicked_modal.get('rects', {})
+                veh = topmost_clicked_modal['vehicle']
+                if 'lights_on' in rects and rects['lights_on'].collidepoint(mouse_pos):
+                    veh.toggle_lights() # [MODIFIED] Use the new toggle method
+                    return
+                if 'lights_off' in rects and rects['lights_off'].collidepoint(mouse_pos):
+                    veh.toggle_lights() # [MODIFIED] Use the new toggle method
+                    return
+                
+                
+
+
             if game.context_menu['active']:
                 handle_context_menu_click(game, mouse_pos)
                 return
@@ -210,7 +229,39 @@ def handle_mouse_up(game, event, mouse_pos):
             if game.dragged_item:
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None # Added gear_stack_split
+
+                for modal in reversed(game.modals):
+                    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Info':
+                        if 'equipment_rects' in modal:
+                            for slot_name, slot_rect in modal['equipment_rects'].items():
+                                if slot_rect.collidepoint(mouse_pos):
+                                    vehicle = modal['vehicle']
+                                    
+                                    valid_drop = vehicle.can_equip(game.dragged_item, slot_name)
+                                    
+                                    if valid_drop:
+                                        # Swap Logic (using add_equipment)
+                                        # add_equipment returns the old item if one was swapped out
+                                        old_item = vehicle.add_equipment(game.dragged_item, slot_name)
+                                        
+                                        if old_item:
+                                            # Put the old item on the cursor (swap)
+                                            game.dragged_item = old_item
+                                            dropped_successfully = False 
+                                        else:
+                                            # Placed successfully, nothing returned
+                                            dropped_successfully = True
+                                    else:
+                                        print(f"Cannot place {game.dragged_item.name} in {slot_name} slot.")
+                                    
+                                    break
+                                    
+                        if dropped_successfully or (not dropped_successfully and game.dragged_item):
+                            break
                 
+                if dropped_successfully:
+                    game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                    return 
                
                 # --- 1. Check for Drop on BELT ---
                 for i_target in range(len(game.player.belt)):
@@ -547,6 +598,12 @@ def handle_mouse_up(game, event, mouse_pos):
                                     container_obj.inventory[i_orig].load += game.dragged_item.load
                             except Exception as e:
                                 print(f"Stack bounce back failed: {e}")
+                        elif type_orig == 'vehicle_equipment':
+                            vehicle = container_info[0]
+                            slot_name = i_orig
+                            vehicle.equipment[slot_name] = game.dragged_item
+                            vehicle.update_stats_from_equipment()
+
                         else:
                             game.player.inventory.append(game.dragged_item) # Failsafe
                 
@@ -711,6 +768,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                 elif type_orig == 'nearby':
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
+                
             
 
             game.drag_candidate = None 
@@ -779,6 +837,68 @@ def handle_context_menu_click(game, mouse_pos):
             container_item = game.context_menu.get('container_item')
 
             print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
+
+            # [MODIFIED] Changed 'Inspect' to 'Vehicle options'
+            if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
+                # Close existing vehicle modals
+                game.modals = [m for m in game.modals if m['type'] != 'vehicle']
+                
+                new_modal = {
+                    'id': uuid.uuid4(),
+                    'type': 'vehicle',
+                    'vehicle': item,
+                    'position': (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200),
+                    'rect': pygame.Rect(0, 0, 400, 320), 
+                    'minimized': False,
+                    'is_dragging': False,
+                    'drag_offset': (0, 0),
+                    'active_tab': 'Info'
+                }
+                # Set initial rect pos
+                new_modal['rect'].topleft = new_modal['position']
+                
+                game.modals.append(new_modal)
+                clicked_on_menu = True
+                return 
+
+            # [NEW] Add Trunk option
+            elif option == 'Trunk':
+                 modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                 if not modal_exists:
+                    new_container_modal = {
+                        'id': uuid.uuid4(),
+                        'type': 'container',
+                        'item': item,
+                        'position': game.last_modal_positions['container'],
+                        'is_dragging': False, 'drag_offset': (0, 0),
+                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                        'minimized': False
+                    }
+                    game.modals.append(new_container_modal)
+                 clicked_on_menu = True
+
+
+            elif option == 'Open':
+                # CHECK: If it's a vehicle, DO NOT open standard container modal
+                if getattr(item, 'item_type', '') != 'vehicle':
+                     # Standard Open logic for backpacks/crates
+                     if getattr(item, 'inventory', None) is not None:
+                        modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                        if not modal_exists:
+                            new_container_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'container',
+                                'item': item,
+                                'position': game.last_modal_positions['container'],
+                                'is_dragging': False, 'drag_offset': (0, 0),
+                                'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                                'minimized': False
+                            }
+                            game.modals.append(new_container_modal)
+                clicked_on_menu = True
+             
+            
+
 
             if option == 'Status':
                 toggle_status_modal(game)
@@ -952,6 +1072,7 @@ def handle_context_menu_click(game, mouse_pos):
                         game.items_on_ground.append(dropped_item)
 
             elif option == 'Open' or option == 'Read' or option == 'Inspect':
+                
                 # The Mobile context window
                 if getattr(item, 'item_type', None) == 'mobile':
                     modal_exists = any(m['type'] == 'mobile' and m['item'] == item for m in game.modals)
@@ -1232,6 +1353,17 @@ def handle_right_click(game, mouse_pos):
             grid_y = int(world_pos[1] // TILE_SIZE)
             
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
+
+            if tile and tile.type == "maptile_car":
+                # 1. Get the vehicle entity associated with this tile
+                vehicle = game.map_manager.get_vehicle_by_tile(tile)
+                
+                if vehicle:
+                    # Instead of opening immediately, we set it as the clicked item.
+                    # This allows the Context Menu logic below to generate the "Inspect" button.
+                    clicked_item = vehicle
+                    click_source = 'container_map' # Triggers the 'Inspect' option in context menu logic
+                    click_index = 0
             
             # Check distance to tile center
             tile_center_x = (grid_x * TILE_SIZE) + (TILE_SIZE / 2)
@@ -1303,7 +1435,11 @@ def handle_right_click(game, mouse_pos):
                     options.append('Open')
         
         elif click_source == 'container_map':
-            options = ['Inspect']
+            # [MODIFIED] Distinguish vehicles
+            if getattr(clicked_item, 'item_type', '') == 'vehicle':
+                options = ['Vehicle options', 'Trunk']
+            else:
+                options = ['Inspect']
 
         elif click_source == 'nearby':
             if 'Drop' in options:
@@ -1344,6 +1480,21 @@ def handle_left_click_drag_candidate(game, mouse_pos):
 
     # --- Run drag checks ONLY on the topmost_modal ---
     modal = topmost_modal
+    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Info':
+        if 'equipment_rects' in modal:
+            for slot_name, slot_rect in modal['equipment_rects'].items():
+                if slot_rect.collidepoint(mouse_pos):
+                    vehicle = modal['vehicle']
+                    item = vehicle.equipment.get(slot_name)
+                    if item:
+                        # START DRAG from Vehicle Slot
+                        game.drag_candidate = (item, (slot_name, 'vehicle_equipment', vehicle))
+                        game.drag_start_pos = mouse_pos
+                        game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                        
+                        # Remove from slot immediately (visual feedback)
+                        vehicle.equipment[slot_name] = None
+                        return
 
     if modal['type'] == 'nearby':
         active_tab_label = modal.get('active_tab')

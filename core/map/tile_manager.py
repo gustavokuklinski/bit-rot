@@ -32,6 +32,7 @@ class TileManager:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
                                 definition = {
+                                    'name': root.get('name', 'Unknown'),
                                     'is_obstacle': is_obstacle,
                                     'image': image,
                                     'type': root.get('type'),
@@ -44,6 +45,38 @@ class TileManager:
                                 sound_node = root.find('sound')
                                 if sound_node is not None:
                                     definition['sound_src'] = sound_node.get('src')
+
+                                if root.get('type') == 'maptile_car':
+                                    car_node = root.find('car')
+                                    if car_node is not None:
+                                        definition['car_stats'] = {
+                                            'max_speed': car_node.find('max_speed').get('value', '10'),
+                                            'key': car_node.find('key').get('value'),
+                                            'fuel': car_node.find('fuel').get('value', '0'), # Changed from 'gas'
+                                            'motor': car_node.find('motor').get('value', '1'),
+                                            'battery': car_node.find('battery').get('value', '1')
+                                        }
+                                        
+                                        # Parse Lights specifically to get radius
+                                        lights_node = car_node.find('lights')
+                                        if lights_node is not None:
+                                            definition['car_stats']['lights'] = lights_node.get('value', 'off')
+                                            definition['car_stats']['lights_radius'] = lights_node.get('radius', '4')
+                                        else:
+                                            definition['car_stats']['lights'] = 'off'
+                                            definition['car_stats']['lights_radius'] = '4'
+
+                                    capacity_node = root.find('capacity')
+                                    if capacity_node is not None:
+                                        definition['capacity'] = int(capacity_node.get('value'))
+                                    loot_node = root.find('loot')
+                                    if loot_node is not None:
+                                        definition['loot'] = []
+                                        for item_node in loot_node.findall('item'):
+                                            definition['loot'].append({
+                                                'item': item_node.get('item'),
+                                                'chance': float(item_node.get('chance', '0'))
+                                            })
 
                                 if root.get('type') == 'maptile_container':
                                     capacity_node = root.find('capacity')

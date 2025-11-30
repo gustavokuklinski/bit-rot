@@ -152,12 +152,34 @@ def handle_input(game):
             if event.type == pygame.KEYDOWN:
                 # Block interactions if chatting
                 if not game.chat_active:
+                    # [FIXED LOGIC] Interaction Key 'E'
                     if event.key == pygame.K_e:
-                        player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
-                        if player_facing_grid_x is not None and player_facing_grid_y is not None:
-                            tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
-                            if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
-                                game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
+                        
+                        # 1. Exit Vehicle (Priority)
+                        if game.player.vehicle:
+                            game.player.exit_vehicle(game)
+                        
+                        else:
+                            # 2. Search for Vehicle to Enter
+                            found_vehicle = None
+                            for obj in game.containers:
+                                if getattr(obj, 'item_type', '') == 'vehicle':
+                                    dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, 
+                                                      game.player.rect.centery - obj.rect.centery)
+                                    # Use a reasonable distance (e.g., adjacent tile)
+                                    if dist < TILE_SIZE * 2.0:
+                                        found_vehicle = obj
+                                        break # Found one, stop searching
+                            
+                            if found_vehicle:
+                                game.player.enter_vehicle(found_vehicle, game)
+                            else:
+                                # 3. Fallback: Interact with Environment (Doors, etc.)
+                                player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
+                                if player_facing_grid_x is not None and player_facing_grid_y is not None:
+                                    tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
+                                    if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                                        game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
 
             handle_movement(game)
             if event.type == pygame.MOUSEBUTTONDOWN:

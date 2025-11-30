@@ -44,7 +44,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
 
     if not map_height or not map_width:
         print("Error: Base map layout is empty.")
-        return [], [], None, [], [], []
+        return [], [], None, [], [], [], []
 
     # 1. Process Ground Layer (Floor Tiles)
     if len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
@@ -54,14 +54,50 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
          for x, char in enumerate(row):
             if x >= map_width: break
             if char and char != ' ': # Ignore empty cells in ground layer
+                
+                # [FIX] Define position and rect here so they are available for use
+                pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+                rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
+
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
                     
-                    #if tile_def['is_obstacle']:
-                        #print(f"Warning: Ground layer tile '{char}' at ({x},{y}) is marked as obstacle. Ground tiles should not be obstacles.")
-                    pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
-                    rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
-                    renderable_tiles.append((tile_def['image'], rect))
+                    # --- START CHANGE ---
+                    if tile_def['type'] == 'maptile_car':
+                        # Create Vehicle Entity
+                        stats = tile_def.get('car_stats', {})
+                        cap = tile_def.get('capacity', 0)
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap)
+                        
+                        # Use the rect we created so it's the SAME object in both lists
+                        vehicle.rect = rect 
+                        
+                        containers.append(vehicle) # Add to entities
+                        
+                        if tile_def['is_obstacle']:
+                            obstacles.append(rect) # Add to physics
+                        
+                        # Do NOT add to renderable_tiles (entity draws itself)
+                    
+                    else:
+                        # Standard Tile
+                        renderable_tiles.append((tile_def['image'], rect))
+                        if tile_def['is_obstacle']:
+                            obstacles.append(rect) 
+                        
+                        if tile_def['type'] == 'maptile_container':
+                            items = []
+                            if 'loot' in tile_def:
+                                for loot_item in tile_def['loot']:
+                                    if random.random() < loot_item['chance']:
+                                        items.append(Item.create_from_name(loot_item['item']))
+                            capacity = tile_def.get('capacity', 0)
+                            container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                            container.rect = rect
+                            container.image = tile_def['image']
+                            containers.append(container)
+                    
+                    # renderable_tiles.append((tile_def['image'], rect)) 
                     
                 else:
                     print(f"Warning: Undefined ground tile character '{char}' at ({x},{y}).")
@@ -81,20 +117,31 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
 
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
-                    renderable_tiles.append((tile_def['image'], rect)) # Add visuals
-                    if tile_def['is_obstacle']:
-                        obstacles.append(rect) # Add collision rect
-                    if tile_def['type'] == 'maptile_container':
-                        items = []
-                        if 'loot' in tile_def:
-                            for loot_item in tile_def['loot']:
-                                if random.random() < loot_item['chance']:
-                                    items.append(Item.create_from_name(loot_item['item']))
-                        capacity = tile_def.get('capacity', 0)
-                        container = Container(name=tile_def['type'], items=items, capacity=capacity)
-                        container.rect = rect
-                        container.image = tile_def['image']
-                        containers.append(container)
+                    
+                    # Also check for cars in Base layer (where they usually are)
+                    if tile_def['type'] == 'maptile_car':
+                        stats = tile_def.get('car_stats', {})
+                        cap = tile_def.get('capacity', 0)
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap)
+                        vehicle.rect = rect 
+                        containers.append(vehicle)
+                        if tile_def['is_obstacle']:
+                            obstacles.append(rect)
+                    else:
+                        renderable_tiles.append((tile_def['image'], rect)) # Add visuals
+                        if tile_def['is_obstacle']:
+                            obstacles.append(rect) # Add collision rect
+                        if tile_def['type'] == 'maptile_container':
+                            items = []
+                            if 'loot' in tile_def:
+                                for loot_item in tile_def['loot']:
+                                    if random.random() < loot_item['chance']:
+                                        items.append(Item.create_from_name(loot_item['item']))
+                            capacity = tile_def.get('capacity', 0)
+                            container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                            container.rect = rect
+                            container.image = tile_def['image']
+                            containers.append(container)
                 else:
                     print(f"Warning: Undefined base tile character '{char}' at ({x},{y}).")
 
@@ -157,7 +204,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                                 if random.random() < loot_item['chance']:
                                     items.append(Item.create_from_name(loot_item['item']))
                         capacity = tile_def.get('capacity', 0)
-                        container = Container(name=tile_def['type'], items=items, capacity=capacity)
+                        container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                         container.rect = rect
                         container.image = tile_def['image']
                         containers.append(container)

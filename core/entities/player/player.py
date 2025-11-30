@@ -223,7 +223,8 @@ class Player:
         Calculates and applies final damage and infection to the player,
         including modifiers from traits.
         """
-        
+        if self.vehicle:
+            return 0, 0
         # 1. Get bonus percentages from progression
         # e.g., "Health: -30", "Infection: +15"
         health_bonus_perc = self.progression.get_health_bonus(self)
@@ -251,32 +252,61 @@ class Player:
     def process_kill(self, weapon, zombie):
         self.progression.process_kill(self, weapon, zombie)
 
-    def update_position(self, obstacles, zombies):
+    def update_position(self, obstacles, zombies, game):
         if self.vehicle:
-            # --- DRIVE MODE ---
-            # Move Vehicle X
-            self.vehicle.x += self.vx
-            self.vehicle.rect.x = round(self.vehicle.x)
+
+            if not self.vehicle.is_driveable():
+                # Cannot move
+                return
+
+            move_x = 0
+            move_y = 0
             
-            # Vehicle Collision X
-            for obstacle in obstacles:
-                if self.vehicle.rect.colliderect(obstacle):
-                    if self.vx > 0: self.vehicle.rect.right = obstacle.left
-                    elif self.vx < 0: self.vehicle.rect.left = obstacle.right
-                    self.vehicle.x = self.vehicle.rect.x
-            
-            # Move Vehicle Y
-            self.vehicle.y += self.vy
-            self.vehicle.rect.y = round(self.vehicle.y)
-            
-            # Vehicle Collision Y
-            for obstacle in obstacles:
-                if self.vehicle.rect.colliderect(obstacle):
-                    if self.vy > 0: self.vehicle.rect.bottom = obstacle.top
-                    elif self.vy < 0: self.vehicle.rect.top = obstacle.bottom
-                    self.vehicle.y = self.vehicle.rect.y
-            
-            # Sync Player to Vehicle
+            # Use vehicle specific max speed (scales with motor)
+            current_max_speed = self.vehicle.max_speed
+
+            # Only calculate movement if there is input
+            if self.vx != 0 or self.vy != 0:
+                input_magnitude = math.sqrt(self.vx**2 + self.vy**2)
+                if input_magnitude > 0:
+                    move_x = (self.vx / input_magnitude) * current_max_speed
+                    move_y = (self.vy / input_magnitude) * current_max_speed
+                    
+                    # [NEW] Fuel Consumption
+                    # Reduce load of the item in the 'fuel' slot
+                    fuel_item = self.vehicle.equipment['fuel']
+                    if fuel_item:
+                        # Consume ~0.01 load per frame of movement
+                        # Adjust 0.01 to change fuel efficiency
+                        fuel_item.load = max(0, fuel_item.load - 0.01)
+                    
+                    # Recharge battery slightly while driving
+                    self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
+
+            self.vehicle.move(move_x, move_y, obstacles)
+
+            # 2. Move Vehicle & Check Collisions (Walls)
+            self.vehicle.move(move_x, move_y, obstacles)
+
+            # [NEW] Zombie Collision Logic
+            # Check for zombies hitting the car rect
+            vehicle_rect = self.vehicle.rect
+            for zombie in zombies[:]: # Iterate copy to safely remove if needed
+                if vehicle_rect.colliderect(zombie.rect):
+                    # Car hits zombie
+                    damage_to_zombie = 100 # Kill or massive damage
+                    zombie.take_damage(damage_to_zombie, game)
+                    
+                    # Reduce Motor Status
+                    # "Every car hit reduces the motor status"
+                    self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) # -5% per hit
+                    print(f"Car hit zombie! Motor at {int(self.vehicle.motor*100)}%")
+                    self.vehicle.velocity[0] *= 0.5
+                    self.vehicle.velocity[1] *= 0.5
+                    print(f"Hit zombie with car for {damage_to_zombie} damage!")
+                    # Optional: slight bounce or visual shake could go here
+
+            # 4. Sync Player
             self.x = self.vehicle.x
             self.y = self.vehicle.y
             self.rect.topleft = (int(self.x), int(self.y))
@@ -477,7 +507,9 @@ class Player:
 
 
         keys = pygame.key.get_pressed()
-        is_moving = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+        has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+
+        is_moving = has_input and (self.vehicle is None)
 
         self.update_aim(is_moving)
         
@@ -504,7 +536,7 @@ class Player:
 
 
         self.progression.update(self, is_moving, game)
-
+        
         if current_time - self.last_decay_time >= core.data.config.DECAY_RATE_SECONDS:
 
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
@@ -801,6 +833,11 @@ class Player:
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
+
+        if getattr(item, 'item_type', '') == 'vehicle':
+             options.append("Inspect")
+             return options
+
         if isinstance(item, Corpse):
             options.append('Open')
             return options

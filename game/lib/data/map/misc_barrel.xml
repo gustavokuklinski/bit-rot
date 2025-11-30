@@ -1,5 +1,10 @@
-<map name="misc_barrel" type="maptile" char="misc_barrel" is_obstacle="true">
+<map name="misc_barrel" type="maptile_container" char="misc_barrel" is_obstacle="true">
     <visuals>
         <sprite file="misc_barrel.png" />
     </visuals>
+    <capacity value="10" />
+    <loot>
+        <item item="Car Gas" chance="0.3" />
+        <item item="Ducktype" chance="0.2" />
+    </loot>
 </map>

@@ -48,7 +48,7 @@ def get_nearby_zombies(zombie, grid, grid_size):
 
 
 def update_game_state(game):
-    game.player.update_position(game.obstacles, game.zombies)
+    game.player.update_position(game.obstacles, game.zombies, game)
 
     check_for_layer_teleport(game)
     
@@ -144,6 +144,10 @@ def update_game_state(game):
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)
                     print(f"Closed {container_item.name} because you moved away.")
+    
+    if game.map_manager and hasattr(game.map_manager, 'vehicles'):
+        for vehicle in game.map_manager.vehicles:
+            vehicle.update()
 
 def player_hit_zombie(player, zombie, game):
     progression = player.progression

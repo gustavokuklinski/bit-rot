@@ -41,6 +41,7 @@ from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_files, delete_save
 from core.messages import display_message, init_messages
 from core.map.generator import ProceduralGenerator
+from core.entities.vehicle.vehicle import Vehicle
 
 class Game:
     def __init__(self):
@@ -521,7 +522,7 @@ class Game:
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-        starter_items = ["Pistol 9mm", "Shotgun", "ID", "Axe", "Mobile off"]
+        starter_items = ["Mobile Off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
@@ -545,6 +546,43 @@ class Game:
             print("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
             self.player.x, self.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
             self.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+
+
+        # --- [NEW] SPAWN VEHICLE FROM TILE DEFINITIONS ---
+        # Spawns 2 tiles to the right of the player
+        car_x = self.player.x + (TILE_SIZE * 2)
+        car_y = self.player.y
+        
+        # Retrieve the definition using the char key defined in your XML (e.g., "car_jeep")
+        vehicle_char_key = "car_jeep" 
+        vehicle_def = self.tile_manager.definitions.get(vehicle_char_key)
+
+        if vehicle_def:
+            # Create Vehicle using data from XML/TileManager
+            test_car = Vehicle(
+                name=vehicle_def.get('name', 'Vehicle'), 
+                x=car_x, 
+                y=car_y, 
+                width=TILE_SIZE, 
+                height=TILE_SIZE, 
+                image=vehicle_def['image'], 
+                stats=vehicle_def.get('car_stats', {}), 
+                capacity=vehicle_def.get('capacity', 20)
+            )
+            
+            # Add to game entities
+            self.containers.append(test_car) 
+            self.obstacles.append(test_car.rect) 
+            
+            # Add to vehicles list if you are maintaining one (optional but good for loops)
+            if not hasattr(self, 'vehicles'):
+                self.vehicles = []
+            self.vehicles.append(test_car)
+
+            print(f"Spawned {vehicle_def.get('name')} from definitions.")
+        else:
+            print(f"Warning: Could not find tile definition for '{vehicle_char_key}'. Vehicle not spawned.")
+        # -------------------------------
 
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
