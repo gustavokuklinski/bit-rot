@@ -1,6 +1,8 @@
 import pygame
 import math
+import random
 from core.data.config import TILE_SIZE
+from core.entities.item.item import Item  # [NEW] Required to spawn items
 
 class Vehicle:
     def __init__(self, name, x, y, width, height, image, stats, capacity=20):
@@ -21,30 +23,28 @@ class Vehicle:
        
         self.max_speed = float(stats.get('max_speed', 10))
         
+        # Initial stats (will be overwritten by equipment items if they spawn)
         self.fuel = float(stats.get('fuel', 0.0))
         self.battery = float(stats.get('battery', 0.0))
         self.motor = float(stats.get('motor', 0.0))
 
         
-        # [MODIFIED] Parse lights stats
         self.lights = stats.get('lights', 'off')
-        if self.lights == '1.0': self.lights = 'off' # Default XML value safety
+        if self.lights == '1.0': self.lights = 'off' 
         
-        # Parse radius from stats (e.g. lights_radius="4")
         self.light_radius = float(stats.get('lights_radius', 4.0))
         
         self.car_state = "Off" 
         
         key_val = stats.get('key', 'false').strip()
         
-        # If the XML value is 'false' (or similar), the vehicle is key-less.
         if key_val.lower() in ['false', 'none', '0', '']:
             self.required_key_id = None 
         else:
-            # Otherwise, the value is the required key item name (e.g., "Car Key Jeep")
             self.required_key_id = key_val
         
         self.equipment = {
+            'motor': None,
             'key': None,
             'fuel': None,
             'battery': None 
@@ -53,8 +53,56 @@ class Vehicle:
         self.velocity = [0, 0]
         self.active = False 
 
+        # [NEW] Randomly populate slots with items
+        self._spawn_random_equipment()
+        
+        # [NEW] Sync internal floats (fuel, battery) with the newly spawned items
+        self.update_stats_from_equipment()
+
+    # [NEW] Helper to randomly fill slots
+    def _spawn_random_equipment(self):
+        # 1. Spawn Key (30% chance, only if vehicle requires a key)
+        if self.required_key_id and random.random() < 0.3:
+            key_item = Item.create_from_name(self.required_key_id)
+            if key_item:
+                self.equipment['key'] = key_item
+                print(f"Spawned {self.name} with key: {key_item.name}")
+
+        # 2. Spawn Fuel (50% chance)
+        if random.random() < 0.5:
+            # Assumes "Car Fuel" is defined in your items XML
+            fuel_item = Item.create_from_name("Car Fuel") 
+            if fuel_item:
+                # Randomize the fuel amount in the can
+                if hasattr(fuel_item, 'capacity') and fuel_item.capacity:
+                    fuel_item.load = random.uniform(1.0, float(fuel_item.capacity))
+                self.equipment['fuel'] = fuel_item
+        
+        motor_item = Item.create_from_name("Car Engine")
+        if motor_item:
+            # We don't randomize load here to ensure it works initially, 
+            # or you can randomize it if you want broken cars.
+            # Assuming full health for now based on "always spawn".
+            if hasattr(motor_item, 'durability'):
+                 motor_item.durability = float(motor_item.durability)
+            self.equipment['motor'] = motor_item
+
+        # 3. Spawn Battery (50% chance)
+        if random.random() < 0.5:
+            # Assumes "Powerbank" is defined in your items XML as the battery item
+            batt_item = Item.create_from_name("Powerbank")
+            if batt_item:
+                # Randomize charge
+                if hasattr(batt_item, 'capacity') and batt_item.capacity:
+                     if hasattr(batt_item, 'load'): # If using load
+                        batt_item.load = random.uniform(1.0, float(batt_item.capacity))
+                     elif hasattr(batt_item, 'durability'): # If using durability
+                        batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
+                self.equipment['battery'] = batt_item
+
     @property
     def health(self):
+        # ... (Rest of the method remains the same)
         """
         Calculates Vehicle Health as a weighted average:
         60% Motor + 30% Battery + 10% Gas
@@ -88,6 +136,7 @@ class Vehicle:
         return weighted_health
 
     def is_driveable(self):
+        # ... (Rest of the method remains the same)
         # Basic check
         if self.motor <= 0: return False
 
@@ -115,7 +164,32 @@ class Vehicle:
         
         return True
 
+    def damage_motor(self, amount):
+        motor_item = self.equipment.get('motor')
+        if not motor_item:
+            return # No motor to damage (or it's missing)
+
+        # Apply damage to the item's Load or Durability
+        if hasattr(motor_item, 'load') and motor_item.load is not None:
+             # Reduce load, but don't go below 0
+             motor_item.load = max(0, motor_item.load - amount)
+             print(f"Motor hit! Damage: {amount}. Remaining Status: {motor_item.load}/{motor_item.capacity}")
+             
+        elif hasattr(motor_item, 'durability') and motor_item.durability is not None:
+             motor_item.durability = max(0, motor_item.durability - amount)
+        
+        # Sync the vehicle's internal 0.0-1.0 stats with the new item state
+        self.update_stats_from_equipment()
+        
+        # Check if engine should die
+        if self.motor <= 0:
+            self.active = False
+            self.car_state = "Off"
+            print("Motor failed! Engine stopped.")
+
+
     def move(self, dx, dy, obstacles):
+        # ... (Rest of the method remains the same)
         if not self.active: return
         self.x += dx
         self.rect.x = int(self.x)
@@ -132,9 +206,9 @@ class Vehicle:
                 elif dy < 0: self.rect.top = obstacle.bottom
                 self.y = self.rect.y
 
-    # [NEW] Property for the renderer to get the light size in pixels
     @property
     def current_light_radius(self):
+        # ... (Rest of the method remains the same)
         if self.lights != 'on':
             return 0
             
@@ -146,8 +220,8 @@ class Vehicle:
         # Using the XML parsed radius * TILE_SIZE
         return self.light_radius * TILE_SIZE
 
-    # [NEW] Toggle Lights Method
     def toggle_lights(self):
+        # ... (Rest of the method remains the same)
         if self.lights == 'on':
             self.lights = 'off'
             print(f"{self.name} lights turned OFF.")
@@ -168,6 +242,7 @@ class Vehicle:
                 print("Cannot turn on lights: No Battery Power.")
 
     def toggle_engine(self):
+        # ... (Rest of the method remains the same)
         if self.active:
             self.active = False
             self.car_state = "Off"
@@ -199,9 +274,8 @@ class Vehicle:
                 if not has_fuel: missing.append("Fuel")
                 print(f"Cannot start. Missing/Empty: {', '.join(missing)}")
 
-
-    # [NEW] Check if an item can be equipped in a specific slot
     def can_equip(self, item, slot):
+        # ... (Rest of the method remains the same)
         if slot not in self.equipment:
             return False
 
@@ -226,11 +300,17 @@ class Vehicle:
                 hasattr(item, 'durability') or 
                 hasattr(item, 'load')
             )
+        
+        elif slot == 'motor':
+            # Check for type "car_motor" or status "motor"
+            is_motor = getattr(item, 'item_type', None) == 'car_motor' or getattr(item, 'type', None) == 'car_motor'
+            return is_motor or getattr(item, 'status', None) == 'motor'
             
         return False
 
-    # [NEW] Method to add equipment
+
     def add_equipment(self, item, slot):
+        # ... (Rest of the method remains the same)
         if not self.can_equip(item, slot):
             print(f"Cannot equip {item.name} in {slot} slot.")
             return False
@@ -244,16 +324,16 @@ class Vehicle:
         
         return old_item # Returns the item that was unequipped (or None)
 
-    # [NEW] Method to remove equipment
     def remove_equipment(self, slot):
+        # ... (Rest of the method remains the same)
         if slot in self.equipment:
             item = self.equipment.pop(slot)
             self.update_stats_from_equipment()
             return item
         return None
 
-    # [NEW] Update vehicle stats after equipment change (Used by add/remove)
     def update_stats_from_equipment(self):
+        # ... (Rest of the method remains the same)
         # Sync Battery from equipped item
         battery_item = self.equipment.get('battery')
         if battery_item:
@@ -275,9 +355,30 @@ class Vehicle:
                 self.fuel = 0.0 # Default/Fallback
         else:
             self.fuel = 0
-
+        
+        motor_item = self.equipment.get('motor')
+        if motor_item:
+            current = 0.0
+            maximum = 100.0
+            
+            # Support both load (as per your XML) and durability
+            if hasattr(motor_item, 'load') and motor_item.load is not None:
+                current = float(motor_item.load)
+                maximum = float(motor_item.capacity) if hasattr(motor_item, 'capacity') and motor_item.capacity else 100.0
+            elif hasattr(motor_item, 'durability') and motor_item.durability is not None:
+                current = float(motor_item.durability)
+                maximum = float(motor_item.max_durability) if hasattr(motor_item, 'max_durability') else 100.0
+            
+            # Calculate percentage (0.0 - 1.0) for vehicle logic
+            if maximum > 0:
+                self.motor = max(0.0, min(1.0, current / maximum))
+            else:
+                self.motor = 0.0
+        else:
+            self.motor = 0.0 # No motor = 0% health
 
     def update(self, game_map=None):
+        # ... (Rest of the method remains the same)
         # 1. Sync Battery
         battery_item = self.equipment.get('battery')
         if battery_item:
@@ -306,8 +407,8 @@ class Vehicle:
              if self.fuel > 0:
                  self.fuel -= fuel_drain
                  # Update Item
-                 if gas_item and hasattr(gas_item, 'load') and gas_item.load is not None:
-                     gas_item.load = max(0, gas_item.load - fuel_drain)
+                 if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
+                     fuel_item.load = max(0, fuel_item.load - fuel_drain)
              else:
                  self.active = False
                  self.car_state = "Off"

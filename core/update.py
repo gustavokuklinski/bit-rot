@@ -146,8 +146,54 @@ def update_game_state(game):
                     print(f"Closed {container_item.name} because you moved away.")
     
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
+        roadkill_zombies = []
+        
         for vehicle in game.map_manager.vehicles:
             vehicle.update()
+            
+            # Only check for collisions if the engine is on (active)
+            if vehicle.active:
+                # Calculate speed from velocity vector
+                speed = math.hypot(vehicle.velocity[0], vehicle.velocity[1])
+                
+                # Threshold: Only damage if moving fast enough (e.g., > 2.0 pixels/frame)
+                if speed > 2.0:
+                    # Find zombies colliding with this vehicle
+                    hit_list = [z for z in game.zombies if z not in zombies_to_remove and vehicle.rect.colliderect(z.rect)]
+                    
+                    for zombie in hit_list:
+                        if zombie in roadkill_zombies: continue
+
+                        # 1. Damage the Zombie (Roadkill)
+                        # Damage scales with speed (e.g., speed 5.0 * 5 = 25 damage)
+                        impact_damage = speed * 5.0 
+                        
+                        if zombie.take_damage(impact_damage, game):
+                            # Zombie died
+                            roadkill_zombies.append(zombie)
+                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
+                            game.zombies_killed += 1
+                            print(f"Roadkill! {zombie.name} squashed for {impact_damage:.1f} damage.")
+                        else:
+                             # Zombie survived but was hit
+                             # Optional: push zombie away to prevent getting stuck inside car
+                             pass
+
+                        # 2. Damage the Vehicle Motor
+                        # Fixed damage per hit (e.g., 2.0 points of durability/load)
+                        vehicle.damage_motor(2.0)
+                        
+                        # Optional: Slow car down slightly on impact
+                        vehicle.velocity[0] *= 0.8
+                        vehicle.velocity[1] *= 0.8
+
+        # Clean up roadkilled zombies
+        if roadkill_zombies:
+            game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]
+    
+    # Final cleanup (merging projectile deaths and roadkills if needed, 
+    # though the list comprehension above handles roadkills separately)
+    game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
 def player_hit_zombie(player, zombie, game):
     progression = player.progression

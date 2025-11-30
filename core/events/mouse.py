@@ -768,6 +768,11 @@ def handle_mouse_motion(game, event, mouse_pos):
                 elif type_orig == 'nearby':
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
+                elif type_orig == 'vehicle_equipment':
+                    vehicle = container_info[0]
+                    slot_name = i_orig
+                    vehicle.equipment[slot_name] = None
+                    vehicle.update_stats_from_equipment()
                 
             
 
@@ -1492,8 +1497,6 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         
-                        # Remove from slot immediately (visual feedback)
-                        vehicle.equipment[slot_name] = None
                         return
 
     if modal['type'] == 'nearby':

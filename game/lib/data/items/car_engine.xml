@@ -1,0 +1,8 @@
+<item name="Car Engine" type="car_motor">
+    <properties>
+        <status value="motor" />
+        <durability min="1" max="100" />
+        <sprite file="car_engine.png" />
+    </properties>
+    <spawn chance="1" />
+</item> 

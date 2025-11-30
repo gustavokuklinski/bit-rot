@@ -5,6 +5,7 @@ from core.ui.tabs import Tabs
 from core.ui.inventory_modal import draw_text_shadow
 
 def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
+    
     y_offset = start_y
     
     # 1. Car State
@@ -59,8 +60,16 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     y_offset = draw_stat_bar("Battery", vehicle.battery, max_batt, y_offset, (0, 255, 255))
     
     # Motor
-    y_offset = draw_stat_bar("Motor", vehicle.motor * 100, 100.0, y_offset)
+    motor_item = vehicle.equipment.get('motor')
+    motor_val = vehicle.motor * 100
+    motor_max = 100.0
+    if motor_item:
+        if hasattr(motor_item, 'capacity') and motor_item.capacity:
+            motor_max = float(motor_item.capacity)
+            if hasattr(motor_item, 'load'):
+                motor_val = float(motor_item.load)
     
+    y_offset = draw_stat_bar("Motor", motor_val, motor_max, y_offset)
     y_offset += 15
 
     # ... (Rest of Lights/Slots/Draw code remains unchanged) ...
@@ -82,7 +91,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     y_offset += 40
 
     # 4. Equipment Slots
-    slots = ['key', 'fuel', 'battery']
+    slots = ['motor','key', 'fuel', 'battery']
     slot_size = 48
     gap = 15
     current_slot_x = start_x
