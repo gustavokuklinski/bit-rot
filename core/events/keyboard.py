@@ -1,5 +1,6 @@
 import pygame
 import uuid
+import math
 from core.data.config import *
 from core.events.game_actions import try_grab_item
 
@@ -105,6 +106,25 @@ def toggle_gear_modal(game):
         }
         game.modals.append(new_gear_modal)
 
+def find_closest_vehicle(game):
+    """Finds the closest vehicle within 1.5 tiles (interaction range)."""
+    closest_vehicle = None
+    closest_dist = float('inf')
+    
+    if not game.player: return None
+    
+    # Vehicles are stored in game.containers
+    for entity in game.containers: 
+        if hasattr(entity, 'item_type') and entity.item_type == 'vehicle':
+            dist = math.hypot(game.player.rect.centerx - entity.rect.centerx, game.player.rect.centery - entity.rect.centery)
+            if dist < closest_dist:
+                closest_dist = dist
+                closest_vehicle = entity
+                
+    if closest_vehicle and closest_dist <= TILE_SIZE * 1.5: # Interaction threshold
+        return closest_vehicle
+    return None
+
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
@@ -184,7 +204,7 @@ def handle_keyboard_events(game, event):
 
             if event.key == pygame.K_q:
                 # 1. Check if a vehicle modal is open
-                vehicle_found = None
+                vehicle_found = find_closest_vehicle(game)
                 for modal in game.modals:
                     if modal['type'] == 'vehicle':
                         vehicle_found = modal['vehicle']

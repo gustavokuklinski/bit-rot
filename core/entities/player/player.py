@@ -118,6 +118,8 @@ class Player:
 
         self.vehicle = None
 
+        self.walk_anim_angle = 0
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -359,7 +361,13 @@ class Player:
 
         # Now use current_image for all drawing
         if current_image:
-            surface.blit(current_image, draw_rect)
+            if self.walk_anim_angle != 0:
+                rotated_img = pygame.transform.rotate(current_image, self.walk_anim_angle)
+                rot_rect = rotated_img.get_rect(center=draw_rect.center)
+                surface.blit(rotated_img, rot_rect)
+            else:
+                surface.blit(current_image, draw_rect)
+            #surface.blit(current_image, draw_rect)
         
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
@@ -367,7 +375,13 @@ class Player:
         for slot in self.clothes_slots: # Draw in order
             item = self.clothes.get(slot)
             if item and item.image:
-                surface.blit(item.image, draw_rect)
+                if self.walk_anim_angle != 0:
+                    # Rotate clothes to match player body
+                    rotated_cloth = pygame.transform.rotate(item.image, self.walk_anim_angle)
+                    rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
+                    surface.blit(rotated_cloth, rot_cloth_rect)
+                else:
+                    surface.blit(item.image, draw_rect)
 
 
         if is_aiming and self.active_weapon and self.active_weapon.image and \
@@ -510,6 +524,13 @@ class Player:
         has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
 
         is_moving = has_input and (self.vehicle is None)
+
+        if is_moving:
+            # Oscillate angle. 15 is speed, 2 is amplitude (degrees)
+            # 0.2 degrees is invisible, so using 2 degrees for visible "little animation"
+            self.walk_anim_angle = math.sin(current_time * 15) * 2
+        else:
+            self.walk_anim_angle = 0
 
         self.update_aim(is_moving)
         

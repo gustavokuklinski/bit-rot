@@ -104,7 +104,6 @@ Types of consumables:
 </item>
 ```
 
-
 - **type="text"**
 ```xml
 <item name="Safety Guide" type="text">
@@ -118,11 +117,11 @@ Types of consumables:
 </item>
 ```
 
-- **type="skill"**
+- **type="charm"**
 ```xml
-<item name="Family Photo" type="skill">
+<item name="Family Photo" type="charm">
     <properties>
-        <sprite file="family_photo_1.png" /> <!-- Skill sprite -->
+        <sprite file="family_photo_1.png" /> <!-- Charm sprite -->
     </properties>
     <attributes>  <!-- Set the attributes to update -->
         <lucky value="0.1" />  <!-- Lucky modifier in % (Can be negative) -->
@@ -140,5 +139,41 @@ Types of consumables:
         <capacity value="1000" /> <!-- Currency max capacity of this value (stack) -->
     </properties>
     <spawn chance="0" />
+</item>
+```
+
+- **type="car_fuel"**
+```xml
+<item name="Car Fuel" type="car_fuel">
+    <properties>
+        <status value="fuel" />
+        <load min="1" max="25" />
+        <capacity value="25" />
+        <sprite file="car_gas.png" />
+    </properties>
+    <spawn chance="1" />
+</item>
+```
+
+- **type="car_key"**
+```xml
+<item name="Car Key Jeep" type="car_key">
+    <properties>
+        <key value="car_jeep" />
+        <sprite file="car_key.png" />
+    </properties>
+    <spawn chance="1" />
+</item>
+```
+
+- **type="car_motor"** - Car enginee
+```xml
+<item name="Car Engine" type="car_motor">
+    <properties>
+        <status value="motor" />
+        <durability min="1" max="100" />
+        <sprite file="car_engine.png" />
+    </properties>
+    <spawn chance="1" />
 </item>
 ```

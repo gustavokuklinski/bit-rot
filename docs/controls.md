@@ -10,7 +10,8 @@
 - **1/2/3/4/5**: Equip and use item from Belt
 - **SPACE**: Wake up from sleep
 
-- **E**: Get item from floor, open/close door
+- **E**: Get item from floor, enter vehicle, open/close door
+- **Q**: Start vehicle engine
 - **R**: Reload weapon
 
 - **I**: Opens Inventory

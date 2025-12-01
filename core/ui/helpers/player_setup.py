@@ -841,7 +841,7 @@ def run_player_setup(game):
                     elif event.key == pygame.K_RETURN:
                         state['seed_input_active'] = False
                     elif len(state.get('world_seed', "")) <= 10:
-                        if event.unicode.isalnum():
+                        if event.unicode.isalnum() or event.unicode == '-':
                             state['world_seed'] += event.unicode.upper()
                 elif state.get('active_setting'):
                     block, key = state['active_setting']
@@ -884,7 +884,7 @@ def run_player_setup(game):
                         state['seed_input_active'] = False
                     elif len(state.get('world_seed', "")) <= 10: # Limit length
                         # Allow alphanumeric and 0 only
-                        if event.unicode.isalnum():
+                        if event.unicode.isalnum() or event.unicode == '-':
                             state['world_seed'] += event.unicode.upper()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

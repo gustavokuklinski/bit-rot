@@ -6,7 +6,7 @@ All item design is stored at: ```game/sprites/map/[MAP_TILE]```
 - **Z**: Zombie spawn
 - **I**: Item map spawn
 
-#### Map items
+#### Map tiles
 
 type="maptile_container" 
 ```xml

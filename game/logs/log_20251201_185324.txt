@@ -1,0 +1,14 @@
+[18:53:24] [INFO] Logger initialized. Output file: game/logs/log_20251201_185324.txt
+[18:53:24] [INFO] Initializing Game Engine...
+[18:53:24] [INFO] Entering Main Game Loop
+[18:53:26] [INFO] Created new save environment at: game/save/game/save_20251201_185326/map
+[18:53:26] [INFO] Loading config preset: default
+[18:53:26] [INFO] Error applying custom config 'default': module 'core.data' has no attribute 'load_settings'
+[18:53:26] [INFO] Generating world with Seed Pattern: 70W5ZXK
+[18:53:26] [INFO] Starting map set to generated file: map_L1_P0_0_0_1_0_map.csv
+[18:53:27] [INFO] Player spawn point found at (800, 800). Setting player position.
+[18:53:27] [INFO] Spawned car_jeep from definitions.
+[18:53:27] [INFO] Saving game to game/save/game/save_20251201_185326...
+[18:53:27] [INFO] Map folder is already in the save directory. Skipping map copy.
+[18:53:27] [INFO] Game saved successfully!
+[18:54:17] [INFO] Game Execution Ended safely.

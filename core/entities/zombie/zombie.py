@@ -2,6 +2,7 @@ import os
 import random
 import math
 import pygame
+import time
 import xml.etree.ElementTree as ET
 import uuid
 from faker import Faker
@@ -93,6 +94,8 @@ class Zombie:
         self.melee_swing_timer = 0
         self.melee_swing_angle = 0
 
+        self.walk_anim_angle = 0
+
         self.last_hit_sound_time = 0
         self.hit_sound_cooldown = 300 # 300ms cooldown for hit sound
         self.last_wander_sound_time = 0
@@ -179,7 +182,14 @@ class Zombie:
         if current_image:
             temp_image = current_image.copy()
             temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-            surface.blit(temp_image, draw_rect)
+            if self.walk_anim_angle != 0:
+                rotated_img = pygame.transform.rotate(temp_image, self.walk_anim_angle)
+                rot_rect = rotated_img.get_rect(center=draw_rect.center)
+                surface.blit(rotated_img, rot_rect)
+            else:
+                surface.blit(temp_image, draw_rect)
+
+            #surface.blit(temp_image, draw_rect)
 
             # Draw clothes
             for slot, clothe in self.clothes.items():
@@ -187,12 +197,23 @@ class Zombie:
                     clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
                     if clothe_sprite:
                         clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-                        surface.blit(clothe_sprite, draw_rect)
+                        if self.walk_anim_angle != 0:
+                            rotated_cloth = pygame.transform.rotate(clothe_sprite, self.walk_anim_angle)
+                            rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
+                            surface.blit(rotated_cloth, rot_cloth_rect)
+                        else:
+                            surface.blit(clothe_sprite, draw_rect)
         else:
             # Fallback for zombies without an image
             temp_surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
             temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
-            surface.blit(temp_surface, draw_rect)
+
+            if self.walk_anim_angle != 0:
+                rotated_surf = pygame.transform.rotate(temp_surface, self.walk_anim_angle)
+                rot_rect = rotated_surf.get_rect(center=draw_rect.center)
+                surface.blit(rotated_surf, rot_rect)
+            else:
+                surface.blit(temp_surface, draw_rect)
 
         if self.show_health_bar_timer > 0:
             bar_y = draw_rect.top - 7
@@ -326,6 +347,13 @@ class Zombie:
         self.vy = move_y # Store velocity
         
         is_moving = move_x != 0 or move_y != 0
+
+        if is_moving:
+            # Oscillate angle. 15 is speed, 2 is amplitude (degrees) - Matches Player
+            self.walk_anim_angle = math.sin(time.time() * 15) * 2
+        else:
+            self.walk_anim_angle = 0
+
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
             current_time = pygame.time.get_ticks()
             # Set cooldown based on state (faster steps when chasing)

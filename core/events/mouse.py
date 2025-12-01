@@ -816,8 +816,11 @@ def handle_context_menu_click(game, mouse_pos):
                     'id': uuid.uuid4(),
                     'type': 'vehicle', 'vehicle': item,
                     'position': (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200),
-                    'rect': pygame.Rect(0, 0, 400, 320), 'minimized': False,
-                    'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Info'
+                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300), 
+                    'minimized': False,
+                    'is_dragging': False, 
+                    'drag_offset': (0, 0), 
+                    'active_tab': 'Info'
                 }
                 new_modal['rect'].topleft = new_modal['position']
                 game.modals.append(new_modal)

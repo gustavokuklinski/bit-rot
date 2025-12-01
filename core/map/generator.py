@@ -60,12 +60,13 @@ class ProceduralGenerator:
         if not self.target_templates:
              self.target_templates = [k for k in self.templates.keys() if not k.startswith("Forest_")]
 
-    def generate_world(self, seed_pattern="30DEFAULT", regenerate=False):
+    def generate_world(self, seed_pattern="3-DEFAULT", regenerate=False):
         try:
-            if '0' in seed_pattern:
-                parts = seed_pattern.split('0', 1)
+            # Check for new pattern: Size-Seed (e.g., "3-B1TR0T")
+            if '-' in seed_pattern:
+                parts = seed_pattern.split('-', 1)
                 n_part = parts[0]
-                if not n_part: n_part = "5"
+                if not n_part: n_part = "3"
                 grid_w = int(n_part)
                 grid_h = int(n_part)
                 actual_seed = parts[1]
@@ -139,8 +140,7 @@ class ProceduralGenerator:
         
         # Create 3 separate surfaces for visualization
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
-        roof_map_surface = pygame.Surface((total_map_w, total_map_h), pygame.SRCALPHA)
-        heat_map_surface = pygame.Surface((total_map_w, total_map_h), pygame.SRCALPHA)
+        heat_map_surface = pygame.Surface((total_map_w, total_map_h))
         
         start_map_filename = None
 
@@ -161,27 +161,23 @@ class ProceduralGenerator:
                 
                 self._save_chunk(filename_base, chunk_data)
                 
-                # Pass all 3 surfaces to the render function
-                self._render_chunk_to_surface(full_map_surface, roof_map_surface, heat_map_surface, gx, gy, chunk_data)
+                # Pass 2 surfaces to the render function
+                self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, chunk_data)
 
                 if pos_id == 0:
                     start_map_filename = filename_base + "_map.csv"
 
-        # Save all 3 map images
+        # Save 2 map images
         try:
-            # 1. Background Map (JPG - No Transparency)
+            # 1. Full Map (Base + Roofs) -> JPG
             bg_path = os.path.join(self.output_folder, "full_map.jpg")
             pygame.image.save(full_map_surface, bg_path)
             
-            # 2. Roof Map (PNG - Transparent)
-            roof_path = os.path.join(self.output_folder, "full_map_roof.png")
-            pygame.image.save(roof_map_surface, roof_path)
-            
-            # 3. Heat Map (PNG - Transparent - Spawns)
-            heat_path = os.path.join(self.output_folder, "full_map_heat.png")
+            # 2. Heat Map -> JPG
+            heat_path = os.path.join(self.output_folder, "full_map_heat.jpg")
             pygame.image.save(heat_map_surface, heat_path)
             
-            print(f"Saved Maps: {bg_path}, {roof_path}, {heat_path}")
+            print(f"Saved Maps: {bg_path}, {heat_path}")
         except Exception as e:
             print(f"Error saving map images: {e}")
 
@@ -587,7 +583,7 @@ class ProceduralGenerator:
             with open(os.path.join(self.output_folder, fname + suffix), 'w', newline='') as f:
                 csv.writer(f).writerows(data)
 
-    def _render_chunk_to_surface(self, bg_surf, roof_surf, heat_surf, gx, gy, data):
+    def _render_chunk_to_surface(self, bg_surf, heat_surf, gx, gy, data):
         if not hasattr(self.game, 'tile_manager'): return
         defs = self.game.tile_manager.definitions
         
@@ -613,22 +609,17 @@ class ProceduralGenerator:
                 if b_char in defs and b_char != ' ': 
                     bg_surf.blit(defs[b_char]['image'], (px, py))
                 
-                # 2. Roof
+                # 2. Roof (Now drawn directly on the full map surface)
                 r_char = roof[y][x]
                 if r_char in defs and r_char != ' ':
-                    roof_surf.blit(defs[r_char]['image'], (px, py))
+                    bg_surf.blit(defs[r_char]['image'], (px, py))
                 
                 # 3. Heatmap
                 s_char = spawn[y][x]
-                if s_char == 'Z':
-                    s = pygame.Surface((self.tile_size, self.tile_size), pygame.SRCALPHA)
-                    s.fill((255, 0, 0, 150)) 
-                    heat_surf.blit(s, (px, py))
-                elif s_char == 'P':
-                    s = pygame.Surface((self.tile_size, self.tile_size), pygame.SRCALPHA)
-                    s.fill((0, 255, 0, 150))
-                    heat_surf.blit(s, (px, py))
-                elif s_char == 'I': 
-                    s = pygame.Surface((self.tile_size, self.tile_size), pygame.SRCALPHA)
-                    s.fill((0, 0, 255, 150))
-                    heat_surf.blit(s, (px, py))
+                if s_char in ['Z', 'P', 'I']:
+                    color = (0, 0, 0)
+                    if s_char == 'Z': color = (255, 0, 0)
+                    elif s_char == 'P': color = (0, 255, 0)
+                    elif s_char == 'I': color = (0, 0, 255)
+                    
+                    pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

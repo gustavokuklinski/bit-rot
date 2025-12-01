@@ -341,6 +341,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 
+    
     if base_modal.minimized:
         return None, close_button, minimize_button
 

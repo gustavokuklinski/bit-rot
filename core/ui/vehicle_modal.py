@@ -1,7 +1,6 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
-from core.ui.tabs import Tabs
 from core.ui.inventory_modal import draw_text_shadow
 
 def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
@@ -130,21 +129,12 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     close_btn, min_btn = base_modal.get_buttons()
     if base_modal.minimized: return [close_btn, min_btn]
 
-    # Tabs
-    tabs_data = [
-        {
-            'label': 'Info', 
-            'icon_path': './game/lib/sprites/ui/vehicle.png' # Uses custom engine icon
-        }
-    ]
-    modal['tabs_data'] = tabs_data
-    if 'active_tab' not in modal: modal['active_tab'] = 'Info'
+    
     
     content_y = base_modal.modal_y + 65 
     content_x = base_modal.modal_x + 15
     
-    if modal['active_tab'] == 'Info':
-        draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
+    draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
         
     
     return [close_btn, min_btn]

@@ -5,8 +5,4 @@ __pycache__
 *.build
 *.dist
 *.onefile-build
-build
-dist
-bit-rot.spec
-GEMINI.md
 game/save/game

@@ -1,0 +1,13 @@
+[18:54:51] [INFO] Logger initialized. Output file: game/logs/log_20251201_185451.txt
+[18:54:51] [INFO] Initializing Game Engine...
+[18:54:51] [INFO] Entering Main Game Loop
+[18:54:53] [INFO] Loading game from game/save/game/save_20251201_185326...
+[18:54:53] [INFO] Created new save environment at: game/save/game/save_20251201_185326/map
+[18:54:53] [INFO] Loading config preset: default
+[18:54:53] [INFO] Error applying custom config 'default': module 'core.data' has no attribute 'load_settings'
+[18:54:53] [INFO] Generating world with Seed Pattern: 4-B1TR07
+[18:54:53] [INFO] Starting map set to generated file: map_L1_P0_0_16_1_0_map.csv
+[18:54:54] [INFO] Player spawn point found at (2400, 2400). Setting player position.
+[18:54:54] [INFO] Spawned car_jeep from definitions.
+[18:54:54] [INFO] Game loaded successfully!
+[18:55:25] [INFO] Game Execution Ended safely.

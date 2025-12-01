@@ -43,6 +43,7 @@ from core.messages import display_message, init_messages
 from core.map.generator import ProceduralGenerator
 from core.entities.vehicle.vehicle import Vehicle
 from core.ui.helpers.start_loading import draw_loading_screen
+from core.logger import GameLogger
 
 class Game:
     def __init__(self):
@@ -59,6 +60,9 @@ class Game:
         except:
             pass
         
+        self.logger = GameLogger()
+        self.logger.info("Initializing Game Engine...")
+
         init_messages(self)
 
         self.clock = pygame.time.Clock()
@@ -198,7 +202,7 @@ class Game:
             self.current_save_folder_name = save_name
 
         save_path = os.path.join("game", "save", "game", save_name)
-        print(f"Saving game to {save_path}...")
+        self.logger.info(f"Saving game to {save_path}...")
 
         try:
             os.makedirs(save_path, exist_ok=True)
@@ -212,7 +216,7 @@ class Game:
                 shutil.copytree(map_src, map_dst, dirs_exist_ok=True)
                 self.map_manager.map_folder = map_dst
             else:
-                print("Map folder is already in the save directory. Skipping map copy.")
+                self.logger.info("Map folder is already in the save directory. Skipping map copy.")
             
             attributes_base = {
                 "strength": self.player.progression.strength['level'],
@@ -283,11 +287,11 @@ class Game:
             with open(os.path.join(save_path, "world.json"), "w") as f:
                 json.dump(world_data, f, indent=4)
 
-            print("Game saved successfully!")
+            self.logger.info("Game saved successfully!")
             return True
             
         except Exception as e:
-            print(f"Error saving game: {e}")
+            self.logger.info(f"Error saving game: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -296,7 +300,7 @@ class Game:
         save_path = os.path.join("game", "save", "game", save_folder_name)
         map_path = os.path.join(save_path, "map")
         
-        print(f"Loading game from {save_path}...")
+        self.logger.info(f"Loading game from {save_path}...")
 
         try:
             with open(os.path.join(save_path, "player.json"), "r") as f:
@@ -348,7 +352,7 @@ class Game:
                     layer_int = int(layer_str)
                     self.layer_spawn_triggers[layer_int] = set(tuple(c) for c in coords_list)
                 except Exception as e:
-                    print(f"Error restoring triggers for layer {layer_str}: {e}")
+                    self.logger.info(f"Error restoring triggers for layer {layer_str}: {e}")
             
             self.items_on_ground = []
             for i_data in world_data.get('items', []):
@@ -370,13 +374,34 @@ class Game:
                 self.load_map(target_map)
             
             self.game_state = 'PLAYING'
-            print("Game loaded successfully!")
+            self.logger.info("Game loaded successfully!")
 
         except Exception as e:
-            print(f"Error loading game: {e}")
+            self.logger.info(f"Error loading game: {e}")
             import traceback
             traceback.print_exc()
             self.game_state = 'MENU'
+
+
+    def _cleanup_modals(self):
+        """Removes the Vehicle modal if the player moves too far from the vehicle."""
+        modals_to_remove = []
+        if not self.player: return
+
+        for modal in self.modals:
+            if modal['type'] == 'vehicle':
+                vehicle = modal['vehicle']
+                # Check distance between player and vehicle (center to center)
+                dist = math.hypot(self.player.rect.centerx - vehicle.rect.centerx, self.player.rect.centery - vehicle.rect.centery)
+                
+                # Close modal if player is farther than 2 tiles
+                if dist > TILE_SIZE * 2: 
+                    modals_to_remove.append(modal)
+            
+        for modal in modals_to_remove:
+            self.modals.remove(modal)
+            self.logger.info(f"Closed {modal['vehicle'].name} modal: player moved away.")
+
 
     def run_paused(self):
         if self.paused_surface:
@@ -436,7 +461,7 @@ class Game:
         # self.current_save_folder_name = None
         self.map_manager.current_map_filename = map_filename
         
-        # [FIX] Pass the current map folder (save folder) to the loader
+        # Pass the current map folder (save folder) to the loader
         self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers = \
             load_all_map_layers(map_filename, base_path=self.map_manager.map_folder)
 
@@ -471,9 +496,9 @@ class Game:
         
         try:
             os.makedirs(map_path, exist_ok=True)
-            print(f"Created new save environment at: {map_path}")
+            self.logger.info(f"Created new save environment at: {map_path}")
         except OSError as e:
-            print(f"Error creating save directory: {e}")
+            self.logger.info(f"Error creating save directory: {e}")
             # Fallback to default if write fails, though this is critical
             map_path = MAP_DIR 
 
@@ -486,26 +511,20 @@ class Game:
 
         preset = self.player_setup_state.get('selected_config_preset', 'default')
         try:
-            print(f"Loading config preset: {preset}")
+            self.logger.info(f"Loading config preset: {preset}")
             core.data.load_settings(preset)
         except Exception as e:
-            print(f"Error applying custom config '{preset}': {e}")
+            self.logger.info(f"Error applying custom config '{preset}': {e}")
 
         # 4. Initialize Generator with the specific OUTPUT folder
         generator = ProceduralGenerator(self, output_folder=map_path)
-        raw_seed = player_data.get('world_seed', "40B1TR07")
+        raw_seed = player_data.get('world_seed', "4-B1TR07")
         if not raw_seed: 
-            raw_seed = "40B1TR07"
-        if '0' in raw_seed:
-            parts = raw_seed.split('0', 1)
-            # If the first part is digits, it's likely a size prefix
-            if parts[0].isdigit():
-                raw_seed = parts[1]
-                if not raw_seed: raw_seed = "40B1TR07"
-
+            raw_seed = "4-B1TR07"
+        
         # Prepend '30' to force 3x3 grid size for the generator
-        world_seed = f"{raw_seed}"
-        print(f"Generating world with Forced 4x4 Pattern/Seed: {world_seed}")
+        world_seed = raw_seed
+        self.logger.info(f"Generating world with Seed Pattern: {world_seed}")
         
         # Generate the world directly into the save folder
         start_map = generator.generate_world(seed_pattern=world_seed, regenerate=regenerate_map)
@@ -515,9 +534,9 @@ class Game:
 
         if start_map:
             self.map_manager.current_map_filename = start_map
-            print(f"Starting map set to generated file: {start_map}")
+            self.logger.info(f"Starting map set to generated file: {start_map}")
         else:
-            print("Warning: Generator did not return a start map.")
+            self.logger.info("Warning: Generator did not return a start map.")
 
         self.player_name = player_data.get('name', "Player")
         self.player = Player(player_data=player_data)
@@ -544,11 +563,11 @@ class Game:
         load_giant_map(self)
 
         if self.player_spawn:
-            print(f"Player spawn point found at {self.player_spawn}. Setting player position.")
+            self.logger.info(f"Player spawn point found at {self.player_spawn}. Setting player position.")
             self.player.x, self.player.y = self.player_spawn
             self.player.rect.topleft = self.player_spawn
         else:
-            print("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
+            self.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
             self.player.x, self.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
             self.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
@@ -584,9 +603,9 @@ class Game:
                 self.vehicles = []
             self.vehicles.append(test_car)
 
-            print(f"Spawned {vehicle_def.get('name')} from definitions.")
+            self.logger.info(f"Spawned {vehicle_def.get('name')} from definitions.")
         else:
-            print(f"Warning: Could not find tile definition for '{vehicle_char_key}'. Vehicle not spawned.")
+            self.logger.info(f"Warning: Could not find tile definition for '{vehicle_char_key}'. Vehicle not spawned.")
         # -------------------------------
 
         self.world_time = WorldTime(self)
@@ -600,22 +619,31 @@ class Game:
 
 
     async def run(self):
-        while self.running:
-            if self.game_state == 'MENU':
-                self.run_menu()
-            elif self.game_state == 'LOAD_GAME_MENU':
-                self.run_load_game_menu()
-            elif self.game_state == 'PLAYER_SETUP':
-                self.run_player_setup()
-            elif self.game_state == 'LOADING':
-                self.run_loading()
-            elif self.game_state == 'PLAYING':
-                self.run_playing()
-            elif self.game_state == 'PAUSED':
-                self.run_paused()
-            elif self.game_state == 'GAME_OVER':
-                self.run_game_over()
-            await asyncio.sleep(0)
+        self.logger.info("Entering Main Game Loop")
+        try:
+            while self.running:
+                if self.game_state == 'MENU':
+                    self.run_menu()
+                elif self.game_state == 'LOAD_GAME_MENU':
+                    self.run_load_game_menu()
+                elif self.game_state == 'PLAYER_SETUP':
+                    self.run_player_setup()
+                elif self.game_state == 'LOADING':
+                    self.run_loading()
+                elif self.game_state == 'PLAYING':
+                    self.run_playing()
+                elif self.game_state == 'PAUSED':
+                    self.run_paused()
+                elif self.game_state == 'GAME_OVER':
+                    self.run_game_over()
+                await asyncio.sleep(0)
+
+        except Exception as e:
+            self.logger.crash("CRITICAL GAME CRASH DETECTED", e)
+            self.running = False
+            raise e
+        finally:
+            self.logger.info("Game Execution Ended safely.")
 
     def run_loading(self):
         """
@@ -792,6 +820,7 @@ class Game:
         self.world_time.update()
         handle_input(self)
         update_game_state(self)
+        self._cleanup_modals()
         draw_game(self)
         self._update_screen()
 

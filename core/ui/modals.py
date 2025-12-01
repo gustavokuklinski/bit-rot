@@ -33,6 +33,8 @@ class BaseModal:
             return GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT
         elif self.modal['type'] == 'mobile':
             return MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT
+        elif self.modal['type'] == 'vehicle':
+            return VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT
         return 300, 300
 
     def draw_header(self):

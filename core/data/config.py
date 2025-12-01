@@ -59,6 +59,9 @@ MESSAGES_MODAL_HEIGHT = 350
 TEXT_MODAL_WIDTH = 300
 TEXT_MODAL_HEIGHT = 300
 
+VEHICLE_MODAL_WIDTH = 300
+VEHICLE_MODAL_HEIGHT = 320
+
 # Mobile modal
 MOBILE_MODAL_WIDTH = 250
 MOBILE_MODAL_HEIGHT = 400
@@ -169,7 +172,7 @@ def load_settings(preset="default"):
         NEAR_ZOOM = float(game_config.find('zoom_near').get('value'))
 
         player_config = root.find('player')
-        PLAYER_SPEED = 3.5 # Hardcoded as per original file
+        PLAYER_SPEED = 3.0 # Hardcoded as per original file
 
         DECAY_RATE_SECONDS = float(player_config.find('food_water_decay_seconds').get('value'))
         FOOD_WATER_MULTIPLIER_DECAY = float(player_config.find('food_water_multiplier_decay').get('value'))
