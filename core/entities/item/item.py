@@ -8,6 +8,7 @@ from core.data.config import *
 import core.data.config
 
 ITEM_TEMPLATES = {}  # loaded templates
+SPRITE_CACHE = {}    # [NEW] Optimization: Cache loaded images to reduce disk I/O
 
 class Item:
     """Base class for all in-game items."""
@@ -155,6 +156,11 @@ class Item:
     def load_sprite(self, sprite_file):
         if not sprite_file:
             return None
+        
+        # [NEW] Check Cache First
+        if sprite_file in SPRITE_CACHE:
+            return SPRITE_CACHE[sprite_file]
+
         try:
             if sprite_file.startswith("./game/"):
                 path = sprite_file
@@ -164,8 +170,12 @@ class Item:
                     path = SPRITE_PATH + "clothes/" + sprite_file
                 else:
                     path = SPRITE_PATH + "items/" + sprite_file
+            
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
+            
+            # [NEW] Store in Cache
+            SPRITE_CACHE[sprite_file] = image
             return image
         except pygame.error as e:
             print(f"Warning: Could not load sprite '{sprite_file}': {e}")
@@ -191,8 +201,6 @@ class Item:
             state = root.attrib.get('state')
             template = {'type': ttype, 'properties': {}, 'state': state}
 
-            # template = {'type': ttype, 'properties': {}}
-            
             props_node = root.find('properties')
             if props_node is not None:
                 for prop in props_node:
@@ -204,10 +212,6 @@ class Item:
                     template['text'] = "\n".join(line.strip() for line in text_node.text.strip().split('\n'))
                 else:
                     template['text'] = None
-                
-
-
-
 
                 template['effects'] = []
 
@@ -278,11 +282,6 @@ class Item:
 
             template['stats'] = None
             if ttype == 'charm':
-                #stats_node = root.find('stats')
-                #if stats_node is not None:
-                #    template['stats'] = {}
-                #    for stat in stats_node:
-                #        template['stats'][stat.tag] = float(stat.get('value', 0))
                 template['attribute_modifiers'] = {}
                 attr_node = root.find('attributes')
                 if attr_node is not None:
@@ -317,8 +316,6 @@ class Item:
 
 
             ITEM_TEMPLATES[name] = template
-        # silent on count to avoid spam
-        # print(f"Loaded {len(ITEM_TEMPLATES)} item templates.")
 
         clothes_dir = DATA_PATH + 'clothes/'
         print(f"Loading clothes templates from: {clothes_dir}")
@@ -440,6 +437,12 @@ class Item:
             
         props = template['properties']
 
+        # [NEW] SAFETY HELPER
+        def get_prop_val(prop_dict, key, subkey='value', default=None):
+            """Safely extracts a value from the properties dictionary."""
+            if key not in prop_dict: return default
+            return prop_dict[key].get(subkey, default)
+
         durability = None
         min_dur = 0.0
         max_dur = 0.0
@@ -450,7 +453,6 @@ class Item:
             min_dur = float(props['durability'].get('min', 0))
             max_dur = float(props['durability']['max'])
             needs_durability = True
-        
         
         if needs_durability:
             # Apply multipliers
@@ -476,37 +478,50 @@ class Item:
                 load = random.randint(int(props['load']['min']), int(props['load']['max']))
             else:
                 load = float(props['load'].get('value', 0))
-        capacity = int(props['capacity']['value']) if 'capacity' in props else None
+        
+        # [MODIFIED] Use Safety Helper
+        capacity_str = get_prop_val(props, 'capacity', 'value', None)
+        capacity = int(capacity_str) if capacity_str else None
+
         color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
-        color = (int(color_prop['r']), int(color_prop['g']), int(color_prop['b']))
-        ammo_type = props.get('ammo', {}).get('type') if 'ammo' in props else None
-        pellets = int(props.get('firing', {}).get('pellets', 1)) if 'firing' in props else 1
-        spread_angle = float(props.get('firing', {}).get('spread_angle', 0)) if 'firing' in props else 0
-        sprite_file = props.get('sprite', {}).get('file') if 'sprite' in props else None
-        min_damage = int(props['damage']['min']) if 'damage' in props and 'min' in props['damage'] else None
-        max_damage = int(props['damage']['max']) if 'damage' in props and 'max' in props['damage'] else None
+        color = (int(color_prop.get('r', 255)), int(color_prop.get('g', 255)), int(color_prop.get('b', 255)))
+        
+        ammo_type = get_prop_val(props, 'ammo', 'type', None)
+        
+        pellets_str = get_prop_val(props, 'firing', 'pellets', '1')
+        pellets = int(pellets_str)
+        
+        spread_angle_str = get_prop_val(props, 'firing', 'spread_angle', '0')
+        spread_angle = float(spread_angle_str)
+        
+        sprite_file = get_prop_val(props, 'sprite', 'file', None)
 
-        min_restore = int(props['restore']['min']) if 'restore' in props and 'min' in props['restore'] else None
-        max_restore = int(props['restore']['max']) if 'restore' in props and 'max' in props['restore'] else None      
+        min_damage = int(get_prop_val(props, 'damage', 'min', 0)) if 'damage' in props else None
+        max_damage = int(get_prop_val(props, 'damage', 'max', 0)) if 'damage' in props else None
 
-        min_reduce = int(props['reduce']['min']) if 'reduce' in props and 'min' in props['reduce'] else None
-        max_reduce = int(props['reduce']['max']) if 'reduce' in props and 'max' in props['reduce'] else None 
+        min_restore = int(get_prop_val(props, 'restore', 'min', 0)) if 'restore' in props else None
+        max_restore = int(get_prop_val(props, 'restore', 'max', 0)) if 'restore' in props else None      
 
-        slot = props.get('slot', {}).get('value')
-        defence = float(props.get('defence', {}).get('value', 0))
-        speed = float(props.get('speed', {}).get('value', 0))
+        min_reduce = int(get_prop_val(props, 'reduce', 'min', 0)) if 'reduce' in props else None
+        max_reduce = int(get_prop_val(props, 'reduce', 'max', 0)) if 'reduce' in props else None 
+
+        slot = get_prop_val(props, 'slot', 'value', None)
+        defence = float(get_prop_val(props, 'defence', 'value', 0))
+        speed = float(get_prop_val(props, 'speed', 'value', 0))
 
         state = template.get('state') # Get root state attribute
         if not state: # Check in properties if not on root
-             state = props.get('state', {}).get('value')
+             state = get_prop_val(props, 'state', 'value', None)
              
-        min_light = int(props['light']['min']) if 'light' in props and 'min' in props['light'] else None
-        max_light = int(props['light']['max']) if 'light' in props and 'max' in props['light'] else None
-        fuel_type = props.get('fuel', {}).get('type')
+        min_light = int(get_prop_val(props, 'light', 'min', 0)) if 'light' in props else None
+        max_light = int(get_prop_val(props, 'light', 'max', 0)) if 'light' in props else None
+        
+        fuel_type = get_prop_val(props, 'fuel', 'type', None)
+        
         text = template.get('text')
 
         attribute_modifiers = template.get('attribute_modifiers', {})
-        status_effect = props.get('status', {}).get('value')
+        status_effect = get_prop_val(props, 'status', 'value', None)
         
         sounds = template.get('sounds', {})
 

@@ -49,11 +49,13 @@ def _draw_settings_screen(game, state, mouse_pos):
         "save_config": None,
         "delete_config": None,
         "load_config_dd": None,
-        "load_config_options": []
+        "load_config_options": [],
+        "seed_input": None
     }
 
     # 1. Preset Management Panel (Top Left of content area)
-    preset_rect = pygame.Rect(col_start_x, 50, col_width, 200)
+    # Increased height to accommodate Seed input
+    preset_rect = pygame.Rect(col_start_x, 50, col_width, 270)
     preset_header = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
 
@@ -78,20 +80,42 @@ def _draw_settings_screen(game, state, mouse_pos):
     
     clickable_rects['config_name_input'] = name_input_rect
 
+    # --- World Seed Input ---
+    seed_y = name_input_rect.bottom + 10
+    game.virtual_screen.blit(font.render("World Seed:", True, WHITE), (preset_body.x + padding, seed_y))
+    
+    seed_input_rect = pygame.Rect(preset_body.x + padding, seed_y + 25, preset_body.width - padding*2, 30)
+    pygame.draw.rect(game.virtual_screen, (50, 50, 50), seed_input_rect)
+    pygame.draw.rect(game.virtual_screen, WHITE, seed_input_rect, 1)
+    
+    seed_val = state.get('world_seed', "")
+    if not seed_val:
+         game.virtual_screen.blit(font.render("Random", True, GRAY), (seed_input_rect.x + 5, seed_input_rect.y + 5))
+    else:
+         game.virtual_screen.blit(font.render(seed_val, True, WHITE), (seed_input_rect.x + 5, seed_input_rect.y + 5))
+         
+    if state.get('seed_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
+        cx = seed_input_rect.x + 5 + font.size(seed_val)[0]
+        pygame.draw.line(game.virtual_screen, WHITE, (cx, seed_input_rect.y + 5), (cx, seed_input_rect.bottom - 5), 2)
+        
+    clickable_rects['seed_input'] = seed_input_rect
+    # -----------------------
+
     # Buttons
     btn_w = 100
-    save_rect = pygame.Rect(preset_body.x + padding, preset_body.y + 80, btn_w, 30)
+    buttons_y = seed_input_rect.bottom + 15
+    save_rect = pygame.Rect(preset_body.x + padding, buttons_y, btn_w, 30)
     pygame.draw.rect(game.virtual_screen, GREEN, save_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Save", True, WHITE), (save_rect.x + 30, save_rect.y + 5))
     clickable_rects['save_config'] = save_rect
 
-    del_rect = pygame.Rect(save_rect.right + padding, preset_body.y + 80, btn_w, 30)
+    del_rect = pygame.Rect(save_rect.right + padding, buttons_y, btn_w, 30)
     pygame.draw.rect(game.virtual_screen, RED, del_rect, border_radius=4)
     game.virtual_screen.blit(font.render("Delete", True, WHITE), (del_rect.x + 25, del_rect.y + 5))
     clickable_rects['delete_config'] = del_rect
 
     # Load Dropdown
-    load_rect = pygame.Rect(preset_body.x + padding, preset_body.y + 120, preset_body.width - padding*2, 30)
+    load_rect = pygame.Rect(preset_body.x + padding, buttons_y + 40, preset_body.width - padding*2, 30)
     clickable_rects['load_config_dd'] = load_rect
     pygame.draw.rect(game.virtual_screen, (50, 50, 50), load_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, load_rect, 1)

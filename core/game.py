@@ -42,6 +42,7 @@ from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_fil
 from core.messages import display_message, init_messages
 from core.map.generator import ProceduralGenerator
 from core.entities.vehicle.vehicle import Vehicle
+from core.ui.helpers.start_loading import draw_loading_screen
 
 class Game:
     def __init__(self):
@@ -173,6 +174,9 @@ class Game:
 
         self.chat_active = False
         self.chat_input_text = ""
+
+        self.loading_data = None
+        self.loading_done = False
         
 
     def capture_pause_screen(self):
@@ -267,6 +271,7 @@ class Game:
                 triggers_export[str(layer_idx)] = list(coords_set)
 
             world_data = {
+                "world_seed": getattr(self, 'world_seed', "40B1TR07"),
                 "time": {
                     "game_time_ms": self.world_time.game_time_ms,
                     "day_count": self.world_time.day_count
@@ -488,19 +493,19 @@ class Game:
 
         # 4. Initialize Generator with the specific OUTPUT folder
         generator = ProceduralGenerator(self, output_folder=map_path)
-        raw_seed = player_data.get('world_seed', "DEFAULT")
+        raw_seed = player_data.get('world_seed', "40B1TR07")
         if not raw_seed: 
-            raw_seed = "DEFAULT"
+            raw_seed = "40B1TR07"
         if '0' in raw_seed:
             parts = raw_seed.split('0', 1)
             # If the first part is digits, it's likely a size prefix
             if parts[0].isdigit():
                 raw_seed = parts[1]
-                if not raw_seed: raw_seed = "DEFAULT"
+                if not raw_seed: raw_seed = "40B1TR07"
 
         # Prepend '30' to force 3x3 grid size for the generator
-        world_seed = f"40{raw_seed}"
-        print(f"Generating world with Forced 3x3 Pattern/Seed: {world_seed}")
+        world_seed = f"{raw_seed}"
+        print(f"Generating world with Forced 4x4 Pattern/Seed: {world_seed}")
         
         # Generate the world directly into the save folder
         start_map = generator.generate_world(seed_pattern=world_seed, regenerate=regenerate_map)
@@ -602,6 +607,8 @@ class Game:
                 self.run_load_game_menu()
             elif self.game_state == 'PLAYER_SETUP':
                 self.run_player_setup()
+            elif self.game_state == 'LOADING':
+                self.run_loading()
             elif self.game_state == 'PLAYING':
                 self.run_playing()
             elif self.game_state == 'PAUSED':
@@ -610,6 +617,41 @@ class Game:
                 self.run_game_over()
             await asyncio.sleep(0)
 
+    def run_loading(self):
+        """
+        Handles the loading screen logic.
+        1. Renders 'Loading...'
+        2. Runs the blocking start_new_game logic
+        3. Renders 'Click to start' and waits for input
+        """
+        mouse_pos = self._get_scaled_mouse_pos()
+        
+        # Draw the screen
+        start_btn = draw_loading_screen(self.virtual_screen, self.loading_done, mouse_pos)
+        self._update_screen()
+        
+        # Logic
+        if not self.loading_done:
+            # If we have data, start the generation
+            # This is a blocking operation, but since we just called _update_screen(), 
+            # the "Loading..." text will be visible to the user while this runs.
+            if self.loading_data:
+                self.start_new_game(self.loading_data)
+                
+                # start_new_game sets state to 'PLAYING', we override it back to stay in loading screen
+                self.game_state = 'LOADING'
+                self.loading_done = True
+                self.loading_data = None # Clear data
+        else:
+            # Loading is done, wait for User click on the button
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if start_btn and start_btn.collidepoint(mouse_pos):
+                        self.game_state = 'PLAYING'
+                        
     def run_menu(self):
         mouse_pos = self._get_scaled_mouse_pos()
         save_dir = os.path.join("game", "save", "game")

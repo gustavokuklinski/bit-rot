@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Car Gas" chance="0.3" />
+        <item item="Car Fuel" chance="0.3" />
         <item item="Ducktype" chance="0.2" />
     </loot>
 </map>

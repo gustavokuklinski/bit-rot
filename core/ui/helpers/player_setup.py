@@ -235,33 +235,12 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     clickable_rects['name_input'] = name_input_rect
 
-    # --- NEW: Draw World Seed Input ---
-    seed_y = name_input_rect.bottom + 10
-    game.virtual_screen.blit(font.render("World Seed (N0Seed):", True, WHITE), (preset_body_rect.x + padding, seed_y))
     
-    seed_input_rect = pygame.Rect(preset_body_rect.x + padding, seed_y + 25, preset_body_rect.width - padding*2, 30)
-    pygame.draw.rect(game.virtual_screen, (50, 50, 50), seed_input_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, seed_input_rect, 1)
-    
-    seed_text = state.get('world_seed', "")
-    # Placeholder text if empty
-    if not seed_text:
-        placeholder = font.render("Ex: 30XYZ (Random if empty)", True, GRAY)
-        game.virtual_screen.blit(placeholder, (seed_input_rect.x + 5, seed_input_rect.y + 5))
-    else:
-        seed_surf = font.render(seed_text, True, WHITE)
-        game.virtual_screen.blit(seed_surf, (seed_input_rect.x + 5, seed_input_rect.y + 5))
-
-    if state.get('seed_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
-        cx = seed_input_rect.x + 5 + font.size(seed_text)[0]
-        pygame.draw.line(game.virtual_screen, WHITE, (cx, seed_input_rect.y + 5), (cx, seed_input_rect.bottom - 5), 2)
-        
-    clickable_rects['seed_input'] = seed_input_rect
     # ----------------------------------
 
     # [Adjust Buttons Y position to account for the new input field]
     # Update y + 80 to y + 150 (approx) or use seed_input_rect.bottom
-    buttons_y = seed_input_rect.bottom + 15 
+    buttons_y = preset_body_rect.y + 80
 
     btn_width = 80
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
@@ -856,6 +835,14 @@ def run_player_setup(game):
                     if event.key == pygame.K_BACKSPACE: state['config_name'] = state['config_name'][:-1]
                     elif event.key == pygame.K_RETURN: state['config_name_active'] = False
                     else: state['config_name'] += event.unicode
+                elif state.get('seed_input_active'):
+                    if event.key == pygame.K_BACKSPACE:
+                        state['world_seed'] = state['world_seed'][:-1]
+                    elif event.key == pygame.K_RETURN:
+                        state['seed_input_active'] = False
+                    elif len(state.get('world_seed', "")) <= 10:
+                        if event.unicode.isalnum():
+                            state['world_seed'] += event.unicode.upper()
                 elif state.get('active_setting'):
                     block, key = state['active_setting']
 
@@ -924,6 +911,12 @@ def run_player_setup(game):
                 # Handle main buttons
                 if clickable_rects.get('config_name_input') and clickable_rects['config_name_input'].collidepoint(mouse_pos):
                     state['config_name_active'] = True
+                    state['seed_input_active'] = False
+                    state['active_setting'] = None
+                elif clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
+                    state['seed_input_active'] = True
+                    state['config_name_active'] = False
+                    state['active_setting'] = None
                 elif clickable_rects.get('save_config') and clickable_rects['save_config'].collidepoint(mouse_pos):
                     if state.get('config_name'):
                         save_config_xml(state['settings_data'], f"./game/save/config/{state['config_name']}.xml")
@@ -976,6 +969,8 @@ def run_player_setup(game):
                     for block, key, rect in clickable_rects.get('config_inputs', []):
                         if rect.collidepoint(mouse_pos):
                             state['active_setting'] = (block, key)
+                            state['seed_input_active'] = False
+                            state['config_name_active'] = False
                             clicked_input = True
                             break
                     
@@ -1048,8 +1043,9 @@ def run_player_setup(game):
                         final_player_data['world_seed'] = raw_seed
                         # -----------------------------------
 
-                        game.start_new_game(final_player_data)
-                        game.game_state = 'PLAYING'
+                        game.loading_data = final_player_data
+                        game.game_state = 'LOADING'
+                        game.loading_done = False
                         return
 
                 if state.get('active_dropdown'):

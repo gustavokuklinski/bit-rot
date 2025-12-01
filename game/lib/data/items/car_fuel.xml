@@ -1,4 +1,4 @@
-<item name="Car Fuel" type="consumable">
+<item name="Car Fuel" type="car_fuel">
     <properties>
         <status value="fuel" />
         <load min="1" max="25" />
@@ -6,4 +6,4 @@
         <sprite file="car_gas.png" />
     </properties>
     <spawn chance="1" />
-</item> 
+</item>
