@@ -120,6 +120,10 @@ class Player:
 
         self.walk_anim_angle = 0
 
+        self.is_moving_to_tile = False
+        self.target_x = 0
+        self.target_y = 0
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:

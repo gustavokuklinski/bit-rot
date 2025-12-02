@@ -81,9 +81,10 @@ def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_heig
     return None # No free tile found within radius
 
 # --- REWRITTEN ZOMBIE SPAWNER ---
-def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None):
+def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None):
     zombies = []
-    
+    SAFE_RADIUS_TILES = 30
+    safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
     # 1. Create a set of all tiles that are *already* occupied.
     #    This is O(Obstacles + Items) and is done ONCE.
     occupied_tiles = set()
@@ -123,6 +124,12 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
 
     for pos in zombie_spawns: # Loop 1: Over each 'Z' marker (e.g., 50 markers)
         if len(zombies) >= limit: break
+
+        if player:
+            dist = math.hypot(pos[0] - player.x, pos[1] - player.y)
+            if dist < safe_dist_px:
+                # print(f"Skipping zombie spawn at {pos}: too close to player ({int(dist/TILE_SIZE)} tiles).")
+                continue
 
         for _ in range(spawns_per_marker): # Loop 2: N zombies per marker (e.g., 3)
             if len(zombies) >= limit: break

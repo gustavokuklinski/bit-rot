@@ -1,6 +1,7 @@
 import os
 import re
 import pygame
+import random
 from core.data.config import *
 import core.data.config
 from core.entities.item.item import Item
@@ -118,13 +119,14 @@ def load_giant_map(game):
     mega_ground = [['bg_grass' for _ in range(mega_w)] for _ in range(mega_h)] # Default to grass to prevent voids
     mega_spawn = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_roof = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_light = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
+    mega_light_grid = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
+    
+    possible_player_spawns = []
 
     for (grid_x, grid_y), (base, ground, spawn, roof, light) in layouts.items():
         offset_x = (grid_x - min_x) * chunk_w
         offset_y = (grid_y - min_y) * chunk_h
         
-        is_start_chunk = (world_grid[(grid_x, grid_y)]['filename'] == start_file)
 
         for r in range(chunk_h):
             for c in range(chunk_w):
@@ -137,7 +139,10 @@ def load_giant_map(game):
                     
                 if r < len(spawn) and c < len(spawn[r]) and spawn[r][c] and spawn[r][c] != ' ':
                     char = spawn[r][c]
-                    if char == 'P' and not is_start_chunk:
+                    if char == 'P':
+                        # Collect all possible spawn points (random spawn feature)
+                        possible_player_spawns.append((offset_x + c, offset_y + r))
+                        # Don't add P to the grid passed to parser to avoid overwrites/warnings
                         mega_spawn[offset_y + r][offset_x + c] = ' '
                     else:
                         mega_spawn[offset_y + r][offset_x + c] = char
@@ -146,20 +151,60 @@ def load_giant_map(game):
                     mega_roof[offset_y + r][offset_x + c] = roof[r][c]
 
                 if light and r < len(light) and c < len(light[r]) and light[r][c] and light[r][c] != ' ':
-                    mega_light[offset_y + r][offset_x + c] = light[r][c]
+                    mega_light_grid[offset_y + r][offset_x + c] = light[r][c]
 
     print("Parsing mega-layouts...")
     (game.obstacles, 
      game.renderable_tiles, 
-     game.player_spawn, 
+     _parsed_spawn, 
      game.zombie_spawns, 
      game.item_spawns, 
      game.containers,
      game.roof_tiles,
-     mega_light) = parse_layered_map_layout(
-         mega_base, mega_ground, mega_spawn, mega_roof, mega_light, game.tile_manager
+     map_lights_list) = parse_layered_map_layout(
+         mega_base, mega_ground, mega_spawn, mega_roof, mega_light_grid, game.tile_manager
      )
     
+    if possible_player_spawns:
+        gx, gy = random.choice(possible_player_spawns)
+        game.player_spawn = (gx * TILE_SIZE, gy * TILE_SIZE)
+        print(f"Selected player spawn from markers at: {game.player_spawn}")
+    else:
+        # Fallback ONLY if no 'P' markers exist: Pick a random chunk
+        print("No 'P' markers found. Attempting to spawn in random chunk...")
+        chunk_coords = list(layouts.keys())
+        spawn_found = False
+        
+        if chunk_coords:
+            random.shuffle(chunk_coords)
+            
+            for (g_x, g_y) in chunk_coords:
+                chunk_pixel_x = (g_x - min_x) * chunk_w * TILE_SIZE
+                chunk_pixel_y = (g_y - min_y) * chunk_h * TILE_SIZE
+                
+                center_x = chunk_pixel_x + (chunk_w * TILE_SIZE // 2)
+                center_y = chunk_pixel_y + (chunk_h * TILE_SIZE // 2)
+                
+                spawn_rect = pygame.Rect(center_x, center_y, TILE_SIZE, TILE_SIZE)
+                
+                collision = False
+                for obs in game.obstacles:
+                    if spawn_rect.colliderect(obs):
+                        collision = True
+                        break
+                
+                if not collision:
+                    game.player_spawn = (center_x, center_y)
+                    print(f"Selected random chunk spawn at: {game.player_spawn} (Chunk {g_x},{g_y})")
+                    spawn_found = True
+                    break
+        
+        if not spawn_found:
+             if _parsed_spawn:
+                  game.player_spawn = _parsed_spawn
+             else:
+                  game.player_spawn = (mega_w * TILE_SIZE // 2, mega_h * TILE_SIZE // 2)
+
     game.map_data = mega_base
     game.current_zombie_spawns = game.zombie_spawns
     
@@ -167,8 +212,9 @@ def load_giant_map(game):
     game.all_ground_layers[1] = mega_ground
     game.all_spawn_layers[1] = mega_spawn
 
-    game.all_light_layers[1] = mega_light
-    game.light_data = mega_light
+    game.all_light_layers[1] = mega_light_grid
+    game.light_data = mega_light_grid
+    game.map_lights = map_lights_list
 
     game.world_min_x = 0
     game.world_min_y = 0

@@ -134,6 +134,10 @@ class ProceduralGenerator:
                 print(f"Assigning PRIORITY {tmpl} to Chunk {coord}")
                 coord_idx = (coord_idx + 1) % len(available_coords)
 
+        start_gx = random.randint(0, grid_w - 1)
+        start_gy = random.randint(0, grid_h - 1)
+        print(f"Randomly selected Start Chunk: ({start_gx}, {start_gy})")
+
         # 2. Render each Chunk
         total_map_w = grid_w * self.chunk_size * self.tile_size
         total_map_h = grid_h * self.chunk_size * self.tile_size
@@ -150,7 +154,10 @@ class ProceduralGenerator:
                 conns = connections_grid[gy][gx]
                 
                 priority_list = chunk_priority_map.get((gx, gy), [])
-                chunk_data = self._generate_chunk_data(gx, gy, conns, is_start=(pos_id==0), priority_templates=priority_list)
+
+                is_center_chunk = (gx == start_gx // 2 and gy == start_gy // 2)
+                
+                chunk_data = self._generate_chunk_data(gx, gy, conns, is_start=is_center_chunk, priority_templates=priority_list)
                 
                 conn_top = conns.get('top_id', 0)
                 conn_right = conns.get('right_id', 0)

@@ -377,7 +377,8 @@ class Game:
             target_map = player_data.get('map_filename')
             if target_map and target_map != self.map_manager.current_map_filename:
                 self.load_map(target_map)
-            
+                load_giant_map(self)
+
             self.game_state = 'PLAYING'
             self.logger.info("Game loaded successfully!")
 

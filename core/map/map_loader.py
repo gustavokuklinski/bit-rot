@@ -224,14 +224,19 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     # 1. Add visual sprite (The lamp itself)
                     # We add it to renderable_tiles so it draws on the world
                     renderable_tiles.append((tile_def['image'], rect))
-                    
+                 
+
                     # 2. Add Light Source Data
                     if tile_def.get('light_state') == 'on':
+                        base_radius = tile_def.get('light_radius', 0) * TILE_SIZE
+                           
+                        random_radius = int(random.uniform(base_radius, base_radius * 2))
+                        
                         is_active = random.choice([True, False])
                         map_lights.append({
                             'rect': rect,
                             # Convert tile radius to pixels (e.g., 10 tiles * 32px)
-                            'radius': tile_def.get('light_radius', 0) * TILE_SIZE,
+                            'radius': random_radius,
                             'active': is_active
                         })
 

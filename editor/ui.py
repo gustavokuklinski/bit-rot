@@ -316,22 +316,23 @@ class Toolbar:
         button_definitions = [
             # Added FILL button
             {"label": "NEW MAP", "icon": "new", "action": "NEW MAP"},
-            {"label": "NEW BUILDING", "icon": "new", "action": "NEW BUILDING"},
+            {"label": "NEW BUILDING", "icon": "building", "action": "NEW BUILDING"},
             {"label": "SAVE", "icon": "save", "action": "SAVE MAP"},
-            {"label": "EXPORT", "icon": "new", "action": "EXPORT PNG"},
+            {"label": "EXPORT", "icon": "export", "action": "EXPORT PNG"},
             {"label": "DELETE", "icon": "delete", "action": "DELETE MAP"},
             {"label": "ERASER", "icon": "eraser", "action": "ERASER"},
+            {"label": "SELECT", "icon": "selection", "action": "SELECTION"},
+            {"label": "FILL", "icon": "fill", "action": "FILL"},
             {"label": "UNDO", "icon": "undo", "action": "UNDO"},
             {"label": "COPY", "icon": "copy", "action": "COPY"},
             {"label": "PASTE", "icon": "paste", "action": "PASTE"},
-            {"label": "FILL", "icon": "paste", "action": "FILL"}, # Reuse paste icon if fill doesn't exist
             {"label": "CLEAR", "icon": "clear", "action": "CLEAR"},
             {"label": "P_SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
             {"label": "Z_SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
             {"label": "ITEM", "icon": "item", "action": "ITEM SPAWN"},
             {"label": "L1", "icon": "stair", "action": "STAIR L1"},
             {"label": "L2", "icon": "stair", "action": "STAIR L2"},
-            {"label": "SELECT", "icon": "selection", "action": "SELECTION"}
+            
         ]
 
         button_width = ICON_SIZE + 10
