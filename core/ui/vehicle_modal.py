@@ -12,6 +12,17 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     col = GREEN if vehicle.active else RED
     state_text = font.render(f"Car: {car_state}", True, col)
     surface.blit(state_text, (start_x, y_offset))
+
+    speed_kmh = int(vehicle.current_speed_val * 10)
+    speed_col = WHITE
+    if speed_kmh > 50: speed_col = ORANGE
+    if speed_kmh > 90: speed_col = RED
+    
+    speed_text = font.render(f"Speed: {speed_kmh} km/h", True, speed_col)
+    # Position right aligned or next to state
+    surface.blit(speed_text, (start_x + 160, y_offset))
+
+    
     y_offset += 25
 
     # 2. Stats Bars

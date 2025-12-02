@@ -10,7 +10,7 @@ from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.player.player_progression import PlayerProgression
 from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
-from core.messages import display_message
+from core.messages import display_message, display_message_player
 from core.placement import find_free_tile
 
 class Player:
@@ -142,7 +142,7 @@ class Player:
         # Remove the car from obstacles so we can move "inside" it
         if vehicle.rect in game.obstacles:
             game.obstacles.remove(vehicle.rect)
-        print(f"Entered {vehicle.name}")
+        display_message_player(f"Entered {vehicle.name}")
     
     # [FIX] Updated exit_vehicle to modify game obstacles
     def exit_vehicle(self, game):
@@ -155,7 +155,7 @@ class Player:
             self.x += TILE_SIZE 
             self.rect.topleft = (self.x, self.y)
             self.vehicle = None
-            print("Exited vehicle")
+            display_message_player("Exited vehicle")
 
     def update_aim(self, is_moving):
         if not self.is_aiming:
@@ -258,63 +258,88 @@ class Player:
         if self.vehicle:
 
             if not self.vehicle.is_driveable():
-                # Cannot move
                 return
 
-            move_x = 0
-            move_y = 0
-            
             # Use vehicle specific max speed (scales with motor)
             current_max_speed = self.vehicle.max_speed
-
-            # Only calculate movement if there is input
+            
+            # --- [NEW] Physics: Acceleration & Friction ---
+            
+            # 1. Calculate Input Direction
+            input_x = 0
+            input_y = 0
             if self.vx != 0 or self.vy != 0:
+                # Normalize input vector so diagonal isn't faster
                 input_magnitude = math.sqrt(self.vx**2 + self.vy**2)
                 if input_magnitude > 0:
-                    move_x = (self.vx / input_magnitude) * current_max_speed
-                    move_y = (self.vy / input_magnitude) * current_max_speed
-                    
-                    # [NEW] Fuel Consumption
-                    # Reduce load of the item in the 'fuel' slot
-                    fuel_item = self.vehicle.equipment['fuel']
-                    if fuel_item:
-                        # Consume ~0.01 load per frame of movement
-                        # Adjust 0.01 to change fuel efficiency
-                        fuel_item.load = max(0, fuel_item.load - 0.01)
-                    
-                    # Recharge battery slightly while driving
-                    self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
+                    input_x = (self.vx / input_magnitude)
+                    input_y = (self.vy / input_magnitude)
 
+            # 2. Apply Acceleration or Friction
+            if input_x != 0 or input_y != 0:
+                # Accelerate: Add to current velocity
+                # We assume self.vehicle.acceleration exists (e.g. 0.15)
+                self.vehicle.velocity[0] += input_x * self.vehicle.acceleration
+                self.vehicle.velocity[1] += input_y * self.vehicle.acceleration
+            else:
+                # Friction: Decelerate when no input
+                speed = self.vehicle.current_speed_val
+                if speed > 0:
+                    friction_loss = min(speed, self.vehicle.friction)
+                    # Scale down the velocity vector
+                    scale = (speed - friction_loss) / speed
+                    self.vehicle.velocity[0] *= scale
+                    self.vehicle.velocity[1] *= scale
+
+            # 3. Cap at Max Speed
+            speed = self.vehicle.current_speed_val
+            if speed > current_max_speed:
+                scale = current_max_speed / speed
+                self.vehicle.velocity[0] *= scale
+                self.vehicle.velocity[1] *= scale
+            
+            # 4. Determine final movement amount for this frame
+            move_x = self.vehicle.velocity[0]
+            move_y = self.vehicle.velocity[1]
+
+            # [NEW] Fuel Consumption & Battery (Only if moving significantly)
+            if speed > 0.1:
+                fuel_item = self.vehicle.equipment.get('fuel')
+                if fuel_item:
+                    # Lower consumption per frame since we are drifting/accelerating
+                    fuel_item.load = max(0, fuel_item.load - 0.005) 
+                
+                # Recharge battery slightly while driving
+                self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
+
+            # 5. Move Vehicle & Check Static Collisions (Walls)
+            # The vehicle.move() method (updated in Step 2) handles wall impact damage
             self.vehicle.move(move_x, move_y, obstacles)
 
-            # 2. Move Vehicle & Check Collisions (Walls)
-            self.vehicle.move(move_x, move_y, obstacles)
-
-            # [NEW] Zombie Collision Logic
-            # Check for zombies hitting the car rect
+            # 6. Entity Collision (Zombies)
             vehicle_rect = self.vehicle.rect
-            for zombie in zombies[:]: # Iterate copy to safely remove if needed
+            for zombie in zombies[:]: 
                 if vehicle_rect.colliderect(zombie.rect):
-                    # Car hits zombie
-                    damage_to_zombie = 100 # Kill or massive damage
+                    # Damage Zombie
+                    damage_to_zombie = 100 
                     zombie.take_damage(damage_to_zombie, game)
                     
-                    # Reduce Motor Status
-                    # "Every car hit reduces the motor status"
-                    self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) # -5% per hit
-                    print(f"Car hit zombie! Motor at {int(self.vehicle.motor*100)}%")
+                    # Damage Car Motor
+                    self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) 
+                    
+                    # Impact Physics: Slow down the car
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
-                    print(f"Hit zombie with car for {damage_to_zombie} damage!")
-                    # Optional: slight bounce or visual shake could go here
+                    
+                    display_message_player(f"Hit zombie! Speed reduced. Motor: {int(self.vehicle.motor*100)}%")
 
-            # 4. Sync Player
+            # 7. Sync Player Position to Vehicle
             self.x = self.vehicle.x
             self.y = self.vehicle.y
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
-            # --- WALK MODE (Existing) ---
+            # --- WALK MODE (Standard) ---
             self.x += self.vx
             self.rect.x = round(self.x)
 
@@ -517,7 +542,7 @@ class Player:
             # Wake up condition
             if self.tireness >= 100:
                 self.is_sleeping = False
-                print("You wake up refreshed.")
+                display_message_player("You wake up refreshed.")
 
 
         keys = pygame.key.get_pressed()
@@ -727,31 +752,31 @@ class Player:
     def reload_active_weapon(self, weapon=None):
         """Reloads the specified weapon, or the active weapon if None."""
         if self.is_reloading:
-            print("Already reloading.")
+            display_message_player("Already reloading.")
             return
             
         # Determine target weapon
         target_weapon = weapon if weapon else self.active_weapon
         
         if not target_weapon or not getattr(target_weapon, 'ammo_type', None):
-            print("Cannot reload: No gun specified or equipped.")
+            display_message_player("Cannot reload: No gun specified or equipped.")
             return
             
         if target_weapon.load >= target_weapon.capacity:
-            print(f"{target_weapon.name} is already full ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
+            display_message_player(f"{target_weapon.name} is already full ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
             return
         
         # Find ammo for the target weapon
         ammo_item, _, _, _ = self.find_matching_ammo(target_weapon)
         
         if not ammo_item:
-            print(f"No {target_weapon.ammo_type} found.")
+            display_message_player(f"No {target_weapon.ammo_type} found.")
             return
             
         self.is_reloading = True
         self.reloading_weapon = target_weapon # Store the specific weapon
         self.reload_timer = self.reload_duration
-        print(f"Reloading {target_weapon.name}...")
+        display_message_player(f"Reloading {target_weapon.name}...")
 
     def _finish_reload(self):
         self.is_reloading = False
@@ -773,7 +798,7 @@ class Player:
         if transfer_amount > 0:
             weapon.load += transfer_amount
             ammo_item.load -= transfer_amount
-            print(f"Finished reloading {weapon.name}. Load: {weapon.load:.0f}/{weapon.capacity:.0f}.")
+            display_message_player(f"Finished reloading {weapon.name}. Load: {weapon.load:.0f}/{weapon.capacity:.0f}.")
             
             if ammo_item.load <= 0:
                 if source_type == 'inventory':
@@ -824,11 +849,11 @@ class Player:
         kit, source, index, container = self.find_repair_kit(target_item)
         
         if not kit:
-            print(f"No repair kit found for {target_item.name}.")
+            display_message_player(f"No repair kit found for {target_item.name}.")
             return
 
         if target_item.durability >= target_item.max_durability:
-            print(f"{target_item.name} is already in perfect condition.")
+            display_message_player(f"{target_item.name} is already in perfect condition.")
             return
 
         # Calculate repair amount
@@ -837,7 +862,7 @@ class Player:
         target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
         restored = target_item.durability - old_dur
         
-        print(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
+        display_message_player(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
         
         # Grant Maintenance XP
         self.progression._add_xp(self, self.progression.maintenance, 'maintenance', 20)
@@ -850,7 +875,7 @@ class Player:
             if inv:
                 if source == 'belt': self.belt[index] = None
                 else: inv.pop(index)
-            print(f"{kit.name} used up.")
+            display_message_player(f"{kit.name} used up.")
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
@@ -949,7 +974,7 @@ class Player:
         ammo.load = weapon.load
         weapon.load = 0
         
-        print(f"Unloaded {int(ammo.load)} {ammo.name} from {weapon.name}.")
+        display_message_player(f"Unloaded {int(ammo.load)} {ammo.name} from {weapon.name}.")
 
         # 1. Try to stack into existing inventory/belt slots
         self.stack_item_in_inventory(ammo)
@@ -965,18 +990,18 @@ class Player:
         # 3. Try backpack
         if self.backpack and len(self.backpack.inventory) < (self.backpack.capacity or 0):
              self.backpack.inventory.append(ammo)
-             print("Moved to backpack.")
+             display_message_player("Moved to backpack.")
              return
 
         # 4. Drop to ground
         ammo.rect.center = self.rect.center
         if find_free_tile(ammo.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)
-            print("Inventory full. Dropped ammo on ground.")
+            display_message_player("Inventory full. Dropped ammo on ground.")
         else:
              # Restore if absolutely nowhere to go (prevent loss)
              weapon.load = ammo.load
-             print("No space to unload ammo!")
+             display_message_player("No space to unload ammo!")
 
     def _get_source_inventory(self, source_type, container_item=None):
         if source_type == 'inventory':
@@ -991,7 +1016,7 @@ class Player:
 
     def equip_item_to_belt(self, item, source_type, item_index, container_item=None):
         if not any(slot is None for slot in self.belt):
-            print("Belt is full.")
+            display_message_player("Belt is full.")
             return False
         source_inventory = self._get_source_inventory(source_type, container_item)
         if source_inventory is None:
@@ -1005,7 +1030,7 @@ class Player:
                     if slot is None:
                         self.belt[i] = item
                         self.invcontainer = None # Unequip from slot
-                        print(f"Equipped {item.name} to belt.")
+                        display_message_player(f"Equipped {item.name} to belt.")
                         return True
             print(f"Error: Item {item.name} not found in source {source_type}")
             return False
@@ -1014,7 +1039,7 @@ class Player:
             if slot is None:
                 self.belt[i] = item
                 source_inventory.pop(item_index)
-                print(f"Equipped {item.name} to belt.")
+                display_message_player(f"Equipped {item.name} to belt.")
                 return True
         return False
 
@@ -1024,7 +1049,7 @@ class Player:
             return False
 
         if item.load <= 0:
-            print(f"Cannot use {item.name}, it is empty.")
+            display_message_player(f"Cannot use {item.name}, it is empty.")
             return False
 
         status_effect_legacy = getattr(item, 'status_effect', None)
@@ -1057,14 +1082,14 @@ class Player:
                             
                             new_val = min(stat_cap, current_val + val)
                             setattr(self, target_stat, new_val)
-                            print(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                            display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
                             consumed = True
 
                         elif eff_type == 'reduce':
                             min_cap = 0.0
                             new_val = max(min_cap, current_val - val)
                             setattr(self, target_stat, new_val)
-                            print(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
+                            display_message_player(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
                             consumed = True
         
         # Fallback for items without new effects structure (if any remain)
@@ -1075,7 +1100,7 @@ class Player:
         else:
             # Only print error if NO effects were processed
             if not consumed:
-                print(f"Cannot consume {item.name}: no valid effects found.")
+                display_message_player(f"Cannot consume {item.name}: no valid effects found.")
                 return False
 
         # If consumed, decrement load and handle empty stack
@@ -1105,14 +1130,14 @@ class Player:
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                print(f"Cannot turn on {item.name}, it's out of power.")
+                display_message_player(f"Cannot turn on {item.name}, it's out of power.")
                 return
             
             # Check for fuel type (e.g., "Matches" for lantern)
             if item.fuel_type == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
-                    print("No matches to light the lantern.")
+                    display_message_player("No matches to light the lantern.")
                     return
                 
                 # Consume one match
@@ -1159,12 +1184,12 @@ class Player:
     def reload_utility_item(self, item, source, index, container_item):
         """Reloads a utility item (Lantern) with fuel (Matches). Resets Durability."""
         if not item.fuel_type:
-            print(f"{item.name} does not use fuel.")
+            display_message_player(f"{item.name} does not use fuel.")
             return
 
         fuel_item, f_source, f_index, f_container = self.find_fuel(item.fuel_type)
         if not fuel_item:
-            print(f"No {item.fuel_type} found to reload.")
+            display_message_player(f"No {item.fuel_type} found to reload.")
             return
             
         # Check if durability is already full
@@ -1172,12 +1197,12 @@ class Player:
         dur_needed = max_dur - (item.durability or 0)
         
         if dur_needed <= 0:
-            print(f"{item.name} durability is already full.")
+            display_message_player(f"{item.name} durability is already full.")
             return
 
         # Check if there are any matches left
         if fuel_item.load <= 0:
-            print(f"No {item.fuel_type} left to use.")
+            display_message_player(f"No {item.fuel_type} left to use.")
             return
 
         # Consume only 1 match
@@ -1186,7 +1211,7 @@ class Player:
         # As requested: "Reload" resets durability to full
         item.durability = max_dur
         
-        print(f"Used 1 {item.fuel_type} to reload {item.name}. Durability set to: {item.durability:.0f}")
+        display_message_player(f"Used 1 {item.fuel_type} to reload {item.name}. Durability set to: {item.durability:.0f}")
 
         if fuel_item.load <= 0:
             # Remove empty fuel item
@@ -1305,7 +1330,7 @@ class Player:
             elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                 source_inventory.pop(index) # Use pop(index) to be precise
             
-            print(f"Merged all of {item.name} into {target_name}.")
+            display_message_player(f"Merged all of {item.name} into {target_name}.")
             return
             
         # 3. If load remains, try to add as a new stack
@@ -1328,14 +1353,14 @@ class Player:
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                      source_inventory.pop(index) # Use pop(index)
 
-                print(f"Sent {remaining_load} {item.name} to {target_name}.")
+                display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
             else:
-                print(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
+                display_message_player(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
 
 
     def drop_item(self, game, source, index, container_item=None):
         if self.drop_cooldown > 0:
-            print("Cannot drop items so quickly.")
+            display_message_player("Cannot drop items so quickly.")
             return None
 
         item_to_drop = None
@@ -1381,7 +1406,7 @@ class Player:
                 return item_to_drop # Success
             else:
                 # No space, put it back
-                print("No free space to drop the item.")
+                display_message_player("No free space to drop the item.")
                 if source == 'inventory':
                     source_inventory.insert(source_index, item_to_drop)
                 elif source == 'belt':
@@ -1431,13 +1456,13 @@ class Player:
         for i, item in enumerate(self.belt):
             if item == broken_weapon:
                 self.belt[i] = None
-                print(f"{broken_weapon.name} broke and was removed from your belt.")
+                display_message_player(f"{broken_weapon.name} broke and was removed from your belt.")
                 return
 
         # Check inventory
         try:
             self.inventory.remove(broken_weapon)
-            print(f"{broken_weapon.name} broke and was removed from your inventory.")
+            display_message_player(f"{broken_weapon.name} broke and was removed from your inventory.")
         except ValueError:
             pass
 

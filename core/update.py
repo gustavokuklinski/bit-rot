@@ -12,7 +12,7 @@ from core.entities.player.player import Player
 from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies
-
+from core.messages import display_message_zombie, display_message_player
 
 def build_zombie_grid(zombies, grid_size):
     """Sorts all zombies into a spatial grid (dictionary)."""
@@ -122,7 +122,7 @@ def update_game_state(game):
     for ground_item in list(game.items_on_ground):
         if isinstance(ground_item, Corpse): # Check specifically for Corpse objects
             if ground_item.is_expired(now_ms):
-                print(f"{getattr(ground_item,'name','Corpse')} decayed.")
+                display_message_zombie(f"{getattr(ground_item,'name','Corpse')} decayed.")
                 try:
                     # Optional: Spill items before removing corpse
                     # ground_item.spill_contents_to_ground(game.items_on_ground)
@@ -143,7 +143,7 @@ def update_game_state(game):
                 distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)
-                    print(f"Closed {container_item.name} because you moved away.")
+                    display_message_player(f"Closed {container_item.name} because you moved away.")
     
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
         roadkill_zombies = []
@@ -173,7 +173,7 @@ def update_game_state(game):
                             roadkill_zombies.append(zombie)
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
                             game.zombies_killed += 1
-                            print(f"Roadkill! {zombie.name} squashed for {impact_damage:.1f} damage.")
+                            display_message_player(f"Roadkill! {zombie.name} squashed for {impact_damage:.1f} damage.")
                         else:
                              # Zombie survived but was hit
                              # Optional: push zombie away to prevent getting stuck inside car
@@ -216,7 +216,7 @@ def player_hit_zombie(player, zombie, game):
             if active_weapon.durability is not None and active_weapon.durability > 0:
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
-                    print(f"{active_weapon.name} broke!")
+                    display_message_player(f"{active_weapon.name} broke!")
                     player.progression._add_xp(player, player.progression.maintenance, 'maintenance', 50)
                     player.destroy_broken_weapon(active_weapon)
     else: # Unarmed
@@ -228,12 +228,12 @@ def player_hit_zombie(player, zombie, game):
         return True
 
     hit_type = "Headshot" if is_headshot else "Hit"
-    print(f"{hit_type}! Dealt {final_damage:.1f} damage.")
+    display_message_player(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False
 
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
-    print(f"A {zombie.name} died. Creating corpse and checking for loot...")
+    display_message_zombie(f"A {zombie.name} died. Creating corpse and checking for loot...")
     # create corpse at zombie position
     dead_sprite_path = "./game/lib/sprites/zombie/dead.png"
     corpse = Corpse(name="Dead corpse", capacity=10, image_path=dead_sprite_path, pos=zombie.rect.center)

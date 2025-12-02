@@ -3,6 +3,7 @@ import math
 from core.data.config import *
 import core.data.config
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
+from core.messages import display_message_player
 
 class PlayerProgression:
     def __init__(self, player_data):
@@ -161,7 +162,7 @@ class PlayerProgression:
         final_xp_gain = max(0, base_amount * xp_modifier)
 
         attribute['xp'] += final_xp_gain
-        print(f"Gained {final_xp_gain:.2f} XP for {attr_name}.")
+        display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.")
         
         # 4. Check for level up
         #    We calculate a modified XP-to-next-level to apply the penalty/bonus
@@ -176,7 +177,7 @@ class PlayerProgression:
         attribute['level'] += 1
         attribute['xp'] = 0
         attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name')) # Use the formula
-        print(f"Leveled up {attribute.get('name', 'attribute')} to level {attribute['level']}!")
+        display_message_player(f"Leveled up {attribute.get('name', 'attribute')} to level {attribute['level']}!")
 
     def process_kill(self, player, weapon, zombie):
         xp_amount = zombie.xp_value
@@ -298,7 +299,7 @@ class PlayerProgression:
         if player.tireness > 1:
             player.tireness = max(0, player.tireness - 0.1)
             return True
-        print("Too tired to swing!")
+        display_message_player("Too tired to swing!")
         return False
 
     # --- HELPER FUNCTIONS ---

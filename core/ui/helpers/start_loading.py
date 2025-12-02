@@ -1,44 +1,72 @@
 import pygame
+import math
 from core.data.config import *
+
+# Global variable to cache the image so we don't reload it every frame
+LOADING_IMG = None
 
 def draw_loading_screen(surface, is_done, mouse_pos):
     """
-    Draws the loading screen. 
-    If is_done is False, shows 'Loading...'.
-    If is_done is True, shows 'Loading Complete' and a 'Click to start' button.
-    Returns the button rect if is_done is True, else None.
+    Draws the loading screen with an animated image and blinking start text.
     """
+    global LOADING_IMG
+    
+    # 1. Load Image (Cached)
+    if LOADING_IMG is None:
+        try:
+            LOADING_IMG = pygame.image.load('game/icons/loading.png').convert_alpha()
+        except Exception:
+            # Fallback surface if image is missing
+            LOADING_IMG = pygame.Surface((100, 100))
+            LOADING_IMG.fill((50, 50, 50))
+
     surface.fill(DARK_GRAY)
     
     w, h = surface.get_size()
     center_x, center_y = w // 2, h // 2
 
+    # Get rect centered on screen
+    img_rect = LOADING_IMG.get_rect(center=(center_x, center_y))
+
     if not is_done:
-        text_surf = large_font.render("Loading...", True, WHITE)
-        rect = text_surf.get_rect(center=(center_x, center_y))
-        surface.blit(text_surf, rect)
+        # 2. Fade/Pulse Animation
+        # Oscillate alpha between 50 and 255 based on time
+        alpha = int(abs(math.sin(pygame.time.get_ticks() * 0.005)) * 200 + 55)
+        LOADING_IMG.set_alpha(alpha)
+        
+        surface.blit(LOADING_IMG, img_rect)
         return None
+        
     else:
-        text_surf = large_font.render("Welcome to Bit Rot...", True, WHITE)
-        rect = text_surf.get_rect(center=(center_x, center_y - 50))
-        surface.blit(text_surf, rect)
+        # Loading Complete
         
-        # Start Button
-        btn_w, btn_h = 250, 60
+        # Reset alpha to fully visible
+        LOADING_IMG.set_alpha(255)
+        surface.blit(LOADING_IMG, img_rect)
+        
+        # 3. Welcome Message (Below Image)
+        welcome_surf = large_font.render("Welcome to Bit Rot...", True, WHITE)
+        welcome_rect = welcome_surf.get_rect(midtop=(center_x, img_rect.bottom + 20))
+        surface.blit(welcome_surf, welcome_rect)
+        
+        # 4. 'Click to start' Button (Centered at Bottom)
+        btn_w, btn_h = 300, 60
         btn_rect = pygame.Rect(0, 0, btn_w, btn_h)
-        btn_rect.center = (center_x, center_y + 50)
+        btn_rect.center = (center_x, h - 100) # 100px from bottom
         
-        # Hover effect
-        color = DARK_GRAY
-        if btn_rect.collidepoint(mouse_pos):
-            # Slightly lighter green for hover
-            color = (DARK_GRAY) 
-        
-        pygame.draw.rect(surface, color, btn_rect, border_radius=8)
-        pygame.draw.rect(surface, DARK_GRAY, btn_rect, 2, border_radius=8)
-        
-        btn_text = font_notification.render("Click to start", True, WHITE)
+        # Blinking Color Logic (Switch every 500ms)
+        current_time = pygame.time.get_ticks()
+        if (current_time // 500) % 2 == 0:
+            text_color = GREEN
+        else:
+            text_color = WHITE
+            
+        # Draw Text (Using large_font for bold effect)
+        btn_text = large_font.render("Click to start", True, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
+        
+        # Draw invisible hit box (or subtle bg if needed)
+        # pygame.draw.rect(surface, (30,30,30), btn_rect, border_radius=8) 
         surface.blit(btn_text, text_rect)
         
         return btn_rect

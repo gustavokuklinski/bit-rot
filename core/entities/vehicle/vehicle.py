@@ -2,7 +2,7 @@ import pygame
 import math
 import random
 from core.data.config import TILE_SIZE
-from core.entities.item.item import Item  # [NEW] Required to spawn items
+from core.entities.item.item import Item
 
 class Vehicle:
     def __init__(self, name, x, y, width, height, image, stats, capacity=20):
@@ -51,6 +51,10 @@ class Vehicle:
         }
         
         self.velocity = [0, 0]
+
+        self.acceleration = 0.05
+        self.friction = 0.01
+
         self.active = False 
 
         # [NEW] Randomly populate slots with items
@@ -58,6 +62,11 @@ class Vehicle:
         
         # [NEW] Sync internal floats (fuel, battery) with the newly spawned items
         self.update_stats_from_equipment()
+
+
+    @property
+    def current_speed_val(self):
+        return math.hypot(self.velocity[0], self.velocity[1])
 
     # [NEW] Helper to randomly fill slots
     def _spawn_random_equipment(self):
@@ -189,22 +198,48 @@ class Vehicle:
 
 
     def move(self, dx, dy, obstacles):
-        # ... (Rest of the method remains the same)
+    
         if not self.active: return
+
+        old_x = self.x
+        old_y = self.y
+
         self.x += dx
         self.rect.x = int(self.x)
+
+        collision_x = False
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
                 if dx > 0: self.rect.right = obstacle.left
                 elif dx < 0: self.rect.left = obstacle.right
                 self.x = self.rect.x
+                collision_x = True
+
         self.y += dy
         self.rect.y = int(self.y)
+
+        collision_y = False
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
                 if dy > 0: self.rect.bottom = obstacle.top
                 elif dy < 0: self.rect.top = obstacle.bottom
                 self.y = self.rect.y
+                collision_y = True
+        
+
+        if collision_x or collision_y:
+            current_speed = self.current_speed_val
+            
+            # Only damage if speed is significant (e.g. > 2.0)
+            if current_speed > 2.0:
+                damage = current_speed * 2.0 # Damage multiplier
+                print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
+                
+                # Apply damage
+                self.damage_motor(damage)
+                
+                # Kill velocity (bounce/stop)
+                self.velocity = [0, 0]
 
     @property
     def current_light_radius(self):

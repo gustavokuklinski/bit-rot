@@ -546,7 +546,7 @@ class Game:
         initial_loot = player_data.get('initial_loot', [])
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-        starter_items = ["Mobile Off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
+        starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
@@ -897,8 +897,6 @@ class Game:
         return (self.player.rect.centerx + self.camera_pan_x + relative_screen_x / self.zoom_level,
                 self.player.rect.centery + self.camera_pan_y + relative_screen_y / self.zoom_level)
 
-        #return (self.player.rect.centerx + relative_screen_x / self.zoom_level,
-        #        self.player.rect.centery + relative_screen_y / self.zoom_level)
 
     def _update_screen(self):
         current_w, current_h = self.screen.get_size()

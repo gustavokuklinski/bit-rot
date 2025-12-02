@@ -131,7 +131,7 @@ class MapManager:
         if new_state == "close":
             # Check if the player's collision box is overlapping with the tile
             if self.game.player.rect.colliderect(tile_rect):
-                print("Player is in the doorway, cannot close.")
+                display_message_player("Player is in the doorway, cannot close.")
                 return # Stop the function
         # Assumes naming convention: "char_name_close" <-> "char_name_open"
         base_name = current_char.replace("_open", "").replace("_close", "")
