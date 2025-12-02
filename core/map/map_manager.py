@@ -3,7 +3,7 @@ import re
 import pygame
 import random
 from core.data.config import *
-
+from core.messages import display_message_player
 class MapManager:
     def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game

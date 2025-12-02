@@ -21,7 +21,7 @@ def load_building_templates(buildings_dir):
             # Remove the layer suffix to get the base name
             # Assumes format: name_layer.csv (e.g., house1_map.csv)
             # If your buildings are just 'house1.csv', adjust splitting
-            base = f.replace('_map.csv', '').replace('_ground.csv', '').replace('_spawn.csv', '').replace('_roof.csv', '')
+            base = f.replace('_map.csv', '').replace('_ground.csv', '').replace('_spawn.csv', '').replace('_roof.csv', '').replace('_light.csv', '')
             prefixes.add(base)
 
     for name in prefixes:
@@ -29,7 +29,8 @@ def load_building_templates(buildings_dir):
             'base': [],
             'ground': [],
             'spawn': [],
-            'roof': []
+            'roof': [],
+            'light': []
         }
         
         # Helper to load a specific layer
@@ -45,6 +46,7 @@ def load_building_templates(buildings_dir):
         template['ground'] = load_layer('_ground.csv')
         template['spawn'] = load_layer('_spawn.csv')
         template['roof'] = load_layer('_roof.csv')
+        template['light'] = load_layer('_light.csv')
 
         # Only add if we found at least a base or ground layer
         if template['base'] or template['ground']:

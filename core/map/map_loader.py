@@ -8,6 +8,7 @@ from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 from core.entities.vehicle.vehicle import Vehicle
 
+
 def load_map_from_file(filepath):
     """Loads a map layout from a CSV file."""
     print(f"Attempting to load map from: {filepath}")  # Debug print
@@ -23,7 +24,7 @@ def load_map_from_file(filepath):
         print(f"Error reading map layer file {filepath}: {e}")
     return layout # Return list (possibly empty if file not found/error)
 
-def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layout, tile_manager):
+def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layout, light_layout, tile_manager):
     """
     Creates lists of tiles, obstacles, and spawn points from layered map layouts.
     - ground_layout defines floor tiles (never obstacles).
@@ -37,7 +38,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
     item_spawns = []
     containers = []
     roof_renderables = []
-
+    map_lights = []
     # Use dimensions from the base layout (assuming all layers match)
     map_height = len(base_layout)
     map_width = len(base_layout[0]) if map_height > 0 else 0
@@ -208,7 +209,31 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         container.rect = rect
                         container.image = tile_def['image']
                         containers.append(container)
-              
+    
+    if light_layout:
+         for y, row in enumerate(light_layout):
+             if y >= len(light_layout): break
+             for x, char in enumerate(row):
+                if x >= len(row): break
+                
+                if char and char != ' ' and char in tile_manager.definitions:
+                    tile_def = tile_manager.definitions[char]
+                    pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
+                    rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
+                    
+                    # 1. Add visual sprite (The lamp itself)
+                    # We add it to renderable_tiles so it draws on the world
+                    renderable_tiles.append((tile_def['image'], rect))
+                    
+                    # 2. Add Light Source Data
+                    if tile_def.get('light_state') == 'on':
+                        is_active = random.choice([True, False])
+                        map_lights.append({
+                            'rect': rect,
+                            # Convert tile radius to pixels (e.g., 10 tiles * 32px)
+                            'radius': tile_def.get('light_radius', 0) * TILE_SIZE,
+                            'active': is_active
+                        })
 
     if len(roof_layout) != map_height or (map_height > 0 and len(roof_layout[0]) != map_width):
         print("Warning: Roof layout dimensions mismatch base layout.")
@@ -235,4 +260,4 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
 
 
-    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables
+    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights

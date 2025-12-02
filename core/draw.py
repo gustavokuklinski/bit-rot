@@ -240,6 +240,39 @@ def draw_game(game):
                 print(f"Error drawing light: {e}")
 
 
+    if light_texture:
+        for light in game.map_lights:
+            if not light.get('active', True): 
+                continue
+            # radius is already in pixels from map_loader
+            radius_view_pixels = int(light['radius'])
+            
+            if radius_view_pixels <= 0: continue
+
+            try:
+                # Scale light texture
+                scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
+
+                # Since we use BLEND_RGBA_ADD, we "dim" the light by multiplying it with a dark color.
+                # 255 = 100% Intensity (Full White)
+                # 100 = ~40% Intensity (Softer Light)
+                # Adjust 'light_opacity' to change the strength (0 to 255)
+                light_opacity = 80 
+                scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
+
+                light_rect = scaled_light_tex.get_rect()
+                
+                # Calculate screen position
+                pos_x_view = light['rect'].centerx + offset_x
+                pos_y_view = light['rect'].centery + offset_y
+                
+                light_rect.center = (pos_x_view, pos_y_view)
+                
+                # Blit to mask using ADD (adds the dimmed light values)
+                light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+            except Exception as e:
+                pass
+
 
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     

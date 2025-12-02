@@ -862,6 +862,13 @@ def handle_context_menu_click(game, mouse_pos):
             if option == 'Sleep':
                 print("You go to sleep...")
                 game.player.is_sleeping = True
+            
+            if option == 'Toggle Light':
+                if source == 'light_source':
+                    # Toggle the boolean state
+                    item['active'] = not item['active']
+                    print(f"Light turned {'ON' if item['active'] else 'OFF'}")
+                clicked_on_menu = True
 
             if option == 'Use': game.player.consume_item(item, source, index, container_item)
             elif option == 'Reload':
@@ -1243,7 +1250,7 @@ def handle_right_click(game, mouse_pos):
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
 
-            if tile and tile.type == "maptile_car":
+            if tile and tile.get('type') == "maptile_car":
                 vehicle = game.map_manager.get_vehicle_by_tile(tile)
                 if vehicle:
                     clicked_item = vehicle
@@ -1258,6 +1265,15 @@ def handle_right_click(game, mouse_pos):
                 clicked_item = {'name': 'Bed', 'type': 'map_tile'} 
                 click_source = 'map_tile'
 
+    if not clicked_item:
+        world_pos = game.screen_to_world(mouse_pos)
+        for light in game.map_lights:
+            # Check if we clicked the specific tile of the light
+            if light['rect'].collidepoint(world_pos):
+                clicked_item = light
+                click_source = 'light_source'
+                click_index = 0
+                break
 
     if clicked_item:
         game.context_menu['active'] = True
@@ -1269,6 +1285,9 @@ def handle_right_click(game, mouse_pos):
 
         if click_source == 'map_tile':
             options = ['Sleep']
+        elif click_source == 'light_source': # [NEW]
+            status = "OFF" if clicked_item['active'] else "ON"
+            options = ['Toggle Light']
         elif click_source == 'player_self':
             options = ['Status', 'Inventory', 'Gear']
         else:

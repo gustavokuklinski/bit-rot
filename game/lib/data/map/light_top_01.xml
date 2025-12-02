@@ -1,0 +1,5 @@
+<map name="light_top_01" type="maptile" char="light_top_01" is_obstacle="false" light="on" light_radius="3">
+    <visuals>
+        <sprite file="light_top_01.png" />
+    </visuals>
+</map>

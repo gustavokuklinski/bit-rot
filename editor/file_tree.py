@@ -209,7 +209,7 @@ class FileTree:
 
                     # Draw Layers
                     if self.expanded_maps.get(map_key):
-                        layer_order = ['roof', 'map', 'spawn', 'ground']
+                        layer_order = ['roof','light', 'map', 'spawn', 'ground']
                         layer_file_lookup = {}
                         for lf in maps[map_name]:
                             for suffix in layer_order:
@@ -288,7 +288,7 @@ class FileTree:
                                 
                                 # Layers
                                 if self.expanded_maps.get(map_key):
-                                    layer_order = ['roof', 'map', 'spawn', 'ground']
+                                    layer_order = ['roof', 'light','map', 'spawn', 'ground']
                                     layer_file_lookup = {}
                                     for lf in maps[map_name]:
                                         for suffix in layer_order:

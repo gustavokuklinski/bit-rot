@@ -39,7 +39,9 @@ class TileManager:
                                     'state': root.get('state'),
                                     'is_statable': root.get('state') is not None,
                                     'rest': root.get('rest', 'false').lower() == 'true',
-                                    'sleep': root.get('sleep', 'false').lower() == 'true'
+                                    'sleep': root.get('sleep', 'false').lower() == 'true',
+                                    'light_state': root.get('light', 'off'), 
+                                    'light_radius': int(root.get('light_radius', '0'))
                                 }
 
                                 sound_node = root.find('sound')

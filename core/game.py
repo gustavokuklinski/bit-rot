@@ -81,6 +81,11 @@ class Game:
         self.renderable_tiles = []
         self.containers = []
         self.corpses = []
+
+        self.map_lights = [] 
+        
+        self.all_light_layers = {} 
+        self.light_data = []
         
         self.zombies_killed = 0
 
@@ -462,7 +467,7 @@ class Game:
         self.map_manager.current_map_filename = map_filename
         
         # Pass the current map folder (save folder) to the loader
-        self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers = \
+        self.all_map_layers, self.all_ground_layers, self.all_spawn_layers, self.all_roof_layers, self.all_light_layers = \
             load_all_map_layers(map_filename, base_path=self.map_manager.map_folder)
 
         if 1 not in self.all_map_layers:

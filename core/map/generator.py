@@ -276,7 +276,8 @@ class ProceduralGenerator:
             'base': [[' ' for _ in range(w)] for _ in range(h)],
             'ground': [['bg_grass' for _ in range(w)] for _ in range(h)],
             'spawn': [[' ' for _ in range(w)] for _ in range(h)],
-            'roof': [[' ' for _ in range(w)] for _ in range(h)]
+            'roof': [[' ' for _ in range(w)] for _ in range(h)],
+            'light': [[' ' for _ in range(w)] for _ in range(h)]
         }
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
 
@@ -566,7 +567,7 @@ class ProceduralGenerator:
         place_zombies(count_woods, woods_tiles)
 
     def _blit_template(self, target, source, ox, oy, mw, mh):
-        for layer in ['base', 'ground', 'spawn', 'roof']:
+        for layer in ['base', 'light', 'ground', 'spawn', 'roof']:
             if layer not in source: continue
             grid = source[layer]
             for r in range(len(grid)):
@@ -593,6 +594,7 @@ class ProceduralGenerator:
         ground = data['ground']
         base = data['base']
         roof = data['roof']
+        light = data['light']
         spawn = data['spawn']
         
         for y in range(self.chunk_size):
@@ -613,6 +615,10 @@ class ProceduralGenerator:
                 r_char = roof[y][x]
                 if r_char in defs and r_char != ' ':
                     bg_surf.blit(defs[r_char]['image'], (px, py))
+                
+                l_char = light[y][x]
+                if l_char in defs and l_char != ' ':
+                    bg_surf.blit(defs[l_char]['image'], (px, py))
                 
                 # 3. Heatmap
                 s_char = spawn[y][x]
