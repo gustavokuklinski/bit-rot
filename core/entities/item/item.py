@@ -120,7 +120,7 @@ class Item:
 
     def can_stack_with(self, other_item):
         """Checks if this item can be stacked with another."""
-        if not self.is_stackable or not other_item.is_stackable:
+        if not self.is_stackable() or not other_item.is_stackable():
             return False
         # Stacking requires same name and (for safety) same item type
         # We also check that durability is None, as stackable items shouldn't have it

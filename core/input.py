@@ -6,6 +6,7 @@ import core.data.config
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
 
+keys_held = {}
 def handle_movement(game):
     if game.player.is_sleeping:
         return
@@ -142,6 +143,10 @@ def handle_input(game):
 
             if event.type == pygame.KEYDOWN:
                 if not game.chat_active:
+                    if game.player.vehicle and event.key == pygame.K_SPACE:
+                        game.player.vehicle.brake(brake_force=0.6)
+                        return
+
                     if event.key == pygame.K_e:
                         if game.player.vehicle:
                             game.player.exit_vehicle(game)

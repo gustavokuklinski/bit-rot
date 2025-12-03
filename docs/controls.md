@@ -3,24 +3,25 @@
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
-- **CTRL/R-Click + L-Click**: Shoot/Attack
-- **SHIFT + L-Click + Drag**: Get only one item from stack
+- **CTRL/R-Click + L-Click**: Shoot + Aim / Attack
+- **1/2/3/4/5**: Equip and use item from Belt
+- **MOUSE SCROLL / - or =**: Zoom in/Zoom out
+
+**Game world interaction**
+- **SHIFT + L-Click + Drag**: Get/drop only one item from stack
 - **L-Click + Drag**: Place or Drop
 - **R-Click**: Opens menu 
-- **1/2/3/4/5**: Equip and use item from Belt
-- **SPACE**: Wake up from sleep
-
-- **E**: Get item from floor, enter vehicle, open/close door
-- **Q**: Start vehicle engine
+- **E**: Get item from floor, open or close door, enter vehicle
 - **R**: Reload weapon
+- **Q**: Start vehicle engine
+- **SPACE**: Break vehicle, wake up from sleep
 
+**Modals**
 - **I**: Opens Inventory
 - **H**: Open Status
 - **N**: Open Nearby
 - **M / ENTER**: Open Messages (enter enable chat mode)
 - **G**: Open Clothes
 
+**System**
 - **F2 / ESC**: Pause, save, back to menu
-
-- **MOUSE SCROLL**: Zoom in/Zoom out
-- **-/=**: Keyboard Zoom in/Zoom out

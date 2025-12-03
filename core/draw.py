@@ -42,7 +42,7 @@ def draw_game(game):
     light_mask = pygame.Surface((view_w, view_h))
     
     # Fill the mask with pitch black.
-    light_mask.fill((12, 12, 12))
+    light_mask.fill((30, 30, 30))
     ambient = int(game.world_time.current_ambient_light)
 
     light_texture = game.assets.get('light_texture')

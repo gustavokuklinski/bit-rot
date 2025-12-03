@@ -13,10 +13,12 @@ class PlayerProgression:
         self.melee = self._create_attribute(player_data, 'melee')
         self.ranged = self._create_attribute(player_data, 'ranged')
         self.maintenance = self._create_attribute(player_data, 'maintenance')
+        
+        self.speed = self._create_attribute(player_data, 'speed')
+
         # Passive skills
         self.lucky = player_data['attributes'].get('lucky', 0.0)
-        self.speed = player_data['attributes'].get('speed', 0.0)
-
+        # self.speed was here previously
 
     def get_total_attribute_bonus(self, player, attr_name):
         """Calculates the total percentage bonus from 'charm' items in player's inventory."""
@@ -85,7 +87,8 @@ class PlayerProgression:
         return base * (1 + (bonus_perc / 100.0))
     
     def get_speed(self, player):
-        base = self.speed
+        # [MODIFIED] Use 'level' from the speed attribute dict
+        base = self.speed['level']
         bonus_perc = self.get_total_attribute_bonus(player, 'speed')
         return base * (1 + (bonus_perc / 100.0))
 
@@ -133,13 +136,31 @@ class PlayerProgression:
             base_xp = 50
         elif attr_name == 'melee':
             base_xp = 100
+        # [NEW] XP Curve for Speed
+        elif attr_name == 'speed':
+            base_xp = 150
             
         # Linear scaling: Level 0->1 = Base. Level 1->2 = Base * 2.
         return base_xp * (current_level + 1)
 
     def _create_attribute(self, player_data, attr_name):
-        base_level_from_traits = player_data['attributes'].get(attr_name, 0.0)
-        start_level = max(0.0, base_level_from_traits)
+        
+
+        # [FIX] Handle both loading (dict) and new creation (float/int)
+        raw_value = player_data['attributes'].get(attr_name, 0.0)
+        
+        # If it's already a dictionary (from a save file), return it directly
+        if isinstance(raw_value, dict):
+            # Ensure xp_to_next_level exists (backward compatibility fix)
+            if 'xp_to_next_level' not in raw_value:
+                 current_lvl = raw_value.get('level', 0)
+                 raw_value['xp_to_next_level'] = self._get_xp_for_next_level(current_lvl, attr_name)
+            return raw_value
+
+        # Otherwise, treat it as a base level (float/int) for new initialization
+        base_level_from_traits = raw_value
+        start_level = max(0.0, int(base_level_from_traits))
+        
         return {
             "name": attr_name,
             "level": start_level,
@@ -162,13 +183,13 @@ class PlayerProgression:
         final_xp_gain = max(0, base_amount * xp_modifier)
 
         attribute['xp'] += final_xp_gain
-        display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.")
+        # display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.") 
         
         # 4. Check for level up
         #    We calculate a modified XP-to-next-level to apply the penalty/bonus
         
         # This is the base amount needed (e.g., 100)
-        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level']) 
+        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name'))
 
         if attribute['xp'] >= attribute['xp_to_next_level']:
             self._level_up(attribute)
@@ -178,6 +199,10 @@ class PlayerProgression:
         attribute['xp'] = 0
         attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name')) # Use the formula
         display_message_player(f"Leveled up {attribute.get('name', 'attribute')} to level {attribute['level']}!")
+
+    # [NEW] Public method to add speed XP
+    def add_speed_xp(self, player, amount):
+        self._add_xp(player, self.speed, 'speed', amount)
 
     def process_kill(self, player, weapon, zombie):
         xp_amount = zombie.xp_value
@@ -198,6 +223,10 @@ class PlayerProgression:
         self.update_infection(player)
         self.update_anxiety(player, game)
         self.update_tireness(player, game, is_moving)
+
+        # Earn Fitness XP when running
+        if is_moving and player.is_running:
+            self._add_xp(player, self.fitness, 'fitness', 0.00002)
 
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)

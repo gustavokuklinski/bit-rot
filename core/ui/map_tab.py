@@ -6,10 +6,10 @@ from core.data.config import *
 # Define colors for the minimap
 MINIMAP_COLORS = {
     ' ': (30, 30, 30),     # Empty/Background
-    'G': (30, 30, 30),    # Grass
-    'W': (30, 30, 30),    # Water
-    'R': (80, 80, 80),     # Road
-    'F': (30, 30, 30),     # Forest
+    'G': (80, 80, 80),    # Grass
+    'W': (80, 80, 80),    # Water
+    'R': (30, 30, 30),     # Road
+    'F': (80, 80, 80),     # Forest
     'default': (80, 80, 80) # Default for walls/obstacles
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255) # Bright cyan for player

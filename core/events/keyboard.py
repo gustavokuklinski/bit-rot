@@ -128,7 +128,8 @@ def find_closest_vehicle(game):
 def toggle_pause(game):
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
-        game.capture_pause_screen() 
+        game.capture_pause_screen()
+        game.save_game()
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 

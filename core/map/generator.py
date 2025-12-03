@@ -445,10 +445,17 @@ class ProceduralGenerator:
                             else:
                                 x_s, x_e = min(cx, bx), max(cx, bx)
                                 for rx in range(x_s, x_e + 1): 
-                                    if 0<=rx<w and layers['ground'][cy][rx]!=road_tile: layers['ground'][cy][rx]=sand_tile; occupied_mask[cy][rx]=1
+                                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
+                                        yy = cy + off
+                                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
+                                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                                
                                 y_s, y_e = min(cy, by), max(cy, by)
                                 for ry in range(y_s, y_e + 1):
-                                    if 0<=ry<h and layers['ground'][ry][bx]!=road_tile: layers['ground'][ry][bx]=sand_tile; occupied_mask[ry][bx]=1
+                                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
+                                        xx = bx + off
+                                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
+                                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
                             
                             self._blit_template(layers, tmpl, tx, ty, w, h)
                             placed_rects.append(pygame.Rect(tx, ty, tw, th))
@@ -486,10 +493,17 @@ class ProceduralGenerator:
             else:
                 x_s, x_e = min(cx, bx), max(cx, bx)
                 for rx in range(x_s, x_e + 1): 
-                    if 0<=rx<w and layers['ground'][cy][rx]!=road_tile: layers['ground'][cy][rx]=sand_tile; occupied_mask[cy][rx]=1
+                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
+                        yy = cy + off
+                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
+                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                
                 y_s, y_e = min(cy, by), max(cy, by)
                 for ry in range(y_s, y_e + 1):
-                    if 0<=ry<h and layers['ground'][ry][bx]!=road_tile: layers['ground'][ry][bx]=sand_tile; occupied_mask[ry][bx]=1
+                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
+                        xx = bx + off
+                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
+                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
 
             self._blit_template(layers, tmpl, tx, ty, w, h)
             placed_rects.append(pygame.Rect(tx, ty, tw, th))

@@ -52,8 +52,8 @@ class Vehicle:
         
         self.velocity = [0, 0]
 
-        self.acceleration = 0.05
-        self.friction = 0.01
+        self.acceleration = 0.4
+        self.friction = 0.4
 
         self.active = False 
 
@@ -68,7 +68,18 @@ class Vehicle:
     def current_speed_val(self):
         return math.hypot(self.velocity[0], self.velocity[1])
 
-    # [NEW] Helper to randomly fill slots
+    def brake(self, brake_force=0.9): 
+        """Applies a strong braking force to instantly reduce velocity."""
+        if not self.active: return
+
+        # Apply a heavy friction (0.9 means 90% velocity reduction per call)
+        self.velocity[0] *= (1 - brake_force)
+        self.velocity[1] *= (1 - brake_force)
+
+        # Stop completely if movement is negligible to prevent floating point jitter
+        if self.current_speed_val < 0.1:
+            self.velocity = [0, 0]
+
     def _spawn_random_equipment(self):
         # 1. Spawn Key (30% chance, only if vehicle requires a key)
         if self.required_key_id and random.random() < 0.3:

@@ -73,6 +73,12 @@ class Player:
         self.reload_timer = 0
         self.reload_duration = 120
 
+        self.action_timer = 0
+        self.action_total_time = 0
+        self.action_callback = None
+        self.action_name = ""
+        self.action_xp_reward = 0
+
         #self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
 
         self.images = {} # Store all player sprites
@@ -454,6 +460,24 @@ class Player:
             bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
             pygame.draw.rect(surface, (100, 150, 255), bar_rect)
 
+        # Action Progress Bar
+        if self.action_timer > 0 and self.action_total_time > 0:
+            # Calculate progress (goes from 1.0 to 0.0)
+            progress = 1.0 - (self.action_timer / self.action_total_time)
+            
+            bar_total_width = TILE_SIZE * 2
+            bar_x = draw_rect.centerx - (bar_total_width / 2)
+            bar_y = draw_rect.top - 15 # Position just above head
+            
+            # Background
+            bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
+            pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+            
+            # Foreground (Green for actions)
+            bar_progress_width = int(bar_total_width * progress)
+            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
+            pygame.draw.rect(surface, (50, 200, 50), bar_rect)
+
         # Melee arc
         if self.melee_swing_timer > 0:
             if self.active_weapon and self.active_weapon.image and \
@@ -508,6 +532,21 @@ class Player:
 
         current_time = time.time()
 
+        # Action Timer Logic
+        if self.action_timer > 0:
+            self.action_timer -= 1
+            if self.action_timer <= 0:
+                # Action Finished
+                if self.action_callback:
+                    self.action_callback()
+                    self.action_callback = None
+                    if self.action_xp_reward > 0:
+                        # Add Speed XP
+                        self.progression.add_speed_xp(self, self.action_xp_reward)
+                self.action_name = ""
+            
+            # Block inputs if performing an action
+            return False
 
         if self.chat_timer > 0:
             self.chat_timer -= 1
@@ -608,8 +647,9 @@ class Player:
                 print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
+                    self.consume_item(water_item, source, index, container, is_auto_drink=True)
                     print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
-                    self.consume_item(water_item, source, index, container)
+                    # self.consume_item(water_item, source, index, container)
         
         all_inventories = [self.belt, self.inventory]
         if self.backpack:
@@ -658,6 +698,33 @@ class Player:
             self.layer_switch_cooldown -= 1
 
         return False
+
+
+    def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
+        if self.action_timer > 0:
+            display_message_player("Busy...")
+            return False
+
+        # Unit time: 60 frames (approx 1 second)
+        UNIT_TIME = 60
+        
+        # Calculate speed reduction
+        # Speed level 0: 1.0 multiplier
+        # Speed level 10: 0.5 multiplier (example curve)
+        speed_lvl = self.progression.get_speed(self)
+        speed_factor = 1.0 / (1.0 + (speed_lvl * 0.1)) # Higher speed = lower factor
+        
+        total_duration = int(UNIT_TIME * base_duration_mult * speed_factor)
+        
+        self.action_timer = total_duration
+        self.action_total_time = total_duration
+        self.action_name = action_name
+        self.action_callback = callback
+        self.action_xp_reward = xp_reward
+        
+        display_message_player(f"{action_name}...")
+        return True
+
 
     def get_total_inventory_slots(self):
         if self.backpack:
@@ -837,19 +904,22 @@ class Player:
 
         # 3. Search Backpack
         if self.backpack:
-             for i, item in enumerate(self.backpack.inventory):
+            for i, item in enumerate(self.backpack.inventory):
                 if is_valid_kit(item): return item, 'container', i, self.backpack
 
         # 4. Search InvContainer
         if self.invcontainer:
-             for i, item in enumerate(self.invcontainer.inventory):
+            for i, item in enumerate(self.invcontainer.inventory):
                 if is_valid_kit(item): return item, 'container', i, self.invcontainer
         
         return None, None, None, None
 
-    # [NEW METHOD]
+
     def repair_item(self, game, target_item):
-        """Repairs the target item using a kit found in inventory."""
+        if self.action_timer > 0:
+            display_message_player("Busy...")
+            return
+
         kit, source, index, container = self.find_repair_kit(target_item)
         
         if not kit:
@@ -860,26 +930,29 @@ class Player:
             display_message_player(f"{target_item.name} is already in perfect condition.")
             return
 
-        # Calculate repair amount
-        restore_amount = random.randint(kit.min_restore, kit.max_restore)
-        old_dur = target_item.durability
-        target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
-        restored = target_item.durability - old_dur
-        
-        display_message_player(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
-        
-        # Grant Maintenance XP
-        self.progression._add_xp(self, self.progression.maintenance, 'maintenance', 20)
+        def execute_repair():
+            # Verify kit still exists
+            # (In a real scenario, we might need to re-find it if the player moved stuff, but since inputs are blocked, it's safe-ish)
+            
+            restore_amount = random.randint(kit.min_restore, kit.max_restore)
+            old_dur = target_item.durability
+            target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
+            restored = target_item.durability - old_dur
+            
+            display_message_player(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
+            self.progression._add_xp(self, self.progression.maintenance, 'maintenance', 20)
 
-        # Consume 1 use of the kit
-        kit.load -= 1
-        if kit.load <= 0:
-            # Remove empty kit
-            inv = self._get_source_inventory(source, container)
-            if inv:
-                if source == 'belt': self.belt[index] = None
-                else: inv.pop(index)
-            display_message_player(f"{kit.name} used up.")
+            kit.load -= 1
+            if kit.load <= 0:
+                inv = self._get_source_inventory(source, container)
+                if inv:
+                    if source == 'belt': self.belt[index] = None
+                    else: inv.pop(index)
+                display_message_player(f"{kit.name} used up.")
+
+        # Repair takes 2.0x unit time
+        self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
+
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
@@ -1047,7 +1120,12 @@ class Player:
                 return True
         return False
 
-    def consume_item(self, item, source_type, item_index, container_item=None):
+
+    def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False):
+        if self.action_timer > 0 and not is_auto_drink:
+            display_message_player("Busy...")
+            return False
+
         source_inventory = self._get_source_inventory(source_type, container_item)
         if not item.item_type.startswith('consumable'):
             return False
@@ -1055,73 +1133,81 @@ class Player:
         if item.load <= 0:
             display_message_player(f"Cannot use {item.name}, it is empty.")
             return False
+            
+        # Determine Multiplier based on item type
+        duration_mult = 1.0
+        if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
+            duration_mult = 2.0
+        elif 'Water' in item.name or item.item_type == 'consumable_drink':
+            duration_mult = 1.0
+        elif item.item_type == 'consumable_food':
+            duration_mult = 1.0
+            
+        # Define the actual consumption logic as a callback
+        def execute_consume():
+            status_effect_legacy = getattr(item, 'status_effect', None)
+            ammo_type = getattr(item, 'ammo_type', None) 
+            consumed = False
 
-        status_effect_legacy = getattr(item, 'status_effect', None)
-        ammo_type = getattr(item, 'ammo_type', None) # Keep this for reload logic
-        consumed = False
+            if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
+                self.reload_active_weapon()
+                return 
 
-        if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
-            # Item is ammo, trigger a reload
-            self.reload_active_weapon()
-            return True # Return early, reload handles its own logic
-
-        
-        
-        if hasattr(item, 'effects') and item.effects:
-            for effect in item.effects:
-                eff_type = effect['type'] # 'restore' or 'reduce'
-                targets = effect['targets'] # list e.g. ['health', 'tireness']
-                val = random.randint(effect['min'], effect['max'])
-                
-                for target_stat in targets:
-                    if hasattr(self, target_stat):
-                        current_val = getattr(self, target_stat)
-                        
-                        if eff_type == 'restore':
-                            # Determine cap
-                            stat_cap = 100.0
-                            if target_stat == 'health': stat_cap = self.max_health
-                            elif target_stat == 'stamina': stat_cap = self.max_stamina
-                            elif target_stat == 'tireness': stat_cap = self.max_tireness
+            if hasattr(item, 'effects') and item.effects:
+                for effect in item.effects:
+                    eff_type = effect['type'] 
+                    targets = effect['targets'] 
+                    val = random.randint(effect['min'], effect['max'])
+                    
+                    for target_stat in targets:
+                        if hasattr(self, target_stat):
+                            current_val = getattr(self, target_stat)
                             
-                            new_val = min(stat_cap, current_val + val)
-                            setattr(self, target_stat, new_val)
-                            display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
-                            consumed = True
+                            if eff_type == 'restore':
+                                stat_cap = 100.0
+                                if target_stat == 'health': stat_cap = self.max_health
+                                elif target_stat == 'stamina': stat_cap = self.max_stamina
+                                elif target_stat == 'tireness': stat_cap = self.max_tireness
+                                
+                                new_val = min(stat_cap, current_val + val)
+                                setattr(self, target_stat, new_val)
+                                display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                                consumed = True
 
-                        elif eff_type == 'reduce':
-                            min_cap = 0.0
-                            new_val = max(min_cap, current_val - val)
-                            setattr(self, target_stat, new_val)
-                            display_message_player(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
-                            consumed = True
-        
-        # Fallback for items without new effects structure (if any remain)
-        elif status_effect_legacy and hasattr(self, status_effect_legacy):
-             # (Existing logic for single status effect fallback)
-             pass
-        
-        else:
-            # Only print error if NO effects were processed
-            if not consumed:
-                display_message_player(f"Cannot consume {item.name}: no valid effects found.")
-                return False
+                            elif eff_type == 'reduce':
+                                min_cap = 0.0
+                                new_val = max(min_cap, current_val - val)
+                                setattr(self, target_stat, new_val)
+                                display_message_player(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
+                                consumed = True
+            
+            elif status_effect_legacy and hasattr(self, status_effect_legacy):
+                pass
+            
+            else:
+                if not consumed:
+                    display_message_player(f"Cannot consume {item.name}: no valid effects found.")
+                    return 
 
-        # If consumed, decrement load and handle empty stack
-        if consumed:
-            item.load -= 1
-            if item.load <= 0:
-                if source_type == 'belt':
-                    self.belt[item_index] = None
-                elif source_type == 'inventory':
-                    if item_index < len(self.inventory) and self.inventory[item_index] == item:
-                        self.inventory.pop(item_index)
-                elif (source_type == 'container' or source_type == 'nearby') and container_item:
-                    if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
-                        container_item.inventory.pop(item_index)
+            if consumed:
+                item.load -= 1
+                if item.load <= 0:
+                    if source_type == 'belt':
+                        self.belt[item_index] = None
+                    elif source_type == 'inventory':
+                        if item_index < len(self.inventory) and self.inventory[item_index] == item:
+                            self.inventory.pop(item_index)
+                    elif (source_type == 'container' or source_type == 'nearby') and container_item:
+                        if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
+                            container_item.inventory.pop(item_index)
+
+        if is_auto_drink:
+            execute_consume()
             return True
-        
-        return False
+        else:
+            # Start timer
+            return self.start_action(f"Using {item.name}", duration_mult, execute_consume, xp_reward=5)
+
 
 
     def toggle_utility_item(self, item, source, index, container_item):
@@ -1274,92 +1360,111 @@ class Player:
                 return None
         return None
 
+
     def transfer_item_stack(self, source, index, container_item, target_container):
-        """Transfers an entire stack to another container, merging if possible."""
-        
-
-        # Get the item and its actual source list
-        item = None
-        source_inventory = self._get_source_inventory(source, container_item) # Get the real inventory list
-        
-        if source == 'backpack':
-            item = self.backpack
-        elif source == 'invcontainer':
-            item = self.invcontainer
-        elif source_inventory and 0 <= index < len(source_inventory):
-            item = source_inventory[index] # Get the item from the list
-
-        target_inv = None
-        target_cap = 0
-        target_name = "Unknown"
-
-        if target_container is self: # Check if target is the player object
-            target_inv = self.inventory
-            target_cap = self.get_total_inventory_slots()
-            target_name = "Inventory"
-        elif target_container and hasattr(target_container, 'inventory'):
-            target_inv = target_container.inventory
-            target_cap = target_container.capacity or 0
-            target_name = target_container.name
-        else:
-            print("Error: Invalid source or target container.")
+        if self.action_timer > 0:
+            display_message_player("Busy...")
             return
 
-        if not item:
-            print("Error: Invalid source item.")
-            return
-        
-        # 1. Try to merge with existing stacks
-        remaining_load = item.load
-        for target_item in target_inv:
-            if target_item.can_stack_with(item):
-                available_space = target_item.capacity - target_item.load
-                transfer = min(available_space, remaining_load)
-                
-                target_item.load += transfer
-                remaining_load -= transfer
-                item.load = remaining_load # This updates the item in the source
-                
-                if remaining_load <= 0:
-                    break 
-        
-        # 2. If stack is now empty, remove it from source
-        if item.load <= 0:
-            # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
+        # Define the logic wrapper
+        def execute_transfer():
+             # Re-fetch item to be safe, as 'item' reference is good but list position might shift if logic wasn't blocking
+             # But we block input, so it's okay to copy the existing logic.
+             # Ideally, we call an internal _instant_transfer method to avoid duplication,
+             # but to keep changes local, I'll paste the logic here or wrap the existing body.
+             
+             # Wait, I can't easily paste the large logic inside the closure without duplicating.
+             # A cleaner way is to separate the *logic* from the *timer check*.
+             # I will perform the logic immediately below, BUT wrapping it in the closure.
+            
+            item = None
+            source_inventory = self._get_source_inventory(source, container_item) 
             
             if source == 'backpack':
-                self.backpack = None
+                item = self.backpack
             elif source == 'invcontainer':
-                self.invcontainer = None
-            elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                source_inventory.pop(index) # Use pop(index) to be precise
-            
-            display_message_player(f"Merged all of {item.name} into {target_name}.")
-            return
-            
-        # 3. If load remains, try to add as a new stack
-        if remaining_load > 0:
-            if len(target_inv) < target_cap:
-                # We need to create a new item, as we can't just move 'item' (it might be a partial stack)
-                new_stack = Item.create_from_name(item.name)
-                new_stack.load = remaining_load
-                new_stack.durability = item.durability # Copy stats just in case
-                
-                target_inv.append(new_stack)
-                
-                # self.drop_item(game, source, index, container_item) # [OLD BUGGY LINE]
+                item = self.invcontainer
+            elif source_inventory and 0 <= index < len(source_inventory):
+                item = source_inventory[index] 
 
-                # The original item is now empty, remove it from its source.
+            target_inv = None
+            target_cap = 0
+            target_name = "Unknown"
+
+            if target_container is self: 
+                target_inv = self.inventory
+                target_cap = self.get_total_inventory_slots()
+                target_name = "Inventory"
+            elif target_container and hasattr(target_container, 'inventory'):
+                target_inv = target_container.inventory
+                target_cap = target_container.capacity or 0
+                target_name = target_container.name
+            else:
+                print("Error: Invalid source or target container.")
+                return
+
+            if not item: return
+            
+            remaining_load = item.load
+            for target_item in target_inv:
+                if target_item.can_stack_with(item):
+                    available_space = target_item.capacity - target_item.load
+                    transfer = min(available_space, remaining_load)
+                    
+                    target_item.load += transfer
+                    remaining_load -= transfer
+                    item.load = remaining_load 
+                    
+                    if remaining_load <= 0:
+                        break 
+            
+            if item.load <= 0:
                 if source == 'backpack':
                     self.backpack = None
                 elif source == 'invcontainer':
                     self.invcontainer = None
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                     source_inventory.pop(index) # Use pop(index)
+                    source_inventory.pop(index) 
+                display_message_player(f"Merged all of {item.name} into {target_name}.")
+                return
+                
+            if remaining_load > 0:
+                if len(target_inv) < target_cap:
+                    new_stack = Item.create_from_name(item.name)
+                    new_stack.load = remaining_load
+                    new_stack.durability = item.durability 
+                    target_inv.append(new_stack)
+                    
+                    if source == 'backpack':
+                        self.backpack = None
+                    elif source == 'invcontainer':
+                        self.invcontainer = None
+                    elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                        source_inventory.pop(index) 
 
-                display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
-            else:
-                display_message_player(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
+                    display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
+                else:
+                    display_message_player(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
+
+
+        # Determine if we need a timer
+        # Rule: External Container <-> Player/Backpack = Timer
+        #       Internal (Inventory <-> Backpack) = Instant
+        
+        is_external_source = (source == 'container' or source == 'nearby')
+        is_external_target = (target_container is not self and 
+                              target_container is not self.backpack and 
+                              target_container is not self.invcontainer)
+        
+        needs_timer = is_external_source or is_external_target
+        
+        if needs_timer:
+            # Transfer takes 1.5x unit time
+            # The prompt says: "The modifies is 1.5x based on speed level."
+            self.start_action("Transferring", 1.5, execute_transfer, xp_reward=2)
+        else:
+            execute_transfer()
+
 
 
     def drop_item(self, game, source, index, container_item=None):
