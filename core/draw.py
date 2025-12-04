@@ -31,7 +31,7 @@ def draw_game(game):
 
 
     world_view_surface = pygame.Surface((view_w, view_h))
-    world_view_surface.fill(GAME_BG_COLOR) # Set the world background color
+    world_view_surface.fill(BLACK) # Set the world background color
 
     # 2. Calculate a single camera offset to center the player.
     offset_x = view_w / 2 - game.player.rect.centerx

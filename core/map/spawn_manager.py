@@ -120,7 +120,7 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
     
 
     if spawns_per_marker is None:
-        spawns_per_marker = core.dataZOMBIES_PER_SPAWN
+        spawns_per_marker = core.data.ZOMBIES_PER_SPAWN
 
     for pos in zombie_spawns: # Loop 1: Over each 'Z' marker (e.g., 50 markers)
         if len(zombies) >= limit: break

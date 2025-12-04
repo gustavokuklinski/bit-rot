@@ -1,0 +1,13 @@
+<item name="Motor Repair Kit" type="consumable_repair">
+    <properties>
+        <status value="durability" />
+        <load value="1" />
+        <restore min="1" max="100" />
+        <capacity value="5" />
+        <sprite file="motor_repair_kit.png" />
+    </properties>
+    <repair>
+        <item name="Car Engine" />
+    </repair>
+    <spawn chance="1" />
+</item>

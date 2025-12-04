@@ -1,0 +1,5 @@
+<map name="world_surface" type="maptile" char="world_surface" is_obstacle="false">
+    <visuals>
+        <sprite file="world_surface.png" />
+    </visuals>
+</map>
