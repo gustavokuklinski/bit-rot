@@ -32,7 +32,6 @@ class ProceduralGenerator:
         self.store_templates = []       # Stores
         self.warehouse_templates = []   # Warehouses
         self.condo_templates = []
-        self.building3_templates = []
         self.building2_templates = []
 
         print("--- Template Discovery ---")
@@ -50,8 +49,6 @@ class ProceduralGenerator:
                 self.warehouse_templates.append(name)
             elif name.startswith("Condo"):
                 self.condo_templates.append(name)
-            elif name.startswith("Building3"):
-                self.building3_templates.append(name)
             elif name.startswith("Building2"):
                 self.building2_templates.append(name)
             elif any(cat in name for cat in self.building_categories):
@@ -102,7 +99,6 @@ class ProceduralGenerator:
         limit_stores = grid_w
         limit_warehouses = math.ceil(grid_w / 2)
         limit_condo = math.ceil(grid_w / 2)
-        limit_building3 = math.ceil(grid_w / 2)
         limit_building2 = math.ceil(grid_w / 2)
         
         print(f"Distribution Targets -> Stores: {limit_stores}, Warehouses: {limit_warehouses}, Building2: {limit_building2}")
@@ -116,23 +112,34 @@ class ProceduralGenerator:
             for _ in range(limit_warehouses): special_buildings_pool.append(random.choice(self.warehouse_templates))
         if self.condo_templates:
             for _ in range(limit_condo): special_buildings_pool.append(random.choice(self.condo_templates))
-        if self.building3_templates:
-            for _ in range(limit_building3): special_buildings_pool.append(random.choice(self.building3_templates))
         if self.building2_templates:
             for _ in range(limit_building2): special_buildings_pool.append(random.choice(self.building2_templates))
 
-        available_coords = [(x, y) for x in range(grid_w) for y in range(grid_h) if (x,y) != (0,0)]
-        random.shuffle(available_coords)
+        # [MODIFIED] Urban/Forest Selection Logic
+        all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         
-        chunk_priority_map = {coord: [] for coord in available_coords}
+        # Calculate how many chunks should have buildings (max of width or height)
+        # e.g., 3x3 -> 3 chunks, 7x7 -> 7 chunks
+        num_building_chunks = max(grid_w, grid_h)
         
-        if available_coords:
+        # Randomly select which chunks will be "Urban" (contain buildings)
+        urban_coords = set(random.sample(all_coords, min(len(all_coords), num_building_chunks)))
+        print(f"Selected Urban Chunks ({len(urban_coords)}): {urban_coords}")
+
+        chunk_priority_map = {coord: [] for coord in all_coords}
+        
+        # We only assign special buildings to the designated Urban chunks
+        urban_list = list(urban_coords)
+        if urban_list:
+            random.shuffle(urban_list)
             coord_idx = 0
-            for tmpl in special_buildings_pool:
-                coord = available_coords[coord_idx]
-                chunk_priority_map[coord].append(tmpl)
-                print(f"Assigning PRIORITY {tmpl} to Chunk {coord}")
-                coord_idx = (coord_idx + 1) % len(available_coords)
+            if special_buildings_pool:
+                for tmpl in special_buildings_pool:
+                    coord = urban_list[coord_idx]
+                    chunk_priority_map[coord].append(tmpl)
+                    print(f"Assigning PRIORITY {tmpl} to Chunk {coord}")
+                    coord_idx = (coord_idx + 1) % len(urban_list)
+        # [END MODIFIED]
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
@@ -157,7 +164,9 @@ class ProceduralGenerator:
 
                 is_center_chunk = (gx == start_gx // 2 and gy == start_gy // 2)
                 
-                chunk_data = self._generate_chunk_data(gx, gy, conns, is_start=is_center_chunk, priority_templates=priority_list)
+                # [MODIFIED] Pass flag indicating if buildings are allowed in this chunk
+                is_urban = (gx, gy) in urban_coords
+                chunk_data = self._generate_chunk_data(gx, gy, conns, is_start=is_center_chunk, priority_templates=priority_list, allow_buildings=is_urban)
                 
                 conn_top = conns.get('top_id', 0)
                 conn_right = conns.get('right_id', 0)
@@ -275,7 +284,7 @@ class ProceduralGenerator:
                     grid[ry][rx-1]['right'] = True; grid[ry][rx-1]['right_id'] = cid; grid[ry][rx-1]['right_type'] = conn_type
         return grid
 
-    def _generate_chunk_data(self, gx, gy, conns, is_start=False, priority_templates=None):
+    def _generate_chunk_data(self, gx, gy, conns, is_start=False, priority_templates=None, allow_buildings=True):
         w, h = self.chunk_size, self.chunk_size
         cx, cy = w // 2, h // 2
         
@@ -379,7 +388,7 @@ class ProceduralGenerator:
                         layers['base'][y][x] = tile
                         occupied_mask[y][x] = 1
 
-        # 4. Place Buildings
+        # 4. Place Buildings (Only if allowed)
         placed_rects = [] 
         buildings_placed = 0
         target_count = 8 
@@ -397,119 +406,120 @@ class ProceduralGenerator:
                         if occupied_mask[ry][rx] == 1: return False
             return True
 
-        # Priority Buildings Loop
-        if priority_templates:
-            for tmpl_name in priority_templates:
-                if tmpl_name in self.templates:
-                    tmpl = self.templates[tmpl_name]
-                    tw, th = tmpl['width'], tmpl['height']
-                    
-                    is_building2 = "building2" in tmpl_name.lower()
-                    
-                    for _ in range(500):
-                        if is_building2:
-                            axis = random.choice(['vert', 'horz'])
-                            road_radius = 2 
-                            
-                            if axis == 'vert':
-                                side = random.choice([-1, 1])
-                                if side == -1: tx = cx - road_radius - 1 - tw
-                                else: tx = cx + road_radius + 1 + 1
-                                ty = random.randint(border_w + 2, h - border_w - th - 2)
-                            else:
-                                side = random.choice([-1, 1])
-                                if side == -1: ty = cy - road_radius - 1 - th
-                                else: ty = cy + road_radius + 1 + 1
-                                tx = random.randint(border_w + 2, w - border_w - tw - 2)
-                                
-                            if tx < 0 or tx + tw >= w or ty < 0 or ty + th >= h: continue
-                        else:
-                            safe_pad = 2
-                            if w - safe_pad*2 < tw or h - safe_pad*2 < th: break 
-                            tx = random.randint(safe_pad, w - safe_pad - tw)
-                            ty = random.randint(safe_pad, h - safe_pad - th)
+        if allow_buildings:
+            # Priority Buildings Loop
+            if priority_templates:
+                for tmpl_name in priority_templates:
+                    if tmpl_name in self.templates:
+                        tmpl = self.templates[tmpl_name]
+                        tw, th = tmpl['width'], tmpl['height']
                         
-                        if is_area_free(tx, ty, tw, th, margin=1):
-                            # Lot -> Sand
-                            lot_m = 2
-                            for ry in range(ty-lot_m, ty+th+lot_m):
-                                for rx in range(tx-lot_m, tx+tw+lot_m):
-                                    if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
-                                        layers['ground'][ry][rx] = sand_tile
-                                        occupied_mask[ry][rx] = 1
-                            
-                            # Connect to Hub -> Sand
-                            bx, by = tx + tw // 2, ty + th // 2
-                            if (tw > 30 or th > 30) and not is_building2:
-                                draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
-                            else:
-                                x_s, x_e = min(cx, bx), max(cx, bx)
-                                for rx in range(x_s, x_e + 1): 
-                                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
-                                        yy = cy + off
-                                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
-                                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                        is_building2 = "building2" in tmpl_name.lower()
+                        
+                        for _ in range(500):
+                            if is_building2:
+                                axis = random.choice(['vert', 'horz'])
+                                road_radius = 2 
                                 
-                                y_s, y_e = min(cy, by), max(cy, by)
-                                for ry in range(y_s, y_e + 1):
-                                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
-                                        xx = bx + off
-                                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
-                                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+                                if axis == 'vert':
+                                    side = random.choice([-1, 1])
+                                    if side == -1: tx = cx - road_radius - 1 - tw
+                                    else: tx = cx + road_radius + 1 + 1
+                                    ty = random.randint(border_w + 2, h - border_w - th - 2)
+                                else:
+                                    side = random.choice([-1, 1])
+                                    if side == -1: ty = cy - road_radius - 1 - th
+                                    else: ty = cy + road_radius + 1 + 1
+                                    tx = random.randint(border_w + 2, w - border_w - tw - 2)
+                                    
+                                if tx < 0 or tx + tw >= w or ty < 0 or ty + th >= h: continue
+                            else:
+                                safe_pad = 2
+                                if w - safe_pad*2 < tw or h - safe_pad*2 < th: break 
+                                tx = random.randint(safe_pad, w - safe_pad - tw)
+                                ty = random.randint(safe_pad, h - safe_pad - th)
                             
-                            self._blit_template(layers, tmpl, tx, ty, w, h)
-                            placed_rects.append(pygame.Rect(tx, ty, tw, th))
-                            buildings_placed += 1
-                            for ry in range(ty, ty + th):
-                                for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
-                            print(f"Placed Priority Building: {tmpl_name} at ({tx},{ty})")
-                            break
+                            if is_area_free(tx, ty, tw, th, margin=1):
+                                # Lot -> Sand (lot_m is 2 here)
+                                lot_m = 2
+                                for ry in range(ty-lot_m, ty+th+lot_m):
+                                    for rx in range(tx-lot_m, tx+tw+lot_m):
+                                        if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                                            layers['ground'][ry][rx] = sand_tile
+                                            occupied_mask[ry][rx] = 1
+                                
+                                # Connect to Hub -> Sand
+                                bx, by = tx + tw // 2, ty + th // 2
+                                if (tw > 30 or th > 30) and not is_building2:
+                                    draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
+                                else:
+                                    x_s, x_e = min(cx, bx), max(cx, bx)
+                                    for rx in range(x_s, x_e + 1): 
+                                        for off in range(2): 
+                                            yy = cy + off
+                                            if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
+                                                layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                                    
+                                    y_s, y_e = min(cy, by), max(cy, by)
+                                    for ry in range(y_s, y_e + 1):
+                                        for off in range(2): 
+                                            xx = bx + off
+                                            if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
+                                                layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+                                
+                                self._blit_template(layers, tmpl, tx, ty, w, h)
+                                placed_rects.append(pygame.Rect(tx, ty, tw, th))
+                                buildings_placed += 1
+                                for ry in range(ty, ty + th):
+                                    for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+                                print(f"Placed Priority Building: {tmpl_name} at ({tx},{ty})")
+                                break
 
-        # Standard Generic Buildings
-        while buildings_placed < target_count and attempts < 3000 and self.target_templates:
-            attempts += 1
-            tmpl_name = random.choice(self.target_templates)
-            tmpl = self.templates[tmpl_name]
-            tw, th = tmpl['width'], tmpl['height']
-            
-            safe_pad = 2 
-            if w - safe_pad*2 < tw or h - safe_pad*2 < th: continue
-            tx = random.randint(safe_pad, w - safe_pad - tw)
-            ty = random.randint(safe_pad, h - safe_pad - th)
-            
-            if not is_area_free(tx, ty, tw, th, margin=1): continue
-            
-            # Lot -> Sand
-            for ry in range(ty-1, ty+th+1):
-                for rx in range(tx-1, tx+tw+1):
-                    if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
-                        layers['ground'][ry][rx] = sand_tile
-                        occupied_mask[ry][rx] = 1
-            
-            # Driveway -> Sand
-            bx, by = tx + tw // 2, ty + th // 2
-            if tw > 30 or th > 30:
-                draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
-            else:
-                x_s, x_e = min(cx, bx), max(cx, bx)
-                for rx in range(x_s, x_e + 1): 
-                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
-                        yy = cy + off
-                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
-                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+            # Standard Generic Buildings
+            while buildings_placed < target_count and attempts < 3000 and self.target_templates:
+                attempts += 1
+                tmpl_name = random.choice(self.target_templates)
+                tmpl = self.templates[tmpl_name]
+                tw, th = tmpl['width'], tmpl['height']
                 
-                y_s, y_e = min(cy, by), max(cy, by)
-                for ry in range(y_s, y_e + 1):
-                    for off in range(2): # [MODIFIED] Added loop for 2-tile thickness
-                        xx = bx + off
-                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
-                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+                safe_pad = 2 
+                if w - safe_pad*2 < tw or h - safe_pad*2 < th: continue
+                tx = random.randint(safe_pad, w - safe_pad - tw)
+                ty = random.randint(safe_pad, h - safe_pad - th)
+                
+                if not is_area_free(tx, ty, tw, th, margin=1): continue
+                
+                # Lot -> Sand
+                for ry in range(ty-1, ty+th+1):
+                    for rx in range(tx-1, tx+tw+1):
+                        if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                            layers['ground'][ry][rx] = sand_tile
+                            occupied_mask[ry][rx] = 1
+                
+                # Driveway -> Sand
+                bx, by = tx + tw // 2, ty + th // 2
+                if tw > 30 or th > 30:
+                    draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
+                else:
+                    x_s, x_e = min(cx, bx), max(cx, bx)
+                    for rx in range(x_s, x_e + 1): 
+                        for off in range(2): 
+                            yy = cy + off
+                            if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
+                                layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                    
+                    y_s, y_e = min(cy, by), max(cy, by)
+                    for ry in range(y_s, y_e + 1):
+                        for off in range(2): 
+                            xx = bx + off
+                            if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
+                                layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
 
-            self._blit_template(layers, tmpl, tx, ty, w, h)
-            placed_rects.append(pygame.Rect(tx, ty, tw, th))
-            buildings_placed += 1
-            for ry in range(ty, ty + th):
-                for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+                self._blit_template(layers, tmpl, tx, ty, w, h)
+                placed_rects.append(pygame.Rect(tx, ty, tw, th))
+                buildings_placed += 1
+                for ry in range(ty, ty + th):
+                    for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
 
         # Forest / Nature
         if self.forest_templates:

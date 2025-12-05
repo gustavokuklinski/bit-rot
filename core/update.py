@@ -14,6 +14,42 @@ from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies
 from core.messages import display_message_zombie, display_message_player
 
+def build_obstacle_grid(obstacles, grid_size):
+    """
+    Builds a static spatial grid for obstacles.
+    This allows us to check only nearby walls instead of ALL walls.
+    """
+    grid = {}
+    for ob in obstacles:
+        # Determine which grid cell the obstacle belongs to
+        # (Using center is safe because obstacles are usually 32x32 and grid is 128x128)
+        grid_x = int(ob.centerx // grid_size)
+        grid_y = int(ob.centery // grid_size)
+        cell = (grid_x, grid_y)
+        
+        if cell not in grid:
+            grid[cell] = [ob]
+        else:
+            grid[cell].append(ob)
+    return grid
+
+def get_nearby_obstacles(entity_rect, grid, grid_size):
+    """
+    Retrieves obstacles from the 9 grid cells surrounding the entity.
+    """
+    nearby = []
+    grid_x = int(entity_rect.centerx // grid_size)
+    grid_y = int(entity_rect.centery // grid_size)
+    
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            cell = (grid_x + i, grid_y + j)
+            if cell in grid:
+                nearby.extend(grid[cell])
+    return nearby
+
+
+
 def build_zombie_grid(zombies, grid_size):
     """Sorts all zombies into a spatial grid (dictionary)."""
     grid = {}
@@ -31,13 +67,14 @@ def build_zombie_grid(zombies, grid_size):
     return grid
 
 
-def get_nearby_zombies(zombie, grid, grid_size):
-    """Gets all zombies from the 9-cell area around a given zombie."""
+def get_nearby_zombies(entity, grid, grid_size):
+    """Gets all zombies from the 9-cell area around a given entity (player, projectile, vehicle)."""
     nearby_zombies = []
-    grid_x = int(zombie.rect.centerx // grid_size)
-    grid_y = int(zombie.rect.centery // grid_size)
+    # Use the entity's bounding box center for grid lookup
+    grid_x = int(entity.rect.centerx // grid_size)
+    grid_y = int(entity.rect.centery // grid_size)
     
-    # Loop through the 3x3 grid centered on the zombie
+    # Loop through the 3x3 grid centered on the entity
     for i in range(-1, 2):
         for j in range(-1, 2):
             cell = (grid_x + i, grid_y + j)
@@ -48,7 +85,18 @@ def get_nearby_zombies(zombie, grid, grid_size):
 
 
 def update_game_state(game):
-    game.player.update_position(game.obstacles, game.zombies, game)
+    # Consolidate spatial grid initialization at the start.
+    GRID_SIZE = 128
+    
+    # --- 1. Obstacle Grid (Cache check) ---
+    current_obstacle_count = len(game.obstacles)
+    if not hasattr(game, 'cached_obstacle_grid') or getattr(game, 'cached_obstacle_count', -1) != current_obstacle_count:
+        game.cached_obstacle_grid = build_obstacle_grid(game.obstacles, GRID_SIZE)
+        game.cached_obstacle_count = current_obstacle_count
+
+    # 1.1 Update player movement using ONLY nearby obstacles
+    nearby_player_obstacles = get_nearby_obstacles(game.player.rect, game.cached_obstacle_grid, GRID_SIZE)
+    game.player.update_position(nearby_player_obstacles, game.zombies, game)
 
     check_for_layer_teleport(game)
     
@@ -65,21 +113,30 @@ def update_game_state(game):
     if game.player.update_stats(game):
         game.game_state = 'GAME_OVER'
 
-    # --- Projectile update logic
+    # --- 2. Build Zombie Grid (Must rebuild every frame as zombies move) ---
+    # This must be done *before* the projectile loop to support optimized projectile-zombie collision.
+    zombie_grid = build_zombie_grid(game.zombies, GRID_SIZE)
+    
+    # --- Projectile update logic (Optimized for collision checks) ---
     projectiles_to_remove = []
     zombies_to_remove = []
+    
     for p in game.projectiles:
-
         world_max_x = game.world_min_x + game.map_width_pixels
         world_max_y = game.world_min_y + game.map_height_pixels
 
-        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or any(p.rect.colliderect(ob) for ob in game.obstacles):
-        # if p.update(game.map_width_pixels, game.map_height_pixels) or any(p.rect.colliderect(ob) for ob in game.obstacles):
-        #if p.update() or any(p.rect.colliderect(ob) for ob in game.obstacles):
+        # 2.1. Fetch only nearby obstacles for collision check
+        local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
+
+        # 2.2. Update projectile and check collisions against LOCAL obstacles only
+        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or any(p.rect.colliderect(ob) for ob in local_obstacles):
             projectiles_to_remove.append(p)
             continue
 
-        hit_zombie = next((z for z in game.zombies if z not in zombies_to_remove and p.rect.colliderect(z.rect)), None)
+        # 2.3. ⭐️ OPTIMIZATION: Check collisions against ONLY nearby zombies using the grid
+        potential_hits = [z for z in get_nearby_zombies(p, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
+        
+        hit_zombie = next((z for z in potential_hits if p.rect.colliderect(z.rect)), None)
 
         if hit_zombie:
             if player_hit_zombie(game.player, hit_zombie, game):
@@ -90,45 +147,38 @@ def update_game_state(game):
 
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
-
-    # TILE_SIZE * 3 = 48 * 3 = 144. Let's use 128.
-    GRID_SIZE = 128 
     
-    # 1. Build the spatial grid *once* per frame
-    zombie_grid = build_zombie_grid(game.zombies, GRID_SIZE)
-
-    zombies_alive = game.zombies[:] # 
+    # --- Zombie AI Update (Already optimized) ---
+    zombies_alive = game.zombies[:] 
     for zombie in zombies_alive:
 
-        # 2. Get *only* the zombies in the 9-cell area around this zombie
+        # 3.1. Get nearby zombies (already optimized)
         nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
         
-        # 3. Call the AI function, passing the *small list*
-        # This is the N*9 check (O(N)), which is much, much faster.
-        zombie.update_ai(game.player.rect, game.obstacles, nearby_zombies, game) # 
+        # 3.2. Get nearby obstacles (already optimized)
+        nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
+        
+        # 3.3. Call AI with reduced lists
+        zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game) 
 
-        # 4. Handle attack logic (This is fine, no changes)
-        distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, # 
-                                        game.player.rect.centery - zombie.rect.centery) # 
-        if distance_to_player < zombie.attack_range: # 
-            current_time = pygame.time.get_ticks() # 
-            if current_time - zombie.last_attack_time > 500: # 500ms cooldown # 
-                zombie.attack(game.player, game) # 
+        # 4. Handle attack logic
+        distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, 
+                                        game.player.rect.centery - zombie.rect.centery) 
+        if distance_to_player < zombie.attack_range: 
+            current_time = pygame.time.get_ticks() 
+            if current_time - zombie.last_attack_time > 500: 
+                zombie.attack(game.player, game) 
                 zombie.last_attack_time = current_time
-
-
 
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):
-        if isinstance(ground_item, Corpse): # Check specifically for Corpse objects
+        if isinstance(ground_item, Corpse): 
             if ground_item.is_expired(now_ms):
                 display_message_zombie(f"{getattr(ground_item,'name','Corpse')} decayed.")
                 try:
-                    # Optional: Spill items before removing corpse
-                    # ground_item.spill_contents_to_ground(game.items_on_ground)
                     game.items_on_ground.remove(ground_item)
                 except ValueError:
-                    pass # Already removed, ignore
+                    pass
 
     # Auto-close container modals if player is too far
     for modal in list(game.modals):
@@ -145,6 +195,7 @@ def update_game_state(game):
                     game.modals.remove(modal)
                     display_message_player(f"Closed {container_item.name} because you moved away.")
     
+    # --- Vehicle Update and Roadkill Logic (Optimized for collision checks) ---
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
         roadkill_zombies = []
         
@@ -158,8 +209,11 @@ def update_game_state(game):
                 
                 # Threshold: Only damage if moving fast enough (e.g., > 2.0 pixels/frame)
                 if speed > 2.0:
-                    # Find zombies colliding with this vehicle
-                    hit_list = [z for z in game.zombies if z not in zombies_to_remove and vehicle.rect.colliderect(z.rect)]
+                    # ⭐️ OPTIMIZATION: Check collisions against ONLY nearby zombies
+                    nearby_zombies_for_vehicle = [z for z in get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
+                    
+                    # Find zombies colliding with this vehicle among the nearby ones
+                    hit_list = [z for z in nearby_zombies_for_vehicle if vehicle.rect.colliderect(z.rect)]
                     
                     for zombie in hit_list:
                         if zombie in roadkill_zombies: continue

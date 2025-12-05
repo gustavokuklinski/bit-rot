@@ -23,34 +23,14 @@ def draw_game(game):
     # Clear the main screen that holds the game and UI panels
     game.virtual_screen.fill(PANEL_COLOR)
 
-    # --- World Rendering with Pixelated Zoom ---
-    # 1. Create a temporary surface for the world view.
+    # World Rendering with Pixelated Zoom ---
     zoom = game.zoom_level
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
 
-
-    world_view_surface = pygame.Surface((view_w, view_h))
-    world_view_surface.fill(BLACK) # Set the world background color
-
-    # 2. Calculate a single camera offset to center the player.
-    offset_x = view_w / 2 - game.player.rect.centerx
-    offset_y = view_h / 2 - game.player.rect.centery
-
-   
-
-    light_mask = pygame.Surface((view_w, view_h))
-    
-    # Fill the mask with pitch black.
-    light_mask.fill((30, 30, 30))
-    ambient = int(game.world_time.current_ambient_light)
-
-    light_texture = game.assets.get('light_texture')
-    
-    light_sources = []
-
-
-    # [START MODIFICATION]
+    # ---------------------------------------------------------
+    # 1. CALCULATE CAMERA PANNING HERE (BEFORE DRAWING)
+    # ---------------------------------------------------------
     mouse_pos = game._get_scaled_mouse_pos()
 
     # Check if mouse is over any UI modal to prevent aiming through it
@@ -67,17 +47,12 @@ def draw_game(game):
     right_click_aim = mouse_buttons[2] and not is_over_modal
     
     is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or right_click_aim)
-    # [END MODIFICATION]
 
-    # Panning Camera
+    # Panning Camera Target Calculation
     target_pan_x = 0
     target_pan_y = 0
 
     if is_aiming and game.player:
-        # [START MODIFICATION]
-        # 1. Get Mouse Position relative to the Player (Screen Center)
-        # mouse_pos = game._get_scaled_mouse_pos() # Removed (moved up)
-        
         # Player is conceptually at the center of the screen
         screen_center_x = GAME_WIDTH / 2
         screen_center_y = GAME_HEIGHT / 2
@@ -88,64 +63,75 @@ def draw_game(game):
         # Distance in Screen Pixels
         mouse_dist_screen = math.hypot(dx, dy)
         
-        # 2. Calculate Threshold (Fog of War Radius) in Screen Pixels
-        # game.player_view_radius is in World Pixels.
-        # On screen, World Pixels are multiplied by Zoom.
+        # Threshold (Fog of War Radius) in Screen Pixels
         pan_threshold_screen = game.player_view_radius * zoom
         
-        # 3. Only pan if mouse is OUTSIDE the threshold
+        # Only pan if mouse is OUTSIDE the threshold
         if mouse_dist_screen > pan_threshold_screen:
             # Calculate max pan distance (e.g., 30% of the view dimension)
-            pan_distance = min(view_w, view_h) * 0.3
+            pan_distance = min(view_w, view_h) * 0.5
             
             # Calculate offset based on aim angle
             # Note: -sin because screen Y is inverted vs standard math plane
             target_pan_x = math.cos(game.player.aim_angle) * pan_distance
             target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
-        # [END MODIFICATION]
 
     # Smoothly interpolate current pan towards target (Lerp)
     lerp_speed = 0.1
     game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
     game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
 
-    # Calculate a single camera offset to center the player + Pan Offset.
-    # We subtract the pan so the camera moves towards the aim direction relative to the player
+    # We subtract the pan so the camera moves towards the aim direction
     offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
     offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
 
+    # FRUSTUM CULLING OPTIMIZATION: Define the world-space viewport rectangle (screen_rect)
+    # This rect is in world coordinates and represents what is currently visible.
+    screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
+
+    world_view_surface = pygame.Surface((view_w, view_h))
+
+    # Apply frustum culling to the most critical loop: Tiles (ground/walls)
+    for image, rect in game.renderable_tiles:
+        if screen_rect.colliderect(rect):
+            world_view_surface.blit(image, rect.move(offset_x, offset_y))
 
 
-    if game.chat_active:
-        chat_box_width = 400
-        chat_box_height = 35
-        chat_x = (GAME_WIDTH - chat_box_width) // 2
-        chat_y = GAME_HEIGHT - 100
-        
-        chat_rect = pygame.Rect(chat_x, chat_y, chat_box_width, chat_box_height)
-        
-        # Background (Semi-transparent black)
-        s = pygame.Surface((chat_box_width, chat_box_height), pygame.SRCALPHA)
-        s.fill((0, 0, 0, 200))
-        game.virtual_screen.blit(s, (chat_x, chat_y))
-        
-        # Border
-        pygame.draw.rect(game.virtual_screen, WHITE, chat_rect, 1)
-        
-        # Input Text
-        if game.chat_input_text:
-            txt_surf = font.render(game.chat_input_text, True, WHITE)
-            game.virtual_screen.blit(txt_surf, (chat_rect.x + 5, chat_rect.y + 8))
-            
-            # Cursor (blinking)
-            if int(pygame.time.get_ticks() / 500) % 2 == 0:
-                cursor_x = chat_rect.x + 5 + txt_surf.get_width()
-                pygame.draw.line(game.virtual_screen, WHITE, (cursor_x, chat_rect.y + 5), (cursor_x, chat_rect.bottom - 5))
-        else:
-            # Cursor at start if text is empty
-            if int(pygame.time.get_ticks() / 500) % 2 == 0:
-                pygame.draw.line(game.virtual_screen, WHITE, (chat_rect.x + 5, chat_rect.y + 5), (chat_rect.x + 5, chat_rect.bottom - 5))
+    # Draw Items (Fixes bug by defining screen_rect and adds culling)
+    for item in game.items_on_ground:
+        if screen_rect.colliderect(item.rect):
+            item.draw(world_view_surface, offset_x, offset_y)
 
+    # Draw Vehicles (Fixes bug by defining screen_rect and adds culling)
+    if game.map_manager and hasattr(game.map_manager, 'vehicles'):
+        for vehicle in game.map_manager.vehicles:
+            if screen_rect.colliderect(vehicle.rect):
+                vehicle.draw(world_view_surface, offset_x, offset_y)
+
+    # Draw Zombies (Fixes bug by defining screen_rect and adds culling)
+    for zombie in game.zombies:
+        if screen_rect.colliderect(zombie.rect):
+            zombie.draw(world_view_surface, offset_x, offset_y)
+
+    # Draw Player
+    game.player.draw(world_view_surface, offset_x, offset_y)
+
+    # Draw Projectiles (Culling added)
+    for p in game.projectiles:
+        if screen_rect.colliderect(p.rect):
+            p.draw(world_view_surface, offset_x, offset_y)
+
+    # ########################################
+
+    light_mask = pygame.Surface((view_w, view_h))
+    
+    # Fill the mask with pitch black.
+    light_mask.fill((30, 30, 30))
+    ambient = int(game.world_time.current_ambient_light)
+
+    light_texture = game.assets.get('light_texture')
+    
+    light_sources = []
 
     # 1. Add the player's base vision as a light source (Fog of War)
     if light_texture:
@@ -159,12 +145,21 @@ def draw_game(game):
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
                 light_rect = player_vision_tex.get_rect()
                 light_rect.center = (view_w / 2, view_h / 2)
+                # [FIX] Offset the fog of war slightly if panning, to keep player centered in the "light"
+                # Actually, since view_w/2 is center of SCREEN, and offset_x handles the world movement,
+                # we just need to draw this at the center of the surface, which is (view_w/2, view_h/2).
+                # Wait! If we pan, the player is NOT at the center of the screen anymore.
+                # The player is at: game.player.rect.centerx + offset_x
+                
+                player_screen_x = game.player.rect.centerx + offset_x
+                player_screen_y = game.player.rect.centery + offset_y
+                light_rect.center = (player_screen_x, player_screen_y)
+
                 light_mask.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
     # 2. Get all dynamic light sources (lanterns)
-    # (This section is correct)
     all_player_inventories = [game.player.belt, game.player.inventory]
     if game.player.backpack:
         all_player_inventories.append(game.player.backpack.inventory)
@@ -180,56 +175,44 @@ def draw_game(game):
          if getattr(item, 'state', 'off') == 'on':
             light_sources.append({'item': item, 'owner': 'ground'})
     
-    # [NEW] Add Vehicle Lights - Checking both vehicles list AND containers
     if hasattr(game, 'vehicles'):
         for vehicle in game.vehicles:
             if getattr(vehicle, 'lights', 'off') == 'on' and vehicle.battery > 0:
                 light_sources.append({'item': vehicle, 'owner': 'vehicle'})
 
-    # Also check containers for vehicles (as vehicles behave as containers)
     for container in game.containers:
         if getattr(container, 'item_type', '') == 'vehicle':
-             # Only add if not already added (avoid duplicates)
              if not any(ls['item'] == container for ls in light_sources):
                  if getattr(container, 'lights', 'off') == 'on' and container.battery > 0:
                      light_sources.append({'item': container, 'owner': 'vehicle'})
 
     if light_texture:
         # 3. Draw all dynamic lights (lanterns)
-        # (This section is correct)
         for light_info in light_sources:
             light = light_info['item']
             
-            # [FIX] Ensure we have a valid radius, using property for vehicles
             if hasattr(light, 'current_light_radius'):
                  radius_world_pixels = light.current_light_radius
             else:
                  radius_world_pixels = 0
             
-            # Skip if 0 radius (lights off or no battery)
-            if radius_world_pixels <= 0:
-                continue
+            if radius_world_pixels <= 0: continue
                 
             radius_view_pixels = int(radius_world_pixels / zoom)
-            
-            if radius_view_pixels <= 0:
-                continue
+            if radius_view_pixels <= 0: continue
 
             try:
                 scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
                 light_rect = scaled_light_tex.get_rect()
                 
                 if light_info['owner'] == 'player':
-                    px_view = view_w / 2
-                    py_view = view_h / 2
+                    # Calculate player screen pos dynamicially
+                    px_view = game.player.rect.centerx + offset_x
+                    py_view = game.player.rect.centery + offset_y
+                    
                     offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.75
                     offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.75
                     light_rect.center = (px_view + offset_lx, py_view + offset_ly)
-                elif light_info['owner'] == 'vehicle':
-                    # [NEW] Calculate center for vehicle
-                    pos_x_view = light.rect.centerx + offset_x
-                    pos_y_view = light.rect.centery + offset_y
-                    light_rect.center = (pos_x_view, pos_y_view)
                 else:
                     pos_x_view = light.rect.centerx + offset_x
                     pos_y_view = light.rect.centery + offset_y
@@ -244,49 +227,33 @@ def draw_game(game):
         for light in game.map_lights:
             if not light.get('active', True): 
                 continue
-            # radius is already in pixels from map_loader
-            radius_view_pixels = int(light['radius'])
             
+            # FRUSTUM CULLING ADDED FOR STATIC MAP LIGHTS
+            if 'rect' in light and not screen_rect.colliderect(light['rect']):
+                continue
+            
+            radius_view_pixels = int(light['radius'])
             if radius_view_pixels <= 0: continue
 
             try:
-                # Scale light texture
                 scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
-
-                # Since we use BLEND_RGBA_ADD, we "dim" the light by multiplying it with a dark color.
-                # 255 = 100% Intensity (Full White)
-                # 100 = ~40% Intensity (Softer Light)
-                # Adjust 'light_opacity' to change the strength (0 to 255)
                 light_opacity = 80 
                 scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
 
                 light_rect = scaled_light_tex.get_rect()
-                
-                # Calculate screen position
                 pos_x_view = light['rect'].centerx + offset_x
                 pos_y_view = light['rect'].centery + offset_y
-                
                 light_rect.center = (pos_x_view, pos_y_view)
-                
-                # Blit to mask using ADD (adds the dimmed light values)
                 light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception as e:
                 pass
 
-
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     
-    # Draw Map Tiles (These are NOT distance-checked, they are lit by the mask)
-    for image, rect in game.renderable_tiles:
-
-        world_view_surface.blit(image, rect.move(offset_x, offset_y))
-    
     for container in game.containers:
+        if not screen_rect.colliderect(container.rect): continue # Frustum culling added
         dist = math.hypot(container.rect.centerx - game.player.rect.centerx, container.rect.centery - game.player.rect.centery)
-        
-        if dist > game.player_view_radius:
-            continue
-            
+        if dist > game.player_view_radius: continue
         draw_pos = container.rect.move(offset_x, offset_y)
         opacity = max(0, 255 * (1 - dist / game.player_view_radius))
         
@@ -295,21 +262,17 @@ def draw_game(game):
                 temp_image = container.image.copy()
                 temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
                 world_view_surface.blit(temp_image, draw_pos)
-            except Exception as e:
-                print(f"Error drawing container image: {e}")
+            except Exception as e: pass
         else:
-            # Fallback drawing
             color = getattr(container, 'color', WHITE)
             temp_surface = pygame.Surface(container.rect.size, pygame.SRCALPHA)
             temp_surface.fill((color[0], color[1], color[2], opacity))
             world_view_surface.blit(temp_surface, draw_pos)
 
     for item in game.items_on_ground:
+        if not screen_rect.colliderect(item.rect): continue # Frustum culling added
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
-        
-        if dist > game.player_view_radius:
-            continue
-            
+        if dist > game.player_view_radius: continue
         draw_pos = item.rect.move(offset_x, offset_y)
         opacity = max(0, 255 * (1 - dist / game.player_view_radius))
         
@@ -323,47 +286,29 @@ def draw_game(game):
             temp_surface.fill((color[0], color[1], color[2], opacity))
             world_view_surface.blit(temp_surface, draw_pos)
 
-
     for p in game.projectiles:
-        p.draw(world_view_surface, offset_x, offset_y)
-
+        if screen_rect.colliderect(p.rect): # Frustum culling added
+            p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        # Check distance from player
+        if not screen_rect.colliderect(zombie.rect): continue # Frustum culling added
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-        
-        # Don't draw zombie if it's outside the player's view radius
-        if dist > game.player_view_radius:
-            continue
-
+        if dist > game.player_view_radius: continue
         opacity = max(0, 255 * (1 - dist / game.player_view_radius))
-
         zombie.draw(world_view_surface, offset_x, offset_y, opacity)
-
-
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
     player_tile_x = game.player.rect.centerx // TILE_SIZE
     player_tile_y = game.player.rect.centery // TILE_SIZE
-    # This hides a 3x3 grid (-1, 0, +1) centered on the player
-    # roof_hide_radius = BASE_PLAYER_VIEW_RADIUS // TILE_SIZE
-
     roof_hide_radius = 3
 
-
-
-
     for image, rect, (tile_x, tile_y) in game.roof_tiles:
+        if not screen_rect.colliderect(rect): continue # Frustum culling added
         dx = abs(tile_x - player_tile_x)
         dy = abs(tile_y - player_tile_y)
-        
-        # If the tile is within the radius, skip drawing it
-        if dx <= roof_hide_radius and dy <= roof_hide_radius:
-            continue
-            
+        if dx <= roof_hide_radius and dy <= roof_hide_radius: continue
         world_view_surface.blit(image, rect.move(offset_x, offset_y))
-
 
     if game.hovered_container:
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
@@ -384,53 +329,39 @@ def draw_game(game):
     game.virtual_screen.blit(scaled_world, game_rect)
 
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
-    # Gun flash effect
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
         center_y = GAME_HEIGHT // 2
         flash_distance = (TILE_SIZE * 1.4) * zoom 
         
-        # Calculate new position based on aim angle
-        # (Note: -sin because screen Y coordinates are inverted relative to math Y)
         flash_x = center_x + math.cos(game.player.aim_angle) * flash_distance
         flash_y = center_y - math.sin(game.player.aim_angle) * flash_distance
         
-        # Smaller flash radius (was TILE_SIZE // 2)
         flash_radius = (TILE_SIZE // 5) * zoom 
-        
         pygame.draw.circle(game.virtual_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
 
 
     if game.player and game.player.chat_text and game.player.chat_timer > 0:
-        # Player world pos on the view surface (unscaled)
-        # view_w/2 - pan_x, view_h/2 - pan_y
-        
-        # Convert to screen coordinates
-        player_view_x = (view_w / 2) - game.camera_pan_x
-        player_view_y = (view_h / 2) - game.camera_pan_y
+        player_view_x = game.player.rect.centerx + offset_x
+        player_view_y = game.player.rect.centery + offset_y
         
         screen_x = (player_view_x * zoom) + GAME_OFFSET_X
         screen_y = (player_view_y * zoom)
         
-        # Bubble setup
         font_bubble = game.assets.get('font') or font
         text_surf = font_bubble.render(game.player.chat_text, True, BLACK)
         
         bubble_w = text_surf.get_width() + 20
         bubble_h = text_surf.get_height() + 10
         
-        # Position above player head
-        # 0.5 * TILE_SIZE * zoom centers it horizontally relative to the scaled tile
         bubble_x = screen_x - (bubble_w / 2) + (TILE_SIZE * zoom / 2)
         bubble_y = screen_y - bubble_h - 15 
         
         bubble_rect = pygame.Rect(bubble_x, bubble_y, bubble_w, bubble_h)
         
-        # Draw Bubble
         pygame.draw.rect(game.virtual_screen, WHITE, bubble_rect, border_radius=8)
         
-        # Triangle Pointer
         tri_center_x = screen_x + (TILE_SIZE * zoom / 2)
         tri_points = [
             (tri_center_x - 6, bubble_rect.bottom),
@@ -439,7 +370,6 @@ def draw_game(game):
         ]
         pygame.draw.polygon(game.virtual_screen, WHITE, tri_points)
         
-        # Text
         text_rect = text_surf.get_rect(center=bubble_rect.center)
         game.virtual_screen.blit(text_surf, text_rect)
 
@@ -448,14 +378,14 @@ def draw_game(game):
         draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
         draw_player_alerts(game.virtual_screen, game.player)
 
+    # ... (Rest of the file with UI/Modal rendering remains exactly the same) ...
+    # Copy the UI rendering part from the previous file or keep it as is below.
     top_tooltip = None
     game.modal_buttons = []
     mouse_pos = game._get_scaled_mouse_pos()
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
     for modal in game.modals:
-        
-
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
         if modal['type'] == 'status':
@@ -481,19 +411,16 @@ def draw_game(game):
                 if send_btn: game.modal_buttons.append(send_btn)
                 if input_box: game.modal_buttons.append(input_box)
             else:
-                _, close_button, minimize_button = result # Fallback
-
+                _, close_button, minimize_button = result
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
         elif modal['type'] == 'text':
             _, close_button, minimize_button = draw_text_modal(game.virtual_screen, game, modal, game.assets)
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
-        
         elif modal['type'] == 'mobile':
             buttons = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
-        
         elif modal['type'] == 'vehicle':
             buttons = draw_vehicle_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
@@ -511,32 +438,26 @@ def draw_game(game):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
         for modal in reversed(game.modals):
             if modal['type'] == 'inventory':
-
-
                 if modal.get('active_tab', 'Inventory') == 'Inventory':
-                    # Only check these slots if Inventory tab is active
                     for i in range(len(game.player.belt)):
                         slot = get_belt_slot_rect_in_modal(i, modal['position'])
                         if slot.collidepoint(game._get_scaled_mouse_pos()):
                             highlighted_rect = slot
                             highlighted_allowed = (preview_item.item_type != 'backpack')
                             break
-                    if highlighted_rect:
-                        break
+                    if highlighted_rect: break
                     for i in range(5):
                         slot = get_inventory_slot_rect(i, modal['position'])
                         if slot.collidepoint(game._get_scaled_mouse_pos()):
                             highlighted_rect = slot
                             highlighted_allowed = True
                             break
-                    if highlighted_rect:
-                        break
+                    if highlighted_rect: break
                     slot = get_backpack_slot_rect(modal['position'])
                     if slot.collidepoint(game._get_scaled_mouse_pos()):
                         highlighted_rect = slot
                         highlighted_allowed = (preview_item.item_type == 'backpack')
                         break
-                        
                     slot = get_invcontainer_slot_rect(modal['position'])
                     if slot.collidepoint(game._get_scaled_mouse_pos()):
                         highlighted_rect = slot
@@ -548,23 +469,16 @@ def draw_game(game):
                             (dragged_type == 'consumable' and dragged_ammo_type is not None)
                         )
                         break
-                
-
             elif modal['type'] == 'gear':
                 if 'gear_slot_rects' in modal:
                     for slot_name, slot_rect in modal['gear_slot_rects'].items():
                         if slot_rect.collidepoint(game._get_scaled_mouse_pos()):
                             highlighted_rect = slot_rect
-                            
-                            # Check if the item belongs in this slot
                             item_slot = getattr(preview_item, 'slot', None)
-                            if item_slot == 'hand': item_slot = 'hands' # Handle alias
-                            
+                            if item_slot == 'hand': item_slot = 'hands'
                             highlighted_allowed = (item_slot == slot_name)
                             break
-                if highlighted_rect:
-                    break
-
+                if highlighted_rect: break
             elif modal['type'] == 'container':
                 cont = modal['item']
                 for i in range(min(cont.capacity, len(cont.inventory) + 16)):
@@ -573,8 +487,7 @@ def draw_game(game):
                         highlighted_rect = slot
                         highlighted_allowed = (len(cont.inventory) < cont.capacity) or (i < len(cont.inventory))
                         break
-                if highlighted_rect:
-                    break
+                if highlighted_rect: break
             elif modal['type'] == 'messages':
                 pass
 
@@ -586,7 +499,6 @@ def draw_game(game):
                     highlighted_rect = slot
                     highlighted_allowed = (preview_item.item_type != 'backpack')
                     break
-
 
         if highlighted_rect:
             overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)
@@ -638,41 +550,22 @@ def draw_game(game):
     if game.context_menu['active']:
         draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
-    #if is_aiming:
-    #    pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
-    else:
-        pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
-
-
     if game.player.is_aiming:
-        # [NEW] Draw Dynamic Reticle
-        pygame.mouse.set_visible(False) # Hide default cursor
-        
+        pygame.mouse.set_visible(False) 
         reticle_img = game.assets.get('aim_reticle')
         if reticle_img:
-            # Scale based on aim factor:
-            # 1.0 (bad aim) -> 1.5x size
-            # 0.0 (good aim) -> 0.5x size
             base_w = reticle_img.get_width()
             base_h = reticle_img.get_height()
-            
             scale_mult = 1.5 + (game.player.current_aim_factor * 2.0)
             new_w = max(1, int(base_w * scale_mult))
             new_h = max(1, int(base_h * scale_mult))
-            
-            # Scale and Draw
             scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))
             rect = scaled_reticle.get_rect(center=game._get_scaled_mouse_pos())
             game.virtual_screen.blit(scaled_reticle, rect)
     else:
-        # [NEW] Restore standard cursor
         pygame.mouse.set_visible(True)
-        pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
-
-
-    # Set cursor
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]:
-        pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
-    else:
-        pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]:
+             pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
+        else:
+             pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
