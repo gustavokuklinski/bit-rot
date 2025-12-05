@@ -7,7 +7,9 @@ from core.data.config import *
 from core.map.building_loader import load_building_templates
 
 class ProceduralGenerator:
-    def __init__(self, game, output_folder=None):
+    def __init__(self, game, output_folder=None, 
+                 building_counts=None, 
+                 chunk_settings=None):
         self.game = game
         self.chunk_size = 100 # 100x100 tiles per chunk
         self.tile_size = TILE_SIZE
@@ -15,14 +17,40 @@ class ProceduralGenerator:
         self.buildings_path = os.path.join(MAP_DIR, 'buildings')
         self.templates = load_building_templates(self.buildings_path)
         
-        # Forest settings
+        # --- NEW: World Generation Settings (Settable at initialization) ---
+        
+        # Map/Chunk Settings - Control world structure
+        self.default_chunk_settings = {
+            'urban_chunk_ratio': 0.6,    # Ratio of chunks that will be "urban" (contain buildings, max 1.0)
+            'min_urban_chunks': 1,       # Minimum number of urban chunks to guarantee
+            'military_chunk_count': 1,   # Number of chunks dedicated to military templates (0 or 1)
+            'force_start_urban': True    # If True, the starting chunk is always urban
+        }
+        self.chunk_settings = self.default_chunk_settings.copy()
+        if chunk_settings:
+            self.chunk_settings.update(chunk_settings)
+
+        # Building Counts - Total number of specific buildings across the entire map
+        self.default_building_counts = {
+            'Stores': 5,
+            'Warehouses': 3,
+            'Condo': 3,
+            'Building2': 3,
+            'Generic': 10  # Max number of generic buildings placed per urban chunk
+        }
+        self.building_counts = self.default_building_counts.copy()
+        if building_counts:
+            self.building_counts.update(building_counts)
+        
+        # Forest settings - Control forest density
         self.forest_border_width = 2      # Width of the solid tree border (in tiles)
         self.cluster_min_count = 50       # Minimum number of forest clusters per chunk
         self.cluster_max_count = 250      # Maximum number of forest clusters per chunk
         self.cluster_radius = 4           # Radius of scatter for each cluster (in tiles)
         self.cluster_density = 0.85       # Probability (0.0 to 1.0) of a tile becoming forest
 
-        self.num_building_per_chunk = 15
+        self.num_building_per_chunk = self.building_counts.get('Generic', 10) 
+        # ---------------------------------------------------------------------
 
         # 1. Identify Forest Tiles
         self.forest_tiles = []
@@ -104,35 +132,19 @@ class ProceduralGenerator:
         # 1. Generate the Connection Matrix
         connections_grid = self._generate_maze_connections(grid_w, grid_h)
 
-        # Distribution Logic
-        limit_stores = grid_w
-        limit_warehouses = math.ceil(grid_w / 2)
-        limit_condo = math.ceil(grid_w / 2)
-        limit_building2 = math.ceil(grid_w / 2)
+        # Distribution Logic - USES self.building_counts for total counts
+        limit_stores = self.building_counts.get('Stores', 0)
+        limit_warehouses = self.building_counts.get('Warehouses', 0)
+        limit_condo = self.building_counts.get('Condo', 0)
+        limit_building2 = self.building_counts.get('Building2', 0)
         
         print(f"Distribution Targets -> Stores: {limit_stores}, Warehouses: {limit_warehouses}, Building2: {limit_building2}")
 
-        # --- NEW MILITARY PLACEMENT LOGIC ---
-        
         # 1. Isolate Military Templates
         military_templates = self.unique_templates[:]
+        required_military_chunks = self.chunk_settings.get('military_chunk_count', 0)
         
-        # 2. Calculate Urban Chunks
-        all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
-        num_building_chunks = max(grid_w, grid_h)
-        urban_coords = set(random.sample(all_coords, min(len(all_coords), num_building_chunks)))
-        
-        # 3. Select ONE Forest Chunk for Military Base (must be outside urban_coords)
-        forest_coords = [coord for coord in all_coords if coord not in urban_coords]
-        military_chunk_coord = None
-        
-        if military_templates and forest_coords:
-            military_chunk_coord = random.choice(forest_coords)
-            # Remove this chunk from the list of generic forest chunks (though this isn't strictly necessary for correctness)
-            forest_coords.remove(military_chunk_coord) 
-            print(f"Selected Military Forest Chunk: {military_chunk_coord}")
-        
-        # 4. Populate General Special Building Pool (excludes military)
+        # 2. Populate General Special Building Pool (excluding military)
         special_buildings_pool = []
         if self.store_templates:
             for _ in range(limit_stores): special_buildings_pool.append(random.choice(self.store_templates))
@@ -142,13 +154,47 @@ class ProceduralGenerator:
             for _ in range(limit_condo): special_buildings_pool.append(random.choice(self.condo_templates))
         if self.building2_templates:
             for _ in range(limit_building2): special_buildings_pool.append(random.choice(self.building2_templates))
+
+        # 3. Calculate Urban Chunks (Uses self.chunk_settings)
+        all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
+        total_chunks = grid_w * grid_h
+        
+        base_urban_count = int(total_chunks * self.chunk_settings.get('urban_chunk_ratio', 0.6))
+        required_special_chunks = math.ceil(len(special_buildings_pool) / 1) 
+        
+        num_building_chunks = max(base_urban_count, required_special_chunks, self.chunk_settings.get('min_urban_chunks', 0))
+        num_building_chunks = min(num_building_chunks, total_chunks) 
+
+        # 4. Assign Military/Urban Chunks
+        urban_candidates = list(all_coords)
+        military_chunk_coord = None
+        
+        # --- FIX: Initialize urban_coords before it's first referenced ---
+        urban_coords = set() 
+        
+        if military_templates and required_military_chunks > 0:
+            # Prioritize selecting a chunk that hasn't been designated urban yet
+            forest_candidates = [coord for coord in urban_candidates if coord not in urban_coords]
+            
+            if forest_candidates:
+                military_chunk_coord = random.choice(forest_candidates)
+                urban_candidates.remove(military_chunk_coord)
+            else:
+                military_chunk_coord = random.choice(urban_candidates)
+                urban_candidates.remove(military_chunk_coord)
+            
+            num_building_chunks = max(0, num_building_chunks - 1)
+        
+        # Select "Urban" chunks from the remaining candidates
+        urban_coords = set(random.sample(urban_candidates, min(len(urban_candidates), num_building_chunks)))
+        # --- END FIX ---
         
         # 5. Build Priority Map
         print(f"Selected Urban Chunks ({len(urban_coords)}): {urban_coords}")
         chunk_priority_map = {coord: [] for coord in all_coords}
         
         # Assign NON-MILITARY special buildings to urban chunks
-        urban_list = list(urban_coords)
+        urban_list = list(urban_coords) 
         if urban_list:
             random.shuffle(urban_list)
             coord_idx = 0
@@ -162,10 +208,9 @@ class ProceduralGenerator:
         # Assign MILITARY buildings to the chosen forest chunk
         if military_chunk_coord:
             chunk_priority_map[military_chunk_coord].extend(military_templates)
-            # This chunk is explicitly NOT urban, but needs buildings placed, so we include it here for logging
             print(f"Assigning {len(military_templates)} Military Templates to Chunk {military_chunk_coord}")
             
-        # --- END NEW MILITARY PLACEMENT LOGIC ---
+        # --- END NEW DISTRIBUTION LOGIC ---
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
@@ -188,19 +233,20 @@ class ProceduralGenerator:
                 
                 priority_list = chunk_priority_map.get((gx, gy), [])
 
-                is_center_chunk = (gx == start_gx // 2 and gy == start_gy // 2)
-                
+                is_center_chunk = (gx == start_gx and gy == start_gy)
                 is_military_chunk = (gx, gy) == military_chunk_coord
                 
-                # allow_buildings must be True for Urban chunks AND the Military chunk
+                # Check if the chunk is designated urban OR if it's the start chunk (if forced) OR military
                 is_urban = (gx, gy) in urban_coords or is_military_chunk
-                
+                if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
+                    is_urban = True
+
                 # Pass flag to enforce forest generation and skip generic buildings
                 chunk_data = self._generate_chunk_data(gx, gy, conns, 
                                                        is_start=is_center_chunk, 
                                                        priority_templates=priority_list, 
                                                        allow_buildings=is_urban,
-                                                       force_forest=is_military_chunk) # <--- PASS NEW FLAG
+                                                       force_forest=is_military_chunk) 
                 
                 conn_top = conns.get('top_id', 0)
                 conn_right = conns.get('right_id', 0)
@@ -237,7 +283,6 @@ class ProceduralGenerator:
         if not os.path.exists(self.output_folder): return False
         return len([f for f in os.listdir(self.output_folder) if f.endswith('_map.csv')]) >= expected_count
 
-# ... (_generate_maze_connections is unchanged) ...
     def _generate_maze_connections(self, w, h):
         grid = [[{
             'visited': False, 
@@ -336,7 +381,6 @@ class ProceduralGenerator:
         dirt_tile = 'dirty_01'
         sand_tile = 'sand_01'
         
-# ... (road drawing helper functions are unchanged) ...
         def draw_straight_road(x1, y1, x2, y2, tile_type):
             sx, ex = min(x1, x2), max(x1, x2)
             sy, ey = min(y1, y2), max(y1, y2)
@@ -428,13 +472,12 @@ class ProceduralGenerator:
         placed_rects = [] 
         buildings_placed = 0
         
-        # Set target count based on forest flag
+        # Target count for GENERIC buildings. 
+        # Set to 0 if we are forcing forest (military chunk) to prevent generic buildings from spawning.
         target_count = 0
         if allow_buildings and not force_forest:
-            target_count = self.num_building_per_chunk
-        elif force_forest:
-            target_count = 1 # Only allow the priority building (military)
-
+            target_count = self.num_building_per_chunk # Uses 'Generic' count from init
+        
         attempts = 0
         
         def is_area_free(tx, ty, tw, th, margin=0):
@@ -450,7 +493,7 @@ class ProceduralGenerator:
             return True
 
         if allow_buildings:
-            # Priority Buildings Loop (Military buildings are placed here if force_forest is True)
+            # Priority Buildings Loop (Includes Military/Store/Condo)
             if priority_templates:
                 for tmpl_name in priority_templates:
                     if tmpl_name in self.templates:
@@ -566,7 +609,6 @@ class ProceduralGenerator:
                         for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
 
         # Forest / Nature (Template Placement)
-        # Skip forest template placement if we are enforcing dense forest via Tile Clusters below
         if self.forest_templates and not force_forest:
             for _ in range(15):
                 tmpl_name = random.choice(self.forest_templates)
@@ -582,7 +624,7 @@ class ProceduralGenerator:
 
         # Tile Clusters (Forest Generation)
         
-        # If forcing forest, overwrite empty space with dense nature tiles
+        # If forcing forest, use high density variables
         if force_forest:
             # Overwrite non-road ground tiles to guarantee forest density
             for y in range(h):
@@ -592,12 +634,12 @@ class ProceduralGenerator:
                     if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile:
                          layers['ground'][y][x] = 'bg_grass'
                          
-            # Set high density variables for filling the chunk
+            # Set extremely high density variables for filling the chunk
             cluster_count_range = random.randint(500, 1500)
             current_radius = 10
             current_density = 0.95
         else:
-            # Use normal cluster settings
+            # Use configurable normal cluster settings
             cluster_count_range = random.randint(self.cluster_min_count, self.cluster_max_count)
             current_radius = self.cluster_radius
             current_density = self.cluster_density
@@ -623,7 +665,6 @@ class ProceduralGenerator:
 
         return layers
 
-# ... (rest of the file is unchanged) ...
     def _scatter_zombies(self, layers, mask, w, h):
         # 1. Identify Zones
         building_tiles = []

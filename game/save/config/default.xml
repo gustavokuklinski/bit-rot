@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
     <game>
-        <time_daylength name="Day length" value="300000"/>
+        <time_daylength name="Day length" value="900000"/>
         <time_sunrise_hr name="Time sunrise" value="5.5"/>
         <time_sunset_hr name="Time sunset" value="17.5"/>
         <time_transition_hr name="Time transition (day/night)" value="1.0"/>
@@ -17,7 +17,7 @@
         <water_decay name="Water decay %" value="0.3"/>
         <water_autodrink name="Allow autodrink" value="true"/>
         <water_threshold name="Minimum % to start autodrink" value="100"/>
-        <food_water_multiplier_decay value="1.5"/>
+        <food_water_multiplier_decay name="Food and water decay multiplier" value="1.5"/>
         <view_radius name="View radius tiles" value="15"/>
     </player>
     <durability>

@@ -525,7 +525,16 @@ class Game:
             self.logger.info(f"Error applying custom config '{preset}': {e}")
 
         # 4. Initialize Generator with the specific OUTPUT folder
-        generator = ProceduralGenerator(self, output_folder=map_path)
+        gen_building_counts = self.player_setup_state.get('building_counts_config', None)
+        gen_chunk_settings = self.player_setup_state.get('chunk_settings_config', None)
+        
+        generator = ProceduralGenerator(
+            self, 
+            output_folder=map_path,
+            building_counts=gen_building_counts, # Pass the building counts dictionary
+            chunk_settings=gen_chunk_settings    # Pass the chunk settings dictionary
+        )
+        
         raw_seed = player_data.get('world_seed', "4-B1TR07")
         if not raw_seed: 
             raw_seed = "4-B1TR07"
@@ -555,7 +564,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID", "Knife", "Shotgun"]
+        starter_items = ["ID", "Knife"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
