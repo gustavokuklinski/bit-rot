@@ -64,7 +64,7 @@ def draw_game(game):
         mouse_dist_screen = math.hypot(dx, dy)
         
         # Threshold (Fog of War Radius) in Screen Pixels
-        pan_threshold_screen = game.player_view_radius * zoom
+        pan_threshold_screen = game.player_view_radius
         
         # Only pan if mouse is OUTSIDE the threshold
         if mouse_dist_screen > pan_threshold_screen:
@@ -91,37 +91,70 @@ def draw_game(game):
 
     world_view_surface = pygame.Surface((view_w, view_h))
 
-    # Apply frustum culling to the most critical loop: Tiles (ground/walls)
-    for image, rect in game.renderable_tiles:
-        if screen_rect.colliderect(rect):
-            world_view_surface.blit(image, rect.move(offset_x, offset_y))
+    # >>> START TILE RENDERING OPTIMIZATION (Tile Surface Caching) <<<
 
+    # 1. Check/Rebuild Cache if the map chunks have changed (tiles_dirty) or a dynamic tile state has toggled.
+    if not hasattr(game, '_tile_cache_surface'):
+        game._tile_cache_surface = None
+    
+    # Check for full map chunk changes OR single dynamic tile changes (e.g., doors)
+    dynamic_update_needed = getattr(game, 'dynamic_tiles_dirty', False)
+    
+    if getattr(game, 'tiles_dirty', True) or dynamic_update_needed: 
+        if game.renderable_tiles:
+            # Calculate the bounding box of all tiles to size the cache surface
+            min_x = min(rect.x for _, rect in game.renderable_tiles)
+            min_y = min(rect.y for _, rect in game.renderable_tiles)
+            max_x = max(rect.right for _, rect in game.renderable_tiles)
+            max_y = max(rect.bottom for _, rect in game.renderable_tiles)
 
-    # Draw Items (Fixes bug by defining screen_rect and adds culling)
-    for item in game.items_on_ground:
-        if screen_rect.colliderect(item.rect):
-            item.draw(world_view_surface, offset_x, offset_y)
+            cache_w = max_x - min_x
+            cache_h = max_y - min_y
+            
+            # Store the world coordinate of the cache's top-left corner
+            game._tile_cache_world_origin = (min_x, min_y)
 
-    # Draw Vehicles (Fixes bug by defining screen_rect and adds culling)
-    if game.map_manager and hasattr(game.map_manager, 'vehicles'):
-        for vehicle in game.map_manager.vehicles:
-            if screen_rect.colliderect(vehicle.rect):
-                vehicle.draw(world_view_surface, offset_x, offset_y)
+            # Create the cache surface. Use .convert() for speed.
+            game._tile_cache_surface = pygame.Surface((cache_w, cache_h)).convert()
+            game._tile_cache_surface.fill(PANEL_COLOR) 
 
-    # Draw Zombies (Fixes bug by defining screen_rect and adds culling)
-    for zombie in game.zombies:
-        if screen_rect.colliderect(zombie.rect):
-            zombie.draw(world_view_surface, offset_x, offset_y)
+            # Calculate offset for drawing onto the cache surface
+            cache_offset_x = -min_x
+            cache_offset_y = -min_y
 
-    # Draw Player
-    game.player.draw(world_view_surface, offset_x, offset_y)
+            # Perform the expensive blit operations ONCE (when dirty)
+            for image, rect in game.renderable_tiles:
+                game._tile_cache_surface.blit(image, rect.move(cache_offset_x, cache_offset_y))
+            
+            # Mark the cache clean
+            game.tiles_dirty = False
+            if dynamic_update_needed:
+                # Clear the dynamic flag after the rebuild
+                game.dynamic_tiles_dirty = False 
+        else:
+            # Handle empty map case
+            game._tile_cache_surface = pygame.Surface((1, 1)).convert()
+            game._tile_cache_world_origin = (0, 0)
+            game.tiles_dirty = False
+            if dynamic_update_needed:
+                game.dynamic_tiles_dirty = False
+    
+    # 2. Per-frame Optimized Blit from Cache
+    if game._tile_cache_surface:
+        cache_origin_x, cache_origin_y = game._tile_cache_world_origin
+        
+        # Calculate the source rectangle (the 'slice' of the map cache to display)
+        source_x = screen_rect.x - cache_origin_x
+        source_y = screen_rect.y - cache_origin_y
+        source_w = view_w
+        source_h = view_h
+        source_rect_on_cache = pygame.Rect(source_x, source_y, source_w, source_h)
+        
+        # Blit the slice onto the world_view_surface at position (0, 0)
+        world_view_surface.blit(game._tile_cache_surface, (0, 0), source_rect_on_cache)
 
-    # Draw Projectiles (Culling added)
-    for p in game.projectiles:
-        if screen_rect.colliderect(p.rect):
-            p.draw(world_view_surface, offset_x, offset_y)
+    # >>> END TILE RENDERING OPTIMIZATION (Tile Surface Caching) <<<
 
-    # ########################################
 
     light_mask = pygame.Surface((view_w, view_h))
     
@@ -140,7 +173,7 @@ def draw_game(game):
             radius_view_pixels = int(radius_world_pixels / zoom) # or Zoom
             
             if radius_view_pixels > 0:
-                player_vision_tex = pygame.transform.smoothscale(light_texture, (radius_view_pixels * PLAYER_FOW_RADIUS, radius_view_pixels * PLAYER_FOW_RADIUS))
+                player_vision_tex = pygame.transform.smoothscale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
                 ambient_color = (ambient, ambient, ambient)
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
                 light_rect = player_vision_tex.get_rect()
@@ -251,15 +284,31 @@ def draw_game(game):
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     
     for container in game.containers:
-        if not screen_rect.colliderect(container.rect): continue # Frustum culling added
+        if not screen_rect.colliderect(container.rect): continue 
+
+        # Calculate distance
         dist = math.hypot(container.rect.centerx - game.player.rect.centerx, container.rect.centery - game.player.rect.centery)
-        if dist > game.player_view_radius: continue
-        draw_pos = container.rect.move(offset_x, offset_y)
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
         
+        # 1. VISIBILITY CHECK: Immediately skip if outside radius
+        if dist > game.player_view_radius: 
+            continue
+
+        draw_pos = container.rect.move(offset_x, offset_y)
+        
+        # 2. FADE LOGIC: Calculate opacity based on distance from player
+        # This creates a number from 1.0 (at player) to 0.0 (at max radius)
+        fade_factor = 1.0 - (dist / game.player_view_radius)
+        
+        # Optional: Power of 2 makes the fade "fall off" faster near the edges (looks blurrier/softer)
+        fade_factor = fade_factor ** 0.5 
+
+        opacity = int(255 * fade_factor)
+        opacity = max(0, min(255, opacity)) # Strictly clamp between 0-255
+
         if getattr(container, 'image', None):
             try:
                 temp_image = container.image.copy()
+                # Apply the safe opacity
                 temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
                 world_view_surface.blit(temp_image, draw_pos)
             except Exception as e: pass
@@ -270,14 +319,24 @@ def draw_game(game):
             world_view_surface.blit(temp_surface, draw_pos)
 
     for item in game.items_on_ground:
-        if not screen_rect.colliderect(item.rect): continue # Frustum culling added
-        dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
-        if dist > game.player_view_radius: continue
-        draw_pos = item.rect.move(offset_x, offset_y)
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
+        if not screen_rect.colliderect(item.rect): continue
         
+        dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
+        
+        # 1. VISIBILITY CHECK
+        if dist > game.player_view_radius: 
+            continue
+
+        draw_pos = item.rect.move(offset_x, offset_y)
+        
+        # 2. FADE LOGIC
+        fade_factor = 1.0 - (dist / game.player_view_radius)
+        opacity = int(255 * fade_factor)
+        opacity = max(0, min(255, opacity)) # Clamp 0-255
+
         if getattr(item, 'image', None):
             temp_image = item.image.copy()
+            # This fixes the specific error you were getting
             temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
             world_view_surface.blit(temp_image, draw_pos)
         else:
@@ -291,10 +350,20 @@ def draw_game(game):
             p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        if not screen_rect.colliderect(zombie.rect): continue # Frustum culling added
+        if not screen_rect.colliderect(zombie.rect): continue
+        
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-        if dist > game.player_view_radius: continue
-        opacity = max(0, 255 * (1 - dist / game.player_view_radius))
+        
+        # 1. VISIBILITY CHECK
+        if dist > game.player_view_radius: 
+            continue
+            
+        # 2. FADE LOGIC
+        fade_factor = 1.0 - (dist / game.player_view_radius)
+        opacity = int(255 * fade_factor)
+        opacity = max(0, min(255, opacity))
+
+        # Pass the calculated safe integer opacity to the zombie draw function
         zombie.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
@@ -378,8 +447,6 @@ def draw_game(game):
         draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
         draw_player_alerts(game.virtual_screen, game.player)
 
-    # ... (Rest of the file with UI/Modal rendering remains exactly the same) ...
-    # Copy the UI rendering part from the previous file or keep it as is below.
     top_tooltip = None
     game.modal_buttons = []
     mouse_pos = game._get_scaled_mouse_pos()

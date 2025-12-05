@@ -57,23 +57,23 @@ class ProceduralGenerator:
         if not self.target_templates:
              self.target_templates = [k for k in self.templates.keys() if not k.startswith("Forest_")]
 
-    def generate_world(self, seed_pattern="3-DEFAULT", regenerate=False):
+    def generate_world(self, seed_pattern="5-DEFAULT", regenerate=False):
         try:
-            # Check for new pattern: Size-Seed (e.g., "3-B1TR0T")
+            # Check for new pattern: Size-Seed (e.g., "5-B1TR0T")
             if '-' in seed_pattern:
                 parts = seed_pattern.split('-', 1)
                 n_part = parts[0]
-                if not n_part: n_part = "3"
+                if not n_part: n_part = "5"
                 grid_w = int(n_part)
                 grid_h = int(n_part)
                 actual_seed = parts[1]
                 if not actual_seed: actual_seed = "DEFAULT"
             else:
-                grid_w, grid_h = 3, 3
+                grid_w, grid_h = 5, 5
                 actual_seed = seed_pattern
         except ValueError:
             print(f"Invalid seed pattern '{seed_pattern}'. Defaulting to 3x3.")
-            grid_w, grid_h = 3, 3
+            grid_w, grid_h = 5, 5
             actual_seed = "DEFAULT"
 
         print(f"Applying World Seed: {actual_seed} | Size: {grid_w}x{grid_h}")

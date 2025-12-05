@@ -98,3 +98,4 @@ class TileManager:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
                 except ET.ParseError as e:
                     print(f"Warning: Could not parse XML file {filename}: {e}")
+    

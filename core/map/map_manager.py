@@ -10,7 +10,7 @@ class MapManager:
         self.map_folder = map_folder
         self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
         self.map_files = self._discover_maps()
-
+    
     def refresh_maps(self):
         """Re-scans the map folder and updates the map_files list."""
         print("Refreshing map file list...")
@@ -124,7 +124,6 @@ class MapManager:
         current_state = current_def.get('state')
         new_state = "open" if current_state == "close" else "close"
 
-
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
         # Check if we are trying to close the door
@@ -133,36 +132,70 @@ class MapManager:
             if self.game.player.rect.colliderect(tile_rect):
                 display_message_player("Player is in the doorway, cannot close.")
                 return # Stop the function
-        # Assumes naming convention: "char_name_close" <-> "char_name_open"
+        
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"
 
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
             
-            # 1. Update the map data (this is persistent for this layer)
+            # 1. Update the map data
             self.game.map_data[grid_y][grid_x] = new_char
             
             # 2. Update obstacles list
-            tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            
-            # Remove any matching rect first (handles both cases)
             self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-            
-            # Add back if the new state is an obstacle
             if new_def['is_obstacle']:
                 self.game.obstacles.append(tile_rect)
                 
-            # 3. Update renderable_tiles list
+            # 3. Update renderable_tiles list AND gather tiles for redraw in ONE pass.
+            # This prevents iterating the massive list twice, eliminating the delay.
             original_image = current_def['image'] 
+            tiles_to_redraw = []
+            door_updated = False
             
             for i, (img, rect) in enumerate(self.game.renderable_tiles):
-                # Check for both rect AND the original image
-                if rect == tile_rect and img == original_image: 
-                    # Found the exact tile (e.g., the closed door, not the floor beneath it)
-                    self.game.renderable_tiles[i] = (new_def['image'], rect)
-                    break
+                # We only care about tiles at this specific location
+                if rect.colliderect(tile_rect):
+                    # Check if this is the door we need to update
+                    if not door_updated and rect == tile_rect and img == original_image:
+                        # Update the main list in-place
+                        self.game.renderable_tiles[i] = (new_def['image'], rect)
+                        # Add the NEW image to the local redraw list
+                        tiles_to_redraw.append((new_def['image'], rect))
+                        door_updated = True
+                    else:
+                        # This is a floor or other overlapping tile; add to redraw list as is
+                        tiles_to_redraw.append((img, rect))
             
+            # 4. Patch the cache directly using the small gathered list
+            if hasattr(self.game, '_tile_cache_surface') and self.game._tile_cache_surface:
+                try:
+                    origin_x, origin_y = self.game._tile_cache_world_origin
+                    
+                    cache_rect = pygame.Rect(
+                        tile_rect.x - origin_x, 
+                        tile_rect.y - origin_y, 
+                        tile_rect.width, 
+                        tile_rect.height
+                    )
+                    
+                    # Clear the specific spot (erasing old door AND floor)
+                    self.game._tile_cache_surface.fill(PANEL_COLOR, cache_rect)
+                    
+                    # Redraw only the gathered tiles (Floor + New Door)
+                    # This loop is now instant because tiles_to_redraw has only ~2 items
+                    for img, r in tiles_to_redraw:
+                        draw_pos = (r.x - origin_x, r.y - origin_y)
+                        self.game._tile_cache_surface.blit(img, draw_pos)
+                    
+                    self.game.dynamic_tiles_dirty = False
+                    
+                except Exception as e:
+                    print(f"Error patching tile cache: {e}")
+                    self.game.dynamic_tiles_dirty = True
+            else:
+                self.game.dynamic_tiles_dirty = True
+
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
                     new_def['sound_src'],

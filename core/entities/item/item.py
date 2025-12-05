@@ -541,6 +541,20 @@ class Item:
         
         return new_item
 
+    def draw(self, surface, offset_x, offset_y, opacity=0):
+        draw_rect = self.rect.move(offset_x, offset_y)
+        
+        if self.image:
+            temp_image = self.image.copy()
+            if opacity < 0:
+                temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(temp_image, draw_rect)
+        else:
+            # Fallback for items with no sprite
+            temp_surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+            temp_surface.fill((*self.color, opacity))
+            surface.blit(temp_surface, draw_rect)
+
 class Container(Item):
     def __init__(self, name, items=None, capacity=0):
         super().__init__(name, item_type='container', capacity=capacity)

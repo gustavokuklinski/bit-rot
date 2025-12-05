@@ -100,7 +100,6 @@ WATER_DECAY_AMOUNT = 0.0
 AUTO_DRINK = False
 AUTO_DRINK_THRESHOLD = 0
 BASE_PLAYER_VIEW_RADIUS = 0
-PLAYER_FOW_RADIUS = 0
 ZOMBIE_SPEED = 0.0
 MAX_ZOMBIES_GLOBAL = 0
 ZOMBIE_DROP = 0
@@ -136,7 +135,7 @@ def load_settings(preset="default"):
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
     global DECAY_RATE_SECONDS, FOOD_WATER_MULTIPLIER_DECAY, FOOD_DECAY_AMOUNT, WATER_DECAY_AMOUNT
-    global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS, PLAYER_FOW_RADIUS
+    global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
     global ZOMBIE_SPEED, MAX_ZOMBIES_GLOBAL, ZOMBIE_DROP, ZOMBIE_DETECTION_RADIUS
     global ZOMBIE_WANDER_ENABLED, ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
     global ZOMBIES_PER_SPAWN, ZOMBIE_RESPAWN_TIMER_MS, ZOMBIE_INFECTION_CHANCE
@@ -185,7 +184,6 @@ def load_settings(preset="default"):
         
         AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
         BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
-        PLAYER_FOW_RADIUS = int(player_config.find('fow_radius').get('value'))
 
         zombie_config = root.find('zombie')
         ZOMBIE_SPEED = float(zombie_config.find('speed').get('value'))

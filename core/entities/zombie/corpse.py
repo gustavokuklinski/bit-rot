@@ -42,3 +42,4 @@ class Corpse(Item):
                 pass
             items_on_ground.append(it)
         self.inventory.clear()
+        
