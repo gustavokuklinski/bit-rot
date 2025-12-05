@@ -1,5 +1,6 @@
 import pygame
 import math
+import random
 from core.data.config import *
 import core.data.config
 from core.entities.item.item import Item
@@ -284,31 +285,23 @@ def draw_game(game):
     # 3. Draw all world objects onto the temporary surface at 1:1 scale.
     
     for container in game.containers:
-        if not screen_rect.colliderect(container.rect): continue 
-
-        # Calculate distance
+        if not screen_rect.colliderect(container.rect): continue # Frustum culling added
         dist = math.hypot(container.rect.centerx - game.player.rect.centerx, container.rect.centery - game.player.rect.centery)
         
-        # 1. VISIBILITY CHECK: Immediately skip if outside radius
-        if dist > game.player_view_radius: 
-            continue
-
+        if dist > game.player_view_radius: continue
+        
         draw_pos = container.rect.move(offset_x, offset_y)
         
-        # 2. FADE LOGIC: Calculate opacity based on distance from player
-        # This creates a number from 1.0 (at player) to 0.0 (at max radius)
-        fade_factor = 1.0 - (dist / game.player_view_radius)
-        
-        # Optional: Power of 2 makes the fade "fall off" faster near the edges (looks blurrier/softer)
+        # Calculate fade factor (1.0 close to player, 0.0 at edge of view_radius)
+        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
+        # Optional "blurry" effect: use power to make the fade faster near the edge
         fade_factor = fade_factor ** 0.5 
-
+        
         opacity = int(255 * fade_factor)
-        opacity = max(0, min(255, opacity)) # Strictly clamp between 0-255
-
+        
         if getattr(container, 'image', None):
             try:
                 temp_image = container.image.copy()
-                # Apply the safe opacity
                 temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
                 world_view_surface.blit(temp_image, draw_pos)
             except Exception as e: pass
@@ -319,25 +312,21 @@ def draw_game(game):
             world_view_surface.blit(temp_surface, draw_pos)
 
     for item in game.items_on_ground:
-        if not screen_rect.colliderect(item.rect): continue
-        
+        if not screen_rect.colliderect(item.rect): continue # Frustum culling added
         dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
         
-        # 1. VISIBILITY CHECK
-        if dist > game.player_view_radius: 
-            continue
-
+        if dist > game.player_view_radius: continue
+        
         draw_pos = item.rect.move(offset_x, offset_y)
         
-        # 2. FADE LOGIC
-        fade_factor = 1.0 - (dist / game.player_view_radius)
+        # Calculate fade factor
+        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
         opacity = int(255 * fade_factor)
-        opacity = max(0, min(255, opacity)) # Clamp 0-255
-
+        
         if getattr(item, 'image', None):
             temp_image = item.image.copy()
-            # This fixes the specific error you were getting
-            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            safe_opacity = max(0, min(255, opacity)) # Clamp (max/min check is good practice)
+            temp_image.fill((255, 255, 255, safe_opacity), special_flags=pygame.BLEND_RGBA_MULT)
             world_view_surface.blit(temp_image, draw_pos)
         else:
             color = getattr(item, 'color', WHITE)
@@ -350,23 +339,84 @@ def draw_game(game):
             p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        if not screen_rect.colliderect(zombie.rect): continue
-        
+        if not screen_rect.colliderect(zombie.rect): continue # Frustum culling added
         dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
         
-        # 1. VISIBILITY CHECK
-        if dist > game.player_view_radius: 
-            continue
-            
-        # 2. FADE LOGIC
-        fade_factor = 1.0 - (dist / game.player_view_radius)
+        if dist > game.player_view_radius: continue
+        
+        # Calculate fade factor
+        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
         opacity = int(255 * fade_factor)
-        opacity = max(0, min(255, opacity))
-
-        # Pass the calculated safe integer opacity to the zombie draw function
+        
         zombie.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
+
+
+    # --- NEW: Draw Persistent Blood Stains (Decals) ---
+    if hasattr(game, 'blood_stains'):
+        for stain in game.blood_stains:
+            # Stains are drawn first (under temporary effects)
+            stain_x = int(stain['pos'][0] + offset_x)
+            stain_y = int(stain['pos'][1] + offset_y)
+            stain_size = stain['size']
+            stain_color = stain.get('color', (139, 0, 0))
+            
+            # Draw a simple circular decal
+            # Multiple of these small circles placed along a line create the trail effect.
+            pygame.draw.circle(world_view_surface, stain_color, 
+                               (stain_x, stain_y), 
+                               stain_size // 2)
+
+    # --- Draw Hit Splashes (Blood Puff/Trail Effect) ---
+    SPLASH_COLOR = (139, 0, 0) # Dark Red
+    current_time = pygame.time.get_ticks()
+    
+    for splash in game.splashes:
+        time_elapsed = current_time - splash['time']
+        
+        # Calculate fade factor (1.0 at start, 0.0 at end)
+        fade_factor = max(0.0, 1.0 - (time_elapsed / splash['duration']))
+        
+        # Base opacity (starts darker, fades out)
+        base_opacity = int(255 * fade_factor)
+        
+        # Calculate screen position in world view (the impact spot on the floor)
+        impact_x = splash['pos'][0] + offset_x
+        impact_y = splash['pos'][1] + offset_y
+
+        # Draw more particles for a dramatic puff
+        num_particles = 15 # Increased particle count for more splatter
+        for i in range(num_particles):
+            
+            # Spread widens as it fades (simulating velocity)
+            offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) 
+            
+            # Add random variation to spread distance
+            offset_dist *= random.uniform(0.7, 1.3)
+            
+            # Random angle for direction of splatter
+            angle = math.radians(i * (360 / num_particles) + random.randint(-45, 45)) # Increased angle variance
+            
+            draw_x = impact_x + (math.cos(angle) * offset_dist)
+            draw_y = impact_y + (math.sin(angle) * offset_dist)
+
+            # Calculate individual particle size (starts at splash['radius'], shrinks slightly)
+            particle_radius = int(splash['radius'] * random.uniform(1.0, 1.5) * (fade_factor * 0.5 + 0.5)) 
+            
+            if particle_radius > 0:
+                # Create a temporary surface for the particle to control its opacity
+                particle_surf = pygame.Surface((particle_radius * 2, particle_radius * 2), pygame.SRCALPHA)
+                
+                # Darken the color slightly as it trails away
+                trail_color = (int(SPLASH_COLOR[0] * fade_factor), int(SPLASH_COLOR[1] * fade_factor), int(SPLASH_COLOR[2] * fade_factor), base_opacity)
+                
+                # Draw the particle with the dynamic color/opacity
+                pygame.draw.circle(particle_surf, trail_color, 
+                                   (particle_radius, particle_radius), 
+                                   particle_radius)
+
+                world_view_surface.blit(particle_surf, (int(draw_x - particle_radius), int(draw_y - particle_radius)))
 
     player_tile_x = game.player.rect.centerx // TILE_SIZE
     player_tile_y = game.player.rect.centery // TILE_SIZE

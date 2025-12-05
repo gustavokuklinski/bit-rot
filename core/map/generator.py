@@ -15,6 +15,15 @@ class ProceduralGenerator:
         self.buildings_path = os.path.join(MAP_DIR, 'buildings')
         self.templates = load_building_templates(self.buildings_path)
         
+        # Forest settings
+        self.forest_border_width = 2      # Width of the solid tree border (in tiles)
+        self.cluster_min_count = 50       # Minimum number of forest clusters per chunk
+        self.cluster_max_count = 250      # Maximum number of forest clusters per chunk
+        self.cluster_radius = 4           # Radius of scatter for each cluster (in tiles)
+        self.cluster_density = 0.85       # Probability (0.0 to 1.0) of a tile becoming forest
+
+        self.num_building_per_chunk = 15
+
         # 1. Identify Forest Tiles
         self.forest_tiles = []
         if hasattr(self.game, 'tile_manager'):
@@ -103,9 +112,28 @@ class ProceduralGenerator:
         
         print(f"Distribution Targets -> Stores: {limit_stores}, Warehouses: {limit_warehouses}, Building2: {limit_building2}")
 
-        special_buildings_pool = []
-        special_buildings_pool.extend(self.unique_templates)
+        # --- NEW MILITARY PLACEMENT LOGIC ---
         
+        # 1. Isolate Military Templates
+        military_templates = self.unique_templates[:]
+        
+        # 2. Calculate Urban Chunks
+        all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
+        num_building_chunks = max(grid_w, grid_h)
+        urban_coords = set(random.sample(all_coords, min(len(all_coords), num_building_chunks)))
+        
+        # 3. Select ONE Forest Chunk for Military Base (must be outside urban_coords)
+        forest_coords = [coord for coord in all_coords if coord not in urban_coords]
+        military_chunk_coord = None
+        
+        if military_templates and forest_coords:
+            military_chunk_coord = random.choice(forest_coords)
+            # Remove this chunk from the list of generic forest chunks (though this isn't strictly necessary for correctness)
+            forest_coords.remove(military_chunk_coord) 
+            print(f"Selected Military Forest Chunk: {military_chunk_coord}")
+        
+        # 4. Populate General Special Building Pool (excludes military)
+        special_buildings_pool = []
         if self.store_templates:
             for _ in range(limit_stores): special_buildings_pool.append(random.choice(self.store_templates))
         if self.warehouse_templates:
@@ -114,21 +142,12 @@ class ProceduralGenerator:
             for _ in range(limit_condo): special_buildings_pool.append(random.choice(self.condo_templates))
         if self.building2_templates:
             for _ in range(limit_building2): special_buildings_pool.append(random.choice(self.building2_templates))
-
-        # [MODIFIED] Urban/Forest Selection Logic
-        all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         
-        # Calculate how many chunks should have buildings (max of width or height)
-        # e.g., 3x3 -> 3 chunks, 7x7 -> 7 chunks
-        num_building_chunks = max(grid_w, grid_h)
-        
-        # Randomly select which chunks will be "Urban" (contain buildings)
-        urban_coords = set(random.sample(all_coords, min(len(all_coords), num_building_chunks)))
+        # 5. Build Priority Map
         print(f"Selected Urban Chunks ({len(urban_coords)}): {urban_coords}")
-
         chunk_priority_map = {coord: [] for coord in all_coords}
         
-        # We only assign special buildings to the designated Urban chunks
+        # Assign NON-MILITARY special buildings to urban chunks
         urban_list = list(urban_coords)
         if urban_list:
             random.shuffle(urban_list)
@@ -139,7 +158,14 @@ class ProceduralGenerator:
                     chunk_priority_map[coord].append(tmpl)
                     print(f"Assigning PRIORITY {tmpl} to Chunk {coord}")
                     coord_idx = (coord_idx + 1) % len(urban_list)
-        # [END MODIFIED]
+
+        # Assign MILITARY buildings to the chosen forest chunk
+        if military_chunk_coord:
+            chunk_priority_map[military_chunk_coord].extend(military_templates)
+            # This chunk is explicitly NOT urban, but needs buildings placed, so we include it here for logging
+            print(f"Assigning {len(military_templates)} Military Templates to Chunk {military_chunk_coord}")
+            
+        # --- END NEW MILITARY PLACEMENT LOGIC ---
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
@@ -164,9 +190,17 @@ class ProceduralGenerator:
 
                 is_center_chunk = (gx == start_gx // 2 and gy == start_gy // 2)
                 
-                # [MODIFIED] Pass flag indicating if buildings are allowed in this chunk
-                is_urban = (gx, gy) in urban_coords
-                chunk_data = self._generate_chunk_data(gx, gy, conns, is_start=is_center_chunk, priority_templates=priority_list, allow_buildings=is_urban)
+                is_military_chunk = (gx, gy) == military_chunk_coord
+                
+                # allow_buildings must be True for Urban chunks AND the Military chunk
+                is_urban = (gx, gy) in urban_coords or is_military_chunk
+                
+                # Pass flag to enforce forest generation and skip generic buildings
+                chunk_data = self._generate_chunk_data(gx, gy, conns, 
+                                                       is_start=is_center_chunk, 
+                                                       priority_templates=priority_list, 
+                                                       allow_buildings=is_urban,
+                                                       force_forest=is_military_chunk) # <--- PASS NEW FLAG
                 
                 conn_top = conns.get('top_id', 0)
                 conn_right = conns.get('right_id', 0)
@@ -203,6 +237,7 @@ class ProceduralGenerator:
         if not os.path.exists(self.output_folder): return False
         return len([f for f in os.listdir(self.output_folder) if f.endswith('_map.csv')]) >= expected_count
 
+# ... (_generate_maze_connections is unchanged) ...
     def _generate_maze_connections(self, w, h):
         grid = [[{
             'visited': False, 
@@ -284,7 +319,7 @@ class ProceduralGenerator:
                     grid[ry][rx-1]['right'] = True; grid[ry][rx-1]['right_id'] = cid; grid[ry][rx-1]['right_type'] = conn_type
         return grid
 
-    def _generate_chunk_data(self, gx, gy, conns, is_start=False, priority_templates=None, allow_buildings=True):
+    def _generate_chunk_data(self, gx, gy, conns, is_start=False, priority_templates=None, allow_buildings=True, force_forest=False):
         w, h = self.chunk_size, self.chunk_size
         cx, cy = w // 2, h // 2
         
@@ -301,6 +336,7 @@ class ProceduralGenerator:
         dirt_tile = 'dirty_01'
         sand_tile = 'sand_01'
         
+# ... (road drawing helper functions are unchanged) ...
         def draw_straight_road(x1, y1, x2, y2, tile_type):
             sx, ex = min(x1, x2), max(x1, x2)
             sy, ey = min(y1, y2), max(y1, y2)
@@ -379,7 +415,7 @@ class ProceduralGenerator:
             else: draw_secondary_maze_road(w-1, cy, cx, cy, dirt_tile)
 
         # 3. Border
-        border_w = 2
+        border_w = self.forest_border_width
         for y in range(h):
             for x in range(w):
                 if x < border_w or x >= w - border_w or y < border_w or y >= h - border_w:
@@ -391,7 +427,14 @@ class ProceduralGenerator:
         # 4. Place Buildings (Only if allowed)
         placed_rects = [] 
         buildings_placed = 0
-        target_count = 8 
+        
+        # Set target count based on forest flag
+        target_count = 0
+        if allow_buildings and not force_forest:
+            target_count = self.num_building_per_chunk
+        elif force_forest:
+            target_count = 1 # Only allow the priority building (military)
+
         attempts = 0
         
         def is_area_free(tx, ty, tw, th, margin=0):
@@ -407,7 +450,7 @@ class ProceduralGenerator:
             return True
 
         if allow_buildings:
-            # Priority Buildings Loop
+            # Priority Buildings Loop (Military buildings are placed here if force_forest is True)
             if priority_templates:
                 for tmpl_name in priority_templates:
                     if tmpl_name in self.templates:
@@ -475,54 +518,56 @@ class ProceduralGenerator:
                                 print(f"Placed Priority Building: {tmpl_name} at ({tx},{ty})")
                                 break
 
-            # Standard Generic Buildings
-            while buildings_placed < target_count and attempts < 3000 and self.target_templates:
-                attempts += 1
-                tmpl_name = random.choice(self.target_templates)
-                tmpl = self.templates[tmpl_name]
-                tw, th = tmpl['width'], tmpl['height']
-                
-                safe_pad = 2 
-                if w - safe_pad*2 < tw or h - safe_pad*2 < th: continue
-                tx = random.randint(safe_pad, w - safe_pad - tw)
-                ty = random.randint(safe_pad, h - safe_pad - th)
-                
-                if not is_area_free(tx, ty, tw, th, margin=1): continue
-                
-                # Lot -> Sand
-                for ry in range(ty-1, ty+th+1):
-                    for rx in range(tx-1, tx+tw+1):
-                        if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
-                            layers['ground'][ry][rx] = sand_tile
-                            occupied_mask[ry][rx] = 1
-                
-                # Driveway -> Sand
-                bx, by = tx + tw // 2, ty + th // 2
-                if tw > 30 or th > 30:
-                    draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
-                else:
-                    x_s, x_e = min(cx, bx), max(cx, bx)
-                    for rx in range(x_s, x_e + 1): 
-                        for off in range(2): 
-                            yy = cy + off
-                            if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
-                                layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+            # Standard Generic Buildings: Only place if NOT a dedicated forest/military chunk
+            if not force_forest:
+                while buildings_placed < target_count and attempts < 3000 and self.target_templates:
+                    attempts += 1
+                    tmpl_name = random.choice(self.target_templates)
+                    tmpl = self.templates[tmpl_name]
+                    tw, th = tmpl['width'], tmpl['height']
                     
-                    y_s, y_e = min(cy, by), max(cy, by)
-                    for ry in range(y_s, y_e + 1):
-                        for off in range(2): 
-                            xx = bx + off
-                            if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
-                                layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+                    safe_pad = 2 
+                    if w - safe_pad*2 < tw or h - safe_pad*2 < th: continue
+                    tx = random.randint(safe_pad, w - safe_pad - tw)
+                    ty = random.randint(safe_pad, h - safe_pad - th)
+                    
+                    if not is_area_free(tx, ty, tw, th, margin=1): continue
+                    
+                    # Lot -> Sand
+                    for ry in range(ty-1, ty+th+1):
+                        for rx in range(tx-1, tx+tw+1):
+                            if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                                layers['ground'][ry][rx] = sand_tile
+                                occupied_mask[ry][rx] = 1
+                    
+                    # Driveway -> Sand
+                    bx, by = tx + tw // 2, ty + th // 2
+                    if tw > 30 or th > 30:
+                        draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
+                    else:
+                        x_s, x_e = min(cx, bx), max(cx, bx)
+                        for rx in range(x_s, x_e + 1): 
+                            for off in range(2): 
+                                yy = cy + off
+                                if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile: 
+                                    layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                        
+                        y_s, y_e = min(cy, by), max(cy, by)
+                        for ry in range(y_s, y_e + 1):
+                            for off in range(2): 
+                                xx = bx + off
+                                if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile: 
+                                    layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
 
-                self._blit_template(layers, tmpl, tx, ty, w, h)
-                placed_rects.append(pygame.Rect(tx, ty, tw, th))
-                buildings_placed += 1
-                for ry in range(ty, ty + th):
-                    for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+                    self._blit_template(layers, tmpl, tx, ty, w, h)
+                    placed_rects.append(pygame.Rect(tx, ty, tw, th))
+                    buildings_placed += 1
+                    for ry in range(ty, ty + th):
+                        for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
 
-        # Forest / Nature
-        if self.forest_templates:
+        # Forest / Nature (Template Placement)
+        # Skip forest template placement if we are enforcing dense forest via Tile Clusters below
+        if self.forest_templates and not force_forest:
             for _ in range(15):
                 tmpl_name = random.choice(self.forest_templates)
                 tmpl = self.templates[tmpl_name]
@@ -535,16 +580,41 @@ class ProceduralGenerator:
                     for ry in range(ty, ty + th):
                         for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
 
-        # Tile Clusters
-        for _ in range(random.randint(12, 128)):
+        # Tile Clusters (Forest Generation)
+        
+        # If forcing forest, overwrite empty space with dense nature tiles
+        if force_forest:
+            # Overwrite non-road ground tiles to guarantee forest density
+            for y in range(h):
+                for x in range(w):
+                    ground_tile = layers['ground'][y][x]
+                    # Only change tiles that are not main roads or immediate building lots
+                    if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile:
+                         layers['ground'][y][x] = 'bg_grass'
+                         
+            # Set high density variables for filling the chunk
+            cluster_count_range = random.randint(500, 1500)
+            current_radius = 10
+            current_density = 0.95
+        else:
+            # Use normal cluster settings
+            cluster_count_range = random.randint(self.cluster_min_count, self.cluster_max_count)
+            current_radius = self.cluster_radius
+            current_density = self.cluster_density
+
+        # Apply cluster logic
+        for _ in range(cluster_count_range):
             gx = random.randint(border_w, w - border_w)
             gy = random.randint(border_w, h - border_w)
-            for y in range(gy - 3, gy + 3):
-                for x in range(gx - 3, gx + 3):
+            
+            search_r = current_radius + 1 
+            
+            for y in range(gy - search_r, gy + search_r):
+                for x in range(gx - search_r, gx + search_r):
                     if 0 <= x < w and 0 <= y < h:
                         if occupied_mask[y][x] == 0 and layers['base'][y][x] == ' ':
-                            if math.hypot(x - gx, y - gy) <= 3:
-                                if random.random() < 0.65:
+                            if math.hypot(x - gx, y - gy) <= current_radius: 
+                                if random.random() < current_density: 
                                     layers['base'][y][x] = random.choice(self.forest_tiles)
 
         # Spawns
@@ -553,7 +623,7 @@ class ProceduralGenerator:
 
         return layers
 
-    # [UPDATED SCATTER ZOMBIES]
+# ... (rest of the file is unchanged) ...
     def _scatter_zombies(self, layers, mask, w, h):
         # 1. Identify Zones
         building_tiles = []
@@ -582,7 +652,7 @@ class ProceduralGenerator:
         total_zombies = random.randint(40, 60) # Adjustable difficulty
         
         count_building = int(total_zombies * 0.45)
-        count_street = int(total_zombies * 0.45)
+        count_street = int(total_zombies * 0.35)
         count_woods = total_zombies - count_building - count_street
         
         # 3. Spawn (Helper function to place)

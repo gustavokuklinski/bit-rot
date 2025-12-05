@@ -85,6 +85,7 @@ def get_nearby_zombies(entity, grid, grid_size):
 
 
 def update_game_state(game):
+    
     # Consolidate spatial grid initialization at the start.
     GRID_SIZE = 128
     
@@ -151,6 +152,21 @@ def update_game_state(game):
     # --- Zombie AI Update (Already optimized) ---
     zombies_alive = game.zombies[:] 
     for zombie in zombies_alive:
+        
+        kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
+        kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]
+        
+        if getattr(zombie, 'knockback_timer', 0) > 0:
+            VELOCITY_MULTIPLIER = 0.25
+            # Apply knockback movement if active
+            zombie.x += kb_vel_x * VELOCITY_MULTIPLIER # Simple horizontal movement
+            zombie.y += kb_vel_y * VELOCITY_MULTIPLIER # Simple vertical movement
+            zombie.rect.topleft = (int(zombie.x), int(zombie.y))
+            
+            # Decay knockback velocity and timer
+            zombie.knockback_velocity[0] *= 0.9 
+            zombie.knockback_velocity[1] *= 0.9
+            zombie.knockback_timer -= game.clock.get_time() # Decrement timer
 
         # 3.1. Get nearby zombies (already optimized)
         nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
@@ -195,6 +211,10 @@ def update_game_state(game):
                     game.modals.remove(modal)
                     display_message_player(f"Closed {container_item.name} because you moved away.")
     
+    current_time = pygame.time.get_ticks()
+    # Remove any splash that has exceeded its duration (e.g., 100ms or 150ms)
+    game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
+
     # --- Vehicle Update and Roadkill Logic (Optimized for collision checks) ---
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
         roadkill_zombies = []
@@ -209,7 +229,7 @@ def update_game_state(game):
                 
                 # Threshold: Only damage if moving fast enough (e.g., > 2.0 pixels/frame)
                 if speed > 2.0:
-                    # ⭐️ OPTIMIZATION: Check collisions against ONLY nearby zombies
+                    # OPTIMIZATION: Check collisions against ONLY nearby zombies
                     nearby_zombies_for_vehicle = [z for z in get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
                     
                     # Find zombies colliding with this vehicle among the nearby ones
@@ -257,6 +277,10 @@ def player_hit_zombie(player, zombie, game):
     damage_multiplier = 1.0
     is_headshot = False
 
+    is_ranged = False
+    knockback_force = 0
+    projectile_dir = [0, 0]
+
     if active_weapon:
         base_damage = active_weapon.damage
         if active_weapon.item_type == 'weapon_ranged': # Ranged
@@ -264,6 +288,16 @@ def player_hit_zombie(player, zombie, game):
             if random.random() < progression.get_headshot_chance(player):
                 is_headshot = True
                 damage_multiplier *= 2.0 # Headshot bonus stacks
+
+            dx = zombie.rect.centerx - player.rect.centerx
+            dy = zombie.rect.centery - player.rect.centery
+            magnitude = math.hypot(dx, dy)
+            if magnitude > 0:
+                projectile_dir = [dx / magnitude, dy / magnitude]
+            
+            # Example base knockback (adjust based on your weapons)
+            # Assuming active_weapon has a 'knockback' attribute, or use a default value (e.g., 50)
+            knockback_force = getattr(active_weapon, 'knockback', 50)
         else: # Melee
             damage_multiplier = progression.get_melee_damage_multiplier(player)
             durability_loss = progression.get_weapon_durability_loss(player)
@@ -278,7 +312,54 @@ def player_hit_zombie(player, zombie, game):
 
     final_damage = base_damage * damage_multiplier
 
+    if is_ranged and knockback_force > 0:
+        # Knockback velocity (opposite of projectile direction, scaled by force)
+        zombie.knockback_velocity = [-projectile_dir[0] * knockback_force, -projectile_dir[1] * knockback_force]
+        zombie.knockback_timer = 400 # Stun for 200ms 
+        
+        # Add a persistent blood stain trail at the impact point (zombie's feet)
+        if hasattr(game, 'blood_stains'):
+            stain_size = 10 + int(final_damage / 3) 
+            trail_dir_x, trail_dir_y = projectile_dir[0], projectile_dir[1]
+            perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
+            base_x, base_y = zombie.rect.centerx, zombie.rect.bottom
+            
+            # Create 6 scattered, permanent stains
+            for i in range(1, 7): 
+                offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
+                lateral_scatter = random.uniform(-8, 8) 
+                
+                stain_pos_x = base_x - (trail_dir_x * offset_pixels) 
+                stain_pos_y = base_y - (trail_dir_y * offset_pixels)
+
+                stain_pos_x += perp_dir_x * lateral_scatter
+                stain_pos_y += perp_dir_y * lateral_scatter
+                
+                game.blood_stains.append({
+                    'pos': (stain_pos_x, stain_pos_y),
+                    'size': random.randint(5, int(stain_size * 1.5)), 
+                    'color': (139, 0, 0), 
+                    'time': pygame.time.get_ticks(),
+                    'duration': 0 # Permanent
+                })
+
+    game.splashes.append({
+        'pos': (zombie.rect.centerx, zombie.rect.bottom),
+        'time': pygame.time.get_ticks(),
+        'duration': 350, # Short duration for a quick puff/trail
+        'radius': 2,
+        'type': 'hit_puff'
+    })
+    
     if zombie.take_damage(final_damage, game):
+        # ZOMBIE DIED: Add a larger, lingering final burst of blood.
+        game.splashes.append({
+            'pos': (zombie.rect.centerx, zombie.rect.bottom), 
+            'time': pygame.time.get_ticks(),
+            'duration': 600, # Longer duration for death
+            'radius': 5,     # Larger radius for death
+            'type': 'death_burst'
+        })
         return True
 
     hit_type = "Headshot" if is_headshot else "Hit"
