@@ -44,11 +44,7 @@ def draw_loading_screen(surface, is_done, mouse_pos):
         LOADING_IMG.set_alpha(255)
         surface.blit(LOADING_IMG, img_rect)
         
-        # 3. Welcome Message (Below Image)
-        welcome_surf = large_font.render("Welcome to Bit Rot...", True, WHITE)
-        welcome_rect = welcome_surf.get_rect(midtop=(center_x, img_rect.bottom + 20))
-        surface.blit(welcome_surf, welcome_rect)
-        
+       
         # 4. 'Click to start' Button (Centered at Bottom)
         btn_w, btn_h = 300, 60
         btn_rect = pygame.Rect(0, 0, btn_w, btn_h)

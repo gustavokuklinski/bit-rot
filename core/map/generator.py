@@ -36,7 +36,7 @@ class ProceduralGenerator:
             'Warehouses': 3,
             'Condo': 3,
             'Building2': 3,
-            'Generic': 10  # Max number of generic buildings placed per urban chunk
+            'Generic': 5  # Max number of generic buildings placed per urban chunk
         }
         self.building_counts = self.default_building_counts.copy()
         if building_counts:
