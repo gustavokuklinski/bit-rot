@@ -693,7 +693,7 @@ class ProceduralGenerator:
         total_zombies = random.randint(40, 60) # Adjustable difficulty
         
         count_building = int(total_zombies * 0.45)
-        count_street = int(total_zombies * 0.35)
+        count_street = int(total_zombies * 0.25)
         count_woods = total_zombies - count_building - count_street
         
         # 3. Spawn (Helper function to place)
