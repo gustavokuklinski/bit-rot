@@ -35,6 +35,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
     renderable_tiles = [] # List to store (image, rect) tuples for drawing
     player_spawn = None
     zombie_spawns = []
+    npc_spawns = []
     item_spawns = []
     containers = []
     roof_renderables = []
@@ -183,6 +184,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         pass
                 elif char == 'I':
                     item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                elif char.strip() == 'NPC':
+                    npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 else:
                     # If not a standard spawn marker, it might be a player spawn point
                     possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))

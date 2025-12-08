@@ -660,8 +660,13 @@ class ProceduralGenerator:
                                     layers['base'][y][x] = random.choice(self.forest_tiles)
 
         # Spawns
-        if is_start: layers['spawn'][cy][cx] = 'P'
-        else: self._scatter_zombies(layers, occupied_mask, w, h)
+        if is_start: 
+            layers['spawn'][cy][cx] = 'P'
+        else: 
+            self._scatter_zombies(layers, occupied_mask, w, h)
+        
+        # Place random NPC spawn points in all chunks
+        self._scatter_npcs(layers, occupied_mask, w, h)
 
         return layers
 
@@ -707,6 +712,68 @@ class ProceduralGenerator:
         place_zombies(count_building, building_tiles)
         place_zombies(count_street, street_tiles)
         place_zombies(count_woods, woods_tiles)
+
+    def _scatter_npcs(self, layers, mask, w, h):
+        """
+        Places NPC spawn markers ('NPC') on valid tiles.
+        Ensures strict separation from Zombie spawn points.
+        """
+        
+        # --- QUANTITY CONFIGURATION (Per Chunk) ---
+        min_npcs_per_chunk = 1
+        max_npcs_per_chunk = 2
+        # ------------------------------------------
+
+        # 1. Identify where Zombies are (so we can avoid them)
+        zombie_locs = []
+        for y in range(h):
+            for x in range(w):
+                if layers['spawn'][y][x] == 'Z':
+                    zombie_locs.append((x, y))
+        
+        # 2. Find valid potential tiles
+        potential_tiles = []
+        for y in range(h):
+            for x in range(w):
+                if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
+                
+                # Must be walkable and empty
+                if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
+                
+                # Use ground info to prefer civil areas
+                ground = layers['ground'][y][x]
+                if ground in ['asphalt_01', 'sand_01', 'dirty_01']:
+                    potential_tiles.append((x, y))
+        
+        if not potential_tiles: return
+
+        # 3. Filter candidates based on safety distance
+        safe_candidates = []
+        # Distance is squared to avoid sqrt (15 tiles = 225)
+        SAFE_DISTANCE_SQ = 15 * 15 
+        
+        for px, py in potential_tiles:
+            too_close = False
+            for zx, zy in zombie_locs:
+                dist_sq = (px - zx)**2 + (py - zy)**2
+                if dist_sq < SAFE_DISTANCE_SQ:
+                    too_close = True
+                    break
+            
+            if not too_close:
+                safe_candidates.append((px, py))
+
+        # 4. Place Markers
+        count = random.randint(min_npcs_per_chunk, max_npcs_per_chunk)
+        if safe_candidates:
+            # Pick from safe tiles if any exist
+            chosen = random.sample(safe_candidates, min(count, len(safe_candidates)))
+            for nx, ny in chosen:
+                layers['spawn'][ny][nx] = 'NPC'
+        else:
+            # Optional: Fallback (commented out) - or simply don't spawn if unsafe
+            # print("Warning: No safe NPC spawn spots found in chunk.")
+            pass
 
     def _blit_template(self, target, source, ox, oy, mw, mh):
         for layer in ['base', 'light', 'ground', 'spawn', 'roof']:
@@ -764,10 +831,11 @@ class ProceduralGenerator:
                 
                 # 3. Heatmap
                 s_char = spawn[y][x]
-                if s_char in ['Z', 'P', 'I']:
+                if s_char in ['Z', 'P', 'I', 'NPC']:
                     color = (0, 0, 0)
                     if s_char == 'Z': color = (255, 0, 0)
                     elif s_char == 'P': color = (0, 255, 0)
                     elif s_char == 'I': color = (0, 0, 255)
+                    elif s_char == 'NPC': color = (255, 255, 0) # Yellow for NPC
                     
                     pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

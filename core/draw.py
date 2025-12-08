@@ -53,6 +53,7 @@ def draw_game(game):
     target_pan_x = 0
     target_pan_y = 0
 
+
     if is_aiming and game.player:
         # Player is conceptually at the center of the screen
         screen_center_x = GAME_WIDTH / 2
@@ -349,6 +350,19 @@ def draw_game(game):
         opacity = int(255 * fade_factor)
         
         zombie.draw(world_view_surface, offset_x, offset_y, opacity)
+
+
+    for npc in game.npcs:
+        if not screen_rect.colliderect(npc.rect): continue
+        
+        dist = math.hypot(npc.rect.centerx - game.player.rect.centerx, npc.rect.centery - game.player.rect.centery)
+        if dist > game.player_view_radius: continue
+        
+        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
+        opacity = int(255 * fade_factor)
+        
+        # Ensure NPC.draw accepts these arguments (Inherited from Zombie)
+        npc.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 

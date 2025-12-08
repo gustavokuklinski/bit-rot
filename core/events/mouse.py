@@ -227,6 +227,7 @@ def handle_mouse_up(game, event, mouse_pos):
             if game.dragged_item:
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
+                is_external_source = type_orig in ['container', 'nearby', 'container_stack_split', 'nearby_stack_split']
 
                 # --- Vehicle Equipment Logic ---
                 for modal in reversed(game.modals):
@@ -270,6 +271,26 @@ def handle_mouse_up(game, event, mouse_pos):
                             dropped_successfully = False
                             break
 
+                        if is_external_source:
+                            if item_in_slot is None or item_in_slot.can_stack_with(game.dragged_item):
+                                item_ref = game.dragged_item
+                                def do_belt_loot():
+                                    if game.player.belt[i_target] is None:
+                                        game.player.belt[i_target] = item_ref
+                                    elif game.player.belt[i_target].can_stack_with(item_ref):
+                                        avail = game.player.belt[i_target].capacity - game.player.belt[i_target].load
+                                        trans = min(avail, item_ref.load)
+                                        game.player.belt[i_target].load += trans
+                                        item_ref.load -= trans
+                                
+                                game.player.start_action("Looting", 1.0, do_belt_loot, xp_reward=2)
+                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                return
+                            else:
+                                print("Cannot swap items while looting.")
+                                dropped_successfully = False
+                                break
+
                         if item_in_slot is None:
                             game.player.belt[i_target] = game.dragged_item
                             dropped_successfully = True
@@ -303,6 +324,20 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if game.player.backpack and check_recursive_containment(game.dragged_item, game.player.backpack):
                                         print("Cannot put a container inside itself."); break
                                     
+                                    if is_external_source:
+                                        if game.player.backpack is None:
+                                            item_ref = game.dragged_item
+                                            def do_bp_loot():
+                                                game.player.backpack = item_ref
+                                            game.player.start_action("Equipping", 1.5, do_bp_loot, xp_reward=2)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+                                        else:
+                                            print("Unequip current backpack first.")
+                                            dropped_successfully = False
+                                            break
+                                    
+
                                     old_backpack = game.player.backpack
                                     game.player.backpack = game.dragged_item
                                     game.dragged_item = old_backpack 
@@ -352,12 +387,38 @@ def handle_mouse_up(game, event, mouse_pos):
                                         (dragged_type == 'consumable' and dragged_ammo_type is not None)
                                     )
                                     if is_allowed_type:
-                                        old_invcontainer = game.player.invcontainer
-                                        game.player.invcontainer = game.dragged_item
-                                        game.dragged_item = old_invcontainer
-                                        dropped_successfully = False 
-                                        if game.dragged_item is None:
-                                            dropped_successfully = True
+                                        if is_external_source:
+                                        # Only allow if empty or stackable (simple logic)
+                                            can_loot = False
+                                            is_stack = False
+                                        if game.player.invcontainer is None:
+                                            can_loot = True
+                                        elif game.player.invcontainer.can_stack_with(game.dragged_item):
+                                            can_loot = True; is_stack = True
+                                        elif (game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory') and 
+                                              game.dragged_item is not game.player.invcontainer):
+                                              # Logic for dropping INTO the equipped container is handled below (Main Inventory Grid usually doesn't overlap perfectly, but let's be safe)
+                                              pass
+
+                                        if can_loot:
+                                            item_ref = game.dragged_item
+                                            def do_util_loot():
+                                                if game.player.invcontainer is None:
+                                                    game.player.invcontainer = item_ref
+                                                elif is_stack:
+                                                    avail = game.player.invcontainer.capacity - game.player.invcontainer.load
+                                                    trans = min(avail, item_ref.load)
+                                                    game.player.invcontainer.load += trans
+                                                    item_ref.load -= trans
+                                            game.player.start_action("Equipping", 1.0, do_util_loot, xp_reward=2)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+                                        else:
+                                            # If logic is complex (swapping or putting inside), skip timed loot or fail
+                                            if not (game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory')):
+                                                 print("Slot occupied.")
+                                                 dropped_successfully = False
+                                                 break
                                     else:
                                         print("Only containers (non-backpack), utilities, or ammo can go in this slot.")
                                 if dropped_successfully: break
@@ -378,6 +439,22 @@ def handle_mouse_up(game, event, mouse_pos):
                                             print("Cannot drop container into itself.")
                                             dropped_successfully = False
                                             break
+                                        
+                                        if is_external_source:
+                                            if item_in_slot.can_stack_with(game.dragged_item):
+                                                item_ref = game.dragged_item
+                                                def do_inv_stack():
+                                                    avail = item_in_slot.capacity - item_in_slot.load
+                                                    trans = min(avail, item_ref.load)
+                                                    item_in_slot.load += trans
+                                                    item_ref.load -= trans
+                                                game.player.start_action("Looting", 1.0, do_inv_stack, xp_reward=2)
+                                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                                return
+                                            else:
+                                                print("Cannot swap while looting.")
+                                                dropped_successfully = False
+                                                break
 
                                         if item_in_slot.can_stack_with(game.dragged_item):
                                             available_space = item_in_slot.capacity - item_in_slot.load
@@ -392,10 +469,28 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.dragged_item = item_to_swap
                                             dropped_successfully = False 
                                     elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+
+                                        if is_external_source:
+                                            item_ref = game.dragged_item
+                                            def do_inv_loot():
+                                                game.player.inventory.insert(target_index, item_ref)
+                                            game.player.start_action("Looting", 1.0, do_inv_loot, xp_reward=2)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+
                                         game.player.inventory.insert(target_index, game.dragged_item)
                                         dropped_successfully = True
                                 
                                 elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+
+                                    if is_external_source:
+                                        item_ref = game.dragged_item
+                                        def do_inv_append():
+                                            game.player.inventory.append(item_ref)
+                                        game.player.start_action("Looting", 1.0, do_inv_append, xp_reward=2)
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+
                                     game.player.inventory.append(game.dragged_item)
                                     dropped_successfully = True
                                 
@@ -808,6 +903,37 @@ def handle_context_menu_click(game, mouse_pos):
                 game.context_menu['active'] = False
                 return
 
+            if source == 'npc':
+                if option == 'Follow':
+                    item.is_following = True
+                    print(f"{item.name} is now following you.")
+                    clicked_on_menu = True
+                elif option == 'Unfollow':
+                    item.is_following = False
+                    print(f"{item.name} stopped following.")
+                    clicked_on_menu = True
+                elif option == 'Trade':
+                    # Create a dummy container interface for the NPC
+                    from core.ui.container_modal import get_container_slot_rect # Ensure import if needed
+                    
+                    # Check if modal already open
+                    modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                    if not modal_exists:
+                        # We treat the NPC object like a container for the UI
+                        new_container_modal = {
+                            'id': uuid.uuid4(),
+                            'type': 'container',
+                            'item': item, # The NPC instance (must have .inventory list)
+                            'position': game.last_modal_positions['container'],
+                            'is_dragging': False, 
+                            'drag_offset': (0, 0),
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                            'minimized': False
+                        }
+                        game.modals.append(new_container_modal)
+                    clicked_on_menu = True
+
+
             print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
 
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
@@ -1095,8 +1221,26 @@ def handle_context_menu_click(game, mouse_pos):
                             game.items_on_ground.append(item_to_unequip)
 
             elif (source == 'ground' or source == 'nearby') and option == 'Grab':
-                target_inventory = game.player.inventory
-                target_capacity = game.player.get_total_inventory_slots()
+                def execute_grab():
+                    target_inventory = game.player.inventory
+                    target_capacity = game.player.get_total_inventory_slots()
+                    
+                    if len(target_inventory) < target_capacity:
+                        grabbed = False
+                        # Use 'item' directly (captured from closure) instead of index for safety
+                        if source == 'ground' and item in game.items_on_ground:
+                            game.items_on_ground.remove(item)
+                            grabbed = True
+                        elif source == 'nearby' and container_item and item in container_item.inventory:
+                            container_item.inventory.remove(item)
+                            grabbed = True
+                        
+                        if grabbed:
+                            target_inventory.append(item)
+                            game.player.stack_item_in_inventory(item)
+                    else:
+                        print("Inventory full.")
+
                 if len(target_inventory) < target_capacity:
                     grabbed_item = None
                     if source == 'ground' and 0 <= index < len(game.items_on_ground):
@@ -1275,6 +1419,18 @@ def handle_right_click(game, mouse_pos):
                 click_index = 0
                 break
 
+
+
+    if not clicked_item:
+        world_pos = game.screen_to_world(mouse_pos)
+        for npc in game.npcs:
+            if npc.rect.collidepoint(world_pos):
+                clicked_item = npc
+                click_source = 'npc'
+                click_index = 0
+                break
+
+
     if clicked_item:
         game.context_menu['active'] = True
         game.context_menu['item'] = clicked_item
@@ -1282,6 +1438,13 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['index'] = click_index
         game.context_menu['container_item'] = click_container_item
         game.context_menu['position'] = mouse_pos
+
+        if click_source == 'npc':
+            options = ['Trade']
+            if clicked_item.is_following:
+                options.append('Unfollow')
+            else:
+                options.append('Follow')
 
         if click_source == 'map_tile':
             options = ['Sleep']

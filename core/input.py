@@ -11,6 +11,13 @@ def handle_movement(game):
     if game.player.is_sleeping:
         return
     
+    # [FIX] Block movement if performing an action (looting, consuming, etc.)
+    if game.player.action_timer > 0:
+        game.player.vx = 0
+        game.player.vy = 0
+        game.player.is_running = False
+        return
+    
     if game.chat_active:
         game.player.vx = 0
         game.player.vy = 0

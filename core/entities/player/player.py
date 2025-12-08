@@ -421,26 +421,28 @@ class Player:
 
         if is_aiming and self.active_weapon and self.active_weapon.image and \
            self.active_weapon.item_type == 'weapon_ranged':
-            # 1. Get the original weapon image
-            original_image = self.active_weapon.image
             
-            # 2. Rotate the image
+            weapon_img = self.active_weapon.image
             angle_degrees = math.degrees(self.aim_angle)
-            rotated_image = pygame.transform.rotate(original_image, angle_degrees)
-            
-            # 3. Get the rect of the rotated image, centered at the player's draw center
-            rotated_rect = rotated_image.get_rect(center=draw_rect.center)
-            
-            # 4. Offset the rect so it looks "held"
-            # We use the angle to push it outwards from the center
-            offset_radius = TILE_SIZE * 0.8 # How far from the center
-            offset_x_weapon = math.cos(self.aim_angle) * offset_radius
-            offset_y_weapon = -math.sin(self.aim_angle) * offset_radius # -sin because pygame Y is inverted
-            
-            rotated_rect.centerx += offset_x_weapon
-            rotated_rect.centery += offset_y_weapon
 
-            # 5. Blit it
+            # Elegant Fix: Flip weapon vertically if aiming left (cos < 0).
+            # This ensures the texture is never upside down relative to the screen.
+            if math.cos(self.aim_angle) < 0:
+                weapon_img = pygame.transform.flip(weapon_img, False, True)
+
+            # Rotate the (potentially flipped) image
+            rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
+            
+            # Calculate offset to make it look "held" away from body
+            offset_dist = TILE_SIZE * 0.8 
+            offset_x = math.cos(self.aim_angle) * offset_dist
+            offset_y = -math.sin(self.aim_angle) * offset_dist # Y is inverted in Pygame
+            
+            # Center the rotated rect relative to the player + offset
+            rotated_rect = rotated_image.get_rect(center=draw_rect.center)
+            rotated_rect.centerx += offset_x
+            rotated_rect.centery += offset_y
+
             surface.blit(rotated_image, rotated_rect)
 
         if self.is_sleeping:
@@ -535,6 +537,11 @@ class Player:
         # Action Timer Logic
         if self.action_timer > 0:
             self.action_timer -= 1
+
+            self.vx = 0
+            self.vy = 0
+            self.is_running = False
+
             if self.action_timer <= 0:
                 # Action Finished
                 if self.action_callback:

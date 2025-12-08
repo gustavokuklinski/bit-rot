@@ -31,7 +31,8 @@ from core.draw import draw_game
 from core.map.tile_manager import TileManager
 from core.map.map_manager import MapManager
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
-from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
+from core.entities.npc.npc import NPC
+from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies, manage_dynamic_npcs
 from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
@@ -76,6 +77,10 @@ class Game:
         self.player = None
         self.zombies = []
         self.items_on_ground = []
+
+        self.npcs = pygame.sprite.Group()
+        self.npc_spawn_timer = 0 # Timer to control spawn checks
+
         self.projectiles = []
         self.obstacles = []
         self.renderable_tiles = []
@@ -150,6 +155,8 @@ class Game:
         self.current_zombie_spawns = []
         self.roof_data = []
         self.roof_tiles = []
+        
+        self.npc_spawn_points = [] # Ensure it's initialized
 
         self.spawn_point_grid = {}
         self.SPAWN_GRID_SIZE = 512
@@ -318,7 +325,14 @@ class Game:
             # self.current_save_folder_name = save_folder_name
             
             self.zombies_killed = player_data.get('zombies_killed', 0)
+
+            obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
+                base_layout, ground_layout, spawn_layout, roof_layout, light_layout, self.tile_manager
+            )
             
+            self.obstacles = obstacles
+            self.npc_spawn_points = npc_spawns
+
             if 'progression' in player_data:
                 prog_data = player_data['progression']
                 self.player.progression.strength = prog_data.get('strength', self.player.progression.strength)
@@ -579,6 +593,20 @@ class Game:
         
         self.load_map(self.map_manager.current_map_filename)
         load_giant_map(self)
+        
+        # --- FIX: Explicitly populate npc_spawn_points from the loaded spawn layer ---
+        # This ensures 'NPC' markers in the CSV are respected even if set_active_layer didn't set them.
+        self.npc_spawn_points = []
+        if self.current_layer_index in self.all_spawn_layers:
+            spawn_layer = self.all_spawn_layers[self.current_layer_index]
+            for y, row in enumerate(spawn_layer):
+                for x, char in enumerate(row):
+                    if char.strip() == 'NPC':
+                        self.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
+        
+        # [FIX] REMOVED the massive spawn call that caused lag. 
+        # NPC spawning is now handled dynamically in run_playing.
+        # spawn_random_npcs(self, count=2000)
 
         if self.player_spawn:
             self.logger.info(f"Player spawn point found at {self.player_spawn}. Setting player position.")
@@ -833,6 +861,18 @@ class Game:
         self.world_time.update()
         handle_input(self)
         update_game_state(self)
+        
+        # --- NEW: Dynamic NPC Spawning ---
+        # Run spawn logic every 30 frames (approx 0.5s) to save performance
+        self.npc_spawn_timer += 1
+        if self.npc_spawn_timer >= 30:
+            manage_dynamic_npcs(self)
+            self.npc_spawn_timer = 0
+        # ---------------------------------
+
+        for npc in self.npcs:
+            npc.update(self)
+
         self._cleanup_modals()
         draw_game(self)
         self._update_screen()

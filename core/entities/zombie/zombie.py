@@ -17,8 +17,12 @@ ZOMBIE_TEMPLATES = []
 ZOMBIE_CLOTHES_POOL = {}
 ALL_ITEM_TEMPLATES = []
 
-class Zombie:
+# 1. Inherit from pygame.sprite.Sprite
+class Zombie(pygame.sprite.Sprite):
     def __init__(self, x, y, template):
+        # 2. Initialize the parent Sprite class
+        super().__init__()
+        
         self.x = x
         self.y = y
         self.id = str(uuid.uuid4())
@@ -69,14 +73,17 @@ class Zombie:
         if sprites_data:
             # Load all sprites defined in the new XML structure
             for sprite_id, sprite_file in sprites_data.items():
-                self.images[sprite_id] = self.load_sprite(sprite_file)
+                img = self.load_sprite(sprite_file)
+                if img:
+                    self.images[sprite_id] = img
         else:
             # Fallback for old templates that might still use the single 'sprite' key
             old_sprite_file = template.get('sprite')
             fallback_image = self.load_sprite(old_sprite_file)
-            self.images['center'] = fallback_image
-            self.images['left'] = fallback_image
-            self.images['right'] = fallback_image
+            if fallback_image:
+                self.images['center'] = fallback_image
+                self.images['left'] = fallback_image
+                self.images['right'] = fallback_image
 
         # Set a default image (self.image is no longer the main one, but good to have)
         self.image = self.images.get('center')
@@ -143,14 +150,26 @@ class Zombie:
             
 
     def load_sprite(self, sprite_file):
+        """Robustly loads a sprite, checking multiple paths."""
         if not sprite_file: return None
-        try:
-            path = SPRITE_PATH + "zombie/" + sprite_file
-            img = pygame.image.load(path).convert_alpha()
-            return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-        except Exception as e:
-            print(f"Error loading zombie sprite {sprite_file}: {e}")
-            return None
+        
+        # Paths to check: 1. zombie/folder, 2. root sprite folder, 3. player folder (common for NPCs)
+        candidates = [
+            os.path.join(SPRITE_PATH, "zombie", sprite_file),
+            os.path.join(SPRITE_PATH, sprite_file),
+            os.path.join(SPRITE_PATH, "player", sprite_file)
+        ]
+
+        for path in candidates:
+            if os.path.exists(path):
+                try:
+                    img = pygame.image.load(path).convert_alpha()
+                    return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+                except Exception as e:
+                    print(f"Error loading sprite at {path}: {e}")
+        
+        print(f"Warning: Could not find sprite '{sprite_file}' in common paths.")
+        return None
 
     def take_damage(self, amount, game):
         self.health -= amount
@@ -188,8 +207,6 @@ class Zombie:
                 surface.blit(rotated_img, rot_rect)
             else:
                 surface.blit(temp_image, draw_rect)
-
-            #surface.blit(temp_image, draw_rect)
 
             # Draw clothes
             for slot, clothe in self.clothes.items():
@@ -265,27 +282,51 @@ class Zombie:
     def update_ai(self, player_rect, obstacles, other_zombies, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
+
+        target_rect = player_rect
+        target_entity = game.player  # Default target
+        
         dist_to_player = math.hypot(player_rect.centerx - self.rect.centerx,
                                     player_rect.centery - self.rect.centery)
 
-        can_see_player = self.has_line_of_sight(player_rect, obstacles)
-        target_pos = None # Reset target each frame
+        nearest_npc = None
+        min_npc_dist = 9999
+        
+        # Access NPCs from game instance
+        if hasattr(game, 'npcs'):
+            for npc in game.npcs:
+                d = math.hypot(npc.rect.centerx - self.rect.centerx, npc.rect.centery - self.rect.centery)
+                if d < min_npc_dist:
+                    min_npc_dist = d
+                    nearest_npc = npc
+        
+        # Switch target to NPC if it is closer than player
+        if nearest_npc and (min_npc_dist < dist_to_player):
+             target_rect = nearest_npc.rect
+             target_entity = nearest_npc # Set specific entity target
+             dist_to_target = min_npc_dist
+        else:
+             dist_to_target = dist_to_player
+
+        can_see_target = self.has_line_of_sight(target_rect, obstacles)
+        target_pos = None
 
         # Decide state: Chasing or Wandering
-        if dist_to_player < core.data.config.ZOMBIE_DETECTION_RADIUS and can_see_player:
+        if dist_to_target < core.data.config.ZOMBIE_DETECTION_RADIUS and can_see_target:
             self.state = 'chasing'
-            target_pos = player_rect.center # Chase the player directly
-            #if self.wandering_channel:
-            #    self.wandering_channel.stop()
-                #self.wandering_channel = None
+            target_pos = target_rect.center 
+            
+            # Check attack range
+            if dist_to_target < self.attack_range:
+                if current_time - self.last_attack_time > 1000: # 1 sec attack speed
+                    self.attack(target_entity, game) # Attack the specific entity
+                    self.last_attack_time = current_time
 
         else:
             self.state = 'wandering'
             
             if self.is_ambiently_noisy and core.data.config.ZOMBIE_WANDER_ENABLED and self.sound_wander:
-                # Check if the sound cooldown has passed
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
-                    # Play the sound as a one-shot (loops=0 is default)
                     game.sound_manager.play_sound(
                         self.sound_wander, 
                         subdir='zombie', 
@@ -293,19 +334,14 @@ class Zombie:
                         source_pos=self.rect.center, 
                         base_volume=random.uniform(0.05, 0.08)
                     )
-                    # Reset the timer
                     self.last_wander_sound_time = current_time
-                    # Pick a new random delay
                     self.wander_sound_cooldown = random.randint(4000, 12000)
 
-            # Update wander target if needed
             if core.data.config.ZOMBIE_WANDER_ENABLED:
-                # If interval passed, no target exists, or target was reached
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
                 if (current_time - self.last_wander_change > core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL) or \
                    (self.wander_target is None) or target_reached:
 
-                    # Pick a new random point within ~5 tiles
                     wander_radius = 5 * TILE_SIZE
                     new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
                     new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
@@ -313,17 +349,12 @@ class Zombie:
                     self.wander_target = (new_target_x, new_target_y)
                     self.last_wander_change = current_time
 
-                target_pos = self.wander_target # Wander towards the target point
-
+                target_pos = self.wander_target 
             else:
-                target_pos = None # Wandering disabled, stand still
+                target_pos = None
 
-        # If we have a valid target (player or wander point), move towards it
         if target_pos:
             self.move_towards(target_pos, obstacles, other_zombies, game)
-        else:
-            # No target, do nothing (or add idle animation later)
-            pass
 
     def move_towards(self, target_pos, obstacles, other_zombies, game):
         """Calculates movement vector towards a target_pos and handles collisions."""
@@ -409,46 +440,52 @@ class Zombie:
         # Update final position based on potential collision adjustments
         self.rect.topleft = (int(self.x), int(self.y))
 
-    def attack(self, player, game):
+    def attack(self, target_entity, game):
         self.melee_swing_timer = 10
-        dx = player.rect.centerx - self.rect.centerx
-        dy = player.rect.centery - self.rect.centery
+        dx = target_entity.rect.centerx - self.rect.centerx
+        dy = target_entity.rect.centery - self.rect.centery
         self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
 
-        infection = 0 # Default to no infection
-        
-        if random.random() < core.data.config.ZOMBIE_INFECTION_CHANCE:
-            # If the check passes, *then* calculate the amount
-            infection = random.randint(self.min_infection, self.max_infection)
-        player.take_durability_damage(damage, game)
-
-
-
-        total_defence = player.get_total_defence() # Get defence from player
-        
-        final_damage = damage
-        final_infection = infection
-
-        if total_defence > 0:
-            # Defence reduces damage by its percentage
+        if hasattr(target_entity, 'take_durability_damage'):
+            # It's a Player
+            target_entity.take_durability_damage(damage, game)
+            
+            total_defence = target_entity.get_total_defence()
             damage_reduction = 1.0 - (total_defence / 100.0)
-            # Defence reduces infection by half its percentage
-            infection_reduction = 1.0 - ((total_defence / 2.0) / 100.0) 
+            
+            infection = 0
+            if random.random() < core.data.config.ZOMBIE_INFECTION_CHANCE:
+                infection = random.randint(self.min_infection, self.max_infection)
+            
+            infection_reduction = 1.0 - ((total_defence / 2.0) / 100.0)
+            final_damage = max(0, damage * damage_reduction)
+            final_infection = max(0, infection * infection_reduction)
 
-            final_damage = max(0, damage * damage_reduction) # Ensure damage doesn't go negative
-            final_infection = max(0, infection * infection_reduction) # Ensure infection doesn't go negative
+            final_damage_taken, final_infection_taken = target_entity.take_damage(game, final_damage, final_infection)
+            
+            if final_infection_taken > 0:
+                 display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
+            else:
+                 display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
 
-        final_damage_taken, final_infection_taken = player.take_damage(game, final_damage, final_infection)
-
-        if final_infection_taken > 0:
-            if self.sound_attack: # Check if a sound is defined
-                game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
-
-            display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
+        # Handle NPC specific damage logic (NPC inherits Zombie)
         else:
-            display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
+            # It's an NPC (Zombie class logic)
+            # Zombie.take_damage signature is (amount, game)
+            is_dead = target_entity.take_damage(damage, game)
+            if is_dead and target_entity in game.npcs:
+                game.npcs.remove(target_entity)
+                # Play death sound
+                if hasattr(target_entity, 'sound_dead') and target_entity.sound_dead:
+                     game.sound_manager.play_sound(target_entity.sound_dead, subdir='zombie', game=game, source_pos=target_entity.rect.center)
+                display_message("A survivor has been killed by a zombie.")
 
+        if self.sound_attack:
+            game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
+
+
+        
 
     @staticmethod
     def load_templates(folder=DATA_PATH + 'zombie/'):

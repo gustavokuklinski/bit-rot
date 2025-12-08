@@ -577,7 +577,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else: state['stats_scrollbar_handle_rect'] = None
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70)
-    is_balanced = (state.get('total_trait_cost', 0) == 0)
+    is_balanced = (state.get('total_trait_cost', 0) <= 0)
     if is_balanced:
         pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
@@ -1021,7 +1021,7 @@ def run_player_setup(game):
                 # ------------------------------------
                 
                 if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
-                    if state.get('total_trait_cost', 0) == 0:
+                    if state.get('total_trait_cost', 0) <= 0:
                         # 1. [MOVED UP] Define final_player_data FIRST
                         final_player_data = state['base_data'].copy()
                         final_player_data['attributes'] = state['final_attrs']
