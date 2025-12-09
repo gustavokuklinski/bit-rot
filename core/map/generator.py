@@ -44,8 +44,8 @@ class ProceduralGenerator:
         
         # Forest settings - Control forest density
         self.forest_border_width = 2      # Width of the solid tree border (in tiles)
-        self.cluster_min_count = 50       # Minimum number of forest clusters per chunk
-        self.cluster_max_count = 250      # Maximum number of forest clusters per chunk
+        self.cluster_min_count = 20       # Minimum number of forest clusters per chunk
+        self.cluster_max_count = 100      # Maximum number of forest clusters per chunk
         self.cluster_radius = 4           # Radius of scatter for each cluster (in tiles)
         self.cluster_density = 0.85       # Probability (0.0 to 1.0) of a tile becoming forest
 

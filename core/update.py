@@ -134,7 +134,7 @@ def update_game_state(game):
             projectiles_to_remove.append(p)
             continue
 
-        # 2.3. ⭐️ OPTIMIZATION: Check collisions against ONLY nearby zombies using the grid
+        # 2.3. OPTIMIZATION: Check collisions against ONLY nearby zombies using the grid
         potential_hits = [z for z in get_nearby_zombies(p, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
         
         hit_zombie = next((z for z in potential_hits if p.rect.colliderect(z.rect)), None)
@@ -145,6 +145,22 @@ def update_game_state(game):
                 handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
                 game.zombies_killed += 1
             projectiles_to_remove.append(p)
+        
+        hit_npc = next((n for n in game.npcs if not n.is_dead and p.rect.colliderect(n.rect)), None)
+        if hit_npc:
+             # Calculate damage (Using weapon range/stats from player)
+             damage = game.player.get_attack_damage()
+             
+             # Apply damage (This will trigger hostility via the modified NPC.take_damage)
+             is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
+             display_message_player(f"You shot {hit_npc.name} for {damage} damage!")
+             
+             if is_dead:
+                 # Death logic is handled inside NPC.take_damage -> NPC.die
+                 display_message_player(f"You killed {hit_npc.name}!")
+                 
+             projectiles_to_remove.append(p)
+             continue
 
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]

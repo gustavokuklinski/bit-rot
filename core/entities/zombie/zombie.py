@@ -176,7 +176,7 @@ class Zombie(pygame.sprite.Sprite):
         print(f"Warning: Could not find sprite '{sprite_file}' in common paths.")
         return None
 
-    def take_damage(self, amount, game, attacking_entity=None): 
+    def take_damage(self, amount, game, attacker=None): 
         self.health -= amount
         self.health = max(0, self.health)
         self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)

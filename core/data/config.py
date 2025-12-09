@@ -21,6 +21,7 @@ SPRITE_PATH = "./game/lib/sprites/" # Folders with PNG sprites
 SOUND_PATH = "./game/lib/sfx/" # Sound OGG files
 
 # Colors
+TRANSPARENT = (0, 0, 0, 0)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (200, 50, 50)

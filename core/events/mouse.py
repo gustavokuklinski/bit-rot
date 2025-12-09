@@ -1230,25 +1230,25 @@ def handle_context_menu_click(game, mouse_pos):
                             game.items_on_ground.append(item_to_unequip)
 
             elif (source == 'ground' or source == 'nearby') and option == 'Grab':
-                def execute_grab():
-                    target_inventory = game.player.inventory
-                    target_capacity = game.player.get_total_inventory_slots()
+                
+                target_inventory = game.player.inventory
+                target_capacity = game.player.get_total_inventory_slots()
+                
+                if len(target_inventory) < target_capacity:
+                    grabbed = False
+                    # Use 'item' directly (captured from closure) instead of index for safety
+                    if source == 'ground' and item in game.items_on_ground:
+                        game.items_on_ground.remove(item)
+                        grabbed = True
+                    elif source == 'nearby' and container_item and item in container_item.inventory:
+                        container_item.inventory.remove(item)
+                        grabbed = True
                     
-                    if len(target_inventory) < target_capacity:
-                        grabbed = False
-                        # Use 'item' directly (captured from closure) instead of index for safety
-                        if source == 'ground' and item in game.items_on_ground:
-                            game.items_on_ground.remove(item)
-                            grabbed = True
-                        elif source == 'nearby' and container_item and item in container_item.inventory:
-                            container_item.inventory.remove(item)
-                            grabbed = True
-                        
-                        if grabbed:
-                            target_inventory.append(item)
-                            game.player.stack_item_in_inventory(item)
-                    else:
-                        print("Inventory full.")
+                    if grabbed:
+                        target_inventory.append(item)
+                        game.player.stack_item_in_inventory(item)
+                else:
+                    print("Inventory full.")
 
                 if len(target_inventory) < target_capacity:
                     grabbed_item = None
@@ -1650,6 +1650,7 @@ def handle_attack(game, mouse_pos):
             return
 
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
+            # ... (Ranged logic remains unchanged) ...
             if weapon.load > 0 and weapon.durability > 0:
                 if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
                     game.sound_manager.play_sound(
@@ -1695,7 +1696,9 @@ def handle_attack(game, mouse_pos):
                     game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items')
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
             else: print(f"**CLUNK!** {weapon.name} is broken.")
+
         else:
+            # --- MELEE ATTACK LOGIC ---
             if game.player.progression.handle_melee_attack(game.player):
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
@@ -1712,14 +1715,45 @@ def handle_attack(game, mouse_pos):
                 dx_swing = mouse_pos[0] - player_screen_x
                 dy_swing = mouse_pos[1] - player_screen_y
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
-                hit_a_zombie = False
+          
+                hit_something = False
+                world_pos = game.screen_to_world(mouse_pos)
+
+                # Check Zombies (Proximity)
                 for zombie in game.zombies:
                     if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
                         if player_hit_zombie(game.player, zombie, game):
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                            
                             game.zombies_killed += 1
-                        hit_a_zombie = True
+                        hit_something = True
                         break
 
-                if not hit_a_zombie: print("Swung and missed!")
+                # [FIX] Check NPCs (Proximity + Direction OR Direct Click)
+                if not hit_something: # Prioritize zombies
+                    for npc in game.npcs:
+                        if not npc.is_dead:
+                            # 1. Check Distance
+                            dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
+                            attack_range = TILE_SIZE * 2
+                            
+                            if dist <= attack_range:
+                                # 2. Check Hit Condition (Click OR Facing)
+                                clicked_on_it = npc.rect.collidepoint(world_pos)
+                                
+                                # Angle check
+                                dx = npc.rect.centerx - game.player.rect.centerx
+                                dy = game.player.rect.centery - npc.rect.centery # Inverted Y for math
+                                npc_angle = math.atan2(dy, dx)
+                                swing_angle = game.player.melee_swing_angle
+                                angle_diff = abs(swing_angle - npc_angle)
+                                if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
+                                
+                                # 45 degree cone (0.8 rads)
+                                if clicked_on_it or angle_diff < 0.8:
+                                    damage = game.player.get_attack_damage()
+                                    npc.take_damage(damage, game, attacker=game.player)
+                                    display_message(game, f"You attacked {npc.name} for {damage} damage!")
+                                    hit_something = True
+                                    break 
+
+                if not hit_something: print("Swung and missed!")

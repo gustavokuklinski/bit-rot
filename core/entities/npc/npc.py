@@ -3,12 +3,12 @@ import random
 import os
 import math
 import time
-from core.entities.item.item import Item, Projectile # <-- MODIFIED: Added Projectile
+from core.entities.item.item import Item, Projectile, ITEM_TEMPLATES
 from core.entities.zombie.corpse import Corpse
 from core.messages import display_message
 import xml.etree.ElementTree as ET
 from core.entities.zombie.zombie import Zombie, ZOMBIE_CLOTHES_POOL
-from core.data.config import TILE_SIZE, SPRITE_PATH, RED, DATA_PATH
+from core.data.config import TILE_SIZE, SPRITE_PATH, DATA_PATH
 
 class NPC(Zombie):
     # --- Class-Level Cache ---
@@ -58,7 +58,12 @@ class NPC(Zombie):
         # --- END Pathing/Stuck Fix Attributes ---
 
         # --- NPC Specific Inventory/Loot Setup (Fix: Loot initialization) ---
-        self.inventory = [] 
+        self.inventory = []
+        id_card = Item.create_from_name("ID")
+        if id_card:
+            id_card.name = f"{self.name}'s ID"
+        self.inventory.append(id_card)
+
         # Give the NPC a random item as starting loot if its template didn't provide any
         if not self.inventory:
              random_item = Item.generate_random()
@@ -67,10 +72,19 @@ class NPC(Zombie):
         # --- END NPC Loot Setup ---
 
         # --- NPC Weapon Setup (Fix: Equipped Weapon) ---
-        # The NPC should have a weapon. We'll give it a basic knife or a random one.
-        self.equipped_weapon = Item.create_from_name("Knife", randomize_durability=True)
-        if not self.equipped_weapon or self.equipped_weapon.item_type not in ['weapon_melee', 'weapon_ranged']:
-            self.equipped_weapon = Item.generate_random() # Fallback to any random item
+        possible_weapons = [name for name, data in ITEM_TEMPLATES.items() 
+                            if data.get('type') in ['weapon_melee', 'weapon_ranged']]
+        
+        if possible_weapons:
+            weapon_name = random.choice(possible_weapons)
+            self.equipped_weapon = Item.create_from_name(weapon_name, randomize_durability=True)
+        else:
+            # Fallback if no templates found
+            self.equipped_weapon = Item.create_from_name("Knife", randomize_durability=True)
+            
+        # Fallback if creation failed
+        if not self.equipped_weapon:
+             self.equipped_weapon = Item.generate_random()
 
         self.melee_swing_timer = 0
         self.melee_swing_angle = 0
@@ -91,6 +105,8 @@ class NPC(Zombie):
         self.last_attack_time = 0
         self.attack_cooldown = 1000
         
+        self.health_bar_timer = 0
+
         # --- Visual Setup ---
         # Fix: Check if 'center' is missing, not just if the dict is empty
         if not self.images or not self.images.get('center'):
@@ -283,13 +299,24 @@ class NPC(Zombie):
 
         # 1. Prioritize Attack nearby Zombie
         min_dist_to_zombie = float('inf')
+        
         if not player_is_far_and_following:
+            # Check Zombies
             for zombie in game.zombies:
                 dist = math.hypot(zombie.rect.centerx - self.rect.centerx, zombie.rect.centery - self.rect.centery)
                 if dist < search_range and dist < min_dist_to_zombie: # Use modified search range
                     min_dist_to_zombie = dist
                     target_entity = zombie
                     self.state = 'chasing'
+            
+            # Check Player (Hostility Check)
+            if not self.is_friendly and game.player and not game.player.is_dead:
+                 dist_p = math.hypot(game.player.rect.centerx - self.rect.centerx, game.player.rect.centery - self.rect.centery)
+                 # If player is within range and closer than the closest zombie (or no zombie found)
+                 if dist_p < search_range and dist_p < min_dist_to_zombie:
+                     target_entity = game.player
+                     self.state = 'chasing'
+
 
         # 2. If no immediate zombie threat, check if following the player
         if not target_entity and self.is_following and game.player or player_is_far_and_following:
@@ -355,7 +382,7 @@ class NPC(Zombie):
                     # Weapon Break/Load Check before attacking
                     weapon_is_ready = True
                     if weapon and weapon.durability is not None and weapon.durability <= 0:
-                        display_message(game, f"{self.name}'s {weapon.name} broke!", RED)
+                        display_message(game, f"{self.name}'s {weapon.name} broke!")
                         self.equipped_weapon = None 
                         weapon_is_ready = False
                         weapon = None 
@@ -367,7 +394,7 @@ class NPC(Zombie):
                             game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=self.rect.center)
                          
                          # Drop the empty ranged weapon and prepare for melee
-                         display_message(game, f"{self.name}'s {weapon.name} is out of ammo! Dropping it to switch to melee.", RED)
+                         display_message(game, f"{self.name}'s {weapon.name} is out of ammo! Dropping it to switch to melee.")
                          self.inventory.append(self.equipped_weapon) 
                          self.equipped_weapon = None 
                          weapon = None 
@@ -403,10 +430,13 @@ class NPC(Zombie):
                                     target_entity.rect.centery, 
                                     speed=20
                                 )
-                                # game.projectiles.append(projectile)
+                                # [FIX] Add projectile to game list
+                                game.projectiles.append(projectile)
                             
-                            # Apply damage to target
-                            is_dead = target_entity.take_damage(damage_to_deal, game, attacking_entity=self)
+                            # Note: Projectile handles damage when it hits, 
+                            # but for instant-hit logic (if you aren't using real projectiles for damage):
+                            # Since we are using projectiles now, we let the projectile update loop handle damage.
+                            pass
 
 
                         else: # Melee Attack (or if ranged weapon broke/ran out)
@@ -417,11 +447,16 @@ class NPC(Zombie):
                                 game.sound_manager.play_sound(weapon.sounds['swing'], subdir='items', game=game, source_pos=self.rect.center)
                             
                             # Deal damage
-                            is_dead = target_entity.take_damage(damage_to_deal, game, attacking_entity=self) 
+                            if target_entity == game.player:
+                                 if hasattr(target_entity, 'take_durability_damage'):
+                                     target_entity.take_durability_damage(damage_to_deal, game)
+                                 target_entity.take_damage(game, damage_to_deal, 0)
+                                 display_message(game, f"{self.name} attacked you!")
+                            else:
+                                 is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         
-                        if is_dead:
+                        if is_dead and target_entity != game.player:
                             if target_entity in game.zombies:
-                                # [FIX] Use target_entity.die() to generate loot
                                 target_entity.die(game)
                         
         else:
@@ -446,6 +481,9 @@ class NPC(Zombie):
             
         if self.melee_swing_timer > 0: # Decrement swing timer regardless of movement
             self.melee_swing_timer -= 1
+
+        if self.health_bar_timer > 0:
+            self.health_bar_timer -= 1
 
         if not is_moving: return
 
@@ -497,42 +535,45 @@ class NPC(Zombie):
     def die(self, game):
         """Creates a corpse at the NPC's position and transfers all equipped clothes, weapon, and inventory to it."""
         if self.is_dead: return
+        self.is_dead = True # Mark as dead immediately to prevent loop
 
-        self.is_dead = True
-        self.state = 'dead'
-        
-        # 1. Create the Corpse object
-        npc_corpse = Corpse(
-            name=f"Corpse of {self.name}", 
-            capacity=20, 
-            image_path='zombie/dead.png', 
-            pos=self.rect.center,
-            decay_ms=3600000 
+        # 1. Create Corpse
+        corpse = Corpse(
+            name=f"Corpse of {self.name}",
+            capacity=20,
+            pos=self.rect.center, 
+            image_path="zombie/dead.png",
+            decay_ms=3600000
         )
         
-        # 2. Gather equipped clothes and put them into the corpse
-        for slot in list(self.clothes.keys()):
-            item = self.clothes.get(slot)
-            if isinstance(item, Item):
-                npc_corpse.inventory.append(item)
-                self.clothes[slot] = None 
-            elif item is not None:
-                print(f"WARNING: Non-Item object of type {type(item)} found in {self.name}'s clothes during death. Dropping it to prevent UI crash.")
+        # 2. Transfer Inventory (includes ID Card)
+        for item in self.inventory:
+            corpse.inventory.append(item)
+            
+        # 3. Transfer Equipped Weapon
+        if self.equipped_weapon:
+            corpse.inventory.append(self.equipped_weapon)
+            
+        # 4. Drop Current Clothes [FIXED SECTION]
+        if hasattr(self, 'clothes') and self.clothes:
+            for cloth_data in self.clothes.values():
+                # cloth_data is a dict (e.g. {'name': 'Blue Jeans', ...}), so we must convert it
+                if cloth_data and isinstance(cloth_data, dict):
+                    item_name = cloth_data.get('name')
+                    if item_name:
+                        # Create a real Item object from the name
+                        cloth_item = Item.create_from_name(item_name)
+                        if cloth_item:
+                            corpse.inventory.append(cloth_item)
+                elif isinstance(cloth_data, Item):
+                    # Handle case if it somehow is already an Item object
+                    corpse.inventory.append(cloth_data)
 
-        # 3. Transfer equipped weapon and inventory items to the corpse
-        if hasattr(self, 'equipped_weapon') and self.equipped_weapon and isinstance(self.equipped_weapon, Item):
-             npc_corpse.inventory.append(self.equipped_weapon)
-             self.equipped_weapon = None
-
-        if hasattr(self, 'inventory') and self.inventory:
-            # Transfer all inventory items to the corpse's inventory
-            for item in self.inventory:
-                if isinstance(item, Item):
-                    npc_corpse.inventory.append(item)
-            self.inventory.clear() # Clear NPC's inventory
-
-        # 4. Add corpse to game's items on ground
-        game.items_on_ground.append(npc_corpse)
+        # 5. Add to game world and remove NPC
+        game.items_on_ground.append(corpse)
+        
+        if self in game.npcs:
+            game.npcs.remove(self)
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
         if self.is_dead and self.dead_image:
@@ -542,6 +583,29 @@ class NPC(Zombie):
         
         # Call parent's draw method (inherited from Zombie) for non-dead state
         super().draw(surface, offset_x, offset_y, opacity)
+        
+        # --- [FIX] Draw Health Bar if Damaged ---
+        # NOTE: self.health and self.template['max_health'] must exist.
+        # Max health is usually set in template or __init__.
+        max_h = self.template.get('max_health', 100) if hasattr(self, 'template') else 100
+        
+        # [FIX] Only show if health is less than max AND timer is active
+        if self.health < max_h and self.health_bar_timer > 0:
+            bar_width = TILE_SIZE
+            bar_height = 4
+            
+            # Position above head
+            bar_x = self.rect.x + offset_x
+            bar_y = self.rect.y + offset_y - 8 
+            
+            # Background (Red)
+            pygame.draw.rect(surface, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+            
+            # Foreground (Green)
+            health_ratio = max(0, self.health / max_h)
+            current_width = int(bar_width * health_ratio)
+            pygame.draw.rect(surface, (0, 255, 0), (bar_x, bar_y, current_width, bar_height))
+        # ----------------------------------------
 
         # Draw equipped weapon 
         weapon = self.equipped_weapon
@@ -574,7 +638,7 @@ class NPC(Zombie):
             # 2.2 Weapon is held statically (Ranged or Melee Idle/Aiming)
             else:
                 # Use facing angle for static hold (which is the aiming direction when chasing)
-                hand_offset_dist = TILE_SIZE * 0.3
+                hand_offset_dist = TILE_SIZE * 0.4
                 angle_rad = math.radians(self.angle)
                 
                 weapon_center_x = self.rect.centerx + math.cos(angle_rad) * hand_offset_dist
@@ -587,27 +651,25 @@ class NPC(Zombie):
             new_rect = rotated_image.get_rect(center=(weapon_center_x + offset_x, weapon_center_y + offset_y))
             surface.blit(rotated_image, new_rect.topleft)
 
-    def take_damage(self, amount, game, attacking_entity=None):
-        """Overrides Zombie's take_damage to implement NPC-specific death and combat messages."""
-        if self.is_dead:
-            return True
-
-        self.health -= amount
-        self.health = max(0, self.health) # Ensure health doesn't go below zero
-        self.show_health_bar_timer = 120 # FIX: Show health bar for 2 seconds
-
+    def take_damage(self, damage, game, attacker=None):
+        """
+        Apply damage. If attacker is player, become hostile.
+        Returns True if dead, False otherwise.
+        """
+        if self.is_dead: return True
         
-        # Allow player killing and show feedback (Request 3)
-        if attacking_entity == game.player and self.health > 0:
-            display_message(game, f"You hurt {self.name}!", RED) 
+        self.health -= damage
 
+        self.health_bar_timer = 180
+        
+        # Fight back logic
+        if attacker == game.player:
+            self.is_friendly = False
+            self.state = 'chasing'
+            # The Zombie AI will automatically target game.player if state is chasing
+        
         if self.health <= 0:
-            self.health = 0
             self.die(game)
-            # FIX 3: Display message when player kills the NPC
-            if attacking_entity == game.player:
-                display_message(game, f"You killed {self.name}!", RED)
+            return True
             
-            return True 
-
         return False

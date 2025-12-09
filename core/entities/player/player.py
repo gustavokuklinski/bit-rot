@@ -202,6 +202,24 @@ class Player:
                      total_defence += item.defence
         return total_defence
 
+    def get_attack_damage(self):
+        """Calculates damage based on equipped weapon or bare hands."""
+        min_dmg = 1
+        max_dmg = 3 
+        
+        if self.active_weapon:
+            # Use getattr to safely access attributes if item structure varies
+            min_dmg = getattr(self.active_weapon, 'min_damage', 1)
+            max_dmg = getattr(self.active_weapon, 'max_damage', 5)
+            
+            # If your items use a tuple for range instead:
+            if hasattr(self.active_weapon, 'current_damage_range'):
+                rng = self.active_weapon.current_damage_range
+                min_dmg = rng[0]
+                max_dmg = rng[1]
+
+        return random.randint(int(min_dmg), int(max_dmg))
+
     def take_durability_damage(self, raw_damage, game):
         """Applies durability damage to a random piece of equipped gear."""
         # Find all clothes that have durability
@@ -422,6 +440,32 @@ class Player:
                     surface.blit(item.image, draw_rect)
 
 
+        if self.active_weapon and self.active_weapon.image:
+            is_swinging = (self.melee_swing_timer > 0)
+            is_ranged_aiming = (is_aiming and self.active_weapon.item_type == 'weapon_ranged')
+            
+            if not is_swinging and not is_ranged_aiming:
+                weapon_img = self.active_weapon.image
+                angle_degrees = math.degrees(self.aim_angle)
+                
+                # Flip weapon vertically if aiming left to prevent upside-down texture
+                if math.cos(self.aim_angle) < 0:
+                    weapon_img = pygame.transform.flip(weapon_img, False, True)
+                
+                rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
+                
+                # Use a smaller offset for idle hold (closer to body)
+                offset_dist = TILE_SIZE * 0.4
+                offset_x = math.cos(self.aim_angle) * offset_dist
+                offset_y = -math.sin(self.aim_angle) * offset_dist
+                
+                rotated_rect = rotated_image.get_rect(center=draw_rect.center)
+                rotated_rect.centerx += offset_x
+                rotated_rect.centery += offset_y
+                
+                surface.blit(rotated_image, rotated_rect)
+
+
         if is_aiming and self.active_weapon and self.active_weapon.image and \
            self.active_weapon.item_type == 'weapon_ranged':
             
@@ -514,8 +558,16 @@ class Player:
             center_x, center_y = draw_rect.center
             start_angle = self.melee_swing_angle - (3.1415 / 4)
             end_angle = self.melee_swing_angle + (3.1415 / 4)
-            arc_bounds = pygame.Rect(center_x - swing_radius, center_y - swing_radius, swing_radius * 2, swing_radius * 2)
-            pygame.draw.arc(surface, YELLOW, arc_bounds, start_angle, end_angle, 1)
+            arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
+            
+            # Draw the arc on the temp surface. 
+            # (255, 255, 0) is Yellow, 128 is ~50% opacity
+            arc_rect = arc_surf.get_rect()
+            pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
+            
+            # Blit the temp surface onto the main surface
+            surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
+            
             self.melee_swing_timer -= 1
 
         # Reloading bar
