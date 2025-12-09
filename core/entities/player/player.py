@@ -130,6 +130,9 @@ class Player:
         self.target_x = 0
         self.target_y = 0
 
+        self.is_dead = False
+        self.dead_image = self._load_sprite(self.visuals.get('dead_sprite', 'dead.png'))
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:

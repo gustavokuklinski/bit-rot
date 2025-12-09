@@ -2,8 +2,6 @@
 .venv
 .bitrotenv
 __pycache__
-*.build
-*.dist
-*.onefile-build
+build
 game/save/game
 game/logs

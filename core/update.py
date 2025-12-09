@@ -366,40 +366,20 @@ def player_hit_zombie(player, zombie, game):
     display_message_player(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False
 
+
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     """Processes loot drops when a zombie dies."""
-    display_message_zombie(f"A {zombie.name} died. Creating corpse and checking for loot...")
-    # create corpse at zombie position
-    dead_sprite_path = "./game/lib/sprites/zombie/dead.png"
-    corpse = Corpse(name="Dead corpse", capacity=10, image_path=dead_sprite_path, pos=zombie.rect.center)
-    
-    if hasattr(zombie, 'inventory'):
-        for item in zombie.inventory:
-            corpse.inventory.append(item)
-
-    # build its inventory from the zombie loot table
-    if hasattr(zombie, 'loot_table'):
-        for drop in zombie.loot_table:
-            if random.random() < drop.get('chance', 0) * (core.data.config.ZOMBIE_DROP / 100.0):
-                item_inst = Item.create_from_name(drop.get('item'))
-                if item_inst:
-                    corpse.inventory.append(item_inst)
-                else:
-                    print(f"Failed to create item: {drop.get('item')}")
-    # append corpse to world items (it behaves like an item on ground)
-    if find_free_tile(corpse.rect, obstacles, items_on_ground_list, initial_pos=zombie.rect.topleft):
-        items_on_ground_list.append(corpse)
-
-    if zombie.sound_dead:
-        game.sound_manager.play_sound(zombie.sound_dead, subdir='zombie', game=game, source_pos=zombie.rect.center)
+    # [FIX] Use the Zombie's own die method to standardize behavior.
+    # This prevents code duplication and ensures 'die()' fixes (like loot dup fix) apply everywhere.
+    zombie.die(game)
 
     game.player.process_kill(weapon, zombie)
 
     # Record killed zombie in map state
     current_map_filename = game.map_manager.current_map_filename
     if current_map_filename not in game.map_states:
-        game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()} # Ensure lists exist
-    game.map_states[current_map_filename].setdefault('killed_zombies', []).append(zombie.id) # Use setdefault
+        game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()} 
+    game.map_states[current_map_filename].setdefault('killed_zombies', []).append(zombie.id)
 
 def check_dynamic_zombie_spawns(game):
     """

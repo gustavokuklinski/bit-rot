@@ -11,6 +11,7 @@ import core.data.config
 from core.messages import display_message
 import random
 from core.entities.item.item import Item
+from core.entities.zombie.corpse import Corpse # Ensure Corpse is imported
 
 fake = Faker()
 ZOMBIE_TEMPLATES = []
@@ -93,7 +94,7 @@ class Zombie(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.x, self.y, TILE_SIZE, TILE_SIZE)
         self.show_health_bar_timer = 0
         self.last_attack_time = 0
-        self.attack_range = TILE_SIZE * 1.5
+        self.attack_range = TILE_SIZE * 1
         self.min_attack = template.get('min_attack')
         self.max_attack = template.get('max_attack')
         self.min_infection = template.get('min_infection')
@@ -125,6 +126,10 @@ class Zombie(pygame.sprite.Sprite):
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
         self.wander_target = None # (x, y) coordinate
         self.last_wander_change = 0 # Timestamp for changing wander direction
+
+        # [NEW] Pathfinding stuck logic
+        self.stuck_timer = 0
+        self.stuck_angle = 0
 
         self.inventory = []
         try:
@@ -171,7 +176,7 @@ class Zombie(pygame.sprite.Sprite):
         print(f"Warning: Could not find sprite '{sprite_file}' in common paths.")
         return None
 
-    def take_damage(self, amount, game):
+    def take_damage(self, amount, game, attacking_entity=None): 
         self.health -= amount
         self.health = max(0, self.health)
         self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)
@@ -183,6 +188,52 @@ class Zombie(pygame.sprite.Sprite):
             self.last_hit_sound_time = current_time
 
         return self.health <= 0 # Return True if dead
+    
+    # [NEW] Standardized Die Method for Loot Generation
+    def die(self, game):
+        """Handles zombie death: plays sound, creates corpse, generates loot."""
+        # 1. Play sound
+        if self.sound_dead:
+             game.sound_manager.play_sound(self.sound_dead, subdir='zombie', game=game, source_pos=self.rect.center)
+        
+        # 2. Create Corpse
+        corpse = Corpse(
+            name=f"Corpse of {self.name}",
+            capacity=20, 
+            image_path="zombie/dead.png", # Corpse class handles default if None
+            pos=self.rect.center,
+            decay_ms=300000 # 5 minutes decay
+        )
+
+        # 3. Add Fixed Inventory (like ID card)
+        for item in self.inventory:
+            corpse.inventory.append(item)
+
+        # 4. Add Random Loot Table Items
+        if self.loot_table:
+            for loot_entry in self.loot_table:
+                if random.random() * 100 < float(loot_entry.get('chance', 0)):
+                    item_name = loot_entry.get('item')
+                    new_item = Item.create_from_name(item_name)
+                    if new_item:
+                         corpse.inventory.append(new_item)
+
+        # 5. Add Clothes
+        #for slot, clothe in self.clothes.items():
+        #    if clothe:
+        #         item_name = clothe.get('name')
+        #         if item_name and not item_name.startswith("Empty"):
+        #             # Simple check to try and create the item version of the cloth
+        #             cloth_item = Item.create_from_name(item_name)
+        #             if cloth_item:
+        #                 corpse.inventory.append(cloth_item)
+
+        game.items_on_ground.append(corpse)
+        
+        # Remove self from game
+        if self in game.zombies:
+            game.zombies.remove(self)
+
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
         # This draw method is for the pixelated zoom approach
@@ -295,6 +346,10 @@ class Zombie(pygame.sprite.Sprite):
         # Access NPCs from game instance
         if hasattr(game, 'npcs'):
             for npc in game.npcs:
+                # [FIX] Skip targeting NPCs that are already dead (issue #1)
+                if npc.is_dead:
+                    continue
+
                 d = math.hypot(npc.rect.centerx - self.rect.centerx, npc.rect.centery - self.rect.centery)
                 if d < min_npc_dist:
                     min_npc_dist = d
@@ -302,11 +357,11 @@ class Zombie(pygame.sprite.Sprite):
         
         # Switch target to NPC if it is closer than player
         if nearest_npc and (min_npc_dist < dist_to_player):
-             target_rect = nearest_npc.rect
-             target_entity = nearest_npc # Set specific entity target
-             dist_to_target = min_npc_dist
+            target_rect = nearest_npc.rect
+            target_entity = nearest_npc # Set specific entity target
+            dist_to_target = min_npc_dist
         else:
-             dist_to_target = dist_to_player
+            dist_to_target = dist_to_player
 
         can_see_target = self.has_line_of_sight(target_rect, obstacles)
         target_pos = None
@@ -358,51 +413,54 @@ class Zombie(pygame.sprite.Sprite):
 
     def move_towards(self, target_pos, obstacles, other_zombies, game):
         """Calculates movement vector towards a target_pos and handles collisions."""
-        dx = target_pos[0] - self.rect.centerx
-        dy = target_pos[1] - self.rect.centery
-        dist = math.hypot(dx, dy)
-
-        stop_distance = TILE_SIZE / 2 # Default stop distance for wandering
-        if self.state == 'chasing':
-            # If chasing, stop when within attack range
-            stop_distance = self.attack_range * 0.9 # Use 90% of range to avoid jitter
-
-        if dist > stop_distance: # Don't move if already very close
-            # Normalize and scale by speed
-            move_x = (dx / dist) * self.speed
-            move_y = (dy / dist) * self.speed
+        # [NEW] Check stuck timer
+        if self.stuck_timer > 0:
+            self.stuck_timer -= 1
+            # Move in random stuck angle
+            rad = math.radians(self.stuck_angle)
+            move_x = math.cos(rad) * self.speed
+            move_y = -math.sin(rad) * self.speed
         else:
-            move_x, move_y = 0, 0
+            # Normal movement
+            dx = target_pos[0] - self.rect.centerx
+            dy = target_pos[1] - self.rect.centery
+            dist = math.hypot(dx, dy)
+
+            stop_distance = TILE_SIZE / 2 
+            if self.state == 'chasing':
+                stop_distance = self.attack_range * 1
+
+            if dist > stop_distance:
+                move_x = (dx / dist) * self.speed
+                move_y = (dy / dist) * self.speed
+            else:
+                move_x, move_y = 0, 0
         
-        self.vx = move_x # Store velocity
-        self.vy = move_y # Store velocity
+        self.vx = move_x 
+        self.vy = move_y 
         
         is_moving = move_x != 0 or move_y != 0
 
         if is_moving:
-            # Oscillate angle. 15 is speed, 2 is amplitude (degrees) - Matches Player
             self.walk_anim_angle = math.sin(time.time() * 15) * 2
         else:
             self.walk_anim_angle = 0
 
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
             current_time = pygame.time.get_ticks()
-            # Set cooldown based on state (faster steps when chasing)
-           
-            
             if current_time > self.last_step_sound_time:
                 game.sound_manager.play_sound(
                     self.sound_steps,
-                    subdir='zombie', # Assuming same dir as player: 'game/sfx/player/'
+                    subdir='zombie', 
                     game=game,
                     source_pos=self.rect.center,
                     base_volume=random.uniform(0.02, 0.06)
                 )
 
                 if self.state == 'chasing':
-                    next_delay = random.randint(280, 380) # Faster steps
+                    next_delay = random.randint(280, 380)
                 else:
-                    next_delay = random.randint(420, 520) # Slower steps
+                    next_delay = random.randint(420, 520)
                 
                 self.last_step_sound_time = current_time + next_delay
 
@@ -422,6 +480,10 @@ class Zombie(pygame.sprite.Sprite):
         if collided_x:
             self.x = old_x
             self.rect.x = int(self.x)
+            # [NEW] Trigger Stuck Logic
+            if self.state == 'chasing':
+                self.stuck_timer = 20 # 20 frames of avoidance
+                self.stuck_angle = random.randint(0, 360)
 
         # Move Y
         self.y += move_y
@@ -436,8 +498,11 @@ class Zombie(pygame.sprite.Sprite):
         if collided_y:
             self.y = old_y
             self.rect.y = int(self.y)
+            # [NEW] Trigger Stuck Logic
+            if self.state == 'chasing':
+                self.stuck_timer = 20
+                self.stuck_angle = random.randint(0, 360)
 
-        # Update final position based on potential collision adjustments
         self.rect.topleft = (int(self.x), int(self.y))
 
     def attack(self, target_entity, game):
@@ -472,13 +537,10 @@ class Zombie(pygame.sprite.Sprite):
         # Handle NPC specific damage logic (NPC inherits Zombie)
         else:
             # It's an NPC (Zombie class logic)
-            # Zombie.take_damage signature is (amount, game)
-            is_dead = target_entity.take_damage(damage, game)
+            is_dead = target_entity.take_damage(damage, game) 
             if is_dead and target_entity in game.npcs:
-                game.npcs.remove(target_entity)
-                # Play death sound
-                if hasattr(target_entity, 'sound_dead') and target_entity.sound_dead:
-                     game.sound_manager.play_sound(target_entity.sound_dead, subdir='zombie', game=game, source_pos=target_entity.rect.center)
+                # [MODIFIED] Use the new die method instead of just removing
+                target_entity.die(game)
                 display_message("A survivor has been killed by a zombie.")
 
         if self.sound_attack:
@@ -659,10 +721,6 @@ class Zombie(pygame.sprite.Sprite):
     @staticmethod
     def create_random(x, y):
         """Creates a zombie instance from a random template."""
-        #if not ZOMBIE_TEMPLATES or not ALL_ITEM_TEMPLATES: # <-- Check both lists
-        #    Zombie.load_templates()
-        #if not ZOMBIE_TEMPLATES:
-        #    Zombie.load_templates() # Load templates if not already loaded
         if not ZOMBIE_TEMPLATES:
             # Fallback if loading failed or no templates exist
             print("Error: No zombie templates loaded. Creating default zombie.")
@@ -732,8 +790,6 @@ class Zombie(pygame.sprite.Sprite):
                         'item': item_name,
                         'chance': 100.0 # Always drops the clothes it's wearing
                     })
-        #print(f"Zombie '{zombie.name}' spawned. Loot: {[item['item'] for item in zombie.loot_table]}")
-        #print(f"Zombie: '{zombie.name}' spawned with clothes: {list(zombie.clothes.keys())}")
         
         # Apply defense multiplier to health
         defense_multiplier = 1 + (total_defense / 100.0)

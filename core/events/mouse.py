@@ -883,6 +883,11 @@ def handle_context_menu_click(game, mouse_pos):
                     verified_item = container_item.inventory[index]
                 elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
                     verified_item = container_item.inventory[index]
+                elif source == 'npc':
+                    if item in game.npcs:
+                        verified_item = item
+                    else:
+                        verified_item = None
                 elif source == 'container_map': # Vehicle or object
                     if getattr(item, 'item_type', '') == 'vehicle':
                         verified_item = item # Pass through for vehicles
@@ -907,10 +912,12 @@ def handle_context_menu_click(game, mouse_pos):
                 if option == 'Follow':
                     item.is_following = True
                     print(f"{item.name} is now following you.")
+                    display_message(game, f"{item.name} is now following you.")
                     clicked_on_menu = True
                 elif option == 'Unfollow':
                     item.is_following = False
                     print(f"{item.name} stopped following.")
+                    display_message(game, f"{item.name} stopped following.")
                     clicked_on_menu = True
                 elif option == 'Trade':
                     # Create a dummy container interface for the NPC
@@ -934,8 +941,10 @@ def handle_context_menu_click(game, mouse_pos):
                     clicked_on_menu = True
 
 
-            print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
-
+            # print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
+            if clicked_on_menu: # Only print if we handled it explicitly
+                print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
+                
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 game.modals = [m for m in game.modals if m['type'] != 'vehicle']
                 new_modal = {
@@ -1446,7 +1455,7 @@ def handle_right_click(game, mouse_pos):
             else:
                 options.append('Follow')
 
-        if click_source == 'map_tile':
+        elif click_source == 'map_tile':
             options = ['Sleep']
         elif click_source == 'light_source': # [NEW]
             status = "OFF" if clicked_item['active'] else "ON"
@@ -1708,7 +1717,7 @@ def handle_attack(game, mouse_pos):
                     if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
                         if player_hit_zombie(game.player, zombie, game):
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                            game.zombies.remove(zombie)
+                            
                             game.zombies_killed += 1
                         hit_a_zombie = True
                         break
