@@ -447,6 +447,10 @@ def draw_game(game):
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
+    if game.hovered_npc:
+        hover_rect = game.hovered_npc.rect.move(offset_x, offset_y)
+        pygame.draw.rect(world_view_surface, (255, 165, 0), hover_rect, 2)
+
     if game.hovered_interactable_tile_rect:
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)

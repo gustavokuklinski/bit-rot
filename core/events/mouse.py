@@ -919,26 +919,6 @@ def handle_context_menu_click(game, mouse_pos):
                     print(f"{item.name} stopped following.")
                     display_message(game, f"{item.name} stopped following.")
                     clicked_on_menu = True
-                elif option == 'Trade':
-                    # Create a dummy container interface for the NPC
-                    from core.ui.container_modal import get_container_slot_rect # Ensure import if needed
-                    
-                    # Check if modal already open
-                    modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                    if not modal_exists:
-                        # We treat the NPC object like a container for the UI
-                        new_container_modal = {
-                            'id': uuid.uuid4(),
-                            'type': 'container',
-                            'item': item, # The NPC instance (must have .inventory list)
-                            'position': game.last_modal_positions['container'],
-                            'is_dragging': False, 
-                            'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                            'minimized': False
-                        }
-                        game.modals.append(new_container_modal)
-                    clicked_on_menu = True
 
 
             # print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
@@ -1449,7 +1429,6 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['position'] = mouse_pos
 
         if click_source == 'npc':
-            options = ['Trade']
             if clicked_item.is_following:
                 options.append('Unfollow')
             else:

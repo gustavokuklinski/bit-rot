@@ -139,7 +139,7 @@ class Game:
         self.selected_profession = None
         self.hovered_item = None
         self.hovered_container = None
-
+        self.hovered_npc = None
         self.hovered_interactable_tile_rect = None
 
         self.message_log = []
@@ -578,7 +578,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID", "Knife", "Pistol 9mm"]
+        starter_items = ["ID", "Knife", "Pistol 9mm", "Shotgun"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
