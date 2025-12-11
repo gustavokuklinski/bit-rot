@@ -14,7 +14,6 @@ from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 def resize_map_layer(layer_data, target_width, target_height, fill_value=' '):
     """
     Resizes a map layer to the target dimensions.
-    [FIX] Default fill_value set to ' ' (space) instead of '' to prevent black voids.
     """
     current_height = len(layer_data)
     new_layer = [[fill_value for _ in range(target_width)] for _ in range(target_height)]
@@ -116,7 +115,7 @@ def load_giant_map(game):
     print(f"Creating {grid_w}x{grid_h} mega-map ({mega_w}x{mega_h} tiles)...")
 
     mega_base = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_ground = [['bg_grass' for _ in range(mega_w)] for _ in range(mega_h)] # Default to grass to prevent voids
+    mega_ground = [['bg_grass' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_spawn = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_roof = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
     mega_light_grid = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
@@ -130,7 +129,6 @@ def load_giant_map(game):
 
         for r in range(chunk_h):
             for c in range(chunk_w):
-                # [FIX] Check for ' ' explicitly and don't overwrite default grass with void if data is missing
                 if r < len(base) and c < len(base[r]) and base[r][c] and base[r][c] != ' ':
                     mega_base[offset_y + r][offset_x + c] = base[r][c]
                     
@@ -140,9 +138,7 @@ def load_giant_map(game):
                 if r < len(spawn) and c < len(spawn[r]) and spawn[r][c] and spawn[r][c] != ' ':
                     char = spawn[r][c]
                     if char == 'P':
-                        # Collect all possible spawn points (random spawn feature)
                         possible_player_spawns.append((offset_x + c, offset_y + r))
-                        # Don't add P to the grid passed to parser to avoid overwrites/warnings
                         mega_spawn[offset_y + r][offset_x + c] = ' '
                     else:
                         mega_spawn[offset_y + r][offset_x + c] = char
@@ -154,6 +150,8 @@ def load_giant_map(game):
                     mega_light_grid[offset_y + r][offset_x + c] = light[r][c]
 
     print("Parsing mega-layouts...")
+    
+    # [FIX] Unpack 9 values including game.npc_spawn_points
     (game.obstacles, 
      game.renderable_tiles, 
      _parsed_spawn, 
@@ -161,7 +159,8 @@ def load_giant_map(game):
      game.item_spawns, 
      game.containers,
      game.roof_tiles,
-     map_lights_list) = parse_layered_map_layout(
+     map_lights_list,
+     game.npc_spawn_points) = parse_layered_map_layout(
          mega_base, mega_ground, mega_spawn, mega_roof, mega_light_grid, game.tile_manager
      )
     
@@ -170,7 +169,6 @@ def load_giant_map(game):
         game.player_spawn = (gx * TILE_SIZE, gy * TILE_SIZE)
         print(f"Selected player spawn from markers at: {game.player_spawn}")
     else:
-        # Fallback ONLY if no 'P' markers exist: Pick a random chunk
         print("No 'P' markers found. Attempting to spawn in random chunk...")
         chunk_coords = list(layouts.keys())
         spawn_found = False
@@ -258,7 +256,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     
     if not base_name_match:
         print(f"CRITICAL: Base map filename does not match expected pattern: {base_map_filename}")
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
     base_pos_id = base_name_match.group(2)
     base_conn_tuple = base_name_match.groups()[2:]
@@ -279,12 +277,12 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
                     break
             if not found_any:
                  print(f"CRITICAL: No map files found at all for base prefix P{base_pos_id} in {base_path}.")
-                 return {}, {}, {}, {}
+                 return {}, {}, {}, {}, {}
         
         base_map_data = load_map_from_file(base_map_file)
         if not base_map_data or not base_map_data[0]:
             print(f"CRITICAL: Base map file is empty or invalid: {base_map_file}")
-            return {}, {}, {}, {}
+            return {}, {}, {}, {}, {}
 
         target_height = len(base_map_data)
         target_width = 0
@@ -320,7 +318,6 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         if not map_data and not ground_data and not spawn_data and not roof_data  and not light_data:
             continue
             
-        # [FIX] Use fill_value=' ' to ensure layers are padded with spaces, not empty strings
         if map_data:
             map_data = resize_map_layer(map_data, target_width, target_height, fill_value=' ')
             all_map_layers[i] = map_data
@@ -347,7 +344,8 @@ def _rebuild_world_from_data(game):
     game.obstacles.clear()
     game.containers.clear()
 
-    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles, map_lights = \
+    # [FIX] Unpack 9 variables
+    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles, map_lights, npc_spawns = \
         parse_layered_map_layout(game.map_data, game.ground_data, game.spawn_data, game.roof_data, game.light_data, game.tile_manager)
 
     game.obstacles = obstacles
@@ -355,6 +353,8 @@ def _rebuild_world_from_data(game):
     game.containers = containers
     game.roof_tiles = roof_tiles
     game.map_lights = map_lights
+    # [FIX] Assign npc spawns to game
+    game.npc_spawn_points = npc_spawns
 
     return item_spawns, zombie_spawns
 
@@ -490,7 +490,8 @@ def check_for_map_transition(game):
     if new_map_filename:
         print(f"Transitioning from {old_map_filename} to map: {new_map_filename}")
 
-        game.all_map_layers, game.all_ground_layers, game.all_spawn_layers, game.all_roof_layers = \
+        # [FIX] Unpack 5 return values (previously 4)
+        game.all_map_layers, game.all_ground_layers, game.all_spawn_layers, game.all_roof_layers, game.all_light_layers = \
             load_all_map_layers(new_map_filename, base_path=game.map_manager.map_folder)
 
         game.layer_items.clear()

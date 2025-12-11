@@ -268,4 +268,4 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
 
 
-    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights
+    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights, npc_spawns

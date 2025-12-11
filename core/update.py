@@ -134,6 +134,30 @@ def update_game_state(game):
             projectiles_to_remove.append(p)
             continue
 
+        # --- [FIX START] Check Collision with Player ---
+        # We only want NPC projectiles (marked as 'hostile') to hurt the player.
+        # This prevents the player from shooting themselves instantly if the spawn offset is slightly off.
+        if getattr(p, 'hostile', False) and game.player and not game.player.is_dead:
+            if p.rect.colliderect(game.player.rect):
+                damage = getattr(p, 'damage', 5) # Default damage if not set
+                
+                # Apply damage to player
+                game.player.take_damage(game, damage, 0)
+                display_message_player(f"You were hit! Took {damage} damage.")
+                
+                # Create a small blood puff at impact
+                game.splashes.append({
+                    'pos': game.player.rect.center,
+                    'time': pygame.time.get_ticks(),
+                    'duration': 350,
+                    'radius': 3,
+                    'type': 'hit_puff' # Or specific blood color
+                })
+
+                projectiles_to_remove.append(p)
+                continue
+        # --- [FIX END] ---
+
         # 2.3. OPTIMIZATION: Check collisions against ONLY nearby zombies using the grid
         potential_hits = [z for z in get_nearby_zombies(p, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
         

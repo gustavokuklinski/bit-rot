@@ -262,7 +262,14 @@ class Zombie(pygame.sprite.Sprite):
             # Draw clothes
             for slot, clothe in self.clothes.items():
                 if clothe:
-                    clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
+                    clothe_sprite = None
+                    # [FIX] Handle both Item objects (NPCs) and Dicts (Zombies)
+                    if isinstance(clothe, Item):
+                        if clothe.image:
+                            clothe_sprite = clothe.image.copy()
+                    elif isinstance(clothe, dict):
+                        clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
+
                     if clothe_sprite:
                         clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
                         if self.walk_anim_angle != 0:

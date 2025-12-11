@@ -29,7 +29,7 @@ class NPC(Zombie):
                 'name': "Survivor", 
                 'sex': random.choice(['Male', 'Female']),
                 'health': 100,
-                'speed': 1.0,
+                'speed': 1.0,\
                 'min_xp': 10,
                 'max_xp': 20,
                 'min_attack': 1,
@@ -57,11 +57,9 @@ class NPC(Zombie):
         self.stuck_angle = 0
         # --- END Pathing/Stuck Fix Attributes ---
 
-        # --- NPC Specific Inventory/Loot Setup (Fix: Loot initialization) ---
+        # --- NPC Specific Inventory/Loot Setup ---
         self.inventory = []
         id_card = Item.create_from_name("ID")
-        if id_card:
-            id_card.name = f"{self.name}'s ID"
         self.inventory.append(id_card)
 
         # Give the NPC a random item as starting loot if its template didn't provide any
@@ -71,7 +69,7 @@ class NPC(Zombie):
                  self.inventory.append(random_item)
         # --- END NPC Loot Setup ---
 
-        # --- NPC Weapon Setup (Fix: Equipped Weapon) ---
+        # --- NPC Weapon Setup ---
         possible_weapons = [name for name, data in ITEM_TEMPLATES.items() 
                             if data.get('type') in ['weapon_melee', 'weapon_ranged']]
         
@@ -108,13 +106,27 @@ class NPC(Zombie):
         self.health_bar_timer = 0
 
         # --- Visual Setup ---
-        # Fix: Check if 'center' is missing, not just if the dict is empty
         if not self.images or not self.images.get('center'):
             self._load_base_sprite()
             
         # Only assign random clothes if the XML didn't specify them
         if not self.clothes:
              self._assign_random_clothes()
+
+        # [CRITICAL FIX] Sanitize clothes to ensure they are Item objects
+        clean_clothes = {}
+        for slot, item_data in self.clothes.items():
+            if not item_data: continue
+            
+            if isinstance(item_data, Item):
+                clean_clothes[slot] = item_data
+            elif isinstance(item_data, str):
+                clean_clothes[slot] = Item.create_from_name(item_data)
+            elif isinstance(item_data, dict) and 'name' in item_data:
+                clean_clothes[slot] = Item.create_from_name(item_data['name'])
+        
+        self.clothes = clean_clothes
+
 
     def load_sprite(self, sprite_file):
         """Override to prefer player/ folder for NPCs."""
@@ -264,10 +276,45 @@ class NPC(Zombie):
             if slot == 'head' and random.random() < 0.3: continue 
             available = ZOMBIE_CLOTHES_POOL.get(slot, [])
             if available:
-                self.clothes[slot] = random.choice(available)
+                choice = random.choice(available)
+                # Ensure we create an ITEM object, not just assign the string/dict
+                if isinstance(choice, str):
+                    self.clothes[slot] = Item.create_from_name(choice)
+                elif isinstance(choice, dict) and 'name' in choice:
+                    self.clothes[slot] = Item.create_from_name(choice['name'])
+
+    def check_line_of_sight(self, target, game):
+        """Checks if there is a clear line of sight to the target (no obstacles)."""
+        x1, y1 = self.rect.center
+        x2, y2 = target.rect.center
+        
+        distance = math.hypot(x2 - x1, y2 - y1)
+        if distance == 0: return True
+        
+        # Check collision at intervals (approx every 16px or half tile for accuracy)
+        step_size = TILE_SIZE / 2
+        steps = int(distance / step_size)
+        
+        if steps < 1: return True
+        
+        dx = (x2 - x1) / steps
+        dy = (y2 - y1) / steps
+        
+        check_rect = pygame.Rect(0, 0, 4, 4) # Small point check
+        
+        for i in range(1, steps): # Skip start point, maybe check end?
+            check_x = x1 + dx * i
+            check_y = y1 + dy * i
+            check_rect.center = (int(check_x), int(check_y))
+            
+            # Use game obstacles
+            for obstacle in game.obstacles:
+                if check_rect.colliderect(obstacle):
+                    return False
+        return True
 
     def update(self, game):
-        """Updates the NPC: AI, Physics, Animation. (Fix: Pathing and Ammo Check)"""
+        """Updates the NPC: AI, Physics, Animation."""
         obstacles = game.obstacles
 
         if self.is_dead:
@@ -399,7 +446,12 @@ class NPC(Zombie):
                          self.equipped_weapon = None 
                          weapon = None 
                     
-                    if weapon_is_ready:
+                    # CHECK LINE OF SIGHT FOR RANGED WEAPONS
+                    has_los = True
+                    if is_ranged_weapon:
+                        has_los = self.check_line_of_sight(target_entity, game)
+
+                    if weapon_is_ready and has_los:
                         self.last_attack_time = current_time
                         attack_angle = math.atan2(-dy, dx)
                         
@@ -415,7 +467,7 @@ class NPC(Zombie):
                         if weapon and weapon.durability is not None:
                              weapon.durability -= 1 # Deduct durability on successful attack attempt
 
-                        if is_ranged_weapon and weapon: # Check weapon exists after ammo check
+                        if is_ranged_weapon and weapon: 
                             # Ranged Attack
                             if hasattr(game, 'projectiles') and weapon.load is not None and weapon.load > 0:
                                 # Use one unit of load as ammo
@@ -423,22 +475,38 @@ class NPC(Zombie):
                                 if weapon.sounds and 'shoot' in weapon.sounds:
                                     game.sound_manager.play_sound(weapon.sounds['shoot'], subdir='items', game=game, source_pos=self.rect.center)
 
-                                projectile = Projectile(
-                                    self.rect.centerx, 
-                                    self.rect.centery, 
-                                    target_entity.rect.centerx, 
-                                    target_entity.rect.centery, 
-                                    speed=20
-                                )
-                                # [FIX] Add projectile to game list
-                                game.projectiles.append(projectile)
+                                # Handle Multiple Pellets and Spread
+                                pellets = getattr(weapon, 'pellets', 1)
+                                spread = getattr(weapon, 'spread_angle', 0.0)
+                                
+                                # Base aiming angle (towards target)
+                                aim_angle = math.atan2(target_entity.rect.centery - self.rect.centery, 
+                                                       target_entity.rect.centerx - self.rect.centerx)
+
+                                for _ in range(pellets):
+                                    # Calculate random spread offset
+                                    current_spread = math.radians(random.uniform(-spread, spread))
+                                    final_angle = aim_angle + current_spread
+                                    
+                                    # Calculate a target point far away in the spread direction
+                                    proj_dist = 1000
+                                    target_x = self.rect.centerx + math.cos(final_angle) * proj_dist
+                                    target_y = self.rect.centery + math.sin(final_angle) * proj_dist
+
+                                    projectile = Projectile(
+                                        self.rect.centerx, 
+                                        self.rect.centery, 
+                                        target_x, 
+                                        target_y, 
+                                        speed=20
+                                    )
+                                    # Assign damage and owner to projectile
+                                    projectile.damage = damage_to_deal
+                                    projectile.owner = self
+                                    projectile.hostile = True
+                                    
+                                    game.projectiles.append(projectile)
                             
-                            # Note: Projectile handles damage when it hits, 
-                            # but for instant-hit logic (if you aren't using real projectiles for damage):
-                            # Since we are using projectiles now, we let the projectile update loop handle damage.
-                            pass
-
-
                         else: # Melee Attack (or if ranged weapon broke/ran out)
                             self.melee_swing_timer = 15
                             self.melee_swing_angle = attack_angle
@@ -554,20 +622,17 @@ class NPC(Zombie):
         if self.equipped_weapon:
             corpse.inventory.append(self.equipped_weapon)
             
-        # 4. Drop Current Clothes [FIXED SECTION]
+        # 4. Drop Current Clothes
         if hasattr(self, 'clothes') and self.clothes:
             for cloth_data in self.clothes.values():
-                # cloth_data is a dict (e.g. {'name': 'Blue Jeans', ...}), so we must convert it
-                if cloth_data and isinstance(cloth_data, dict):
-                    item_name = cloth_data.get('name')
-                    if item_name:
-                        # Create a real Item object from the name
-                        cloth_item = Item.create_from_name(item_name)
-                        if cloth_item:
-                            corpse.inventory.append(cloth_item)
-                elif isinstance(cloth_data, Item):
-                    # Handle case if it somehow is already an Item object
+                if isinstance(cloth_data, Item):
                     corpse.inventory.append(cloth_data)
+                # Fallback for old mixed types, though init fixes this now
+                elif isinstance(cloth_data, dict):
+                    name = cloth_data.get('name')
+                    if name: corpse.inventory.append(Item.create_from_name(name))
+                elif isinstance(cloth_data, str):
+                     corpse.inventory.append(Item.create_from_name(cloth_data))
 
         # 5. Add to game world and remove NPC
         game.items_on_ground.append(corpse)
@@ -584,12 +649,9 @@ class NPC(Zombie):
         # Call parent's draw method (inherited from Zombie) for non-dead state
         super().draw(surface, offset_x, offset_y, opacity)
         
-        # --- [FIX] Draw Health Bar if Damaged ---
-        # NOTE: self.health and self.template['max_health'] must exist.
-        # Max health is usually set in template or __init__.
+        # Draw Health Bar if Damaged
         max_h = self.template.get('max_health', 100) if hasattr(self, 'template') else 100
         
-        # [FIX] Only show if health is less than max AND timer is active
         if self.health < max_h and self.health_bar_timer > 0:
             bar_width = TILE_SIZE
             bar_height = 4
@@ -605,7 +667,6 @@ class NPC(Zombie):
             health_ratio = max(0, self.health / max_h)
             current_width = int(bar_width * health_ratio)
             pygame.draw.rect(surface, (0, 255, 0), (bar_x, bar_y, current_width, bar_height))
-        # ----------------------------------------
 
         # Draw equipped weapon 
         weapon = self.equipped_weapon

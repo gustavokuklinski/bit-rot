@@ -28,8 +28,9 @@ class Item:
         self.x = 0
         self.y = 0
 
-        if self.item_type in ['backpack', 'container']:
-            self.inventory = []
+        # if self.item_type in ['backpack', 'container']:
+        self.inventory = []
+
         self.color = color
         self.min_damage = min_damage
         self.max_damage = max_damage
@@ -55,6 +56,40 @@ class Item:
         self.status_effect = status_effect
         self.effects = effects if effects is not None else []
         self.repair_list = repair_list if repair_list is not None else []
+
+
+    def to_dict(self):
+        """Serializes the item's dynamic state to a dictionary."""
+        data = {
+            'name': self.name,
+            'durability': self.durability,
+            'load': self.load,
+            'state': self.state,
+            # Recursively save inventory items (e.g. for backpacks)
+            'inventory': [i.to_dict() for i in self.inventory] if self.inventory else []
+        }
+        return data
+
+    @staticmethod
+    def from_dict(data):
+        """Creates an item from a dictionary, restoring its state."""
+        if not data or 'name' not in data: return None
+        
+        # 1. Create a fresh instance from the template to get static stats (damage, sprite, etc.)
+        item = Item.create_from_name(data['name'])
+        if not item: return None
+        
+        # 2. Overwrite dynamic properties with saved data
+        if 'durability' in data: item.durability = data['durability']
+        if 'load' in data: item.load = data['load']
+        if 'state' in data: item.state = data['state']
+        
+        # 3. Recursively restore inventory
+        if 'inventory' in data and data['inventory']:
+            item.inventory = [Item.from_dict(i_data) for i_data in data['inventory'] if i_data]
+            
+        return item
+
 
     @property
     def damage(self):

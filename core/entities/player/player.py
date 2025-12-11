@@ -57,10 +57,14 @@ class Player:
         
         # Load clothes from player_data
         chosen_clothes_dict = data.get('clothes', {})
-        for slot, item_name in chosen_clothes_dict.items():
-            if item_name and item_name != "None" and slot in self.clothes_slots:
-                # Create the item instance for the chosen clothing
-                self.clothes[slot] = Item.create_from_name(item_name)
+        for slot, item_data in chosen_clothes_dict.items():
+            # Check if item_data is valid and not "None"
+            if item_data and item_data != "None" and slot in self.clothes_slots:
+                # Check if it's a Dictionary (Saved Game) or String (New Game)
+                if isinstance(item_data, dict):
+                    self.clothes[slot] = Item.from_dict(item_data)
+                else:
+                    self.clothes[slot] = Item.create_from_name(item_data)
 
         # animation / action timers
         self.melee_swing_timer = 0

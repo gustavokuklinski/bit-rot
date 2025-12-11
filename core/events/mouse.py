@@ -1428,6 +1428,7 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['container_item'] = click_container_item
         game.context_menu['position'] = mouse_pos
 
+        options = ['']
         if click_source == 'npc':
             if clicked_item.is_following:
                 options.append('Unfollow')

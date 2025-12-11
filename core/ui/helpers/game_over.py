@@ -58,12 +58,9 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
     center_x = VIRTUAL_SCREEN_WIDTH // 2
     start_y = VIRTUAL_GAME_HEIGHT * 0.55
 
-    # Restart Button
-    restart_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
-    draw_btn(screen, restart_rect, "Restart", mouse_pos)
 
     # Back to Menu Button (Replaces Quit)
-    menu_rect = pygame.Rect(center_x - btn_width // 2, restart_rect.bottom + spacing, btn_width, btn_height)
+    menu_rect = pygame.Rect(center_x - btn_width // 2,  start_y, btn_width, btn_height)
     draw_btn(screen, menu_rect, "Back to Menu", mouse_pos)
 
     # --- 4. Footer ---
@@ -73,4 +70,4 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
     footer_rect = footer_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)
 
-    return restart_rect, menu_rect
+    return menu_rect

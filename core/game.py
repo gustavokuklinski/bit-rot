@@ -79,7 +79,7 @@ class Game:
         self.items_on_ground = []
 
         self.npcs = pygame.sprite.Group()
-        self.npc_spawn_timer = 0 # Timer to control spawn checks
+        self.npc_spawn_timer = 0 
 
         self.projectiles = []
         self.obstacles = []
@@ -156,7 +156,7 @@ class Game:
         self.roof_data = []
         self.roof_tiles = []
         
-        self.npc_spawn_points = [] # Ensure it's initialized
+        self.npc_spawn_points = [] 
 
         self.spawn_point_grid = {}
         self.SPAWN_GRID_SIZE = 512
@@ -186,8 +186,6 @@ class Game:
             'Player': [],
             'Zombie': []
         }
-        # Keep this property for backward compatibility if needed, 
-        # but we will primarily use message_logs['All']
         self.message_log = self.message_logs['All']
 
         self.chat_active = False
@@ -237,8 +235,8 @@ class Game:
                 "fitness": self.player.progression.fitness['level'],
                 "melee": self.player.progression.melee['level'],
                 "ranged": self.player.progression.ranged['level'],
-                "lucky": self.player.progression.lucky,
-                "speed": self.player.progression.speed
+                "lucky": self.player.progression.lucky['level'],
+                "speed": self.player.progression.speed['level']
             }
             
             progression_data = {
@@ -246,6 +244,8 @@ class Game:
                 "fitness": self.player.progression.fitness,
                 "melee": self.player.progression.melee,
                 "ranged": self.player.progression.ranged,
+                "lucky": self.player.progression.lucky,
+                "speed": self.player.progression.speed
             }
 
             player_data = {
@@ -270,23 +270,100 @@ class Game:
                 "traits": self.player.traits,
                 "visuals": self.player.visuals,
                 "sounds": self.player.sounds_data,
-                "inventory": [item.name for item in self.player.inventory if item],
-                "belt": [item.name if item else None for item in self.player.belt],
-                "clothes": {slot: (item.name if item else None) for slot, item in self.player.clothes.items()},
+                # [SAFE] Check for to_dict before calling
+                "inventory": [item.to_dict() if hasattr(item, 'to_dict') else item for item in self.player.inventory if item],
+                "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in self.player.belt],
+                "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item) if item else None) for slot, item in self.player.clothes.items()},
             }
             
             if self.player.backpack:
-                 player_data["backpack"] = {
-                     "name": self.player.backpack.name,
-                     "inventory": [i.name for i in self.player.backpack.inventory]
-                 }
+                 # Check if backpack is Item object
+                 if hasattr(self.player.backpack, 'to_dict'):
+                     player_data["backpack"] = self.player.backpack.to_dict()
+                 else:
+                     player_data["backpack"] = self.player.backpack
 
             with open(os.path.join(save_path, "player.json"), "w") as f:
                 json.dump(player_data, f, indent=4)
 
-            triggers_export = {}
-            for layer_idx, coords_set in self.layer_spawn_triggers.items():
-                triggers_export[str(layer_idx)] = list(coords_set)
+            # --- NPC Save [ROBUST FIX] ---
+            npc_data = []
+            for npc in self.npcs:
+                # Safely handle clothes and inventory that might be dicts instead of Items
+                safe_clothes = {}
+                for slot, item in npc.clothes.items():
+                    if item:
+                        if hasattr(item, 'to_dict'):
+                            safe_clothes[slot] = item.to_dict()
+                        else:
+                            safe_clothes[slot] = item # Save raw data/dict/string if not an Item object
+                    else:
+                        safe_clothes[slot] = None
+
+                safe_inventory = []
+                for i in npc.inventory:
+                    if hasattr(i, 'to_dict'):
+                        safe_inventory.append(i.to_dict())
+                    else:
+                        safe_inventory.append(i)
+
+                safe_weapon = None
+                if npc.equipped_weapon:
+                    if hasattr(npc.equipped_weapon, 'to_dict'):
+                        safe_weapon = npc.equipped_weapon.to_dict()
+                    else:
+                        safe_weapon = npc.equipped_weapon
+
+                npc_entry = {
+                    "x": npc.rect.x,
+                    "y": npc.rect.y,
+                    "name": npc.name,
+                    "health": npc.health,
+                    "is_following": npc.is_following,
+                    "is_friendly": npc.is_friendly,
+                    "inventory": safe_inventory,
+                    "equipped_weapon": safe_weapon,
+                    "clothes": safe_clothes
+                }
+                npc_data.append(npc_entry)
+            
+            with open(os.path.join(save_path, "npc.json"), "w") as f:
+                json.dump(npc_data, f, indent=4)
+
+            # --- Vehicle Save ---
+            vehicle_data = []
+            vehicles_to_save = getattr(self.map_manager, 'vehicles', [])
+            for v in vehicles_to_save:
+                 safe_inv = []
+                 if hasattr(v, 'inventory'):
+                     for i in v.inventory:
+                         if hasattr(i, 'to_dict'):
+                             safe_inv.append(i.to_dict())
+                         else:
+                             safe_inv.append(i)
+
+                 v_entry = {
+                     "x": v.rect.x,
+                     "y": v.rect.y,
+                     "name": v.name, 
+                     "health": getattr(v, 'health', 100),
+                     "inventory": safe_inv
+                 }
+                 vehicle_data.append(v_entry)
+
+            with open(os.path.join(save_path, "vehicles.json"), "w") as f:
+                 json.dump(vehicle_data, f, indent=4)
+
+            # --- World Data Save ---
+            # Safe checking for items on ground
+            safe_ground_items = []
+            for i in self.items_on_ground:
+                item_data = i.to_dict() if hasattr(i, 'to_dict') else i
+                safe_ground_items.append({
+                    "data": item_data, 
+                    "x": i.rect.x if hasattr(i, 'rect') else i.x, 
+                    "y": i.rect.y if hasattr(i, 'rect') else i.y
+                })
 
             world_data = {
                 "world_seed": getattr(self, 'world_seed', "40B1TR07"),
@@ -294,8 +371,8 @@ class Game:
                     "game_time_ms": self.world_time.game_time_ms,
                     "day_count": self.world_time.day_count
                 },
-                "layer_spawn_triggers": triggers_export,
-                "items": [{"name": i.name, "x": i.rect.x, "y": i.rect.y} for i in self.items_on_ground],
+                "layer_spawn_triggers": {str(k): list(v) for k, v in self.layer_spawn_triggers.items()},
+                "items": safe_ground_items,
                 "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
             }
             with open(os.path.join(save_path, "world.json"), "w") as f:
@@ -320,25 +397,38 @@ class Game:
             with open(os.path.join(save_path, "player.json"), "r") as f:
                 player_data = json.load(f)
 
+            # Initialize game state (populates self.all_map_layers via load_map)
             self.start_new_game(player_data, save_dir_name=save_folder_name)
-            
-            # self.current_save_folder_name = save_folder_name
             
             self.zombies_killed = player_data.get('zombies_killed', 0)
 
+            # Retrieve layouts from the initialized game instance
+            layer_idx = self.current_layer_index
+            base_layout = self.all_map_layers.get(layer_idx)
+            ground_layout = self.all_ground_layers.get(layer_idx)
+            spawn_layout = self.all_spawn_layers.get(layer_idx)
+            roof_layout = self.all_roof_layers.get(layer_idx)
+            light_layout = self.all_light_layers.get(layer_idx)
+
+            # Re-parse the map to get static objects
             obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
                 base_layout, ground_layout, spawn_layout, roof_layout, light_layout, self.tile_manager
             )
             
             self.obstacles = obstacles
+            self.containers = containers
+            self.renderable_tiles = renderable_tiles
             self.npc_spawn_points = npc_spawns
 
+            # Player Restoration
             if 'progression' in player_data:
                 prog_data = player_data['progression']
                 self.player.progression.strength = prog_data.get('strength', self.player.progression.strength)
                 self.player.progression.fitness = prog_data.get('fitness', self.player.progression.fitness)
                 self.player.progression.melee = prog_data.get('melee', self.player.progression.melee)
                 self.player.progression.ranged = prog_data.get('ranged', self.player.progression.ranged)
+                self.player.progression.lucky = prog_data.get('lucky', self.player.progression.lucky)
+                self.player.progression.speed = prog_data.get('speed', self.player.progression.speed)
             
             self.map_manager.map_folder = map_path
             self.map_manager.refresh_maps()
@@ -347,18 +437,44 @@ class Game:
             self.player.y = player_data['y']
             self.player.rect.topleft = (self.player.x, self.player.y)
             
-            self.player.inventory = [Item.create_from_name(name) for name in player_data['inventory'] if Item.create_from_name(name)]
-            self.player.belt = [Item.create_from_name(name) if name else None for name in player_data.get('belt', [None]*5)]
+            self.player.inventory = []
+            for item_data in player_data['inventory']:
+                if isinstance(item_data, dict):
+                    item = Item.from_dict(item_data)
+                else:
+                    item = Item.create_from_name(item_data)
+                if item: self.player.inventory.append(item)
+
+            self.player.belt = []
+            for item_data in player_data.get('belt', [None]*5):
+                if item_data:
+                    if isinstance(item_data, dict):
+                        self.player.belt.append(Item.from_dict(item_data))
+                    else:
+                        self.player.belt.append(Item.create_from_name(item_data))
+                else:
+                    self.player.belt.append(None)
             
-            for slot, item_name in player_data.get('clothes', {}).items():
-                self.player.clothes[slot] = Item.create_from_name(item_name) if item_name else None
+            self.player.clothes = {}
+            for slot, item_data in player_data.get('clothes', {}).items():
+                if item_data:
+                    if isinstance(item_data, dict):
+                        self.player.clothes[slot] = Item.from_dict(item_data)
+                    else:
+                        self.player.clothes[slot] = Item.create_from_name(item_data)
+                else:
+                    self.player.clothes[slot] = None
 
             if "backpack" in player_data:
                  bp_data = player_data["backpack"]
-                 self.player.backpack = Item.create_from_name(bp_data["name"])
-                 if self.player.backpack:
-                     self.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data["inventory"] if Item.create_from_name(name)]
+                 if isinstance(bp_data, dict):
+                     self.player.backpack = Item.from_dict(bp_data)
+                 else:
+                     self.player.backpack = Item.create_from_name(bp_data["name"])
+                     if self.player.backpack:
+                         self.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data.get("inventory", [])]
 
+            # Load World Data
             with open(os.path.join(save_path, "world.json"), "r") as f:
                 world_data = json.load(f)
             
@@ -377,7 +493,16 @@ class Game:
             
             self.items_on_ground = []
             for i_data in world_data.get('items', []):
-                item = Item.create_from_name(i_data['name'])
+                if 'data' in i_data:
+                    # New format with full state
+                    if isinstance(i_data['data'], dict):
+                        item = Item.from_dict(i_data['data'])
+                    else:
+                        item = Item.create_from_name(i_data['data'])
+                else:
+                    # Old format
+                    item = Item.create_from_name(i_data['name'])
+                    
                 if item:
                     item.x, item.y = i_data['x'], i_data['y']
                     item.rect.topleft = (item.x, item.y)
@@ -389,6 +514,82 @@ class Game:
                 if z:
                     z.health = z_data['health']
                     self.zombies.append(z)
+
+            # --- NPC Load ---
+            if os.path.exists(os.path.join(save_path, "npc.json")):
+                 with open(os.path.join(save_path, "npc.json"), "r") as f:
+                     npc_list = json.load(f)
+                 self.npcs.empty()
+                 for n_data in npc_list:
+                     npc = NPC(n_data['x'], n_data['y'], self)
+                     npc.name = n_data.get('name', 'Survivor')
+                     npc.health = n_data.get('health', 100)
+                     
+                     npc.is_following = n_data.get('is_following', False)
+                     npc.is_friendly = n_data.get('is_friendly', True)
+                     if npc.is_following:
+                         npc.state = 'following'
+                     
+                     npc.inventory = []
+                     for i_data in n_data.get('inventory', []):
+                         if isinstance(i_data, dict):
+                             item = Item.from_dict(i_data)
+                         else:
+                             item = Item.create_from_name(i_data)
+                         if item: npc.inventory.append(item)
+                     
+                     w_data = n_data.get('equipped_weapon')
+                     if w_data:
+                         if isinstance(w_data, dict):
+                             npc.equipped_weapon = Item.from_dict(w_data)
+                         else:
+                             npc.equipped_weapon = Item.create_from_name(w_data)
+                         
+                     clothes_data = n_data.get('clothes', {})
+                     npc.clothes = {}
+                     for slot, c_data in clothes_data.items():
+                         if c_data:
+                             if isinstance(c_data, dict):
+                                 npc.clothes[slot] = Item.from_dict(c_data)
+                             else:
+                                 npc.clothes[slot] = Item.create_from_name(c_data)
+                             
+                     self.npcs.add(npc)
+            
+            # --- Vehicle Load ---
+            if os.path.exists(os.path.join(save_path, "vehicles.json")):
+                 with open(os.path.join(save_path, "vehicles.json"), "r") as f:
+                     v_list = json.load(f)
+                 
+                 self.map_manager.vehicles = []
+                 for v_data in v_list:
+                     vehicle_def = self.tile_manager.definitions.get(v_data.get('name').lower().replace(" ", "_"), None)
+                     v_img = vehicle_def['image'] if vehicle_def else None 
+                     v_w, v_h = TILE_SIZE, TILE_SIZE
+                     
+                     vehicle = Vehicle(
+                        name=v_data.get('name'),
+                        x=v_data.get('x'),
+                        y=v_data.get('y'),
+                        width=v_w,
+                        height=v_h,
+                        image=v_img, 
+                        stats={}, 
+                        capacity=20
+                     )
+                     
+                     if hasattr(vehicle, 'inventory'):
+                         vehicle.inventory = []
+                         for i_data in v_data.get('inventory', []):
+                             if isinstance(i_data, dict):
+                                 item = Item.from_dict(i_data)
+                             else:
+                                 item = Item.create_from_name(i_data)
+                             if item: vehicle.inventory.append(item)
+                     
+                     self.map_manager.vehicles.append(vehicle)
+                     self.containers.append(vehicle)
+                     self.obstacles.append(vehicle.rect)
 
             target_map = player_data.get('map_filename')
             if target_map and target_map != self.map_manager.current_map_filename:
@@ -498,6 +699,42 @@ class Game:
 
     def start_new_game(self, player_data, save_dir_name=None):
 
+        self.is_giant_map = False
+        
+        # 1. Clear Map & Layer Data
+        self.all_map_layers = {}
+        self.all_ground_layers = {}
+        self.all_spawn_layers = {}
+        self.all_roof_layers = {}
+        self.all_light_layers = {}
+        self.layer_spawn_triggers = {}
+        self.triggered_spawns = set()
+        
+        # 2. Clear Entity & World State (CRITICAL: map_states holds old save data)
+        self.map_states = {}  
+        self.spawn_point_grid = {}
+        self.items_on_ground = []
+        self.zombies = []
+        self.obstacles = []
+        self.containers = []
+        self.renderable_tiles = []
+        self.map_lights = []
+        self.projectiles = []
+        self.corpses = []
+        self.splashes = []
+        self.blood_stains = []
+        self.npcs.empty()
+        
+        # 3. Clear Visual Caches
+        if hasattr(self, '_tile_cache_surface'):
+            self._tile_cache_surface = None
+        self.tiles_dirty = True
+        
+        # 4. Reset MapManager cache so it doesn't remember old file paths
+        if hasattr(self, 'map_manager'):
+            self.map_manager.map_files = {}
+
+
         if save_dir_name:
             # We are loading an existing game
             save_name = save_dir_name
@@ -549,9 +786,15 @@ class Game:
             chunk_settings=gen_chunk_settings    # Pass the chunk settings dictionary
         )
         
-        raw_seed = player_data.get('world_seed', "4-B1TR07")
-        if not raw_seed: 
-            raw_seed = "4-B1TR07"
+        if save_dir_name:
+             # Loading: Use seed from data or fallback to default
+             raw_seed = player_data.get('world_seed', "4-B1TR07")
+        else:
+             # New Game: Check if user provided a seed in player_data
+             # If empty or matches the default placeholder, randomize it
+             raw_seed = player_data.get('world_seed')
+             if not raw_seed or raw_seed == "4-B1TR07":
+                 raw_seed = str(uuid.uuid4())
         
         # Prepend '30' to force 3x3 grid size for the generator
         world_seed = raw_seed
@@ -594,8 +837,6 @@ class Game:
         self.load_map(self.map_manager.current_map_filename)
         load_giant_map(self)
         
-        # --- FIX: Explicitly populate npc_spawn_points from the loaded spawn layer ---
-        # This ensures 'NPC' markers in the CSV are respected even if set_active_layer didn't set them.
         self.npc_spawn_points = []
         if self.current_layer_index in self.all_spawn_layers:
             spawn_layer = self.all_spawn_layers[self.current_layer_index]
@@ -604,10 +845,6 @@ class Game:
                     if char.strip() == 'NPC':
                         self.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
         
-        # [FIX] REMOVED the massive spawn call that caused lag. 
-        # NPC spawning is now handled dynamically in run_playing.
-        # spawn_random_npcs(self, count=2000)
-
         if self.player_spawn:
             self.logger.info(f"Player spawn point found at {self.player_spawn}. Setting player position.")
             self.player.x, self.player.y = self.player_spawn
@@ -616,38 +853,6 @@ class Game:
             self.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
             self.player.x, self.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
             self.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
-
-
-        ## --- SPAWN VEHICLE FROM TILE DEFINITIONS ---
-        ## Spawns 2 tiles to the right of the player
-        #car_x = self.player.x + (TILE_SIZE * 2)
-        #car_y = self.player.y
-        ## Retrieve the definition using the char key defined in your XML (e.g., "car_jeep")
-        #vehicle_char_key = "car_jeep" 
-        #vehicle_def = self.tile_manager.definitions.get(vehicle_char_key)
-        #if vehicle_def:
-        #    # Create Vehicle using data from XML/TileManager
-        #    test_car = Vehicle(
-        #        name=vehicle_def.get('name', 'Vehicle'), 
-        #        x=car_x, 
-        #        y=car_y, 
-        #        width=TILE_SIZE, 
-        #        height=TILE_SIZE, 
-        #        image=vehicle_def['image'], 
-        #        stats=vehicle_def.get('car_stats', {}), 
-        #        capacity=vehicle_def.get('capacity', 20)
-        #    )
-        #    # Add to game entities
-        #    self.containers.append(test_car) 
-        #    self.obstacles.append(test_car.rect) 
-        #    # Add to vehicles list if you are maintaining one (optional but good for loops)
-        #    if not hasattr(self, 'vehicles'):
-        #        self.vehicles = []
-        #    self.vehicles.append(test_car)
-        #    self.logger.info(f"Spawned {vehicle_def.get('name')} from definitions.")
-        #else:
-        #    self.logger.info(f"Warning: Could not find tile definition for '{vehicle_char_key}'. Vehicle not spawned.")
-        ## -------------------------------
 
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
@@ -740,6 +945,7 @@ class Game:
                 mouse_pos = self._get_scaled_mouse_pos()
                 
                 if start_btn.collidepoint(mouse_pos):
+                    self.player_setup_state = {} # Reset Setup State so seed clears
                     self.game_state = 'PLAYER_SETUP'
                     # Ensure we start on the player tab if returning from elsewhere
                     self.player_setup_state['current_tab'] = 'Player' 
@@ -840,7 +1046,7 @@ class Game:
 
     def run_game_over(self):
         mouse_pos = self._get_scaled_mouse_pos()
-        restart_button, menu_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
+        menu_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -850,9 +1056,8 @@ class Game:
                 self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
-                if restart_button.collidepoint(mouse_pos):
-                    self.game_state = 'PLAYER_SETUP'
-                elif menu_button.collidepoint(mouse_pos):
+                
+                if menu_button.collidepoint(mouse_pos):
                     self.game_state = 'MENU'
                     return
         self._update_screen()

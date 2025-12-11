@@ -13,11 +13,10 @@ class PlayerProgression:
         self.melee = self._create_attribute(player_data, 'melee')
         self.ranged = self._create_attribute(player_data, 'ranged')
         self.maintenance = self._create_attribute(player_data, 'maintenance')
-        
         self.speed = self._create_attribute(player_data, 'speed')
 
         # Passive skills
-        self.lucky = player_data['attributes'].get('lucky', 0.0)
+        self.lucky = self._create_attribute(player_data, 'luck')
         # self.speed was here previously
 
     def get_total_attribute_bonus(self, player, attr_name):
