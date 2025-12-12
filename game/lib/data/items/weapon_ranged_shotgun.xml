@@ -12,6 +12,7 @@
     </properties>
     <sound>
         <shoot src="shotgun.ogg" />
+        <reload src="reload.ogg" />
         <noammo src="outofammo.ogg" />
     </sound>
     <spawn chance="1" />

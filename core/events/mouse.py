@@ -990,7 +990,7 @@ def handle_context_menu_click(game, mouse_pos):
                 if getattr(item, 'item_type', None) in ['utility', 'mobile']:
                     game.player.reload_utility_item(item, source, index, container_item)
                 else:
-                    game.player.reload_active_weapon()
+                    game.player.reload_active_weapon(game=game)
             elif option == 'Repair': game.player.repair_item(game, item)
             elif option == 'Get bullets': game.player.unload_weapon(game, item)
             elif option == 'Turn on' or option == 'Turn off': game.player.toggle_utility_item(item, source, index, container_item)
@@ -1630,7 +1630,7 @@ def handle_attack(game, mouse_pos):
             return
 
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
-            # ... (Ranged logic remains unchanged) ...
+            
             if weapon.load > 0 and weapon.durability > 0:
                 if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
                     game.sound_manager.play_sound(
@@ -1673,7 +1673,7 @@ def handle_attack(game, mouse_pos):
                     game.player.destroy_broken_weapon(weapon)
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
-                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items')
+                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
             else: print(f"**CLUNK!** {weapon.name} is broken.")
 

@@ -201,7 +201,7 @@ def handle_keyboard_events(game, event):
 
             if event.key == pygame.K_r:
                 if game.player:
-                    game.player.reload_active_weapon()
+                    game.player.reload_active_weapon(game=game)
 
             if event.key == pygame.K_q:
                 # 1. Check if a vehicle modal is open
@@ -231,7 +231,7 @@ def handle_keyboard_events(game, event):
                     item = game.player.belt[slot_index]
                     if item:
                         if item.item_type.startswith('consumable'):
-                            game.player.consume_item(item, 'belt', slot_index)
+                            game.player.consume_item(item, 'belt', slot_index,game=game)
                         elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
                             if game.player.active_weapon == item:
                                 game.player.active_weapon = None

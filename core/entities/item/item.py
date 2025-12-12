@@ -337,14 +337,20 @@ class Item:
             template['sounds'] = {}
             sound_node = root.find('sound')
             if sound_node is not None:
+                # Weapons sound
                 shoot_node = sound_node.find('shoot')
                 if shoot_node is not None:
                     template['sounds']['shoot'] = shoot_node.get('src')
+                
+                reload_node = sound_node.find('reload')
+                if reload_node is not None:
+                    template['sounds']['reload'] = reload_node.get('src')
                 
                 noammo_node = sound_node.find('noammo')
                 if noammo_node is not None:
                     template['sounds']['noammo'] = noammo_node.get('src')
                 
+                # Melee Weapon Sound
                 swing_node = sound_node.find('swing') # For melee
                 if swing_node is not None:
                     template['sounds']['swing'] = swing_node.get('src')

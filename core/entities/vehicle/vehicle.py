@@ -449,7 +449,7 @@ class Vehicle:
 
         # 3. Consumption
         if self.active:
-             fuel_drain = 0.01 
+             fuel_drain = 0.0001 
              if self.fuel > 0:
                  self.fuel -= fuel_drain
                  # Update Item
@@ -461,7 +461,7 @@ class Vehicle:
                  print("Engine died (No Fuel).")
 
         if self.lights == 'on':
-            drain_amount = 0.05
+            drain_amount = 0.005
             if self.battery > 0:
                 self.battery -= drain_amount
                 # Update Item (Durability OR Load)

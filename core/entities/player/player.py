@@ -713,7 +713,7 @@ class Player:
                 print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
-                    self.consume_item(water_item, source, index, container, is_auto_drink=True)
+                    self.consume_item(water_item, source, index, container, is_auto_drink=True, game=game)
                     print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
                     # self.consume_item(water_item, source, index, container)
         
@@ -886,7 +886,7 @@ class Player:
         return None, None, None, None
 
 
-    def reload_active_weapon(self, weapon=None):
+    def reload_active_weapon(self, weapon=None,game=None):
         """Reloads the specified weapon, or the active weapon if None."""
         if self.is_reloading:
             display_message_player("Already reloading.")
@@ -909,6 +909,14 @@ class Player:
         if not ammo_item:
             display_message_player(f"No {target_weapon.ammo_type} found.")
             return
+        
+        if game and hasattr(target_weapon, 'sounds') and 'reload' in target_weapon.sounds and target_weapon.sounds['reload']:
+            game.sound_manager.play_sound(
+                target_weapon.sounds['reload'],
+                subdir='items',
+                game=game,
+                source_pos=self.rect.center
+            )
             
         self.is_reloading = True
         self.reloading_weapon = target_weapon # Store the specific weapon
@@ -1077,6 +1085,14 @@ class Player:
             if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0:
                 options.append('Get bullets')
 
+
+        elif item.item_type in ['car_motor']:
+            if item.durability is not None and item.durability < item.max_durability:
+                kit, _, _, _ = self.find_repair_kit(item)
+                if kit:
+                    options.append('Repair')
+
+
         elif item.item_type == 'container':
             options.append('Open')
 
@@ -1187,7 +1203,7 @@ class Player:
         return False
 
 
-    def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False):
+    def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None):
         if self.action_timer > 0 and not is_auto_drink:
             display_message_player("Busy...")
             return False
@@ -1216,7 +1232,7 @@ class Player:
             consumed = False
 
             if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
-                self.reload_active_weapon()
+                self.reload_active_weapon(game=game)
                 return 
 
             if hasattr(item, 'effects') and item.effects:

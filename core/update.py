@@ -262,49 +262,65 @@ def update_game_state(game):
         for vehicle in game.map_manager.vehicles:
             vehicle.update()
             
-            # Only check for collisions if the engine is on (active)
             if vehicle.active:
-                # Calculate speed from velocity vector
                 speed = math.hypot(vehicle.velocity[0], vehicle.velocity[1])
                 
-                # Threshold: Only damage if moving fast enough (e.g., > 2.0 pixels/frame)
+                # Threshold: Only damage if moving fast enough
                 if speed > 2.0:
-                    # OPTIMIZATION: Check collisions against ONLY nearby zombies
                     nearby_zombies_for_vehicle = [z for z in get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
                     
-                    # Find zombies colliding with this vehicle among the nearby ones
                     hit_list = [z for z in nearby_zombies_for_vehicle if vehicle.rect.colliderect(z.rect)]
                     
                     for zombie in hit_list:
                         if zombie in roadkill_zombies: continue
 
+                        # [FIX START] - Add Cooldown to prevent "Machine Gun" damage
+                        # This prevents the code from running 60 times/sec on the same zombie,
+                        # which saves the motor health and makes impacts punchier.
+                        current_time = pygame.time.get_ticks()
+                        last_hit = getattr(zombie, 'last_vehicle_hit_time', 0)
+                        
+                        # 1000ms (1 second) cooldown before the car can damage this specific zombie again
+                        if current_time - last_hit < 1000:
+                            continue
+                        
+                        # Update the last hit time
+                        zombie.last_vehicle_hit_time = current_time
+                        # [FIX END]
+
                         # 1. Damage the Zombie (Roadkill)
-                        # Damage scales with speed (e.g., speed 5.0 * 5 = 25 damage)
-                        impact_damage = speed * 5.0 
+                        # [FIX] Increased multiplier from 5.0 to 20.0
+                        # Speed 2.5 -> 50 Damage (2 hits)
+                        # Speed 5.0 -> 100 Damage (Instant Kill)
+                        impact_damage = speed * 20.0 
                         
                         if zombie.take_damage(impact_damage, game):
-                            # Zombie died
                             roadkill_zombies.append(zombie)
+                            # Handle death (pass None as weapon)
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
                             game.zombies_killed += 1
                             display_message_player(f"Roadkill! {zombie.name} squashed for {impact_damage:.1f} damage.")
                         else:
-                             # Zombie survived but was hit
-                             # Optional: push zombie away to prevent getting stuck inside car
-                             pass
+                             # Optional: Add knockback to push zombie away if it survives
+                             # Push in direction of car movement
+                             if speed > 0:
+                                 push_x = (vehicle.velocity[0] / speed) * 10
+                                 push_y = (vehicle.velocity[1] / speed) * 10
+                                 zombie.knockback_velocity = [push_x, push_y]
+                                 zombie.knockback_timer = 200 # 200ms slide
 
                         # 2. Damage the Vehicle Motor
-                        # Fixed damage per hit (e.g., 2.0 points of durability/load)
-                        vehicle.damage_motor(2.0)
+                        # Now that this only happens once per second, we can apply a fair amount (e.g., 1.0 or 2.0)
+                        vehicle.damage_motor(0.1)
                         
-                        # Optional: Slow car down slightly on impact
+                        # Slow car down slightly on impact
                         vehicle.velocity[0] *= 0.8
                         vehicle.velocity[1] *= 0.8
 
         # Clean up roadkilled zombies
         if roadkill_zombies:
             game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]
-    
+
     # Final cleanup (merging projectile deaths and roadkills if needed, 
     # though the list comprehension above handles roadkills separately)
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
@@ -413,7 +429,8 @@ def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     # This prevents code duplication and ensures 'die()' fixes (like loot dup fix) apply everywhere.
     zombie.die(game)
 
-    game.player.process_kill(weapon, zombie)
+    if weapon:
+        game.player.process_kill(weapon, zombie)
 
     # Record killed zombie in map state
     current_map_filename = game.map_manager.current_map_filename

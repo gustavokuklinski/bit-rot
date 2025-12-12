@@ -332,27 +332,41 @@ class Game:
 
             # --- Vehicle Save ---
             vehicle_data = []
-            vehicles_to_save = getattr(self.map_manager, 'vehicles', [])
+            #vehicles_to_save = getattr(self.map_manager, 'vehicles', [])
+            vehicles_to_save = [obj for obj in self.containers if isinstance(obj, Vehicle)]
             for v in vehicles_to_save:
-                 safe_inv = []
-                 if hasattr(v, 'inventory'):
-                     for i in v.inventory:
-                         if hasattr(i, 'to_dict'):
-                             safe_inv.append(i.to_dict())
-                         else:
-                             safe_inv.append(i)
+                safe_inv = []
+                if hasattr(v, 'inventory'):
+                    for i in v.inventory:
+                        if hasattr(i, 'to_dict'):
+                            safe_inv.append(i.to_dict())
+                        else:
+                            safe_inv.append(i)
 
-                 v_entry = {
-                     "x": v.rect.x,
-                     "y": v.rect.y,
-                     "name": v.name, 
-                     "health": getattr(v, 'health', 100),
-                     "inventory": safe_inv
-                 }
-                 vehicle_data.append(v_entry)
+                safe_equipment = {}
+                if hasattr(v, 'equipment'):
+                    for slot, item in v.equipment.items():
+                        if item:
+                            if hasattr(item, 'to_dict'):
+                                safe_equipment[slot] = item.to_dict()
+                            else:
+                                # Fallback for non-Item objects or raw strings
+                                safe_equipment[slot] = item
+                        else:
+                            safe_equipment[slot] = None
+
+                v_entry = {
+                    "x": v.rect.x,
+                    "y": v.rect.y,
+                    "name": v.name, 
+                    "inventory": safe_inv,
+                    "equipment": safe_equipment, # [CHANGED] - Add equipment to save data
+                    "lights": getattr(v, 'lights', 'off') # [CHANGED] - Save light state
+                }
+                vehicle_data.append(v_entry)
 
             with open(os.path.join(save_path, "vehicles.json"), "w") as f:
-                 json.dump(vehicle_data, f, indent=4)
+                json.dump(vehicle_data, f, indent=4)
 
             # --- World Data Save ---
             # Safe checking for items on ground
@@ -366,7 +380,6 @@ class Game:
                 })
 
             world_data = {
-                "world_seed": getattr(self, 'world_seed', "40B1TR07"),
                 "time": {
                     "game_time_ms": self.world_time.game_time_ms,
                     "day_count": self.world_time.day_count
@@ -414,6 +427,16 @@ class Game:
             obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
                 base_layout, ground_layout, spawn_layout, roof_layout, light_layout, self.tile_manager
             )
+
+            map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
+            for v in map_vehicles:
+                # Remove from the containers list
+                if v in containers:
+                    containers.remove(v)
+                # Remove its collision box from obstacles
+                # We check by value (v.rect) to ensure we catch the specific rect added by the parser
+                if v.rect in obstacles:
+                    obstacles.remove(v.rect)
             
             self.obstacles = obstacles
             self.containers = containers
@@ -558,16 +581,18 @@ class Game:
             
             # --- Vehicle Load ---
             if os.path.exists(os.path.join(save_path, "vehicles.json")):
-                 with open(os.path.join(save_path, "vehicles.json"), "r") as f:
-                     v_list = json.load(f)
+                with open(os.path.join(save_path, "vehicles.json"), "r") as f:
+                    v_list = json.load(f)
                  
-                 self.map_manager.vehicles = []
-                 for v_data in v_list:
-                     vehicle_def = self.tile_manager.definitions.get(v_data.get('name').lower().replace(" ", "_"), None)
-                     v_img = vehicle_def['image'] if vehicle_def else None 
-                     v_w, v_h = TILE_SIZE, TILE_SIZE
+                # Ensure map_manager has the list (though we use containers mostly)
+                self.map_manager.vehicles = [] 
+                
+                for v_data in v_list:
+                    vehicle_def = self.tile_manager.definitions.get(v_data.get('name').lower().replace(" ", "_"), None)
+                    v_img = vehicle_def['image'] if vehicle_def else None 
+                    v_w, v_h = TILE_SIZE, TILE_SIZE
                      
-                     vehicle = Vehicle(
+                    vehicle = Vehicle(
                         name=v_data.get('name'),
                         x=v_data.get('x'),
                         y=v_data.get('y'),
@@ -576,20 +601,41 @@ class Game:
                         image=v_img, 
                         stats={}, 
                         capacity=20
-                     )
+                    )
+                    
+                    if hasattr(vehicle, 'inventory'):
+                        vehicle.inventory = []
+                        for i_data in v_data.get('inventory', []):
+                            if isinstance(i_data, dict):
+                                item = Item.from_dict(i_data)
+                            else:
+                                item = Item.create_from_name(i_data)
+                            if item: vehicle.inventory.append(item)
+                    
+                    # [FIX] Restore Equipment
+                    if 'equipment' in v_data:
+                        loaded_equipment = v_data['equipment']
+                        for slot, item_data in loaded_equipment.items():
+                            if item_data:
+                                if isinstance(item_data, dict):
+                                    item = Item.from_dict(item_data)
+                                else:
+                                    item = Item.create_from_name(item_data)
+                                 
+                                if item:
+                                    vehicle.equipment[slot] = item
+                            else:
+                                vehicle.equipment[slot] = None
+                        
+                        # Recalculate fuel/battery based on the loaded items
+                        vehicle.update_stats_from_equipment()
                      
-                     if hasattr(vehicle, 'inventory'):
-                         vehicle.inventory = []
-                         for i_data in v_data.get('inventory', []):
-                             if isinstance(i_data, dict):
-                                 item = Item.from_dict(i_data)
-                             else:
-                                 item = Item.create_from_name(i_data)
-                             if item: vehicle.inventory.append(item)
-                     
-                     self.map_manager.vehicles.append(vehicle)
-                     self.containers.append(vehicle)
-                     self.obstacles.append(vehicle.rect)
+                    if 'lights' in v_data:
+                        vehicle.lights = v_data['lights']
+
+                    self.map_manager.vehicles.append(vehicle)
+                    self.containers.append(vehicle)
+                    self.obstacles.append(vehicle.rect)
 
             target_map = player_data.get('map_filename')
             if target_map and target_map != self.map_manager.current_map_filename:

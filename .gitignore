@@ -1,6 +1,7 @@
 .env
 .venv
 .bitrotenv
+.gemini
 __pycache__
 build
 game/save/game
