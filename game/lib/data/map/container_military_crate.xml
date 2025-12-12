@@ -25,5 +25,7 @@
         <item item="Infection Pills" chance="0.2" />
         <item item="Weapon Repair Kit" chance="0.3" />
         <item item="Car Key Jeep" chance="0.1" />
+        <item item="38 Revolver" chance="0.1" />
+        <item item="38 Ammo" chance="0.1" />
     </loot>
 </map>

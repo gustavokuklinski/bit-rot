@@ -1055,20 +1055,20 @@ def handle_context_menu_click(game, mouse_pos):
                     game.modals.append(new_container_modal)
                  clicked_on_menu = True
 
-            elif option == 'Open':
-                if getattr(item, 'item_type', '') != 'vehicle':
-                     if getattr(item, 'inventory', None) is not None:
-                        modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                        if not modal_exists:
-                            new_container_modal = {
-                                'id': uuid.uuid4(), 'type': 'container', 'item': item,
-                                'position': game.last_modal_positions['container'],
-                                'is_dragging': False, 'drag_offset': (0, 0),
-                                'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
-                                'minimized': False
-                            }
-                            game.modals.append(new_container_modal)
-                clicked_on_menu = True
+            #elif option == 'Open':
+            #    if getattr(item, 'item_type', '') != 'vehicle':
+            #         if getattr(item, 'inventory', None) is not None:
+            #            modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+            #            if not modal_exists:
+            #                new_container_modal = {
+            #                    'id': uuid.uuid4(), 'type': 'container', 'item': item,
+            #                    'position': game.last_modal_positions['container'],
+            #                    'is_dragging': False, 'drag_offset': (0, 0),
+            #                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+            #                    'minimized': False
+            #                }
+            #                game.modals.append(new_container_modal)
+            #    clicked_on_menu = True
             
             if option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
@@ -1579,8 +1579,6 @@ def handle_right_click(game, mouse_pos):
             if 'Drop all' in options: options.remove('Drop all') 
             if not isinstance(clicked_item, Corpse):
                 if 'Grab' not in options: options.insert(0, 'Grab')
-            if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
-                if 'Place on Backpack' not in options: options.append('Place on Backpack')
 
         game.context_menu['options'] = options
         game.context_menu['rects'] = []

@@ -1,0 +1,18 @@
+<item name="38 Revolver" type="weapon_ranged">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="5" max="6" />
+        <capacity value="6" />
+        <ammo type="38 Ammo" />
+        <damage min="25" max="55" />
+        <firing pellets="1" spread_angle="0" />
+        <skill type="range" />
+        <sprite file="38_revolver.png" />
+    </properties>
+    <sound>
+        <shoot src="38_revolver.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>

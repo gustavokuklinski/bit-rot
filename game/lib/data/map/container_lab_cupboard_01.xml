@@ -16,5 +16,7 @@
         <item item="Cigarette" chance="0.1" />
         <item item="Sparkling Water" chance="0.1" />
         <item item="Ducktype" chance="0.2" />
+        <item item="38 Revolver" chance="0.1" />
+        <item item="38 Ammo" chance="0.1" />
     </loot>
 </map>

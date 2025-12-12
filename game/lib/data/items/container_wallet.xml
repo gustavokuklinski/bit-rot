@@ -6,6 +6,9 @@
     <loot>
         <item name="Safety Guide" chance="0.3" />
         <item name="Mobile off" chance="0.1" />
+        <item name="Money 5" chance="0.1" />
+        <item name="Money 20" chance="0.1" />
+        <item name="Money 50" chance="0.1" />
         <item name="Money 100" chance="0.1" />
     </loot>
     <spawn chance="1" />

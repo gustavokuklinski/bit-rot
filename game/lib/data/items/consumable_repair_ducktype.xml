@@ -8,6 +8,7 @@
     </properties>
     <repair>
         <item name="Pistol 9mm"  />
+        <item name="38 Revolver"  />
         <item name="Shotgun"  />
         <item name="Axe"  />
         <item name="Knife"  />

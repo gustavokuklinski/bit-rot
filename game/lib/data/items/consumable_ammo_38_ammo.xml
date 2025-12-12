@@ -1,0 +1,9 @@
+<item name="38 Ammo" type="consumable_ammo">
+    <properties>
+        <status value="ammo" />
+        <load min="10" max="50" />
+        <capacity value="150" />
+        <sprite file="38_ammo.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

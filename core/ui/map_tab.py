@@ -1,6 +1,7 @@
 # core/ui/map_tab.py
 
 import pygame
+import math # Import math for ceil/floor operations
 from core.data.config import *
 
 # Define colors for the minimap
@@ -16,27 +17,40 @@ MINIMAP_PLAYER_COLOR = (0, 255, 255) # Bright cyan for player
 
 def draw_map_tab(surface, game, modal, assets):
     # --- 1. Get/Initialize Map State ---
-    # We store map-specific state in the modal dict
     if 'map_zoom' not in modal:
-        modal['map_zoom'] = 6 # Size of each tile in pixels (default zoom)
+        modal['map_zoom'] = 6
     if 'map_offset' not in modal:
-        modal['map_offset'] = (0, 0) # Camera offset (for future panning)
+        modal['map_offset'] = (0, 0)
+
+    # --- [OPTIMIZATION 1] Cache Valid Construction Chars ---
+    # We build a set of characters that are obstacles but NOT nature (F/W)
+    # This prevents expensive dictionary lookups inside the loop
+    if 'construction_cache' not in modal:
+        valid_chars = set()
+        for char, defn in game.tile_manager.definitions.items():
+            # Check if it is an obstacle
+            if defn.get('is_obstacle', False):
+                # Check if it is NOT nature (Forest/Water)
+                base_char = char[0].upper()
+                if base_char not in ['F', 'W']:
+                    valid_chars.add(char)
+        modal['construction_cache'] = valid_chars
+    
+    valid_construction_chars = modal['construction_cache']
 
     map_zoom = modal['map_zoom']
     
     # --- 2. Define Draw Areas ---
-    content_y_start = modal['rect'].y + 80 # Below header and tabs
+    content_y_start = modal['rect'].y + 80
     content_x_start = modal['rect'].x + 10
-    content_height = modal['rect'].height - 90 # 80 for header/tab, 10 for bottom padding
+    content_height = modal['rect'].height - 90
     content_width = modal['rect'].width - 20
     
-    # This is the main area where the map will be drawn
-    # Leave 40px at the bottom for buttons
     map_area_rect = pygame.Rect(content_x_start, content_y_start, content_width, content_height - 40) 
-    modal['map_area_rect'] = map_area_rect # Store for scroll detection in input.py
+    modal['map_area_rect'] = map_area_rect
 
     # --- 3. Draw Map Background ---
-    pygame.draw.rect(surface, (20, 20, 20), map_area_rect) # Dark background
+    pygame.draw.rect(surface, (20, 20, 20), map_area_rect)
 
     # --- 4. Get Map Data and Player Position ---
     map_data = getattr(game, 'map_data', [])
@@ -44,7 +58,7 @@ def draw_map_tab(surface, game, modal, assets):
         text_surf = font.render("Map data not available.", True, GRAY)
         text_rect = text_surf.get_rect(center=map_area_rect.center)
         surface.blit(text_surf, text_rect)
-        return # Can't draw anything else
+        return
 
     player_grid_x = game.player.rect.centerx // TILE_SIZE
     player_grid_y = game.player.rect.centery // TILE_SIZE
@@ -53,12 +67,10 @@ def draw_map_tab(surface, game, modal, assets):
     map_width = len(map_data[0]) if map_height > 0 else 0
 
     # --- 5. Draw the Map (Clipped) ---
-    # Create a subsurface for clipping
     try:
         map_surface = surface.subsurface(map_area_rect)
     except ValueError:
-        # This can happen if the modal is resized to be tiny
-        return # Can't draw
+        return
 
     # Center the view on the player
     offset_x = (map_area_rect.width / 2) - (player_grid_x * map_zoom)
@@ -66,23 +78,36 @@ def draw_map_tab(surface, game, modal, assets):
     
     modal['map_offset'] = (offset_x, offset_y)
     
-    for y in range(map_height):
-        for x in range(map_width):
-            tile_char = map_data[y][x]
-            
-            # Simple char matching for color
-            base_char = tile_char[0].upper() if tile_char else ' '
-            color = MINIMAP_COLORS.get(base_char, MINIMAP_COLORS['default'])
+    # --- [OPTIMIZATION 2] Viewport Calculation (Frustum Culling) ---
+    # Only iterate over tiles that are actually visible on screen.
+    # We solve for x:  0 <= offset_x + (x * zoom) <= view_width
+    
+    start_col = max(0, int(-offset_x // map_zoom))
+    end_col = min(map_width, int((map_area_rect.width - offset_x) // map_zoom) + 1)
+    
+    start_row = max(0, int(-offset_y // map_zoom))
+    end_row = min(map_height, int((map_area_rect.height - offset_y) // map_zoom) + 1)
 
-            # Calculate draw position *within the subsurface*
+    # Iterate only the visible range
+    for y in range(start_row, end_row):
+        for x in range(start_col, end_col):
+            tile_char = map_data[y][x]
+            if not tile_char: continue
+            
+            # Fast check using the cached set
+            if tile_char not in valid_construction_chars:
+                continue
+
+            # Calculate draw position
             draw_x = offset_x + (x * map_zoom)
             draw_y = offset_y + (y * map_zoom)
 
-            # Cull tiles outside the viewport
-            if draw_x + map_zoom < 0 or draw_x > map_area_rect.width or \
-               draw_y + map_zoom < 0 or draw_y > map_area_rect.height:
-                continue
-                
+            # (No need for extra culling check here, the loop range handles it)
+            
+            # Determine color
+            base_char = tile_char[0].upper()
+            color = MINIMAP_COLORS.get(base_char, MINIMAP_COLORS['default'])
+
             tile_rect = pygame.Rect(draw_x, draw_y, map_zoom, map_zoom)
             pygame.draw.rect(map_surface, color, tile_rect)
 
@@ -91,7 +116,6 @@ def draw_map_tab(surface, game, modal, assets):
     player_draw_y = offset_y + (player_grid_y * map_zoom)
     player_rect = pygame.Rect(player_draw_x, player_draw_y, map_zoom, map_zoom)
     
-    # Draw a filled rect if zoom is tiny, otherwise a border
     border_width = 0 if map_zoom < 4 else (2 if map_zoom > 6 else 1)
     pygame.draw.rect(map_surface, MINIMAP_PLAYER_COLOR, player_rect, border_width)
 
@@ -114,7 +138,7 @@ def draw_map_tab(surface, game, modal, assets):
     minus_rect = minus_surf.get_rect(center=zoom_out_rect.center)
     surface.blit(minus_surf, minus_rect)
     
-    # --- 8. Store button rects in the modal for handle_mouse_down ---
+    # --- 8. Store button rects ---
     modal['map_zoom_in_rect'] = zoom_in_rect
     modal['map_zoom_out_rect'] = zoom_out_rect
 
