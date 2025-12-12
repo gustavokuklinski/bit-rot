@@ -213,6 +213,7 @@ def handle_mouse_down(game, event, mouse_pos):
         handle_right_click(game, mouse_pos)
         return
 
+
 def handle_mouse_up(game, event, mouse_pos):
     for modal in reversed(game.modals):
         modal['is_dragging'] = False
@@ -227,7 +228,11 @@ def handle_mouse_up(game, event, mouse_pos):
             if game.dragged_item:
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
-                is_external_source = type_orig in ['container', 'nearby', 'container_stack_split', 'nearby_stack_split']
+                
+                # [CHANGED] Logic: External only if it's NOT the player's own backpack
+                is_raw_external = type_orig in ['container', 'nearby', 'container_stack_split', 'nearby_stack_split']
+                is_source_backpack = (container_obj == game.player.backpack and container_obj is not None)
+                is_external_source = is_raw_external and not is_source_backpack
 
                 # --- Vehicle Equipment Logic ---
                 for modal in reversed(game.modals):
@@ -397,7 +402,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                             can_loot = True; is_stack = True
                                         elif (game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory') and 
                                               game.dragged_item is not game.player.invcontainer):
-                                              # Logic for dropping INTO the equipped container is handled below (Main Inventory Grid usually doesn't overlap perfectly, but let's be safe)
                                               pass
 
                                         if can_loot:
@@ -414,7 +418,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
                                         else:
-                                            # If logic is complex (swapping or putting inside), skip timed loot or fail
                                             if not (game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory')):
                                                  print("Slot occupied.")
                                                  dropped_successfully = False
@@ -511,6 +514,41 @@ def handle_mouse_up(game, event, mouse_pos):
                                         target_index = i
                                         break
                                 
+                                # [CHANGED] Looting Logic for Bag Tab (Nearby -> Backpack)
+                                if is_external_source:
+                                    can_loot = False
+                                    is_stack = False
+                                    if target_index != -1 and target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            can_loot = True; is_stack = True
+                                        else:
+                                            print("Cannot swap while looting.")
+                                            dropped_successfully = False
+                                            break
+                                    elif len(container.inventory) < (container.capacity or 0):
+                                        can_loot = True
+                                    
+                                    if can_loot:
+                                        item_ref = game.dragged_item
+                                        def do_bag_loot():
+                                            if is_stack:
+                                                item_in_dst = container.inventory[target_index]
+                                                avail = item_in_dst.capacity - item_in_dst.load
+                                                trans = min(avail, item_ref.load)
+                                                item_in_dst.load += trans
+                                                item_ref.load -= trans
+                                            else:
+                                                if target_index != -1 and target_index <= len(container.inventory):
+                                                    container.inventory.insert(target_index, item_ref)
+                                                else:
+                                                    container.inventory.append(item_ref)
+                                        
+                                        game.player.start_action("Looting", 1.0, do_bag_loot, xp_reward=2)
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+
+                                # [EXISTING] Instant Drop Logic (Inventory -> Backpack is now instant because is_external_source is False)
                                 if target_index != -1:
                                     if target_index < len(container.inventory):
                                         item_in_slot = container.inventory[target_index]
@@ -601,6 +639,67 @@ def handle_mouse_up(game, event, mouse_pos):
                                 target_index = i
                                 break
                         
+                        # [CHANGED] Generalized Loader Logic for Container/Nearby
+                        # Determine if we should show a loader and which one (Looting vs Storing)
+                        is_target_backpack = (container == game.player.backpack)
+                        use_loader = False
+                        action_name = "Storing" # Default
+                        
+                        if is_target_backpack:
+                            # Target is Backpack (Internal)
+                            # Show loader only if Source is External (Nearby -> Backpack)
+                            if is_external_source:
+                                use_loader = True
+                                action_name = "Looting"
+                        else:
+                            # Target is External (Nearby/Chest)
+                            # Show loader if Source is Internal (Inv/Backpack -> Nearby)
+                            if not is_external_source:
+                                use_loader = True
+                                action_name = "Storing"
+
+                        if use_loader:
+                            can_action = False
+                            is_stack = False
+
+                            if target_index != -1 and target_index < len(container.inventory):
+                                item_in_slot = container.inventory[target_index]
+                                if item_in_slot.can_stack_with(game.dragged_item):
+                                    can_action = True; is_stack = True
+                                else:
+                                    print(f"Cannot swap items while {action_name.lower()}.")
+                                    dropped_successfully = False
+                                    break
+                            elif len(container.inventory) < (container.capacity or 0):
+                                can_action = True
+                            else:
+                                print(f"{container.name} is full.")
+                                dropped_successfully = False
+                                break
+
+                            if can_action:
+                                item_ref = game.dragged_item
+                                def do_timed_action():
+                                    if is_stack and target_index < len(container.inventory):
+                                        item_in_dst = container.inventory[target_index]
+                                        avail = item_in_dst.capacity - item_in_dst.load
+                                        trans = min(avail, item_ref.load)
+                                        item_in_dst.load += trans
+                                        item_ref.load -= trans
+                                        if item_ref.load > 0:
+                                            # Return remainder (simplified)
+                                            pass
+                                    else:
+                                        if target_index != -1 and target_index <= len(container.inventory):
+                                            container.inventory.insert(target_index, item_ref)
+                                        else:
+                                            container.inventory.append(item_ref)
+                                
+                                game.player.start_action(action_name, 1.0, do_timed_action, xp_reward=2)
+                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                return
+
+                        # [EXISTING] Instant Drop Logic (Fallback)
                         if target_index != -1 and target_index < len(container.inventory):
                             item_in_slot = container.inventory[target_index]
                             if item_in_slot.can_stack_with(game.dragged_item):
@@ -687,6 +786,7 @@ def handle_mouse_up(game, event, mouse_pos):
         game.dragged_item = None
         game.drag_origin = None
         game.drag_candidate = None
+
 
 def find_item_at_pos(game, mouse_pos):
     for i, item in enumerate(game.player.belt):
