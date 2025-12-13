@@ -150,20 +150,42 @@ class Player:
             return None
 
     def enter_vehicle(self, vehicle, game):
+        seat_idx = -1
+        for i, occupant in enumerate(vehicle.seats):
+            if occupant is None:
+                seat_idx = i
+                break
+        
+        if seat_idx == -1:
+            display_message_player("Vehicle is full! No free seats.")
+            return
+
         # TODO: Check for Key here in future
         self.vehicle = vehicle
         self.x = vehicle.x 
         self.y = vehicle.y
         self.rect.topleft = (self.x, self.y)
         
+        # [NEW] Occupy the seat
+        vehicle.seats[seat_idx] = self
+        self.vehicle_seat_index = seat_idx
+
         # Remove the car from obstacles so we can move "inside" it
         if vehicle.rect in game.obstacles:
             game.obstacles.remove(vehicle.rect)
-        display_message_player(f"Entered {vehicle.name}")
+        
+        seat_name = "Driver's Seat" if seat_idx == 0 else f"Seat {seat_idx+1}"
+        display_message_player(f"Entered {vehicle.name} ({seat_name})")
     
-    # [FIX] Updated exit_vehicle to modify game obstacles
     def exit_vehicle(self, game):
         if self.vehicle:
+            # [NEW] Vacate the seat
+            if hasattr(self, 'vehicle_seat_index') and self.vehicle_seat_index is not None:
+                if 0 <= self.vehicle_seat_index < len(self.vehicle.seats):
+                    # Ensure we are the one removing ourselves (safety check)
+                    if self.vehicle.seats[self.vehicle_seat_index] == self:
+                        self.vehicle.seats[self.vehicle_seat_index] = None
+
             # Add car back to obstacles
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
@@ -172,6 +194,8 @@ class Player:
             self.x += TILE_SIZE 
             self.rect.topleft = (self.x, self.y)
             self.vehicle = None
+            self.vehicle_seat_index = None
+            
             display_message_player("Exited vehicle")
 
     def update_aim(self, is_moving):

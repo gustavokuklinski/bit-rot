@@ -5,7 +5,7 @@ from core.data.config import TILE_SIZE
 from core.entities.item.item import Item
 
 class Vehicle:
-    def __init__(self, name, x, y, width, height, image, stats, capacity=20):
+    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None):
 
         self.item_type = 'vehicle'
         self.name = name
@@ -18,8 +18,8 @@ class Vehicle:
         self.color = (0, 0, 255)
         
         self.capacity = capacity
-        self.inventory = []
-        
+
+        self.inventory = items if items is not None else []
        
         self.max_speed = float(stats.get('max_speed', 10))
         
@@ -56,6 +56,11 @@ class Vehicle:
         self.friction = 0.4
 
         self.active = False 
+
+        # Initialize Seats from XML stats (default to 4 if missing)
+        self.seat_count = int(stats.get('seats', 4))
+        # Seats can hold None, an Item, or a Player instance
+        self.seats = [None] * self.seat_count
 
         # [NEW] Randomly populate slots with items
         self._spawn_random_equipment()
@@ -288,7 +293,12 @@ class Vehicle:
                 print("Cannot turn on lights: No Battery Power.")
 
     def toggle_engine(self):
-        # ... (Rest of the method remains the same)
+        
+        driver_seat = self.seats[0]
+        if not driver_seat or type(driver_seat).__name__ != 'Player':
+            print("Cannot start engine: No driver in the driver's seat.")
+            return
+
         if self.active:
             self.active = False
             self.car_state = "Off"

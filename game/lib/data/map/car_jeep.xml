@@ -7,12 +7,13 @@
         <motor value="1.0" />
         <battery value="1.0" />
         <lights min="5" max="100" radius="8" />
+        <seats value="4" /> 
     </car>
     <loot>
-        <item item="Car Key Jeep" chance="0.3" />
-        <item item="Car Gas" chance="0.3" />
-        <item item="Powerbank" chance="0.3" />
-        <item item="Motor Repair Kit" chance="0.3" />
+        <item item="Car Key Jeep" chance="0.1" />
+        <item item="Car Fuel" chance="0.1" />
+        <item item="Powerbank" chance="0.1" />
+        <item item="Motor Repair Kit" chance="0.1" />
     </loot>
     <visuals>
         <sprite file="car_jeep.png" />

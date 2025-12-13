@@ -2,7 +2,7 @@ import pygame
 from core.data.config import *
 
 class BaseModal:
-    def __init__(self, surface, modal, assets, title):
+    def __init__(self, surface, modal, assets, title, w=None, h=None):
         self.surface = surface
         self.modal = modal
         self.assets = assets
@@ -22,7 +22,7 @@ class BaseModal:
         elif self.modal['type'] == 'status':
             return STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT
         elif self.modal['type'] == 'container':
-            return 300, 300
+            return CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT
         elif self.modal['type'] == 'nearby':
             return NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT
         elif self.modal['type'] == 'messages':
@@ -35,7 +35,7 @@ class BaseModal:
             return MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT
         elif self.modal['type'] == 'vehicle':
             return VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT
-        return 300, 300
+        # return 300, 300
 
     def draw_header(self):
         header_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h)

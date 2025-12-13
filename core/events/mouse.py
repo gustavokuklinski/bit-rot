@@ -76,7 +76,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         elif topmost_modal['type'] == 'gear': full_h = GEAR_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'status': full_h = STATUS_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'messages': full_h = MESSAGES_MODAL_HEIGHT
-                        else: full_h = 300
+                        else: full_h = CONTAINER_MODAL_WIDTH
                         topmost_modal['rect'].height = header_height if is_minimized else full_h
                         return
                     elif button['type'] in ['map_zoom_in', 'map_zoom_out']:
@@ -145,7 +145,7 @@ def handle_mouse_down(game, event, mouse_pos):
                                 'item': game.player.backpack,
                                 'position': game.last_modal_positions['container'],
                                 'is_dragging': False, 'drag_offset': (0, 0),
-                                'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                                'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
                                 'minimized': False
                             }
                             game.modals.append(new_container_modal)
@@ -1031,7 +1031,7 @@ def handle_context_menu_click(game, mouse_pos):
                     'id': uuid.uuid4(),
                     'type': 'vehicle', 'vehicle': item,
                     'position': (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200),
-                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300), 
+                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT), 
                     'minimized': False,
                     'is_dragging': False, 
                     'drag_offset': (0, 0), 
@@ -1049,7 +1049,7 @@ def handle_context_menu_click(game, mouse_pos):
                         'id': uuid.uuid4(), 'type': 'container', 'item': item,
                         'position': game.last_modal_positions['container'],
                         'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
                         'minimized': False
                     }
                     game.modals.append(new_container_modal)
@@ -1064,7 +1064,7 @@ def handle_context_menu_click(game, mouse_pos):
             #                    'id': uuid.uuid4(), 'type': 'container', 'item': item,
             #                    'position': game.last_modal_positions['container'],
             #                    'is_dragging': False, 'drag_offset': (0, 0),
-            #                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+            #                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
             #                    'minimized': False
             #                }
             #                game.modals.append(new_container_modal)
@@ -1263,7 +1263,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'id': uuid.uuid4(), 'type': 'container', 'item': item,
                             'position': game.last_modal_positions['container'],
                             'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], 300, 300),
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1],CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
                             'minimized': False
                         }
                         game.modals.append(new_container_modal)

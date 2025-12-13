@@ -69,7 +69,18 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         # Create Vehicle Entity
                         stats = tile_def.get('car_stats', {})
                         cap = tile_def.get('capacity', 0)
-                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap)
+                        
+                        # Generate Loot
+                        items = []
+                        if 'loot' in tile_def:
+                            for loot_item in tile_def['loot']:
+                                if random.random() < loot_item['chance']:
+                                    new_item = Item.create_from_name(loot_item['item'])
+                                    if new_item:
+                                        items.append(new_item)
+
+                        # Pass items to Vehicle constructor
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, items=items)
                         
                         # Use the rect we created so it's the SAME object in both lists
                         vehicle.rect = rect 
@@ -78,8 +89,6 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                         if tile_def['is_obstacle']:
                             obstacles.append(rect) # Add to physics
-                        
-                        # Do NOT add to renderable_tiles (entity draws itself)
                     
                     else:
                         # Standard Tile
@@ -124,7 +133,19 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     if tile_def['type'] == 'maptile_car':
                         stats = tile_def.get('car_stats', {})
                         cap = tile_def.get('capacity', 0)
-                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap)
+
+                        # Generate Loot
+                        items = []
+                        if 'loot' in tile_def:
+                            for loot_item in tile_def['loot']:
+                                if random.random() < loot_item['chance']:
+                                    new_item = Item.create_from_name(loot_item['item'])
+                                    if new_item:
+                                        items.append(new_item)
+
+                        # Pass items to Vehicle constructor
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, items=items)
+
                         vehicle.rect = rect 
                         containers.append(vehicle)
                         if tile_def['is_obstacle']:

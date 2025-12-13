@@ -56,7 +56,8 @@ class TileManager:
                                             'key': car_node.find('key').get('value'),
                                             'fuel': car_node.find('fuel').get('value', '0'), # Changed from 'gas'
                                             'motor': car_node.find('motor').get('value', '1'),
-                                            'battery': car_node.find('battery').get('value', '1')
+                                            'battery': car_node.find('battery').get('value', '1'),
+                                            'seats': car_node.find('seats').get('value', '4') if car_node.find('seats') is not None else '4'
                                         }
                                         
                                         # Parse Lights specifically to get radius
@@ -98,4 +99,3 @@ class TileManager:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
                 except ET.ParseError as e:
                     print(f"Warning: Could not parse XML file {filename}: {e}")
-    
