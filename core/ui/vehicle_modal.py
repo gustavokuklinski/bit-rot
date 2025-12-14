@@ -35,7 +35,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     status_lbl = font.render("Status:", True, WHITE)
     surface.blit(status_lbl, (col1_x, y_offset - 20))
 
-    # Helper for stat bars (Same as before but moved into helper if preferred or inline)
+    # Helper for stat bars
     def draw_stat_bar(label, val, max_val, y, bar_col=GREEN):
         safe_val = max(0, min(val, max_val))
         label_str = f"{label}: {int(safe_val)}/{int(max_val)}"
@@ -67,8 +67,13 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
 
     motor_item = vehicle.equipment.get('motor')
     motor_val = vehicle.motor * 100
-    motor_max = 100.0 # Simplification
+    motor_max = 100.0 
     current_stat_y = draw_stat_bar("Motor", motor_val, motor_max, current_stat_y)
+
+    # Added Trunk/Storage Stat
+    trunk_val = len(vehicle.inventory) if hasattr(vehicle, 'inventory') else 0
+    trunk_cap = vehicle.capacity if hasattr(vehicle, 'capacity') else 20
+    current_stat_y = draw_stat_bar("Trunk", trunk_val, trunk_cap, current_stat_y, BLUE)
 
 
     # --- RIGHT COLUMN: SEATS ---
@@ -130,7 +135,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # --- BOTTOM SECTION: LIGHTS & EQUIPMENT ---
     y_offset = max(current_stat_y, current_seat_y_end) + 20
 
-    # 3. Lights (Existing logic)
+    # 3. Lights
     lights_lbl = font.render("Lights:", True, WHITE)
     surface.blit(lights_lbl, (start_x, y_offset))
     is_on = getattr(vehicle, 'lights', 'off') == 'on'
@@ -141,9 +146,9 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     surface.blit(on_txt, on_rect); surface.blit(off_txt, off_rect)
     modal['rects'] = {'lights_on': on_rect, 'lights_off': off_rect}
     
-    y_offset += 40
+    y_offset += 35 # Reduced spacing slightly
 
-    # 4. Equipment Slots (Existing logic)
+    # 4. Equipment Slots
     slots = ['motor','key', 'fuel', 'battery']
     slot_size = 48; gap = 15; current_slot_x = start_x
     modal['equipment_rects'] = {}
@@ -174,7 +179,8 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     close_btn, min_btn = base_modal.get_buttons()
     if base_modal.minimized: return [close_btn, min_btn]
 
-    content_y = base_modal.modal_y + 65 
+    # [FIX] Start content higher (45 instead of 65) to fit all elements within 320px height
+    content_y = base_modal.modal_y + 45 
     content_x = base_modal.modal_x + 15
     
     draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
