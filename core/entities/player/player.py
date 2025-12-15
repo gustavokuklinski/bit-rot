@@ -38,7 +38,14 @@ class Player:
         self.max_stamina = stats.get('stamina', 100.0)
         self.stamina = stats.get('stamina', self.max_stamina)
         self.anxiety = stats.get('anxiety', 0.0)
-        self.max_tireness = stats.get('tireness', 100.0) # NEW
+        
+        # [FIX] Ensure max_tireness is never 0 to prevent division errors
+        raw_tireness = float(stats.get('tireness', 100.0))
+        self.max_tireness = max(1.0, raw_tireness)
+        
+        # [CHANGED] Tireness starts at 0.0 (Rested) unless loaded from save
+        # If loading an old save where tireness was high (meaning rested), this might need manual adjustment, 
+        # but for new logic 0 is good.
         self.tireness = stats.get('tireness', self.max_tireness)
 
         self.sex = data.get('sex', 'Male')
@@ -58,9 +65,7 @@ class Player:
         # Load clothes from player_data
         chosen_clothes_dict = data.get('clothes', {})
         for slot, item_data in chosen_clothes_dict.items():
-            # Check if item_data is valid and not "None"
             if item_data and item_data != "None" and slot in self.clothes_slots:
-                # Check if it's a Dictionary (Saved Game) or String (New Game)
                 if isinstance(item_data, dict):
                     self.clothes[slot] = Item.from_dict(item_data)
                 else:
@@ -83,28 +88,21 @@ class Player:
         self.action_name = ""
         self.action_xp_reward = 0
 
-        #self.image = self._load_sprite(data.get('visuals', {}).get('sprite'))
-
-        self.images = {} # Store all player sprites
+        self.images = {}
         visuals_data = data.get('visuals', {})
-        
         self.visuals = visuals_data
 
-        # Load all sprites defined in the data
         if 'center' in visuals_data:
             self.images['center'] = self._load_sprite(visuals_data.get('center'))
             self.images['left'] = self._load_sprite(visuals_data.get('left'))
             self.images['right'] = self._load_sprite(visuals_data.get('right'))
         else:
-            # Fallback for old data structure
             old_sprite = self._load_sprite(visuals_data.get('sprite'))
             self.images['center'] = old_sprite
             self.images['left'] = old_sprite
             self.images['right'] = old_sprite
 
-        # Set a default image (self.image is no longer the main one)
         self.image = self.images.get('center')
-
 
         self.layer_switch_cooldown = 0
         self.aim_angle = 0
@@ -114,7 +112,7 @@ class Player:
 
         self.sounds_data = data.get('sounds', {})
         if not self.sounds_data or 'steps' not in self.sounds_data:
-             self.sounds_data = {'steps': 'steps.ogg'} # Default fallback
+             self.sounds_data = {'steps': 'steps.ogg'}
 
         self.sound_steps = self.sounds_data.get('steps')
         self.last_step_sound_time = 0
@@ -140,7 +138,6 @@ class Player:
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
-            #image = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
             path = SPRITE_PATH + "player/" + sprite_path
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
@@ -160,17 +157,14 @@ class Player:
             display_message_player("Vehicle is full! No free seats.")
             return
 
-        # TODO: Check for Key here in future
         self.vehicle = vehicle
         self.x = vehicle.x 
         self.y = vehicle.y
         self.rect.topleft = (self.x, self.y)
         
-        # [NEW] Occupy the seat
         vehicle.seats[seat_idx] = self
         self.vehicle_seat_index = seat_idx
 
-        # Remove the car from obstacles so we can move "inside" it
         if vehicle.rect in game.obstacles:
             game.obstacles.remove(vehicle.rect)
         
@@ -179,18 +173,14 @@ class Player:
     
     def exit_vehicle(self, game):
         if self.vehicle:
-            # [NEW] Vacate the seat
             if hasattr(self, 'vehicle_seat_index') and self.vehicle_seat_index is not None:
                 if 0 <= self.vehicle_seat_index < len(self.vehicle.seats):
-                    # Ensure we are the one removing ourselves (safety check)
                     if self.vehicle.seats[self.vehicle_seat_index] == self:
                         self.vehicle.seats[self.vehicle_seat_index] = None
 
-            # Add car back to obstacles
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
             
-            # Place player slightly to the side (right) to avoid stuck logic
             self.x += TILE_SIZE 
             self.rect.topleft = (self.x, self.y)
             self.vehicle = None
@@ -200,47 +190,35 @@ class Player:
 
     def update_aim(self, is_moving):
         if not self.is_aiming:
-            # Reset if not aiming
             self.current_aim_factor = 1.0
             return
 
-        # Calculate shrink speed based on Ranged skill
-        # Example: Level 0 = 0.01 speed, Level 10 = 0.03 speed
         ranged_level = self.progression.get_ranged(self)
         shrink_speed = 0.01 + (ranged_level * 0.002)
 
         if is_moving:
-            # Penalty: Moving increases aim factor (bigger reticle)
             self.current_aim_factor = min(1.0, self.current_aim_factor + 0.05)
         else:
-            # Stabilize: Shrink reticle over time
             self.current_aim_factor = max(0.0, self.current_aim_factor - shrink_speed)
 
-
     def get_total_defence(self):
-        """Calculates the total defence value from all equipped clothes."""
         total_defence = 0
         for item in self.clothes.values():
             if item and hasattr(item, 'defence') and item.defence is not None:
-                # Only add defence if the item is not broken
                 if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
                     total_defence += item.defence
-                # Also count items that don't have durability
                 elif not hasattr(item, 'durability') or item.durability is None:
                      total_defence += item.defence
         return total_defence
 
     def get_attack_damage(self):
-        """Calculates damage based on equipped weapon or bare hands."""
         min_dmg = 1
         max_dmg = 3 
         
         if self.active_weapon:
-            # Use getattr to safely access attributes if item structure varies
             min_dmg = getattr(self.active_weapon, 'min_damage', 1)
             max_dmg = getattr(self.active_weapon, 'max_damage', 5)
             
-            # If your items use a tuple for range instead:
             if hasattr(self.active_weapon, 'current_damage_range'):
                 rng = self.active_weapon.current_damage_range
                 min_dmg = rng[0]
@@ -249,156 +227,108 @@ class Player:
         return random.randint(int(min_dmg), int(max_dmg))
 
     def take_durability_damage(self, raw_damage, game):
-        """Applies durability damage to a random piece of equipped gear."""
-        # Find all clothes that have durability
         worn_clothes = [item for item in self.clothes.values() if item and hasattr(item, 'durability') and item.durability is not None and item.durability > 0]
         
         if not worn_clothes:
-            return # No clothes to damage
+            return
 
-        # Pick one random piece to take the hit
         item_hit = random.choice(worn_clothes)
-        
-        # Calculate durability damage (e.g., 25% of raw attack damage)
-        # This can be tuned for balance
         dur_damage = raw_damage * 0.25 
         
         if dur_damage > 0:
             item_hit.durability = max(0, item_hit.durability - dur_damage)
 
             if item_hit.durability <= 0:
-                # Find the slot this item was in and remove it
                 slot_to_clear = None
                 for slot, item in self.clothes.items():
                     if item == item_hit:
                         slot_to_clear = slot
                         break
-                
                 if slot_to_clear:
                     self.clothes[slot_to_clear] = None
                     display_message(f"Your {item_hit.name} broke!")
 
-
     def take_damage(self, game, base_damage, base_infection):
-        """
-        Calculates and applies final damage and infection to the player,
-        including modifiers from traits.
-        """
         if self.vehicle:
             return 0, 0
-        # 1. Get bonus percentages from progression
-        # e.g., "Health: -30", "Infection: +15"
+        
         health_bonus_perc = self.progression.get_health_bonus(self)
         infection_bonus_perc = self.progression.get_infection_bonus(self)
         
-        # 2. Calculate modifiers
-        # "Health -30" means +30% damage taken
-        damage_modifier = 1.0 - (health_bonus_perc / 100.0) # e.g., 1.0 - (-30 / 100) = 1.3
+        damage_modifier = 1.0 - (health_bonus_perc / 100.0)
+        infection_modifier = 1.0 + (infection_bonus_perc / 100.0)
         
-        # "Infection +15" means +15% infection taken
-        infection_modifier = 1.0 + (infection_bonus_perc / 100.0) # e.g., 1.0 + (15 / 100) = 1.15
-        
-        # 3. Calculate final amounts
         final_damage_taken = max(0, base_damage * damage_modifier)
         final_infection_taken = max(0, base_infection * infection_modifier)
         
-        # 4. Apply to player
         self.health = max(0, self.health - final_damage_taken)
         if final_infection_taken > 0:
             self.infection = min(100, self.infection + final_infection_taken)
             
         return final_damage_taken, final_infection_taken
 
-
     def process_kill(self, weapon, zombie):
         self.progression.process_kill(self, weapon, zombie)
 
     def update_position(self, obstacles, zombies, game):
         if self.vehicle:
-
             if not self.vehicle.is_driveable():
                 return
 
-            # Use vehicle specific max speed (scales with motor)
             current_max_speed = self.vehicle.max_speed
             
-            # --- [NEW] Physics: Acceleration & Friction ---
-            
-            # 1. Calculate Input Direction
             input_x = 0
             input_y = 0
             if self.vx != 0 or self.vy != 0:
-                # Normalize input vector so diagonal isn't faster
                 input_magnitude = math.sqrt(self.vx**2 + self.vy**2)
                 if input_magnitude > 0:
                     input_x = (self.vx / input_magnitude)
                     input_y = (self.vy / input_magnitude)
 
-            # 2. Apply Acceleration or Friction
             if input_x != 0 or input_y != 0:
-                # Accelerate: Add to current velocity
-                # We assume self.vehicle.acceleration exists (e.g. 0.15)
                 self.vehicle.velocity[0] += input_x * self.vehicle.acceleration
                 self.vehicle.velocity[1] += input_y * self.vehicle.acceleration
             else:
-                # Friction: Decelerate when no input
                 speed = self.vehicle.current_speed_val
                 if speed > 0:
                     friction_loss = min(speed, self.vehicle.friction)
-                    # Scale down the velocity vector
                     scale = (speed - friction_loss) / speed
                     self.vehicle.velocity[0] *= scale
                     self.vehicle.velocity[1] *= scale
 
-            # 3. Cap at Max Speed
             speed = self.vehicle.current_speed_val
             if speed > current_max_speed:
                 scale = current_max_speed / speed
                 self.vehicle.velocity[0] *= scale
                 self.vehicle.velocity[1] *= scale
             
-            # 4. Determine final movement amount for this frame
             move_x = self.vehicle.velocity[0]
             move_y = self.vehicle.velocity[1]
 
-            # [NEW] Fuel Consumption & Battery (Only if moving significantly)
             if speed > 0.1:
                 fuel_item = self.vehicle.equipment.get('fuel')
                 if fuel_item:
-                    # Lower consumption per frame since we are drifting/accelerating
                     fuel_item.load = max(0, fuel_item.load - 0.005) 
                 
-                # Recharge battery slightly while driving
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
 
-            # 5. Move Vehicle & Check Static Collisions (Walls)
-            # The vehicle.move() method (updated in Step 2) handles wall impact damage
             self.vehicle.move(move_x, move_y, obstacles)
 
-            # 6. Entity Collision (Zombies)
             vehicle_rect = self.vehicle.rect
             for zombie in zombies[:]: 
                 if vehicle_rect.colliderect(zombie.rect):
-                    # Damage Zombie
                     damage_to_zombie = 100 
                     zombie.take_damage(damage_to_zombie, game)
-                    
-                    # Damage Car Motor
                     self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) 
-                    
-                    # Impact Physics: Slow down the car
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
-                    
                     display_message_player(f"Hit zombie! Speed reduced. Motor: {int(self.vehicle.motor*100)}%")
 
-            # 7. Sync Player Position to Vehicle
             self.x = self.vehicle.x
             self.y = self.vehicle.y
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
-            # --- WALK MODE (Standard) ---
             self.x += self.vx
             self.rect.x = round(self.x)
 
@@ -418,32 +348,22 @@ class Player:
                     self.y = self.rect.y
 
     def draw(self, surface, offset_x, offset_y, is_aiming=False):
-        draw_rect = self.rect.move(offset_x, offset_y)
-        
-        
         if self.vehicle:
-            # We don't draw the player rect/sprite, we draw the vehicle image
-            # Vehicle position is already updated in update_position
-            # Draw using vehicle coords + offset
             veh_draw_pos = (self.vehicle.x + offset_x, self.vehicle.y + offset_y)
             surface.blit(self.vehicle.image, veh_draw_pos)
-            return # Skip drawing player sprite
+            return
 
         draw_rect = self.rect.move(offset_x, offset_y)
 
-        #if self.image:
-        #    surface.blit(self.image, draw_rect)
         current_image = None
         if self.facing_direction[0] < 0: # Facing left
             current_image = self.images.get('left')
         elif self.facing_direction[0] > 0: # Facing right
             current_image = self.images.get('right')
         
-        # Default to 'center' if facing up/down or if directional sprites are missing
         if current_image is None:
             current_image = self.images.get('center')
 
-        # Now use current_image for all drawing
         if current_image:
             if self.walk_anim_angle != 0:
                 rotated_img = pygame.transform.rotate(current_image, self.walk_anim_angle)
@@ -451,22 +371,18 @@ class Player:
                 surface.blit(rotated_img, rot_rect)
             else:
                 surface.blit(current_image, draw_rect)
-            #surface.blit(current_image, draw_rect)
-        
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
 
-        for slot in self.clothes_slots: # Draw in order
+        for slot in self.clothes_slots: 
             item = self.clothes.get(slot)
             if item and item.image:
                 if self.walk_anim_angle != 0:
-                    # Rotate clothes to match player body
                     rotated_cloth = pygame.transform.rotate(item.image, self.walk_anim_angle)
                     rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
                     surface.blit(rotated_cloth, rot_cloth_rect)
                 else:
                     surface.blit(item.image, draw_rect)
-
 
         if self.active_weapon and self.active_weapon.image:
             is_swinging = (self.melee_swing_timer > 0)
@@ -476,13 +392,10 @@ class Player:
                 weapon_img = self.active_weapon.image
                 angle_degrees = math.degrees(self.aim_angle)
                 
-                # Flip weapon vertically if aiming left to prevent upside-down texture
                 if math.cos(self.aim_angle) < 0:
                     weapon_img = pygame.transform.flip(weapon_img, False, True)
                 
                 rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
-                
-                # Use a smaller offset for idle hold (closer to body)
                 offset_dist = TILE_SIZE * 0.4
                 offset_x = math.cos(self.aim_angle) * offset_dist
                 offset_y = -math.sin(self.aim_angle) * offset_dist
@@ -493,27 +406,20 @@ class Player:
                 
                 surface.blit(rotated_image, rotated_rect)
 
-
         if is_aiming and self.active_weapon and self.active_weapon.image and \
            self.active_weapon.item_type == 'weapon_ranged':
             
             weapon_img = self.active_weapon.image
             angle_degrees = math.degrees(self.aim_angle)
 
-            # Elegant Fix: Flip weapon vertically if aiming left (cos < 0).
-            # This ensures the texture is never upside down relative to the screen.
             if math.cos(self.aim_angle) < 0:
                 weapon_img = pygame.transform.flip(weapon_img, False, True)
 
-            # Rotate the (potentially flipped) image
             rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
-            
-            # Calculate offset to make it look "held" away from body
             offset_dist = TILE_SIZE * 0.8 
             offset_x = math.cos(self.aim_angle) * offset_dist
-            offset_y = -math.sin(self.aim_angle) * offset_dist # Y is inverted in Pygame
+            offset_y = -math.sin(self.aim_angle) * offset_dist 
             
-            # Center the rotated rect relative to the player + offset
             rotated_rect = rotated_image.get_rect(center=draw_rect.center)
             rotated_rect.centerx += offset_x
             rotated_rect.centery += offset_y
@@ -521,57 +427,50 @@ class Player:
             surface.blit(rotated_image, rotated_rect)
 
         if self.is_sleeping:
-            # Calculate progress (0.0 to 1.0) - assuming tireness is 0..max
-            progress = min(1.0, max(0.0, self.tireness / self.max_tireness))
+            # [CHANGED] Visual bar for Sleep
+            # Now Tireness goes 100 -> 0.
+            # We want the bar to fill up as we rest (0% rested -> 100% rested).
+            # So progress = 1.0 - (current / max)
+            if self.max_tireness < 0:
+                progress = 1.0 - max(0.0, min(1.0, self.tireness / self.max_tireness))
+            else:
+                progress = 0.0
             
             bar_total_width = TILE_SIZE * 2
             bar_x = draw_rect.centerx - (bar_total_width / 2)
-            bar_y = draw_rect.top - 20 # Position above the player
+            bar_y = draw_rect.top - 20 
             
-            # Background
             bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
             pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
             
-            # Foreground (Restoring)
             bar_progress_width = int(bar_total_width * progress)
             bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
+            # Blue color for resting
             pygame.draw.rect(surface, (100, 150, 255), bar_rect)
 
-        # Action Progress Bar
         if self.action_timer > 0 and self.action_total_time > 0:
-            # Calculate progress (goes from 1.0 to 0.0)
             progress = 1.0 - (self.action_timer / self.action_total_time)
             
             bar_total_width = TILE_SIZE * 2
             bar_x = draw_rect.centerx - (bar_total_width / 2)
-            bar_y = draw_rect.top - 15 # Position just above head
+            bar_y = draw_rect.top - 15 
             
-            # Background
             bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
             pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
             
-            # Foreground (Green for actions)
             bar_progress_width = int(bar_total_width * progress)
             bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
             pygame.draw.rect(surface, (50, 200, 50), bar_rect)
 
-        # Melee arc
         if self.melee_swing_timer > 0:
             if self.active_weapon and self.active_weapon.image and \
                self.active_weapon.item_type in ['weapon_melee', 'tool']:
-            # [END MODIFICATION]
                 
-                # 1. Get the original weapon image
                 original_image = self.active_weapon.image
-                
-                # 2. Rotate the image (use melee_swing_angle, negate for pygame)
                 angle_degrees = math.degrees(self.melee_swing_angle)
-                rotated_image = pygame.transform.rotate(original_image, angle_degrees) # Negate angle
-                
-                # 3. Get the rect, centered at the player's draw center
+                rotated_image = pygame.transform.rotate(original_image, angle_degrees) 
                 rotated_rect = rotated_image.get_rect(center=draw_rect.center)
                 
-                # 4. Offset the rect
                 offset_radius = TILE_SIZE * 0.8 
                 offset_x_weapon = math.cos(self.melee_swing_angle) * offset_radius
                 offset_y_weapon = -math.sin(self.melee_swing_angle) * offset_radius
@@ -579,7 +478,6 @@ class Player:
                 rotated_rect.centerx += offset_x_weapon
                 rotated_rect.centery += offset_y_weapon
                 
-                # 5. Blit it
                 surface.blit(rotated_image, rotated_rect)
 
             swing_radius = TILE_SIZE * 0.7
@@ -588,17 +486,12 @@ class Player:
             end_angle = self.melee_swing_angle + (3.1415 / 4)
             arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
             
-            # Draw the arc on the temp surface. 
-            # (255, 255, 0) is Yellow, 128 is ~50% opacity
             arc_rect = arc_surf.get_rect()
             pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
-            
-            # Blit the temp surface onto the main surface
             surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
             
             self.melee_swing_timer -= 1
 
-        # Reloading bar
         if self.is_reloading:
             progress = 1.0 - (self.reload_timer / self.reload_duration)
             bar_total_width = TILE_SIZE * 2
@@ -613,29 +506,21 @@ class Player:
             pygame.draw.rect(surface, YELLOW, bar_rect)
 
     def update_stats(self, game):
-        
-
         current_time = time.time()
 
-        # Action Timer Logic
         if self.action_timer > 0:
             self.action_timer -= 1
-
             self.vx = 0
             self.vy = 0
             self.is_running = False
 
             if self.action_timer <= 0:
-                # Action Finished
                 if self.action_callback:
                     self.action_callback()
                     self.action_callback = None
                     if self.action_xp_reward > 0:
-                        # Add Speed XP
                         self.progression.add_speed_xp(self, self.action_xp_reward)
                 self.action_name = ""
-            
-            # Block inputs if performing an action
             return False
 
         if self.chat_timer > 0:
@@ -643,40 +528,42 @@ class Player:
             if self.chat_timer <= 0:
                 self.chat_text = None
 
-        if not self.is_sleeping: # Only check passive rest if not already sleeping
+        # [CHANGED] Natural Fatigue Accumulation
+        # Accumulate tireness over time (slowly)
+        # 0.005 per frame -> ~0.3 per second -> ~300s (5 min) to reach 100
+        # Adjust as needed for balance
+        if not self.is_sleeping:
+            self.tireness = min(self.max_tireness, self.tireness - 0.005)
+
+        if not self.is_sleeping: 
             grid_x = int(self.rect.centerx // TILE_SIZE)
             grid_y = int(self.rect.centery // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
             
             if tile and tile.get('rest'):
-                 # Passive resting: slowly restore tireness
-                 self.tireness = min(self.max_tireness, self.tireness + 0.05)
+                 # [CHANGED] Passive resting now reduces tireness
+                 self.tireness = max(0.0, self.tireness + 0.05)
 
         if self.is_sleeping:
-            # Active sleeping: fast restore
             restore_amount = 0.2
             
-            # [START MODIFICATION]
-            # Calculate time jump: 8 hours (1/3 of 24h) for 100% tireness
-            # 1. Calculate what fraction of the bar we are restoring this frame
-            restore_fraction = restore_amount / self.max_tireness
+            if self.max_tireness > 0:
+                restore_fraction = restore_amount / self.max_tireness
+            else:
+                restore_fraction = 0
 
-            # 2. Calculate 8 hours in game milliseconds
-            # day_length_ms represents 24 hours
             eight_hours_ms = game.world_time.day_length_ms / 3
-
-            # 3. Apply the proportional time jump
             time_jump = restore_fraction * eight_hours_ms
             game.world_time.game_time_ms += time_jump
-            # [END MODIFICATION]
 
-            self.tireness = min(self.max_tireness, self.tireness + restore_amount)
+            # [CHANGED] Sleeping reduces tireness
+            self.tireness = max(0.0, self.tireness + restore_amount)
             
-            # Wake up condition
-            if self.tireness >= 100:
+            # [CHANGED] Wake up if fully rested (tireness <= 0)
+            if self.tireness >= self.max_tireness:
+                self.tireness = self.max_tireness
                 self.is_sleeping = False
                 display_message_player("You wake up refreshed.")
-
 
         keys = pygame.key.get_pressed()
         has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
@@ -684,8 +571,6 @@ class Player:
         is_moving = has_input and (self.vehicle is None)
 
         if is_moving:
-            # Oscillate angle. 15 is speed, 2 is amplitude (degrees)
-            # 0.2 degrees is invisible, so using 2 degrees for visible "little animation"
             self.walk_anim_angle = math.sin(current_time * 15) * 2
         else:
             self.walk_anim_angle = 0
@@ -693,9 +578,7 @@ class Player:
         self.update_aim(is_moving)
         
         if is_moving and self.sound_steps:
-
             if current_time > self.last_step_sound_time:
-                # Play sound (subdir 'player' based on your path)
                 game.sound_manager.play_sound(
                     self.sound_steps,
                     subdir='player',
@@ -703,25 +586,18 @@ class Player:
                     source_pos=self.rect.center,
                     base_volume=random.uniform(0.2, 0.4)
                 )
-
                 if self.is_running:
-                    # Tighter, faster steps when running
-                    next_delay = random.uniform(0.25, 0.35) # e.g., 250-350ms
+                    next_delay = random.uniform(0.25, 0.35) 
                 else:
-                    # Slower, more varied steps when walking
                     next_delay = random.uniform(0.35, 0.5)
-
                 self.last_step_sound_time = current_time + next_delay
-
 
         self.progression.update(self, is_moving, game)
         
         if current_time - self.last_decay_time >= core.data.config.DECAY_RATE_SECONDS:
-
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
             food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
             
-            # Apply modifier (a negative bonus reduces decay)
             water_decay = max(0, core.data.config.WATER_DECAY_AMOUNT * water_mod)
             food_decay = max(0, core.data.config.FOOD_DECAY_AMOUNT * food_mod)
             
@@ -734,12 +610,11 @@ class Player:
                 self.health = max(0, self.health)
 
             if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:
-                print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") # Debug print
+                print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") 
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
                     self.consume_item(water_item, source, index, container, is_auto_drink=True, game=game)
-                    print(f"Auto-consuming {water_item.name} from {source} index {index}") # Debug print
-                    # self.consume_item(water_item, source, index, container)
+                    print(f"Auto-consuming {water_item.name} from {source} index {index}")
         
         all_inventories = [self.belt, self.inventory]
         if self.backpack:
@@ -750,29 +625,17 @@ class Player:
 
         for inv in all_inventories:
             for item in inv:
-                # Use getattr for safety
                 if getattr(item, 'state', 'off') == 'on':
                     if item.durability is not None:
-                        item.durability -= 0.05 # Adjust this value for consumption rate
+                        item.durability -= 0.05 
                         if item.durability <= 0:
                             item.durability = 0
-                            # Item is out of fuel/broken, turn it off
-                            self.toggle_utility_item(item, None, None, None) # Pass None source to just toggle
+                            self.toggle_utility_item(item, None, None, None) 
 
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
                 self._finish_reload()
-
-
-        #for item in self.inventory:
-        #    if item and item.item_type == 'skill' and item.skill_stats:
-        #        for stat_name, value in item.skill_stats.items():
-        #            # Set the player's stat directly
-        #            # This will overwrite current values with the buff
-        #            # e.g., self.anxiety = 0.0, self.health = 100.0
-        #            setattr(self, stat_name, value)
-
 
         if self.health <= 1:
             print("GAME OVER: Health depleted!")
@@ -789,20 +652,14 @@ class Player:
 
         return False
 
-
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
         if self.action_timer > 0:
             display_message_player("Busy...")
             return False
 
-        # Unit time: 60 frames (approx 1 second)
         UNIT_TIME = 60
-        
-        # Calculate speed reduction
-        # Speed level 0: 1.0 multiplier
-        # Speed level 10: 0.5 multiplier (example curve)
         speed_lvl = self.progression.get_speed(self)
-        speed_factor = 1.0 / (1.0 + (speed_lvl * 0.1)) # Higher speed = lower factor
+        speed_factor = 1.0 / (1.0 + (speed_lvl * 0.1)) 
         
         total_duration = int(UNIT_TIME * base_duration_mult * speed_factor)
         
@@ -814,7 +671,6 @@ class Player:
         
         display_message_player(f"{action_name}...")
         return True
-
 
     def get_total_inventory_slots(self):
         if self.backpack:
@@ -856,23 +712,19 @@ class Player:
             return None, None, None, None
         ammo_type_needed = weapon.ammo_type
         
-        # 1. Search Belt
         for i, item in enumerate(self.belt):
             if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
                 return item, 'belt', i, None
 
-        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
             if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
                 return item, 'inventory', i, None
 
-        # 3. Search Backpack
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
                  if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
                     return item, 'container', i, self.backpack
 
-        # 4. Search Utility/InvContainer
         if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
              for i, item in enumerate(self.invcontainer.inventory):
                  if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
@@ -881,27 +733,22 @@ class Player:
         return None, None, None, None
 
     def find_fuel(self, fuel_name):
-        """Searches all inventories for a fuel item (like 'Matches')."""
         if not fuel_name:
             return None, None, None, None
             
-        # 1. Search Belt
         for i, item in enumerate(self.belt):
             if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
                 return item, 'belt', i, None
 
-        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
             if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
                 return item, 'inventory', i, None
         
-        # 3. Search Backpack (if exists)
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
                 if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
                     return item, 'container', i, self.backpack
                     
-        # 4. Search attached container
         if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
             for i, item in enumerate(self.invcontainer.inventory):
                  if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
@@ -909,14 +756,11 @@ class Player:
 
         return None, None, None, None
 
-
     def reload_active_weapon(self, weapon=None,game=None):
-        """Reloads the specified weapon, or the active weapon if None."""
         if self.is_reloading:
             display_message_player("Already reloading.")
             return
             
-        # Determine target weapon
         target_weapon = weapon if weapon else self.active_weapon
         
         if not target_weapon or not getattr(target_weapon, 'ammo_type', None):
@@ -927,7 +771,6 @@ class Player:
             display_message_player(f"{target_weapon.name} is already full ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
             return
         
-        # Find ammo for the target weapon
         ammo_item, _, _, _ = self.find_matching_ammo(target_weapon)
         
         if not ammo_item:
@@ -943,20 +786,18 @@ class Player:
             )
             
         self.is_reloading = True
-        self.reloading_weapon = target_weapon # Store the specific weapon
+        self.reloading_weapon = target_weapon 
         self.reload_timer = self.reload_duration
         display_message_player(f"Reloading {target_weapon.name}...")
 
     def _finish_reload(self):
         self.is_reloading = False
         
-        # Use the stored weapon, fallback to active for safety
         weapon = getattr(self, 'reloading_weapon', self.active_weapon)
-        self.reloading_weapon = None # Reset
+        self.reloading_weapon = None 
         
         if not weapon: return
         
-        # Find the specific ammo item again
         ammo_item, source_type, index, container_obj = self.find_matching_ammo(weapon)
         
         if not ammo_item: return
@@ -981,9 +822,7 @@ class Player:
                         container_obj.inventory.remove(ammo_item)
                     except ValueError: pass
     
-
     def find_repair_kit(self, target_item):
-        """Finds a consumable_repair item that can repair the target_item."""
         if not target_item: return None, None, None, None
 
         def is_valid_kit(it):
@@ -992,26 +831,21 @@ class Player:
                     target_item.name in it.repair_list and 
                     it.load > 0)
 
-        # 1. Search Belt
         for i, item in enumerate(self.belt):
             if is_valid_kit(item): return item, 'belt', i, None
         
-        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
             if is_valid_kit(item): return item, 'inventory', i, None
 
-        # 3. Search Backpack
         if self.backpack:
             for i, item in enumerate(self.backpack.inventory):
                 if is_valid_kit(item): return item, 'container', i, self.backpack
 
-        # 4. Search InvContainer
         if self.invcontainer:
             for i, item in enumerate(self.invcontainer.inventory):
                 if is_valid_kit(item): return item, 'container', i, self.invcontainer
         
         return None, None, None, None
-
 
     def repair_item(self, game, target_item):
         if self.action_timer > 0:
@@ -1029,9 +863,6 @@ class Player:
             return
 
         def execute_repair():
-            # Verify kit still exists
-            # (In a real scenario, we might need to re-find it if the player moved stuff, but since inputs are blocked, it's safe-ish)
-            
             restore_amount = random.randint(kit.min_restore, kit.max_restore)
             old_dur = target_item.durability
             target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
@@ -1048,9 +879,7 @@ class Player:
                     else: inv.pop(index)
                 display_message_player(f"{kit.name} used up.")
 
-        # Repair takes 2.0x unit time
         self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
-
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
@@ -1066,17 +895,16 @@ class Player:
         if item.item_type == 'text':
             options.append('Read')
             if hasattr(item, 'is_stackable') and item.is_stackable():
-                 # This logic probably won't apply to text items, but good to keep
                 options.append('Drop one')
                 if item.load > 1:
                     options.append('Drop all')
             else:
                 options.append('Drop')
-            return options # Return immediately
+            return options 
 
         if item.item_type.startswith('consumable'):
             if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
-                options.append('Reload') # This is for guns
+                options.append('Reload') 
             else:
                 options.append('Use')
             options.append('Equip')
@@ -1086,8 +914,8 @@ class Player:
             elif item.state == 'off':
                 options.append('Turn on')
             if item.fuel_type:
-                options.append('Reload') # This is for lanterns
-            if item.item_type == 'mobile': # Check for mobile
+                options.append('Reload') 
+            if item.item_type == 'mobile': 
                 options.append('Open')
             options.append('Equip')
 
@@ -1109,13 +937,11 @@ class Player:
             if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0:
                 options.append('Get bullets')
 
-
         elif item.item_type in ['car_motor']:
             if item.durability is not None and item.durability < item.max_durability:
                 kit, _, _, _ = self.find_repair_kit(item)
                 if kit:
                     options.append('Repair')
-
 
         elif item.item_type == 'container':
             options.append('Open')
@@ -1125,64 +951,52 @@ class Player:
             if item.load > 1:
                 options.append('Drop all')
             
-            # 1. Check if item is NOT in Backpack, and we have one
             if self.backpack and container_item is not self.backpack:
                 options.append('Send all to Backpack')
             
-            # 2. Check if item is NOT in Utility, and we have one
             if self.invcontainer and container_item is not self.invcontainer and source != 'invcontainer':
                  options.append('Send all to Utility')
 
-            # 3. Check if item is NOT in main inventory
             if source != 'inventory':
                 options.append('Send all to Inventory')
 
         else:
-            # Not stackable, add normal 'Drop'
             options.append('Drop')
         return options
 
     def unload_weapon(self, game, weapon):
-        """Unloads ammo from a ranged weapon into the inventory."""
         if not weapon.ammo_type or weapon.load <= 0:
             return
 
-        # Create the specific ammo item
         ammo = Item.create_from_name(weapon.ammo_type)
         if not ammo:
             print(f"Error creating ammo: {weapon.ammo_type}")
             return
 
-        # Transfer load
         ammo.load = weapon.load
         weapon.load = 0
         
         display_message_player(f"Unloaded {int(ammo.load)} {ammo.name} from {weapon.name}.")
 
-        # 1. Try to stack into existing inventory/belt slots
         self.stack_item_in_inventory(ammo)
         
         if ammo.load <= 0:
-            return # Fully stacked
+            return 
 
-        # 2. Try to add remaining to main inventory
         if len(self.inventory) < self.base_inventory_slots:
              self.inventory.append(ammo)
              return
         
-        # 3. Try backpack
         if self.backpack and len(self.backpack.inventory) < (self.backpack.capacity or 0):
              self.backpack.inventory.append(ammo)
              display_message_player("Moved to backpack.")
              return
 
-        # 4. Drop to ground
         ammo.rect.center = self.rect.center
         if find_free_tile(ammo.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)
             display_message_player("Inventory full. Dropped ammo on ground.")
         else:
-             # Restore if absolutely nowhere to go (prevent loss)
              weapon.load = ammo.load
              display_message_player("No space to unload ammo!")
 
@@ -1207,12 +1021,11 @@ class Player:
              return False
 
         if item not in source_inventory:
-             # Handle special case where item is 'invcontainer' itself
             if source_type == 'invcontainer' and item == self.invcontainer:
                  for i, slot in enumerate(self.belt):
                     if slot is None:
                         self.belt[i] = item
-                        self.invcontainer = None # Unequip from slot
+                        self.invcontainer = None 
                         display_message_player(f"Equipped {item.name} to belt.")
                         return True
             print(f"Error: Item {item.name} not found in source {source_type}")
@@ -1225,7 +1038,6 @@ class Player:
                 display_message_player(f"Equipped {item.name} to belt.")
                 return True
         return False
-
 
     def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None):
         if self.action_timer > 0 and not is_auto_drink:
@@ -1240,7 +1052,6 @@ class Player:
             display_message_player(f"Cannot use {item.name}, it is empty.")
             return False
             
-        # Determine Multiplier based on item type
         duration_mult = 1.0
         if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
             duration_mult = 2.0
@@ -1249,7 +1060,6 @@ class Player:
         elif item.item_type == 'consumable_food':
             duration_mult = 1.0
             
-        # Define the actual consumption logic as a callback
         def execute_consume():
             status_effect_legacy = getattr(item, 'status_effect', None)
             ammo_type = getattr(item, 'ammo_type', None) 
@@ -1273,12 +1083,19 @@ class Player:
                                 stat_cap = 100.0
                                 if target_stat == 'health': stat_cap = self.max_health
                                 elif target_stat == 'stamina': stat_cap = self.max_stamina
-                                elif target_stat == 'tireness': stat_cap = self.max_tireness
-                                
-                                new_val = min(stat_cap, current_val + val)
-                                setattr(self, target_stat, new_val)
-                                display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
-                                consumed = True
+                                elif target_stat == 'tireness':
+                                    # [CHANGED] For tireness, 'restore' means reducing the value (restoring energy)
+                                    # So we subtract val from tireness
+                                    new_val = max(0.0, current_val - val)
+                                    setattr(self, target_stat, new_val)
+                                    display_message_player(f"Used {item.name}. Restored Energy (Tireness -{val}).")
+                                    consumed = True
+                                else:
+                                    # Normal logic for other stats
+                                    new_val = min(stat_cap, current_val + val)
+                                    setattr(self, target_stat, new_val)
+                                    display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                                    consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0
@@ -1311,13 +1128,9 @@ class Player:
             execute_consume()
             return True
         else:
-            # Start timer
             return self.start_action(f"Using {item.name}", duration_mult, execute_consume, xp_reward=5)
 
-
-
     def toggle_utility_item(self, item, source, index, container_item):
-        """Toggles a utility item's state (e.g., Lantern On/Off)."""
         if not hasattr(item, 'state'):
             return
 
@@ -1329,56 +1142,43 @@ class Player:
                 display_message_player(f"Cannot turn on {item.name}, it's out of power.")
                 return
             
-            # Check for fuel type (e.g., "Matches" for lantern)
             if item.fuel_type == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
                     display_message_player("No matches to light the lantern.")
                     return
                 
-                # Consume one match
                 matches.load -= 1
                 if matches.load <= 0:
                     m_inv = self._get_source_inventory(m_source, m_container)
                     if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
                         m_inv.pop(m_index)
             
-            # If fuel_type is "Powerbank", we don't need to consume anything to *turn on*,
-            # just check durability (which we did).
-            # If fuel_type is None, it also just turns on.
-            
             new_name = item.name.replace(" off", " on")
         
         if not new_name:
             return
 
-        # Create the new item
         new_item = Item.create_from_name(new_name)
         if not new_item:
             print(f"Error: Could not find item template for '{new_name}'")
             return
 
-        # Preserve durability and load (fuel)
         new_item.durability = item.durability
         new_item.load = item.load
 
-        # Replace the item in its original location
-        # If source is None, it means it was an update_stats call
         if source and index is not None:
             source_inventory = self._get_source_inventory(source, container_item)
             if source_inventory and index < len(source_inventory) and source_inventory[index] == item:
                 source_inventory[index] = new_item
             else:
-                # Failsafe: if we can't find it, we can't replace it
                 print(f"Error: Could not find item {item.name} in {source} to toggle.")
         elif item in self.belt:
              self.belt[self.belt.index(item)] = new_item
         elif item in self.inventory:
              self.inventory[self.inventory.index(item)] = new_item
-        # Add backpack/container checks if needed
         
     def reload_utility_item(self, item, source, index, container_item):
-        """Reloads a utility item (Lantern) with fuel (Matches). Resets Durability."""
         if not item.fuel_type:
             display_message_player(f"{item.name} does not use fuel.")
             return
@@ -1388,7 +1188,6 @@ class Player:
             display_message_player(f"No {item.fuel_type} found to reload.")
             return
             
-        # Check if durability is already full
         max_dur = item.max_durability
         dur_needed = max_dur - (item.durability or 0)
         
@@ -1396,42 +1195,35 @@ class Player:
             display_message_player(f"{item.name} durability is already full.")
             return
 
-        # Check if there are any matches left
         if fuel_item.load <= 0:
             display_message_player(f"No {item.fuel_type} left to use.")
             return
 
-        # Consume only 1 match
         fuel_item.load -= 1
         
-        # As requested: "Reload" resets durability to full
         item.durability = max_dur
         
         display_message_player(f"Used 1 {item.fuel_type} to reload {item.name}. Durability set to: {item.durability:.0f}")
 
         if fuel_item.load <= 0:
-            # Remove empty fuel item
             f_inv = self._get_source_inventory(f_source, f_container)
             if f_inv and f_index < len(f_inv) and f_inv[f_index] == fuel_item:
                 f_inv.pop(f_index)
     
     def find_item_and_stack(self, source, index, container_item):
-        """Helper to find an item and its containing inventory list."""
         source_inventory = self._get_source_inventory(source, container_item)
         if source_inventory and 0 <= index < len(source_inventory):
             item = source_inventory[index]
             return item, source_inventory
         
-        # Handle special cases like 'backpack' or 'invcontainer' which aren't in lists
         if source == 'backpack' and self.backpack:
-            return self.backpack, [self] # Use [self] as a dummy list
+            return self.backpack, [self] 
         if source == 'invcontainer' and self.invcontainer:
             return self.invcontainer, [self]
             
         return None, None
 
     def drop_item_stack(self, game, source, index, container_item, quantity):
-        """Drops one, all, or a specific quantity of a stackable item."""
         item, source_inventory = self.find_item_and_stack(source, index, container_item)
         if not item:
             print("Error: Could not find item to drop.")
@@ -1439,50 +1231,35 @@ class Player:
 
         item_to_drop = None
         if quantity == 'all' or quantity >= item.load:
-            # Drop the entire stack
             item_to_drop = self.drop_item(game, source, index, container_item)
         elif quantity > 0 and item.load > 0:
-            # Drop a partial stack
             item_to_drop = Item.create_from_name(item.name)
             if not item_to_drop: return
 
             transfer_amount = min(item.load, quantity)
             item_to_drop.load = transfer_amount
-            item_to_drop.durability = item.durability # Preserve stats
+            item_to_drop.durability = item.durability 
             
             item.load -= transfer_amount
             if item.load <= 0:
-                # The original stack is now empty, remove it
-                self.drop_item(game, source, index, container_item) # Use original drop to handle pop
+                self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
             if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
-                return item_to_drop # Success, return item to be added to ground
+                return item_to_drop 
             else:
-                # No space, put the created stack back into inventory
                 print("No free space to drop the item.")
-                self.inventory.append(item_to_drop) # Failsafe: add to inventory
-                self.stack_item_in_inventory(item_to_drop) # Try to stack it
+                self.inventory.append(item_to_drop) 
+                self.stack_item_in_inventory(item_to_drop) 
                 return None
         return None
-
 
     def transfer_item_stack(self, source, index, container_item, target_container):
         if self.action_timer > 0:
             display_message_player("Busy...")
             return
 
-        # Define the logic wrapper
         def execute_transfer():
-             # Re-fetch item to be safe, as 'item' reference is good but list position might shift if logic wasn't blocking
-             # But we block input, so it's okay to copy the existing logic.
-             # Ideally, we call an internal _instant_transfer method to avoid duplication,
-             # but to keep changes local, I'll paste the logic here or wrap the existing body.
-             
-             # Wait, I can't easily paste the large logic inside the closure without duplicating.
-             # A cleaner way is to separate the *logic* from the *timer check*.
-             # I will perform the logic immediately below, BUT wrapping it in the closure.
-            
             item = None
             source_inventory = self._get_source_inventory(source, container_item) 
             
@@ -1552,11 +1329,6 @@ class Player:
                 else:
                     display_message_player(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
 
-
-        # Determine if we need a timer
-        # Rule: External Container <-> Player/Backpack = Timer
-        #       Internal (Inventory <-> Backpack) = Instant
-        
         is_external_source = (source == 'container' or source == 'nearby')
         is_external_target = (target_container is not self and 
                               target_container is not self.backpack and 
@@ -1565,13 +1337,9 @@ class Player:
         needs_timer = is_external_source or is_external_target
         
         if needs_timer:
-            # Transfer takes 1.5x unit time
-            # The prompt says: "The modifies is 1.5x based on speed level."
             self.start_action("Transferring", 1.5, execute_transfer, xp_reward=2)
         else:
             execute_transfer()
-
-
 
     def drop_item(self, game, source, index, container_item=None):
         if self.drop_cooldown > 0:
@@ -1579,7 +1347,7 @@ class Player:
             return None
 
         item_to_drop = None
-        source_inventory = None # To know where to return it
+        source_inventory = None 
         source_index = -1
 
         if source == 'inventory' and index < len(self.inventory):
@@ -1596,31 +1364,29 @@ class Player:
         elif source == 'backpack':
             item_to_drop = self.backpack
             self.backpack = None
-            source_inventory = [self] # Use dummy list
-            source_index = 0 # Dummy index
+            source_inventory = [self] 
+            source_index = 0 
         elif source == 'invcontainer':
             item_to_drop = self.invcontainer
             self.invcontainer = None
-            source_inventory = [self] # Use dummy list
-            source_index = 1 # Dummy index
+            source_inventory = [self] 
+            source_index = 1 
         elif source == 'gear':
-            item_to_drop = self.clothes.get(index) # index is slot_name
+            item_to_drop = self.clothes.get(index) 
             self.clothes[index] = None
-            source_inventory = [self] # Use dummy list
-            source_index = 2 # Dummy index
+            source_inventory = [self] 
+            source_index = 2 
         elif (source == 'container' or source == 'nearby') and container_item and index < len(container_item.inventory):
             item_to_drop = container_item.inventory.pop(index)
             source_inventory = container_item.inventory
             source_index = index
 
         if item_to_drop:
-            # --- MODIFIED: Check for valid drop location ---
             if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
                 item_to_drop.x = item_to_drop.rect.x
                 item_to_drop.y = item_to_drop.rect.y
-                return item_to_drop # Success
+                return item_to_drop 
             else:
-                # No space, put it back
                 display_message_player("No free space to drop the item.")
                 if source == 'inventory':
                     source_inventory.insert(source_index, item_to_drop)
@@ -1631,19 +1397,17 @@ class Player:
                 elif source == 'invcontainer':
                     self.invcontainer = item_to_drop
                 elif source == 'gear':
-                    self.clothes[index] = item_to_drop # index is slot_name
+                    self.clothes[index] = item_to_drop 
                 elif source == 'container' or source == 'nearby':
                     source_inventory.insert(source_index, item_to_drop)
-                return None # Failed to drop
+                return None 
 
         return None
 
     def stack_item_in_inventory(self, item_to_stack):
-        """Tries to merge an item with existing stacks in inventory, then belt."""
         if not item_to_stack.is_stackable():
-            return # Not stackable, do nothing
+            return 
 
-        # 1. Try to merge with inventory
         for item in self.inventory:
             if item.can_stack_with(item_to_stack):
                 available_space = item.capacity - item.load
@@ -1651,9 +1415,8 @@ class Player:
                 item.load += transfer
                 item_to_stack.load -= transfer
                 if item_to_stack.load <= 0:
-                    return # Fully stacked
+                    return 
         
-        # 2. Try to merge with belt
         for item in self.belt:
             if item and item.can_stack_with(item_to_stack):
                 available_space = item.capacity - item.load
@@ -1661,20 +1424,18 @@ class Player:
                 item.load += transfer
                 item_to_stack.load -= transfer
                 if item_to_stack.load <= 0:
-                    return # Fully stacked
+                    return 
 
     def destroy_broken_weapon(self, broken_weapon):
         if self.active_weapon == broken_weapon:
             self.active_weapon = None
 
-        # Check belt
         for i, item in enumerate(self.belt):
             if item == broken_weapon:
                 self.belt[i] = None
                 display_message_player(f"{broken_weapon.name} broke and was removed from your belt.")
                 return
 
-        # Check inventory
         try:
             self.inventory.remove(broken_weapon)
             display_message_player(f"{broken_weapon.name} broke and was removed from your inventory.")
@@ -1682,36 +1443,29 @@ class Player:
             pass
 
     def find_water_to_auto_drink(self):
-        """Searches belt, inventory, then backpack for a usable water item."""
-        # 1. Search Belt
         for i, item in enumerate(self.belt):
             if item and 'Water' in item.name and item.load > 0:
-                print(f"Found water in belt slot {i}") # Optional debug
-                return item, 'belt', i, None # No container item needed for belt
+                print(f"Found water in belt slot {i}") 
+                return item, 'belt', i, None 
 
-        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
             if item and 'Water' in item.name and item.load > 0:
-                print(f"Found water in inventory slot {i}") # Optional debug
-                return item, 'inventory', i, None # No container item needed for inventory
+                print(f"Found water in inventory slot {i}") 
+                return item, 'inventory', i, None 
 
         for i, container_item in enumerate(self.inventory):
             if container_item and hasattr(container_item, 'inventory') and container_item.inventory:
-                print(f"Checking inside container '{container_item.name}' in inventory slot {i}") # Debug
+                print(f"Checking inside container '{container_item.name}' in inventory slot {i}") 
                 for sub_index, sub_item in enumerate(container_item.inventory):
                     if sub_item and 'Water' in sub_item.name and sub_item.load > 0:
                         print(f"Found water inside '{container_item.name}' at sub-index {sub_index}")
-                        # Source: 'container', Index: sub_index (within container), Container: container_item
                         return sub_item, 'container', sub_index, container_item
 
-        # 3. Search Backpack (if exists and has inventory)
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
                 if item and 'Water' in item.name and item.load > 0:
-                    print(f"Found water in backpack slot {i}") # Optional debug
-                    # For backpack items, the source is 'container' and we need the backpack itself
+                    print(f"Found water in backpack slot {i}") 
                     return item, 'container', i, self.backpack
 
-        # 4. Not found
-        print("No water found for auto-drink.") # Optional debug
+        print("No water found for auto-drink.") 
         return None, None, None, None

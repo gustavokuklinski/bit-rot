@@ -324,9 +324,16 @@ class PlayerProgression:
                 player.health = 1 # Player dies
 
     def handle_melee_attack(self, player):
-        if player.tireness > 1:
-            player.tireness = max(0, player.tireness - 0.1)
+        # Cost to swing (energy consumption)
+        fatigue_cost = 0.5 
+        
+        # [FIXED] Check if player has enough Energy (> 1%)
+        # 100% = Full Rested, 0% = Exhausted
+        if player.tireness > 1.0:
+            # Decrease energy (tireness)
+            player.tireness = max(0.0, player.tireness - fatigue_cost)
             return True
+            
         display_message_player("Too tired to swing!")
         return False
 

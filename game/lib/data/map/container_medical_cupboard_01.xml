@@ -4,11 +4,13 @@
     </visuals>
     <capacity value="10" />
     <loot>
+        <item item="Magazine (General content)" chance="0.2" />
         <item item="Vaccine" chance="0.1" />
         <item item="Infection Pills" chance="0.2" />
         <item item="Matches" chance="0.1" />
         <item item="Medkit" chance="0.2" />
         <item item="Powerbank" chance="0.1" />
         <item item="Ducktype" chance="0.2" />
+        <item item="Car Key Jeep" chance="0.1" />
     </loot>
 </map>

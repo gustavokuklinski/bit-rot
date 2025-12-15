@@ -1,0 +1,11 @@
+<item name="Magazine (General content)" type="consumable">
+    <properties>
+        <status value="anxiety" />
+        <reduce min="1" max="50" />
+
+        <load min="2" max="20" />
+        <capacity value="20" />
+        <sprite file="magazine.png" />
+    </properties>
+    <spawn chance="1" />
+</item>
