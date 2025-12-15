@@ -3,174 +3,241 @@ from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.inventory_modal import draw_text_shadow
 
+# --- CONFIGURATION: LAYOUT & COLORS ---
+STYLE = {
+    # -- Dimensions & Spacing --
+    "MARGIN_TOP": 45,        # Distance from top of modal window
+    "MARGIN_LEFT": 15,       # Distance from left of modal window
+    "COL_2_OFFSET": 230,     # Horizontal distance to the 'Seats' column
+    
+    "SECTION_SPACING": 35,   # Vertical gap between main sections (e.g., Header -> Stats)
+    "TITLE_SPACING": 15,      # Gap between a Section Title (e.g. "Status:") and its content
+    
+    # -- Sizing --
+    "BAR_WIDTH": 100,        # Width of the health/fuel/etc bars
+    "BAR_HEIGHT": 8,         # Thickness of the bars
+    "SLOT_SIZE": 48,         # Size of Equipment/Seat squares
+    "SLOT_GAP": 25,          # Gap between equipment slots
+    "SEAT_GAP": 20,          # Gap between seat slots
+    
+    # -- Colors --
+    "TEXT_MAIN": WHITE,
+    "TEXT_DIM": GRAY,        # Used for labels and seat numbers
+    "ACTIVE": GREEN,         # Color when car is ON
+    "INACTIVE": RED,         # Color when car is OFF / Damaged
+    "WARN": ORANGE,          # Warning color (low fuel/high speed)
+    "BAR_BG": (40, 40, 40),  # Dark background for empty part of bars
+    "SLOT_BG": (30, 30, 30), # Background for item/seat slots
+    "BORDER": GRAY,          # Border color for slots
+    "DRIVER_LBL": YELLOW,    # Special color for the Driver label
+    "TRUNK_BAR": BLUE        # Color for the Trunk bar
+}
+
 def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
+    """
+    Draws the content of the vehicle tab using the STYLE configuration.
+    """
+    x = start_x
+    y = start_y
     
-    y_offset = start_y
+    # --- 1. HEADER SECTION (State & Speed) ---
+    car_state = "ON" if vehicle.active else "OFF"
+    state_color = STYLE["ACTIVE"] if vehicle.active else STYLE["INACTIVE"]
     
-    # 1. Car State & Speed (Keep at top)
-    car_state = "On" if vehicle.active else "Off"
-    col = GREEN if vehicle.active else RED
-    state_text = font.render(f"Car: {car_state}", True, col)
-    surface.blit(state_text, (start_x, y_offset))
+    # Draw State
+    state_surf = font.render(f"Car (Press: Q): {car_state}", True, state_color)
+    surface.blit(state_surf, (x, y))
 
+    # Draw Speed
     speed_kmh = int(vehicle.current_speed_val * 10)
-    speed_col = WHITE
-    if speed_kmh > 50: speed_col = ORANGE
-    if speed_kmh > 90: speed_col = RED
+    speed_color = STYLE["TEXT_MAIN"]
+    if speed_kmh > 50: speed_color = STYLE["WARN"]
+    if speed_kmh > 90: speed_color = STYLE["INACTIVE"]
     
-    speed_text = font.render(f"Speed: {speed_kmh} km/h", True, speed_col)
-    surface.blit(speed_text, (start_x + 160, y_offset))
+    speed_surf = font.render(f"{speed_kmh} km/h", True, speed_color)
+    surface.blit(speed_surf, (x + 160, y))
 
+    # Move Y down for the next main section
+    y += STYLE["SECTION_SPACING"]
     
-    # --- COLUMNS START ---
-    y_offset += 35 
     
-    # Column X positions
-    col1_x = start_x
-    col2_x = start_x + 230  # Second column for Seats
+    # --- 2. COLUMNS SETUP ---
+    col1_x = x
+    col2_x = x + STYLE["COL_2_OFFSET"]
+    
+    # Define vertical start for columns (Header text + Spacing)
+    # We render titles first, then apply TITLE_SPACING
+    
     
     # --- LEFT COLUMN: STATS ---
+    # 1. Title
+    surface.blit(font.render("Status:", True, STYLE["TEXT_MAIN"]), (col1_x, y))
     
-    # Header
-    status_lbl = font.render("Status:", True, WHITE)
-    surface.blit(status_lbl, (col1_x, y_offset - 20))
+    # 2. Content Start Y
+    current_stat_y = y + 20 + STYLE["TITLE_SPACING"] # 20 is approx height of font
 
-    # Helper for stat bars
-    def draw_stat_bar(label, val, max_val, y, bar_col=GREEN):
+    # Helper function for bars
+    def draw_stat_bar(label, val, max_val, current_y, fill_color=STYLE["ACTIVE"]):
         safe_val = max(0, min(val, max_val))
+        
+        # Label
         label_str = f"{label}: {int(safe_val)}/{int(max_val)}"
-        label_surf = font_notification.render(label_str, True, GRAY)
-        surface.blit(label_surf, (col1_x, y))
+        surface.blit(font_notification.render(label_str, True, STYLE["TEXT_DIM"]), (col1_x, current_y))
         
-        bar_x = col1_x + 100
-        bar_w = 100 
-        bar_h = 8
+        # Bar Background
+        bar_x = col1_x + 100 
+        bar_rect = (bar_x, current_y + 4, STYLE["BAR_WIDTH"], STYLE["BAR_HEIGHT"])
+        pygame.draw.rect(surface, STYLE["BAR_BG"], bar_rect)
+        
+        # Bar Fill
         fill_pct = safe_val / max_val if max_val > 0 else 0
+        fill_width = int(STYLE["BAR_WIDTH"] * fill_pct)
+        if fill_width > 0:
+            pygame.draw.rect(surface, fill_color, (bar_x, current_y + 4, fill_width, STYLE["BAR_HEIGHT"]))
+            
+        # Border
+        pygame.draw.rect(surface, STYLE["TEXT_MAIN"], bar_rect, 1)
         
-        pygame.draw.rect(surface, (40,40,40), (bar_x, y + 4, bar_w, bar_h))
-        fill_w = int(bar_w * fill_pct)
-        if fill_w > 0:
-            pygame.draw.rect(surface, bar_col, (bar_x, y + 4, fill_w, bar_h))
-        pygame.draw.rect(surface, WHITE, (bar_x, y + 4, bar_w, bar_h), 1)
-        return y + 20
+        return current_y + 20 # Return new Y position
 
-    current_stat_y = y_offset
-    current_stat_y = draw_stat_bar("Health", vehicle.health, 100.0, current_stat_y, RED)
+    # Draw Stats
+    stats_y = current_stat_y
+    stats_y = draw_stat_bar("Health", vehicle.health, 100.0, stats_y, STYLE["INACTIVE"])
     
     gas_item = vehicle.equipment.get('fuel')
     max_fuel = float(gas_item.capacity) if gas_item and hasattr(gas_item, 'capacity') else 25.0
-    current_stat_y = draw_stat_bar("Fuel", vehicle.fuel, max_fuel, current_stat_y, (255, 165, 0))
+    stats_y = draw_stat_bar("Fuel", vehicle.fuel, max_fuel, stats_y, STYLE["WARN"])
 
     batt_item = vehicle.equipment.get('battery')
     max_batt = float(batt_item.max_durability) if batt_item and hasattr(batt_item, 'max_durability') else 100.0
-    current_stat_y = draw_stat_bar("Battery", vehicle.battery, max_batt, current_stat_y, (0, 255, 255))
+    stats_y = draw_stat_bar("Battery", vehicle.battery, max_batt, stats_y, (0, 255, 255))
 
     motor_item = vehicle.equipment.get('motor')
     motor_val = vehicle.motor * 100
-    motor_max = 100.0 
-    current_stat_y = draw_stat_bar("Motor", motor_val, motor_max, current_stat_y)
+    stats_y = draw_stat_bar("Motor", motor_val, 100.0, stats_y)
 
-    # Added Trunk/Storage Stat
     trunk_val = len(vehicle.inventory) if hasattr(vehicle, 'inventory') else 0
     trunk_cap = vehicle.capacity if hasattr(vehicle, 'capacity') else 20
-    current_stat_y = draw_stat_bar("Trunk", trunk_val, trunk_cap, current_stat_y, BLUE)
+    stats_y = draw_stat_bar("Trunk", trunk_val, trunk_cap, stats_y, STYLE["TRUNK_BAR"])
 
 
     # --- RIGHT COLUMN: SEATS ---
+    # 1. Title (Aligned with Status title)
+    surface.blit(font.render("Seats:", True, STYLE["TEXT_MAIN"]), (col2_x, y))
     
-    seat_y = y_offset
-    seats_lbl = font.render("Seats:", True, WHITE)
-    surface.blit(seats_lbl, (col2_x, seat_y - 20)) 
+    # 2. Grid Content Start
+    seats_y = y + 20 + STYLE["TITLE_SPACING"]
     
-    seat_slot_size = 48
-    seat_gap = 10
+    modal['seat_rects'] = {} 
+    seat_size = STYLE["SLOT_SIZE"]
+    seat_gap = STYLE["SEAT_GAP"]
     
-    modal['seat_rects'] = {} # Initialize rects for mouse interaction
-    
-    # Calculate rows needed
-    rows_used = (len(vehicle.seats) + 1) // 2
-    seats_height = rows_used * (seat_slot_size + seat_gap)
-    current_seat_y_end = seat_y + seats_height
-
-    # Draw Grid
     for i, occupant in enumerate(vehicle.seats):
         row = i // 2
         col = i % 2
         
-        sx = col2_x + (col * (seat_slot_size + seat_gap))
-        sy = seat_y + (row * (seat_slot_size + seat_gap))
+        slot_x = col2_x + (col * (seat_size + seat_gap))
+        slot_y = seats_y + (row * (seat_size + seat_gap))
         
-        slot_rect = pygame.Rect(sx, sy, seat_slot_size, seat_slot_size)
-        pygame.draw.rect(surface, (30,30,30), slot_rect)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1)
+        slot_rect = pygame.Rect(slot_x, slot_y, seat_size, seat_size)
         
-        # Label Seat 0 as Driver
+        # Background
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        
+        # --- SEAT NUMBER / DRIVER LBL ---
+        # Logic: If seat 0, show "Driver" (maybe small text inside or just 'D'?)
+        # User requested numbers inside.
         if i == 0:
-            lbl = font_notification.render("Driver", True, YELLOW)
-            surface.blit(lbl, (sx, sy - 12))
+            # Special case for driver, keep it clear
+            lbl = font_notification.render("D", True, STYLE["DRIVER_LBL"])
+            surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
         else:
-            lbl = font_notification.render(f"{i+1}", True, GRAY)
-            surface.blit(lbl, (sx, sy - 12))
+            # Regular seats: Number inside, top-left
+            lbl = font_notification.render(str(i+1), True, STYLE["TEXT_DIM"])
+            surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
 
-        # Draw Occupant
+        # --- OCCUPANT ---
         if occupant:
             if type(occupant).__name__ == 'Player':
-                # Draw Player indicator
-                text_p = font.render("PLY", True, (0, 255, 255))
-                text_rect = text_p.get_rect(center=slot_rect.center)
-                surface.blit(text_p, text_rect)
-            elif hasattr(occupant, 'image'):
-                # Draw Item
-                if occupant.image:
-                    icon = pygame.transform.scale(occupant.image, (32, 32))
-                    icon_rect = icon.get_rect(center=slot_rect.center)
-                    surface.blit(icon, icon_rect)
-                
-                # Draw stack count
+                txt = font.render("YOU", True, (0, 255, 255))
+                txt_rect = txt.get_rect(center=slot_rect.center)
+                surface.blit(txt, txt_rect)
+            elif hasattr(occupant, 'image') and occupant.image:
+                icon = pygame.transform.scale(occupant.image, (32, 32))
+                surface.blit(icon, icon.get_rect(center=slot_rect.center))
+                # Stack size
                 if hasattr(occupant, 'load') and occupant.load > 1:
-                     draw_text_shadow(surface, font_small, str(int(occupant.load)), WHITE, (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
+                     draw_text_shadow(surface, font_small, str(int(occupant.load)), STYLE["TEXT_MAIN"], 
+                                    (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['seat_rects'][i] = slot_rect
 
-    # --- BOTTOM SECTION: LIGHTS & EQUIPMENT ---
-    y_offset = max(current_stat_y, current_seat_y_end) + 20
+    # Calculate height used by seats
+    rows_used = (len(vehicle.seats) + 1) // 2
+    seats_height = rows_used * (seat_size + seat_gap)
+    seats_end_y = seats_y + seats_height
 
-    # 3. Lights
-    lights_lbl = font.render("Lights:", True, WHITE)
-    surface.blit(lights_lbl, (start_x, y_offset))
+
+    # --- BOTTOM SECTION: LIGHTS & EQUIPMENT ---
+    # Start below the lowest column + spacing
+    y = max(stats_y, seats_end_y) + STYLE["SECTION_SPACING"]
+
+    # 1. Lights Title & Controls
+    surface.blit(font.render("Lights:", True, STYLE["TEXT_MAIN"]), (x, y))
+    
+    # Controls (Placed to the right of the title)
     is_on = getattr(vehicle, 'lights', 'off') == 'on'
-    on_txt = font.render("[ON]", True, WHITE if is_on else GRAY)
-    off_txt = font.render("[OFF]", True, GRAY if is_on else WHITE)
-    on_rect = on_txt.get_rect(topleft=(start_x + 70, y_offset))
-    off_rect = off_txt.get_rect(topleft=(on_rect.right + 10, y_offset))
-    surface.blit(on_txt, on_rect); surface.blit(off_txt, off_rect)
+    
+    on_color = STYLE["TEXT_MAIN"] if is_on else STYLE["TEXT_DIM"]
+    off_color = STYLE["TEXT_DIM"] if is_on else STYLE["TEXT_MAIN"]
+    
+    on_txt = font.render("[ON]", True, on_color)
+    off_txt = font.render("[OFF]", True, off_color)
+    
+    # Position: Title X + ~70px
+    on_rect = on_txt.get_rect(topleft=(x + 70, y))
+    off_rect = off_txt.get_rect(topleft=(on_rect.right + 10, y))
+    
+    surface.blit(on_txt, on_rect)
+    surface.blit(off_txt, off_rect)
     modal['rects'] = {'lights_on': on_rect, 'lights_off': off_rect}
     
-    y_offset += 35 # Reduced spacing slightly
+    # Move down for Equipment
+    y += 20 + STYLE["TITLE_SPACING"] # 20 is approx height of lights text
 
-    # 4. Equipment Slots
+    # 2. Equipment Slots
     slots = ['motor','key', 'fuel', 'battery']
-    slot_size = 48; gap = 15; current_slot_x = start_x
+    slot_size = STYLE["SLOT_SIZE"]
+    slot_gap = STYLE["SLOT_GAP"]
+    current_x = x
     modal['equipment_rects'] = {}
     
     for slot_name in slots:
-        slot_rect = pygame.Rect(current_slot_x, y_offset, slot_size, slot_size)
-        pygame.draw.rect(surface, (30,30,30), slot_rect)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1)
-        lbl = font_notification.render(slot_name.capitalize(), True, GRAY)
-        surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.bottom + 2)))
+        slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
         
+        # Draw Box
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        
+        # Label (centered above or inside? User didn't specify, but "inside" was for seats. 
+        # Keeping equipment labels outside/above is cleaner for text like "Battery")
+        lbl = font_notification.render(slot_name.capitalize(), True, STYLE["TEXT_DIM"])
+        surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
+        
+        # Item Icon
         item = vehicle.equipment.get(slot_name)
         if item:
              if getattr(item, 'image', None):
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
              if hasattr(item, 'load') and item.load is not None and item.load > 0:
-                 draw_text_shadow(surface, font_small, str(int(item.load)), WHITE, (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
+                 draw_text_shadow(surface, font_small, str(int(item.load)), STYLE["TEXT_MAIN"], 
+                                (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['equipment_rects'][slot_name] = slot_rect
-        current_slot_x += slot_size + gap
-        
+        current_x += slot_size + slot_gap
+
 def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     vehicle = modal['vehicle']
     base_modal = BaseModal(surface, modal, assets, vehicle.name)
@@ -179,9 +246,9 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     close_btn, min_btn = base_modal.get_buttons()
     if base_modal.minimized: return [close_btn, min_btn]
 
-    # [FIX] Start content higher (45 instead of 65) to fit all elements within 320px height
-    content_y = base_modal.modal_y + 45 
-    content_x = base_modal.modal_x + 15
+    # Apply Margins
+    content_y = base_modal.modal_y + STYLE["MARGIN_TOP"]
+    content_x = base_modal.modal_x + STYLE["MARGIN_LEFT"]
     
     draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
         
