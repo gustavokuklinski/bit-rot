@@ -84,6 +84,7 @@ font_notification = pygame.font.Font(FONT_FACE, 14)
 
 
 # Global Default game settings
+CHUNK_SIZE = 100
 TILE_SIZE = 16
 TIME_DAYLENGTH = 0
 TIME_SUNRISE_HR = 0.0

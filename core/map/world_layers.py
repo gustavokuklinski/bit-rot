@@ -107,7 +107,7 @@ def load_giant_map(game):
                     found_neighbor = True
                     break
 
-    chunk_w, chunk_h = 100, 100
+    chunk_w, chunk_h = CHUNK_SIZE, CHUNK_SIZE
     grid_w = (max_x - min_x) + 1
     grid_h = (max_y - min_y) + 1
     

@@ -48,8 +48,8 @@
         <detection name="Player detection tiles" value="10"/>
         <wander name="Wandering" value="true"/>
         <wander_interval name="Wandering timing" value="2000"/>
-        <sight_check name="Sight player" value="false"/>
-        <spawn name="Zombies per spawn" value="2"/>
+        <sight_check name="Sight player" value="true"/>
+        <spawn name="Zombies per spawn" value="1"/>
         <respawn_timer name="Respawn" value="600000"/>
         <max_zombies name="World max zombies" value="2024"/>
         <infection_chance name="Zombir infection chance" value="0.10"/>

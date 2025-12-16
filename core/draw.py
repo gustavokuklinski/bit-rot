@@ -180,11 +180,6 @@ def draw_game(game):
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
                 light_rect = player_vision_tex.get_rect()
                 light_rect.center = (view_w / 2, view_h / 2)
-                # [FIX] Offset the fog of war slightly if panning, to keep player centered in the "light"
-                # Actually, since view_w/2 is center of SCREEN, and offset_x handles the world movement,
-                # we just need to draw this at the center of the surface, which is (view_w/2, view_h/2).
-                # Wait! If we pan, the player is NOT at the center of the screen anymore.
-                # The player is at: game.player.rect.centerx + offset_x
                 
                 player_screen_x = game.player.rect.centerx + offset_x
                 player_screen_y = game.player.rect.centery + offset_y
@@ -232,6 +227,19 @@ def draw_game(game):
                  radius_world_pixels = 0
             
             if radius_world_pixels <= 0: continue
+            
+            # [OPTIMIZED] Culling: Don't process lights off-screen
+            if light_info['owner'] == 'player':
+                 lx = game.player.rect.centerx
+                 ly = game.player.rect.centery
+            else:
+                 lx = light.rect.centerx
+                 ly = light.rect.centery
+            
+            # Simple check: if light center is far from screen_rect
+            # Allow a margin equal to the light radius
+            if not screen_rect.inflate(radius_world_pixels*2, radius_world_pixels*2).collidepoint(lx, ly):
+                continue
                 
             radius_view_pixels = int(radius_world_pixels / zoom)
             if radius_view_pixels <= 0: continue
@@ -369,15 +377,27 @@ def draw_game(game):
 
     # --- NEW: Draw Persistent Blood Stains (Decals) ---
     if hasattr(game, 'blood_stains'):
+        # [OPTIMIZED] Calculate View Bounds once
+        # Add a 100px buffer so stains don't pop out at edges
+        min_view_x = -offset_x - 100
+        max_view_x = -offset_x + view_w + 100
+        min_view_y = -offset_y - 100
+        max_view_y = -offset_y + view_h + 100
+
         for stain in game.blood_stains:
+            stain_wx, stain_wy = stain['pos']
+            
+            # [OPTIMIZED] Culling: Skip drawing if stain is off-screen
+            if not (min_view_x < stain_wx < max_view_x and min_view_y < stain_wy < max_view_y):
+                continue
+
             # Stains are drawn first (under temporary effects)
-            stain_x = int(stain['pos'][0] + offset_x)
-            stain_y = int(stain['pos'][1] + offset_y)
+            stain_x = int(stain_wx + offset_x)
+            stain_y = int(stain_wy + offset_y)
             stain_size = stain['size']
             stain_color = stain.get('color', (139, 0, 0))
             
             # Draw a simple circular decal
-            # Multiple of these small circles placed along a line create the trail effect.
             pygame.draw.circle(world_view_surface, stain_color, 
                                (stain_x, stain_y), 
                                stain_size // 2)

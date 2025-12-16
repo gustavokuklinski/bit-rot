@@ -8,11 +8,10 @@ from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
 
 # --- Configuration for Dynamic Spawning ---
-# Reduced max active NPCs to improve performance on slower systems
 MAX_ACTIVE_NPCS = 2
-NPC_SPAWN_RADIUS = 30 * TILE_SIZE  # Slightly reduced radius
-NPC_DESPAWN_RADIUS = 50 * TILE_SIZE 
-NPC_MIN_SPAWN_DIST = 15 * TILE_SIZE 
+NPC_SPAWN_RADIUS = 70 * TILE_SIZE
+NPC_DESPAWN_RADIUS = 80 * TILE_SIZE
+NPC_MIN_SPAWN_DIST = 50 * TILE_SIZE
 
 def spawn_initial_items(obstacles, item_spawns):
     items_on_ground = []
@@ -25,9 +24,7 @@ def spawn_initial_items(obstacles, item_spawns):
         item.rect.topleft = pos
         item.x = pos[0]
         item.y = pos[1]
-
         item_tile = (item.rect.x // TILE_SIZE, item.rect.y // TILE_SIZE)
-        
         if item_tile not in occupied_tiles:
             items_on_ground.append(item)
             occupied_tiles.add(item_tile)
@@ -54,73 +51,43 @@ def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_heig
             for j in range(-radius, radius + 1):
                 if abs(i) < radius and abs(j) < radius:
                     continue
-
                 check_x_tile = start_x_tile + i
                 check_y_tile = start_y_tile + j
-                
                 if not (0 <= check_x_tile < max_x_tile and 0 <= check_y_tile < max_y_tile):
                     continue
-                
                 tile_coord = (check_x_tile, check_y_tile)
-
                 if tile_coord not in occupied_tiles:
                     occupied_tiles.add(tile_coord)
                     return (check_x_tile * TILE_SIZE, check_y_tile * TILE_SIZE)
-                    
     return None
 
 def manage_dynamic_npcs(game):
-    """
-    Called every few frames to manage NPC population.
-    1. Despawns NPCs that are too far.
-    2. Spawns new NPCs if near a spawn point and under the limit.
-    """
     if not game.player: return
-
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
 
-    # 1. Despawn far NPCs
-    # Using a reverse loop to remove safely
     for npc in list(game.npcs):
-        # Don't despawn followers/friends
-        if hasattr(npc, 'is_following') and npc.is_following:
-            continue
-            
+        if hasattr(npc, 'is_following') and npc.is_following: continue
         dist_sq = (npc.rect.centerx - player_x)**2 + (npc.rect.centery - player_y)**2
         if dist_sq > NPC_DESPAWN_RADIUS**2:
             game.npcs.remove(npc)
 
-    # 2. Check if we need more NPCs
     current_count = len(game.npcs)
-    if current_count >= MAX_ACTIVE_NPCS:
-        return
+    if current_count >= MAX_ACTIVE_NPCS: return
 
-    # 3. Spawn new NPCs near player
     spawn_points = getattr(game, 'npc_spawn_points', [])
-    
     spawned_this_frame = 0
-    limit_per_frame = 1 # Strictly limit new creations to prevent frame drops
-    
-    # Pre-calculate squared radius for faster comparison
+    limit_per_frame = 1 
     spawn_rad_sq = NPC_SPAWN_RADIUS**2
     min_spawn_rad_sq = NPC_MIN_SPAWN_DIST**2
     
     p_rect = game.player.rect
-    # Create a simple rect for rough collision first (very fast)
     search_rect = pygame.Rect(
         p_rect.centerx - NPC_SPAWN_RADIUS, 
         p_rect.centery - NPC_SPAWN_RADIUS, 
         NPC_SPAWN_RADIUS * 2, 
         NPC_SPAWN_RADIUS * 2
     )
-
-    valid_candidates = []
-    
-    # Collect candidates (only check basic bounds first)
-    for pos in spawn_points:
-        if search_rect.collidepoint(pos):
-             valid_candidates.append(pos)
-    
+    valid_candidates = [pos for pos in spawn_points if search_rect.collidepoint(pos)]
     if not valid_candidates: return
 
     random.shuffle(valid_candidates)
@@ -132,13 +99,9 @@ def manage_dynamic_npcs(game):
         px, py = pos
         dist_sq = (px - player_x)**2 + (py - player_y)**2
 
-        # Check precise range
         if min_spawn_rad_sq < dist_sq < spawn_rad_sq:
-            
-            # Check if an NPC is already close to this spot (prevent stacking)
             too_crowded = False
             for npc in game.npcs:
-                # 2 Tiles squared = (64*2)^2 roughly
                 if (npc.rect.x - px)**2 + (npc.rect.y - py)**2 < (TILE_SIZE * 2)**2:
                     too_crowded = True
                     break
@@ -149,33 +112,58 @@ def manage_dynamic_npcs(game):
                 current_count += 1
                 spawned_this_frame += 1
 
-def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None):
+def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128):
     zombies = []
-    SAFE_RADIUS_TILES = 35 
+    SAFE_RADIUS_TILES = 45 
     safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
     
     filtered_spawns = []
     marker_exclusion_zone = set()
-    min_spacing_tiles = 5
+    min_spacing_tiles = 15
+
+    if not zombie_spawns: return []
+    
+    # Calculate bounding box of spawns to limit obstacle search
+    min_sx = min(s[0] for s in zombie_spawns) - (10 * TILE_SIZE)
+    max_sx = max(s[0] for s in zombie_spawns) + (10 * TILE_SIZE)
+    min_sy = min(s[1] for s in zombie_spawns) - (10 * TILE_SIZE)
+    max_sy = max(s[1] for s in zombie_spawns) + (10 * TILE_SIZE)
     
     for pos in zombie_spawns:
         tx = int(pos[0] // TILE_SIZE)
         ty = int(pos[1] // TILE_SIZE)
-        
-        if (tx, ty) in marker_exclusion_zone:
-            continue
-            
+        if (tx, ty) in marker_exclusion_zone: continue
         filtered_spawns.append(pos)
-        
         for i in range(-min_spacing_tiles, min_spacing_tiles + 1):
             for j in range(-min_spacing_tiles, min_spacing_tiles + 1):
                 marker_exclusion_zone.add((tx + i, ty + j))
 
+    # [OPTIMIZED] Use obstacle_grid if available to avoid O(N) loop
     occupied_tiles = set()
-    for ob in obstacles:
-        for x_tile in range(ob.left // TILE_SIZE, (ob.right + TILE_SIZE - 1) // TILE_SIZE):
-            for y_tile in range(ob.top // TILE_SIZE, (ob.bottom + TILE_SIZE - 1) // TILE_SIZE):
-                occupied_tiles.add((x_tile, y_tile))
+    relevant_obstacles = []
+
+    if obstacle_grid:
+        # Use the grid to fetch ONLY obstacles near the spawn area
+        start_grid_x = int(min_sx // grid_size)
+        end_grid_x = int(max_sx // grid_size)
+        start_grid_y = int(min_sy // grid_size)
+        end_grid_y = int(max_sy // grid_size)
+        
+        for gx in range(start_grid_x, end_grid_x + 1):
+            for gy in range(start_grid_y, end_grid_y + 1):
+                cell = (gx, gy)
+                if cell in obstacle_grid:
+                    relevant_obstacles.extend(obstacle_grid[cell])
+    else:
+        # Fallback to full list if grid is missing (slow)
+        relevant_obstacles = obstacles
+
+    for ob in relevant_obstacles:
+        # Check if obstacle is actually in range (grid gives rough area)
+        if ob.right > min_sx and ob.left < max_sx and ob.bottom > min_sy and ob.top < max_sy:
+            for x_tile in range(ob.left // TILE_SIZE, (ob.right + TILE_SIZE - 1) // TILE_SIZE):
+                for y_tile in range(ob.top // TILE_SIZE, (ob.bottom + TILE_SIZE - 1) // TILE_SIZE):
+                    occupied_tiles.add((x_tile, y_tile))
                 
     for entity in items_on_ground:
         occupied_tiles.add((entity.rect.x // TILE_SIZE, entity.rect.y // TILE_SIZE))

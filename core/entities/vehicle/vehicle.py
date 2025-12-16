@@ -121,13 +121,12 @@ class Vehicle:
         # Simple loot table for cars
         possible_loot = [
             ("Water Bottle", 0.4),
-            ("Canned Beans", 0.4),
-            ("Bandage", 0.3),
+            ("Canned Food", 0.4),
+            ("Medkit", 0.3),
             ("9mm Ammo", 0.2),
             ("Shotgun Shells", 0.1),
-            ("T-Shirt", 0.2),
-            ("Jeans", 0.2),
-            ("Duct Tape", 0.15)
+            ("Car Key Jeep", 0.1),
+            ("Motor Repair Kit", 0.15)
         ]
         
         # Try to spawn 0 to 4 items
@@ -144,8 +143,6 @@ class Vehicle:
                         self.inventory.append(item)
                     if len(self.inventory) >= self.capacity:
                         break
-
-    # ... [Keep existing health, is_driveable, damage_motor, move, current_light_radius, toggle_lights, toggle_engine methods] ...
     
     @property
     def health(self):
