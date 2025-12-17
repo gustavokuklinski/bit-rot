@@ -29,12 +29,25 @@ def draw_game(game):
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
 
+    # [OPTIMIZATION] Cache the world view surface to avoid expensive reallocation every frame
+    # We only recreate it if the zoom level (view dimensions) changes.
+    if not hasattr(game, 'cached_view_surface') or \
+       game.cached_view_surface.get_width() != view_w or \
+       game.cached_view_surface.get_height() != view_h:
+        game.cached_view_surface = pygame.Surface((view_w, view_h))
+        # Also create a scratch surface for particles to avoid allocs in loops
+        game.particle_scratch = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+    
+    world_view_surface = game.cached_view_surface
+    # We must fill it to clear previous frame (black is fine as background)
+    world_view_surface.fill((20, 20, 20)) 
+
     # ---------------------------------------------------------
-    # 1. CALCULATE CAMERA PANNING HERE (BEFORE DRAWING)
+    # 1. CALCULATE CAMERA PANNING
     # ---------------------------------------------------------
     mouse_pos = game._get_scaled_mouse_pos()
 
-    # Check if mouse is over any UI modal to prevent aiming through it
+    # Check if mouse is over any UI modal
     is_over_modal = False
     for modal in game.modals:
         if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
@@ -43,68 +56,43 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    
-    # Only allow right-click aiming if NOT hovering over a modal
     right_click_aim = mouse_buttons[2] and not is_over_modal
-    
     is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or right_click_aim)
 
     # Panning Camera Target Calculation
     target_pan_x = 0
     target_pan_y = 0
 
-
     if is_aiming and game.player:
-        # Player is conceptually at the center of the screen
         screen_center_x = GAME_WIDTH / 2
         screen_center_y = GAME_HEIGHT / 2
-        
         dx = mouse_pos[0] - screen_center_x
         dy = mouse_pos[1] - screen_center_y
-        
-        # Distance in Screen Pixels
         mouse_dist_screen = math.hypot(dx, dy)
-        
-        # Threshold (Fog of War Radius) in Screen Pixels
         pan_threshold_screen = game.player_view_radius
         
-        # Only pan if mouse is OUTSIDE the threshold
         if mouse_dist_screen > pan_threshold_screen:
-            # Calculate max pan distance (e.g., 30% of the view dimension)
             pan_distance = min(view_w, view_h) * 0.5
-            
-            # Calculate offset based on aim angle
-            # Note: -sin because screen Y is inverted vs standard math plane
             target_pan_x = math.cos(game.player.aim_angle) * pan_distance
             target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
 
-    # Smoothly interpolate current pan towards target (Lerp)
     lerp_speed = 0.1
     game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
     game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
 
-    # We subtract the pan so the camera moves towards the aim direction
     offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
     offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
 
-    # FRUSTUM CULLING OPTIMIZATION: Define the world-space viewport rectangle (screen_rect)
-    # This rect is in world coordinates and represents what is currently visible.
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
-    world_view_surface = pygame.Surface((view_w, view_h))
-
     # >>> START TILE RENDERING OPTIMIZATION (Tile Surface Caching) <<<
-
-    # 1. Check/Rebuild Cache if the map chunks have changed (tiles_dirty) or a dynamic tile state has toggled.
     if not hasattr(game, '_tile_cache_surface'):
         game._tile_cache_surface = None
     
-    # Check for full map chunk changes OR single dynamic tile changes (e.g., doors)
     dynamic_update_needed = getattr(game, 'dynamic_tiles_dirty', False)
     
     if getattr(game, 'tiles_dirty', True) or dynamic_update_needed: 
         if game.renderable_tiles:
-            # Calculate the bounding box of all tiles to size the cache surface
             min_x = min(rect.x for _, rect in game.renderable_tiles)
             min_y = min(rect.y for _, rect in game.renderable_tiles)
             max_x = max(rect.right for _, rect in game.renderable_tiles)
@@ -112,87 +100,78 @@ def draw_game(game):
 
             cache_w = max_x - min_x
             cache_h = max_y - min_y
-            
-            # Store the world coordinate of the cache's top-left corner
             game._tile_cache_world_origin = (min_x, min_y)
 
-            # Create the cache surface. Use .convert() for speed.
             game._tile_cache_surface = pygame.Surface((cache_w, cache_h)).convert()
             game._tile_cache_surface.fill(PANEL_COLOR) 
 
-            # Calculate offset for drawing onto the cache surface
             cache_offset_x = -min_x
             cache_offset_y = -min_y
 
-            # Perform the expensive blit operations ONCE (when dirty)
             for image, rect in game.renderable_tiles:
                 game._tile_cache_surface.blit(image, rect.move(cache_offset_x, cache_offset_y))
             
-            # Mark the cache clean
             game.tiles_dirty = False
             if dynamic_update_needed:
-                # Clear the dynamic flag after the rebuild
                 game.dynamic_tiles_dirty = False 
         else:
-            # Handle empty map case
             game._tile_cache_surface = pygame.Surface((1, 1)).convert()
             game._tile_cache_world_origin = (0, 0)
             game.tiles_dirty = False
             if dynamic_update_needed:
                 game.dynamic_tiles_dirty = False
     
-    # 2. Per-frame Optimized Blit from Cache
     if game._tile_cache_surface:
         cache_origin_x, cache_origin_y = game._tile_cache_world_origin
-        
-        # Calculate the source rectangle (the 'slice' of the map cache to display)
         source_x = screen_rect.x - cache_origin_x
         source_y = screen_rect.y - cache_origin_y
-        source_w = view_w
-        source_h = view_h
-        source_rect_on_cache = pygame.Rect(source_x, source_y, source_w, source_h)
-        
-        # Blit the slice onto the world_view_surface at position (0, 0)
+        source_rect_on_cache = pygame.Rect(source_x, source_y, view_w, view_h)
         world_view_surface.blit(game._tile_cache_surface, (0, 0), source_rect_on_cache)
+    # >>> END TILE RENDERING OPTIMIZATION <<<
 
-    # >>> END TILE RENDERING OPTIMIZATION (Tile Surface Caching) <<<
 
-
-    light_mask = pygame.Surface((view_w, view_h))
+    # [OPTIMIZATION] Low-Resolution Lighting
+    # Render lights to a smaller surface (1/2 size) then scale up. 
+    # This reduces fill-rate pressure by 4x and creates smoother shadows.
+    low_res_w = view_w // 2
+    low_res_h = view_h // 2
+    light_mask_low = pygame.Surface((low_res_w, low_res_h))
     
-    # Fill the mask with pitch black.
-    light_mask.fill((30, 30, 30))
+    light_mask_low.fill((30, 30, 30))
     ambient = int(game.world_time.current_ambient_light)
 
     light_texture = game.assets.get('light_texture')
-    
     light_sources = []
 
-    # 1. Add the player's base vision as a light source (Fog of War)
+    # 1. Player Vision (Fog of War)
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
-            radius_view_pixels = int(radius_world_pixels / zoom) # or Zoom
+            radius_view_pixels = int(radius_world_pixels / zoom)
             
             if radius_view_pixels > 0:
-                player_vision_tex = pygame.transform.smoothscale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
+                # [OPTIMIZATION] Use scale instead of smoothscale (much faster)
+                # Scale to half-resolution coordinates
+                radius_low = radius_view_pixels // 2
+                
+                player_vision_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 ambient_color = (ambient, ambient, ambient)
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
-                light_rect = player_vision_tex.get_rect()
-                light_rect.center = (view_w / 2, view_h / 2)
                 
-                player_screen_x = game.player.rect.centerx + offset_x
-                player_screen_y = game.player.rect.centery + offset_y
-                light_rect.center = (player_screen_x, player_screen_y)
-
-                light_mask.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+                light_rect = player_vision_tex.get_rect()
+                
+                # Calculate player center in Low Res View
+                p_screen_x = (game.player.rect.centerx + offset_x) / 2
+                p_screen_y = (game.player.rect.centery + offset_y) / 2
+                
+                light_rect.center = (p_screen_x, p_screen_y)
+                light_mask_low.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
-    # 2. Get all dynamic light sources (lanterns)
+    # 2. Collect Light Sources
     all_player_inventories = [game.player.belt, game.player.inventory]
-    if game.player.backpack:
-        all_player_inventories.append(game.player.backpack.inventory)
+    if game.player.backpack: all_player_inventories.append(game.player.backpack.inventory)
     if game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory'):
         all_player_inventories.append(game.player.invcontainer.inventory)
 
@@ -216,169 +195,96 @@ def draw_game(game):
                  if getattr(container, 'lights', 'off') == 'on' and container.battery > 0:
                      light_sources.append({'item': container, 'owner': 'vehicle'})
 
+    # 3. Draw Lights (Low Res)
     if light_texture:
-        # 3. Draw all dynamic lights (lanterns)
         for light_info in light_sources:
             light = light_info['item']
+            radius_world = getattr(light, 'current_light_radius', 0)
+            if radius_world <= 0: continue
             
-            if hasattr(light, 'current_light_radius'):
-                 radius_world_pixels = light.current_light_radius
-            else:
-                 radius_world_pixels = 0
-            
-            if radius_world_pixels <= 0: continue
-            
-            # [OPTIMIZED] Culling: Don't process lights off-screen
             if light_info['owner'] == 'player':
-                 lx = game.player.rect.centerx
-                 ly = game.player.rect.centery
+                 lx, ly = game.player.rect.centerx, game.player.rect.centery
             else:
-                 lx = light.rect.centerx
-                 ly = light.rect.centery
+                 lx, ly = light.rect.centerx, light.rect.centery
             
-            # Simple check: if light center is far from screen_rect
-            # Allow a margin equal to the light radius
-            if not screen_rect.inflate(radius_world_pixels*2, radius_world_pixels*2).collidepoint(lx, ly):
+            # Culling Check
+            if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly):
                 continue
-                
-            radius_view_pixels = int(radius_world_pixels / zoom)
-            if radius_view_pixels <= 0: continue
+            
+            radius_low = int((radius_world / zoom) / 2)
+            if radius_low <= 0: continue
 
             try:
-                scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
+                scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 light_rect = scaled_light_tex.get_rect()
                 
                 if light_info['owner'] == 'player':
-                    # Calculate player screen pos dynamicially
-                    px_view = game.player.rect.centerx + offset_x
-                    py_view = game.player.rect.centery + offset_y
-                    
-                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.75
-                    offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.75
+                    px_view = (game.player.rect.centerx + offset_x) / 2
+                    py_view = (game.player.rect.centery + offset_y) / 2
+                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375 # 0.75 / 2
+                    offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.375
                     light_rect.center = (px_view + offset_lx, py_view + offset_ly)
                 else:
-                    pos_x_view = light.rect.centerx + offset_x
-                    pos_y_view = light.rect.centery + offset_y
+                    pos_x_view = (light.rect.centerx + offset_x) / 2
+                    pos_y_view = (light.rect.centery + offset_y) / 2
                     light_rect.center = (pos_x_view, pos_y_view)
                 
-                light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
-            except Exception as e:
-                print(f"Error drawing light: {e}")
+                light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+            except Exception: pass
 
-
-    if light_texture:
         for light in game.map_lights:
-            if not light.get('active', True): 
-                continue
+            if not light.get('active', True): continue
+            if 'rect' in light and not screen_rect.colliderect(light['rect']): continue
             
-            # FRUSTUM CULLING ADDED FOR STATIC MAP LIGHTS
-            if 'rect' in light and not screen_rect.colliderect(light['rect']):
-                continue
-            
-            radius_view_pixels = int(light['radius'])
-            if radius_view_pixels <= 0: continue
+            radius_low = int(light['radius'] / 2)
+            if radius_low <= 0: continue
 
             try:
-                scaled_light_tex = pygame.transform.scale(light_texture, (radius_view_pixels * 2, radius_view_pixels * 2))
+                scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 light_opacity = 80 
                 scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
-
                 light_rect = scaled_light_tex.get_rect()
-                pos_x_view = light['rect'].centerx + offset_x
-                pos_y_view = light['rect'].centery + offset_y
+                
+                pos_x_view = (light['rect'].centerx + offset_x) / 2
+                pos_y_view = (light['rect'].centery + offset_y) / 2
                 light_rect.center = (pos_x_view, pos_y_view)
-                light_mask.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
-            except Exception as e:
-                pass
-
-    # 3. Draw all world objects onto the temporary surface at 1:1 scale.
+                light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+            except Exception: pass
     
     for container in game.containers:
-        if not screen_rect.colliderect(container.rect): continue # Frustum culling added
-        dist = math.hypot(container.rect.centerx - game.player.rect.centerx, container.rect.centery - game.player.rect.centery)
-        
-        if dist > game.player_view_radius: continue
-        
+        if not screen_rect.colliderect(container.rect): continue
         draw_pos = container.rect.move(offset_x, offset_y)
-        
-        # Calculate fade factor (1.0 close to player, 0.0 at edge of view_radius)
-        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
-        # Optional "blurry" effect: use power to make the fade faster near the edge
-        fade_factor = fade_factor ** 0.5 
-        
-        opacity = int(255 * fade_factor)
-        
         if getattr(container, 'image', None):
-            try:
-                temp_image = container.image.copy()
-                temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-                world_view_surface.blit(temp_image, draw_pos)
-            except Exception as e: pass
+             world_view_surface.blit(container.image, draw_pos)
         else:
-            color = getattr(container, 'color', WHITE)
-            temp_surface = pygame.Surface(container.rect.size, pygame.SRCALPHA)
-            temp_surface.fill((color[0], color[1], color[2], opacity))
-            world_view_surface.blit(temp_surface, draw_pos)
+             color = getattr(container, 'color', WHITE)
+             pygame.draw.rect(world_view_surface, color, draw_pos)
 
     for item in game.items_on_ground:
-        if not screen_rect.colliderect(item.rect): continue # Frustum culling added
-        dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
-        
-        if dist > game.player_view_radius: continue
-        
+        if not screen_rect.colliderect(item.rect): continue
         draw_pos = item.rect.move(offset_x, offset_y)
-        
-        # Calculate fade factor
-        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
-        opacity = int(255 * fade_factor)
-        
         if getattr(item, 'image', None):
-            temp_image = item.image.copy()
-            safe_opacity = max(0, min(255, opacity)) # Clamp (max/min check is good practice)
-            temp_image.fill((255, 255, 255, safe_opacity), special_flags=pygame.BLEND_RGBA_MULT)
-            world_view_surface.blit(temp_image, draw_pos)
+            world_view_surface.blit(item.image, draw_pos)
         else:
-            color = getattr(item, 'color', WHITE)
-            temp_surface = pygame.Surface(item.rect.size, pygame.SRCALPHA)
-            temp_surface.fill((color[0], color[1], color[2], opacity))
-            world_view_surface.blit(temp_surface, draw_pos)
+            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
 
     for p in game.projectiles:
-        if screen_rect.colliderect(p.rect): # Frustum culling added
+        if screen_rect.colliderect(p.rect):
             p.draw(world_view_surface, offset_x, offset_y)
 
     for zombie in game.zombies:
-        if not screen_rect.colliderect(zombie.rect): continue # Frustum culling added
-        dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-        
-        if dist > game.player_view_radius: continue
-        
-        # Calculate fade factor
-        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
-        opacity = int(255 * fade_factor)
-        
-        zombie.draw(world_view_surface, offset_x, offset_y, opacity)
-
+        if not screen_rect.colliderect(zombie.rect): continue
+        zombie.draw(world_view_surface, offset_x, offset_y, 255) # Full opacity is faster
 
     for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
-        
-        dist = math.hypot(npc.rect.centerx - game.player.rect.centerx, npc.rect.centery - game.player.rect.centery)
-        if dist > game.player_view_radius: continue
-        
-        fade_factor = max(0.0, 1.0 - (dist / game.player_view_radius))
-        opacity = int(255 * fade_factor)
-        
-        # Ensure NPC.draw accepts these arguments (Inherited from Zombie)
-        npc.draw(world_view_surface, offset_x, offset_y, opacity)
+        npc.draw(world_view_surface, offset_x, offset_y, 255)
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
 
     # --- NEW: Draw Persistent Blood Stains (Decals) ---
     if hasattr(game, 'blood_stains'):
-        # [OPTIMIZED] Calculate View Bounds once
-        # Add a 100px buffer so stains don't pop out at edges
         min_view_x = -offset_x - 100
         max_view_x = -offset_x + view_w + 100
         min_view_y = -offset_y - 100
@@ -386,71 +292,48 @@ def draw_game(game):
 
         for stain in game.blood_stains:
             stain_wx, stain_wy = stain['pos']
-            
-            # [OPTIMIZED] Culling: Skip drawing if stain is off-screen
             if not (min_view_x < stain_wx < max_view_x and min_view_y < stain_wy < max_view_y):
                 continue
 
-            # Stains are drawn first (under temporary effects)
             stain_x = int(stain_wx + offset_x)
             stain_y = int(stain_wy + offset_y)
-            stain_size = stain['size']
-            stain_color = stain.get('color', (139, 0, 0))
-            
-            # Draw a simple circular decal
-            pygame.draw.circle(world_view_surface, stain_color, 
-                               (stain_x, stain_y), 
-                               stain_size // 2)
+            pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
-    # --- Draw Hit Splashes (Blood Puff/Trail Effect) ---
-    SPLASH_COLOR = (139, 0, 0) # Dark Red
+    SPLASH_COLOR = (139, 0, 0)
     current_time = pygame.time.get_ticks()
+    
+    # Pre-configure scratch surface
+    scratch = game.particle_scratch 
     
     for splash in game.splashes:
         time_elapsed = current_time - splash['time']
+        if time_elapsed > splash['duration']: continue
         
-        # Calculate fade factor (1.0 at start, 0.0 at end)
         fade_factor = max(0.0, 1.0 - (time_elapsed / splash['duration']))
-        
-        # Base opacity (starts darker, fades out)
         base_opacity = int(255 * fade_factor)
-        
-        # Calculate screen position in world view (the impact spot on the floor)
         impact_x = splash['pos'][0] + offset_x
         impact_y = splash['pos'][1] + offset_y
 
-        # Draw more particles for a dramatic puff
-        num_particles = 15 # Increased particle count for more splatter
+        num_particles = 10 
         for i in range(num_particles):
-            
-            # Spread widens as it fades (simulating velocity)
-            offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) 
-            
-            # Add random variation to spread distance
-            offset_dist *= random.uniform(0.7, 1.3)
-            
-            # Random angle for direction of splatter
-            angle = math.radians(i * (360 / num_particles) + random.randint(-45, 45)) # Increased angle variance
+            offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) * random.uniform(0.7, 1.3)
+            angle = math.radians(i * (360 / num_particles) + random.randint(-45, 45))
             
             draw_x = impact_x + (math.cos(angle) * offset_dist)
             draw_y = impact_y + (math.sin(angle) * offset_dist)
-
-            # Calculate individual particle size (starts at splash['radius'], shrinks slightly)
-            particle_radius = int(splash['radius'] * random.uniform(1.0, 1.5) * (fade_factor * 0.5 + 0.5)) 
             
-            if particle_radius > 0:
-                # Create a temporary surface for the particle to control its opacity
-                particle_surf = pygame.Surface((particle_radius * 2, particle_radius * 2), pygame.SRCALPHA)
-                
-                # Darken the color slightly as it trails away
-                trail_color = (int(SPLASH_COLOR[0] * fade_factor), int(SPLASH_COLOR[1] * fade_factor), int(SPLASH_COLOR[2] * fade_factor), base_opacity)
-                
-                # Draw the particle with the dynamic color/opacity
-                pygame.draw.circle(particle_surf, trail_color, 
-                                   (particle_radius, particle_radius), 
-                                   particle_radius)
-
-                world_view_surface.blit(particle_surf, (int(draw_x - particle_radius), int(draw_y - particle_radius)))
+            p_radius = int(splash['radius'] * random.uniform(1.0, 1.5) * (fade_factor * 0.5 + 0.5))
+            if p_radius <= 0: continue
+            
+            # [OPTIMIZED DRAWING]
+            # Clear scratch area (only the size we need)
+            scratch_rect = pygame.Rect(0, 0, p_radius*2, p_radius*2)
+            scratch.fill((0,0,0,0), scratch_rect)
+            
+            trail_color = (int(SPLASH_COLOR[0] * fade_factor), int(SPLASH_COLOR[1] * fade_factor), int(SPLASH_COLOR[2] * fade_factor), base_opacity)
+            
+            pygame.draw.circle(scratch, trail_color, (p_radius, p_radius), p_radius)
+            world_view_surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
     player_tile_x = game.player.rect.centerx // TILE_SIZE
     player_tile_y = game.player.rect.centery // TILE_SIZE
@@ -475,13 +358,11 @@ def draw_game(game):
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
 
-    # Apply the light mask
-    world_view_surface.blit(light_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
+    world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # 4. Scale the entire world view surface up to the final game size.
+    # Final Scale to Screen
     scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
-
-    # 5. Blit the scaled world onto the main virtual screen.
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
     game.virtual_screen.blit(scaled_world, game_rect)
 
