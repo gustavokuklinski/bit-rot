@@ -4,6 +4,7 @@
         <damage min="20" max="50" />
         <skill type="melee" />
         <sprite file="axe.png" />
+        <knockback value="5" />
     </properties>
     <spawn chance="1" />
     <sound>

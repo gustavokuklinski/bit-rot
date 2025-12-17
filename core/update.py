@@ -167,26 +167,64 @@ def update_game_state(game):
         # If far away, skip EVERYTHING
         if dist_sq > ACTIVE_RADIUS_SQ:
             continue
+        
+        nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
+        nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]
         
         if getattr(zombie, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
-            zombie.x += kb_vel_x * VELOCITY_MULTIPLIER 
-            zombie.y += kb_vel_y * VELOCITY_MULTIPLIER
+            
+            dx = kb_vel_x * VELOCITY_MULTIPLIER
+            dy = kb_vel_y * VELOCITY_MULTIPLIER
+            
+            # 1. Move X
+            original_x = zombie.x
+            zombie.x += dx
+            zombie.rect.x = int(zombie.x)
+            
+            # Check collision on X axis
+            collision_x = False
+            for obs in nearby_obstacles:
+                if zombie.rect.colliderect(obs):
+                    collision_x = True
+                    break
+            
+            if collision_x:
+                zombie.x = original_x # Revert if hit wall
+                zombie.rect.x = int(zombie.x)
+                zombie.knockback_velocity[0] = 0 # Stop horizontal momentum
+            
+            # 2. Move Y
+            original_y = zombie.y
+            zombie.y += dy
+            zombie.rect.y = int(zombie.y)
+            
+            # Check collision on Y axis
+            collision_y = False
+            for obs in nearby_obstacles:
+                if zombie.rect.colliderect(obs):
+                    collision_y = True
+                    break
+            
+            if collision_y:
+                zombie.y = original_y # Revert if hit wall
+                zombie.rect.y = int(zombie.y)
+                zombie.knockback_velocity[1] = 0 # Stop vertical momentum
+
             zombie.rect.topleft = (int(zombie.x), int(zombie.y))
+
             zombie.knockback_velocity[0] *= 0.9 
             zombie.knockback_velocity[1] *= 0.9
             zombie.knockback_timer -= game.clock.get_time()
-
-        nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
-        nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
         
         zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game) 
 
         distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, 
-                                        game.player.rect.centery - zombie.rect.centery) 
+                                        game.player.rect.centery - zombie.rect.centery)
+                                        
         if distance_to_player < zombie.attack_range: 
             current_time = pygame.time.get_ticks() 
             if current_time - zombie.last_attack_time > 500: 
@@ -214,6 +252,10 @@ def update_game_state(game):
     
     current_time = pygame.time.get_ticks()
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
+
+    # [NEW] Blood Stain Cleanup
+    if hasattr(game, 'blood_stains'):
+        game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']]
 
     # --- Vehicle Update ---
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
@@ -299,7 +341,7 @@ def player_hit_zombie(player, zombie, game):
     final_damage = base_damage * damage_multiplier
 
     if is_ranged and knockback_force > 0:
-        zombie.knockback_velocity = [-projectile_dir[0] * knockback_force, -projectile_dir[1] * knockback_force]
+        zombie.knockback_velocity = [projectile_dir[0] * knockback_force, projectile_dir[1] * knockback_force]
         zombie.knockback_timer = 400 
         
         if hasattr(game, 'blood_stains'):
@@ -318,12 +360,30 @@ def player_hit_zombie(player, zombie, game):
                 stain_pos_x += perp_dir_x * lateral_scatter
                 stain_pos_y += perp_dir_y * lateral_scatter
                 
+                # [NEW] Check Collision with Obstacles before adding stain
+                # This prevents blood from drawing on top of stones/trees/walls
+                stain_rect = pygame.Rect(stain_pos_x - 1, stain_pos_y - 1, 2, 2)
+                
+                collides_with_obstacle = False
+                if hasattr(game, 'cached_obstacle_grid'):
+                    GRID_SIZE_CHECK = 128
+                    nearby_obs = get_nearby_obstacles(stain_rect, game.cached_obstacle_grid, GRID_SIZE_CHECK)
+                    if any(stain_rect.colliderect(obs) for obs in nearby_obs):
+                        collides_with_obstacle = True
+                else:
+                    if any(stain_rect.colliderect(obs) for obs in game.obstacles):
+                        collides_with_obstacle = True
+                
+                if collides_with_obstacle:
+                    continue
+
                 game.blood_stains.append({
                     'pos': (stain_pos_x, stain_pos_y),
                     'size': random.randint(5, int(stain_size * 1.5)), 
                     'color': (139, 0, 0), 
                     'time': pygame.time.get_ticks(),
-                    'duration': 0 
+                    # [NEW] Add random duration (30-60 seconds)
+                    'duration': random.randint(30000, 60000) 
                 })
             
             # [OPTIMIZATION] Limit the number of blood stains to prevent lag

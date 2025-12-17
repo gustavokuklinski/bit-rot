@@ -8,6 +8,7 @@
         <firing pellets="1" spread_angle="0" />
         <skill type="range" />
         <sprite file="38_revolver.png" />
+        <knockback value="10" />
     </properties>
     <sound>
         <shoot src="38_revolver.ogg" />

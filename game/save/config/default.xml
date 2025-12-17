@@ -42,6 +42,14 @@
         <item_currency_spawn_chance_multiplier name="Currency" value="1.0"/>
         <item_text_spawn_chance_multiplier name="Text (ID, Newspaper)" value="1.0"/>
     </item_spawning>
+    <npc>
+        <max_npcs name="World Max NPCs" value="50"/>
+        <spawn_chance name="Spawn Chance" value="0.5"/>
+        <health_multiplier name="Health Multiplier" value="1.0"/>
+        <damage_multiplier name="Damage Multiplier" value="1.0"/>
+        <speed_multiplier name="Speed Multiplier" value="1.0"/>
+        <detection_radius name="Detection Radius" value="15"/>
+    </npc>
     <zombie>
         <speed name="Speed" value="0.8"/>
         <drop name="Drop" value="1"/>
@@ -49,9 +57,9 @@
         <wander name="Wandering" value="true"/>
         <wander_interval name="Wandering timing" value="2000"/>
         <sight_check name="Sight player" value="true"/>
-        <spawn name="Zombies per spawn" value="1"/>
+        <spawn name="Zombies per spawn" value="2"/>
         <respawn_timer name="Respawn" value="600000"/>
-        <max_zombies name="World max zombies" value="2024"/>
+        <max_zombies name="World max zombies" value="100000"/>
         <infection_chance name="Zombir infection chance" value="0.10"/>
     </zombie>
 </config>

@@ -57,18 +57,14 @@ class Vehicle:
 
         self.active = False 
 
-        # Initialize Seats from XML stats (default to 4 if missing)
         self.seat_count = int(stats.get('seats', 4))
-        # Seats can hold None, an Item, or a Player instance
+
         self.seats = [None] * self.seat_count
 
-        # [NEW] Randomly populate slots with items
         self._spawn_random_equipment()
         
-        # [NEW] Generate generic loot for the trunk/seats
         self.generate_trunk_loot()
         
-        # [NEW] Sync internal floats (fuel, battery) with the newly spawned items
         self.update_stats_from_equipment()
 
     # ... [Keep existing current_speed_val and brake methods] ...
@@ -119,15 +115,7 @@ class Vehicle:
     def generate_trunk_loot(self):
         """Populates the trunk with random items based on a simple loot table logic."""
         # Simple loot table for cars
-        possible_loot = [
-            ("Water Bottle", 0.4),
-            ("Canned Food", 0.4),
-            ("Medkit", 0.3),
-            ("9mm Ammo", 0.2),
-            ("Shotgun Shells", 0.1),
-            ("Car Key Jeep", 0.1),
-            ("Motor Repair Kit", 0.15)
-        ]
+        possible_loot = []
         
         # Try to spawn 0 to 4 items
         num_items = random.randint(0, 4)
@@ -397,7 +385,7 @@ class Vehicle:
                  print("Engine died (No Fuel).")
 
         if self.lights == 'on':
-            drain_amount = 0.005
+            drain_amount = 0.0005
             if self.battery > 0:
                 self.battery -= drain_amount
                 if battery_item:

@@ -131,6 +131,12 @@ ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = 1.0
+MAX_NPCS_GLOBAL = 0
+NPC_SPAWN_CHANCE = 0.0
+NPC_HEALTH_MULTIPLIER = 1.0
+NPC_DAMAGE_MULTIPLIER = 1.0
+NPC_SPEED_MULTIPLIER = 1.0
+NPC_DETECTION_RADIUS = 0
 
 
 def load_settings(preset="default"):
@@ -151,6 +157,8 @@ def load_settings(preset="default"):
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
+    global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
+    global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -231,7 +239,15 @@ def load_settings(preset="default"):
         ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = float(spawning_config.find('item_consumable_ammo_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = float(spawning_config.find('item_currency_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = float(spawning_config.find('item_text_spawn_chance_multiplier').get('value'))
-        
+
+        npc_config = root.find('npc')
+        MAX_NPCS_GLOBAL = int(npc_config.find('max_npcs').get('value'))
+        NPC_SPAWN_CHANCE = float(npc_config.find('spawn_chance').get('value'))
+        NPC_HEALTH_MULTIPLIER = float(npc_config.find('health_multiplier').get('value'))
+        NPC_DAMAGE_MULTIPLIER = float(npc_config.find('damage_multiplier').get('value'))
+        NPC_SPEED_MULTIPLIER = float(npc_config.find('speed_multiplier').get('value'))
+        NPC_DETECTION_RADIUS = int(npc_config.find('detection_radius').get('value')) * TILE_SIZE
+
         print(f"Configuration loaded from {filepath}")
 
     except Exception as e:

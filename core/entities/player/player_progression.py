@@ -14,11 +14,9 @@ class PlayerProgression:
         self.ranged = self._create_attribute(player_data, 'ranged')
         self.maintenance = self._create_attribute(player_data, 'maintenance')
         self.speed = self._create_attribute(player_data, 'speed')
-
-        # Passive skills
         self.lucky = self._create_attribute(player_data, 'luck')
-        # self.speed was here previously
-
+        
+        
     def get_total_attribute_bonus(self, player, attr_name):
         """Calculates the total percentage bonus from 'charm' items in player's inventory."""
         total_bonus = 0.0
@@ -81,7 +79,7 @@ class PlayerProgression:
         return self.maintenance['level']
 
     def get_lucky(self, player):
-        base = self.lucky
+        base = self.lucky['level']
         bonus_perc = self.get_total_attribute_bonus(player, 'lucky')
         return base * (1 + (bonus_perc / 100.0))
     
@@ -127,7 +125,7 @@ class PlayerProgression:
         base_xp = 100
 
         # Specific XP requirements for Level 1 (scaling from there)
-        if attr_name in ['strength', 'fitness']:
+        if attr_name in ['strength', 'fitness', 'lucky']:
             base_xp = 1000
         elif attr_name == 'ranged':
             base_xp = 200
@@ -135,9 +133,8 @@ class PlayerProgression:
             base_xp = 50
         elif attr_name == 'melee':
             base_xp = 100
-        # [NEW] XP Curve for Speed
         elif attr_name == 'speed':
-            base_xp = 150
+            base_xp = 500
             
         # Linear scaling: Level 0->1 = Base. Level 1->2 = Base * 2.
         return base_xp * (current_level + 1)
@@ -327,15 +324,16 @@ class PlayerProgression:
         # Cost to swing (energy consumption)
         fatigue_cost = 0.5 
         
-        # [FIXED] Check if player has enough Energy (> 1%)
-        # 100% = Full Rested, 0% = Exhausted
-        if player.tireness > 1.0:
-            # Decrease energy (tireness)
+        # [CHANGED] Logic to allow swinging even when exhausted (tireness <= 0)
+        # If player has energy (tireness > 0), we consume it.
+        # If player has NO energy, we still allow the swing (Return True).
+        # Since 'tireness' is low/zero, 'get_melee_damage_multiplier' will naturally 
+        # reduce damage to near zero, but the attack event will fire, allowing knockback.
+        
+        if player.tireness > 0:
             player.tireness = max(0.0, player.tireness - fatigue_cost)
-            return True
             
-        display_message_player("Too tired to swing!")
-        return False
+        return True
 
     # --- HELPER FUNCTIONS ---
     def get_melee_damage_multiplier(self, player):

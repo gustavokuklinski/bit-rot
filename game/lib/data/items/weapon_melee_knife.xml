@@ -4,6 +4,7 @@
         <damage min="5" max="10" />
         <skill type="melee" />
         <sprite file="knife.png" />
+        <knockback value="5" />
     </properties>
     <spawn chance="1" />
     <sound>

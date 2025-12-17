@@ -2,7 +2,7 @@ import pygame
 import uuid
 import random
 import math
-
+import time
 from core.data.config import *
 from core.entities.item.item import Item, Projectile
 from core.entities.zombie.corpse import Corpse
@@ -1544,6 +1544,8 @@ def handle_right_click(game, mouse_pos):
             options = ['Status', 'Inventory', 'Gear']
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
+            if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
+                options.remove('Use')
 
         if click_source == 'belt':
             if 'Unequip' not in options: options.append('Unequip')
@@ -1728,8 +1730,13 @@ def handle_attack(game, mouse_pos):
             return
 
         if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:
+            firing_delay = getattr(weapon, 'firing_second', 0.0)
+            if firing_delay > 0:
+                if time.time() - game.player.last_shot_time < firing_delay:
+                    return
             
             if weapon.load > 0 and weapon.durability > 0:
+                game.player.last_shot_time = time.time()
                 if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
                     game.sound_manager.play_sound(
                         weapon.sounds['shoot'], 

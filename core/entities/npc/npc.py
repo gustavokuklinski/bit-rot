@@ -8,7 +8,12 @@ from core.entities.zombie.corpse import Corpse
 from core.messages import display_message
 import xml.etree.ElementTree as ET
 from core.entities.zombie.zombie import Zombie, ZOMBIE_CLOTHES_POOL
-from core.data.config import TILE_SIZE, SPRITE_PATH, DATA_PATH
+# Import the new configuration variables
+from core.data.config import (
+    TILE_SIZE, SPRITE_PATH, DATA_PATH,
+    NPC_HEALTH_MULTIPLIER, NPC_DAMAGE_MULTIPLIER, 
+    NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
+)
 
 class NPC(Zombie):
     # --- Class-Level Cache ---
@@ -29,7 +34,7 @@ class NPC(Zombie):
                 'name': "Survivor", 
                 'sex': random.choice(['Male', 'Female']),
                 'health': 100,
-                'speed': 1.0,\
+                'speed': 1.0,
                 'min_xp': 10,
                 'max_xp': 20,
                 'min_attack': 1,
@@ -43,6 +48,22 @@ class NPC(Zombie):
         super().__init__(x, y, template)
         
         self.game = game
+
+        # --- APPLY GLOBAL CONFIG SETTINGS ---
+        # Apply multipliers to stats loaded from template
+        self.max_health = int(self.max_health * NPC_HEALTH_MULTIPLIER)
+        self.health = int(self.health * NPC_HEALTH_MULTIPLIER)
+        self.min_attack = int(self.min_attack * NPC_DAMAGE_MULTIPLIER)
+        self.max_attack = int(self.max_attack * NPC_DAMAGE_MULTIPLIER)
+        
+        # Ensure base speed exists, then apply multiplier
+        if not hasattr(self, 'speed') or self.speed == 0:
+            self.speed = 1.1 
+        self.speed = self.speed * NPC_SPEED_MULTIPLIER
+
+        # Set detection radius from config
+        self.base_search_range = NPC_DETECTION_RADIUS
+        # ------------------------------------
         
         # Override name if template was random/generic
         if self.name == "Zombie" or self.name == "RANDOM":
@@ -95,9 +116,6 @@ class NPC(Zombie):
         if not hasattr(self, 'angle'): self.angle = 0
         if not hasattr(self, 'dx'): self.dx = 0
         if not hasattr(self, 'dy'): self.dy = 0
-        
-        if not hasattr(self, 'speed') or self.speed == 0:
-            self.speed = 1.1
             
         self.attack_range = TILE_SIZE * 1
         self.last_attack_time = 0
@@ -337,12 +355,16 @@ class NPC(Zombie):
             if self.is_following and player_dist > FOLLOW_PRIORITY_RANGE:
                 player_is_far_and_following = True
 
-        # Determine effective search range based on weapon
+        # Determine effective search range based on weapon and CONFIG
         weapon = getattr(self, 'equipped_weapon', None)
-        search_range = TILE_SIZE * 15 # Default search range (15 tiles)
+        
+        # Use the config value (defaults to 15 tiles)
+        search_range = self.base_search_range 
+        
         is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
         if is_ranged_weapon:
-            search_range = TILE_SIZE * 30 # Search further for ranged attacks
+            # Scale range for ranged weapons (e.g., 2x the base detection)
+            search_range = self.base_search_range * 2 
 
         # 1. Prioritize Attack nearby Zombie
         min_dist_to_zombie = float('inf')

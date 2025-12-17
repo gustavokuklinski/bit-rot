@@ -134,6 +134,8 @@ class Player:
 
         self.is_dead = False
         self.dead_image = self._load_sprite(self.visuals.get('dead_sprite', 'dead.png'))
+        
+        self.last_shot_time = 0
 
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
@@ -567,6 +569,17 @@ class Player:
 
         keys = pygame.key.get_pressed()
         has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+
+
+        mouse_buttons = pygame.mouse.get_pressed()
+        is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]
+        is_firing = mouse_buttons[0]
+
+        if not self.is_sleeping and is_aiming and is_firing:
+             if self.active_weapon and getattr(self.active_weapon, 'machine_gun', False):
+                  # Import here to avoid circular dependency
+                  from core.events.mouse import handle_attack
+                  handle_attack(game, pygame.mouse.get_pos())
 
         is_moving = has_input and (self.vehicle is None)
 

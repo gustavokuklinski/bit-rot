@@ -51,6 +51,15 @@ def draw_tooltip(surface, item, pos):
     if item.min_damage is not None and item.max_damage is not None:
         min_damage, max_damage = item.current_damage_range
         lines.append(f"Damage: {min_damage}-{max_damage}")
+    if item.ammo_type:
+        lines.append(f"Ammo: {item.ammo_type}")
+    
+    if hasattr(item, 'repair_list') and item.repair_list:
+        lines.append("Repairs:")
+        for target_name in item.repair_list:
+            # Display item name (replacing underscores for cleaner look if desired)
+            display_str = target_name.replace('_', ' ')
+            lines.append(f" - {display_str}")
     
     if item.item_type == 'charm' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line

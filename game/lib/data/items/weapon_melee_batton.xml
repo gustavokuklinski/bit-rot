@@ -4,6 +4,7 @@
         <damage min="1" max="10" />
         <skill type="melee" />
         <sprite file="batton.png" />
+        <knockback value="5" />
     </properties>
     <spawn chance="1" />
     <sound>

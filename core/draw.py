@@ -30,7 +30,6 @@ def draw_game(game):
     view_h = int(GAME_HEIGHT / zoom)
 
     # [OPTIMIZATION] Cache the world view surface to avoid expensive reallocation every frame
-    # We only recreate it if the zoom level (view dimensions) changes.
     if not hasattr(game, 'cached_view_surface') or \
        game.cached_view_surface.get_width() != view_w or \
        game.cached_view_surface.get_height() != view_h:
@@ -39,7 +38,6 @@ def draw_game(game):
         game.particle_scratch = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
     
     world_view_surface = game.cached_view_surface
-    # We must fill it to clear previous frame (black is fine as background)
     world_view_surface.fill((20, 20, 20)) 
 
     # ---------------------------------------------------------
@@ -129,10 +127,24 @@ def draw_game(game):
         world_view_surface.blit(game._tile_cache_surface, (0, 0), source_rect_on_cache)
     # >>> END TILE RENDERING OPTIMIZATION <<<
 
+    # --- [MOVED] Draw Persistent Blood Stains (Decals) ---
+    # Moved here so they appear on the ground, below entities
+    if hasattr(game, 'blood_stains'):
+        min_view_x = -offset_x - 100
+        max_view_x = -offset_x + view_w + 100
+        min_view_y = -offset_y - 100
+        max_view_y = -offset_y + view_h + 100
+
+        for stain in game.blood_stains:
+            stain_wx, stain_wy = stain['pos']
+            if not (min_view_x < stain_wx < max_view_x and min_view_y < stain_wy < max_view_y):
+                continue
+
+            stain_x = int(stain_wx + offset_x)
+            stain_y = int(stain_wy + offset_y)
+            pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
     # [OPTIMIZATION] Low-Resolution Lighting
-    # Render lights to a smaller surface (1/2 size) then scale up. 
-    # This reduces fill-rate pressure by 4x and creates smoother shadows.
     low_res_w = view_w // 2
     low_res_h = view_h // 2
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
@@ -143,15 +155,13 @@ def draw_game(game):
     light_texture = game.assets.get('light_texture')
     light_sources = []
 
-    # 1. Player Vision (Fog of War)
+    # 1. Player Vision
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
             radius_view_pixels = int(radius_world_pixels / zoom)
             
             if radius_view_pixels > 0:
-                # [OPTIMIZATION] Use scale instead of smoothscale (much faster)
-                # Scale to half-resolution coordinates
                 radius_low = radius_view_pixels // 2
                 
                 player_vision_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
@@ -160,7 +170,6 @@ def draw_game(game):
                 
                 light_rect = player_vision_tex.get_rect()
                 
-                # Calculate player center in Low Res View
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
                 
@@ -221,7 +230,7 @@ def draw_game(game):
                 if light_info['owner'] == 'player':
                     px_view = (game.player.rect.centerx + offset_x) / 2
                     py_view = (game.player.rect.centery + offset_y) / 2
-                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375 # 0.75 / 2
+                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375 
                     offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.375
                     light_rect.center = (px_view + offset_lx, py_view + offset_ly)
                 else:
@@ -274,7 +283,7 @@ def draw_game(game):
 
     for zombie in game.zombies:
         if not screen_rect.colliderect(zombie.rect): continue
-        zombie.draw(world_view_surface, offset_x, offset_y, 255) # Full opacity is faster
+        zombie.draw(world_view_surface, offset_x, offset_y, 255) 
 
     for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
@@ -282,22 +291,7 @@ def draw_game(game):
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
-
-    # --- NEW: Draw Persistent Blood Stains (Decals) ---
-    if hasattr(game, 'blood_stains'):
-        min_view_x = -offset_x - 100
-        max_view_x = -offset_x + view_w + 100
-        min_view_y = -offset_y - 100
-        max_view_y = -offset_y + view_h + 100
-
-        for stain in game.blood_stains:
-            stain_wx, stain_wy = stain['pos']
-            if not (min_view_x < stain_wx < max_view_x and min_view_y < stain_wy < max_view_y):
-                continue
-
-            stain_x = int(stain_wx + offset_x)
-            stain_y = int(stain_wy + offset_y)
-            pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
+    # --- Draw Persistent Blood Stains was removed from here ---
 
     SPLASH_COLOR = (139, 0, 0)
     current_time = pygame.time.get_ticks()
@@ -325,8 +319,6 @@ def draw_game(game):
             p_radius = int(splash['radius'] * random.uniform(1.0, 1.5) * (fade_factor * 0.5 + 0.5))
             if p_radius <= 0: continue
             
-            # [OPTIMIZED DRAWING]
-            # Clear scratch area (only the size we need)
             scratch_rect = pygame.Rect(0, 0, p_radius*2, p_radius*2)
             scratch.fill((0,0,0,0), scratch_rect)
             

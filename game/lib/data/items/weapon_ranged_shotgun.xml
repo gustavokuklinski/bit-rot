@@ -5,10 +5,10 @@
         <capacity value="8" />
         <ammo type="Shotgun Shells" />
         <damage min="65" max="150" />
-        <firing pellets="6" spread_angle="15" />
+        <firing pellets="6" spread_angle="15" firing_second="1.5" />
         <skill type="range" />
         <sprite file="shotgun.png" />
-        <knockback value="150" />
+        <knockback value="50" />
     </properties>
     <sound>
         <shoot src="shotgun.ogg" />
