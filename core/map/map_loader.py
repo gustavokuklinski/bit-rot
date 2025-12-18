@@ -71,16 +71,10 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         cap = tile_def.get('capacity', 0)
                         
                         # Generate Loot
-                        items = []
-                        if 'loot' in tile_def:
-                            for loot_item in tile_def['loot']:
-                                if random.random() < loot_item['chance']:
-                                    new_item = Item.create_from_name(loot_item['item'])
-                                    if new_item:
-                                        items.append(new_item)
+                        loot_table = tile_def.get('loot')
 
                         # Pass items to Vehicle constructor
-                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, items=items)
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, loot_table=loot_table)
                         
                         # Use the rect we created so it's the SAME object in both lists
                         vehicle.rect = rect 
@@ -135,16 +129,10 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         cap = tile_def.get('capacity', 0)
 
                         # Generate Loot
-                        items = []
-                        if 'loot' in tile_def:
-                            for loot_item in tile_def['loot']:
-                                if random.random() < loot_item['chance']:
-                                    new_item = Item.create_from_name(loot_item['item'])
-                                    if new_item:
-                                        items.append(new_item)
+                        loot_table = tile_def.get('loot')
 
                         # Pass items to Vehicle constructor
-                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, items=items)
+                        vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, loot_table=loot_table)
 
                         vehicle.rect = rect 
                         containers.append(vehicle)

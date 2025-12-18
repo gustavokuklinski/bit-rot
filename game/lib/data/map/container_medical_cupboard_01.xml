@@ -10,7 +10,7 @@
         <item item="Matches" chance="0.1" />
         <item item="Medkit" chance="0.2" />
         <item item="Powerbank" chance="0.1" />
-        <item item="Ducktype" chance="0.2" />
+        <item item="Duck Tape" chance="0.2" />
         <item item="Car Key Jeep" chance="0.1" />
     </loot>
 </map>

@@ -1,16 +1,17 @@
 <?xml version="1.0" ?>
 <config>
     <game>
-        <time_daylength name="Day length" value="900000"/>
+        <time_daylength name="Day length" value="1500000"/>
         <time_sunrise_hr name="Time sunrise" value="5.5"/>
         <time_sunset_hr name="Time sunset" value="17.5"/>
         <time_transition_hr name="Time transition (day/night)" value="1.0"/>
         <time_start_hr name="Start hour" value="6.0"/>
         <day_night_cycle_darkness name="Darkness color" value="255"/>
         <zoom_start name="Zoom start" value="3.0"/>
-        <zoom_far name="Zoom max far" value="1.3"/>
-        <zoom_near name="Zoom max near" value="5.0"/>
+        <zoom_far name="Zoom max far" value="1.5"/>
+        <zoom_near name="Zoom max near" value="6.0"/>
     </game>
+
     <player>
         <food_water_decay_seconds name="Food and Water decay seconds" value="5.0"/>
         <food_decay name="Food decay %" value="0.2"/>
@@ -20,6 +21,7 @@
         <food_water_multiplier_decay name="Food and water decay multiplier" value="1.5"/>
         <view_radius name="View radius tiles" value="15"/>
     </player>
+
     <durability>
         <multiplier name="Base multiplier" value="1.0"/>
         <weapon_melee_multiplier name="Weapon melee" value="1.0"/>
@@ -27,6 +29,7 @@
         <tool_multiplier name="Tools" value="1.0"/>
         <cloth_multiplier name="Cloth" value="1.0"/>
     </durability>
+
     <item_spawning>
         <item_spawn_chance_multiplier name="Multiplier" value="1.0"/>
         <item_weapon_melee_spawn_chance_multiplier name="Melee weapons" value="1.0"/>
@@ -42,16 +45,23 @@
         <item_currency_spawn_chance_multiplier name="Currency" value="1.0"/>
         <item_text_spawn_chance_multiplier name="Text (ID, Newspaper)" value="1.0"/>
     </item_spawning>
+
+    <vehicle>
+        <has_fuel name="Car Fuel chance" value="1.0" />
+        <has_key name="Car Key chance" value="1.0" />
+        <has_battery name="Car Battery chance" value="1.0" />
+    </vehicle>
+
     <npc>
-        <max_npcs name="World Max NPCs" value="50"/>
-        <spawn_chance name="Spawn Chance" value="0.5"/>
+        <max_npcs name="World Max NPCs" value="150"/>
+        <spawn_chance name="Spawn Chance" value="1.0"/>
         <health_multiplier name="Health Multiplier" value="1.0"/>
         <damage_multiplier name="Damage Multiplier" value="1.0"/>
         <speed_multiplier name="Speed Multiplier" value="1.0"/>
         <detection_radius name="Detection Radius" value="15"/>
     </npc>
     <zombie>
-        <speed name="Speed" value="0.8"/>
+        <speed name="Speed" value="0.5"/>
         <drop name="Drop" value="1"/>
         <detection name="Player detection tiles" value="10"/>
         <wander name="Wandering" value="true"/>
@@ -59,7 +69,7 @@
         <sight_check name="Sight player" value="true"/>
         <spawn name="Zombies per spawn" value="2"/>
         <respawn_timer name="Respawn" value="600000"/>
-        <max_zombies name="World max zombies" value="100000"/>
+        <max_zombies name="World max zombies" value="10000"/>
         <infection_chance name="Zombir infection chance" value="0.10"/>
     </zombie>
 </config>

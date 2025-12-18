@@ -1,4 +1,4 @@
-<item name="MP5" type="weapon_ranged">
+<item name="MPK5" type="weapon_ranged">
     <properties>
         <durability min="1" max="100" />
         <load min="10" max="30" />
@@ -7,11 +7,11 @@
         <damage min="25" max="65" />
         <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" />
         <skill type="range" />
-        <sprite file="mp5.png" />
+        <sprite file="mpk5.png" />
         <knockback value="25" />
     </properties>
     <sound>
-        <shoot src="mp5.ogg" />
+        <shoot src="mpk5.ogg" />
         <reload src="reload.ogg" />
         <noammo src="outofammo.ogg" />
     </sound>

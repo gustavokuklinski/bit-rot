@@ -83,9 +83,10 @@ title_font = pygame.font.Font(FONT_FACE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 14)
 
 
-# Global Default game settings
 CHUNK_SIZE = 100
 TILE_SIZE = 16
+
+# Global Default game settings
 TIME_DAYLENGTH = 0
 TIME_SUNRISE_HR = 0.0
 TIME_SUNSET_HR = 0.0
@@ -137,6 +138,10 @@ NPC_HEALTH_MULTIPLIER = 1.0
 NPC_DAMAGE_MULTIPLIER = 1.0
 NPC_SPEED_MULTIPLIER = 1.0
 NPC_DETECTION_RADIUS = 0
+VEH_HAS_FUEL = 1.0
+VEH_HAS_KEY = 1.0
+VEH_HAS_MOTOR = 1.0
+VEH_HAS_BATTERY = 1.0
 
 
 def load_settings(preset="default"):
@@ -159,6 +164,7 @@ def load_settings(preset="default"):
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
+    global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -247,6 +253,14 @@ def load_settings(preset="default"):
         NPC_DAMAGE_MULTIPLIER = float(npc_config.find('damage_multiplier').get('value'))
         NPC_SPEED_MULTIPLIER = float(npc_config.find('speed_multiplier').get('value'))
         NPC_DETECTION_RADIUS = int(npc_config.find('detection_radius').get('value')) * TILE_SIZE
+
+        vehicle_config = root.find('vehicle')
+        VEH_HAS_FUEL = float(vehicle_config.find('has_fuel').get('value'))
+        VEH_HAS_KEY = float(vehicle_config.find('has_key').get('value'))
+        VEH_HAS_MOTOR = float(vehicle_config.find('has_motor').get('value'))
+        VEH_HAS_BATTERY = float(vehicle_config.find('has_battery').get('value'))
+        
+        
 
         print(f"Configuration loaded from {filepath}")
 

@@ -5,7 +5,7 @@ from core.data.config import TILE_SIZE
 from core.entities.item.item import Item
 
 class Vehicle:
-    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None):
+    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None):
 
         self.item_type = 'vehicle'
         self.name = name
@@ -63,7 +63,7 @@ class Vehicle:
 
         self._spawn_random_equipment()
         
-        self.generate_trunk_loot()
+        self.generate_trunk_loot(loot_table)
         
         self.update_stats_from_equipment()
 
@@ -81,14 +81,14 @@ class Vehicle:
 
     def _spawn_random_equipment(self):
         # 1. Spawn Key (30% chance, only if vehicle requires a key)
-        if self.required_key_id and random.random() < 0.3:
+        if self.required_key_id and random.random() < VEH_HAS_KEY:
             key_item = Item.create_from_name(self.required_key_id)
             if key_item:
                 self.equipment['key'] = key_item
                 # print(f"Spawned {self.name} with key: {key_item.name}")
 
         # 2. Spawn Fuel (50% chance)
-        if random.random() < 0.5:
+        if random.random() < VEH_HAS_FUEL:
             fuel_item = Item.create_from_name("Car Fuel") 
             if fuel_item:
                 if hasattr(fuel_item, 'capacity') and fuel_item.capacity:
@@ -102,7 +102,7 @@ class Vehicle:
             self.equipment['motor'] = motor_item
 
         # 3. Spawn Battery (50% chance)
-        if random.random() < 0.5:
+        if random.random() < VEH_HAS_BATTERY:
             batt_item = Item.create_from_name("Powerbank")
             if batt_item:
                 if hasattr(batt_item, 'capacity') and batt_item.capacity:
@@ -112,25 +112,29 @@ class Vehicle:
                         batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
                 self.equipment['battery'] = batt_item
 
-    def generate_trunk_loot(self):
-        """Populates the trunk with random items based on a simple loot table logic."""
-        # Simple loot table for cars
-        possible_loot = []
-        
-        # Try to spawn 0 to 4 items
-        num_items = random.randint(0, 4)
-        
-        for _ in range(num_items):
+    def generate_trunk_loot(self, loot_table=None):
+        """Populates the trunk with items based on the XML loot table."""
+        if not loot_table:
+            return
+            
+        for entry in loot_table:
             if len(self.inventory) >= self.capacity:
                 break
             
-            for name, chance in possible_loot:
-                if random.random() < chance:
-                    item = Item.create_from_name(name)
-                    if item:
-                        self.inventory.append(item)
-                    if len(self.inventory) >= self.capacity:
-                        break
+            # Retrieve item name and chance from the dictionary
+            item_name = entry.get('item')
+            chance = entry.get('chance', 0)
+            
+            # Ensure chance is treated as a float
+            try:
+                chance = float(chance)
+            except (ValueError, TypeError):
+                chance = 0.0
+            
+            if random.random() < chance:
+                item = Item.create_from_name(item_name)
+                if item:
+                    self.inventory.append(item)
     
     @property
     def health(self):

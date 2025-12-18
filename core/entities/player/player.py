@@ -1052,6 +1052,7 @@ class Player:
                 return True
         return False
 
+
     def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None):
         if self.action_timer > 0 and not is_auto_drink:
             display_message_player("Busy...")
@@ -1093,18 +1094,18 @@ class Player:
                             current_val = getattr(self, target_stat)
                             
                             if eff_type == 'restore':
-                                stat_cap = 100.0
-                                if target_stat == 'health': stat_cap = self.max_health
-                                elif target_stat == 'stamina': stat_cap = self.max_stamina
-                                elif target_stat == 'tireness':
+                                if target_stat == 'tireness':
                                     # [CHANGED] For tireness, 'restore' means reducing the value (restoring energy)
-                                    # So we subtract val from tireness
                                     new_val = max(0.0, current_val - val)
                                     setattr(self, target_stat, new_val)
                                     display_message_player(f"Used {item.name}. Restored Energy (Tireness -{val}).")
                                     consumed = True
                                 else:
-                                    # Normal logic for other stats
+                                    # [FIX] Standard logic for Health, Stamina, and others
+                                    stat_cap = 100.0
+                                    if target_stat == 'health': stat_cap = self.max_health
+                                    elif target_stat == 'stamina': stat_cap = self.max_stamina
+                                    
                                     new_val = min(stat_cap, current_val + val)
                                     setattr(self, target_stat, new_val)
                                     display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
@@ -1142,6 +1143,7 @@ class Player:
             return True
         else:
             return self.start_action(f"Using {item.name}", duration_mult, execute_consume, xp_reward=5)
+
 
     def toggle_utility_item(self, item, source, index, container_item):
         if not hasattr(item, 'state'):

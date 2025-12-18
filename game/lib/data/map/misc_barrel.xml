@@ -5,7 +5,7 @@
     <capacity value="10" />
     <loot>
         <item item="Car Fuel" chance="0.5" />
-        <item item="Ducktype" chance="0.5" />
+        <item item="Duck Tape" chance="0.5" />
         <item item="Motor Repair Kit" chance="0.3" />
     </loot>
 </map>
