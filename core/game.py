@@ -283,7 +283,7 @@ class Game:
                  else:
                      player_data["backpack"] = self.player.backpack
 
-            with open(os.path.join(save_path, "player.json"), "w") as f:
+            with open(os.path.join(save_path, "player.rot"), "w") as f:
                 json.dump(player_data, f, indent=4)
 
             # --- NPC Save [ROBUST FIX] ---
@@ -327,7 +327,7 @@ class Game:
                 }
                 npc_data.append(npc_entry)
             
-            with open(os.path.join(save_path, "npc.json"), "w") as f:
+            with open(os.path.join(save_path, "npc.rot"), "w") as f:
                 json.dump(npc_data, f, indent=4)
 
             # --- Vehicle Save ---
@@ -365,7 +365,7 @@ class Game:
                 }
                 vehicle_data.append(v_entry)
 
-            with open(os.path.join(save_path, "vehicles.json"), "w") as f:
+            with open(os.path.join(save_path, "vehicles.rot"), "w") as f:
                 json.dump(vehicle_data, f, indent=4)
 
             # --- World Data Save ---
@@ -388,7 +388,7 @@ class Game:
                 "items": safe_ground_items,
                 "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
             }
-            with open(os.path.join(save_path, "world.json"), "w") as f:
+            with open(os.path.join(save_path, "world.rot"), "w") as f:
                 json.dump(world_data, f, indent=4)
 
             self.logger.info("Game saved successfully!")
@@ -407,7 +407,7 @@ class Game:
         self.logger.info(f"Loading game from {save_path}...")
 
         try:
-            with open(os.path.join(save_path, "player.json"), "r") as f:
+            with open(os.path.join(save_path, "player.rot"), "r") as f:
                 player_data = json.load(f)
 
             # Initialize game state (populates self.all_map_layers via load_map)
@@ -498,7 +498,7 @@ class Game:
                          self.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data.get("inventory", [])]
 
             # Load World Data
-            with open(os.path.join(save_path, "world.json"), "r") as f:
+            with open(os.path.join(save_path, "world.rot"), "r") as f:
                 world_data = json.load(f)
             
             time_data = world_data.get('time', {})
@@ -539,8 +539,8 @@ class Game:
                     self.zombies.append(z)
 
             # --- NPC Load ---
-            if os.path.exists(os.path.join(save_path, "npc.json")):
-                 with open(os.path.join(save_path, "npc.json"), "r") as f:
+            if os.path.exists(os.path.join(save_path, "npc.rot")):
+                 with open(os.path.join(save_path, "npc.rot"), "r") as f:
                      npc_list = json.load(f)
                  self.npcs.empty()
                  for n_data in npc_list:
@@ -580,8 +580,8 @@ class Game:
                      self.npcs.add(npc)
             
             # --- Vehicle Load ---
-            if os.path.exists(os.path.join(save_path, "vehicles.json")):
-                with open(os.path.join(save_path, "vehicles.json"), "r") as f:
+            if os.path.exists(os.path.join(save_path, "vehicles.rot")):
+                with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
                     v_list = json.load(f)
                  
                 # Ensure map_manager has the list (though we use containers mostly)
@@ -818,6 +818,12 @@ class Game:
         try:
             self.logger.info(f"Loading config preset: {preset}")
             core.data.load_settings(preset)
+
+            if 'settings_data' in self.player_setup_state:
+                self.logger.info("Applying runtime config overrides from UI.")
+                # This ensures your "Apply Settings" changes actually take effect
+                core.data.config.update_config_from_dict(self.player_setup_state['settings_data'])
+
         except Exception as e:
             self.logger.info(f"Error applying custom config '{preset}': {e}")
 
@@ -867,7 +873,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID","Shotgun", "38 Revolver", "MP5"]
+        starter_items = ["ID","Mobile off","Shotgun", "38 Revolver", "MPK5"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

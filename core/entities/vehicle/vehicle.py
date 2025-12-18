@@ -1,7 +1,7 @@
 import pygame
 import math
 import random
-from core.data.config import TILE_SIZE
+from core.data.config import *
 from core.entities.item.item import Item
 
 class Vehicle:

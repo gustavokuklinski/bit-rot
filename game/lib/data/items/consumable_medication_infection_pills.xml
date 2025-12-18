@@ -1,8 +1,7 @@
 <item name="Infection Pills" type="consumable_medication">
     <properties>
-        <status value="infection" />
+        <reduce status="[infection]" min="1" max="5" />
         <load value="1" />
-        <reduce min="1" max="5" />
         <capacity value="10" />
         <sprite file="infection_pills.png" />
     </properties>

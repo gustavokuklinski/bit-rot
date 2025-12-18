@@ -3,6 +3,7 @@ import random
 import csv
 import pygame
 import math
+import core.data.config
 from core.data.config import *
 from core.map.building_loader import load_building_templates
 
@@ -109,23 +110,26 @@ class ProceduralGenerator:
         for cat, lst in self.categorized_templates.items():
             print(f"Category {cat}: Found {len(lst)} templates.")
 
-    def generate_world(self, seed_pattern="5-DEFAULT", regenerate=False):
-        try:
-            if '-' in seed_pattern:
-                parts = seed_pattern.split('-', 1)
-                n_part = parts[0]
-                if not n_part: n_part = "5"
-                grid_w = int(n_part)
-                grid_h = int(n_part)
-                actual_seed = parts[1]
-                if not actual_seed: actual_seed = "DEFAULT"
-            else:
-                grid_w, grid_h = 5, 5
-                actual_seed = seed_pattern
-        except ValueError:
-            print(f"Invalid seed pattern '{seed_pattern}'. Defaulting to 3x3.")
-            grid_w, grid_h = 5, 5
-            actual_seed = "DEFAULT"
+    def generate_world(self, seed_pattern=None, regenerate=False): # Changed default to None
+        current_chunks = core.data.config.MAP_CHUNKS
+        # Logic to generate seed if missing or generic
+        if not seed_pattern or seed_pattern == "5-DEFAULT": 
+            seed_pattern = generate_random_seed(current_chunks)
+            
+   
+        if '-' in seed_pattern:
+            parts = seed_pattern.split('-', 1)
+            n_part = parts[0]
+            if not n_part: n_part = str(current_chunks)
+            grid_w = int(n_part)
+            grid_h = int(n_part)
+            actual_seed = parts[1]
+            if not actual_seed: actual_seed = "DEFAULT"
+        else:
+            # Handle fallback legacy seeds if necessary
+            grid_w, grid_h = current_chunks, current_chunks
+            actual_seed = seed_pattern
+        
 
         self.grid_w = grid_w
         self.grid_h = grid_h
@@ -738,7 +742,7 @@ class ProceduralGenerator:
                 elif ground == 'bg_grass':
                     woods_tiles.append((x, y))
 
-        total_zombies = random.randint(40, 60)
+        total_zombies = ZOMBIE_MAX_CHUNK
         count_building = int(total_zombies * 0.45)
         count_street = int(total_zombies * 0.25)
         count_woods = total_zombies - count_building - count_street
@@ -754,8 +758,8 @@ class ProceduralGenerator:
         place_zombies(count_woods, woods_tiles)
 
     def _scatter_npcs(self, layers, mask, w, h):
-        min_npcs_per_chunk = 1
-        max_npcs_per_chunk = 2
+        min_npcs_per_chunk = NPC_MAX_CHUNK
+        max_npcs_per_chunk = NPC_MAX_CHUNK
 
         zombie_locs = []
         for y in range(h):

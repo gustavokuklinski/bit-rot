@@ -14,8 +14,8 @@ def get_save_files():
     try:
         for name in os.listdir(save_dir):
             if name.startswith("save_") and os.path.isdir(os.path.join(save_dir, name)):
-                player_path = os.path.join(save_dir, name, "player.json")
-                world_path = os.path.join(save_dir, name, "world.json")
+                player_path = os.path.join(save_dir, name, "player.rot")
+                world_path = os.path.join(save_dir, name, "world.rot")
 
                 if not os.path.exists(player_path) or not os.path.exists(world_path):
                     continue

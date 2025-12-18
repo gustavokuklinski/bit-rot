@@ -2,13 +2,14 @@ import pygame
 import xml.etree.ElementTree as ET
 import os
 import subprocess
+import uuid
 
 pygame.init()
 infoObject = pygame.display.Info()
 
 # --- Scalable Screen Setup ---
 VIRTUAL_SCREEN_WIDTH = 1360
-VIRTUAL_GAME_HEIGHT = 720
+VIRTUAL_GAME_HEIGHT = 725
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
@@ -106,6 +107,7 @@ AUTO_DRINK_THRESHOLD = 0
 BASE_PLAYER_VIEW_RADIUS = 0
 ZOMBIE_SPEED = 0.0
 MAX_ZOMBIES_GLOBAL = 0
+ZOMBIE_MAX_CHUNK = 0
 ZOMBIE_DROP = 0
 ZOMBIE_DETECTION_RADIUS = 0
 ZOMBIE_WANDER_ENABLED = True
@@ -132,6 +134,7 @@ ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = 1.0
+NPC_MAX_CHUNK = 0
 MAX_NPCS_GLOBAL = 0
 NPC_SPAWN_CHANCE = 0.0
 NPC_HEALTH_MULTIPLIER = 1.0
@@ -142,7 +145,14 @@ VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
 VEH_HAS_MOTOR = 1.0
 VEH_HAS_BATTERY = 1.0
+MAP_CHUNKS = 0
 
+def generate_random_seed(chunks=None): # <-- ADDED FUNCTION
+    """Generates a formatted seed string: 'CHUNKS-HASH'."""
+    if chunks is None:
+        chunks = MAP_CHUNKS
+    # Generates a random 8-char hash (e.g., '5-A1B2C3D4')
+    return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 def load_settings(preset="default"):
     """Loads configuration from XML and updates global variables."""
@@ -165,6 +175,8 @@ def load_settings(preset="default"):
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
     global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
+    global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
+    global MAP_CHUNKS
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -186,6 +198,9 @@ def load_settings(preset="default"):
         START_ZOOM = float(game_config.find('zoom_start').get('value'))
         FAR_ZOOM = float(game_config.find('zoom_far').get('value'))
         NEAR_ZOOM = float(game_config.find('zoom_near').get('value'))
+
+        map_config = root.find('map')
+        MAP_CHUNKS = int(map_config.find('map_chunks').get('value'))
 
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file
@@ -224,6 +239,10 @@ def load_settings(preset="default"):
         
         ZOMBIE_INFECTION_CHANCE = float(zombie_config.find('infection_chance').get('value'))
 
+        ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value'))
+
+
+
         durability_config = root.find('durability')
         DURABILITY_MULTIPLIER = float(durability_config.find('multiplier').get('value'))
         WEAPON_MELEE_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_melee_multiplier').get('value'))
@@ -253,6 +272,7 @@ def load_settings(preset="default"):
         NPC_DAMAGE_MULTIPLIER = float(npc_config.find('damage_multiplier').get('value'))
         NPC_SPEED_MULTIPLIER = float(npc_config.find('speed_multiplier').get('value'))
         NPC_DETECTION_RADIUS = int(npc_config.find('detection_radius').get('value')) * TILE_SIZE
+        NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
 
         vehicle_config = root.find('vehicle')
         VEH_HAS_FUEL = float(vehicle_config.find('has_fuel').get('value'))

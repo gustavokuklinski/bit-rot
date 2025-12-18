@@ -1,7 +1,10 @@
 <item name="Meat" type="consumable_food">
     <properties>
-        <status value="food" />
-        <restore min="5" max="10" />
+        <restore status="[food]" min="8" max="10" />
+        <restore status="[water]" min="1" max="3" />
+        <restore status="[health]" min="1" max="2" />
+        <restore status="[tireness]" min="1" max="2" />
+        <restore status="[stamina]" min="2" max="5" />
         <load value="1" />
         <capacity value="1" />
         <sprite file="meat.png" />

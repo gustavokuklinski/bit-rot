@@ -1,11 +1,9 @@
 <item name="Cigarette" type="consumable">
     <properties>
-        <status value="anxiety" />
-        <reduce min="1" max="15" />
-
         <restore status="[tireness]" min="5" max="10" />
-        <reduce status="[stamina]" min="5" max="15" />
-        <reduce status="[water]" min="5" max="10" />
+        <reduce status="[anxiety]" min="5" max="20" />
+        <reduce status="[stamina]" min="2" max="5" />
+        <reduce status="[water]" min="2" max="5" />
 
         <load min="2" max="20" />
         <capacity value="20" />

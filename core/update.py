@@ -154,14 +154,14 @@ def update_game_state(game):
     # --- Zombie AI Update (OPTIMIZED) ---
     zombies_alive = game.zombies[:] 
     
-    # [OPTIMIZATION] Define active zone. 
+    # Define active zone. 
     # Zombies outside this distance will be "dormant" (no AI/Physics)
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
     ACTIVE_RADIUS_SQ = (1500)**2 # 1500px radius
 
     for zombie in zombies_alive:
         
-        # [OPTIMIZATION] Distance check
+        # Distance check
         dist_sq = (zombie.rect.centerx - player_x)**2 + (zombie.rect.centery - player_y)**2
         
         # If far away, skip EVERYTHING
@@ -224,7 +224,7 @@ def update_game_state(game):
 
         distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, 
                                         game.player.rect.centery - zombie.rect.centery)
-                                        
+
         if distance_to_player < zombie.attack_range: 
             current_time = pygame.time.get_ticks() 
             if current_time - zombie.last_attack_time > 500: 
@@ -253,7 +253,7 @@ def update_game_state(game):
     current_time = pygame.time.get_ticks()
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
 
-    # [NEW] Blood Stain Cleanup
+    # Blood Stain Cleanup
     if hasattr(game, 'blood_stains'):
         game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']]
 
@@ -292,9 +292,9 @@ def update_game_state(game):
                                  zombie.knockback_velocity = [push_x, push_y]
                                  zombie.knockback_timer = 200 
 
-                        vehicle.damage_motor(0.1)
-                        vehicle.velocity[0] *= 0.8
-                        vehicle.velocity[1] *= 0.8
+                        vehicle.damage_motor(0.001)
+                        vehicle.velocity[0] *= 0.95
+                        vehicle.velocity[1] *= 0.95
 
         if roadkill_zombies:
             game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]
@@ -360,7 +360,7 @@ def player_hit_zombie(player, zombie, game):
                 stain_pos_x += perp_dir_x * lateral_scatter
                 stain_pos_y += perp_dir_y * lateral_scatter
                 
-                # [NEW] Check Collision with Obstacles before adding stain
+                # Check Collision with Obstacles before adding stain
                 # This prevents blood from drawing on top of stones/trees/walls
                 stain_rect = pygame.Rect(stain_pos_x - 1, stain_pos_y - 1, 2, 2)
                 
@@ -382,11 +382,11 @@ def player_hit_zombie(player, zombie, game):
                     'size': random.randint(5, int(stain_size * 1.5)), 
                     'color': (139, 0, 0), 
                     'time': pygame.time.get_ticks(),
-                    # [NEW] Add random duration (30-60 seconds)
+                    # Add random duration (30-60 seconds)
                     'duration': random.randint(30000, 60000) 
                 })
             
-            # [OPTIMIZATION] Limit the number of blood stains to prevent lag
+            # Limit the number of blood stains to prevent lag
             if len(game.blood_stains) > 500:
                 game.blood_stains = game.blood_stains[-500:]
 
@@ -464,7 +464,7 @@ def check_dynamic_zombie_spawns(game, grid_size=128):
 
             triggered_spawns_for_layer.add(spawn_pos)
             
-            # [OPTIMIZED CALL] Passing cached_obstacle_grid and grid_size
+            # Passing cached_obstacle_grid and grid_size
             new_zombies = spawn_initial_zombies(
                 game.obstacles, 
                 [spawn_pos], 

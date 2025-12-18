@@ -10,6 +10,7 @@
         <item name="38_revolver"  />
         <item name="Pistol 9mm"  />
         <item name="Shotgun"  />
+        <item name="MPK5"  />
     </repair>
     <spawn chance="1" />
 </item>

@@ -933,6 +933,14 @@ def run_player_setup(game):
                             state['config_name'] = ""
                         except: pass
 
+
+                elif clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
+                    # Switch back to Player tab
+                    # The settings data is already in state['settings_data'] 
+                    # and will be picked up by start_new_game when the user clicks START.
+                    state['current_tab'] = 'Player'
+                    print("Settings applied. Returning to Player Builder.")
+
                 # [CHANGE] Logic for Config Preset Dropdown
                 # 1. Toggle dropdown
                 elif clickable_rects.get('load_config_dd') and clickable_rects['load_config_dd'].collidepoint(mouse_pos):
@@ -1035,10 +1043,7 @@ def run_player_setup(game):
                         # --- NEW: Generate Seed if empty ---
                         raw_seed = state.get('world_seed', "").strip()
                         if not raw_seed:
-                            # Generate random: Grid size 3-6, Separator 0, Random alphanumeric 5 chars
-                            rnd_size = random.randint(3, 8)
-                            rnd_str = "".join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=5))
-                            raw_seed = f"{rnd_size}0{rnd_str}"
+                            raw_seed = core.data.config.generate_random_seed()
                         
                         final_player_data['world_seed'] = raw_seed
                         # -----------------------------------

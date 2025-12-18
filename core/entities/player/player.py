@@ -32,21 +32,14 @@ class Player:
         self.profession = data.get('profession', "Survivor")
         self.max_health = stats.get('health', 100.0)
         self.health = stats.get('health', self.max_health)
+        self.max_tireness = stats.get('tireness', 100.0)
+        self.tireness = stats.get('tireness', self.max_tireness)
+        self.max_stamina = stats.get('stamina', 100.0)
+        self.stamina = stats.get('stamina', self.max_stamina)
         self.water = stats.get('water', 100.0)
         self.food = stats.get('food', 100.0)
         self.infection = stats.get('infection', 0.0)
-        self.max_stamina = stats.get('stamina', 100.0)
-        self.stamina = stats.get('stamina', self.max_stamina)
         self.anxiety = stats.get('anxiety', 0.0)
-        
-        # [FIX] Ensure max_tireness is never 0 to prevent division errors
-        raw_tireness = float(stats.get('tireness', 100.0))
-        self.max_tireness = max(1.0, raw_tireness)
-        
-        # [CHANGED] Tireness starts at 0.0 (Rested) unless loaded from save
-        # If loading an old save where tireness was high (meaning rested), this might need manual adjustment, 
-        # but for new logic 0 is good.
-        self.tireness = stats.get('tireness', self.max_tireness)
 
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
@@ -1094,22 +1087,15 @@ class Player:
                             current_val = getattr(self, target_stat)
                             
                             if eff_type == 'restore':
-                                if target_stat == 'tireness':
-                                    # [CHANGED] For tireness, 'restore' means reducing the value (restoring energy)
-                                    new_val = max(0.0, current_val - val)
-                                    setattr(self, target_stat, new_val)
-                                    display_message_player(f"Used {item.name}. Restored Energy (Tireness -{val}).")
-                                    consumed = True
-                                else:
-                                    # [FIX] Standard logic for Health, Stamina, and others
-                                    stat_cap = 100.0
-                                    if target_stat == 'health': stat_cap = self.max_health
-                                    elif target_stat == 'stamina': stat_cap = self.max_stamina
-                                    
-                                    new_val = min(stat_cap, current_val + val)
-                                    setattr(self, target_stat, new_val)
-                                    display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
-                                    consumed = True
+                                stat_cap = 100.0
+                                if target_stat == 'health': stat_cap = self.max_health
+                                elif target_stat == 'stamina': stat_cap = self.max_stamina
+                                elif target_stat == 'tireness': stat_cap = self.max_tireness
+
+                                new_val = min(stat_cap, current_val + val)
+                                setattr(self, target_stat, new_val)
+                                display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                                consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0

@@ -12,6 +12,10 @@
         <zoom_near name="Zoom max near" value="6.0"/>
     </game>
 
+    <map>
+        <map_chunks name="Max map chunks" value="3" />
+    </map>
+
     <player>
         <food_water_decay_seconds name="Food and Water decay seconds" value="5.0"/>
         <food_decay name="Food decay %" value="0.2"/>
@@ -53,21 +57,23 @@
     </vehicle>
 
     <npc>
-        <max_npcs name="World Max NPCs" value="150"/>
+        <npc_spawn_per_chunk name="Max NPC spawn on chunk" value="2" />
+        <max_npcs name="World Max NPCs" value="100"/>
         <spawn_chance name="Spawn Chance" value="1.0"/>
         <health_multiplier name="Health Multiplier" value="1.0"/>
         <damage_multiplier name="Damage Multiplier" value="1.0"/>
         <speed_multiplier name="Speed Multiplier" value="1.0"/>
-        <detection_radius name="Detection Radius" value="15"/>
+        <detection_radius name="Detection Radius" value="10"/>
     </npc>
     <zombie>
+        <zombie_spawn_per_chunk name="Max Zombie spawn on chunk" value="10" />
         <speed name="Speed" value="0.5"/>
         <drop name="Drop" value="1"/>
         <detection name="Player detection tiles" value="10"/>
         <wander name="Wandering" value="true"/>
         <wander_interval name="Wandering timing" value="2000"/>
         <sight_check name="Sight player" value="true"/>
-        <spawn name="Zombies per spawn" value="2"/>
+        <spawn name="Zombies per spawn" value="5"/>
         <respawn_timer name="Respawn" value="600000"/>
         <max_zombies name="World max zombies" value="10000"/>
         <infection_chance name="Zombir infection chance" value="0.10"/>

@@ -1,7 +1,6 @@
 <item name="Magazine (General content)" type="consumable">
     <properties>
-        <status value="anxiety" />
-        <reduce min="1" max="50" />
+        <reduce status="[anxiety]" min="1" max="50" />
 
         <load min="2" max="20" />
         <capacity value="20" />

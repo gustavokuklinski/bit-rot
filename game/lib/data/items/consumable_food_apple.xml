@@ -1,11 +1,10 @@
 <item name="Apple" type="consumable_food">
     <properties>
-        <status value="food" />
-        <restore min="15" max="15" />
-
-        <reduce status="[tireness]" min="5" max="10" />
-        <restore status="[health, stamina]" min="1" max="2" />
-        <restore status="[water]" min="1" max="10" />
+        <restore status="[food]" min="15" max="15" />
+        <restore status="[water]" min="1" max="3" />
+        <restore status="[health]" min="1" max="2" />
+        <restore status="[tireness]" min="1" max="2" />
+        <restore status="[stamina]" min="2" max="5" />
 
         <load value="1" />
         <capacity value="3" />

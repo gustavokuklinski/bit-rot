@@ -597,3 +597,13 @@ def draw_game(game):
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
+    
+    if hasattr(game, 'clock'):
+        fps = int(game.clock.get_fps())
+        fps_text = f"FPS: {fps}"
+        font = game.assets.get('font')
+        if font:
+            fps_surface = font.render(fps_text, True, (0, 255, 0)) # Green color
+            # Position 5 pixels from right and bottom edges
+            fps_rect = fps_surface.get_rect(bottomright=(game.virtual_screen.get_width() - 5, game.virtual_screen.get_height() - 5))
+            game.virtual_screen.blit(fps_surface, fps_rect)
