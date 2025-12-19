@@ -176,7 +176,7 @@ def load_settings(preset="default"):
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
     global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
-    global MAP_CHUNKS
+    global MAP_CHUNKS, CHUNK_SIZE
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -201,7 +201,8 @@ def load_settings(preset="default"):
 
         map_config = root.find('map')
         MAP_CHUNKS = int(map_config.find('map_chunks').get('value'))
-
+        CHUNK_SIZE = int(map_config.find('map_chunk_size').get('value'))
+        
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file
 

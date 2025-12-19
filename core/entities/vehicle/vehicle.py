@@ -67,7 +67,6 @@ class Vehicle:
         
         self.update_stats_from_equipment()
 
-    # ... [Keep existing current_speed_val and brake methods] ...
     @property
     def current_speed_val(self):
         return math.hypot(self.velocity[0], self.velocity[1])
@@ -85,7 +84,6 @@ class Vehicle:
             key_item = Item.create_from_name(self.required_key_id)
             if key_item:
                 self.equipment['key'] = key_item
-                # print(f"Spawned {self.name} with key: {key_item.name}")
 
         # 2. Spawn Fuel (50% chance)
         if random.random() < VEH_HAS_FUEL:
@@ -113,7 +111,6 @@ class Vehicle:
                 self.equipment['battery'] = batt_item
 
     def generate_trunk_loot(self, loot_table=None):
-        """Populates the trunk with items based on the XML loot table."""
         if not loot_table:
             return
             
@@ -121,11 +118,9 @@ class Vehicle:
             if len(self.inventory) >= self.capacity:
                 break
             
-            # Retrieve item name and chance from the dictionary
             item_name = entry.get('item')
             chance = entry.get('chance', 0)
             
-            # Ensure chance is treated as a float
             try:
                 chance = float(chance)
             except (ValueError, TypeError):
@@ -135,29 +130,6 @@ class Vehicle:
                 item = Item.create_from_name(item_name)
                 if item:
                     self.inventory.append(item)
-    
-    @property
-    def health(self):
-        motor_pct = max(0.0, min(1.0, self.motor))
-        batt_item = self.equipment.get('battery')
-        max_batt = 100.0
-        if batt_item:
-            if hasattr(batt_item, 'max_durability') and batt_item.max_durability > 0:
-                max_batt = float(batt_item.max_durability)
-            elif hasattr(batt_item, 'capacity') and batt_item.capacity:
-                max_batt = float(batt_item.capacity)
-        
-        battery_pct = max(0.0, min(1.0, self.battery / max_batt)) if max_batt > 0 else 0.0
-
-        fuel_item = self.equipment.get('fuel')
-        max_fuel = 25.0
-        if fuel_item and hasattr(fuel_item, 'capacity') and fuel_item.capacity:
-            max_fuel = float(fuel_item.capacity)
-            
-        fuel_pct = max(0.0, min(1.0, self.fuel / max_fuel)) if max_fuel > 0 else 0.0
-
-        weighted_health = (motor_pct * 60) + (battery_pct * 30) + (fuel_pct * 10)
-        return weighted_health
 
     def is_driveable(self):
         if self.motor <= 0: return False
@@ -190,7 +162,9 @@ class Vehicle:
 
         if hasattr(motor_item, 'load') and motor_item.load is not None:
              motor_item.load = max(0, motor_item.load - amount)
-             print(f"Motor hit! Damage: {amount}. Remaining Status: {motor_item.load}/{motor_item.capacity}")
+             # Only print major status changes to avoid console spam
+             if motor_item.load <= 0:
+                 print(f"Motor hit! Damage: {amount}. Remaining Status: {motor_item.load}/{motor_item.capacity}")
              
         elif hasattr(motor_item, 'durability') and motor_item.durability is not None:
              motor_item.durability = max(0, motor_item.durability - amount)
@@ -210,6 +184,34 @@ class Vehicle:
         collision_x = False
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
+                # --- ROBUST ZOMBIE DETECTION ---
+                is_zombie = False
+                obs_name = getattr(obstacle, 'name', '')
+                obs_type = getattr(obstacle, '__class__', None)
+                
+                # Check 1: Name contains Zombie
+                if obs_name and ('Zombie' in obs_name or 'zombie' in obs_name):
+                    is_zombie = True
+                # Check 2: Class Name is Zombie
+                elif obs_type and obs_type.__name__ in ['Zombie', 'zombie']:
+                    is_zombie = True
+                
+                if is_zombie:
+                    # Kill the zombie (Standard Entity methods)
+                    if hasattr(obstacle, 'take_damage'):
+                        obstacle.take_damage(100) 
+                    elif hasattr(obstacle, 'die'):
+                        obstacle.die()
+                    
+                    # Slight damage to motor (1.0)
+                    # This prevents the instant "Crash" logic below
+                    self.damage_motor(1.0)
+                    
+                    # IMPORTANT: Continue skips setting collision_x=True
+                    # This lets the car pass through the zombie
+                    continue 
+                # -------------------------------
+
                 if dx > 0: self.rect.right = obstacle.left
                 elif dx < 0: self.rect.left = obstacle.right
                 self.x = self.rect.x
@@ -220,6 +222,26 @@ class Vehicle:
         collision_y = False
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
+                # --- ROBUST ZOMBIE DETECTION (Y-AXIS) ---
+                is_zombie = False
+                obs_name = getattr(obstacle, 'name', '')
+                obs_type = getattr(obstacle, '__class__', None)
+                
+                if obs_name and ('Zombie' in obs_name or 'zombie' in obs_name):
+                    is_zombie = True
+                elif obs_type and obs_type.__name__ in ['Zombie', 'zombie']:
+                    is_zombie = True
+                
+                if is_zombie:
+                    if hasattr(obstacle, 'take_damage'):
+                        obstacle.take_damage(100)
+                    elif hasattr(obstacle, 'die'):
+                        obstacle.die()
+                    
+                    self.damage_motor(1.0)
+                    continue
+                # ----------------------------------------
+
                 if dy > 0: self.rect.bottom = obstacle.top
                 elif dy < 0: self.rect.top = obstacle.bottom
                 self.y = self.rect.y
@@ -227,8 +249,9 @@ class Vehicle:
         
         if collision_x or collision_y:
             current_speed = self.current_speed_val
+            # Only trigger crash damage if hitting a solid wall (not a zombie)
             if current_speed > 2.0:
-                damage = current_speed * 2.0 
+                damage = current_speed * 0.5
                 print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
                 self.damage_motor(damage)
                 self.velocity = [0, 0]
@@ -242,7 +265,6 @@ class Vehicle:
     def toggle_lights(self):
         if self.lights == 'on':
             self.lights = 'off'
-            # print(f"{self.name} lights turned OFF.")
         else:
             battery_item = self.equipment.get('battery')
             has_power = False
@@ -254,7 +276,6 @@ class Vehicle:
             
             if has_power:
                 self.lights = 'on'
-                # print(f"{self.name} lights turned ON.")
             else:
                 print("Cannot turn on lights: No Battery Power.")
 
@@ -292,7 +313,6 @@ class Vehicle:
                 if not has_fuel: missing.append("Fuel")
                 print(f"Cannot start. Missing/Empty: {', '.join(missing)}")
 
-    # ... [Keep existing can_equip, add_equipment, remove_equipment, update_stats_from_equipment, update, current_weight, max_weight, draw] ...
     def can_equip(self, item, slot):
         if slot not in self.equipment: return False
 
@@ -372,7 +392,6 @@ class Vehicle:
             self.motor = 0.0
 
     def update(self, game_map=None):
-        # Sync items again just in case (e.g. if damaged externally)
         self.update_stats_from_equipment()
         battery_item = self.equipment.get('battery')
         fuel_item = self.equipment.get('fuel')

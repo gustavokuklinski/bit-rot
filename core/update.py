@@ -267,34 +267,48 @@ def update_game_state(game):
             if vehicle.active:
                 speed = math.hypot(vehicle.velocity[0], vehicle.velocity[1])
                 
+                # Check for zombie impacts if speed is decent
                 if speed > 2.0:
                     nearby_zombies_for_vehicle = [z for z in get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
                     hit_list = [z for z in nearby_zombies_for_vehicle if vehicle.rect.colliderect(z.rect)]
+                    
+                    zombies_hit_this_frame = 0
                     
                     for zombie in hit_list:
                         if zombie in roadkill_zombies: continue
                         current_time = pygame.time.get_ticks()
                         last_hit = getattr(zombie, 'last_vehicle_hit_time', 0)
-                        if current_time - last_hit < 1000: continue
+                        if current_time - last_hit < 500: continue 
                         
                         zombie.last_vehicle_hit_time = current_time
-                        impact_damage = speed * 20.0 
                         
+                        # [KEEP] Lethal damage to ensure the kill
+                        impact_damage = 100
+                        
+                        zombies_hit_this_frame += 1
+
                         if zombie.take_damage(impact_damage, game):
                             roadkill_zombies.append(zombie)
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
                             game.zombies_killed += 1
-                            display_message_player(f"Roadkill! {zombie.name} squashed for {impact_damage:.1f} damage.")
+                            display_message_player(f"Roadkill! {zombie.name} obliterated!")
                         else:
+                             # Knockback alive zombies (rare if damage is 1000)
                              if speed > 0:
-                                 push_x = (vehicle.velocity[0] / speed) * 10
-                                 push_y = (vehicle.velocity[1] / speed) * 10
+                                 push_x = (vehicle.velocity[0] / speed) * 15 
+                                 push_y = (vehicle.velocity[1] / speed) * 15
                                  zombie.knockback_velocity = [push_x, push_y]
                                  zombie.knockback_timer = 200 
 
-                        vehicle.damage_motor(0.001)
-                        vehicle.velocity[0] *= 0.95
-                        vehicle.velocity[1] *= 0.95
+                    if zombies_hit_this_frame > 0:
+                        # [CHANGED] Re-enabled motor damage.
+                        # 1.0 damage per zombie hit. 
+                        # If you hit many zombies, the engine will eventually break.
+                        vehicle.damage_motor(1.0 * zombies_hit_this_frame)
+                        
+                        # [NOTE] Friction is still removed so you don't get stuck.
+                        # vehicle.velocity[0] *= 0.95 
+                        # vehicle.velocity[1] *= 0.95 
 
         if roadkill_zombies:
             game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]

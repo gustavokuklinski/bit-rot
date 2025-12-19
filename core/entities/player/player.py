@@ -308,16 +308,16 @@ class Player:
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
 
             self.vehicle.move(move_x, move_y, obstacles)
-
+            
             vehicle_rect = self.vehicle.rect
             for zombie in zombies[:]: 
                 if vehicle_rect.colliderect(zombie.rect):
-                    damage_to_zombie = 100 
+                    damage_to_zombie = 1000
                     zombie.take_damage(damage_to_zombie, game)
-                    self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) 
+                    #self.vehicle.motor = max(0.0, self.vehicle.motor - 0.05) 
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
-                    display_message_player(f"Hit zombie! Speed reduced. Motor: {int(self.vehicle.motor*100)}%")
+                    #print(f"Hit zombie! Speed reduced. Motor: {int(self.vehicle.motor*100)}%")
 
             self.x = self.vehicle.x
             self.y = self.vehicle.y

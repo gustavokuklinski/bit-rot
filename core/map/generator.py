@@ -34,17 +34,17 @@ class ProceduralGenerator:
         # --- GLOBAL BUILDING LIMITS (MAX ON FULL MAP) ---
         # This defines exactly how many of each type will spawn in the entire world.
         self.global_building_limits = {
-            'Warehouse': 3,
-            'Stores': 5,
-            'Shed': 25,
-            'Building': 50,
-            'Petrol': 10,
+            'Warehouse': MAP_CHUNKS * 2,
+            'Stores': MAP_CHUNKS * 2,
+            'Shed': MAP_CHUNKS * 2,
+            'Building': MAP_CHUNKS * 3,
+            'Petrol': MAP_CHUNKS * 3,
             'Heli': 1
         }
         # ------------------------------------------------
 
         # Forest settings
-        self.forest_border_width = 2
+        self.forest_border_width = 1
         self.cluster_min_count = 20
         self.cluster_max_count = 100
         self.cluster_radius = 4
@@ -53,7 +53,7 @@ class ProceduralGenerator:
         # --- Island/Coast Settings ---
         self.water_tile = 'water_01'
         self.sand_tile = 'beach_sand_01'
-        self.coast_width = 25 # Adjusted for 100x100 map
+        self.coast_width = 15 # Adjusted for 100x100 map
         # -----------------------------
 
         # 1. Identify Forest Tiles
