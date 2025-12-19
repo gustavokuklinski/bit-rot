@@ -57,6 +57,19 @@ def _draw_settings_screen(game, state, mouse_pos):
         "load_config_options": []
     }
 
+    # [FIX START] Logic to sync Dropdown Selection with Input Box
+    # This detects if the selected preset has changed since the last frame.
+    # If it has changed, we automatically populate the 'Config Name' box with the new selection.
+    curr_preset = state.get('selected_config_preset', 'default')
+    last_preset = state.get('_internal_last_preset')
+
+    if curr_preset != last_preset:
+        # User selected a new config, so update the input box text
+        state['config_name'] = curr_preset
+        # Update our tracker so we don't overwrite user typing in subsequent frames
+        state['_internal_last_preset'] = curr_preset
+    # [FIX END]
+
     # 1. Preset Management Panel (Top Left of content area)
     # Increased height to accommodate Seed input
     preset_rect = pygame.Rect(col_start_x, 50, col_width, 270)
@@ -104,27 +117,13 @@ def _draw_settings_screen(game, state, mouse_pos):
     clickable_rects['load_config_dd'] = load_rect
     pygame.draw.rect(game.virtual_screen, (50, 50, 50), load_rect)
     pygame.draw.rect(game.virtual_screen, WHITE, load_rect, 1)
-    curr_preset = state.get('selected_config_preset', 'default')
+    # Note: curr_preset is already defined at the top for logic check
     game.virtual_screen.blit(font.render(curr_preset, True, WHITE), (load_rect.x + 5, load_rect.y + 5))
     
     # Dropdown arrow
     pygame.draw.polygon(game.virtual_screen, WHITE, [(load_rect.right - 15, load_rect.y + 10), (load_rect.right - 5, load_rect.y + 10), (load_rect.right - 10, load_rect.y + 15)])
 
-    apply_rect = pygame.Rect(preset_body.x + padding, load_rect.bottom + 20, preset_body.width - padding*2, 35)
-    
-    # Hover effect
-    bg_col = (0, 100, 200) # Blue
-    if apply_rect.collidepoint(mouse_pos):
-        bg_col = (0, 130, 230)
-        
-    pygame.draw.rect(game.virtual_screen, bg_col, apply_rect, border_radius=4)
-    pygame.draw.rect(game.virtual_screen, bg_col, apply_rect, 1, border_radius=4)
-    
-    apply_txt = font.render("Apply Settings", True, WHITE)
-    txt_rect = apply_txt.get_rect(center=apply_rect.center)
-    game.virtual_screen.blit(apply_txt, txt_rect)
-    
-    clickable_rects['apply_settings'] = apply_rect
+
 
 
     # 2. Settings List (Scrollable Area)

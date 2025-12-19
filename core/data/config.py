@@ -147,11 +147,11 @@ VEH_HAS_MOTOR = 1.0
 VEH_HAS_BATTERY = 1.0
 MAP_CHUNKS = 0
 
-def generate_random_seed(chunks=None): # <-- ADDED FUNCTION
+def generate_random_seed(chunks=None):
     """Generates a formatted seed string: 'CHUNKS-HASH'."""
     if chunks is None:
         chunks = MAP_CHUNKS
-    # Generates a random 8-char hash (e.g., '5-A1B2C3D4')
+        
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 def load_settings(preset="default"):

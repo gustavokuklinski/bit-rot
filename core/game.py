@@ -164,7 +164,7 @@ class Game:
         self.player_setup_state = {}
         self.load_game_state = {} 
 
-        self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
+        self.player_view_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS
         self.world_time = WorldTime(self)
         self.sound_manager = SoundManager()
 
@@ -273,7 +273,7 @@ class Game:
                 # [SAFE] Check for to_dict before calling
                 "inventory": [item.to_dict() if hasattr(item, 'to_dict') else item for item in self.player.inventory if item],
                 "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in self.player.belt],
-                "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item) if item else None) for slot, item in self.player.clothes.items()},
+                "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item)) if item else None for slot, item in self.player.clothes.items()},
             }
             
             if self.player.backpack:
@@ -817,15 +817,13 @@ class Game:
         preset = self.player_setup_state.get('selected_config_preset', 'default')
         try:
             self.logger.info(f"Loading config preset: {preset}")
-            core.data.load_settings(preset)
+            
+            core.data.config.load_settings(preset)
 
-            if 'settings_data' in self.player_setup_state:
-                self.logger.info("Applying runtime config overrides from UI.")
-                # This ensures your "Apply Settings" changes actually take effect
-                core.data.config.update_config_from_dict(self.player_setup_state['settings_data'])
 
         except Exception as e:
             self.logger.info(f"Error applying custom config '{preset}': {e}")
+           
 
         # 4. Initialize Generator with the specific OUTPUT folder
         gen_building_counts = self.player_setup_state.get('building_counts_config', None)
