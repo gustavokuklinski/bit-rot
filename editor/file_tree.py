@@ -1,3 +1,4 @@
+# editor/file_tree.py
 import pygame
 import re
 import os
@@ -9,7 +10,7 @@ YELLOW = (255, 255, 0)
 LIGHT_BLUE = (180, 180, 220)
 
 class FileTree:
-    def __init__(self, x, y, width, height, root_dir, file_pattern, font):
+    def __init__(self, x, y, width, height, root_dir, file_pattern, font, show_saves=True):
         self.x = x
         self.y = y
         self.width = width
@@ -20,6 +21,7 @@ class FileTree:
         self.line_height = 25
         self.scroll_offset = 0
         self.icons = load_editor_icons("./game/lib/sprites/editor")
+        self.show_saves = show_saves # New flag to control save folder visibility
 
         # Data structures
         self.folders = []          # List of folder names (or absolute paths for saves). "" for root.
@@ -69,34 +71,36 @@ class FileTree:
                     continue
 
         # --- 2. Save Folders (External Directory) ---
-        # Scan: ./game/save/game/save_TIMESTAMP/map
-        save_root = os.path.join(GAME_ROOT, 'save', 'game')
-        if os.path.exists(save_root):
-            try:
-                # Sort reverse to show newest saves first
-                save_folders = sorted(os.listdir(save_root), reverse=True)
-                for sf in save_folders:
-                    sf_path = os.path.join(save_root, sf)
-                    map_sub = os.path.join(sf_path, 'map')
-                    
-                    if os.path.isdir(map_sub):
-                        try:
-                            # Check for map files inside the 'map' subdirectory
-                            save_maps = sorted([f for f in os.listdir(map_sub) if self.file_pattern.match(f)])
-                            if save_maps:
-                                # Use absolute path as the key so editor.py can load it
-                                # os.path.join(base, absolute) returns absolute, bypassing base
-                                folder_key = os.path.abspath(map_sub)
-                                
-                                self.folders.append(folder_key)
-                                self.map_data[folder_key] = self._group_maps(save_maps)
-                                
-                                if folder_key not in self.expanded_folders:
-                                    self.expanded_folders[folder_key] = False
-                        except OSError:
-                            pass
-            except OSError:
-                pass
+        # Only scan saves if explicitly enabled
+        if self.show_saves:
+            # Scan: ./game/save/game/save_TIMESTAMP/map
+            save_root = os.path.join(GAME_ROOT, 'save', 'game')
+            if os.path.exists(save_root):
+                try:
+                    # Sort reverse to show newest saves first
+                    save_folders = sorted(os.listdir(save_root), reverse=True)
+                    for sf in save_folders:
+                        sf_path = os.path.join(save_root, sf)
+                        map_sub = os.path.join(sf_path, 'map')
+                        
+                        if os.path.isdir(map_sub):
+                            try:
+                                # Check for map files inside the 'map' subdirectory
+                                save_maps = sorted([f for f in os.listdir(map_sub) if self.file_pattern.match(f)])
+                                if save_maps:
+                                    # Use absolute path as the key so editor.py can load it
+                                    # os.path.join(base, absolute) returns absolute, bypassing base
+                                    folder_key = os.path.abspath(map_sub)
+                                    
+                                    self.folders.append(folder_key)
+                                    self.map_data[folder_key] = self._group_maps(save_maps)
+                                    
+                                    if folder_key not in self.expanded_folders:
+                                        self.expanded_folders[folder_key] = False
+                            except OSError:
+                                pass
+                except OSError:
+                    pass
 
         # Initialize default properties for new files
         for folder in self.folders:
@@ -124,6 +128,7 @@ class FileTree:
                 if first_folder != "":
                     self.expanded_folders[first_folder] = True
 
+    # ... (rest of class remains unchanged)
     def _group_maps(self, file_list):
         grouped = {}
         for f in file_list:

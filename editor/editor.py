@@ -11,7 +11,7 @@ from editor.config import (
 )
 from editor.assets import load_map_tiles_from_xml
 from editor.map import Map
-from editor.ui import Sidebar, Toolbar, NewMapModal, NewBuildingModal, ModeTabs
+from editor.ui import Sidebar, Toolbar, NewBuildingModal # Removed ModeTabs, NewMapModal
 from editor.file_tree import FileTree
 
 # ... [Init, Colors, Fonts, Regex Patterns, Helper Functions remain unchanged] ...
@@ -161,59 +161,42 @@ def editor():
     map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
 
     # Initialize State
-    main_map = Map(width=MAP_DEFAULT_WIDTH, height=MAP_DEFAULT_HEIGHT)
+    # Only using building_map now
     building_map = Map(width=20, height=20) 
     
-    # Modes: "MAP" or "BUILDING"
-    editor_mode = "MAP" 
+    # Modes: Always "BUILDING"
+    editor_mode = "BUILDING" 
     
     # UI Elements positions
-    content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT
+    content_y = TOOLBAR_HEIGHT # No Mode Tabs anymore
     
-    # Mode Tabs
-    mode_tabs = ModeTabs(0, 0, SCREEN_WIDTH, TAB_BAR_HEIGHT, FONT)
+    # File Trees - Only Building Tree
+    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
     
-    # File Trees
-    map_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, MAP_DIR, MAP_PATTERN, FONT)
-    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, BUILDINGS_DIR, BUILDING_PATTERN, FONT)
-    
-    toolbar = Toolbar(FILE_TREE_WIDTH, TAB_BAR_HEIGHT, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
+    toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, FONT)
     
-    sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
+    # REFRESH BUILDINGS REMOVED AS TAB IS GONE
 
     # Current State Pointers
-    current_map_obj = main_map
-    current_file_tree = map_file_tree
-    current_root_dir = MAP_DIR 
-    current_folder = ""
-    current_base_name = "map_L1_P0_0_0_0_0" # Default
-
-    # Initial Load from Tree
-    if map_file_tree.selected_map:
-        folder, map_name = map_file_tree.selected_map
-        current_folder = folder
-        current_base_name = map_name
-        current_root_dir = os.path.join(MAP_DIR, folder) if folder else MAP_DIR
-        load_map_layers(main_map, current_base_name, current_root_dir)
-    else:
-        # Fallback if tree is empty
-        load_map_layers(main_map, current_base_name, current_root_dir)
-
+    current_map_obj = building_map
+    current_file_tree = building_file_tree
+    
     # Building tree init
     current_building_name = "NewBuilding"
+    current_base_name = current_building_name
+    current_folder = ""
+    current_root_dir = BUILDINGS_DIR
+
     if building_file_tree.selected_map:
         folder, map_name = building_file_tree.selected_map
         current_building_name = map_name
+        current_base_name = map_name
         # Buildings likely flat, so folder is ""
         b_root = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
         load_map_layers(building_map, current_building_name, b_root)
 
-    # Current Names
-    current_map_name = current_base_name
-
     # Modals
-    new_map_modal = NewMapModal(SCREEN_WIDTH//2-150, SCREEN_HEIGHT//2-175, 300, 350, FONT, current_map_name)
     new_building_modal = NewBuildingModal(SCREEN_WIDTH//2-150, SCREEN_HEIGHT//2-150, 300, 300, FONT)
 
     # Camera
@@ -256,8 +239,6 @@ def editor():
                     modified_maps.discard((current_folder, current_base_name))
                     status_msg = "Saved!"
                     status_timer = pygame.time.get_ticks() + 1000
-                    if editor_mode == "BUILDING":
-                        sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
                 elif ctrl_held and event.key == pygame.K_c: # Copy
                      if selection_rect:
                         clipboard = current_map_obj.get_tiles_in_rect(selection_rect, current_map_obj.active_layer_name)
@@ -285,14 +266,6 @@ def editor():
                     sidebar.selected_building = None
             
             # Modal Handling
-            if new_map_modal.active:
-                res = new_map_modal.handle_event(event)
-                if res and res['action'] == 'create_map':
-                     # ... [Implementation depends on NewMapModal details] ...
-                     pass
-                elif res and res['action'] == 'cancel': new_map_modal.active = False
-                continue
-            
             if new_building_modal.active:
                 res = new_building_modal.handle_event(event)
                 if res and res['action'] == 'create_building':
@@ -307,12 +280,7 @@ def editor():
                             writer = csv.writer(f)
                             for _ in range(h): writer.writerow([''] * w)
                     
-                    # Switch to Building Mode
-                    mode_tabs.active_mode = "BUILDING"
-                    editor_mode = "BUILDING"
-                    current_file_tree = building_file_tree
-                    current_map_obj = building_map
-                    
+                    # Refresh to show new building
                     building_file_tree.refresh()
                     
                     current_folder = "" # Buildings are flat
@@ -323,48 +291,12 @@ def editor():
                     load_map_layers(building_map, b_name, BUILDINGS_DIR)
                     building_file_tree.selected_map = ("", b_name)
                     
-                    sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
                     sidebar.active_tab = "Tiles" 
 
                     status_msg = f"Created & Opened {b_name}"
                     status_timer = pygame.time.get_ticks() + 2000
                 continue
 
-            # Mode Tabs
-            new_mode = mode_tabs.handle_event(event)
-            if new_mode:
-                editor_mode = new_mode
-                if editor_mode == "MAP":
-                    current_file_tree = map_file_tree
-                    current_map_obj = main_map
-                    current_base_name = current_map_name
-                    
-                    # Restore map context
-                    if map_file_tree.selected_map:
-                        fld, name = map_file_tree.selected_map
-                        current_folder = fld
-                        current_base_name = name
-                    else:
-                        current_folder = ""
-                        # Keep existing base name or default
-                    
-                    current_root_dir = os.path.join(MAP_DIR, current_folder) if current_folder else MAP_DIR
-                    
-                else:
-                    current_file_tree = building_file_tree
-                    current_map_obj = building_map
-                    current_base_name = current_building_name
-                    
-                    if building_file_tree.selected_map:
-                        fld, name = building_file_tree.selected_map
-                        current_folder = fld
-                        current_base_name = name
-                    else:
-                        current_folder = ""
-                        
-                    current_root_dir = os.path.join(BUILDINGS_DIR, current_folder) if current_folder else BUILDINGS_DIR
-                    sidebar.active_tab = "Tiles"
-            
             # Sidebar
             if sidebar.handle_event(event):
                 if sidebar.selected_tile: 
@@ -385,11 +317,9 @@ def editor():
                     current_folder = folder
                     current_base_name = map_name
                     
-                    root_base = MAP_DIR if editor_mode == "MAP" else BUILDINGS_DIR
-                    current_root_dir = os.path.join(root_base, folder) if folder else root_base
+                    current_root_dir = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
                     
-                    if editor_mode == "MAP": current_map_name = map_name
-                    else: current_building_name = map_name
+                    current_building_name = map_name
                     
                     load_map_layers(current_map_obj, map_name, current_root_dir)
                     modified_maps.discard((folder, map_name))
@@ -406,15 +336,14 @@ def editor():
             # Toolbar
             tb_action = toolbar.handle_event(event)
             if tb_action:
-                if tb_action == "NEW MAP": new_map_modal.active = True
+                if tb_action == "NEW MAP": pass # Disabled
                 elif tb_action == "NEW BUILDING": new_building_modal.active = True
                 elif tb_action == "SAVE MAP":
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
                     modified_maps.discard((current_folder, current_base_name))
                     status_msg = "Saved!"
                     status_timer = pygame.time.get_ticks() + 1000
-                    if editor_mode == "BUILDING":
-                        sidebar.refresh_buildings(BUILDINGS_DIR, map_tiles)
+                    # sidebar.refresh_buildings removed
 
                 elif tb_action == "SELECTION":
                     is_selecting = True
@@ -489,7 +418,7 @@ def editor():
                             selection_start = (map_x, map_y)
                             selection_rect = pygame.Rect(map_x, map_y, 1, 1)
                         
-                        elif editor_mode == "MAP" and sidebar.selected_building and sidebar.active_tab == "Builds":
+                        elif sidebar.selected_building and sidebar.active_tab == "Builds":
                             paste_building_on_map(current_map_obj, sidebar.selected_building, BUILDINGS_DIR, map_x, map_y)
                             modified_maps.add((current_folder, current_base_name))
                         
@@ -524,7 +453,7 @@ def editor():
         # Render
         screen.fill(GREY)
         
-        mode_tabs.draw(screen)
+        # Mode Tabs Removed
         
         current_map_obj.render(screen, map_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
         draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
@@ -536,8 +465,8 @@ def editor():
              sh = selection_rect.height * TILE_SIZE * current_zoom
              pygame.draw.rect(screen, YELLOW, (sx, sy, sw, sh), 2)
 
-        # Ghost Building Preview
-        if editor_mode == "MAP" and sidebar.selected_building and sidebar.active_tab == "Builds" and map_view_rect.collidepoint(pygame.mouse.get_pos()):
+        # Ghost Building Preview (Disabled since sidebar.selected_building is effectively disabled)
+        if sidebar.selected_building and sidebar.active_tab == "Builds" and map_view_rect.collidepoint(pygame.mouse.get_pos()):
              mx, my = pygame.mouse.get_pos()
              gx = int(((mx - camera_offset_x) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_x
              gy = int(((my - camera_offset_y) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_y
@@ -556,7 +485,6 @@ def editor():
         sidebar.draw(screen)
         toolbar.draw(screen)
         
-        if new_map_modal.active: new_map_modal.draw(screen)
         if new_building_modal.active: new_building_modal.draw(screen)
         
         if pygame.time.get_ticks() < status_timer:
