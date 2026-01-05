@@ -70,10 +70,15 @@ def load_giant_map(game):
             roof_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_roof.csv"))
             light_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_light.csv"))
 
-            if not base_layout or not ground_layout or not spawn_layout or not roof_layout or not light_layout:
+            if not base_layout:
                 print(f"Warning: Missing layout files for {base_name}. Skipping chunk.")
                 continue
-                
+            
+            if not ground_layout: ground_layout = []
+            if not spawn_layout: spawn_layout = []
+            if not roof_layout: roof_layout = []
+            if not light_layout: light_layout = []
+
             layouts[(cx, cy)] = (base_layout, ground_layout, spawn_layout, roof_layout, light_layout)
         except Exception as e:
             print(f"Error loading layouts for {c_info['filename']}: {e}")

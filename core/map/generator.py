@@ -39,7 +39,8 @@ class ProceduralGenerator:
             'Shed': MAP_CHUNKS * 2,
             'Building': MAP_CHUNKS * 3,
             'Petrol': MAP_CHUNKS * 3,
-            'Heli': 1
+            'Heli': 1,
+            'Military': 1
         }
         # ------------------------------------------------
 
@@ -71,7 +72,8 @@ class ProceduralGenerator:
             'Shed': [],
             'Building': [],
             'Petrol': [],
-            'Heli': []
+            'Heli': [],
+            'Military': []
         }
         self.forest_templates = []
 
@@ -88,6 +90,9 @@ class ProceduralGenerator:
             
             if "heli" in lower_name:
                 self.categorized_templates['Heli'].append(name)
+                assigned = True
+            if "military" in lower_name:
+                self.categorized_templates['Military'].append(name)
                 assigned = True
             elif "warehouse" in lower_name:
                 self.categorized_templates['Warehouse'].append(name)
@@ -110,13 +115,14 @@ class ProceduralGenerator:
         for cat, lst in self.categorized_templates.items():
             print(f"Category {cat}: Found {len(lst)} templates.")
 
-    def generate_world(self, seed_pattern=None, regenerate=False): # Changed default to None
+
+    def generate_world(self, seed_pattern=None, regenerate=False):
         current_chunks = core.data.config.MAP_CHUNKS
+        
         # Logic to generate seed if missing or generic
         if not seed_pattern or seed_pattern == "5-DEFAULT": 
             seed_pattern = generate_random_seed(current_chunks)
             
-   
         if '-' in seed_pattern:
             parts = seed_pattern.split('-', 1)
             n_part = parts[0]
@@ -126,10 +132,8 @@ class ProceduralGenerator:
             actual_seed = parts[1]
             if not actual_seed: actual_seed = "DEFAULT"
         else:
-            # Handle fallback legacy seeds if necessary
             grid_w, grid_h = current_chunks, current_chunks
             actual_seed = seed_pattern
-        
 
         self.grid_w = grid_w
         self.grid_h = grid_h
@@ -155,6 +159,11 @@ class ProceduralGenerator:
         # 2. Build the Global Building Deck (The Master List)
         global_deck = []
         
+        # Reset specific templates placeholders
+        self.heli_template = None
+        self.military_template = None
+        self.mil_petrol_template = None
+
         for category, limit in self.global_building_limits.items():
             available = self.categorized_templates.get(category, [])
             if not available:
@@ -162,7 +171,6 @@ class ProceduralGenerator:
                 continue
             
             # Select 'limit' number of buildings. 
-            # Try to use unique ones first, then repeat if we run out.
             selected_for_category = []
             pool = list(available)
             random.shuffle(pool)
@@ -175,22 +183,35 @@ class ProceduralGenerator:
                     tmpl = pool.pop()
                     selected_for_category.append(tmpl)
             
-            # Special handling: Heli usually goes to one specific chunk, but here we put it in the deck
+            # --- SPECIAL HANDLING FOR MILITARY CHUNK ITEMS ---
             if category == 'Heli':
+                # Save specifically, do not add to global deck
                 self.heli_template = selected_for_category[0] if selected_for_category else None
+            
+            elif category == 'Military':
+                # Save specifically, do not add to global deck
+                self.military_template = selected_for_category[0] if selected_for_category else None
+
+            elif category == 'Petrol':
+                # Reserve ONE Petrol for the military chunk
+                if selected_for_category:
+                    self.mil_petrol_template = selected_for_category.pop(0)
+                # Add the REST of the petrol stations to the global deck
+                global_deck.extend(selected_for_category)
+            
             else:
+                # All other categories go to general deck
                 global_deck.extend(selected_for_category)
 
-        # Shuffle the deck to mix Warehouses, Sheds, and Buildings
+        # Shuffle the deck to mix Warehouses, Sheds, and remaining Buildings
         random.shuffle(global_deck)
-        print(f"Global Building Deck Constructed: {len(global_deck)} buildings to place.")
+        print(f"Global Building Deck Constructed: {len(global_deck)} buildings + Special Mil Set.")
 
         # 3. Calculate Urban Chunks (Where buildings can go)
         all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         total_chunks = grid_w * grid_h
         
-        # Ensure we have enough urban chunks to fit the deck, or use ratio
-        deck_size_estimate_chunks = math.ceil(len(global_deck) / 2) # approx 2 per chunk
+        deck_size_estimate_chunks = math.ceil(len(global_deck) / 2) 
         base_urban_count = int(total_chunks * self.chunk_settings.get('urban_chunk_ratio', 0.8))
         num_building_chunks = max(base_urban_count, deck_size_estimate_chunks, self.chunk_settings.get('min_urban_chunks', 1))
         num_building_chunks = min(num_building_chunks, total_chunks) 
@@ -200,9 +221,9 @@ class ProceduralGenerator:
         military_chunk_coord = None
         
         # Select Military Chunk
-        if self.heli_template and self.chunk_settings.get('military_chunk_count', 0) > 0:
+        if self.chunk_settings.get('military_chunk_count', 0) > 0:
             military_chunk_coord = random.choice(urban_candidates)
-            urban_candidates.remove(military_chunk_coord)
+            urban_candidates.remove(military_chunk_coord) # Remove it so normal buildings don't go there
             num_building_chunks = max(0, num_building_chunks - 1)
         
         urban_coords = set(random.sample(urban_candidates, min(len(urban_candidates), num_building_chunks)))
@@ -213,8 +234,7 @@ class ProceduralGenerator:
         
         if urban_list:
             random.shuffle(urban_list)
-            
-            # Round-Robin Distribution
+            # Round-Robin Distribution for standard buildings
             if global_deck:
                 chunk_idx = 0
                 for tmpl in global_deck:
@@ -222,9 +242,15 @@ class ProceduralGenerator:
                     chunk_priority_map[target_chunk].append(tmpl)
                     chunk_idx = (chunk_idx + 1) % len(urban_list)
 
-        # Assign Heli to Military Chunk
-        if military_chunk_coord and self.heli_template:
-            chunk_priority_map[military_chunk_coord].append(self.heli_template)
+        # --- ASSIGN SPECIALS TO MILITARY CHUNK ---
+        if military_chunk_coord:
+            print(f"Populating Military Chunk at {military_chunk_coord}")
+            if self.heli_template:
+                chunk_priority_map[military_chunk_coord].append(self.heli_template)
+            if self.military_template:
+                chunk_priority_map[military_chunk_coord].append(self.military_template)
+            if self.mil_petrol_template:
+                chunk_priority_map[military_chunk_coord].append(self.mil_petrol_template)
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
@@ -258,7 +284,7 @@ class ProceduralGenerator:
                                                        is_start=is_center_chunk, 
                                                        assigned_templates=assigned_buildings, 
                                                        allow_buildings=is_urban,
-                                                       force_forest=is_military_chunk) 
+                                                       force_forest=False) 
                 
                 conn_top = conns.get('top_id', 0)
                 conn_right = conns.get('right_id', 0)
