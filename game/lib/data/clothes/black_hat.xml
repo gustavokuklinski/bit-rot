@@ -1,4 +1,4 @@
-<cloth name="Black Hat" type="cloth" id="head">
+<cloth name="Black Hat" type="cloth" id="head" builder="true">
     <properties>
         <defence value="0" />
         <durability min="1" max="100" />

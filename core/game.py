@@ -871,7 +871,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID","Mobile off","Shotgun", "38 Revolver", "MPK5"]
+        starter_items = ["ID","Mobile off"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
@@ -881,7 +881,28 @@ class Game:
              except: pass
 
         self.zombies_killed = 0
-        self.modals = []
+        self.modals = [
+            {
+                'type': 'status', 
+                'id': str(uuid.uuid4()), 
+                'position': self.last_modal_positions.get('status', (50, 50))
+            },
+            {
+                'type': 'inventory', 
+                'id': str(uuid.uuid4()), 
+                'position': self.last_modal_positions.get('inventory', (400, 50))
+            },
+            {
+                'type': 'nearby', 
+                'id': str(uuid.uuid4()), 
+                'position': self.last_modal_positions.get('nearby', (1050, 360))
+            },
+            {
+                'type': 'gear', 
+                'id': str(uuid.uuid4()), 
+                'position': self.last_modal_positions.get('gear', (830, 10))
+            }
+        ]
         self.map_states = {}
         
         self.load_map(self.map_manager.current_map_filename)

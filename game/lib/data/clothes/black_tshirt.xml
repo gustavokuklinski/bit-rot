@@ -1,4 +1,4 @@
-<cloth name="Black Tshirt" type="cloth" id="torso">
+<cloth name="Black Tshirt" type="cloth" id="torso" builder="true">
     <properties>
         <defence value="0" />
         <durability min="1" max="100" />

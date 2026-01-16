@@ -955,6 +955,9 @@ def handle_mouse_motion(game, event, mouse_pos):
             modal['position'] = (clamped_x, clamped_y)
             modal['rect'].topleft = modal['position']
 
+            if hasattr(game, 'last_modal_positions'):
+                game.last_modal_positions[modal['type']] = modal['position']
+
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
     for i, rect in enumerate(game.context_menu['rects']):
@@ -1027,11 +1030,14 @@ def handle_context_menu_click(game, mouse_pos):
                 
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 game.modals = [m for m in game.modals if m['type'] != 'vehicle']
+                default_pos = (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200)
+                pos = game.last_modal_positions.get('vehicle', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
+
                 new_modal = {
                     'id': uuid.uuid4(),
                     'type': 'vehicle', 'vehicle': item,
-                    'position': (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200),
-                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT), 
+                    'position': pos, # Use the retrieved pos
+                    'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT), # Use pos[0], pos[1]
                     'minimized': False,
                     'is_dragging': False, 
                     'drag_offset': (0, 0), 

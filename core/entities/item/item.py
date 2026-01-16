@@ -383,6 +383,9 @@ class Item:
                         'properties': {}
                     }
                     
+                    builder_str = root.attrib.get('builder', 'false')
+                    template['builder'] = (builder_str.lower() == 'true')
+
                     # Store the slot ID (e.g., "head")
                     template['properties']['slot'] = {'value': root.attrib.get('id')}
                     

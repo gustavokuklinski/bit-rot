@@ -1,4 +1,4 @@
-<cloth name="Blue Sneakers" type="cloth" id="feet">
+<cloth name="Blue Sneakers" type="cloth" id="feet" builder="true">
     <properties>
         <defence value="0" />
         <speed value="0" />

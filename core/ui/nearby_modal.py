@@ -7,6 +7,7 @@ from core.entities.zombie.corpse import Corpse
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Nearby")
+    modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 

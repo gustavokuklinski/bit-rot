@@ -338,6 +338,7 @@ def get_invcontainer_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
 
 def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory")
+    modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 

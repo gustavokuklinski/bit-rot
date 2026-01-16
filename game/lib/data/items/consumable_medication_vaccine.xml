@@ -1,6 +1,6 @@
 <item name="Vaccine" type="consumable_medication">
     <properties>
-        <reduce value="[infection]" min="5" max="15" />
+        <reduce status="[infection]" min="5" max="15" />
         <load value="1" />
         <capacity value="5" />
         <sprite file="vaccine.png" />

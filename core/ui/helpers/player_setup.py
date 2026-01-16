@@ -719,6 +719,10 @@ def run_player_setup(game):
 
         for item_name, template in ITEM_TEMPLATES.items():
             if template.get('type') == 'cloth':
+                
+                if not template.get('builder', False):
+                    continue
+
                 slot = template.get('properties', {}).get('slot', {}).get('value')
                 if slot == 'hand': slot = 'hands' 
                 if slot in state['available_clothes']:
