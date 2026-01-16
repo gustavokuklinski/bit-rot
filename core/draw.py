@@ -584,7 +584,7 @@ def draw_game(game):
         if reticle_img:
             base_w = reticle_img.get_width()
             base_h = reticle_img.get_height()
-            scale_mult = 1.5 + (game.player.current_aim_factor * 2.0)
+            scale_mult = 1.5 + (game.player.current_aim_factor * 3.5)
             new_w = max(1, int(base_w * scale_mult))
             new_h = max(1, int(base_h * scale_mult))
             scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))

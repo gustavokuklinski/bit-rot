@@ -22,7 +22,7 @@ class ProceduralGenerator:
         
         # Map/Chunk Settings
         self.default_chunk_settings = {
-            'urban_chunk_ratio': 0.8, # Increased to spread buildings out more
+            'urban_chunk_ratio': 0.8,
             'min_urban_chunks': 1,
             'military_chunk_count': 1,
             'force_start_urban': True
@@ -32,7 +32,6 @@ class ProceduralGenerator:
             self.chunk_settings.update(chunk_settings)
 
         # --- GLOBAL BUILDING LIMITS (MAX ON FULL MAP) ---
-        # This defines exactly how many of each type will spawn in the entire world.
         self.global_building_limits = {
             'Warehouse': MAP_CHUNKS * 2,
             'Stores': MAP_CHUNKS * 2,
@@ -54,7 +53,7 @@ class ProceduralGenerator:
         # --- Island/Coast Settings ---
         self.water_tile = 'water_01'
         self.sand_tile = 'beach_sand_01'
-        self.coast_width = 15 # Adjusted for 100x100 map
+        self.coast_width = 15
         # -----------------------------
 
         # 1. Identify Forest Tiles
@@ -119,7 +118,6 @@ class ProceduralGenerator:
     def generate_world(self, seed_pattern=None, regenerate=False):
         current_chunks = core.data.config.MAP_CHUNKS
         
-        # Logic to generate seed if missing or generic
         if not seed_pattern or seed_pattern == "5-DEFAULT": 
             seed_pattern = generate_random_seed(current_chunks)
             
@@ -156,10 +154,9 @@ class ProceduralGenerator:
         # 1. Generate the Connection Matrix
         connections_grid = self._generate_maze_connections(grid_w, grid_h)
 
-        # 2. Build the Global Building Deck (The Master List)
+        # 2. Build the Global Building Deck
         global_deck = []
         
-        # Reset specific templates placeholders
         self.heli_template = None
         self.military_template = None
         self.mil_petrol_template = None
@@ -167,47 +164,41 @@ class ProceduralGenerator:
         for category, limit in self.global_building_limits.items():
             available = self.categorized_templates.get(category, [])
             if not available:
-                print(f"Warning: No templates found for category '{category}'")
+                if category in ['Heli', 'Military', 'Petrol']:
+                    print(f"CRITICAL WARNING: No templates found for mandatory category '{category}'!")
+                else:
+                    print(f"Warning: No templates found for category '{category}'")
                 continue
             
-            # Select 'limit' number of buildings. 
             selected_for_category = []
             pool = list(available)
             random.shuffle(pool)
             
             for _ in range(limit):
                 if not pool:
-                    pool = list(available) # Refill pool if we need more
+                    pool = list(available)
                     random.shuffle(pool)
                 if pool:
                     tmpl = pool.pop()
                     selected_for_category.append(tmpl)
             
-            # --- SPECIAL HANDLING FOR MILITARY CHUNK ITEMS ---
+            # --- SPECIAL HANDLING ---
             if category == 'Heli':
-                # Save specifically, do not add to global deck
                 self.heli_template = selected_for_category[0] if selected_for_category else None
-            
             elif category == 'Military':
-                # Save specifically, do not add to global deck
                 self.military_template = selected_for_category[0] if selected_for_category else None
-
             elif category == 'Petrol':
                 # Reserve ONE Petrol for the military chunk
                 if selected_for_category:
                     self.mil_petrol_template = selected_for_category.pop(0)
-                # Add the REST of the petrol stations to the global deck
+                # Add the REST to global deck
                 global_deck.extend(selected_for_category)
-            
             else:
-                # All other categories go to general deck
                 global_deck.extend(selected_for_category)
 
-        # Shuffle the deck to mix Warehouses, Sheds, and remaining Buildings
         random.shuffle(global_deck)
-        print(f"Global Building Deck Constructed: {len(global_deck)} buildings + Special Mil Set.")
 
-        # 3. Calculate Urban Chunks (Where buildings can go)
+        # 3. Calculate Urban Chunks
         all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         total_chunks = grid_w * grid_h
         
@@ -220,21 +211,19 @@ class ProceduralGenerator:
         urban_candidates = list(all_coords)
         military_chunk_coord = None
         
-        # Select Military Chunk
         if self.chunk_settings.get('military_chunk_count', 0) > 0:
             military_chunk_coord = random.choice(urban_candidates)
-            urban_candidates.remove(military_chunk_coord) # Remove it so normal buildings don't go there
+            urban_candidates.remove(military_chunk_coord)
             num_building_chunks = max(0, num_building_chunks - 1)
         
         urban_coords = set(random.sample(urban_candidates, min(len(urban_candidates), num_building_chunks)))
         
-        # 5. Distribute the Deck to Chunks
+        # 5. Distribute Deck
         chunk_priority_map = {coord: [] for coord in all_coords}
         urban_list = list(urban_coords)
         
         if urban_list:
             random.shuffle(urban_list)
-            # Round-Robin Distribution for standard buildings
             if global_deck:
                 chunk_idx = 0
                 for tmpl in global_deck:
@@ -242,20 +231,27 @@ class ProceduralGenerator:
                     chunk_priority_map[target_chunk].append(tmpl)
                     chunk_idx = (chunk_idx + 1) % len(urban_list)
 
-        # --- ASSIGN SPECIALS TO MILITARY CHUNK ---
+        # --- ASSIGN MANDATORY SPECIALS TO MILITARY CHUNK ---
         if military_chunk_coord:
             print(f"Populating Military Chunk at {military_chunk_coord}")
             if self.heli_template:
                 chunk_priority_map[military_chunk_coord].append(self.heli_template)
+            else:
+                print("FAILED to assign Heli to Military Chunk (Template missing).")
+                
             if self.military_template:
                 chunk_priority_map[military_chunk_coord].append(self.military_template)
+            else:
+                print("FAILED to assign Military Base to Military Chunk (Template missing).")
+
             if self.mil_petrol_template:
                 chunk_priority_map[military_chunk_coord].append(self.mil_petrol_template)
+            else:
+                print("FAILED to assign Petrol to Military Chunk (Template missing).")
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
-        print(f"Start Chunk: ({start_gx}, {start_gy})")
-
+        
         total_map_w = grid_w * self.chunk_size * self.tile_size
         total_map_h = grid_h * self.chunk_size * self.tile_size
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
@@ -268,13 +264,10 @@ class ProceduralGenerator:
                 pos_id = (gy * grid_w) + gx
                 conns = connections_grid[gy][gx]
                 
-                # These are the ONLY buildings allowed for this chunk
                 assigned_buildings = chunk_priority_map.get((gx, gy), [])
-
                 is_center_chunk = (gx == start_gx and gy == start_gy)
                 is_military_chunk = (gx, gy) == military_chunk_coord
                 
-                # A chunk is urban if it has assigned buildings OR is in the urban set
                 is_urban = (gx, gy) in urban_coords or is_military_chunk or len(assigned_buildings) > 0
                 
                 if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
@@ -421,7 +414,6 @@ class ProceduralGenerator:
             while steps < max_steps:
                 steps += 1
                 if not (0 <= current_x < w and 0 <= current_y < h): break
-                # Stop if we hit main road OR Water
                 if layers['ground'][current_y][current_x] == road_tile: break 
                 if layers['ground'][current_y][current_x] == self.water_tile: break 
 
@@ -432,7 +424,6 @@ class ProceduralGenerator:
                 for dx, dy in moves:
                     nx, ny = current_x + dx, current_y + dy
                     if 0 <= nx < w and 0 <= ny < h:
-                        # Avoid obstacles AND Water
                         if layers['base'][ny][nx] == ' ' and layers['ground'][ny][nx] != self.water_tile:
                             valid_moves.append((dx, dy))
                 
@@ -495,22 +486,20 @@ class ProceduralGenerator:
                         layers['base'][y][x] = tile
                         occupied_mask[y][x] = 1
 
-        # 4. Organic "Drunkward" Coastline
+        # 4. Organic Coastline
         if hasattr(self, 'grid_w') and hasattr(self, 'grid_h'):
             cw = self.coast_width
-            
             def get_coast_noise(idx, scale=0.1, amp=4.0):
                 val = math.sin(idx * scale) * amp 
                 val += math.sin(idx * scale * 2.1) * (amp * 0.5)
                 val += random.uniform(-2.0, 2.0)
                 return int(val)
 
-            # Left Edge
-            if gx == 0:
+            if gx == 0: # Left
                 for y in range(h):
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
-                    water_lim = (cw - 8) + offset # Reduced variance for smaller chunk
+                    water_lim = (cw - 8) + offset 
                     sand_lim = cw + offset
                     for x in range(cw + 8):
                         if x >= w: break
@@ -524,8 +513,7 @@ class ProceduralGenerator:
                                 layers['base'][y][x] = ' '
                                 occupied_mask[y][x] = 1
 
-            # Right Edge
-            if gx == self.grid_w - 1:
+            if gx == self.grid_w - 1: # Right
                 for y in range(h):
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
@@ -545,8 +533,7 @@ class ProceduralGenerator:
                                 layers['base'][y][x] = ' '
                                 occupied_mask[y][x] = 1
 
-            # Top Edge
-            if gy == 0:
+            if gy == 0: # Top
                 for x in range(w):
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
@@ -564,8 +551,7 @@ class ProceduralGenerator:
                                 layers['base'][y][x] = ' '
                                 occupied_mask[y][x] = 1
 
-            # Bottom Edge
-            if gy == self.grid_h - 1:
+            if gy == self.grid_h - 1: # Bottom
                 for x in range(w):
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
@@ -585,119 +571,142 @@ class ProceduralGenerator:
                                 layers['base'][y][x] = ' '
                                 occupied_mask[y][x] = 1
 
-        # 5. Generate "Organic" Trade Routes
+        # 5. Organic Trade Routes (Only if NOT mandatory/overcrowded)
         if allow_buildings and not force_forest:
-            num_routes = 6 # Reduced for smaller chunk
+            num_routes = 6
             safe_margin = self.coast_width + 3 
-            
             for _ in range(num_routes):
                 rx1 = random.randint(safe_margin, w - safe_margin)
                 ry1 = random.randint(safe_margin, h - safe_margin)
                 rx2 = random.randint(safe_margin, w - safe_margin)
                 ry2 = random.randint(safe_margin, h - safe_margin)
-                
                 draw_secondary_maze_road(rx1, ry1, rx2, ry2, tile_type=dirt_tile)
 
-        # 6. Place Buildings (STRICTLY ASSIGNED ONLY)
+        # 6. Place Buildings (MANDATORY LOGIC)
         placed_rects = [] 
         
-        def is_area_free(tx, ty, tw, th, margin=0):
+        def is_area_free(tx, ty, tw, th, margin=0, ignore_mask=False):
             t_rect = pygame.Rect(tx, ty, tw, th)
+            # 1. Check Collision with other buildings
             for pr in placed_rects:
                 if t_rect.inflate(margin*2, margin*2).colliderect(pr): return False
-            mx1, my1 = max(0, tx - margin), max(0, ty - margin)
-            mx2, my2 = min(w, tx + tw + margin), min(h, ty + th + margin)
-            for ry in range(my1, my2):
-                for rx in range(mx1, mx2):
-                    if 0 <= ry < h and 0 <= rx < w:
-                        if occupied_mask[ry][rx] == 1: return False
+            
+            # 2. Check Map Boundaries
+            if tx < 0 or tx + tw > w or ty < 0 or ty + th > h: return False
+
+            # 3. Check Mask (Trees, Water, Roads) - unless forced
+            if not ignore_mask:
+                mx1, my1 = max(0, tx - margin), max(0, ty - margin)
+                mx2, my2 = min(w, tx + tw + margin), min(h, ty + th + margin)
+                for ry in range(my1, my2):
+                    for rx in range(mx1, mx2):
+                        if 0 <= ry < h and 0 <= rx < w:
+                            if occupied_mask[ry][rx] == 1: 
+                                return False
+            else:
+                # Even if ignoring mask, NEVER place on Water or Map Edges (Connection Roads)
+                # Let's say connection roads are at x=cx/cy range? 
+                # Better safe check: Don't place on water_tile
+                mx1, my1 = tx, ty
+                mx2, my2 = tx + tw, ty + th
+                for ry in range(my1, my2):
+                    for rx in range(mx1, mx2):
+                         if 0 <= ry < h and 0 <= rx < w:
+                             if layers['ground'][ry][rx] == self.water_tile:
+                                 return False
             return True
 
         if allow_buildings and assigned_templates:
-            # We strictly loop through the assigned templates for this chunk.
-            # No random filling afterwards.
-            for tmpl_name in assigned_templates:
-                if tmpl_name in self.templates:
-                    tmpl = self.templates[tmpl_name]
-                    tw, th = tmpl['width'], tmpl['height']
-                    
-                    is_building2 = "building2" in tmpl_name.lower()
-                    
-                    placed = False
-                    for _ in range(200): # Attempts per building
-                        if is_building2:
-                            axis = random.choice(['vert', 'horz'])
-                            road_radius = 2 
-                            if axis == 'vert':
-                                side = random.choice([-1, 1])
-                                if side == -1: tx = cx - road_radius - 1 - tw
-                                else: tx = cx + road_radius + 1 + 1
-                                ty = random.randint(border_w + 2, h - border_w - th - 2)
-                            else:
-                                side = random.choice([-1, 1])
-                                if side == -1: 
-                                    ty = cy - road_radius - 1 - th
-                                else: 
-                                    ty = cy + road_radius + 1 + 1
-                                tx = random.randint(border_w + 2, w - border_w - tw - 2)
-                            
-                            if tx < 0 or tx + tw >= w or ty < 0 or ty + th >= h: 
-                                continue
+            # SORT MANDATORY BUILDINGS BY SIZE (Largest First)
+            # This ensures the Heli/Mil base get spots before smaller sheds
+            sorted_templates = []
+            for t_name in assigned_templates:
+                if t_name in self.templates:
+                    t = self.templates[t_name]
+                    area = t['width'] * t['height']
+                    sorted_templates.append((area, t_name))
+            sorted_templates.sort(key=lambda x: x[0], reverse=True)
+            
+            ordered_names = [x[1] for x in sorted_templates]
+
+            for tmpl_name in ordered_names:
+                tmpl = self.templates[tmpl_name]
+                tw, th = tmpl['width'], tmpl['height']
+                is_building2 = "building2" in tmpl_name.lower()
+                
+                placed = False
+                
+                # --- STRATEGY 1: Random Attempts (Standard) ---
+                for _ in range(100): 
+                    if is_building2:
+                        # (Keep existing building2 random logic)
+                        axis = random.choice(['vert', 'horz'])
+                        road_radius = 2 
+                        if axis == 'vert':
+                            side = random.choice([-1, 1])
+                            if side == -1: tx = cx - road_radius - 1 - tw
+                            else: tx = cx + road_radius + 1 + 1
+                            ty = random.randint(border_w + 2, h - border_w - th - 2)
                         else:
-                            safe_pad = 2
-                            if w - safe_pad*2 < tw or h - safe_pad*2 < th: break 
-                            tx = random.randint(safe_pad, w - safe_pad - tw)
-                            ty = random.randint(safe_pad, h - safe_pad - th)
+                            side = random.choice([-1, 1])
+                            if side == -1: ty = cy - road_radius - 1 - th
+                            else: ty = cy + road_radius + 1 + 1
+                            tx = random.randint(border_w + 2, w - border_w - tw - 2)
+                    else:
+                        safe_pad = 2
+                        if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
+                        tx = random.randint(safe_pad, w - safe_pad - tw)
+                        ty = random.randint(safe_pad, h - safe_pad - th)
+                    
+                    if is_area_free(tx, ty, tw, th, margin=1):
+                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                        placed = True
+                        break
+                
+                # --- STRATEGY 2: Exhaustive Grid Scan (If Random Failed) ---
+                if not placed:
+                    print(f"Random placement failed for {tmpl_name}, trying scan...")
+                    stride = 2 # Step size
+                    for sy in range(border_w + 2, h - border_w - th - 2, stride):
+                        if placed: break
+                        for sx in range(border_w + 2, w - border_w - tw - 2, stride):
+                            if is_area_free(sx, sy, tw, th, margin=1):
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                                placed = True
+                                break
+                
+                # --- STRATEGY 3: Force Placement (Clear Obstacles) ---
+                if not placed:
+                    print(f"FORCE PLACING Mandatory Building: {tmpl_name}")
+                    # Try random spots again, but IGNORE obstacles (except water/edge)
+                    for _ in range(50):
+                        tx = random.randint(5, w - 5 - tw)
+                        ty = random.randint(5, h - 5 - th)
                         
-                        if is_area_free(tx, ty, tw, th, margin=1):
-                            # Lot -> Sand
-                            lot_m = 2
-                            for ry in range(ty-lot_m, ty+th+lot_m):
-                                for rx in range(tx-lot_m, tx+tw+lot_m):
-                                    if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
-                                        layers['ground'][ry][rx] = sand_tile
-                                        occupied_mask[ry][rx] = 1
-                            
-                            # Driveway
-                            bx, by = tx + tw // 2, ty + th // 2
-                            if (tw > 30 or th > 30) and not is_building2:
-                                draw_secondary_maze_road(bx, by, cx, cy, sand_tile)
-                            else:
-                                x_s, x_e = min(cx, bx), max(cx, bx)
-                                for rx in range(x_s, x_e + 1): 
-                                    for off in range(2): 
-                                        yy = cy + off
-                                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=self.water_tile: 
-                                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                        # Ensure we don't block the absolute center road intersection (hub)
+                        # Hub is roughly cx-2 to cx+2
+                        hub_rect = pygame.Rect(cx-3, cy-3, 6, 6)
+                        new_rect = pygame.Rect(tx, ty, tw, th)
+                        
+                        if not hub_rect.colliderect(new_rect):
+                            if is_area_free(tx, ty, tw, th, margin=0, ignore_mask=True):
+                                # Clear the area first
+                                for cy_clr in range(ty, ty + th):
+                                    for cx_clr in range(tx, tx + tw):
+                                        if 0 <= cy_clr < h and 0 <= cx_clr < w:
+                                            layers['base'][cy_clr][cx_clr] = ' ' # Remove tree
+                                            layers['ground'][cy_clr][cx_clr] = sand_tile # Prepare ground
+                                            occupied_mask[cy_clr][cx_clr] = 0 # Temp clear mask
                                 
-                                y_s, y_e = min(cy, by), max(cy, by)
-                                for ry in range(y_s, y_e + 1):
-                                    for off in range(2): 
-                                        xx = bx + off
-                                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=self.water_tile: 
-                                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
-                            
-                            self._blit_template(layers, tmpl, tx, ty, w, h)
-                            placed_rects.append(pygame.Rect(tx, ty, tw, th))
-                            for ry in range(ty, ty + th):
-                                for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
-                            print(f"Placed Assigned: {tmpl_name} at ({tx},{ty}) in chunk ({gx},{gy})")
-                            placed = True
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                                placed = True
+                                break
 
-                            # Connect to neighbor
-                            if len(placed_rects) > 1:
-                                target_index = random.randint(0, len(placed_rects) - 2)
-                                target_rect = placed_rects[target_index]
-                                px, py = target_rect.centerx, target_rect.centery
-                                bx, by = tx + tw // 2, ty + th // 2
-                                draw_secondary_maze_road(bx, by, px, py, tile_type=sand_tile)
-                            break
-                    if not placed:
-                        print(f"Failed to place {tmpl_name} in chunk ({gx},{gy})")
+                if not placed:
+                    print(f"CRITICAL FAILURE: Could not place {tmpl_name} even with force!")
 
-        # 7. Forest / Nature
+        # 7. Forest / Nature (Fill remaining gaps)
         if self.forest_templates and not force_forest:
-            # Add some nature to fill emptiness since we aren't spamming buildings
             for _ in range(12): 
                 tmpl_name = random.choice(self.forest_templates)
                 tmpl = self.templates[tmpl_name]
@@ -748,6 +757,56 @@ class ProceduralGenerator:
 
         return layers
 
+    def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
+        road_tile = 'asphalt_01'
+        # Lot -> Sand
+        lot_m = 2
+        for ry in range(ty-lot_m, ty+th+lot_m):
+            for rx in range(tx-lot_m, tx+tw+lot_m):
+                if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                    layers['ground'][ry][rx] = sand_tile
+                    occupied_mask[ry][rx] = 1
+        
+        # Driveway
+        bx, by = tx + tw // 2, ty + th // 2
+        
+        def draw_secondary_road(start_x, start_y, target_x, target_y):
+            # Simple Manhattan connector for driveway
+            cur_x, cur_y = start_x, start_y
+            while cur_x != target_x or cur_y != target_y:
+                if cur_x < target_x: cur_x += 1
+                elif cur_x > target_x: cur_x -= 1
+                elif cur_y < target_y: cur_y += 1
+                elif cur_y > target_y: cur_y -= 1
+                
+                if 0<=cur_x<w and 0<=cur_y<h:
+                     if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != self.water_tile:
+                         layers['ground'][cur_y][cur_x] = sand_tile
+                         occupied_mask[cur_y][cur_x] = 1
+
+        if (tw > 30 or th > 30) and not is_building2:
+            draw_secondary_road(bx, by, cx, cy)
+        else:
+            x_s, x_e = min(cx, bx), max(cx, bx)
+            for rx in range(x_s, x_e + 1): 
+                for off in range(2): 
+                    yy = cy + off
+                    if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=self.water_tile: 
+                        layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+            
+            y_s, y_e = min(cy, by), max(cy, by)
+            for ry in range(y_s, y_e + 1):
+                for off in range(2): 
+                    xx = bx + off
+                    if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=self.water_tile: 
+                        layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+        
+        self._blit_template(layers, tmpl, tx, ty, w, h)
+        placed_rects.append(pygame.Rect(tx, ty, tw, th))
+        for ry in range(ty, ty + th):
+            for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+        print(f"PLACED: {tmpl_name} at ({tx},{ty})")
+
     def _scatter_zombies(self, layers, mask, w, h):
         building_tiles = []
         street_tiles = []
@@ -759,7 +818,7 @@ class ProceduralGenerator:
                 if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
                 
                 ground = layers['ground'][y][x]
-                if ground == self.water_tile: continue # No water spawns
+                if ground == self.water_tile: continue 
 
                 if ground == 'sand_01' or ground == 'dirty_01':
                     building_tiles.append((x, y))
@@ -800,7 +859,7 @@ class ProceduralGenerator:
                 if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
                 
                 ground = layers['ground'][y][x]
-                if ground == self.water_tile: continue # No water spawns
+                if ground == self.water_tile: continue 
 
                 if ground in ['asphalt_01', 'sand_01', 'dirty_01']:
                     potential_tiles.append((x, y))
