@@ -193,7 +193,7 @@ class Game:
 
         self.loading_data = None
         self.loading_done = False
-        
+        self.loading_saved_game_folder = None
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""
@@ -386,6 +386,7 @@ class Game:
                 },
                 "layer_spawn_triggers": {str(k): list(v) for k, v in self.layer_spawn_triggers.items()},
                 "items": safe_ground_items,
+                "modal_positions": self.last_modal_positions,
                 "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
             }
             with open(os.path.join(save_path, "world.rot"), "w") as f:
@@ -400,6 +401,7 @@ class Game:
             traceback.print_exc()
             return False
 
+
     def load_game(self, save_folder_name):
         save_path = os.path.join("game", "save", "game", save_folder_name)
         map_path = os.path.join(save_path, "map")
@@ -410,12 +412,23 @@ class Game:
             with open(os.path.join(save_path, "player.rot"), "r") as f:
                 player_data = json.load(f)
 
-            # Initialize game state (populates self.all_map_layers via load_map)
+            # 1. Initialize Game
             self.start_new_game(player_data, save_dir_name=save_folder_name)
-            
             self.zombies_killed = player_data.get('zombies_killed', 0)
 
-            # Retrieve layouts from the initialized game instance
+            # 2. [CHANGED] Load the correct map IMMEDIATELY, before loading items/zombies
+            # This prevents load_map from wiping out the restored entities later.
+            target_map = player_data.get('map_filename')
+            if target_map and target_map != self.map_manager.current_map_filename:
+                self.logger.info(f"Switching to saved map: {target_map}")
+                self.load_map(target_map)
+                load_giant_map(self)
+            
+            self.map_manager.map_folder = map_path
+            self.map_manager.refresh_maps()
+
+            # 3. Parse Map Layout (Obstacles, Containers, etc.)
+            # We do this after ensuring we are on the correct map.
             layer_idx = self.current_layer_index
             base_layout = self.all_map_layers.get(layer_idx)
             ground_layout = self.all_ground_layers.get(layer_idx)
@@ -423,18 +436,15 @@ class Game:
             roof_layout = self.all_roof_layers.get(layer_idx)
             light_layout = self.all_light_layers.get(layer_idx)
 
-            # Re-parse the map to get static objects
             obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
                 base_layout, ground_layout, spawn_layout, roof_layout, light_layout, self.tile_manager
             )
 
+            # Separate vehicles from static containers
             map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
             for v in map_vehicles:
-                # Remove from the containers list
                 if v in containers:
                     containers.remove(v)
-                # Remove its collision box from obstacles
-                # We check by value (v.rect) to ensure we catch the specific rect added by the parser
                 if v.rect in obstacles:
                     obstacles.remove(v.rect)
             
@@ -443,7 +453,7 @@ class Game:
             self.renderable_tiles = renderable_tiles
             self.npc_spawn_points = npc_spawns
 
-            # Player Restoration
+            # 4. Restore Player State
             if 'progression' in player_data:
                 prog_data = player_data['progression']
                 self.player.progression.strength = prog_data.get('strength', self.player.progression.strength)
@@ -453,13 +463,11 @@ class Game:
                 self.player.progression.lucky = prog_data.get('lucky', self.player.progression.lucky)
                 self.player.progression.speed = prog_data.get('speed', self.player.progression.speed)
             
-            self.map_manager.map_folder = map_path
-            self.map_manager.refresh_maps()
-            
             self.player.x = player_data['x']
             self.player.y = player_data['y']
             self.player.rect.topleft = (self.player.x, self.player.y)
             
+            # Inventory restoration
             self.player.inventory = []
             for item_data in player_data['inventory']:
                 if isinstance(item_data, dict):
@@ -497,7 +505,7 @@ class Game:
                      if self.player.backpack:
                          self.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data.get("inventory", [])]
 
-            # Load World Data
+            # 5. Load World Data (Items, Zombies)
             with open(os.path.join(save_path, "world.rot"), "r") as f:
                 world_data = json.load(f)
             
@@ -505,6 +513,7 @@ class Game:
             self.world_time.game_time_ms = time_data.get('game_time_ms', 0)
             self.world_time.day_count = time_data.get('day_count', 0)
             
+            # Triggers
             raw_layer_triggers = world_data.get('layer_spawn_triggers', {})
             self.layer_spawn_triggers = {}
             for layer_str, coords_list in raw_layer_triggers.items():
@@ -514,31 +523,54 @@ class Game:
                 except Exception as e:
                     self.logger.info(f"Error restoring triggers for layer {layer_str}: {e}")
             
-            self.items_on_ground = []
-            for i_data in world_data.get('items', []):
-                if 'data' in i_data:
-                    # New format with full state
-                    if isinstance(i_data['data'], dict):
-                        item = Item.from_dict(i_data['data'])
+            # Items on Ground
+            self.items_on_ground = [] # Clear any items spawned by load_map
+            saved_items = world_data.get('items', [])
+            self.logger.info(f"Found {len(saved_items)} items to load from save file.")
+
+            for i_data in saved_items:
+                try:
+                    item = None
+                    if 'data' in i_data:
+                        if isinstance(i_data['data'], dict):
+                            item = Item.from_dict(i_data['data'])
+                        else:
+                            item = Item.create_from_name(i_data['data'])
                     else:
-                        item = Item.create_from_name(i_data['data'])
-                else:
-                    # Old format
-                    item = Item.create_from_name(i_data['name'])
-                    
-                if item:
-                    item.x, item.y = i_data['x'], i_data['y']
-                    item.rect.topleft = (item.x, item.y)
-                    self.items_on_ground.append(item)
+                        item = Item.create_from_name(i_data['name'])
+                        
+                    if item:
+                        item.x = int(i_data.get('x', 0))
+                        item.y = int(i_data.get('y', 0))
+                        item.rect.topleft = (item.x, item.y)
+                        self.items_on_ground.append(item)
+                    else:
+                        self.logger.info(f"Warning: Failed to recreate item: {i_data}")
+                except Exception as e:
+                    self.logger.info(f"Error loading an item on ground: {e}")
             
-            self.zombies = []
+            # Zombies
+            self.zombies = [] # Clear any zombies spawned by load_map
             for z_data in world_data.get('zombies', []):
                 z = Zombie.create_random(z_data['x'], z_data['y']) 
                 if z:
                     z.health = z_data['health']
                     self.zombies.append(z)
+            
+            if 'modal_positions' in world_data:
+                saved_positions = world_data['modal_positions']
+                self.last_modal_positions.update(saved_positions)
+                
+                for modal in self.modals:
+                    m_type = modal['type']
+                    if m_type in saved_positions:
+                        pos = saved_positions[m_type]
+                        # Ensure we have valid coordinates
+                        if isinstance(pos, (list, tuple)) and len(pos) == 2:
+                            modal['position'] = (int(pos[0]), int(pos[1]))
+                            modal['rect'].topleft = modal['position']
 
-            # --- NPC Load ---
+            # 6. Load NPCs
             if os.path.exists(os.path.join(save_path, "npc.rot")):
                  with open(os.path.join(save_path, "npc.rot"), "r") as f:
                      npc_list = json.load(f)
@@ -579,12 +611,11 @@ class Game:
                              
                      self.npcs.add(npc)
             
-            # --- Vehicle Load ---
+            # 7. Load Vehicles
             if os.path.exists(os.path.join(save_path, "vehicles.rot")):
                 with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
                     v_list = json.load(f)
                  
-                # Ensure map_manager has the list (though we use containers mostly)
                 self.map_manager.vehicles = [] 
                 
                 for v_data in v_list:
@@ -612,7 +643,6 @@ class Game:
                                 item = Item.create_from_name(i_data)
                             if item: vehicle.inventory.append(item)
                     
-                    # [FIX] Restore Equipment
                     if 'equipment' in v_data:
                         loaded_equipment = v_data['equipment']
                         for slot, item_data in loaded_equipment.items():
@@ -627,7 +657,6 @@ class Game:
                             else:
                                 vehicle.equipment[slot] = None
                         
-                        # Recalculate fuel/battery based on the loaded items
                         vehicle.update_stats_from_equipment()
                      
                     if 'lights' in v_data:
@@ -636,11 +665,6 @@ class Game:
                     self.map_manager.vehicles.append(vehicle)
                     self.containers.append(vehicle)
                     self.obstacles.append(vehicle.rect)
-
-            target_map = player_data.get('map_filename')
-            if target_map and target_map != self.map_manager.current_map_filename:
-                self.load_map(target_map)
-                load_giant_map(self)
 
             self.game_state = 'PLAYING'
             self.logger.info("Game loaded successfully!")
@@ -871,7 +895,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID","Mobile off"]
+        starter_items = ["ID","Mobile off", "Camp Tent", "Sleeping Bag","MAC10"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)
@@ -881,26 +905,49 @@ class Game:
              except: pass
 
         self.zombies_killed = 0
+        stat_pos = self.last_modal_positions.get('status', (50, 50))
+        inv_pos = self.last_modal_positions.get('inventory', (400, 50))
+        nearby_pos = self.last_modal_positions.get('nearby', (1050, 360))
+        gear_pos = self.last_modal_positions.get('gear', (830, 10))
+
         self.modals = [
             {
                 'type': 'status', 
                 'id': str(uuid.uuid4()), 
-                'position': self.last_modal_positions.get('status', (50, 50))
+                'position': stat_pos,
+                'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)),
+                'is_dragging': False,
+                'drag_offset': (0, 0),
+                'minimized': False
             },
             {
                 'type': 'inventory', 
                 'id': str(uuid.uuid4()), 
-                'position': self.last_modal_positions.get('inventory', (400, 50))
+                'position': inv_pos,
+                'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)),
+                'is_dragging': False,
+                'drag_offset': (0, 0),
+                'minimized': False,
+                'active_tab': 'Inventory'
             },
             {
                 'type': 'nearby', 
                 'id': str(uuid.uuid4()), 
-                'position': self.last_modal_positions.get('nearby', (1050, 360))
+                'position': nearby_pos,
+                'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)),
+                'is_dragging': False,
+                'drag_offset': (0, 0),
+                'minimized': False,
+                'active_tab': 'Ground'
             },
             {
                 'type': 'gear', 
                 'id': str(uuid.uuid4()), 
-                'position': self.last_modal_positions.get('gear', (830, 10))
+                'position': gear_pos,
+                'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
+                'is_dragging': False,
+                'drag_offset': (0, 0),
+                'minimized': False
             }
         ]
         self.map_states = {}
@@ -980,6 +1027,7 @@ class Game:
             # If we have data, start the generation
             # This is a blocking operation, but since we just called _update_screen(), 
             # the "Loading..." text will be visible to the user while this runs.
+            # Case 1: New Game
             if self.loading_data:
                 self.start_new_game(self.loading_data)
                 
@@ -987,6 +1035,15 @@ class Game:
                 self.game_state = 'LOADING'
                 self.loading_done = True
                 self.loading_data = None # Clear data
+            
+            # [NEW] Case 2: Loading Saved Game
+            elif self.loading_saved_game_folder:
+                self.load_game(self.loading_saved_game_folder)
+                
+                # load_game sets state to 'PLAYING', override it back to wait for user click
+                self.game_state = 'LOADING'
+                self.loading_done = True
+                self.loading_saved_game_folder = None
         else:
             # Loading is done, wait for User click on the button
             for event in pygame.event.get():
@@ -1080,6 +1137,10 @@ class Game:
                     if idx is not None and idx < len(self.load_game_state['save_list']):
                         save_folder = self.load_game_state['save_list'][idx]['filename']
                         self.load_game(save_folder)
+
+                        self.loading_saved_game_folder = save_folder
+                        self.loading_done = False
+                        self.game_state = 'LOADING'
                 
                 elif clickable_rects['delete_button'] and clickable_rects['delete_button'].collidepoint(mouse_pos):
                     idx = self.load_game_state.get('selected_save_index')

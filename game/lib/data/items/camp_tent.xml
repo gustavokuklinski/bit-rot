@@ -1,0 +1,8 @@
+<item name="Camp Tent" type="camp">
+    <properties>
+        <capacity value="20" />
+        <allow_sleep value="true" />
+        <sprite file="tent.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

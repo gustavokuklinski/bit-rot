@@ -16,5 +16,7 @@
         <item item="38 Ammo" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
         <item item="Car Key Jeep" chance="0.1" />
+        <item item="Sleeping Bag" chance="0.1" />
+        <item item="Camp Tent" chance="0.1" />
     </loot>
 </map>

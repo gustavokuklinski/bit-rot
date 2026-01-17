@@ -1570,12 +1570,31 @@ def handle_right_click(game, mouse_pos):
             options = [o for o in options if o != 'Equip']
         elif click_source == 'ground':
             if 'Drop' in options: options.remove('Drop')
-            if not isinstance(clicked_item, Corpse):
+
+            is_camp = getattr(clicked_item, 'item_type', None) == 'camp'
+            can_grab = True
+            
+            if isinstance(clicked_item, Corpse):
+                can_grab = False
+            elif is_camp and clicked_item.inventory:
+                # Prevent grabbing a camp if it has items inside
+                can_grab = False
+            
+            if can_grab:
                 if 'Grab' not in options: options.insert(0, 'Grab') 
+
+            # Restrict "Place on Backpack" if we can't grab it (e.g. full camp)
             if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
-                if 'Place on Backpack' not in options: options.append('Place on Backpack')
+                if can_grab:
+                    if 'Place on Backpack' not in options: options.append('Place on Backpack')
+
+            # Add "Sleep" option for camps
+            if is_camp and getattr(clicked_item, 'allow_sleep', False):
+                options.append('Sleep')
+
             if getattr(clicked_item, 'inventory', None) is not None:
                 if 'Open' not in options: options.append('Open')
+                
         elif click_source == 'container_map':
             if getattr(clicked_item, 'item_type', '') == 'vehicle':
                 options = ['Vehicle options', 'Trunk']
