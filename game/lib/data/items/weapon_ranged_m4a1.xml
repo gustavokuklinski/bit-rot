@@ -1,0 +1,19 @@
+<item name="M4A1" type="weapon_ranged">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="10" max="40" />
+        <capacity value="40" />
+        <ammo type="556 Ammo" />
+        <damage min="30" max="80" />
+        <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" />
+        <skill type="range" />
+        <sprite file="m4a1.png" />
+        <knockback value="12" />
+    </properties>
+    <sound>
+        <shoot src="mpk5.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>
