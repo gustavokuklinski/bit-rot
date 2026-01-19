@@ -288,7 +288,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         game.player.belt[i_target].load += trans
                                         item_ref.load -= trans
                                 
-                                game.player.start_action("Looting", 1.0, do_belt_loot, xp_reward=2)
+                                game.player.start_action("Looting", 1.0, do_belt_loot, xp_reward=0.5)
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
                             else:
@@ -334,7 +334,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             item_ref = game.dragged_item
                                             def do_bp_loot():
                                                 game.player.backpack = item_ref
-                                            game.player.start_action("Equipping", 1.5, do_bp_loot, xp_reward=2)
+                                            game.player.start_action("Equipping", 1.5, do_bp_loot, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
                                         else:
@@ -414,7 +414,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     trans = min(avail, item_ref.load)
                                                     game.player.invcontainer.load += trans
                                                     item_ref.load -= trans
-                                            game.player.start_action("Equipping", 1.0, do_util_loot, xp_reward=2)
+                                            game.player.start_action("Equipping", 1.0, do_util_loot, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
                                         else:
@@ -451,7 +451,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     trans = min(avail, item_ref.load)
                                                     item_in_slot.load += trans
                                                     item_ref.load -= trans
-                                                game.player.start_action("Looting", 1.0, do_inv_stack, xp_reward=2)
+                                                game.player.start_action("Looting", 1.0, do_inv_stack, xp_reward=0.5)
                                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                 return
                                             else:
@@ -477,7 +477,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             item_ref = game.dragged_item
                                             def do_inv_loot():
                                                 game.player.inventory.insert(target_index, item_ref)
-                                            game.player.start_action("Looting", 1.0, do_inv_loot, xp_reward=2)
+                                            game.player.start_action("Looting", 1.0, do_inv_loot, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -490,7 +490,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         item_ref = game.dragged_item
                                         def do_inv_append():
                                             game.player.inventory.append(item_ref)
-                                        game.player.start_action("Looting", 1.0, do_inv_append, xp_reward=2)
+                                        game.player.start_action("Looting", 1.0, do_inv_append, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -544,7 +544,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 else:
                                                     container.inventory.append(item_ref)
                                         
-                                        game.player.start_action("Looting", 1.0, do_bag_loot, xp_reward=2)
+                                        game.player.start_action("Looting", 1.0, do_bag_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -695,7 +695,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                             container.inventory.append(item_ref)
                                 
-                                game.player.start_action(action_name, 1.0, do_timed_action, xp_reward=2)
+                                game.player.start_action(action_name, 1.0, do_timed_action, xp_reward=0.5)
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
 
@@ -1321,18 +1321,25 @@ def handle_context_menu_click(game, mouse_pos):
                 target_capacity = game.player.get_total_inventory_slots()
                 
                 if len(target_inventory) < target_capacity:
-                    grabbed = False
-                    # Use 'item' directly (captured from closure) instead of index for safety
-                    if source == 'ground' and item in game.items_on_ground:
-                        game.items_on_ground.remove(item)
-                        grabbed = True
-                    elif source == 'nearby' and container_item and item in container_item.inventory:
-                        container_item.inventory.remove(item)
-                        grabbed = True
                     
-                    if grabbed:
-                        target_inventory.append(item)
-                        game.player.stack_item_in_inventory(item)
+                    def do_grab():
+                        grabbed = False
+                        # Use 'item' directly (captured from closure) instead of index for safety
+                        if source == 'ground' and item in game.items_on_ground:
+                            game.items_on_ground.remove(item)
+                            grabbed = True
+                        elif source == 'nearby' and container_item and item in container_item.inventory:
+                            container_item.inventory.remove(item)
+                            grabbed = True
+                        
+                        if grabbed:
+                            target_inventory.append(item)
+                            game.player.stack_item_in_inventory(item)
+
+                    if source == 'nearby':
+                        game.player.start_action("Looting", 1.0, do_grab, xp_reward=0.5)
+                    else:
+                        do_grab()
                 else:
                     print("Inventory full.")
 
