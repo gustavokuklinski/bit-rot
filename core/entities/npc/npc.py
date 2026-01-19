@@ -451,7 +451,7 @@ class NPC(Zombie):
                     # Weapon Break/Load Check before attacking
                     weapon_is_ready = True
                     if weapon and weapon.durability is not None and weapon.durability <= 0:
-                        display_message(game, f"{self.name}'s {weapon.name} broke!")
+                        #display_message(game, f"{self.name}'s {weapon.name} broke!")
                         self.equipped_weapon = None 
                         weapon_is_ready = False
                         weapon = None 
@@ -463,7 +463,7 @@ class NPC(Zombie):
                             game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=self.rect.center)
                          
                          # Drop the empty ranged weapon and prepare for melee
-                         display_message(game, f"{self.name}'s {weapon.name} is out of ammo! Dropping it to switch to melee.")
+                         #display_message(game, f"{self.name}'s {weapon.name} is out of ammo! Dropping it to switch to melee.")
                          self.inventory.append(self.equipped_weapon) 
                          self.equipped_weapon = None 
                          weapon = None 

@@ -13,5 +13,7 @@
         <item item="Cigarette" chance="0.1" />
         <item item="Duck Tape" chance="0.2" />
         <item item="Car Key Jeep" chance="0.1" />
+        <item item="Shotgun Shells" chance="0.1" />
+        <item item="38 Ammo" chance="0.1" />
     </loot>
 </map>

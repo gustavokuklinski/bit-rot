@@ -247,7 +247,7 @@ def handle_keyboard_events(game, event):
             zoom_step = 0.1
             if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 
                 game.zoom_level += zoom_step
-                game.zoom_level = min(game.zoom_level, core.data.config.NEAR_ZOOM) 
+                game.zoom_level = min(game.zoom_level, NEAR_ZOOM) 
             elif event.key == pygame.K_MINUS: 
                 game.zoom_level -= zoom_step
-                game.zoom_level = max(core.data.config.FAR_ZOOM, game.zoom_level)
+                game.zoom_level = max(FAR_ZOOM, game.zoom_level)

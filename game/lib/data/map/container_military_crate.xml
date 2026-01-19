@@ -16,6 +16,7 @@
         <item item="Large Backpack" chance="0.2" />
         <item item="Vaccine" chance="0.2" />
         <item item="Shotgun" chance="0.1" />
+        <item item="Double Barrel Shotgun" chance="0.1" />
         <item item="Shotgun Shells" chance="0.1" />
         <item item="Family Photo" chance="0.01" />
         <item item="Axe" chance="0.1" />
@@ -30,5 +31,7 @@
         <item item="MPK5" chance="0.1" />
         <item item="Sleeping Bag" chance="0.1" />
         <item item="Camp Tent" chance="0.1" />
+        <item item="M4A1" chance="0.1" />
+        <item item="556 Ammo" chance="0.1" />
     </loot>
 </map>

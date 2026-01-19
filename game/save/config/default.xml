@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
     <game>
-        <time_daylength value="1500000" name="Day length (Default: 1500000)"/>
+        <time_daylength value="900000" name="Day length (Default: 900000)"/>
         <time_sunrise_hr value="5.5" name="Time sunrise (Default: 5.5)"/>
         <time_sunset_hr value="17.5" name="Time sunset (Default: 17.5)"/>
         <time_transition_hr value="1.0" name="Time transition (Default: 1.0)"/>

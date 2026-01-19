@@ -250,6 +250,7 @@ class Game:
 
             player_data = {
                 "name": self.player.name,
+                "world_seed": getattr(self, 'world_seed', "4-B1TR07"),
                 "profession": self.player.profession,
                 "sex": self.player.sex,
                 "x": self.player.x,
@@ -872,6 +873,7 @@ class Game:
         
         # Prepend '30' to force 3x3 grid size for the generator
         world_seed = raw_seed
+        self.world_seed = world_seed
         self.logger.info(f"Generating world with Seed Pattern: {world_seed}")
         
         # Generate the world directly into the save folder
@@ -895,7 +897,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID","Mobile off", "Camp Tent", "Sleeping Bag","MAC10"]
+        starter_items = ["ID","Mobile off", "M4A1", "556 Ammo"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

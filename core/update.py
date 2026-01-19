@@ -117,7 +117,7 @@ def update_game_state(game):
             if p.rect.colliderect(game.player.rect):
                 damage = getattr(p, 'damage', 5) 
                 game.player.take_damage(game, damage, 0)
-                display_message_player(f"You were hit! Took {damage} damage.")
+                display_message_player(f"You were hit!")
                 game.splashes.append({
                     'pos': game.player.rect.center,
                     'time': pygame.time.get_ticks(),
@@ -142,9 +142,9 @@ def update_game_state(game):
         if hit_npc:
              damage = game.player.get_attack_damage()
              is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
-             display_message_player(f"You shot {hit_npc.name} for {damage} damage!")
+             display_message_player(f"You shot {hit_npc.name}")
              if is_dead:
-                 display_message_player(f"You killed {hit_npc.name}!")
+                display_message_player(f"You killed {hit_npc.name}!")
              projectiles_to_remove.append(p)
              continue
 
@@ -248,7 +248,7 @@ def update_game_state(game):
                 distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)
-                    display_message_player(f"Closed {container_item.name} because you moved away.")
+                    # display_message_player(f"Closed {container_item.name} because you moved away.")
     
     current_time = pygame.time.get_ticks()
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
@@ -291,7 +291,7 @@ def update_game_state(game):
                             roadkill_zombies.append(zombie)
                             handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
                             game.zombies_killed += 1
-                            display_message_player(f"Roadkill! {zombie.name} obliterated!")
+                            #display_message_player(f"Roadkill! Zombie Dead!")
                         else:
                              # Knockback alive zombies (rare if damage is 1000)
                              if speed > 0:

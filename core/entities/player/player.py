@@ -770,7 +770,7 @@ class Player:
         target_weapon = weapon if weapon else self.active_weapon
         
         if not target_weapon or not getattr(target_weapon, 'ammo_type', None):
-            display_message_player("Cannot reload: No gun specified or equipped.")
+            display_message_player("Cannot reload: No gun equipped.")
             return
             
         if target_weapon.load >= target_weapon.capacity:

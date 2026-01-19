@@ -7,7 +7,7 @@
         <sprite file="weapon_repair_kit.png" />
     </properties>
     <repair>
-        <item name="38_revolver" />
+        <item name="38 Revolver" />
         <item name="Pistol 9mm" />
         <item name="Shotgun" />
         <item name="Double Barrel Shotgun" />

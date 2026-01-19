@@ -1,0 +1,21 @@
+<map name="car_pickup" type="maptile_car" char="car_pickup" is_obstacle="true">
+    <capacity value="10" />
+    <car>
+        <max_speed value="8" />
+        <key value="Car Key Pickup" />
+        <fuel value="1.0" />
+        <motor value="1.0" />
+        <battery value="1.0" />
+        <lights min="5" max="100" radius="8" />
+        <seats value="2" /> 
+    </car>
+    <loot>
+        <item item="Car Key Pickup" chance="0.1" />
+        <item item="Car Fuel" chance="0.1" />
+        <item item="Powerbank" chance="0.1" />
+        <item item="Motor Repair Kit" chance="0.1" />
+    </loot>
+    <visuals>
+        <sprite file="car_pickup.png" />
+    </visuals>
+</map>

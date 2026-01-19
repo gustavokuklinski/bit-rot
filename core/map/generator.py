@@ -116,6 +116,15 @@ class ProceduralGenerator:
 
 
     def generate_world(self, seed_pattern=None, regenerate=False):
+        if not regenerate and os.path.exists(self.output_folder):
+            # If we are loading (not regenerating), check if the start map exists.
+            # We skip the 'expected_chunks' count check because it relies on the seed,
+            # which might be missing or default if loading an old save.
+            for f in os.listdir(self.output_folder):
+                if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
+                    print(f"World already exists at {self.output_folder}. Skipping generation.")
+                    return f
+
         current_chunks = core.data.config.MAP_CHUNKS
         
         if not seed_pattern or seed_pattern == "5-DEFAULT": 
@@ -141,12 +150,12 @@ class ProceduralGenerator:
 
         expected_chunks = grid_w * grid_h
         
-        if not regenerate and self._maps_exist(expected_chunks):
-            print("World already exists. Skipping.")
-            for f in os.listdir(self.output_folder):
-                if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
-                    return f
-            return None
+        #if not regenerate and self._maps_exist(expected_chunks):
+        #    print("World already exists. Skipping.")
+        #    for f in os.listdir(self.output_folder):
+        #        if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
+        #            return f
+        #    return None
 
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)

@@ -179,7 +179,7 @@ class PlayerProgression:
         final_xp_gain = max(0, base_amount * xp_modifier)
 
         attribute['xp'] += final_xp_gain
-        # display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.") 
+        display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.") 
         
         # 4. Check for level up
         #    We calculate a modified XP-to-next-level to apply the penalty/bonus
