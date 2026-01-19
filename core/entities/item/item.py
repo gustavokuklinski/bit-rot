@@ -403,7 +403,12 @@ class Item:
                         spd_node = props_node.find('speed')
                         if spd_node is not None:
                             template['properties']['speed'] = {'value': spd_node.attrib.get('value', '0')}
-                        
+
+                        # Map <capacity> to item template format
+                        cap_node = props_node.find('capacity')
+                        if cap_node is not None:
+                            template['properties']['capacity'] = {'value': cap_node.attrib.get('value', '0')}
+
                         # Map <sprite> to item template format
                         spr_node = props_node.find('sprite')
                         if spr_node is not None:

@@ -1614,6 +1614,11 @@ def handle_right_click(game, mouse_pos):
             if not isinstance(clicked_item, Corpse):
                 if 'Grab' not in options: options.insert(0, 'Grab')
 
+        if getattr(clicked_item, 'capacity', 0) and clicked_item.capacity > 0:
+            if getattr(clicked_item, 'item_type', '') != 'vehicle':
+                if 'Open' not in options:
+                    options.append('Open')
+
         game.context_menu['options'] = options
         game.context_menu['rects'] = []
         return
