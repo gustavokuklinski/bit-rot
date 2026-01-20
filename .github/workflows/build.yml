@@ -3,11 +3,11 @@ name: Bit Rot Release
 on:
   push:
     tags:
-      - 'v*' # Triggers when you push a tag like v1.0, v0.5-beta
-  workflow_dispatch: # Allows manual trigger for testing
+      - 'v*' # Triggers when you push a tag like v1.0
+  workflow_dispatch: # Allows manual trigger
 
 permissions:
-  contents: write # Required to create releases
+  contents: write
 
 jobs:
   build:
@@ -44,8 +44,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install nuitka
-          # pip install -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Build with Nuitka
         run: |
@@ -56,7 +55,8 @@ jobs:
         run: |
           mkdir release
           cp -r game release/game
-          mv build/main${{ matrix.executable_ext }} release/game_executable${{ matrix.executable_ext }}
+          # Renamed from game_executable to bitrot
+          mv build/main${{ matrix.executable_ext }} release/bitrot${{ matrix.executable_ext }}
 
       - name: Zip Release (Windows)
         if: runner.os == 'Windows'
@@ -78,9 +78,9 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: build # Waits for the build job to finish
+    needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') # Only runs if a tag was pushed
+    if: startsWith(github.ref, 'refs/tags/')
     
     steps:
       - name: Download Artifacts
@@ -91,5 +91,5 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*.zip # Grabs all zips from the build job
+          files: artifacts/**/*.zip
           generate_release_notes: true
