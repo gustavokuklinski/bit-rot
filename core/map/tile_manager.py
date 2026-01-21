@@ -51,10 +51,13 @@ class TileManager:
                                 if root.get('type') == 'maptile_car':
                                     car_node = root.find('car')
                                     if car_node is not None:
+                                        key_node = car_node.find('key')
+                                        key_value = key_node.get('value', 'false') if key_node is not None else 'false'
+                                        
                                         definition['car_stats'] = {
                                             'max_speed': car_node.find('max_speed').get('value', '10'),
-                                            'key': car_node.find('key').get('value'),
-                                            'fuel': car_node.find('fuel').get('value', '0'), # Changed from 'gas'
+                                            'key': key_value,
+                                            'fuel': car_node.find('fuel').get('value', '0'),
                                             'motor': car_node.find('motor').get('value', '1'),
                                             'battery': car_node.find('battery').get('value', '1'),
                                             'seats': car_node.find('seats').get('value', '4') if car_node.find('seats') is not None else '4'

@@ -582,6 +582,24 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if item_slot == 'hand': item_slot = 'hands'
                                         
                                     if item_slot == slot_name:
+                                        
+                                        if is_external_source:
+                                            # If coming from external (Nearby/Container), use Timer
+                                            item_in_slot = game.player.clothes.get(slot_name)
+                                            if item_in_slot:
+                                                print("Cannot swap items while equipping from external source.")
+                                                dropped_successfully = False
+                                                break
+                                            
+                                            item_ref = dragged_item
+                                            def do_gear_equip():
+                                                game.player.clothes[slot_name] = item_ref
+                                            
+                                            game.player.start_action("Equipping", 1.0, do_gear_equip, xp_reward=0.5)
+                                            # Clear drag manually as we return early
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+
                                         item_in_slot = game.player.clothes.get(slot_name)
                                         game.player.clothes[slot_name] = dragged_item
                                         
@@ -760,6 +778,8 @@ def handle_mouse_up(game, event, mouse_pos):
                             container_obj.inventory.insert(i_orig, game.dragged_item)
                         elif type_orig == 'nearby' and container_obj is not None:
                             container_obj.inventory.insert(i_orig, game.dragged_item)
+                            if getattr(container_obj, 'item_type', '') == 'ground':
+                                game.items_on_ground.append(game.dragged_item)
                         elif 'stack_split' in type_orig:
                             try:
                                 if type_orig == 'inventory_stack_split':
@@ -934,6 +954,9 @@ def handle_mouse_motion(game, event, mouse_pos):
                 elif type_orig == 'nearby':
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
+                    if getattr(container_obj, 'item_type', '') == 'ground':
+                        if item_to_drag in game.items_on_ground:
+                            game.items_on_ground.remove(item_to_drag)
                 elif type_orig == 'vehicle_equipment':
                     vehicle = container_info[0]
                     slot_name = i_orig
@@ -1112,6 +1135,11 @@ def handle_context_menu_click(game, mouse_pos):
                             return it
                         if src == 'container' and c_item and 0 <= idx < len(c_item.inventory):
                             return c_item.inventory.pop(idx)
+                        if (src == 'container' or src == 'nearby') and c_item and 0 <= idx < len(c_item.inventory):
+                            it = c_item.inventory.pop(idx)
+                            if getattr(c_item, 'item_type', '') == 'ground' and it in game.items_on_ground:
+                                game.items_on_ground.remove(it)
+                            return it
                         if src == 'ground' and 0 <= idx < len(game.items_on_ground):
                             return game.items_on_ground.pop(idx)
                         return None
@@ -1161,6 +1189,8 @@ def handle_context_menu_click(game, mouse_pos):
                             item_from_source = game.items_on_ground.pop(index)
                         elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
                             item_from_source = container_item.inventory.pop(index)
+                            if getattr(container_item, 'item_type', '') == 'ground' and item_from_source in game.items_on_ground:
+                                game.items_on_ground.remove(item_from_source)
 
                         if item_from_source:
                             old_item = game.player.clothes.get(item_slot)
@@ -1330,6 +1360,8 @@ def handle_context_menu_click(game, mouse_pos):
                             grabbed = True
                         elif source == 'nearby' and container_item and item in container_item.inventory:
                             container_item.inventory.remove(item)
+                            if getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
+                                game.items_on_ground.remove(item)
                             grabbed = True
                         
                         if grabbed:
@@ -1615,7 +1647,7 @@ def handle_right_click(game, mouse_pos):
                 if 'Grab' not in options: options.insert(0, 'Grab')
 
         if getattr(clicked_item, 'capacity', 0) and clicked_item.capacity > 0:
-            if getattr(clicked_item, 'item_type', '') != 'vehicle':
+            if getattr(clicked_item, 'item_type', '') in ['container', 'backpack', 'cloth']:
                 if 'Open' not in options:
                     options.append('Open')
 

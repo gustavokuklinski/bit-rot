@@ -9,6 +9,10 @@ def draw_tooltip(surface, item, pos):
     if item.item_type:
         lines.append(f"Type: {item.item_type}")
     
+    if hasattr(item, 'inventory') and item.inventory is not None:
+        cap = item.capacity if item.capacity is not None else 0
+        lines.append(f"Contents: {len(item.inventory)} / {cap}")
+        
     # --- MODIFIED: Logic to trigger bar rendering ---
     if item.durability is not None:
         max_dur = item.max_durability # Get max from item property

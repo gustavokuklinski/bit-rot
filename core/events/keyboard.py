@@ -215,10 +215,6 @@ def handle_keyboard_events(game, event):
                     vehicle_found.toggle_engine()
                 else:
                     print("No vehicle nearby.")
-
-            if event.key == pygame.K_e:
-                
-                try_grab_item(game)
             
             if event.key == pygame.K_SPACE:
                 if game.player and game.player.is_sleeping:

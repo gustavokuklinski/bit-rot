@@ -5,6 +5,16 @@ from core.ui.tabs import Tabs
 from core.ui.container_modal import draw_container_content
 from core.entities.zombie.corpse import Corpse
 
+# --- NEW: Virtual Container for grouping loose items ---
+class VirtualGroundContainer:
+    def __init__(self, items):
+        self.name = "Ground"
+        self.inventory = items
+        self.capacity = 20 # Infinite capacity for ground view
+        self.item_type = 'ground'
+        self.image = None 
+# -----------------------------------------------------
+
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Nearby")
     modal['rect'] = base_modal.modal_rect
@@ -15,10 +25,38 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         modal['content_rect'] = None # No content rect when minimized
         return close_button, minimize_button
 
-    nearby_containers = game.find_nearby_containers()
+    # --- CHANGED: Filter and Group Items ---
+    raw_nearby_objects = game.find_nearby_containers()
+    
+    nearby_containers = []
+    ground_items = []
+
+    if raw_nearby_objects:
+        for obj in raw_nearby_objects:
+            # Determine if this object deserves its own tab (Container/Backpack/Corpse)
+            is_independent_container = False
+            
+            if isinstance(obj, Corpse):
+                is_independent_container = True
+            elif hasattr(obj, 'inventory') and obj.inventory is not None:
+                # Only treat it as a container if it's explicitly a container type (e.g. Backpack)
+                # This prevents weird edge cases if regular items somehow get inventory attributes
+                if getattr(obj, 'item_type', '') in ['backpack', 'container','vehicle']:
+                    is_independent_container = True
+            
+            if is_independent_container:
+                nearby_containers.append(obj)
+            else:
+                # It's a loose item (Ammo, Weapon, etc.) -> Group to Ground
+                ground_items.append(obj)
+    
+    # If we have loose items, create a "Ground" tab at the very beginning
+    if ground_items:
+        nearby_containers.insert(0, VirtualGroundContainer(ground_items))
+    # ---------------------------------------
 
     if not nearby_containers:
-        no_containers_text = font.render("No containers nearby.", True, WHITE)
+        no_containers_text = font.render("", True, WHITE)
         surface.blit(no_containers_text, (base_modal.modal_x + 10, base_modal.modal_y + base_modal.header_h + 30 + 10)) # Position below header+tabs
         modal['content_rect'] = None # No content rect when empty
         modal['tabs_data'] = [] # Ensure tabs_data is empty
@@ -36,7 +74,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         if isinstance(container, Corpse):
             label = "Corpse" # Use a consistent label for corpses
             icon_path = SPRITE_PATH + 'zombie/dead.png'
-        elif container.item_type == 'backpack':
+        elif getattr(container, 'item_type', '') == 'backpack':
             # Use specific backpack icons
             if 'large' in container.name.lower():
                 icon_path = SPRITE_PATH + 'items/large_backpack.png'
@@ -44,6 +82,12 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
                 icon_path = SPRITE_PATH + 'items/small_backpack.png'
             else:
                 icon_path = SPRITE_PATH + 'items/bag.png'
+        # --- NEW: Icon logic for Ground ---
+        elif getattr(container, 'item_type', '') == 'ground':
+            label = "GRD"
+            # You can set a specific icon_path here if you have one, e.g.:
+            # icon_path = SPRITE_PATH + 'ui/floor.png' 
+        # ----------------------------------
         elif hasattr(container, 'image'):
              # Use the container's own image if available (and not handled above)
              icon = container.image # Pass the surface directly if loaded

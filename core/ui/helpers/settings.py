@@ -151,7 +151,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     config_data = state.get('settings_data', {})
     
     # Order of blocks
-    block_order = ['game', 'map', 'player', 'item_spawning', 'zombie', 'npc']
+    block_order = ['game', 'map', 'player', 'vehicle', 'item_spawning', 'zombie', 'npc']
     for k in config_data:
         if k not in block_order: block_order.append(k)
 

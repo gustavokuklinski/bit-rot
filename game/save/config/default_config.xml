@@ -13,7 +13,7 @@
     </game>
     <map>
         <map_chunks value="3" name="Max map chunks (Default: 3, Max: 9)"/>
-        <map_chunk_size value="150" name="Single chunk size (Default: 150)"/>
+        <map_chunk_size value="256" name="Single chunk size (Default: 256)"/>
     </map>
     <player>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>

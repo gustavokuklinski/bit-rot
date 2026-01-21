@@ -11,7 +11,7 @@
 - **SHIFT + L-Click + Drag**: Get/drop only one item from stack
 - **L-Click + Drag**: Place or Drop
 - **R-Click**: Opens menu 
-- **E**: Get item from floor, open or close door, enter vehicle
+- **E**: open or close door, enter vehicle
 - **R**: Reload weapon
 - **Q**: Start vehicle engine
 - **SPACE**: Break vehicle, wake up from sleep

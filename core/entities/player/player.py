@@ -725,6 +725,10 @@ class Player:
         for i, item in enumerate(self.inventory):
             if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
                 return item, 'inventory', i, None
+        
+        for slot, item in self.clothes.items():
+            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                return item, 'gear', slot, None
 
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
@@ -823,6 +827,8 @@ class Player:
                     except ValueError: pass
                 elif source_type == 'belt':
                     self.belt[index] = None
+                elif source_type == 'gear':
+                    self.clothes[index] = None
                 elif source_type == 'container' and container_obj:
                     try:
                         container_obj.inventory.remove(ammo_item)
@@ -1120,6 +1126,8 @@ class Player:
                     elif source_type == 'inventory':
                         if item_index < len(self.inventory) and self.inventory[item_index] == item:
                             self.inventory.pop(item_index)
+                    elif source_type == 'gear':
+                        self.clothes[item_index] = None
                     elif (source_type == 'container' or source_type == 'nearby') and container_item:
                         if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
                             container_item.inventory.pop(item_index)
@@ -1255,7 +1263,7 @@ class Player:
                 return None
         return None
 
-    def transfer_item_stack(self, source, index, container_item, target_container):
+    def transfer_item_stack(self, source, index, container_item, target_container, game=None):
         if self.action_timer > 0:
             display_message_player("Busy...")
             return
@@ -1308,7 +1316,9 @@ class Player:
                 elif source == 'invcontainer':
                     self.invcontainer = None
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                    source_inventory.pop(index) 
+                    source_inventory.pop(index)
+                    if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
+                        game.items_on_ground.remove(item)
                 display_message_player(f"Merged all of {item.name} into {target_name}.")
                 return
                 
@@ -1324,7 +1334,9 @@ class Player:
                     elif source == 'invcontainer':
                         self.invcontainer = None
                     elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                        source_inventory.pop(index) 
+                        source_inventory.pop(index)
+                        if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
+                            game.items_on_ground.remove(item)
 
                     display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
                 else:
@@ -1453,6 +1465,11 @@ class Player:
             if item and 'Water' in item.name and item.load > 0:
                 print(f"Found water in inventory slot {i}") 
                 return item, 'inventory', i, None 
+
+        for slot, item in self.clothes.items():
+            if item and 'Water' in item.name and item.load > 0:
+                print(f"Found water in gear slot {slot}")
+                return item, 'gear', slot, None
 
         for i, container_item in enumerate(self.inventory):
             if container_item and hasattr(container_item, 'inventory') and container_item.inventory:

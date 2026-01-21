@@ -2,6 +2,7 @@ import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.inventory_modal import draw_text_shadow
+from core.ui.tooltip import draw_tooltip
 
 # --- CONFIGURATION: LAYOUT & COLORS ---
 STYLE = {
@@ -243,5 +244,13 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     content_x = base_modal.modal_x + STYLE["MARGIN_LEFT"]
     
     draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
-        
+    
+    if 'equipment_rects' in modal:
+        for slot_name, rect in modal['equipment_rects'].items():
+            if rect.collidepoint(mouse_pos):
+                # Retrieve the actual item object from the vehicle's equipment
+                item = vehicle.equipment.get(slot_name)
+                if item:
+                    draw_tooltip(surface, item, mouse_pos)
+
     return [close_btn, min_btn]
