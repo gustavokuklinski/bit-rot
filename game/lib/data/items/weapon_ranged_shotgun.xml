@@ -5,7 +5,7 @@
         <capacity value="8" />
         <ammo type="Shotgun Shells" />
         <damage min="65" max="150" />
-        <firing pellets="6" spread_angle="15" />
+        <firing pellets="6" spread_angle="15" distance="10" />
         <skill type="range" />
         <sprite file="shotgun.png" />
         <knockback value="50" />

@@ -567,7 +567,7 @@ class Player:
 
 
         mouse_buttons = pygame.mouse.get_pressed()
-        is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]
+        is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]
         is_firing = mouse_buttons[0]
 
         if not self.is_sleeping and is_aiming and is_firing:

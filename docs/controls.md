@@ -3,7 +3,7 @@
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
-- **CTRL/R-Click + L-Click**: Shoot + Aim / Attack
+- **CTRL + L-Click**: Shoot + Aim / Attack
 - **1/2/3/4/5**: Equip and use item from Belt
 - **MOUSE SCROLL / - or =**: Zoom in/Zoom out
 

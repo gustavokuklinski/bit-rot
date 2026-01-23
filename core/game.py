@@ -1220,6 +1220,7 @@ class Game:
         run_player_setup(self)
 
     def run_game_over(self):
+        pygame.mouse.set_visible(True)
         mouse_pos = self._get_scaled_mouse_pos()
         menu_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
 

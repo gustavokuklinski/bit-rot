@@ -1837,14 +1837,31 @@ def handle_attack(game, mouse_pos):
                 final_inaccuracy = base_aim_inaccuracy * skill_modifier
                 total_spread_deg = weapon.spread_angle + final_inaccuracy
 
+                distance_tiles = getattr(weapon, 'firing_distance', None)
+                max_dist_pixels = None 
+                
+                # Legacy fallback logic: if no distance is set, use 1000 pixels for target calculation
+                calc_dist = 1000 
+                
+                if distance_tiles is not None:
+                    max_dist_pixels = distance_tiles * TILE_SIZE
+                    calc_dist = max_dist_pixels
+
                 for _ in range(weapon.pellets):
                     spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
                     angle = base_angle + spread
                     
-                    target_x = game.player.rect.centerx + math.cos(angle) * 1000
-                    target_y = game.player.rect.centery + math.sin(angle) * 1000
+                    target_x = game.player.rect.centerx + math.cos(angle) * calc_dist
+                    target_y = game.player.rect.centery + math.sin(angle) * calc_dist
 
-                    game.projectiles.append(Projectile(game.player.rect.centerx, game.player.rect.centery, target_x, target_y))
+                    # [MODIFIED] Pass max_distance to Projectile
+                    game.projectiles.append(Projectile(
+                        game.player.rect.centerx, 
+                        game.player.rect.centery, 
+                        target_x, 
+                        target_y,
+                        max_distance=max_dist_pixels 
+                    ))
 
                 weapon.load -= 1
 

@@ -5,7 +5,7 @@
         <capacity value="35" />
         <ammo type="9mm Ammo" />
         <damage min="20" max="60" />
-        <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" />
+        <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" distance="30" />
         <skill type="range" />
         <sprite file="mac10.png" />
         <knockback value="10" />

@@ -5,7 +5,7 @@
         <capacity value="6" />
         <ammo type="38 Ammo" />
         <damage min="25" max="55" />
-        <firing pellets="1" spread_angle="0" />
+        <firing pellets="1" spread_angle="0" distance="15" />
         <skill type="range" />
         <sprite file="38_revolver.png" />
         <knockback value="8" />

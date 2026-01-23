@@ -132,10 +132,40 @@ def update_game_state(game):
         hit_zombie = next((z for z in potential_hits if p.rect.colliderect(z.rect)), None)
 
         if hit_zombie:
-            if player_hit_zombie(game.player, hit_zombie, game):
-                zombies_to_remove.append(hit_zombie)
-                handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
-                game.zombies_killed += 1
+            owner = getattr(p, 'owner', None)
+
+            # Case 1: Player Projectile (Owner is None or explicitly Player)
+            if owner is None or owner == game.player:
+                if player_hit_zombie(game.player, hit_zombie, game):
+                    zombies_to_remove.append(hit_zombie)
+                    # Pass active_weapon so process_kill() triggers XP/stats
+                    handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
+                    game.zombies_killed += 1 # Increment Player Kill Count
+            
+            # Case 2: NPC Projectile
+            else:
+                damage = getattr(p, 'damage', 5) # Use damage stored on projectile by NPC
+                is_dead = hit_zombie.take_damage(damage, game, attacker=owner)
+                
+                # Add Hit Visual (Puff)
+                game.splashes.append({
+                    'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom),
+                    'time': pygame.time.get_ticks(),
+                    'duration': 350, 'radius': 2, 'type': 'hit_puff'
+                })
+
+                if is_dead:
+                    zombies_to_remove.append(hit_zombie)
+                    # [FIX] Pass weapon=None to skip player XP/Kill processing
+                    handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, None)
+                    
+                    # Add Death Visual (Burst)
+                    game.splashes.append({
+                        'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom), 
+                        'time': pygame.time.get_ticks(),
+                        'duration': 600, 'radius': 5, 'type': 'death_burst'
+                    })
+
             projectiles_to_remove.append(p)
         
         hit_npc = next((n for n in game.npcs if not n.is_dead and p.rect.colliderect(n.rect)), None)
