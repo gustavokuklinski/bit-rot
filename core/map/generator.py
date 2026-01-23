@@ -302,8 +302,19 @@ class ProceduralGenerator:
 
         # DEBUG to display the saved map and Heat places
         try:
-            pygame.image.save(full_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
-            pygame.image.save(heat_map_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
+            scale_factor = 0.5
+            new_w = int(total_map_w * scale_factor)
+            new_h = int(total_map_h * scale_factor)
+            preview_size = (new_w, new_h)
+
+            # Use smoothscale for better quality reduction, or scale for speed
+            small_map_surface = pygame.transform.smoothscale(full_map_surface, preview_size)
+            pygame.image.save(small_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
+            
+            small_heat_surface = pygame.transform.smoothscale(heat_map_surface, preview_size)
+            pygame.image.save(small_heat_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
+            
+            print(f"Saved compressed map previews ({new_w}x{new_h}) to {self.output_folder}")
         except Exception as e:
             print(f"Error saving map images: {e}")
 

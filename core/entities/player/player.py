@@ -200,9 +200,16 @@ class Player:
         total_defence = 0
         for item in self.clothes.values():
             if item and hasattr(item, 'defence') and item.defence is not None:
-                if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
-                    total_defence += item.defence
+                if hasattr(item, 'durability') and item.durability is not None:
+                    if item.max_durability > 0:
+                        # Scale defence: 100% durability = 100% defence, 50% durability = 50% defence
+                        defence_factor = item.durability / item.max_durability
+                        total_defence += item.defence * defence_factor
+                    elif item.durability > 0:
+                         # Fallback if max_durability is invalid but item has durability
+                         total_defence += item.defence
                 elif not hasattr(item, 'durability') or item.durability is None:
+                     # Items without durability (permanent) provide full defence
                      total_defence += item.defence
         return total_defence
 
@@ -247,10 +254,23 @@ class Player:
         if self.vehicle:
             return 0, 0
         
+        # 1. Apply durability damage to clothes
+        self.take_durability_damage(base_damage, game)
+
+        # 2. Get Defensive Stats
+        total_defence = self.get_total_defence()
         health_bonus_perc = self.progression.get_health_bonus(self)
         infection_bonus_perc = self.progression.get_infection_bonus(self)
         
-        damage_modifier = 1.0 - (health_bonus_perc / 100.0)
+        # 3. Calculate Damage Modifier
+        # Combine Health Bonus + Total Defence as percentage reduction
+        # Example: 10% Health Bonus + 20 Defence = 30% Damage Reduction
+        total_reduction_perc = health_bonus_perc + total_defence
+        
+        # Ensure modifier doesn't go below 0 (invincible) or above 1 (full damage) logic handled by max(0, ...)
+        damage_modifier = 1.0 - (total_reduction_perc / 100.0)
+        damage_modifier = max(0.0, damage_modifier) # Cap at 0 (100% reduction max)
+
         infection_modifier = 1.0 + (infection_bonus_perc / 100.0)
         
         final_damage_taken = max(0, base_damage * damage_modifier)
@@ -937,6 +957,11 @@ class Player:
             options.append('Open')
             if not self.backpack:
                 options.append('Equip')
+        
+        elif item.item_type == 'cloth':
+            options.append('Open')
+            options.append('Equip')
+
         elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
             options.append('Equip')
 

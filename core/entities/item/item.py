@@ -361,6 +361,10 @@ class Item:
                     
                     props_node = root.find('properties')
                     if props_node is not None:
+                        dur_node = props_node.find('durability')
+                        if dur_node is not None:
+                             template['properties']['durability'] = {k: v for k, v in dur_node.attrib.items()}
+                             
                         def_node = props_node.find('defence')
                         if def_node is not None:
                             template['properties']['defence'] = {'value': def_node.attrib.get('value', '0')}

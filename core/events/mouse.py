@@ -80,11 +80,23 @@ def handle_mouse_down(game, event, mouse_pos):
                         topmost_modal['rect'].height = header_height if is_minimized else full_h
                         return
                     elif button['type'] in ['map_zoom_in', 'map_zoom_out']:
-                        current_zoom = topmost_modal.get('map_zoom', 4)
-                        if button['type'] == 'map_zoom_in':
-                             topmost_modal['map_zoom'] = min(16, current_zoom + 1)
+                        current_zoom = float(topmost_modal.get('map_zoom', 4))
+                        is_image_mode = topmost_modal.get('full_map_image') is not None
+                        
+                        if is_image_mode:
+                            # Image Map: Use small float steps, allow zooming out < 1
+                            step = 0.2
+                            if button['type'] == 'map_zoom_in':
+                                topmost_modal['map_zoom'] = min(8.0, current_zoom + step)
+                            else:
+                                topmost_modal['map_zoom'] = max(0.2, current_zoom - step)
                         else:
-                             topmost_modal['map_zoom'] = max(2, current_zoom - 1)
+                            # Tile Map: Use integer steps, min zoom 2
+                            current_zoom = int(current_zoom)
+                            if button['type'] == 'map_zoom_in':
+                                topmost_modal['map_zoom'] = min(16, current_zoom + 1)
+                            else:
+                                topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
             
             # If minimized, we only care about header dragging
