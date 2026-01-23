@@ -1,3 +1,5 @@
+# core/map/spawn_manager.py
+
 import pygame
 import random
 import math
@@ -114,7 +116,7 @@ def manage_dynamic_npcs(game):
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128):
     zombies = []
-    SAFE_RADIUS_TILES = 45 
+    SAFE_RADIUS_TILES = 1  # Changed from 45 to 15 to allow spawning at player birth chunk
     safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
     
     filtered_spawns = []

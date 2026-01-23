@@ -1,13 +1,14 @@
 import random
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
-def find_free_tile(rect, obstacles, items_on_ground, initial_pos=None, max_radius=10):
+def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10):
     """
-    Finds a free tile for the given rect, avoiding obstacles and other items.
-    The position is snapped to the grid.
-    If initial_pos is provided, it searches outwards from that position.
-    Otherwise, it searches for a random free tile.
+    Finds a free tile for the given rect, avoiding obstacles.
+    If items_on_ground is provided, avoids them too. If None or [], allows stacking.
     """
+    if items_on_ground is None:
+        items_on_ground = []
+
     if initial_pos:
         start_x = (initial_pos[0] // TILE_SIZE) * TILE_SIZE
         start_y = (initial_pos[1] // TILE_SIZE) * TILE_SIZE

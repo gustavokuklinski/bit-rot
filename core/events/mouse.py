@@ -1021,7 +1021,7 @@ def handle_context_menu_click(game, mouse_pos):
                         verified_item = container_item.inventory[index] if 0 <= index < len(container_item.inventory) else None
                     else:
                         verified_item = item
-                elif source == 'player_self' or source == 'map_tile':
+                elif source == 'player_self' or source == 'map_tile' or source == 'ground_context':
                     verified_item = item
                 
                 if verified_item is not item and not isinstance(item, dict):
@@ -1103,7 +1103,7 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Inventory': toggle_inventory_modal(game)
             elif option == 'Gear': toggle_gear_modal(game)
 
-            if option == 'Sleep':
+            if option == 'Sleep' or option == 'Rest':
                 print("You go to sleep...")
                 game.player.is_sleeping = True
             
@@ -1401,7 +1401,9 @@ def handle_context_menu_click(game, mouse_pos):
     if clicked_on_menu:
         return
 
+
 def handle_right_click(game, mouse_pos):
+
     clicked_item = None
     click_source = None
     click_index = -1
@@ -1553,8 +1555,6 @@ def handle_right_click(game, mouse_pos):
                 click_index = 0
                 break
 
-
-
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
         for npc in game.npcs:
@@ -1564,6 +1564,11 @@ def handle_right_click(game, mouse_pos):
                 click_index = 0
                 break
 
+    if not clicked_item and not is_over_any_modal:
+        # [CHANGED] Final fallback: Clicked on empty ground
+        clicked_item = {'name': 'Ground', 'type': 'ground'}
+        click_source = 'ground_context'
+        click_index = 0
 
     if clicked_item:
         game.context_menu['active'] = True
@@ -1582,11 +1587,14 @@ def handle_right_click(game, mouse_pos):
 
         elif click_source == 'map_tile':
             options = ['Sleep']
-        elif click_source == 'light_source': # [NEW]
+        elif click_source == 'light_source':
             status = "OFF" if clicked_item['active'] else "ON"
             options = ['Toggle Light']
         elif click_source == 'player_self':
             options = ['Status', 'Inventory', 'Gear']
+        elif click_source == 'ground_context':
+            # [CHANGED] Add Rest option for ground click
+            options = ['Rest']
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
             if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
@@ -1654,6 +1662,9 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['options'] = options
         game.context_menu['rects'] = []
         return
+
+
+
 
 def handle_left_click_drag_candidate(game, mouse_pos):
     topmost_modal = None

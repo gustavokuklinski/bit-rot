@@ -301,11 +301,11 @@ class ProceduralGenerator:
                     start_map_filename = filename_base + "_map.csv"
 
         # DEBUG to display the saved map and Heat places
-        #try:
-        #    pygame.image.save(full_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
-        #    pygame.image.save(heat_map_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
-        #except Exception as e:
-        #    print(f"Error saving map images: {e}")
+        try:
+            pygame.image.save(full_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
+            pygame.image.save(heat_map_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
+        except Exception as e:
+            print(f"Error saving map images: {e}")
 
         return start_map_filename
 

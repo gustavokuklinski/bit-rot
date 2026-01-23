@@ -974,6 +974,47 @@ class Game:
             self.player.x, self.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
             self.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
+        # --- FIX: Immediate Zombie Spawn around Player (Populates Start Chunk) ---
+        # Fetch spawns from grid that are near the player (5x5 chunks around)
+        nearby_spawns = []
+        GRID_SIZE_SPAWNS = getattr(self, 'SPAWN_GRID_SIZE', 512)
+        p_grid_x = int(self.player.x // GRID_SIZE_SPAWNS)
+        p_grid_y = int(self.player.y // GRID_SIZE_SPAWNS)
+        
+        for i in range(-2, 3): 
+            for j in range(-2, 3):
+                 cell = (p_grid_x + i, p_grid_y + j)
+                 if cell in self.spawn_point_grid:
+                     nearby_spawns.extend(self.spawn_point_grid[cell])
+                     
+        if nearby_spawns:
+             # Ensure triggers set exists
+             if self.current_layer_index not in self.layer_spawn_triggers:
+                 self.layer_spawn_triggers[self.current_layer_index] = set()
+             
+             # Mark these points as triggered so dynamic spawner doesn't double-count them later
+             for pos in nearby_spawns:
+                 self.layer_spawn_triggers[self.current_layer_index].add(pos)
+
+             # Spawn them immediately (ignoring min_dist, but respecting SAFE_RADIUS via spawn_initial_zombies)
+             initial_zombies = spawn_initial_zombies(
+                self.obstacles, 
+                nearby_spawns, 
+                self.items_on_ground + [self.player],
+                limit=1000, 
+                spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
+                map_width_px=self.map_width_pixels,
+                map_height_px=self.map_height_pixels,
+                player=self.player, # Pass player for Safe Radius check (15 tiles)
+                obstacle_grid=getattr(self, 'cached_obstacle_grid', None)
+             )
+             self.zombies.extend(initial_zombies)
+             self.layer_zombies[self.current_layer_index] = self.zombies[:]
+             self.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
+
+        # --- FIX: Immediate NPC Spawn (Removes Delay) ---
+        manage_dynamic_npcs(self)
+
         self.world_time = WorldTime(self)
         self.game_start_time = pygame.time.get_ticks()
 

@@ -69,7 +69,9 @@ class NPC(Zombie):
         if self.name == "Zombie" or self.name == "RANDOM":
              self.name = f"Survivor {random.randint(100, 999)}"
 
-        self.is_friendly = True
+        # [AI IMPROVEMENT] Randomize Friendly/Hostile Status (e.g. 40% Hostile)
+        self.is_friendly = random.random() > 0.4
+        
         self.is_following = False
         self.state = 'wandering'
 
@@ -104,6 +106,15 @@ class NPC(Zombie):
         # Fallback if creation failed
         if not self.equipped_weapon:
              self.equipped_weapon = Item.generate_random()
+
+        # [AI IMPROVEMENT] Spawn Ammo for Ranged Weapons
+        if self.equipped_weapon and self.equipped_weapon.item_type == 'weapon_ranged':
+            ammo_type = self.equipped_weapon.ammo_type
+            if ammo_type:
+                ammo_item = Item.create_from_name(ammo_type)
+                if ammo_item:
+                    ammo_item.load = 50 # Give a generous starting stack
+                    self.inventory.append(ammo_item)
 
         self.melee_swing_timer = 0
         self.melee_swing_angle = 0
@@ -331,6 +342,52 @@ class NPC(Zombie):
                     return False
         return True
 
+    # [AI IMPROVEMENT] New method to handle switching weapons
+    def _switch_weapon(self, game):
+        """Attempts to switch to a melee weapon or a loaded ranged weapon."""
+        best_candidate = None
+        
+        for item in self.inventory:
+            if item.item_type == 'weapon_melee':
+                best_candidate = item
+                break # Prefer melee as fallback
+            elif item.item_type == 'weapon_ranged' and item.load > 0:
+                best_candidate = item
+                break 
+
+        if best_candidate:
+            # Put current weapon away in inventory
+            if self.equipped_weapon:
+                self.inventory.append(self.equipped_weapon)
+            
+            # Equip new weapon
+            self.inventory.remove(best_candidate)
+            self.equipped_weapon = best_candidate
+            display_message(game, f"{self.name} switched to {best_candidate.name}!")
+            return True
+        return False
+
+    # [AI IMPROVEMENT] New method to handle reloading
+    def _try_reload(self, weapon, game):
+        """Attempts to reload the current weapon using ammo in inventory."""
+        if not weapon.ammo_type: return False
+        
+        for item in self.inventory:
+            if item.name == weapon.ammo_type and item.load > 0:
+                # Reload logic
+                needed = weapon.capacity - weapon.load
+                amount = min(needed, item.load)
+                
+                weapon.load += amount
+                item.load -= amount
+                
+                if item.load <= 0:
+                    self.inventory.remove(item)
+                    
+                display_message(game, f"{self.name} reloaded!")
+                return True
+        return False
+
     def update(self, game):
         """Updates the NPC: AI, Physics, Animation."""
         obstacles = game.obstacles
@@ -344,7 +401,7 @@ class NPC(Zombie):
         if game.player and not game.player.is_dead:
             entities_to_check.append(game.player)
 
-        # --- AI: Find and Attack Zombies ---
+        # --- AI: Find and Attack ---
         target_entity = None
 
         FOLLOW_PRIORITY_RANGE = TILE_SIZE * 20 # 20 tiles threshold to prioritize following
@@ -366,28 +423,39 @@ class NPC(Zombie):
             # Scale range for ranged weapons (e.g., 2x the base detection)
             search_range = self.base_search_range * 2 
 
-        # 1. Prioritize Attack nearby Zombie
-        min_dist_to_zombie = float('inf')
+        # 1. Identify Potential Targets (Smarter Faction Logic)
+        potential_targets = []
+        
+        # Zombies are enemies to everyone
+        potential_targets.extend(game.zombies)
+        
+        # Faction Logic
+        if not self.is_friendly:
+            # Hostile NPCs hate Player
+            if game.player and not game.player.is_dead:
+                potential_targets.append(game.player)
+            
+            # Hostile NPCs hate Friendly NPCs
+            for npc in game.npcs:
+                if npc != self and not npc.is_dead and npc.is_friendly:
+                    potential_targets.append(npc)
+        else:
+            # Friendly NPCs will auto-retaliate if attacked (handled by take_damage logic)
+            # But currently, they primarily target Zombies.
+            pass
+
+        min_dist_to_target = float('inf')
         
         if not player_is_far_and_following:
-            # Check Zombies
-            for zombie in game.zombies:
-                dist = math.hypot(zombie.rect.centerx - self.rect.centerx, zombie.rect.centery - self.rect.centery)
-                if dist < search_range and dist < min_dist_to_zombie: # Use modified search range
-                    min_dist_to_zombie = dist
-                    target_entity = zombie
+            for entity in potential_targets:
+                dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
+                if dist < search_range and dist < min_dist_to_target:
+                    min_dist_to_target = dist
+                    target_entity = entity
                     self.state = 'chasing'
-            
-            # Check Player (Hostility Check)
-            if not self.is_friendly and game.player and not game.player.is_dead:
-                 dist_p = math.hypot(game.player.rect.centerx - self.rect.centerx, game.player.rect.centery - self.rect.centery)
-                 # If player is within range and closer than the closest zombie (or no zombie found)
-                 if dist_p < search_range and dist_p < min_dist_to_zombie:
-                     target_entity = game.player
-                     self.state = 'chasing'
 
 
-        # 2. If no immediate zombie threat, check if following the player
+        # 2. If no immediate threat, check if following the player
         if not target_entity and self.is_following and game.player or player_is_far_and_following:
             # Follow if player is far (e.g., more than 2 tiles away)
             if player_dist > TILE_SIZE * 2 or player_is_far_and_following:
@@ -459,18 +527,26 @@ class NPC(Zombie):
                     # Stop shooting when ranged weapon is out of ammo
                     if weapon and weapon.item_type == 'weapon_ranged' and weapon.load is not None and weapon.load <= 0:
                          weapon_is_ready = False
-                         if weapon.sounds and 'noammo' in weapon.sounds:
-                            game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=self.rect.center)
                          
-                         # Drop the empty ranged weapon and prepare for melee
-                         #display_message(game, f"{self.name}'s {weapon.name} is out of ammo! Dropping it to switch to melee.")
-                         self.inventory.append(self.equipped_weapon) 
-                         self.equipped_weapon = None 
-                         weapon = None 
+                         # [AI IMPROVEMENT] Try Reload first, then Switch
+                         if not self._try_reload(weapon, game):
+                             if weapon.sounds and 'noammo' in weapon.sounds:
+                                game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=self.rect.center)
+                             
+                             if not self._switch_weapon(game):
+                                 # Fallback: Keep empty gun in inventory, maybe try to punch?
+                                 # For now, put it away and become unarmed (effectively punches if handled or just sits there)
+                                 self.inventory.append(self.equipped_weapon) 
+                                 self.equipped_weapon = None 
+                                 weapon = None 
+                         else:
+                             # Reload successful, apply cooldown delay
+                             self.last_attack_time = current_time + 1000
+                             weapon_is_ready = True
                     
                     # CHECK LINE OF SIGHT FOR RANGED WEAPONS
                     has_los = True
-                    if is_ranged_weapon:
+                    if is_ranged_weapon and weapon:
                         has_los = self.check_line_of_sight(target_entity, game)
 
                     if weapon_is_ready and has_los:
@@ -543,10 +619,11 @@ class NPC(Zombie):
                                  target_entity.take_damage(game, damage_to_deal, 0)
                                  display_message(game, f"{self.name} attacked you!")
                             else:
+                                 # NPC attacking Zombie or another NPC
                                  is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         
                         if is_dead and target_entity != game.player:
-                            if target_entity in game.zombies:
+                            if hasattr(target_entity, 'die'):
                                 target_entity.die(game)
                         
         else:
@@ -749,7 +826,6 @@ class NPC(Zombie):
         if attacker == game.player:
             self.is_friendly = False
             self.state = 'chasing'
-            # The Zombie AI will automatically target game.player if state is chasing
         
         if self.health <= 0:
             self.die(game)

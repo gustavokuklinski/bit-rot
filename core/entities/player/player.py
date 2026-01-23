@@ -540,7 +540,9 @@ class Player:
                  self.tireness = max(0.0, self.tireness + 0.05)
 
         if self.is_sleeping:
-            restore_amount = 0.2
+            # [CHANGED] Faster restore amount to speed up sleep cycle significantly
+            # 0.2 was approx 8 seconds. 0.8 is approx 2 seconds.
+            restore_amount = 0.8
             
             if self.max_tireness > 0:
                 restore_fraction = restore_amount / self.max_tireness
@@ -1005,7 +1007,8 @@ class Player:
              return
 
         ammo.rect.center = self.rect.center
-        if find_free_tile(ammo.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+
+        if find_free_tile(ammo.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)
             display_message_player("Inventory full. Dropped ammo on ground.")
         else:
@@ -1254,13 +1257,9 @@ class Player:
                 self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
-            if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+            if find_free_tile(item_to_drop.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
                 return item_to_drop 
-            else:
-                print("No free space to drop the item.")
-                self.inventory.append(item_to_drop) 
-                self.stack_item_in_inventory(item_to_drop) 
-                return None
+            
         return None
 
     def transfer_item_stack(self, source, index, container_item, target_container, game=None):
@@ -1395,7 +1394,7 @@ class Player:
             source_index = index
 
         if item_to_drop:
-            if find_free_tile(item_to_drop.rect, game.obstacles, game.items_on_ground, initial_pos=self.rect.center, max_radius=1):
+            if find_free_tile(item_to_drop.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
                 item_to_drop.x = item_to_drop.rect.x
                 item_to_drop.y = item_to_drop.rect.y
                 return item_to_drop 

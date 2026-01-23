@@ -13,7 +13,7 @@
     </game>
     <map>
         <map_chunks value="3" name="Max map chunks (Default: 3, Max: 9)"/>
-        <map_chunk_size value="256" name="Single chunk size (Default: 256)"/>
+        <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>
@@ -52,25 +52,25 @@
         <has_battery value="1.0" name="Car Battery chance (Default: 1.0)"/>
     </vehicle>
     <npc>
-        <npc_spawn_per_chunk value="2" name="Max NPC spawn on chunk (Default: 2)"/>
-        <max_npcs value="100" name="World Max NPCs (Default: 100)"/>
+        <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
+        <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
         <spawn_chance value="1.0" name="Spawn Chance (Default: 1.0)"/>
         <health_multiplier value="1.0" name="Health Multiplier (Default: 1.0)"/>
         <damage_multiplier value="1.0" name="Damage Multiplier (Default: 1.0)"/>
         <speed_multiplier value="1.0" name="Speed Multiplier (Default: 1.0)"/>
-        <detection_radius value="10" name="Detection Radius (Default: 1.0)"/>
+        <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
+        <zombie_spawn_per_chunk value="15" name="Max Zombie spawn on chunk (Default: 15)"/>
         <speed value="0.5" name="Speed (Default: 0.5)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <detection value="10" name="Player detection tiles (Default: 10)"/>
+        <detection value="30" name="Player detection tiles (Default: 30)"/>
         <wander value="true" name="Wandering (Default: true)"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>
-        <spawn value="5" name="Zombies per spawn (Default: 5)"/>
+        <spawn value="15" name="Zombies per spawn (Default: 15)"/>
         <respawn_timer value="600000" name="Respawn (Default: 600000)"/>
-        <max_zombies value="10000" name="World max zombies (Default: 10000)"/>
+        <max_zombies value="100000" name="World max zombies (Default: 100000)"/>
         <infection_chance value="0.10" name="Zombie infection chance (Default: 0.10)"/>
     </zombie>
 </config>
