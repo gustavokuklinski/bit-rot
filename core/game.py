@@ -897,7 +897,7 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["Mobile off", "M4A1", "556 Ammo", "Car Key Jeep","Car Key Pickup"]
+        starter_items = ["ID", "Mobile off"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

@@ -130,7 +130,7 @@ class PlayerProgression:
         elif attr_name == 'ranged':
             base_xp = 200
         elif attr_name == 'maintenance':
-            base_xp = 50
+            base_xp = 100
         elif attr_name == 'melee':
             base_xp = 100
         elif attr_name == 'speed':
@@ -222,7 +222,7 @@ class PlayerProgression:
 
         # Earn Fitness XP when running
         if is_moving and player.is_running:
-            self._add_xp(player, self.fitness, 'fitness', 0.00002)
+            self._add_xp(player, self.fitness, 'fitness', 0.02)
 
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)

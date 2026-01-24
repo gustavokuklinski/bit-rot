@@ -2,7 +2,7 @@
     <visuals>
         <sprite file="military_crate.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="15" />
     <loot>
         <item item="Canned Food" chance="0.5" />
         <item item="Pistol 9mm" chance="0.2" />

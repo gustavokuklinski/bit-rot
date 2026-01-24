@@ -54,8 +54,8 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    right_click_aim = mouse_buttons[2] and not is_over_modal
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or right_click_aim)
+    #right_click_aim = mouse_buttons[2] and not is_over_modal
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
 
     # Panning Camera Target Calculation
     target_pan_x = 0
@@ -342,9 +342,32 @@ def draw_game(game):
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
-    if game.hovered_npc:
-        hover_rect = game.hovered_npc.rect.move(offset_x, offset_y)
-        pygame.draw.rect(world_view_surface, (255, 165, 0), hover_rect, 2)
+    world_mouse_pos = game.screen_to_world(mouse_pos)
+    for npc in game.npcs:
+        # Optimization: Only check NPCs currently within the view
+        if not screen_rect.colliderect(npc.rect): 
+            continue
+            
+        if npc.rect.collidepoint(world_mouse_pos):
+            # Check friendliness: Green if friendly, Red if hostile
+            is_friendly = getattr(npc, 'is_friendly', True)
+            color = (0, 255, 0) if is_friendly else (255, 0, 0)
+            
+            hover_rect = npc.rect.move(offset_x, offset_y)
+            pygame.draw.rect(world_view_surface, color, hover_rect, 2)
+            break # Only highlight one at a time
+    
+
+    for zombie in game.zombies:
+        # Optimization: Only check zombies currently within the view
+        if not screen_rect.colliderect(zombie.rect): 
+            continue
+        
+        if zombie.rect.collidepoint(world_mouse_pos):
+            hover_rect = zombie.rect.move(offset_x, offset_y)
+            # Draw Purple outline for Zombies
+            pygame.draw.rect(world_view_surface, (128, 0, 128), hover_rect, 2)
+            break
 
     if game.hovered_interactable_tile_rect:
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
@@ -575,6 +598,45 @@ def draw_game(game):
     if game.hovered_item and not game.context_menu['active']:
         draw_tooltip(game.virtual_screen, game.hovered_item, game._get_scaled_mouse_pos())
 
+    elif not game.context_menu['active']:
+        ui_buttons = [
+            (game.status_button_rect, "Player Status (H)"),
+            (game.inventory_button_rect, "Inventory (I)"),
+            (game.gear_button_rect, "Gear (G)"),
+            (game.nearby_button_rect, "Nearby (N)"),
+            (game.messages_button_rect, "Messages (M)")
+        ]
+        
+        mouse_pos = game._get_scaled_mouse_pos()
+        
+        for rect, label in ui_buttons:
+            if rect and rect.collidepoint(mouse_pos):
+                # Use standard notification font or fallback to asset font
+                font_tip = globals().get('font_notification', game.assets.get('font'))
+                
+                if font_tip:
+                    text_surf = font_tip.render(label, True, WHITE)
+                    padding = 8
+                    width = text_surf.get_width() + padding * 2
+                    height = text_surf.get_height() + padding * 2
+                    
+                    # Position tooltip near mouse but keep on screen
+                    tip_x = mouse_pos[0] + 15
+                    tip_y = mouse_pos[1] + 15
+                    
+                    if tip_x + width > VIRTUAL_SCREEN_WIDTH:
+                        tip_x = mouse_pos[0] - width - 5
+                    if tip_y + height > VIRTUAL_GAME_HEIGHT:
+                        tip_y = mouse_pos[1] - height - 5
+                    
+                    tooltip_rect = pygame.Rect(tip_x, tip_y, width, height)
+                    
+                    # Draw consistent tooltip style (Dark background, White border)
+                    pygame.draw.rect(game.virtual_screen, (0, 0, 0, 220), tooltip_rect)
+                    pygame.draw.rect(game.virtual_screen, WHITE, tooltip_rect, 1)
+                    game.virtual_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
+                break
+
     if game.context_menu['active']:
         draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
@@ -593,7 +655,7 @@ def draw_game(game):
     else:
         pygame.mouse.set_visible(True)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2]:
+        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

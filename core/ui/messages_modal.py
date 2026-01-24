@@ -5,7 +5,7 @@ from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
 
 def draw_messages_modal(surface, game, modal, assets):
-    base_modal = BaseModal(surface, modal, assets, "Messages")
+    base_modal = BaseModal(surface, modal, assets, "Messages (M)")
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 

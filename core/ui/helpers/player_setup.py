@@ -16,6 +16,9 @@ from core.ui.helpers.trait_config_loader import _load_config_presets, save_confi
 from core.ui.helpers.settings import _draw_settings_screen
 
 _stat_icons_cache = {}
+
+STARTING_POINTS = 5
+ 
 def _load_stat_icons():
     """Loads all stat and skill icons into a global cache."""
     if _stat_icons_cache: # Don't reload
@@ -413,8 +416,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
     game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (header_rect.x + 10, header_rect.y + 7))
     total_cost = sum(TRAIT_DEFINITIONS.get(t, {}).get('cost', 0) for t in state['chosen_traits'])
     state['total_trait_cost'] = total_cost
-    cost_text = f"Points: {total_cost}"
-    cost_color = (100, 255, 100) if total_cost == 0 else (255, 100, 100)
+    
+    # Calculate remaining points
+    points_remaining = STARTING_POINTS - total_cost
+    
+    # Display the remaining points
+    cost_text = f"Points: {points_remaining}"
+    
+    # If points are >= 0 (positive or zero), show Green. If negative, show Red.
+    cost_color = (100, 255, 100) if points_remaining >= 0 else (255, 100, 100)
+    
     cost_surf = font.render(cost_text, True, cost_color)
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
     game.virtual_screen.blit(cost_surf, cost_rect)
@@ -577,7 +588,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else: state['stats_scrollbar_handle_rect'] = None
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70)
-    is_balanced = (state.get('total_trait_cost', 0) <= 0)
+    is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)
     if is_balanced:
         pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
@@ -1033,7 +1044,7 @@ def run_player_setup(game):
                 # ------------------------------------
                 
                 if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
-                    if state.get('total_trait_cost', 0) <= 0:
+                    if state.get('total_trait_cost', 0) <= STARTING_POINTS:
                         # 1. [MOVED UP] Define final_player_data FIRST
                         final_player_data = state['base_data'].copy()
                         final_player_data['attributes'] = state['final_attrs']
@@ -1121,7 +1132,7 @@ def run_player_setup(game):
                 if clickable_rects['delete_button'].collidepoint(mouse_pos): _delete_preset(state)
 
                 if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
-                    if state.get('total_trait_cost', 0) == 0:
+                    if state.get('total_trait_cost', 0) <= STARTING_POINTS:
                         final_player_data = state['base_data'].copy()
                         final_player_data['attributes'] = state['final_attrs']
                         final_player_data['clothes'] = state['chosen_clothes']

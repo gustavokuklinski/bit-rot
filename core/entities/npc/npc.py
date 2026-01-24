@@ -79,6 +79,10 @@ class NPC(Zombie):
         self.stuck_timer = 0
         self.stuck_angle = 0
         # --- END Pathing/Stuck Fix Attributes ---
+        
+        # [NEW] Knockback Physics Attributes
+        self.knockback_velocity = [0, 0]
+        self.knockback_timer = 0
 
         # --- NPC Specific Inventory/Loot Setup ---
         self.inventory = []
@@ -396,6 +400,40 @@ class NPC(Zombie):
             return # Stop updating physics/AI if dead
 
         current_time = pygame.time.get_ticks()
+        
+        # [NEW] Handle Knockback Physics
+        if self.knockback_timer > 0:
+            kb_x = self.knockback_velocity[0]
+            kb_y = self.knockback_velocity[1]
+            
+            # Move X
+            self.x += kb_x
+            self.rect.x = int(self.x)
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    self.x -= kb_x # Revert
+                    self.rect.x = int(self.x)
+                    break
+            
+            # Move Y
+            self.y += kb_y
+            self.rect.y = int(self.y)
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    self.y -= kb_y # Revert
+                    self.rect.y = int(self.y)
+                    break
+
+            self.rect.topleft = (int(self.x), int(self.y))
+            
+            # Decay Velocity & Timer
+            dt = 16 # Approx 1 frame
+            self.knockback_timer -= dt
+            self.knockback_velocity[0] *= 0.9
+            self.knockback_velocity[1] *= 0.9
+            
+            # Skip AI logic while being knocked back
+            return
 
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
         if game.player and not game.player.is_dead:
@@ -826,6 +864,28 @@ class NPC(Zombie):
         if attacker == game.player:
             self.is_friendly = False
             self.state = 'chasing'
+        
+        # [NEW] Bleeding Effects
+        if hasattr(game, 'blood_stains') and damage > 0:
+             count = random.randint(1, 2)
+             for _ in range(count):
+                 game.blood_stains.append({
+                    'pos': (self.rect.centerx + random.randint(-8, 8), self.rect.centery + random.randint(-8, 8)),
+                    'size': random.randint(5, 12),
+                    'color': (139, 0, 0),
+                    'time': pygame.time.get_ticks(),
+                    'duration': random.randint(30000, 60000)
+                 })
+        
+        # [NEW] Splash Effects
+        if hasattr(game, 'splashes') and damage > 0:
+             game.splashes.append({
+                'pos': self.rect.center,
+                'time': pygame.time.get_ticks(),
+                'duration': 350,
+                'radius': 3,
+                'type': 'hit_puff' 
+             })
         
         if self.health <= 0:
             self.die(game)

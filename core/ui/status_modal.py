@@ -6,7 +6,7 @@ from core.ui.status_tab import draw_status_tab
 from core.ui.record_tab import draw_record_tab
 
 def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos):
-    base_modal = BaseModal(surface, modal, assets, "Player Status")
+    base_modal = BaseModal(surface, modal, assets, "Player Status (H)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()

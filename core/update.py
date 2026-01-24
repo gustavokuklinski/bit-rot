@@ -14,6 +14,8 @@ from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies
 from core.messages import display_message_zombie, display_message_player
 
+# ... [Keep imports and helper functions: build_obstacle_grid, get_nearby_obstacles, build_zombie_grid, get_nearby_zombies] ...
+
 def build_obstacle_grid(obstacles, grid_size):
     """
     Builds a static spatial grid for obstacles.
@@ -170,7 +172,20 @@ def update_game_state(game):
         
         hit_npc = next((n for n in game.npcs if not n.is_dead and p.rect.colliderect(n.rect)), None)
         if hit_npc:
-             damage = game.player.get_attack_damage()
+             damage = getattr(p, 'damage', game.player.get_attack_damage()) # Use projectile damage if available
+             
+             # [NEW] Calculate Knockback for NPC
+             if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
+                  knockback_force = getattr(game.player.active_weapon, 'knockback', 5) # Default 5 if not set
+                  
+                  dx = hit_npc.rect.centerx - game.player.rect.centerx
+                  dy = hit_npc.rect.centery - game.player.rect.centery
+                  dist = math.hypot(dx, dy)
+                  if dist > 0:
+                      ndx, ndy = dx/dist, dy/dist
+                      hit_npc.knockback_velocity = [ndx * knockback_force, ndy * knockback_force]
+                      hit_npc.knockback_timer = 200 # ms of knockback duration
+             
              is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
              display_message_player(f"You shot {hit_npc.name}")
              if is_dead:
@@ -389,7 +404,7 @@ def player_hit_zombie(player, zombie, game):
         zombie.knockback_timer = 400 
         
         if hasattr(game, 'blood_stains'):
-            stain_size = 10 + int(final_damage / 3) 
+            stain_size = 4 + int(final_damage / 6) # [CHANGED] Smaller base size and scaling
             trail_dir_x, trail_dir_y = projectile_dir[0], projectile_dir[1]
             perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
             base_x, base_y = zombie.rect.centerx, zombie.rect.bottom
@@ -423,7 +438,7 @@ def player_hit_zombie(player, zombie, game):
 
                 game.blood_stains.append({
                     'pos': (stain_pos_x, stain_pos_y),
-                    'size': random.randint(5, int(stain_size * 1.5)), 
+                    'size': stain_size, # [CHANGED] Smaller random range
                     'color': (139, 0, 0), 
                     'time': pygame.time.get_ticks(),
                     # Add random duration (30-60 seconds)
@@ -431,8 +446,8 @@ def player_hit_zombie(player, zombie, game):
                 })
             
             # Limit the number of blood stains to prevent lag
-            if len(game.blood_stains) > 500:
-                game.blood_stains = game.blood_stains[-500:]
+            if len(game.blood_stains) > 250:
+                game.blood_stains = game.blood_stains[-250:]
 
     game.splashes.append({
         'pos': (zombie.rect.centerx, zombie.rect.bottom),
@@ -446,7 +461,7 @@ def player_hit_zombie(player, zombie, game):
         game.splashes.append({
             'pos': (zombie.rect.centerx, zombie.rect.bottom), 
             'time': pygame.time.get_ticks(),
-            'duration': 600, 
+            'duration': 250, 
             'radius': 5,    
             'type': 'death_burst'
         })
@@ -456,6 +471,7 @@ def player_hit_zombie(player, zombie, game):
     display_message_player(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False
 
+# ... [Keep handle_zombie_death, check_dynamic_zombie_spawns, check_zombie_respawn functions] ...
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     zombie.die(game)
     if weapon:

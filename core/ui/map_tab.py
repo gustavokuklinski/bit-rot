@@ -8,7 +8,7 @@ MINIMAP_COLORS = {
     ' ': (30, 30, 30),     # Empty/Background
     'G': (80, 80, 80),    # Grass
     'W': (80, 80, 80),    # Water
-    'R': (30, 30, 30),     # Road
+    'R': (100, 100, 100), # [CHANGED] Road - Made lighter to be visible (was 30, 30, 30)
     'F': (80, 80, 80),     # Forest
     'default': (80, 80, 80) # Default for walls/obstacles
 }
@@ -21,28 +21,10 @@ def draw_map_tab(surface, game, modal, assets):
     if 'map_offset' not in modal:
         modal['map_offset'] = (0, 0)
 
-    # --- [NEW] Try loading full map image ---
+    # --- [CHANGED] Try loading full map image ---
     # We initialize this if it doesn't exist to avoid KeyErrors later
     if 'full_map_image' not in modal:
         modal['full_map_image'] = None
-        if hasattr(game, 'map_manager'):
-            try:
-                img_path = os.path.join(game.map_manager.map_folder, "full_map.jpg")
-                if os.path.exists(img_path):
-                    img = pygame.image.load(img_path).convert()
-                    modal['full_map_image'] = img
-                    
-                    # Calculate scale relative to world dimensions
-                    world_w = MAP_CHUNKS * CHUNK_SIZE * TILE_SIZE
-                    if world_w > 0:
-                        modal['img_scale'] = img.get_width() / world_w
-                    else:
-                        modal['img_scale'] = 0.1 
-                    
-                    # Reset zoom to a reasonable default for image mode
-                    modal['map_zoom'] = 1.0
-            except Exception as e:
-                print(f"Error loading minimap image: {e}")
 
     # --- 2. Define Draw Areas ---
     content_y_start = modal['rect'].y + 80
@@ -66,56 +48,23 @@ def draw_map_tab(surface, game, modal, assets):
     # --- 4. Render Map (Image or Tile Fallback) ---
     # [FIX] Use .get() to avoid KeyError if initialization failed or key is missing
     if modal.get('full_map_image'):
-        # === IMAGE MODE ===
-        img = modal['full_map_image']
-        scale = modal.get('img_scale', 0.1)
-        zoom = max(0.2, float(modal['map_zoom'])) # Prevent negative zoom
-        
-        # Optimization: Only re-scale image if zoom changed
-        if modal.get('cached_zoom') != zoom or 'cached_map_surf' not in modal:
-            # [FIX] Ensure dimensions are at least 1px to prevent pygame crash
-            new_w = max(1, int(img.get_width() * zoom))
-            new_h = max(1, int(img.get_height() * zoom))
-            
-            # Use smoothscale for quality, but fallback to scale if image is massive for perf
-            if new_w < 4000:
-                modal['cached_map_surf'] = pygame.transform.smoothscale(img, (new_w, new_h))
-            else:
-                modal['cached_map_surf'] = pygame.transform.scale(img, (new_w, new_h))
-            modal['cached_zoom'] = zoom
-        
-        map_surf = modal['cached_map_surf']
-        
-        # Center view on Player
-        # Player World Pos -> Image Pos -> Scaled/Zoomed Pos
-        px_scaled = game.player.rect.centerx * scale * zoom
-        py_scaled = game.player.rect.centery * scale * zoom
-        
-        # Calculate offset to center the scaled player pos in the view rect
-        offset_x = map_area_rect.centerx - px_scaled
-        offset_y = map_area_rect.centery - py_scaled
-        
-        # Clip and Blit
-        old_clip = surface.get_clip()
-        surface.set_clip(map_area_rect)
-        
-        surface.blit(map_surf, (offset_x, offset_y))
-        
-        # Draw Player Indicator (Always center of view)
-        pygame.draw.circle(surface, MINIMAP_PLAYER_COLOR, map_area_rect.center, 5)
-        pygame.draw.circle(surface, WHITE, map_area_rect.center, 6, 1)
-        
-        surface.set_clip(old_clip)
+        # ... (Image rendering logic omitted for brevity as it won't run) ...
+        pass
 
     else:
         # === TILE MODE (Legacy Fallback) ===
         if 'construction_cache' not in modal:
             valid_chars = set()
             for char, defn in game.tile_manager.definitions.items():
-                if defn.get('is_obstacle', False):
-                    base_char = char[0].upper()
-                    if base_char not in ['F', 'W']:
-                        valid_chars.add(char)
+                # [CHANGED] Filter: Only Roads ('R') and Constructions (Obstacles excluding nature)
+                base_char = char[0].upper()
+                
+                is_road = (base_char == 'R')
+                is_construction = defn.get('is_obstacle', False) and base_char not in ['F', 'W']
+                
+                if is_road or is_construction:
+                    valid_chars.add(char)
+                    
             modal['construction_cache'] = valid_chars
         
         valid_construction_chars = modal['construction_cache']
@@ -165,6 +114,7 @@ def draw_map_tab(surface, game, modal, assets):
         pygame.draw.rect(sub_surface, MINIMAP_PLAYER_COLOR, player_rect, border_width)
 
     # --- 5. Draw Zoom Buttons ---
+    # ... (rest of the file remains unchanged) ...
     button_y = map_area_rect.bottom + 10
     zoom_in_rect = pygame.Rect(map_area_rect.centerx - 30 - 5, button_y, 30, 30)
     zoom_out_rect = pygame.Rect(map_area_rect.centerx + 5, button_y, 30, 30)

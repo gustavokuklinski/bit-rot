@@ -130,6 +130,8 @@ class Player:
         
         self.last_shot_time = 0
 
+        self.is_resting = False
+
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
         try:
@@ -543,24 +545,37 @@ class Player:
             if self.chat_timer <= 0:
                 self.chat_text = None
 
-        # [CHANGED] Natural Fatigue Accumulation
-        # Accumulate tireness over time (slowly)
-        # 0.005 per frame -> ~0.3 per second -> ~300s (5 min) to reach 100
-        # Adjust as needed for balance
-        if not self.is_sleeping:
+        # [CHANGED] Moved Input Detection here so 'is_moving' is defined before use
+        keys = pygame.key.get_pressed()
+        has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
+        is_moving = has_input and (self.vehicle is None)
+
+        if is_moving:
+            self.is_resting = False
+            
+        # Detect Rest Tile
+        grid_x = int(self.rect.centerx // TILE_SIZE)
+        grid_y = int(self.rect.centery // TILE_SIZE)
+        tile = game.map_manager.get_tile_at(grid_x, grid_y)
+        
+        # Combine manual rest and tile rest
+        # The player is considered "in a resting state" if they are on a rest tile OR manually resting.
+        is_active_resting = (tile and tile.get('rest')) or self.is_resting
+
+        # Natural Tireness Decay
+        # Logic: Energy drains slowly while awake, UNLESS you are resting.
+        # This ensures 'Rest' preserves energy (stops decay) but does not restore it.
+        if not self.is_sleeping and not is_active_resting:
             self.tireness = min(self.max_tireness, self.tireness - 0.005)
 
-        if not self.is_sleeping: 
-            grid_x = int(self.rect.centerx // TILE_SIZE)
-            grid_y = int(self.rect.centery // TILE_SIZE)
-            tile = game.map_manager.get_tile_at(grid_x, grid_y)
-            
-            if tile and tile.get('rest'):
-                 # [CHANGED] Passive resting now reduces tireness
-                 self.tireness = max(0.0, self.tireness + 0.05)
+        # Rest Mechanic
+        # Logic: Restores ONLY Stamina.
+        if not self.is_sleeping and is_active_resting:
+            if self.stamina < self.max_stamina:
+                self.stamina = min(self.max_stamina, self.stamina + 0.5)
 
         if self.is_sleeping:
-            # [CHANGED] Faster restore amount to speed up sleep cycle significantly
+            # Sleep Mechanic: Restores Tireness
             # 0.2 was approx 8 seconds. 0.8 is approx 2 seconds.
             restore_amount = 0.8
             
@@ -573,19 +588,17 @@ class Player:
             time_jump = restore_fraction * eight_hours_ms
             game.world_time.game_time_ms += time_jump
 
-            # [CHANGED] Sleeping reduces tireness
+            # Increases Tireness (Energy)
             self.tireness = max(0.0, self.tireness + restore_amount)
             
-            # [CHANGED] Wake up if fully rested (tireness <= 0)
+            # Wake up if fully rested
             if self.tireness >= self.max_tireness:
                 self.tireness = self.max_tireness
                 self.is_sleeping = False
                 display_message_player("You wake up refreshed.")
 
-        keys = pygame.key.get_pressed()
-        has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
-
-
+        # [CHANGED] Removed redundant 'keys' and 'has_input' definitions from here
+        
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]
         is_firing = mouse_buttons[0]
@@ -596,13 +609,12 @@ class Player:
                   from core.events.mouse import handle_attack
                   handle_attack(game, pygame.mouse.get_pos())
 
-        is_moving = has_input and (self.vehicle is None)
+        # [CHANGED] Removed redundant 'is_moving' definition from here
 
         if is_moving:
             self.walk_anim_angle = math.sin(current_time * 15) * 2
         else:
             self.walk_anim_angle = 0
-
         self.update_aim(is_moving)
         
         if is_moving and self.sound_steps:

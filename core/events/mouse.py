@@ -84,17 +84,19 @@ def handle_mouse_down(game, event, mouse_pos):
                         is_image_mode = topmost_modal.get('full_map_image') is not None
                         
                         if is_image_mode:
-                            # Image Map: Use small float steps, allow zooming out < 1
-                            step = 0.2
+                            # [CHANGED] Dynamic step size for smoother zooming at high levels
+                            # [CHANGED] Increased max zoom from 8.0 to 50.0
+                            step = max(0.2, current_zoom * 0.2)
                             if button['type'] == 'map_zoom_in':
-                                topmost_modal['map_zoom'] = min(8.0, current_zoom + step)
+                                topmost_modal['map_zoom'] = min(50.0, current_zoom + step)
                             else:
                                 topmost_modal['map_zoom'] = max(0.2, current_zoom - step)
                         else:
                             # Tile Map: Use integer steps, min zoom 2
+                            # [CHANGED] Increased max zoom for tile mode as well
                             current_zoom = int(current_zoom)
                             if button['type'] == 'map_zoom_in':
-                                topmost_modal['map_zoom'] = min(16, current_zoom + 1)
+                                topmost_modal['map_zoom'] = min(32, current_zoom + 1)
                             else:
                                 topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
@@ -213,7 +215,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     return
             
         # Attack / World Interaction
-        if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL] or pygame.mouse.get_pressed()[2]):
+        if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
             handle_attack(game, mouse_pos)
             return
 
@@ -1115,9 +1117,14 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Inventory': toggle_inventory_modal(game)
             elif option == 'Gear': toggle_gear_modal(game)
 
-            if option == 'Sleep' or option == 'Rest':
+            if option == 'Sleep':
                 print("You go to sleep...")
                 game.player.is_sleeping = True
+            
+            # [CHANGED] Rest triggers the resting state (Stamina recovery).
+            if option == 'Rest':
+                print("You take a rest...")
+                game.player.is_resting = True
             
             if option == 'Toggle Light':
                 if source == 'light_source':
@@ -1652,7 +1659,9 @@ def handle_right_click(game, mouse_pos):
                 options.append('Sleep')
 
             if getattr(clicked_item, 'inventory', None) is not None:
-                if 'Open' not in options: options.append('Open')
+                is_valid_type = getattr(clicked_item, 'item_type', '') in ['backpack', 'container', 'cloth']
+                if isinstance(clicked_item, Corpse) or is_valid_type:
+                    if 'Open' not in options: options.append('Open')
                 
         elif click_source == 'container_map':
             if getattr(clicked_item, 'item_type', '') == 'vehicle':
