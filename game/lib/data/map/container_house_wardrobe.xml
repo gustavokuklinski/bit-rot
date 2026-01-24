@@ -20,5 +20,7 @@
         <item item="Shotgun" chance="0.1" />
         <item item="Double Barrel Shotgun" chance="0.1" />
         <item item="Shotgun Shells" chance="0.1" />
+        <item item="Baseball Bat" chance="0.2" />
+        <item item="Alcohol Bottle" chance="0.3" />
     </loot>
 </map>

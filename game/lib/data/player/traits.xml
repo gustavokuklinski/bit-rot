@@ -48,6 +48,10 @@
         <attributes ranged="2" />
     </trait>
 
+    <trait id="nurse" name="Nurse" cost="3" tooltip="Known basic medical reciples">
+        <recipe magazine="Medicine Vol.1" />
+    </trait>
+
 
     <!-- Negative traits -->
     <trait id="weak" name="Weak" cost="-2" tooltip="-2 level strength">

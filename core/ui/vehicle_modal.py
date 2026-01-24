@@ -43,7 +43,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     state_color = STYLE["ACTIVE"] if vehicle.active else STYLE["INACTIVE"]
     
     # Draw State
-    state_surf = font.render(f"Car (Press: Q): {car_state}", True, state_color)
+    state_surf = font.render(f"Car (ON/OFF: Q): {car_state}", True, state_color)
     surface.blit(state_surf, (x, y))
 
     # Draw Speed

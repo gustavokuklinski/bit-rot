@@ -1,5 +1,6 @@
 import pygame
 from core.data.config import *
+from core.data.recipe_manager import RecipeManager
 
 def draw_tooltip(surface, item, pos):
     if not item:
@@ -8,10 +9,22 @@ def draw_tooltip(surface, item, pos):
     lines = [item.name]
     if item.item_type:
         lines.append(f"Type: {item.item_type}")
-    
+        
+    if item.item_type == 'recipe':
+        # Ensure recipes are loaded if checking from main menu or early state
+        if not RecipeManager.RECIPES:
+             RecipeManager.load_recipes()
+             
+        recipes = RecipeManager.get_recipes_by_magazine(item.name)
+        if recipes:
+            lines.append("Teaches:")
+            for r in recipes:
+                lines.append(f" - {r.output_name}")
+
     if hasattr(item, 'inventory') and item.inventory is not None:
-        cap = item.capacity if item.capacity is not None else 0
-        lines.append(f"Contents: {len(item.inventory)} / {cap}")
+        if item.item_type in ['container', 'backpack', 'cloth']:
+            cap = item.capacity if item.capacity is not None else 0
+            lines.append(f"Contents: {len(item.inventory)} / {cap}")
         
     # --- MODIFIED: Logic to trigger bar rendering ---
     if item.durability is not None:

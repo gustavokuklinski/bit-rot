@@ -10,8 +10,9 @@ from core.update import player_hit_zombie, handle_zombie_death
 from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect, get_belt_hud_slot_rect
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
-from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
+from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal
 from core.placement import find_free_tile
+from core.messages import display_message
 
 # Recursive Logic Check (Prevents Bag-in-Bag crashes)
 def check_recursive_containment(dragged_item, target_container):
@@ -76,6 +77,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         elif topmost_modal['type'] == 'gear': full_h = GEAR_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'status': full_h = STATUS_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'messages': full_h = MESSAGES_MODAL_HEIGHT
+                        elif topmost_modal['type'] == 'crafting': full_h = CRAFTING_MODAL_HEIGHT
                         else: full_h = CONTAINER_MODAL_WIDTH
                         topmost_modal['rect'].height = header_height if is_minimized else full_h
                         return
@@ -203,6 +205,8 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_gear_modal(game); return
         if game.messages_button_rect and game.messages_button_rect.collidepoint(mouse_pos):
             toggle_messages_modal(game); return
+        if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
+            toggle_crafting_modal(game); return
 
         # Belt HUD
         for i, item in enumerate(game.player.belt):
@@ -638,6 +642,46 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = False 
                                     break
                         if dropped_successfully: break
+                    
+                    elif modal['type'] == 'crafting' and modal['rect'].collidepoint(mouse_pos):
+                        # The internal container in the modal
+                        container = modal['instance'].ingredients_container
+                        
+                        target_index = -1
+                        # We must replicate the slot positioning logic from crafting_modal.py
+                        slot_start_x = modal['position'][0] + 20
+                        slot_start_y = modal['position'][1] + 50
+                        
+                        for i in range(container.capacity or 4):
+                            # get_container_slot_rect calculates relative to the provided pos
+                            if get_container_slot_rect((slot_start_x, slot_start_y), i).collidepoint(mouse_pos):
+                                target_index = i
+                                break
+                        
+                        if target_index != -1:
+                            if target_index < len(container.inventory):
+                                item_in_slot = container.inventory[target_index]
+                                if item_in_slot.can_stack_with(game.dragged_item):
+                                    available = item_in_slot.capacity - item_in_slot.load
+                                    transfer = min(available, game.dragged_item.load)
+                                    item_in_slot.load += transfer
+                                    game.dragged_item.load -= transfer
+                                    if game.dragged_item.load <= 0: dropped_successfully = True
+                                else:
+                                    # Swap
+                                    item_to_swap = container.inventory.pop(target_index)
+                                    container.inventory.insert(target_index, game.dragged_item)
+                                    game.dragged_item = item_to_swap
+                                    dropped_successfully = False
+                            else:
+                                container.inventory.insert(target_index, game.dragged_item)
+                                dropped_successfully = True
+                        elif len(container.inventory) < container.capacity:
+                            # Drop into next available slot
+                            container.inventory.append(game.dragged_item)
+                            dropped_successfully = True
+                        
+                        if dropped_successfully: break
 
                 if dropped_successfully:
                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -813,6 +857,16 @@ def handle_mouse_up(game, event, mouse_pos):
                             slot_name = i_orig
                             vehicle.equipment[slot_name] = game.dragged_item
                             vehicle.update_stats_from_equipment()
+                        
+                        elif type_orig == 'crafting':
+                            modal_id = container_info[0]
+                            # Find the modal
+                            target_modal = next((m for m in game.modals if m['id'] == modal_id), None)
+                            if target_modal:
+                                target_modal['instance'].ingredients_container.inventory.insert(i_orig, game.dragged_item)
+                            else:
+                                game.player.inventory.append(game.dragged_item)
+
                         else:
                             game.player.inventory.append(game.dragged_item) 
 
@@ -878,6 +932,15 @@ def find_item_at_pos(game, mouse_pos):
                 for i, item in enumerate(active_container.inventory):
                     if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
                         return item
+        
+        elif modal['type'] == 'crafting':
+            container = modal['instance'].ingredients_container
+            slot_start_x = modal['position'][0] + 20
+            slot_start_y = modal['position'][1] + 50
+            for i, item in enumerate(container.inventory):
+                if item and get_container_slot_rect((slot_start_x, slot_start_y), i).collidepoint(mouse_pos): return item
+
+        if False: break
         
         return None
 
@@ -976,6 +1039,12 @@ def handle_mouse_motion(game, event, mouse_pos):
                     slot_name = i_orig
                     vehicle.equipment[slot_name] = None
                     vehicle.update_stats_from_equipment()
+
+                elif type_orig == 'crafting':
+                    modal_id = container_info[0]
+                    target_modal = next((m for m in game.modals if m['id'] == modal_id), None)
+                    if target_modal:
+                        target_modal['instance'].ingredients_container.inventory.pop(i_orig)
             
             game.drag_candidate = None 
 
@@ -1286,7 +1355,11 @@ def handle_context_menu_click(game, mouse_pos):
                         dropped_item.rect.center = game.player.rect.center
                         game.items_on_ground.append(dropped_item)
 
-            elif option == 'Open' or option == 'Read' or option == 'Inspect':
+            elif option == 'Read':
+                game.player.read_recipe_book(item)
+                clicked_on_menu = True
+
+            elif option == 'Open' or option == 'Inspect':
                 if getattr(item, 'item_type', None) == 'mobile':
                     modal_exists = any(m['type'] == 'mobile' and m['item'] == item for m in game.modals)
                     if not modal_exists:
@@ -1548,17 +1621,18 @@ def handle_right_click(game, mouse_pos):
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
+            dist = math.hypot(game.player.rect.centerx - world_pos[0], game.player.rect.centery - world_pos[1])
 
             if tile and tile.get('type') == "maptile_car":
-                vehicle = game.map_manager.get_vehicle_by_tile(tile)
-                if vehicle:
-                    clicked_item = vehicle
-                    click_source = 'container_map'
-                    click_index = 0
-            
-            tile_center_x = (grid_x * TILE_SIZE) + (TILE_SIZE / 2)
-            tile_center_y = (grid_y * TILE_SIZE) + (TILE_SIZE / 2)
-            dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+                if dist <= TILE_SIZE * 2:
+                    # [CHANGED] Use the new get_vehicle_at method with grid coordinates
+                    vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
+                    if vehicle:
+                        clicked_item = vehicle
+                        click_source = 'container_map'
+                        click_index = 0
+            else:
+                display_message(game, "Too far away to interact.")
 
             if tile and tile.get('sleep') and dist < TILE_SIZE * 2:
                 clicked_item = {'name': 'Bed', 'type': 'map_tile'} 
@@ -1803,6 +1877,20 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         return
+    
+    elif modal['type'] == 'crafting':
+        container = modal['instance'].ingredients_container
+        slot_start_x = modal['position'][0] + 20
+        slot_start_y = modal['position'][1] + 50
+        
+        for i, item in enumerate(container.inventory):
+            if item:
+                slot_rect = get_container_slot_rect((slot_start_x, slot_start_y), i)
+                if slot_rect.collidepoint(mouse_pos):
+                    game.drag_candidate = (item, (i, 'crafting', modal['id']))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                    return
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):

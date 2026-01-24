@@ -50,7 +50,12 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
         
-        self.screen = pygame.display.set_mode((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.RESIZABLE)
+        current_scale = core.data.config.RESOLUTION_SCALE
+        initial_w = int(VIRTUAL_SCREEN_WIDTH * current_scale)
+        initial_h = int(VIRTUAL_GAME_HEIGHT * current_scale)
+        
+        self.screen = pygame.display.set_mode((initial_w, initial_h), pygame.RESIZABLE)
+        
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
         
         pygame.display.set_caption("Bit Rot")
@@ -123,13 +128,15 @@ class Game:
             'nearby': (1050, 360),
             'messages': (10, 360),
             'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200)
+            'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200),
+            'crafting': (300, 100)
         }
 
         self.status_button_rect = None
         self.inventory_button_rect = None
         self.nearby_button_rect = None
         self.messages_button_rect = None
+        self.crafting_button_rect = None
         self.camera = None
         self.map_states = {}
         self.layer_items = {}
@@ -269,6 +276,7 @@ class Game:
                 "attributes": attributes_base,
                 "progression": progression_data,
                 "traits": self.player.traits,
+                "known_recipes": self.player.known_recipes,
                 "visuals": self.player.visuals,
                 "sounds": self.player.sounds_data,
                 # [SAFE] Check for to_dict before calling
@@ -897,7 +905,8 @@ class Game:
         self.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
-        starter_items = ["ID", "Mobile off"]
+        # starter_items = ["ID", "Mobile off"]
+        starter_items = ["Medicine Vol.1", "Alcohol Bottle","Medical Bandage"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

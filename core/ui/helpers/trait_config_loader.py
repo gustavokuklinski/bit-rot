@@ -27,7 +27,7 @@ def load_trait_definitions():
             except ValueError:
                 cost = 0
                 
-            trait_data = {'cost': cost}
+            trait_data = {'cost': cost, 'stats': {}, 'attributes': {}, 'recipes': []}
             
             # Parse 'stats' modifiers (e.g., infection, stamina)
             stats_node = trait_node.find('stats')
@@ -49,6 +49,11 @@ def load_trait_definitions():
                     except ValueError:
                         pass
             
+                
+            for r_node in trait_node.findall('recipe'):
+                mag = r_node.get('magazine')
+                if mag: trait_data['recipes'].append(mag)
+
             traits[trait_id] = trait_data
 
         print(f"Loaded {len(traits)} traits from XML.")

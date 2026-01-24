@@ -1,0 +1,8 @@
+<item name="Medicine Vol.1" type="recipe">
+    <properties>
+        <load min="1" max="1" />
+        <capacity value="10" />
+        <sprite file="magazine_medicine_vol_1.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

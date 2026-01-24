@@ -19,7 +19,8 @@ def parse_player_data():
         'stats': {},
         'attributes': {},
         'initial_loot': [],
-        'visuals': {}
+        'visuals': {},
+        'known_recipes': []
     }
     
     # Parse stats
@@ -44,5 +45,12 @@ def parse_player_data():
     for trait in root.findall('traits/*'):
         trait_names.append(trait.tag)
     
+    recipes_node = root.find('recipes')
+    if recipes_node is not None:
+        for recipe in recipes_node.findall('recipe'):
+            magazine = recipe.get('magazine')
+            if magazine:
+                data['known_recipes'].append(magazine)
+                
     # Return both the data dictionary and the list of trait names
     return data, trait_names

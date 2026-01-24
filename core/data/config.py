@@ -9,12 +9,13 @@ infoObject = pygame.display.Info()
 
 # --- Scalable Screen Setup ---
 VIRTUAL_SCREEN_WIDTH = 1360
-VIRTUAL_GAME_HEIGHT = 725
+VIRTUAL_GAME_HEIGHT = 740
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
 GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
 
+RESOLUTION_SCALE = 1.0
 
 MAP_DIR = "./game/lib/map/" # Game map files
 DATA_PATH = "./game/lib/data/" # Folders with XML data files
@@ -72,6 +73,10 @@ MOBILE_MODAL_HEIGHT = 400
 # Gear Modal
 GEAR_MODAL_WIDTH = 200
 GEAR_MODAL_HEIGHT = 290
+
+# Craft Modal
+CRAFTING_MODAL_WIDTH = 500
+CRAFTING_MODAL_HEIGHT = 400
 
 
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
@@ -194,6 +199,12 @@ def load_settings(preset="default"):
         TIME_TRANSITION_HR = float(game_config.find('time_transition_hr').get('value'))
         TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
         MAX_DARKNESS_OPACITY = int(game_config.find('day_night_cycle_darkness').get('value'))
+
+        try:
+            val_scale = game_config.find('resolution_scale').get('value')
+            RESOLUTION_SCALE = float(val_scale)
+        except (AttributeError, ValueError):
+            RESOLUTION_SCALE = 1.0
 
         START_ZOOM = float(game_config.find('zoom_start').get('value'))
         FAR_ZOOM = float(game_config.find('zoom_far').get('value'))

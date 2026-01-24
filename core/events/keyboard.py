@@ -133,6 +133,29 @@ def toggle_pause(game):
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
+def toggle_crafting_modal(game):
+    crafting_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'crafting':
+            game.modals.remove(modal)
+            crafting_modal_exists = True
+            break
+    if not crafting_modal_exists:
+        new_modal = {
+            'id': uuid.uuid4(),
+            'type': 'crafting',
+            'position': game.last_modal_positions.get('crafting', (300, 100)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(
+                game.last_modal_positions.get('crafting', (300, 100))[0], 
+                game.last_modal_positions.get('crafting', (300, 100))[1], 
+                CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
+            ),
+            'minimized': False
+        }
+        game.modals.append(new_modal)
+
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
         # --- Global Keys ---
@@ -147,6 +170,9 @@ def handle_keyboard_events(game, event):
             else:
                 toggle_pause(game)
                 return
+        
+        if event.key == pygame.K_c:
+            toggle_crafting_modal(game)
 
         # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:

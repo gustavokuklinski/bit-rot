@@ -1,0 +1,8 @@
+<item name="Alcohol Bottle" type="resource">
+    <properties>
+        <load min="1" max="20" />
+        <capacity value="20" />
+        <sprite file="resource_alcohol.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

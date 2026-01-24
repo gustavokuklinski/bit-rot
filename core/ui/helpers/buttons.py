@@ -6,6 +6,7 @@ _status_img = None
 _nearby_img = None
 _message_img = None
 _gear_img = None
+_crafting_img = None
 
 def draw_status_button(surface):
     global _status_img
@@ -82,3 +83,20 @@ def draw_messages_button(surface):
     button_messages_rect = pygame.Rect(10, 210, 40, 40) 
     surface.blit(_message_img, button_messages_rect)
     return button_messages_rect
+
+def draw_crafting_button(surface):
+    global _crafting_img
+    if _crafting_img is None:
+        try:
+            # Assumes you have a crafting.png or uses gray placeholder
+            _crafting_img = pygame.image.load(SPRITE_PATH + 'ui/craft.png').convert_alpha()
+            _crafting_img = pygame.transform.scale(_crafting_img, (40, 40))
+        except pygame.error:
+            _crafting_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _crafting_img.fill(GRAY)
+            pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1) # Simple icon
+            
+    # Position: 260 (Messages 210 + 40 + 10 gap)
+    button_rect = pygame.Rect(10, 260, 40, 40)
+    surface.blit(_crafting_img, button_rect)
+    return button_rect

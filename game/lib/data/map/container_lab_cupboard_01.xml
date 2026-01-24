@@ -22,5 +22,8 @@
         <item item="Car Key Jeep" chance="0.1" />
         <item item="Pistol 9mm" chance="0.1" />
         <item item="9mm Ammo" chance="0.1" />
+        <item item="Alcohol Bottle" chance="0.3" />
+        <item item="Medical Bandage" chance="0.3" />
+        <item item="Medicine Vol.1" chance="0.2" />
     </loot>
 </map>

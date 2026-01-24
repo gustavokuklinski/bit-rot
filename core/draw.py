@@ -11,7 +11,7 @@ from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby_modal import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button, draw_messages_button, draw_gear_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.gear_modal import draw_gear_modal
 from core.ui.messages_modal import draw_messages_modal
@@ -475,6 +475,15 @@ def draw_game(game):
         elif modal['type'] == 'vehicle':
             buttons = draw_vehicle_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
+        elif modal['type'] == 'crafting':
+            # Instantiate Logic on the fly (or you could store instance in modal dict)
+            if 'instance' not in modal:
+                from core.ui.crafting_modal import CraftingModal
+                modal['instance'] = CraftingModal(game.virtual_screen, modal, game.assets, game)
+            
+            # Ensure surface is up to date
+            modal['instance'].surface = game.virtual_screen
+            modal['instance'].draw()
         
 
     game.status_button_rect = draw_status_button(game.virtual_screen)
@@ -482,6 +491,7 @@ def draw_game(game):
     game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
     game.gear_button_rect = draw_gear_button(game.virtual_screen)
     game.messages_button_rect = draw_messages_button(game.virtual_screen)
+    game.crafting_button_rect = draw_crafting_button(game.virtual_screen)
 
     highlighted_rect = None
     highlighted_allowed = False
@@ -604,7 +614,8 @@ def draw_game(game):
             (game.inventory_button_rect, "Inventory (I)"),
             (game.gear_button_rect, "Gear (G)"),
             (game.nearby_button_rect, "Nearby (N)"),
-            (game.messages_button_rect, "Messages (M)")
+            (game.messages_button_rect, "Messages (M)"),
+            (game.crafting_button_rect, "Crafting (C)")
         ]
         
         mouse_pos = game._get_scaled_mouse_pos()

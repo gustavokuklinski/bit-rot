@@ -107,7 +107,23 @@ def draw_messages_modal(surface, game, modal, assets):
             # If text is longer, use scroll offset
             y_pos = -modal['scroll_offset_y']
 
-        for msg in active_log:
+        # [OPTIMIZED] Virtual Scrolling: Only render what is visible
+        start_index = 0
+        
+        # 1. Skip messages above the view
+        if y_pos < 0:
+            skip_count = int(abs(y_pos) // line_height)
+            start_index = skip_count
+            y_pos += skip_count * line_height
+
+        # 2. Iterate only from start_index
+        for i in range(start_index, len(active_log)):
+            msg = active_log[i]
+            
+            # 3. Stop rendering if we go below the view
+            if y_pos > content_height:
+                break
+                
             txt_surf = font_notification.render(msg, True, WHITE)
             content_surface.blit(txt_surf, (5, y_pos))
             y_pos += line_height

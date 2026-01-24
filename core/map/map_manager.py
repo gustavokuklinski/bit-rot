@@ -113,6 +113,14 @@ class MapManager:
                 return self.game.tile_manager.definitions[char]
         return None
 
+    def get_tile_at(self, grid_x, grid_y):
+        """Gets the tile definition at a specific grid coordinate."""
+        if 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
+            char = self.game.map_data[grid_y][grid_x]
+            if char in self.game.tile_manager.definitions:
+                return self.game.tile_manager.definitions[char]
+        return None
+
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
         current_char = self.game.map_data[grid_y][grid_x]
