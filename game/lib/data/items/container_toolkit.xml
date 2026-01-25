@@ -1,0 +1,22 @@
+<item name="Toolkit" type="container">
+    <properties>
+        <capacity value="10" />
+        <sprite file="toolkit.png" />
+    </properties>
+    <loot>
+        <item name="Screwdriver" chance="0.3" />
+        <item name="Wrench" chance="0.3" />
+        <item name="Lug Wrench" chance="0.3" />
+        <item name="Saw" chance="0.3" />
+        <item name="Screws" chance="0.3" />
+        <item name="Nails" chance="0.3" />
+        <item name="Hammer" chance="0.3" />
+        <item name="Knife" chance="0.3" />
+        <item name="Axe" chance="0.3" />
+        <item name="Portable Hand Saw" chance="0.1" />
+        <item name="Duck Tape" chance="0.3" />
+        <item name="Cigarette" chance="0.2" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

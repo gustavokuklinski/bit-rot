@@ -15,5 +15,8 @@
         <item item="556 Ammo" chance="0.1" />
         <item item="Pistol 9mm" chance="0.1" />
         <item item="9mm Ammo" chance="0.1" />
+        <item item="Toolkit" chance="0.1" />
+        <item item="Survivor Kit" chance="0.1" />
+        <item item="Medical Kit" chance="0.2" />
     </loot>
 </map>

@@ -1,0 +1,16 @@
+<item name="Medical Kit" type="container">
+    <properties>
+        <capacity value="5" />
+        <sprite file="medical_kit.png" />
+    </properties>
+    <loot>
+        <item name="Medical Bandage" chance="0.3" />
+        <item name="Infection Pills" chance="0.3" />
+        <item name="Medical Bandage" chance="0.3" />
+        <item name="Vaccine" chance="0.3" />
+        <item name="Alcohol Bottle" chance="0.3" />
+        <item name="Scissor" chance="0.3" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

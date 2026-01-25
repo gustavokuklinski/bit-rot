@@ -14,5 +14,8 @@
         <item item="Alcohol Bottle" chance="0.1" />
         <item item="Medical Bandage" chance="0.3" />
         <item item="Medicine Vol.1" chance="0.2" />
+        <item item="Survivor Guide Basic" chance="0.2" />
+        <item item="Vehicle Engineering Vol.1" chance="0.2" />
+        <item item="Vehicle Engineering Vol.2" chance="0.2" />
     </loot>
 </map>

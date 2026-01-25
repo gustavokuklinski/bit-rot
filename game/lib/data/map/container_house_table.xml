@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Magazine (General content)" chance="0.6" />
+        <item item="Magazine (General content)" chance="0.2" />
         <item item="Canned Food" chance="0.1" />
         <item item="Water Bottle" chance="0.1" />
         <item item="Batton" chance="0.1" />
@@ -14,7 +14,17 @@
         <item item="Energy Drink" chance="0.1" />
         <item item="Cola Drink" chance="0.1" />
         <item item="Sparkling Water" chance="0.1" />
-        <item item="Duck Tape" chance="0.2" />
-        <item item="Baseball Bat" chance="0.2" />
+        <item item="Duck Tape" chance="0.1" />
+        <item item="Hammer" chance="0.1" />
+        <item item="Nails" chance="0.1" />
+        <item item="Screws" chance="0.1" />
+        <item item="Baseball Bat" chance="0.1" />
+        <item item="Medicine Vol.1" chance="0.1" />
+        <item item="Survivor Guide Basic" chance="0.1" />
+        <item item="Vehicle Engineering Vol.1" chance="0.1" />
+        <item item="Vehicle Engineering Vol.2" chance="0.1" />
+        <item item="Sewing Kit" chance="0.1" />
+        <item item="Car Key Jeep" chance="0.1" />
+        <item item="Car Key Pickup" chance="0.1" />
     </loot>
 </map>

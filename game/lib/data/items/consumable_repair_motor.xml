@@ -6,8 +6,5 @@
         <capacity value="5" />
         <sprite file="motor_repair_kit.png" />
     </properties>
-    <repair>
-        <item name="Car Engine" />
-    </repair>
     <spawn chance="1" />
 </item>

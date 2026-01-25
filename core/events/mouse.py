@@ -133,7 +133,10 @@ def handle_mouse_down(game, event, mouse_pos):
                         topmost_modal['is_dragging_scrollbar'] = True
                         topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
                         return
-
+                # [FIX] Specific Modal Logic (Correctly checking for instance)
+                if 'instance' in topmost_modal and hasattr(topmost_modal['instance'], 'handle_event'):
+                    if topmost_modal['instance'].handle_event(event): 
+                        return
                 # Tabs
                 if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
@@ -220,6 +223,8 @@ def handle_mouse_down(game, event, mouse_pos):
             slot_rect = get_belt_hud_slot_rect(i)
             if slot_rect.collidepoint(mouse_pos):
                 if item:
+                    if game.player.action_timer > 0:
+                        return
                     game.drag_candidate = (item, (i, 'belt'))
                     game.drag_start_pos = mouse_pos
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
@@ -1204,7 +1209,7 @@ def handle_context_menu_click(game, mouse_pos):
                     game.player.reload_utility_item(item, source, index, container_item)
                 else:
                     game.player.reload_active_weapon(game=game)
-            elif option == 'Repair': game.player.repair_item(game, item)
+
             elif option == 'Get bullets': game.player.unload_weapon(game, item)
             elif option == 'Turn on' or option == 'Turn off': game.player.toggle_utility_item(item, source, index, container_item)
             
@@ -1758,6 +1763,8 @@ def handle_right_click(game, mouse_pos):
 
 
 def handle_left_click_drag_candidate(game, mouse_pos):
+    if game.player.action_timer > 0:
+        return
     topmost_modal = None
     for modal in reversed(game.modals):
         if modal['rect'].collidepoint(mouse_pos):

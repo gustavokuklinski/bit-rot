@@ -4,21 +4,23 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Water Bottle" chance="0.2" />
-        <item item="Knife" chance="0.2" />
-        <item item="Batton" chance="0.2" />
-        <item item="Matches" chance="0.2" />
-        <item item="Lantern off" chance="0.2" />
+        <item item="Water Bottle" chance="0.1" />
+        <item item="Knife" chance="0.1" />
+        <item item="Batton" chance="0.1" />
+        <item item="Matches" chance="0.1" />
+        <item item="Lantern off" chance="0.1" />
         <item item="Vaccine" chance="0.1" />
         <item item="Medkit" chance="0.1" />
-        <item item="Duck Tape" chance="0.2" />
+        <item item="Duck Tape" chance="0.1" />
         <item item="38 Revolver" chance="0.1" />
         <item item="38 Ammo" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
         <item item="Car Key Jeep" chance="0.1" />
         <item item="Sleeping Bag" chance="0.1" />
         <item item="Camp Tent" chance="0.1" />
-        <item item="Baseball Bat" chance="0.2" />
-        
+        <item item="Baseball Bat" chance="0.1" />
+        <item item="Screws" chance="0.1" />
+        <item item="Nails" chance="0.1" />
+        <item item="Hammer" chance="0.1" />
     </loot>
 </map>

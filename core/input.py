@@ -24,6 +24,16 @@ def handle_movement(game):
         game.player.is_running = False
         return
 
+    # [ADDED] Block movement if any modal has an active search bar (e.g. Crafting)
+    for modal in game.modals:
+        if 'instance' in modal:
+            # Check if the modal instance has 'search_active' set to True
+            if getattr(modal['instance'], 'search_active', False):
+                game.player.vx = 0
+                game.player.vy = 0
+                game.player.is_running = False
+                return
+
     keys = pygame.key.get_pressed()
     mouse_buttons = pygame.mouse.get_pressed()
     current_speed = 0

@@ -7,8 +7,6 @@
     </properties>
     <drop>
         <item item="Log" chance="1" />
-        <item item="Log" chance="1" />
-        <item item="Log" chance="1" />
     </drop>
     <sound src="chop_tree.ogg" />
 </map>

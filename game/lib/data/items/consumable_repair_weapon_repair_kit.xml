@@ -6,14 +6,5 @@
         <capacity value="5" />
         <sprite file="weapon_repair_kit.png" />
     </properties>
-    <repair>
-        <item name="38 Revolver" />
-        <item name="Pistol 9mm" />
-        <item name="Shotgun" />
-        <item name="Double Barrel Shotgun" />
-        <item name="MPK5" />
-        <item name="MAC10" />
-        <item name="M4A1" />
-    </repair>
     <spawn chance="1" />
 </item>

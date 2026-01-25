@@ -1,0 +1,16 @@
+<item name="Sewing Kit" type="container">
+    <properties>
+        <capacity value="5" />
+        <sprite file="sewing_kit.png" />
+    </properties>
+    <loot>
+        <item name="Needle" chance="0.3" />
+        <item name="Line Twine" chance="0.3" />
+        <item name="Ragged Cloth" chance="0.3" />
+        <item name="Leather Piece" chance="0.3" />
+        <item name="Denim Stripes" chance="0.3" />
+        <item name="Scissor" chance="0.3" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

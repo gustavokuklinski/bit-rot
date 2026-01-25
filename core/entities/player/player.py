@@ -972,19 +972,8 @@ class Player:
             if item.item_type == 'weapon_ranged':
                 options.append('Reload')
             
-            if item.durability is not None and item.durability < item.max_durability:
-                kit, _, _, _ = self.find_repair_kit(item)
-                if kit:
-                    options.append('Repair')
-
             if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0:
                 options.append('Get bullets')
-
-        elif item.item_type in ['car_motor']:
-            if item.durability is not None and item.durability < item.max_durability:
-                kit, _, _, _ = self.find_repair_kit(item)
-                if kit:
-                    options.append('Repair')
 
         elif item.item_type == 'container':
             options.append('Open')

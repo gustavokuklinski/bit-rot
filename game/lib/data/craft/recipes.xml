@@ -1,53 +1,126 @@
 <recipes>
-    <recipe type="resource" output="Line Twine" amount="10" time="3.0">
+    <recipe type="weapon_ranged" craft="repair" output="Pistol 9mm" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="Pistol 9mm" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="38 Revolver" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="38 Revolver" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="Shotgun" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="Shotgun" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="Double Barrel Shotgun" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="Double Barrel Shotgun" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="MPK5" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="MPK5" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="MAC10" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="MAC10" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_ranged" craft="repair" output="M4A1" amount="1" time="2.0">
+        <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+        <ingredient name="M4A1" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Axe" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Axe" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Knife" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Knife" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Batton" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Batton" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Baseball Bat" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Baseball Bat" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Baseball Bat with Nails" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Baseball Bat with Nails" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Hammer" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Hammer" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Screwdriver" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Screwdriver" destroy="false" amount="1" />
+    </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Scissor" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Scissor" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="car_motor" craft="repair" output="Car Engine" amount="1" time="2.0">
+        <ingredient name="Motor Repair Kit" destroy="true" amount="1" />
+        <ingredient name="Car Engine" destroy="false" amount="1" />
+    </recipe>
+
+
+    <!-- Crafts -->
+    <recipe type="weapon_melee" craft="create" output="Baseball Bat with Nails" amount="1" time="2.0">
+        <ingredient name="Nails" destroy="true" amount="5" />
+        <ingredient name="Hammer" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="resource" craft="create" output="Line Twine" amount="10" time="3.0">
         <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
         <ingredient name="Scissor" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="resource" output="Plank" amount="5" time="4.0">
+    <recipe type="resource" craft="create" output="Plank" amount="5" time="4.0">
         <ingredient name="Log" destroy="true" amount="1" />
-        <ingredient name="Saw" destroy="false" amount="1" />
+        <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="resource" output="Stick" amount="5" time="3.0">
+    <recipe type="resource" craft="create" output="Stick" amount="5" time="3.0">
         <ingredient name="Plank" destroy="true" amount="1" />
-        <ingredient name="Saw" destroy="false" amount="1" />
+        <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="resource" output="Ragged Cloth" amount="4" time="1.0">
+    <recipe type="resource" craft="create" output="Ragged Cloth" amount="4" time="1.0">
         <ingredient name="[Military Tshirt, Medical Pants, Medical Vest, Blue Tshirt, Balaclava, Ironmaiden Tshirt, Black Tshirt, Red Tshirt, Green Tshirt, Pink Tshirt, Medical Tshirt, Grey Tshirt, Yellow Tshirt]" destroy="true" amount="1" />
     </recipe>
 
-    <recipe type="resource" output="Denim Stripes" amount="2" time="1.5">
+    <recipe type="resource" craft="create" output="Denim Stripes" amount="2" time="1.5">
         <ingredient name="[Military Pants, Black Hat, Beret, Military Jacket, Jens Pants, Blue Pants, Jeans Short, Blue Sneakers, Black Sneakers, Red Sneakers, Pink Sneakers, Grey Sneakers, Green Sneakers, Yellow Sneakers]" destroy="true" amount="1" />
         <ingredient name="Scissor" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="resource" output="Leather Piece" amount="2" time="2.5">
-        <ingredient name="[Leather Pants, Leather Jacket, Leather Gloves, Military Boots]" destroy="true" amount="1" />
+    <recipe type="resource" craft="create" output="Leather Piece" amount="2" time="2.5">
+        <ingredient name="[Leather Black Pants, Leather Black Jacket, Leather Black Gloves, Military Boots]" destroy="true" amount="1" />
         <ingredient name="Scissor" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="backpack" output="Bag" magazine="Survivor Guide Basic" amount="1" time="4.5">
+    <recipe type="backpack" craft="create" output="Bag" magazine="Survivor Guide Basic" amount="1" time="4.5">
         <ingredient name="Ragged Cloth" destroy="true" amount="8" />
         <ingredient name="Line Twine" destroy="true" amount="4" />
         <ingredient name="Needle" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="camp" output="Sleeping Bag" magazine="Survivor Guide Basic" amount="1" time="7.0">
+    <recipe type="camp" craft="create" output="Sleeping Bag" magazine="Survivor Guide Basic" amount="1" time="7.0">
         <ingredient name="Denim Stripes" destroy="true" amount="15" />
         <ingredient name="Line Twine" destroy="true" amount="10" />
         <ingredient name="Needle" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="camp" output="Camp Tent" magazine="Survivor Guide Basic" amount="1" time="10.0">
+    <recipe type="camp" craft="create" output="Camp Tent" magazine="Survivor Guide Basic" amount="1" time="10.0">
         <ingredient name="[Leather Piece, Denim Stripes]" destroy="true" amount="4" />
         <ingredient name="Line Twine" destroy="true" amount="20" />
         <ingredient name="Stick" destroy="true" amount="4" />
         <ingredient name="Needle" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="consumable_repair" output="Motor Repair Kit" magazine="Vehicle Engineering Vol.1" amount="1" time="30.0">
+    <recipe type="consumable_repair" craft="create" output="Motor Repair Kit" magazine="Vehicle Engineering Vol.1" amount="1" time="30.0">
         <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
         <ingredient name="Screwdriver" destroy="true" amount="1" />
         <ingredient name="Screws" destroy="true" amount="10" />
@@ -55,25 +128,25 @@
         <ingredient name="Engine Parts" destroy="true" amount="5" />
     </recipe>
 
-    <recipe type="resource" output="Engine Parts" magazine="Vehicle Engineering Vol.1" amount="5" time="60.0">
+    <recipe type="resource" craft="create" output="Engine Parts" magazine="Vehicle Engineering Vol.1" amount="5" time="60.0">
         <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
         <ingredient name="Screwdriver" destroy="true" amount="1" />
         <ingredient name="Car Engine" destroy="true" amount="10" />
     </recipe>
 
-    <recipe type="car_motor" output="Car Engine" magazine="Vehicle Engineering Vol.2" amount="1" time="50.0">
+    <recipe type="car_motor" craft="create" output="Car Engine" magazine="Vehicle Engineering Vol.2" amount="1" time="50.0">
         <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
         <ingredient name="Screwdriver" destroy="true" amount="1" />
         <ingredient name="Car Oil" destroy="true" amount="3" />
         <ingredient name="Engine Parts" destroy="true" amount="10" />
     </recipe>
 
-    <recipe type="consumable_medication" magazine="Survivor Guide Basic" output="Medical Bandage" amount="2" time="1.0">
+    <recipe type="consumable_medication" craft="create" magazine="Survivor Guide Basic" output="Medical Bandage" amount="2" time="1.0">
         <ingredient name="Ragged Cloth" destroy="true" amount="2" />
         <ingredient name="Alcohol Bottle" destroy="true" amount="1" />
     </recipe>
 
-    <recipe type="consumable_medication" magazine="Medicine Vol.1" output="Medkit" amount="1" time="2.0">
+    <recipe type="consumable_medication" craft="create" magazine="Medicine Vol.1" output="Medkit" amount="1" time="2.0">
         <ingredient name="Medical Bandage" destroy="true" amount="2" />
         <ingredient name="Alcohol Bottle" destroy="true" amount="1" />
     </recipe>

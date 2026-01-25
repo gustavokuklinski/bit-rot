@@ -4,8 +4,17 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Car Fuel" chance="0.5" />
-        <item item="Duck Tape" chance="0.5" />
+        <item item="Car Fuel" chance="0.3" />
+        <item item="Duck Tape" chance="0.3" />
         <item item="Motor Repair Kit" chance="0.3" />
+        <item item="Screws" chance="0.3" />
+        <item item="Engine Parts" chance="0.3" />
+        <item item="Car Oil" chance="0.3" />
+        <item item="Ragged Cloth" chance="0.3" />
+        <item item="Car Key Jeep" chance="0.1" />
+        <item item="Car Key Pickup" chance="0.1" />
+        <item item="Screwdriver" chance="0.3" />
+        <item item="Wrench" chance="0.3" />
+        <item item="Lug Wrench" chance="0.3" />
     </loot>
 </map>

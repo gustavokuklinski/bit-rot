@@ -18,5 +18,20 @@
         <item item="Powerbank" chance="0.1" />
         <item item="Sleeping Bag" chance="0.1" />
         <item item="Camp Tent" chance="0.1" />
+        <item item="Toolkit" chance="0.1" />
+        <item item="Survivor Kit" chance="0.1" />
+        <item item="Medical Kit" chance="0.1" />
+        <item item="Sewing Kit" chance="0.1" />
+        <item item="Screwdriver" chance="0.1" />
+        <item item="Wrench" chance="0.1" />
+        <item item="Lug Wrench" chance="0.1" />
+        <item item="Saw" chance="0.1" />
+        <item item="Screws" chance="0.1" />
+        <item item="Nails" chance="0.1" />
+        <item item="Hammer" chance="0.1" />
+        <item item="Knife" chance="0.1" />
+        <item item="Axe" chance="0.1" />
+        <item item="Portable Hand Saw" chance="0.1" />
+        <item item="Cigarette" chance="0.1" />
     </loot>
 </map>

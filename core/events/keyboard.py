@@ -5,6 +5,7 @@ from core.data.config import *
 from core.events.game_actions import try_grab_item
 from core.ui.crafting_modal import CraftingModal
 
+# ... (Previous toggle functions remain unchanged) ...
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
     for modal in game.modals:
@@ -115,7 +116,6 @@ def toggle_crafting_modal(game):
             crafting_modal_exists = True
             break
     if not crafting_modal_exists:
-        # [FIX] 1. Create the modal data dictionary first
         modal_data = {
             'id': uuid.uuid4(),
             'type': 'crafting',
@@ -130,27 +130,20 @@ def toggle_crafting_modal(game):
             'minimized': False
         }
         
-        # [FIX] 2. Instantiate the CraftingModal class
-        # We try to get 'screen' and 'assets' from game, with safety fallbacks
         screen = getattr(game, 'screen', pygame.display.get_surface())
         assets = getattr(game, 'assets', {})
         
         crafting_instance = CraftingModal(screen, modal_data, assets, game)
-        
-        # [FIX] 3. Attach the instance to the modal dictionary
-        # This ensures modal['instance'] exists for mouse.py to use
         modal_data['instance'] = crafting_instance
         
         game.modals.append(modal_data)
 
 def find_closest_vehicle(game):
-    """Finds the closest vehicle within 1.5 tiles (interaction range)."""
     closest_vehicle = None
     closest_dist = float('inf')
     
     if not game.player: return None
     
-    # Vehicles are stored in game.containers
     for entity in game.containers: 
         if hasattr(entity, 'item_type') and entity.item_type == 'vehicle':
             dist = math.hypot(game.player.rect.centerx - entity.rect.centerx, game.player.rect.centery - entity.rect.centery)
@@ -158,7 +151,7 @@ def find_closest_vehicle(game):
                 closest_dist = dist
                 closest_vehicle = entity
                 
-    if closest_vehicle and closest_dist <= TILE_SIZE * 1.5: # Interaction threshold
+    if closest_vehicle and closest_dist <= TILE_SIZE * 1.5: 
         return closest_vehicle
     return None
 
@@ -171,9 +164,15 @@ def toggle_pause(game):
         game.game_state = 'PLAYING'
 
 
-
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
+        # [ADDED] Check if a top modal wants to handle the event (e.g. Search Bar)
+        if game.modals:
+            top_modal = game.modals[-1]
+            if 'instance' in top_modal and hasattr(top_modal['instance'], 'handle_event'):
+                if top_modal['instance'].handle_event(event):
+                    return
+
         # --- Global Keys ---
         if event.key == pygame.K_F2:
             toggle_pause(game)
@@ -190,7 +189,6 @@ def handle_keyboard_events(game, event):
         # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:
             if event.key == pygame.K_RETURN:
-                # Send message
                 if game.chat_input_text.strip():
                     game.player.chat_text = game.chat_input_text
                     game.player.chat_timer = game.player.chat_duration
@@ -198,10 +196,8 @@ def handle_keyboard_events(game, event):
                     from core.messages import display_message_player
                     display_message_player(game, f"{game.player.name}: {game.chat_input_text}")
                 
-                # Clear text and deactivate input mode, but keep modal open
                 game.chat_input_text = ""
                 game.chat_active = False
-                # REMOVED: toggle_messages_modal(game) to keep it open
 
             elif event.key == pygame.K_BACKSPACE:
                 game.chat_input_text = game.chat_input_text[:-1]
@@ -210,19 +206,16 @@ def handle_keyboard_events(game, event):
                 game.chat_active = False
                 
             else:
-                # Type characters
                 if len(game.chat_input_text) < 50:
                     game.chat_input_text += event.unicode
             
-            return # CRITICAL: Return here prevents walking/interacting while typing
+            return 
 
         # --- 2. GAMEPLAY KEYS (Only if Chat is NOT active) ---
         if game.game_state == 'PLAYING':
             
-            # Open Chat
             if event.key == pygame.K_RETURN or event.key == pygame.K_t:
                 game.chat_active = True
-                # Ensure window opens if it isn't already
                 if not any(m['type'] == 'messages' for m in game.modals):
                     toggle_messages_modal(game)
                 return
@@ -245,7 +238,6 @@ def handle_keyboard_events(game, event):
                     game.player.reload_active_weapon(game=game)
 
             if event.key == pygame.K_q:
-                # 1. Check if a vehicle modal is open
                 vehicle_found = find_closest_vehicle(game)
                 for modal in game.modals:
                     if modal['type'] == 'vehicle':
@@ -280,7 +272,6 @@ def handle_keyboard_events(game, event):
                         game.player.active_weapon = None
                         print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
 
-            # Zoom controls
             zoom_step = 0.1
             if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 
                 game.zoom_level += zoom_step

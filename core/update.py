@@ -14,7 +14,6 @@ from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies
 from core.messages import display_message_zombie, display_message_player
 
-# ... [Keep imports and helper functions: build_obstacle_grid, get_nearby_obstacles, build_zombie_grid, get_nearby_zombies] ...
 
 def build_obstacle_grid(obstacles, grid_size):
     """

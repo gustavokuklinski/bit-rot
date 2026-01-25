@@ -14,6 +14,9 @@
         <item item="Car Fuel" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
         <item item="Motor Repair Kit" chance="0.1" />
+        <item item="Toolkit" chance="0.3" />
+        <item item="Survivor Kit" chance="0.2" />
+        <item item="Medical Kit" chance="0.2" />
     </loot>
     <visuals>
         <sprite file="car_jeep.png" />
