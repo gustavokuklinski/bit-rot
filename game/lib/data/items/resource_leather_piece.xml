@@ -1,0 +1,8 @@
+<item name="Leather Piece" type="resource">
+    <properties>
+        <load min="1" max="20" />
+        <capacity value="20" />
+        <sprite file="leather_piece.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -7,7 +7,8 @@ class Recipe:
         self.output_name = output_name
         self.magazine = magazine
         self.time_required = float(time_required)
-        self.ingredients = ingredients # List of dicts: {'name': str, 'amount': int, 'destroy': bool}
+        # Updated: ingredients now stores 'names' as a list of strings
+        self.ingredients = ingredients # List of dicts: {'names': list[str], 'amount': int, 'destroy': bool}
         self.output_amount = int(output_amount)
 
 class RecipeManager:
@@ -33,11 +34,24 @@ class RecipeManager:
 
             ingredients = []
             for ing_node in recipe_node.findall('ingredient'):
+                raw_name = ing_node.get('name')
+                
+                # --- CHANGED: Parsing logic for multiple items ---
+                if raw_name.startswith('[') and raw_name.endswith(']'):
+                    # It's a list: "[A, B, C]" -> ['A', 'B', 'C']
+                    # Remove brackets, split by comma, and strip whitespace around names
+                    names_list = [n.strip() for n in raw_name[1:-1].split(',')]
+                else:
+                    # It's a single item: "A" -> ['A']
+                    # Wrap in a list to maintain consistent data structure
+                    names_list = [raw_name]
+                
                 ingredients.append({
-                    'name': ing_node.get('name'),
+                    'names': names_list, # Changed key from 'name' to 'names'
                     'amount': int(ing_node.get('amount', 1)),
                     'destroy': ing_node.get('destroy', 'true').lower() == 'true'
                 })
+                # -------------------------------------------------
 
             recipe = Recipe(output_name, magazine, time_required, ingredients, output_amount)
             RecipeManager.RECIPES.append(recipe)

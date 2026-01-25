@@ -27,7 +27,14 @@ def load_trait_definitions():
             except ValueError:
                 cost = 0
                 
-            trait_data = {'cost': cost, 'stats': {}, 'attributes': {}, 'recipes': []}
+            trait_data = {
+                'cost': cost, 
+                'stats': {}, 
+                'attributes': {}, 
+                'recipes': [],
+                'name': trait_node.get('name', trait_id), # Default to ID if name missing
+                'tooltip': trait_node.get('tooltip')      # Capture tooltip text
+            }
             
             # Parse 'stats' modifiers (e.g., infection, stamina)
             stats_node = trait_node.find('stats')

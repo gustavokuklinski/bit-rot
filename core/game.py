@@ -906,7 +906,7 @@ class Game:
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         # starter_items = ["ID", "Mobile off"]
-        starter_items = ["Medicine Vol.1", "Alcohol Bottle","Medical Bandage"]
+        starter_items = ["Axe", "Survivor Kit", "Wallet"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

@@ -1,0 +1,8 @@
+<item name="Survivor Guide Basic" type="recipe">
+    <properties>
+        <load min="1" max="1" />
+        <capacity value="10" />
+        <sprite file="magazine_survivor_guide.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

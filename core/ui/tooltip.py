@@ -7,9 +7,13 @@ def draw_tooltip(surface, item, pos):
         return
 
     lines = [item.name]
+
+    if hasattr(item, 'tooltip_text') and item.tooltip_text:
+        lines.append(item.tooltip_text)
+        
     if item.item_type:
         lines.append(f"Type: {item.item_type}")
-        
+
     if item.item_type == 'recipe':
         # Ensure recipes are loaded if checking from main menu or early state
         if not RecipeManager.RECIPES:

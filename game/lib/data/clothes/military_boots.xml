@@ -1,4 +1,4 @@
-<cloth name="Military Boots" type="cloth" id="feet">
+<cloth name="Military Boots" type="cloth" id="feet" builder="true">
     <properties>
         <defence value="5" />
         <speed value="0.5" />

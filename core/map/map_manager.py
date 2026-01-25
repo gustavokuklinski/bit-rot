@@ -2,15 +2,20 @@ import os
 import re
 import pygame
 import random
+import time
 from core.data.config import *
 from core.messages import display_message_player
+from core.entities.item.item import Item
+from core.placement import find_free_tile
+
 class MapManager:
     def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game
         self.map_folder = map_folder
         self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
         self.map_files = self._discover_maps()
-    
+        self.shaking_tiles = {}
+
     def refresh_maps(self):
         """Re-scans the map folder and updates the map_files list."""
         print("Refreshing map file list...")
@@ -215,3 +220,150 @@ class MapManager:
 
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
+    
+    def hit_tile(self, grid_x, grid_y, damage, weapon=None):
+        if not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
+            return False
+
+        char = self.game.map_data[grid_y][grid_x]
+        definition = self.game.tile_manager.definitions.get(char)
+        
+        if not definition or not definition.get('destructible'):
+            return False
+
+        if not weapon or "Axe" not in weapon.name:
+             display_message_player("You need an axe to chop this.")
+             return True 
+        
+        STAMINA_COST = 0.5
+        if self.game.player.stamina < STAMINA_COST:
+            display_message_player("You are too exhausted to chop!")
+            return True
+
+        # [ADDED] Apply Fatigue and Stamina Loss
+        self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
+        self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
+
+        # [ADDED] Apply Weapon Durability Loss
+        if weapon and weapon.durability is not None:
+            DURABILITY_COST = 0.7
+            weapon.durability = max(0, weapon.durability - DURABILITY_COST)
+            if weapon.durability <= 0:
+                display_message_player(f"Your {weapon.name} broke!")
+                self.game.player.destroy_broken_weapon(weapon)
+                return True
+        
+
+        if definition.get('sound_src'):
+            tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            self.game.sound_manager.play_sound(
+                definition['sound_src'],
+                subdir='map', # As requested: game/lib/sfx/map/
+                game=self.game,
+                source_pos=tile_rect.center,
+                base_volume=random.uniform(0.2, 0.7)
+            )
+
+        self.shaking_tiles[(grid_x, grid_y)] = time.time()
+
+        map_name = self.current_map_filename
+        if map_name not in self.game.map_states:
+            self.game.map_states[map_name] = {}
+        if 'tile_health' not in self.game.map_states[map_name]:
+            self.game.map_states[map_name]['tile_health'] = {}
+        
+        pos_key = (grid_x, grid_y)
+        if pos_key not in self.game.map_states[map_name]['tile_health']:
+            self.game.map_states[map_name]['tile_health'][pos_key] = random.randint(
+                definition.get('health_min', 60), 
+                definition.get('health_max', 100)
+            )
+        
+        self.game.map_states[map_name]['tile_health'][pos_key] -= damage
+        current_hp = self.game.map_states[map_name]['tile_health'][pos_key]
+        display_message_player(f"Chop! ({max(0, current_hp)} HP left)")
+        
+        if current_hp <= 0:
+            # 1. Clear health state
+            del self.game.map_states[map_name]['tile_health'][pos_key]
+            
+            if (grid_x, grid_y) in self.shaking_tiles:
+                del self.shaking_tiles[(grid_x, grid_y)]
+
+            # 2. [CHANGED] Remove the Tile FIRST to clear the obstacle
+            try:
+                ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
+            except (KeyError, IndexError):
+                ground_char = "." 
+
+            self._replace_tile(grid_x, grid_y, char, ground_char)
+
+            # 3. [CHANGED] NOW drop the items (since the tile is free)
+            if 'drops' in definition:
+                for drop in definition['drops']:
+                     if random.random() <= drop['chance']:
+                         qty = random.randint(drop.get('min_qty', 1), drop.get('max_qty', 1))
+                         for _ in range(qty):
+                             item = Item.create_from_name(drop['item'])
+                             if item:
+                                 # Spawn exact center of the now-empty tile
+                                 center_x = grid_x * TILE_SIZE + TILE_SIZE // 2
+                                 center_y = grid_y * TILE_SIZE + TILE_SIZE // 2
+                                 item.rect.center = (center_x, center_y)
+                                 
+                                 # We still check find_free_tile to handle items stacking or other nearby obstacles
+                                 if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
+                                     self.game.items_on_ground.append(item)
+                                 else:
+                                     print(f"Warning: Could not place dropped item {item.name}")
+                             else:
+                                 print(f"Warning: Drop item '{drop['item']}' not found in templates.")
+
+        return True
+
+    def _replace_tile(self, grid_x, grid_y, old_char, new_char):
+        new_def = self.game.tile_manager.definitions.get(new_char)
+        old_def = self.game.tile_manager.definitions.get(old_char)
+        if not new_def or not old_def: return
+
+        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        # 1. Update Map Data
+        self.game.map_data[grid_y][grid_x] = new_char
+        
+        # 2. Update Obstacles
+        self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
+        if new_def['is_obstacle']:
+            self.game.obstacles.append(tile_rect)
+            
+        # 3. Update Visual Cache
+        original_image = old_def['image'] 
+        tiles_to_redraw = []
+        
+        for i, (img, rect) in enumerate(self.game.renderable_tiles):
+            if rect.colliderect(tile_rect):
+                if rect == tile_rect and img == original_image:
+                    self.game.renderable_tiles[i] = (new_def['image'], rect)
+                    tiles_to_redraw.append((new_def['image'], rect))
+                else:
+                    tiles_to_redraw.append((img, rect))
+        
+        if hasattr(self.game, '_tile_cache_surface') and self.game._tile_cache_surface:
+            try:
+                origin_x, origin_y = self.game._tile_cache_world_origin
+                cache_rect = pygame.Rect(
+                    tile_rect.x - origin_x, 
+                    tile_rect.y - origin_y, 
+                    tile_rect.width, 
+                    tile_rect.height
+                )
+                self.game._tile_cache_surface.fill(PANEL_COLOR, cache_rect)
+                for img, r in tiles_to_redraw:
+                    draw_pos = (r.x - origin_x, r.y - origin_y)
+                    self.game._tile_cache_surface.blit(img, draw_pos)
+                self.game.dynamic_tiles_dirty = False
+            except Exception as e:
+                print(f"Error patching tile cache: {e}")
+                self.game.dynamic_tiles_dirty = True
+        else:
+            self.game.dynamic_tiles_dirty = True

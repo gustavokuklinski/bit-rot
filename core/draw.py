@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+import time
 from core.data.config import *
 import core.data.config
 from core.entities.item.item import Item
@@ -127,6 +128,41 @@ def draw_game(game):
         source_rect_on_cache = pygame.Rect(source_x, source_y, view_w, view_h)
         world_view_surface.blit(game._tile_cache_surface, (0, 0), source_rect_on_cache)
     # >>> END TILE RENDERING OPTIMIZATION <<<
+
+
+    current_time = time.time()
+    tiles_to_remove = []
+    
+    for (grid_x, grid_y), start_time in game.map_manager.shaking_tiles.items():
+        if current_time - start_time > 0.2:
+            tiles_to_remove.append((grid_x, grid_y))
+            continue
+            
+        tile_def = game.map_manager.get_tile_at(grid_x, grid_y)
+        if tile_def and tile_def.get('image'):
+            screen_x = grid_x * TILE_SIZE + offset_x
+            screen_y = grid_y * TILE_SIZE + offset_y
+            
+            # Optimization: Don't animate if off-screen
+            if -TILE_SIZE < screen_x < view_w and -TILE_SIZE < screen_y < view_h:
+                # 1. Erase static tree (draw ground over it)
+                try:
+                    layer_idx = getattr(game, 'current_layer_index', 0)
+                    if hasattr(game, 'all_ground_layers'):
+                        ground_char = game.all_ground_layers[layer_idx][grid_y][grid_x]
+                        ground_def = game.tile_manager.definitions.get(ground_char)
+                        if ground_def:
+                            world_view_surface.blit(ground_def['image'], (screen_x, screen_y))
+                except Exception: pass
+
+                # 2. Draw Shaking Tree
+                shake_x = random.randint(-2, 2)
+                shake_y = random.randint(-2, 2)
+                world_view_surface.blit(tile_def['image'], (screen_x + shake_x, screen_y + shake_y))
+
+    for k in tiles_to_remove:
+        del game.map_manager.shaking_tiles[k]
+
 
     # --- [MOVED] Draw Persistent Blood Stains (Decals) ---
     # Moved here so they appear on the ground, below entities

@@ -127,6 +127,13 @@ def handle_mouse_down(game, event, mouse_pos):
                     topmost_modal['scrollbar_drag_last_y'] = mouse_pos[1] 
                     return
 
+                if topmost_modal['type'] == 'crafting':
+                    handle_rect = topmost_modal.get('crafting_handle_rect')
+                    if handle_rect and handle_rect.collidepoint(mouse_pos):
+                        topmost_modal['is_dragging_scrollbar'] = True
+                        topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
+                        return
+
                 # Tabs
                 if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
@@ -221,6 +228,25 @@ def handle_mouse_down(game, event, mouse_pos):
         # Attack / World Interaction
         if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
             handle_attack(game, mouse_pos)
+            return
+
+    elif event.button in (4, 5):
+        topmost_modal = None
+        for modal in reversed(game.modals):
+            if modal['rect'].collidepoint(mouse_pos):
+                topmost_modal = modal
+                break
+        
+        if topmost_modal and topmost_modal['type'] == 'crafting':
+            offset = topmost_modal.get('crafting_scroll_offset', 0)
+            total = topmost_modal.get('crafting_total_items', 0)
+            visible = topmost_modal.get('crafting_visible_items', 14)
+            max_scroll = max(0, total - visible)
+            
+            if event.button == 4: # Scroll Up
+                topmost_modal['crafting_scroll_offset'] = max(0, offset - 1)
+            elif event.button == 5: # Scroll Down
+                topmost_modal['crafting_scroll_offset'] = min(max_scroll, offset + 1)
             return
 
     elif event.button == 3:
@@ -913,6 +939,35 @@ def handle_mouse_motion(game, event, mouse_pos):
         if container.rect.collidepoint(world_pos):
             game.hovered_container = container
             break
+
+    for modal in reversed(game.modals):
+        if modal.get('is_dragging_scrollbar') and modal['type'] == 'crafting':
+             track = modal.get('crafting_track_rect')
+             handle = modal.get('crafting_handle_rect')
+             
+             if track and handle:
+                 track_y = track.y
+                 track_h = track.height
+                 handle_h = handle.height
+                 
+                 # Calculate where the top of the handle should be
+                 click_offset = modal.get('scrollbar_click_offset_y', 0)
+                 target_handle_y = mouse_pos[1] - click_offset
+                 
+                 # Determine percentage within valid track area
+                 available_space = track_h - handle_h
+                 if available_space > 0:
+                     relative_y = target_handle_y - track_y
+                     pct = relative_y / available_space
+                     pct = max(0.0, min(1.0, pct))
+                     
+                     # Apply percentage to item index
+                     total = modal.get('crafting_total_items', 0)
+                     visible = modal.get('crafting_visible_items', 14)
+                     max_scroll = max(0, total - visible)
+                     
+                     modal['crafting_scroll_offset'] = int(pct * max_scroll)
+             return
 
     for modal in reversed(game.modals):
         if modal.get('is_dragging_scrollbar'):
@@ -1974,5 +2029,36 @@ def handle_attack(game, mouse_pos):
                                     display_message(game, f"You attacked {npc.name} for {damage} damage!")
                                     hit_something = True
                                     break 
+
+                if not hit_something:
+                     clicked_grid_x = int(world_pos[0] // TILE_SIZE)
+                     clicked_grid_y = int(world_pos[1] // TILE_SIZE)
+                     
+                     target_found = False
+                     
+                     # Check the clicked tile and 3 tiles below it (for tall trees)
+                     for offset_y in range(4): 
+                         target_y = clicked_grid_y + offset_y
+                         
+                         tile_def = game.map_manager.get_tile_at(clicked_grid_x, target_y)
+                         
+                         # Check specifically for your new flag
+                         if tile_def and tile_def.get('destructible'):
+                             
+                             # Calculate distance to the TRUNK (target_y), not the leaves
+                             tile_center_x = clicked_grid_x * TILE_SIZE + TILE_SIZE / 2
+                             tile_center_y = target_y * TILE_SIZE + TILE_SIZE / 2
+                             dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+                             
+                             if dist <= TILE_SIZE * 2:
+                                 damage = game.player.get_attack_damage()
+                                 # This will now return TRUE if it hits (even if it just says "Need Axe")
+                                 result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
+                                 if result:
+                                     hit_something = True
+                                     target_found = True
+                                     break 
+                             else:
+                                 print(f"Destructible target found at {clicked_grid_x},{target_y} but too far ({dist:.0f}px)")
 
                 if not hit_something: print("Swung and missed!")

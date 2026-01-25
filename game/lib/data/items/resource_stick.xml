@@ -1,0 +1,8 @@
+<item name="Stick" type="resource">
+    <properties>
+        <load min="1" max="10" />
+        <capacity value="10" />
+        <sprite file="stick.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

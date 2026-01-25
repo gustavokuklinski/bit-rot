@@ -1,110 +1,108 @@
 <traits>
-    <!-- Positive traits -->
-    <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% slower infection rate">
+    <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% Infection gain rate">
         <stats infection="-5" />
     </trait>
 
-    <trait id="athletic" name="Athletic"  cost="2" tooltip="+10% faster stamina recovery">
+    <trait id="athletic" name="Athletic"  cost="2" tooltip="+10% Stamina regeneration">
         <stats stamina="10" />
     </trait>
 
-    <trait id="strong" name="Strong" cost="2" tooltip="+2 level strong">
+    <trait id="strong" name="Strong" cost="2" tooltip="+2% Strength XP gain">
         <attributes strength="2" />
     </trait>
 
-    <trait id="luck" name="Luck" cost="2" tooltip="+2 level lucky">
+    <trait id="luck" name="Luck" cost="2" tooltip="+2% Luck">
         <attributes lucky="2" />
     </trait>
 
-    <trait id="runner" name="Runner" cost="2" tooltip="+2 level speed">
+    <trait id="runner" name="Runner" cost="2" tooltip="+2% Movement speed">
         <attributes speed="2" />
     </trait>
 
-    <trait id="healthy" name="Healthy"  cost="2" tooltip="+15% faster health recovery">
+    <trait id="healthy" name="Healthy"  cost="2" tooltip="+15% Health regeneration">
         <stats health="15" />
     </trait>
 
-    <trait id="rested" name="Rested" cost="1" tooltip="15% faster tireness recovery">
+    <trait id="rested" name="Rested" cost="1" tooltip="+15% Fatigue recovery rate">
         <stats tireness="15" />
     </trait>
 
-    <trait id="camel" name="Camel" cost="1" tooltip="20% faster water recovery">
+    <trait id="camel" name="Camel" cost="1" tooltip="-20% Thirst accumulation">
         <stats water="20" />
     </trait>
 
-    <trait id="iron_stomach" name="Iron Stomach" cost="1" tooltip="15% faster food recovery">
+    <trait id="iron_stomach" name="Iron Stomach" cost="1" tooltip="-15% Hunger accumulation">
         <stats food="15" />
     </trait>
 
-    <trait id="fit" name="Fit" cost="2" tooltip="+2 level fitness">
+    <trait id="fit" name="Fit" cost="2" tooltip="+2% Fitness XP gain">
         <attributes fitness="2" />
     </trait>
 
-    <trait id="brawler" name="Browler" cost="2" tooltip="+2 level melee">
+    <trait id="brawler" name="Brawler" cost="2" tooltip="+2% Melee XP gain">
         <attributes melee="2" />
     </trait>
 
-    <trait id="shooter" name="Shooter" cost="2" tooltip="+2 level ranged weapons">
+    <trait id="shooter" name="Shooter" cost="2" tooltip="+2% Ranged XP gain">
         <attributes ranged="2" />
     </trait>
 
-    <trait id="nurse" name="Nurse" cost="3" tooltip="Known basic medical reciples">
+    <trait id="nurse" name="Nurse" cost="3" tooltip="Starts with Medicine Vol.1 recipe">
         <recipe magazine="Medicine Vol.1" />
     </trait>
 
 
-    <!-- Negative traits -->
-    <trait id="weak" name="Weak" cost="-2" tooltip="-2 level strength">
+    <trait id="weak" name="Weak" cost="-2" tooltip="-2% Strength XP gain">
         <attributes strength="-2" />
     </trait>
 
-    <trait id="unlucky" name="Unlucky" cost="-2" tooltip="-1 level strength">
+    <trait id="unlucky" name="Unlucky" cost="-2" tooltip="-1% Luck">
         <attributes lucky="-1" />
     </trait>
 
-    <trait id="smoker" name="Smoker" cost="-1" tooltip="-15% slower recovery stamina and +15% faster increase anxiety">
+    <trait id="smoker" name="Smoker" cost="-1" tooltip="-15% Stamina regen, +15% Anxiety gain">
         <stats stamina="-15" anxiety="15" />
     </trait>
 
-    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15 speed penality and +15% faster increase anxiety">
+    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% Movement speed, +15% Anxiety gain">
         <attributes speed="-15" />
         <stats anxiety="15" />
     </trait>
 
-    <trait id="illnes" name="Illnes" cost="-1" tooltip="+15% infection rate">
+    <trait id="illnes" name="Illness" cost="-1" tooltip="+15% Infection gain rate">
         <stats infection="15" />
     </trait>
 
-    <trait id="sedentary" name="Sedentary" cost="-2">
+    <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-15% Stamina regen, -1% Strength XP gain">
         <stats stamina="-15" tireness="15" />
         <attributes strength="-1" />
     </trait>
 
-    <trait id="myopia" name="Myopia" cost="-1">
+    <trait id="myopia" name="Myopia" cost="-1" tooltip="-10% Ranged XP gain" >
         <attributes ranged="-10" />
     </trait>
 
-    <trait id="frail" name="Frail" cost="-2">
+    <trait id="frail" name="Frail" cost="-2" tooltip="-15% Health regeneration">
         <stats health="-15" />
     </trait>
 
-    <trait id="sleepy" name="Sleepy" cost="-1">
+    <trait id="sleepy" name="Sleepy" cost="-1" tooltip="-20% Fatigue recovery rate">
         <stats tireness="-20" />
     </trait>
 
-    <trait id="high_thirst" name="High thirst" cost="-1">
+    <trait id="high_thirst" name="High thirst" cost="-1" tooltip="+25% Thirst accumulation">
         <stats water="-25" />
     </trait>
 
-    <trait id="sweet_tooth" name="Sweet tooth" cost="-1">
+    <trait id="sweet_tooth" name="Sweet tooth" cost="-1" tooltip="+20% Hunger accumulation">
         <stats food="-20" />
     </trait>
 
-    <trait id="unfit" name="Unfit" cost="-2">
+    <trait id="unfit" name="Unfit" cost="-2"  tooltip="-2% Fitness XP gain">
         <attributes fitness="-2" />
     </trait>
 
-    <trait id="clumsy" name="Clumsy" cost="-2">
+    <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% Melee XP gain">
         <attributes melee="-2" />
     </trait>
 

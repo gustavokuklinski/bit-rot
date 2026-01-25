@@ -11,7 +11,8 @@ from core.entities.zombie.zombie import Zombie
 import random
 from faker import Faker
 fake = Faker()
-
+from types import SimpleNamespace
+from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.settings import _draw_settings_screen
 
@@ -376,6 +377,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         content_surface = game.virtual_screen.subsurface(drawable_traits_rect)
         content_surface.fill((30, 30, 30))
     else: content_surface = None
+    hovered_trait_id = None
     y_offset = 0 - scroll_offset_y
     if content_surface:
         for i, trait_name in enumerate(state['available_traits']):
@@ -384,6 +386,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
             add_btn_rect_rel = pygame.Rect(row_rect_rel.right - 25, row_rect_rel.y, 25, 25)
             add_btn_rect_abs = pygame.Rect(traits_content_rect.x + add_btn_rect_rel.x, traits_content_rect.y + add_btn_rect_rel.y, 25, 25)
             if row_rect_rel.bottom > 0 and row_rect_rel.top < traits_content_rect.height:
+                if row_rect_abs.collidepoint(mouse_pos):
+                    hovered_trait_id = trait_name
                 trait_cost = TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
                 name_surf = font.render(trait_name.capitalize(), True, WHITE)
@@ -468,6 +472,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
             # Draw if visible
             if row_rect_rel.bottom > 0 and row_rect_rel.top < chosen_content_rect.height:
+                if row_rect_abs.collidepoint(mouse_pos):
+                    hovered_trait_id = trait_name
                 pygame.draw.rect(content_surface, RED, remove_btn_rect_rel, border_radius=4)
                 content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + 7, remove_btn_rect_rel.y + 2))
                 content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
@@ -683,6 +689,24 @@ def _draw_player_build_screen(game, state, mouse_pos):
             game.virtual_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
             clickable_rects["game_config_options"].append((option_name, option_rect))
             y_offset += option_height
+
+    if hovered_trait_id:
+        trait_data = TRAIT_DEFINITIONS.get(hovered_trait_id)
+        if trait_data and trait_data.get('tooltip'):
+            # Create a lightweight object that looks like an Item to the tooltip function
+            # We initialize standard item fields to None to avoid AttributeErrors
+            t_item = SimpleNamespace(
+                name=trait_data.get('name', hovered_trait_id),
+                tooltip_text=trait_data.get('tooltip'),
+                item_type=None,
+                durability=None,
+                defence=None,
+                load=None,
+                min_damage=None,
+                max_damage=None,
+                ammo_type=None
+            )
+            draw_tooltip(game.virtual_screen, t_item, mouse_pos)
 
     return clickable_rects
 

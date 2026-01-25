@@ -1,0 +1,14 @@
+<item name="Survivor Kit" type="container">
+    <properties>
+        <capacity value="4" />
+        <sprite file="survivor_kit.png" />
+    </properties>
+    <loot>
+        <item name="Survivor Guide Basic" chance="1" />
+        <item name="Scissor" chance="1" />
+        <item name="Needle" chance="1" />
+        <item name="Alcohol Bottle" chance="1" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

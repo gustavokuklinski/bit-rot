@@ -1,0 +1,8 @@
+<item name="Plank" type="resource">
+    <properties>
+        <load min="1" max="6" />
+        <capacity value="6" />
+        <sprite file="plank.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

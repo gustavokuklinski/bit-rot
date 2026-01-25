@@ -1,0 +1,10 @@
+<item name="Scissor" type="weapon_melee">
+    <properties>
+        <durability min="1" max="100" />
+        <damage min="1" max="2" />
+        <skill type="melee" />
+        <sprite file="scissor.png" />
+        <knockback value="0" />
+    </properties>
+    <spawn chance="1" />
+</item>

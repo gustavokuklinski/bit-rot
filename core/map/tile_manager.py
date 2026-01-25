@@ -23,6 +23,10 @@ class TileManager:
                     if root.tag == 'map':
                         char = root.get('char')
                         is_obstacle = root.get('is_obstacle', 'false').lower() == 'true'
+                        
+                        # [NEW] Parse your specific destructible tag
+                        is_destructible = root.get('destructible', 'false').lower() == 'true'
+
                         sprite_node = root.find('visuals/sprite')
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
@@ -34,6 +38,7 @@ class TileManager:
                                 definition = {
                                     'name': root.get('name', 'Unknown'),
                                     'is_obstacle': is_obstacle,
+                                    'destructible': is_destructible, # Store the flag
                                     'image': image,
                                     'type': root.get('type'),
                                     'state': root.get('state'),
@@ -44,16 +49,54 @@ class TileManager:
                                     'light_radius': int(root.get('light_radius', '0'))
                                 }
 
+                                # Parse Explicit Health
+                                props_node = root.find('properties')
+                                if props_node is not None:
+                                    health_node = props_node.find('health')
+                                    if health_node is not None:
+                                        definition['health_min'] = int(health_node.get('min', 1))
+                                        definition['health_max'] = int(health_node.get('max', 1))
+
+                                # Parse Explicit Drops
+                                drop_node = root.find('drop')
+                                if drop_node is not None:
+                                    definition['drops'] = []
+                                    for item_node in drop_node.findall('item'):
+                                        definition['drops'].append({
+                                            'item': item_node.get('item'),
+                                            'chance': float(item_node.get('chance', 1.0)),
+                                            'min_qty': int(item_node.get('min', 1)),
+                                            'max_qty': int(item_node.get('max', 1))
+                                        })
+
+                                # [SAFETY NET] If marked destructible (or is a tree) but missing properties, add defaults
+                                # This ensures your new tag works immediately even if you forget <properties>
+                                if definition['destructible'] or 'tree' in filename.lower():
+                                    if 'health_max' not in definition:
+                                        definition['health_min'] = 60
+                                        definition['health_max'] = 100
+                                    
+                                    if 'drops' not in definition:
+                                        definition['drops'] = [{
+                                            'item': 'Log',
+                                            'chance': 1.0, 
+                                            'min_qty': 1, 
+                                            'max_qty': 2
+                                        }]
+                                    
+                                    # Force the flag to true if we detected it by filename (legacy support)
+                                    definition['destructible'] = True
+
                                 sound_node = root.find('sound')
                                 if sound_node is not None:
                                     definition['sound_src'] = sound_node.get('src')
 
+                                # ... (Keep Car/Container logic unchanged) ...
                                 if root.get('type') == 'maptile_car':
                                     car_node = root.find('car')
                                     if car_node is not None:
                                         key_node = car_node.find('key')
                                         key_value = key_node.get('value', 'false') if key_node is not None else 'false'
-                                        
                                         definition['car_stats'] = {
                                             'max_speed': car_node.find('max_speed').get('value', '10'),
                                             'key': key_value,
@@ -62,8 +105,6 @@ class TileManager:
                                             'battery': car_node.find('battery').get('value', '1'),
                                             'seats': car_node.find('seats').get('value', '4') if car_node.find('seats') is not None else '4'
                                         }
-                                        
-                                        # Parse Lights specifically to get radius
                                         lights_node = car_node.find('lights')
                                         if lights_node is not None:
                                             definition['car_stats']['lights'] = lights_node.get('value', 'off')
@@ -96,8 +137,8 @@ class TileManager:
                                                 'item': item_node.get('item'),
                                                 'chance': float(item_node.get('chance', '0'))
                                             })
+                                
                                 self.definitions[char] = definition
-                                #print(f"Loaded tile definition for '{char}' from {filename}. Image loaded from: {image_path}")
                             except pygame.error as e:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
                 except ET.ParseError as e:

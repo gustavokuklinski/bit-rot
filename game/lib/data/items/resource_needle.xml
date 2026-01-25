@@ -1,0 +1,8 @@
+<item name="Needle" type="resource">
+    <properties>
+        <load min="1" max="5" />
+        <capacity value="5" />
+        <sprite file="needle.png" />
+    </properties>
+    <spawn chance="1" />
+</item>
