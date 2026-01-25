@@ -3,7 +3,6 @@ from core.ui.modals import BaseModal
 from core.data.config import *
 from core.entities.item.item import Item
 from core.data.recipe_manager import RecipeManager
-from core.ui.container_modal import get_container_slot_rect
 
 class CraftingModal(BaseModal):
     def __init__(self, surface, modal_data, assets, game):
@@ -11,201 +10,212 @@ class CraftingModal(BaseModal):
         self.game = game
         self.player = game.player
         
-        # Internal container for ingredients (4 slots)
-        self.ingredients_container = Item("Ingredients", "container", capacity=4)
-        self.ingredients_container.inventory = [] 
+        # Dimensions for Split Layout
+        self.modal_w = CRAFTING_MODAL_WIDTH
+        self.modal_h = CRAFTING_MODAL_HEIGHT
+        self.modal_rect.size = (self.modal_w, self.modal_h)
         
+        # Layout Config
+        self.list_width = 250
+        self.padding = 20
+        
+        # Data
         self.selected_recipe = None
         self.scroll_offset = 0
+        self.visible_items = 14  # Number of recipes visible at once
         
-        # Dimensions
-        self.modal_w = 500
-        self.modal_h = 400
-        self.modal_rect.size = (self.modal_w, self.modal_h)
-        self.close_button_rect.topright = (self.modal_x + self.modal_w - 10, self.modal_y + 10)
+        # Cache known recipes
+        self.known_recipes = RecipeManager.get_known_recipes(self.player.known_recipes)
+
+    def handle_events(self, event):
+        """Handle scrolling and specific inputs."""
+        # Note: BaseModal does not have handle_events, so we removed the super() call to prevent crashes.
+        # super().handle_events(event) 
         
-        # Cache for result item to avoid recreating it every frame
-        self.preview_item = None
-        self.last_selected_recipe = None
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # Scroll Wheel Logic
+            if self.modal_rect.collidepoint(pygame.mouse.get_pos()):
+                if event.button == 4: # Scroll Up
+                    self.scroll_offset = max(0, self.scroll_offset - 1)
+                elif event.button == 5: # Scroll Down
+                    max_scroll = max(0, len(self.known_recipes) - self.visible_items)
+                    self.scroll_offset = min(max_scroll, self.scroll_offset + 1)
 
     def draw(self):
-        
+        # 1. Sync Minimization State
+        # We must check the shared modal data to see if the minimize button was clicked externally
+        self.minimized = self.modal.get('minimized', False)
+
+        # 2. Update Modal Positions
         self.modal_x, self.modal_y = self.modal['position']
         self.modal_rect.topleft = (self.modal_x, self.modal_y)
+        
+        # 3. Update Dimensions based on State
+        # If minimized, shrink the rect so the border draws correctly and clicks pass through below
+        if self.minimized:
+            self.modal_rect.height = self.header_h
+        else:
+            self.modal_rect.height = self.modal_h
+
+        # Update Buttons
         self.close_button_rect.topright = (self.modal_x + self.modal_w - 10, self.modal_y + 10)
-        # [FIXED] Update minimize button position so it follows the window
         self.minimize_button_rect.topright = (self.close_button_rect.left - 10, self.modal_y + 10)
 
         self.draw_base()
         
-        # [FIXED] Return buttons if minimized
         if self.minimized: 
             close_btn, min_btn = self.get_buttons()
             return None, close_btn, min_btn
 
-        # 1. Draw Ingredient Slots (Left Side)
-        slot_start_x = self.modal_x + 20
-        slot_start_y = self.modal_y + 50
-        
-        text = font.render("Ingredients:", True, WHITE)
-        self.surface.blit(text, (slot_start_x, slot_start_y - 25))
-        
         mouse_pos = pygame.mouse.get_pos()
-        
-        # Manually draw slots
-        for i in range(4):
-            slot_rect = get_container_slot_rect((slot_start_x, slot_start_y), i)
-            
-            # Hover effect
-            color = (60, 60, 60)
-            if slot_rect.collidepoint(mouse_pos):
-                color = (80, 80, 80)
-            
-            pygame.draw.rect(self.surface, color, slot_rect)
-            pygame.draw.rect(self.surface, GRAY, slot_rect, 1)
-            
-            # Draw Item if present
-            if i < len(self.ingredients_container.inventory):
-                item = self.ingredients_container.inventory[i]
-                if item and item.image:
-                    scaled_img = pygame.transform.scale(item.image, (32, 32))
-                    self.surface.blit(scaled_img, (slot_rect.x + 4, slot_rect.y + 4))
-                    if item.load > 1:
-                        qty_txt = font_small.render(str(int(item.load)), True, WHITE)
-                        self.surface.blit(qty_txt, (slot_rect.right - qty_txt.get_width() - 2, slot_rect.bottom - qty_txt.get_height() - 2))
+        click = pygame.mouse.get_pressed()[0]
 
-        # 2. Draw Known Recipes List (Right Side)
-        list_x = self.modal_x + 250
+        # =================================================
+        # 1. LEFT PANEL: RECIPE LIST
+        # =================================================
+        list_x = self.modal_x + self.padding
         list_y = self.modal_y + 50
-        list_w = 230
-        list_h = 230 # Slightly shorter to make room for preview
+        list_h = self.modal_h - 70
         
-        pygame.draw.rect(self.surface, (30, 30, 30), (list_x, list_y, list_w, list_h))
-        pygame.draw.rect(self.surface, GRAY, (list_x, list_y, list_w, list_h), 1)
-        
-        known = RecipeManager.get_known_recipes(self.player.known_recipes)
-        
-        # Scroll logic could be added here, for now basic list
-        for i, recipe in enumerate(known):
-            row_y = list_y + 5 + (i * 25)
-            if row_y > list_y + list_h - 25: break
+        # Draw Background for List
+        pygame.draw.rect(self.surface, (30, 30, 30), (list_x, list_y, self.list_width, list_h))
+        pygame.draw.rect(self.surface, GRAY, (list_x, list_y, self.list_width, list_h), 1)
+
+        # Draw List Items
+        row_h = 28
+        for i in range(self.visible_items):
+            idx = i + self.scroll_offset
+            if idx >= len(self.known_recipes): break
             
-            color = WHITE
-            if self.selected_recipe == recipe:
-                color = YELLOW
-                pygame.draw.rect(self.surface, (60, 60, 60), (list_x + 2, row_y, list_w - 4, 20))
+            recipe = self.known_recipes[idx]
+            row_y = list_y + 2 + (i * row_h)
+            row_rect = pygame.Rect(list_x + 2, row_y, self.list_width - 4, row_h - 2)
             
-            name_txt = font_small.render(recipe.output_name, True, color)
-            self.surface.blit(name_txt, (list_x + 5, row_y + 2))
+            # Highlight Logic
+            is_selected = (self.selected_recipe == recipe)
+            is_hovered = row_rect.collidepoint(mouse_pos)
             
-            # Click detection for recipes
-            row_rect = pygame.Rect(list_x, row_y, list_w, 20)
-            if pygame.mouse.get_pressed()[0] and row_rect.collidepoint(pygame.mouse.get_pos()):
+            bg_color = (60, 60, 80) if is_selected else ((50, 50, 50) if is_hovered else (30, 30, 30))
+            text_color = YELLOW if is_selected else (WHITE if is_hovered else GRAY)
+            
+            pygame.draw.rect(self.surface, bg_color, row_rect, border_radius=3)
+            
+            # Truncate text if too long
+            name_surf = font_small.render(recipe.output_name, True, text_color)
+            self.surface.blit(name_surf, (row_rect.x + 8, row_rect.y + 6))
+            
+            # Select Recipe on Click
+            if click and is_hovered:
                 self.selected_recipe = recipe
 
-        # 3. Selected Recipe Preview & Craft Button (Bottom Section)
-        preview_y = self.modal_y + 300
-        pygame.draw.line(self.surface, GRAY, (self.modal_x + 20, preview_y), (self.modal_x + self.modal_w - 20, preview_y))
+        # =================================================
+        # 2. RIGHT PANEL: DETAILS
+        # =================================================
+        details_x = list_x + self.list_width + self.padding
+        details_y = list_y
+        details_w = self.modal_w - self.list_width - (self.padding * 3)
         
         if self.selected_recipe:
-            # Update preview item if selection changed
-            if self.selected_recipe != self.last_selected_recipe:
-                self.preview_item = Item.create_from_name(self.selected_recipe.output_name)
-                self.last_selected_recipe = self.selected_recipe
-
-            # Draw Result Preview
-            if self.preview_item:
-                # [FIXED] Scale result image to prevent "too large" issue
-                if self.preview_item.image:
-                    preview_img = pygame.transform.scale(self.preview_item.image, (48, 48))
-                    self.surface.blit(preview_img, (self.modal_x + 30, preview_y + 15))
-                else:
-                    pygame.draw.rect(self.surface, self.preview_item.color, (self.modal_x + 30, preview_y + 15, 48, 48))
+            r = self.selected_recipe
+            
+            # Title
+            title_surf = font.render(r.output_name, True, WHITE)
+            self.surface.blit(title_surf, (details_x, details_y))
+            
+            pygame.draw.line(self.surface, GRAY, (details_x, details_y + 35), (details_x + details_w, details_y + 35), 1)
+            
+            # Ingredients Header
+            ing_y = details_y + 50
+            lbl = font_small.render("Required Ingredients:", True, GRAY)
+            self.surface.blit(lbl, (details_x, ing_y))
+            
+            # Ingredients List with Live Check
+            curr_y = ing_y + 30
+            can_craft = True
+            
+            for req in r.ingredients:
+                needed = req['amount']
+                name = req['name']
                 
-                # Result Text
-                res_name = font.render(f"Result: {self.preview_item.name}", True, YELLOW)
-                self.surface.blit(res_name, (self.modal_x + 90, preview_y + 20))
+                # Check Player Inventory
+                have = sum(item.load for item in self.player.inventory if item.name == name)
                 
-                res_qty = font_small.render(f"Quantity: {self.selected_recipe.output_amount}", True, GRAY)
-                self.surface.blit(res_qty, (self.modal_x + 90, preview_y + 45))
-
-            # Craft Button
-            btn_rect = pygame.Rect(self.modal_x + 350, preview_y + 20, 100, 40)
-            can_craft = self._can_craft(self.selected_recipe)
+                # Color Logic
+                color = GREEN if have >= needed else RED
+                if have < needed: can_craft = False
+                
+                txt_str = f"• {name}: {int(have)} / {needed}"
+                ing_surf = font_small.render(txt_str, True, color)
+                self.surface.blit(ing_surf, (details_x + 10, curr_y))
+                curr_y += 25
+                
+            # Craft Button (Bottom Right)
+            btn_h = 40
+            btn_rect = pygame.Rect(details_x, details_y + list_h - btn_h, details_w, btn_h)
             
-            btn_color = (0, 150, 0) if can_craft else (60, 60, 60)
-            pygame.draw.rect(self.surface, btn_color, btn_rect, 0, 5)
-            pygame.draw.rect(self.surface, WHITE if can_craft else GRAY, btn_rect, 1, 5)
+            btn_color = (0, 100, 0) if can_craft else (60, 60, 60)
+            border_color = WHITE if can_craft else GRAY
             
-            lbl = font.render("CRAFT", True, WHITE if can_craft else GRAY)
-            self.surface.blit(lbl, (btn_rect.centerx - lbl.get_width()//2, btn_rect.centery - lbl.get_height()//2))
+            pygame.draw.rect(self.surface, btn_color, btn_rect, border_radius=5)
+            pygame.draw.rect(self.surface, border_color, btn_rect, 1, border_radius=5)
             
-            # Click detection for craft button
-            if can_craft and pygame.mouse.get_pressed()[0]:
-                mouse_rect = pygame.Rect(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1], 1, 1)
+            btn_text = "CRAFT ITEM" if can_craft else "MISSING RESOURCES"
+            lbl = font.render(btn_text, True, WHITE if can_craft else GRAY)
+            text_rect = lbl.get_rect(center=btn_rect.center)
+            self.surface.blit(lbl, text_rect)
+            
+            # Craft Action
+            if can_craft and click:
+                mouse_rect = pygame.Rect(mouse_pos[0], mouse_pos[1], 1, 1)
                 if mouse_rect.colliderect(btn_rect):
-                    self._craft(self.selected_recipe)
+                    self._craft(r)
+                    
         else:
-            # Placeholder text if no recipe selected
-            info_txt = font_small.render("Select a recipe to craft", True, GRAY)
-            self.surface.blit(info_txt, (self.modal_x + 30, preview_y + 30))
+            # Empty State
+            info_txt = font.render("Select a recipe to view details", True, GRAY)
+            text_rect = info_txt.get_rect(center=(details_x + details_w//2, details_y + 100))
+            self.surface.blit(info_txt, text_rect)
 
-        # [FIXED] Return buttons to UI manager so they are clickable
         close_btn, min_btn = self.get_buttons()
         return None, close_btn, min_btn
-
-    def _can_craft(self, recipe):
-        # Check if ingredients_container has the required items
-        temp_inv = [item for item in self.ingredients_container.inventory]
-        
-        for req in recipe.ingredients:
-            needed = req['amount']
-            found = 0
-            for item in temp_inv:
-                if item.name == req['name']:
-                    found += item.load
-            if found < needed:
-                return False
-        return True
 
     def _craft(self, recipe):
         if self.player.action_timer > 0: return
 
         def craft_complete():
-             # Remove ingredients
+            # Deduct Ingredients from Inventory
             for req in recipe.ingredients:
-                removed_count = 0
                 to_remove = req['amount']
+                removed = 0
                 
-                # Iterate backwards to safely remove empty items
-                for i in range(len(self.ingredients_container.inventory) - 1, -1, -1):
-                    item = self.ingredients_container.inventory[i]
+                # Iterate backwards to safely remove
+                for i in range(len(self.player.inventory) - 1, -1, -1):
+                    item = self.player.inventory[i]
                     if item.name == req['name']:
-                        take = min(to_remove - removed_count, item.load)
-                        if req['destroy']:
-                            item.load -= take
-                        removed_count += take
+                        take = min(to_remove - removed, item.load)
+                        item.load -= take
+                        removed += take
                         
                         if item.load <= 0:
-                             self.ingredients_container.inventory.pop(i)
-                             
-                        if removed_count >= to_remove:
+                            self.player.inventory.pop(i)
+                            
+                        if removed >= to_remove:
                             break
             
-            # Create Output
+            # Create Result
             result = Item.create_from_name(recipe.output_name)
             if result:
                 result.load = recipe.output_amount
                 
-                # Add to player inventory or drop
                 if len(self.player.inventory) < self.player.base_inventory_slots:
                     self.player.inventory.append(result)
                 else:
                     self.game.items_on_ground.append(result)
                     result.x, result.y = self.player.x, self.player.y
                     result.rect.topleft = (result.x, result.y)
-                    
+                
                 from core.messages import display_message_player
-                display_message_player(f"Crafted {result.name}!")
+                display_message_player(f"Successfully crafted {result.name}!")
 
+        # Start Action Timer
         self.player.start_action(f"Crafting {recipe.output_name}", recipe.time_required, craft_complete)

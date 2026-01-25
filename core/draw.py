@@ -19,6 +19,7 @@ from core.ui.text_modal import draw_text_modal
 from core.ui.mobile_modal import draw_mobile_modal
 from core.ui.alerts import draw_player_alerts
 from core.ui.vehicle_modal import draw_vehicle_modal
+from core.ui.crafting_modal import CraftingModal
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -478,12 +479,12 @@ def draw_game(game):
         elif modal['type'] == 'crafting':
             # Instantiate Logic on the fly (or you could store instance in modal dict)
             if 'instance' not in modal:
-                from core.ui.crafting_modal import CraftingModal
                 modal['instance'] = CraftingModal(game.virtual_screen, modal, game.assets, game)
             
             # Ensure surface is up to date
             modal['instance'].surface = game.virtual_screen
-            modal['instance'].draw()
+            _, *buttons = modal['instance'].draw()
+            game.modal_buttons.extend(buttons)
         
 
     game.status_button_rect = draw_status_button(game.virtual_screen)

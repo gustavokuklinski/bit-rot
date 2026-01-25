@@ -3,6 +3,7 @@ import uuid
 import math
 from core.data.config import *
 from core.events.game_actions import try_grab_item
+from core.ui.crafting_modal import CraftingModal
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -106,6 +107,42 @@ def toggle_gear_modal(game):
         }
         game.modals.append(new_gear_modal)
 
+def toggle_crafting_modal(game):
+    crafting_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'crafting':
+            game.modals.remove(modal)
+            crafting_modal_exists = True
+            break
+    if not crafting_modal_exists:
+        # [FIX] 1. Create the modal data dictionary first
+        modal_data = {
+            'id': uuid.uuid4(),
+            'type': 'crafting',
+            'position': game.last_modal_positions.get('crafting', (300, 100)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(
+                game.last_modal_positions.get('crafting', (300, 100))[0], 
+                game.last_modal_positions.get('crafting', (300, 100))[1], 
+                CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
+            ),
+            'minimized': False
+        }
+        
+        # [FIX] 2. Instantiate the CraftingModal class
+        # We try to get 'screen' and 'assets' from game, with safety fallbacks
+        screen = getattr(game, 'screen', pygame.display.get_surface())
+        assets = getattr(game, 'assets', {})
+        
+        crafting_instance = CraftingModal(screen, modal_data, assets, game)
+        
+        # [FIX] 3. Attach the instance to the modal dictionary
+        # This ensures modal['instance'] exists for mouse.py to use
+        modal_data['instance'] = crafting_instance
+        
+        game.modals.append(modal_data)
+
 def find_closest_vehicle(game):
     """Finds the closest vehicle within 1.5 tiles (interaction range)."""
     closest_vehicle = None
@@ -133,28 +170,7 @@ def toggle_pause(game):
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
-def toggle_crafting_modal(game):
-    crafting_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'crafting':
-            game.modals.remove(modal)
-            crafting_modal_exists = True
-            break
-    if not crafting_modal_exists:
-        new_modal = {
-            'id': uuid.uuid4(),
-            'type': 'crafting',
-            'position': game.last_modal_positions.get('crafting', (300, 100)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(
-                game.last_modal_positions.get('crafting', (300, 100))[0], 
-                game.last_modal_positions.get('crafting', (300, 100))[1], 
-                CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
-            ),
-            'minimized': False
-        }
-        game.modals.append(new_modal)
+
 
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
@@ -170,9 +186,6 @@ def handle_keyboard_events(game, event):
             else:
                 toggle_pause(game)
                 return
-        
-        if event.key == pygame.K_c:
-            toggle_crafting_modal(game)
 
         # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:
@@ -224,6 +237,8 @@ def handle_keyboard_events(game, event):
                 toggle_nearby_modal(game)
             if event.key == pygame.K_m:
                 toggle_messages_modal(game)
+            if event.key == pygame.K_c:
+                toggle_crafting_modal(game)
 
             if event.key == pygame.K_r:
                 if game.player:
