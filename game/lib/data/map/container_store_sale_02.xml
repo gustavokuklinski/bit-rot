@@ -32,6 +32,6 @@
         <item item="Knife" chance="0.1" />
         <item item="Axe" chance="0.1" />
         <item item="Portable Hand Saw" chance="0.1" />
-        <item item="Cigarette" chance="0.1" />
+        <item item="Cigarette Pack" chance="0.1" />
     </loot>
 </map>

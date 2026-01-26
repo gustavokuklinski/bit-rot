@@ -1,0 +1,8 @@
+<item name="Lighter Fluid" type="utility">
+    <properties>
+        <load min="1" max="50" />
+        <capacity value="50" />
+        <sprite file="lighter_fluid.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

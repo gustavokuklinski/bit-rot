@@ -1162,6 +1162,46 @@ class Player:
             self.read_recipe_book(item)
             return True
 
+        if hasattr(item, 'require') and item.require:
+            required_list = item.require if isinstance(item.require, list) else [item.require]
+            found_req = False
+            
+            # Helper to check if player has a specific item with valid load/durability
+            def has_valid_item(name):
+                # Search Belt
+                for it in self.belt:
+                    if it and it.name == name:
+                        if it.load is not None and it.load <= 0: continue
+                        return True
+                # Search Inventory
+                for it in self.inventory:
+                    if it and it.name == name:
+                         if it.load is not None and it.load <= 0: continue
+                         return True
+                # Search Backpack
+                if self.backpack:
+                    for it in self.backpack.inventory:
+                        if it and it.name == name:
+                             if it.load is not None and it.load <= 0: continue
+                             return True
+                # Search Utility Container
+                if self.invcontainer:
+                     for it in self.invcontainer.inventory:
+                        if it and it.name == name:
+                             if it.load is not None and it.load <= 0: continue
+                             return True
+                return False
+
+            for req_name in required_list:
+                if has_valid_item(req_name):
+                    found_req = True
+                    break
+            
+            if not found_req:
+                req_str = " or ".join(required_list)
+                display_message_player(f"Requires {req_str} to use.")
+                return False
+
         source_inventory = self._get_source_inventory(source_type, container_item)
         
         # ... [Rest of consume_item logic same as original] ...

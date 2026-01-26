@@ -1,0 +1,10 @@
+<item name="Fuel Canister" type="container" allow_liquid="true">
+    <properties>
+        <capacity value="1" />
+        <sprite file="car_gas.png" />
+    </properties>
+    <loot>
+        <item name="Fuel Unit" chance="1" />
+    </loot>
+    <spawn chance="1" />
+</item>

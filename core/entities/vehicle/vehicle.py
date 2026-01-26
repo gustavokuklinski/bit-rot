@@ -87,7 +87,7 @@ class Vehicle:
 
         # 2. Spawn Fuel (50% chance)
         if random.random() < VEH_HAS_FUEL:
-            fuel_item = Item.create_from_name("Car Fuel") 
+            fuel_item = Item.create_from_name("Fuel Unit") 
             if fuel_item:
                 if hasattr(fuel_item, 'capacity') and fuel_item.capacity:
                     fuel_item.load = random.uniform(1.0, float(fuel_item.capacity))

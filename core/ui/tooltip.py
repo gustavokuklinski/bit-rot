@@ -14,6 +14,10 @@ def draw_tooltip(surface, item, pos):
     if item.item_type:
         lines.append(f"Type: {item.item_type}")
 
+    if hasattr(item, 'require') and item.require:
+        reqs = item.require if isinstance(item.require, list) else [item.require]
+        lines.append(f"Requires: {' or '.join(reqs)}")
+
     if item.item_type == 'recipe':
         # Ensure recipes are loaded if checking from main menu or early state
         if not RecipeManager.RECIPES:

@@ -15,7 +15,7 @@
         <item name="Axe" chance="0.3" />
         <item name="Portable Hand Saw" chance="0.1" />
         <item name="Duck Tape" chance="0.3" />
-        <item name="Cigarette" chance="0.2" />
+        <item name="Cigarette Pack" chance="0.2" />
     </loot>
     <spawn chance="1" />
 </item>

@@ -1,9 +1,9 @@
-<item name="Car Fuel" type="car_fuel">
+<item name="Fuel Unit" type="car_fuel" liquid="true">
     <properties>
         <status value="fuel" />
         <load min="1" max="25" />
         <capacity value="25" />
-        <sprite file="car_gas.png" />
+        <sprite file="fuel_unit.png" />
     </properties>
     <spawn chance="1" />
 </item>

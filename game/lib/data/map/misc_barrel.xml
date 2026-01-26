@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Car Fuel" chance="0.3" />
+        <item item="Fuel Canister" chance="0.3" />
         <item item="Duck Tape" chance="0.3" />
         <item item="Motor Repair Kit" chance="0.3" />
         <item item="Screws" chance="0.3" />

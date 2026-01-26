@@ -1,0 +1,10 @@
+<item name="Cigarette Pack" type="container" disposable="true">
+    <properties>
+        <capacity value="1" />
+        <sprite file="cigarette_pack.png" />
+    </properties>
+    <loot>
+        <item name="Cigarette" chance="1" />
+    </loot>
+    <spawn chance="1" />
+</item>

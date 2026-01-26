@@ -1,0 +1,13 @@
+<item name="Ammo Canister 9mm" type="container">
+    <properties>
+        <capacity value="3" />
+        <sprite file="ammo_canister.png" />
+    </properties>
+    <loot>
+        <item name="Ammo 9mm" chance="0.5" />
+        <item name="Ammo 9mm" chance="0.5" />
+        <item name="Ammo 9mm" chance="0.5" />
+    </loot>
+    <spawn chance="1" />
+</item>
+
