@@ -1,0 +1,10 @@
+<item name="Primitive Hammer" type="weapon_melee">
+    <properties>
+        <durability min="1" max="100" />
+        <damage min="3" max="5" />
+        <skill type="melee" />
+        <sprite file="primitive_hammer.png" />
+        <knockback value="0" />
+    </properties>
+    <spawn chance="1" />
+</item>

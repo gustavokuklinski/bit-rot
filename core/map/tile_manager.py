@@ -81,7 +81,7 @@ class TileManager:
                                     
                                     if 'drops' not in definition:
                                         definition['drops'] = [{
-                                            'item': 'Log',
+                                            'item': 'Tree Trunk',
                                             'chance': 1.0, 
                                             'min_qty': 1, 
                                             'max_qty': 2

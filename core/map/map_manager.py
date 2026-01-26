@@ -231,10 +231,18 @@ class MapManager:
         if not definition or not definition.get('destructible'):
             return False
 
-        if not weapon or "Axe" not in weapon.name:
-             display_message_player("You need an axe to chop this.")
-             return True 
+        valid_axes = ["Axe", "Primitive Axe"]
+        has_axe = False
+        if weapon:
+            for axe_name in valid_axes:
+                if axe_name in weapon.name:
+                    has_axe = True
+                    break
         
+        if not has_axe:
+             display_message_player("You need an axe to chop this.")
+             return True
+             
         STAMINA_COST = 0.5
         if self.game.player.stamina < STAMINA_COST:
             display_message_player("You are too exhausted to chop!")

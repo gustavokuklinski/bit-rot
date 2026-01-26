@@ -4,5 +4,5 @@
         <capacity value="5" />
         <sprite file="log.png" />
     </properties>
-    <spawn chance="1" />
+    <spawn chance="0" />
 </item>

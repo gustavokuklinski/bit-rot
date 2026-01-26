@@ -1,0 +1,8 @@
+<item name="Stone" type="resource">
+    <properties>
+        <load min="1" max="20" />
+        <capacity value="20" />
+        <sprite file="stone.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

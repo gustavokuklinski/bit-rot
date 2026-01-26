@@ -67,24 +67,69 @@
 
 
     <!-- Crafts -->
+
+    <!-- Weapons -->
     <recipe type="weapon_melee" craft="create" output="Baseball Bat with Nails" amount="1" time="2.0">
         <ingredient name="Nails" destroy="true" amount="5" />
-        <ingredient name="Hammer" destroy="false" amount="1" />
+        <ingredient name="[Hammer, Primitive Hammer]" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="resource" craft="create" output="Line Twine" amount="10" time="3.0">
-        <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
-        <ingredient name="Scissor" destroy="false" amount="1" />
+
+    <!-- Primitive Survivor -->
+    <recipe type="resource" craft="create" output="Stone Blade" amount="1" time="1.0">
+        <ingredient name="Stone" destroy="true" amount="1" />
+        <ingredient name="Stone" destroy="false" amount="1" />
     </recipe>
 
     <recipe type="resource" craft="create" output="Plank" amount="5" time="4.0">
-        <ingredient name="Log" destroy="true" amount="1" />
+        <ingredient name="[Log, Three Trunk]" destroy="true" amount="1" />
         <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
     </recipe>
 
     <recipe type="resource" craft="create" output="Stick" amount="5" time="3.0">
-        <ingredient name="Plank" destroy="true" amount="1" />
-        <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
+        <ingredient name="[Plank, Tree Branch]" destroy="true" amount="1" />
+        <ingredient name="[Saw, Primitive Knife, Knife, Portable Hand Saw]" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="resource" craft="create" output="Half Stick" amount="10" time="1.5">
+        <ingredient name="Stick" destroy="true" amount="1" />
+        <ingredient name="[Saw, Primitive Knife, Knife, Portable Hand Saw]" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="weapon_melee" craft="create" output="Primitive Knife" amount="1" time="2.0">
+        <ingredient name="Stone Blade" destroy="true" amount="1" />
+        <ingredient name="Half Stick" destroy="true" amount="1" />
+        <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+    </recipe>
+
+    <recipe type="weapon_melee" craft="create" output="Primitive Spear" amount="1" time="3.0">
+        <ingredient name="[Primitive Knife, Stone Blade]" destroy="true" amount="1" />
+        <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+        <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+    </recipe>
+
+    <recipe type="weapon_melee" craft="create" output="Primitive Hammer" amount="1" time="3.0">
+        <ingredient name="Stone" destroy="true" amount="1" />
+        <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+        <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+    </recipe>
+
+    <recipe type="weapon_melee" craft="create" output="Improvised Spear" amount="1" time="3.0">
+        <ingredient name="Knife" destroy="true" amount="1" />
+        <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+        <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+    </recipe>
+
+    <recipe type="weapon_melee" craft="create" output="Primitive Axe" amount="1" time="3.0">
+        <ingredient name="Stone Blade" destroy="true" amount="1" />
+        <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+        <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+    </recipe>
+
+    <!-- Clothes -->
+    <recipe type="resource" craft="create" output="Line Twine" amount="10" time="3.0">
+        <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
+        <ingredient name="Scissor" destroy="false" amount="1" />
     </recipe>
 
     <recipe type="resource" craft="create" output="Ragged Cloth" amount="4" time="1.0">

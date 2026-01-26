@@ -1,0 +1,10 @@
+<item name="Primitive Spear" type="weapon_melee">
+    <properties>
+        <durability min="1" max="100" />
+        <damage min="5" max="10" />
+        <skill type="melee" />
+        <sprite file="primitive_spear.png" />
+        <knockback value="5" />
+    </properties>
+    <spawn chance="1" />
+</item>
