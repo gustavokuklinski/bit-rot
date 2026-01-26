@@ -11,7 +11,7 @@
         <item name="Alcohol Bottle" chance="0.4" />
         <item name="Portable Hand Saw" chance="0.4" />
         <item name="Screwdriver" chance="0.4" />
-        <item item="Island Map" chance="0.2" />
+        <item name="Island Map" chance="0.2" />
     </loot>
     <spawn chance="1" />
 </item>

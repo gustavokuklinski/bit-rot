@@ -331,6 +331,8 @@ class Item:
                 template['loot'] = []
                 for loot_item_node in loot_node.findall('item'):
                     loot_item_name = loot_item_node.attrib.get('name')
+                    if loot_item_name is None:
+                        print(f"Missing 'name' attribute in loot for item: {name}")
                     loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
                     template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
             

@@ -4,9 +4,9 @@
         <sprite file="ammo_canister.png" />
     </properties>
     <loot>
-        <item name="Ammo 9mm" chance="0.5" />
-        <item name="Ammo 9mm" chance="0.5" />
-        <item name="Ammo 9mm" chance="0.5" />
+        <item name="9mm Ammo" chance="0.5" />
+        <item name="9mm Ammo" chance="0.5" />
+        <item name="9mm Ammo" chance="0.5" />
     </loot>
     <spawn chance="1" />
 </item>
