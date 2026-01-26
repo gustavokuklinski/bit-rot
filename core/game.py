@@ -699,10 +699,22 @@ class Game:
                 # Close modal if player is farther than 2 tiles
                 if dist > TILE_SIZE * 2: 
                     modals_to_remove.append(modal)
+
+            elif modal['type'] == 'npc_dialog':
+                npc = modal['npc']
+                # Calculate distance
+                dist = math.hypot(self.player.rect.centerx - npc.rect.centerx, self.player.rect.centery - npc.rect.centery)
+                
+                # Check if NPC is dead or too far (2 tiles)
+                if npc.is_dead or dist > TILE_SIZE * 2:
+                    modals_to_remove.append(modal)
             
         for modal in modals_to_remove:
             self.modals.remove(modal)
-            self.logger.info(f"Closed {modal['vehicle'].name} modal: player moved away.")
+            if 'npc' in modal:
+                pass # Optional: Reset NPC state if needed
+            else:
+                self.logger.info(f"Closed {modal['vehicle'].name} modal: player moved away.")
 
 
     def run_paused(self):
@@ -906,7 +918,7 @@ class Game:
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         # starter_items = ["ID", "Mobile off"]
-        starter_items = ["Survivor Kit", "Wallet", "Primitive Axe"]
+        starter_items = ["Survivor Kit", "Wallet", "Car Key Jeep"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

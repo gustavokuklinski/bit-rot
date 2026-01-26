@@ -317,10 +317,32 @@ class Vehicle:
         if slot not in self.equipment: return False
 
         if slot == 'key':
+            # If the vehicle requires a key (required_key_id is not None)
             if self.required_key_id:
+                # 1. Verify it is a key type item
                 is_key_type = getattr(item, 'item_type', None) == 'car_key' or getattr(item, 'type', None) == 'car_key'
-                if item.name == self.required_key_id and is_key_type: return True
+                
+                # 2. Get clean strings for comparison
+                required = str(self.required_key_id).strip()
+                item_name = getattr(item, 'name', '').strip()
+                # Get the item's internal key code (from <key value="..." /> in item properties)
+                item_key_id = getattr(item, 'key_id', '')
+                if item_key_id: 
+                    item_key_id = str(item_key_id).strip()
+
+                # 3. Check for Match:
+                # Allow match by Name ("Car Key Jeep" == "Car Key Jeep")
+                # OR match by Key ID ("car_jeep" == "car_jeep") - *Recommended for future XML updates*
+                matches_requirement = (item_name == required) or (item_key_id and item_key_id == required)
+
+                if matches_requirement and is_key_type: 
+                    return True
+                
+                # Debugging: Uncomment if issues persist
+                # print(f"Key Mismatch: Req='{required}' vs Name='{item_name}' / ID='{item_key_id}'")
                 return False
+            
+            # If required_key_id is None, this vehicle does not accept a key.
             return False
             
         elif slot == 'fuel': return getattr(item, 'status_effect', None) == 'fuel'

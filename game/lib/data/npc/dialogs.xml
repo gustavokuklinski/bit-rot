@@ -1,0 +1,8 @@
+<npc_dialog>
+    <options player_question="How is going on?" npc_awnser="It was fast, I just escaped with: [inventory_list] and [clothes_list]" required="true" />
+    <options player_question="Do you have any tip?" npc_awnser="You can use an Axe or Primitive Axe to chop tress." type="random" />
+    <options player_question="Do you have any tip?" npc_awnser="Be carefull, some people went rogue!" type="random" />
+    <options player_question="Do you have any tip?" npc_awnser="Stay away from the infected!" type="random" />
+    <options player_question="Do you have any tip?" npc_awnser="Search for Magazines, this can keep your sanity alive." type="random" />
+    <options player_question="Do you have any tip?" npc_awnser="I'm feeling dizzy..." type="random" />
+</npc_dialog>

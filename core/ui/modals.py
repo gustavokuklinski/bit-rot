@@ -39,6 +39,8 @@ class BaseModal:
             return CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
         elif self.modal['type'] == 'big_map':
             return MAP_MODAL_WIDTH, MAP_MODAL_HEIGHT
+        elif self.modal['type'] == 'npc_dialog':
+            return NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT
         # return 300, 300
 
     def draw_header(self):

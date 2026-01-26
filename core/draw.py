@@ -22,6 +22,7 @@ from core.ui.alerts import draw_player_alerts
 from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
 from core.ui.map_tab import draw_big_map_modal
+from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
@@ -516,7 +517,9 @@ def draw_game(game):
         elif modal['type'] == 'big_map':
             buttons = draw_big_map_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
-            
+        elif modal['type'] == 'npc_dialog':
+            draw_npc_dialog_modal(game.virtual_screen, modal, game)
+            game.modal_buttons.extend(buttons)
         elif modal['type'] == 'crafting':
             # Instantiate Logic on the fly (or you could store instance in modal dict)
             if 'instance' not in modal:

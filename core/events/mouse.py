@@ -9,6 +9,7 @@ from core.entities.zombie.corpse import Corpse
 from core.update import player_hit_zombie, handle_zombie_death
 from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_backpack_slot_rect, get_invcontainer_slot_rect, get_belt_hud_slot_rect
 from core.ui.container_modal import get_container_slot_rect
+from core.ui.npc_dialog_modal import get_npc_dialog_option_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal
 from core.placement import find_free_tile
@@ -48,6 +49,31 @@ def handle_mouse_down(game, event, mouse_pos):
                 break
         
         if topmost_modal:
+
+            if topmost_modal['type'] == 'npc_dialog':
+                # Check for Close button manually (since we custom draw it) or use standard button logic
+                # Assuming the standard close button logic in 'modal_buttons' loop handles the close X.
+                # We handle the content clicks here:
+                
+                active_index = topmost_modal.get('active_dialog_index', -1)
+                
+                if active_index == -1:
+                    # Logic: Clicking a question
+                    dialogs = topmost_modal.get('dialogs', [])
+                    for i in range(len(dialogs)):
+                        rect = get_npc_dialog_option_rect(topmost_modal['position'], i)
+                        if rect.collidepoint(mouse_pos):
+                            topmost_modal['active_dialog_index'] = i
+                            return # Handled
+                else:
+                    # Logic: Clicking anywhere inside while viewing answer goes back
+                    # (Unless clicking close button, which is handled by the general loop below)
+                    # We check if we didn't click the close button area
+                    close_rect = pygame.Rect(topmost_modal['rect'].right - 30, topmost_modal['rect'].top + 5, 25, 25)
+                    if not close_rect.collidepoint(mouse_pos):
+                        topmost_modal['active_dialog_index'] = -1
+                        return
+
             if game.modals[-1] != topmost_modal:
                 game.modals.remove(topmost_modal)
                 game.modals.append(topmost_modal)
@@ -1179,15 +1205,27 @@ def handle_context_menu_click(game, mouse_pos):
                 return
 
             if source == 'npc':
-                if option == 'Follow':
-                    item.is_following = True
-                    print(f"{item.name} is now following you.")
-                    display_message(game, f"{item.name} is now following you.")
-                    clicked_on_menu = True
-                elif option == 'Unfollow':
-                    item.is_following = False
-                    print(f"{item.name} stopped following.")
-                    display_message(game, f"{item.name} stopped following.")
+                if option == 'Talk':
+                    # Load dialog options
+                    dialogs = item.get_dialog_options()
+                    
+                    # Center the modal
+                    pos_x = (VIRTUAL_SCREEN_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
+                    pos_y = (VIRTUAL_GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
+                    
+                    new_modal = {
+                        'id': uuid.uuid4(),
+                        'type': 'npc_dialog',
+                        'npc': item,
+                        'dialogs': dialogs,
+                        'position': (pos_x, pos_y),
+                        'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
+                        'minimized': False,
+                        'is_dragging': False,
+                        'drag_offset': (0, 0),
+                        'active_dialog_index': -1 
+                    }
+                    game.modals.append(new_modal)
                     clicked_on_menu = True
 
 
@@ -1700,6 +1738,15 @@ def handle_right_click(game, mouse_pos):
                 click_container_item = None
 
         if not clicked_item:
+            # Sort NPCs by Y to handle overlapping (render order)
+            sorted_npcs = sorted(game.npcs, key=lambda n: n.rect.bottom, reverse=True)
+            for npc in sorted_npcs:
+                if npc.rect.collidepoint(world_pos):
+                    clicked_item = npc
+                    click_source = 'npc'
+                    break
+
+        if not clicked_item:
             world_pos = game.screen_to_world(mouse_pos)
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
@@ -1752,11 +1799,24 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['position'] = mouse_pos
 
         options = ['']
+
         if click_source == 'npc':
-            if clicked_item.is_following:
-                options.append('Unfollow')
+            dist = math.hypot(game.player.rect.centerx - clicked_item.rect.centerx, 
+                              game.player.rect.centery - clicked_item.rect.centery)
+            max_dist_px = TILE_SIZE * 3  
+            
+            # Print debug info to console for verification
+            print(f"DEBUG: NPC Interact - Name: {clicked_item.name}, Friendly: {clicked_item.is_friendly}, Dist: {dist:.1f}/{max_dist_px}")
+
+            if clicked_item.is_friendly:
+                if dist <= max_dist_px:
+                    options.append('Talk')
+                    if hasattr(clicked_item, 'stop_moving'):
+                        clicked_item.stop_moving()
+                else:
+                    display_message(game, "Too far to talk to them.")
             else:
-                options.append('Follow')
+                display_message(game, "They look hostile and refuse to talk.")
 
         elif click_source == 'map_tile':
             options = ['Sleep']
