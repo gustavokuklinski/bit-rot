@@ -2,6 +2,13 @@
 
 All item design is stored at: ```game/sprites/item/[ITEM_NAME]```
 
+Items have some nodes:
+<item 
+    name="Lantern on" 
+    type="utility"
+    state="on"
+    dispensable="true">
+
 Sprite types and codes:
 
 - **type="utility"**

@@ -4,7 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Water Bottle" chance="0.1" />
+        <item item="Plastic Bottle" chance="0.2" />
         <item item="Knife" chance="0.1" />
         <item item="Batton" chance="0.1" />
         <item item="Matches" chance="0.1" />

@@ -1,0 +1,9 @@
+<item name="Flask" type="container" allow_liquid="true">
+    <properties>
+        <capacity value="1" />
+        <sprite file="flask.png" />
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>

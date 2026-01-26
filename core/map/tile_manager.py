@@ -24,8 +24,11 @@ class TileManager:
                         char = root.get('char')
                         is_obstacle = root.get('is_obstacle', 'false').lower() == 'true'
                         
-                        # [NEW] Parse your specific destructible tag
+                        # [NEW] Parse destructible tag
                         is_destructible = root.get('destructible', 'false').lower() == 'true'
+                        
+                        # [NEW] Parse allow_liquid tag
+                        allow_liquid = root.get('allow_liquid', 'false').lower() == 'true'
 
                         sprite_node = root.find('visuals/sprite')
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
@@ -38,7 +41,8 @@ class TileManager:
                                 definition = {
                                     'name': root.get('name', 'Unknown'),
                                     'is_obstacle': is_obstacle,
-                                    'destructible': is_destructible, # Store the flag
+                                    'destructible': is_destructible, 
+                                    'allow_liquid': allow_liquid, # [ADDED] Store the flag
                                     'image': image,
                                     'type': root.get('type'),
                                     'state': root.get('state'),
@@ -69,8 +73,7 @@ class TileManager:
                                             'max_qty': int(item_node.get('max', 1))
                                         })
 
-                                # [SAFETY NET] If marked destructible (or is a tree) but missing properties, add defaults
-                                # This ensures your new tag works immediately even if you forget <properties>
+                                # [SAFETY NET] Defaults for destructibles/trees
                                 if definition['destructible'] or 'tree' in filename.lower():
                                     if 'health_max' not in definition:
                                         definition['health_min'] = 60
@@ -84,7 +87,6 @@ class TileManager:
                                             'max_qty': 2
                                         }]
                                     
-                                    # Force the flag to true if we detected it by filename (legacy support)
                                     definition['destructible'] = True
 
                                 sound_node = root.find('sound')

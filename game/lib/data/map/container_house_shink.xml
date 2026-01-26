@@ -1,10 +1,10 @@
-<map name="house_shink" type="maptile_container" char="house_shink" is_obstacle="true">
+<map name="house_shink" type="maptile_container" char="house_shink" is_obstacle="true" allow_liquid="true">
     <visuals>
         <sprite file="house_shink.png" />
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Water Bottle" chance="1" />
+        <item item="Water Unit" chance="1" />
         <item item="Duck Tape" chance="0.2" />
         <item item="Alcohol Bottle" chance="0.3" />
         <item item="Medical Kit" chance="0.2" />

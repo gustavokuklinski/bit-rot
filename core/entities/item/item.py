@@ -13,8 +13,9 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    # [MODIFIED] Added firing_distance=None to arguments
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None):
+    # [MODIFIED] Added liquid=False, allow_liquid=False to arguments
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False):
+
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -62,8 +63,12 @@ class Item:
         self.firing_second = firing_second
         self.key_id = key_id
         self.allow_sleep = allow_sleep
-        self.firing_distance = firing_distance # [ADDED] Store the distance property
-
+        self.firing_distance = firing_distance 
+        self.disposable = disposable
+        
+        # [ADDED] Liquid properties
+        self.liquid = liquid
+        self.allow_liquid = allow_liquid
 
     def to_dict(self):
         """Serializes the item's dynamic state to a dictionary."""
@@ -218,9 +223,19 @@ class Item:
             root = tree.getroot()
             name = root.attrib.get('name')
             ttype = root.attrib.get('type')
+            disposable_str = root.attrib.get('disposable', 'false')
+            disposable = (disposable_str.lower() == 'true')
+            
+            # [ADDED] Parse liquid attributes
+            liquid_str = root.attrib.get('liquid', 'false')
+            liquid = (liquid_str.lower() == 'true')
+
+            allow_liquid_str = root.attrib.get('allow_liquid', 'false')
+            allow_liquid = (allow_liquid_str.lower() == 'true')
 
             state = root.attrib.get('state')
-            template = {'type': ttype, 'properties': {}, 'state': state}
+            # [MODIFIED] Store liquid attributes in template
+            template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid}
 
             props_node = root.find('properties')
             if props_node is not None:
@@ -557,9 +572,15 @@ class Item:
         firing_second = float(firing_second_str)
         
         key_id = get_prop_val(props, 'key', 'value', None)
+        
+        disposable = template.get('disposable', False)
+        
+        # [ADDED] Get liquid properties
+        liquid = template.get('liquid', False)
+        allow_liquid = template.get('allow_liquid', False)
 
         # [MODIFIED] Pass firing_distance to constructor
-        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance)
+        new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid)
 
         if 'loot' in template and hasattr(new_item, 'inventory'):
             for loot_info in template['loot']:
@@ -570,6 +591,42 @@ class Item:
                             new_item.inventory.append(loot_item)
         
         return new_item
+
+    @staticmethod
+    def cleanup_disposables(item_list, modals=None, message_func=None):
+        """
+        Recursively removes empty disposable containers from a list of items.
+        
+        Args:
+            item_list (list): The list of items to check (e.g., inventory).
+            modals (list): Reference to game.modals to close windows for removed items.
+            message_func (func): Function to call for notifications (e.g., display_message_player).
+        """
+        if item_list is None: return
+
+        # Iterate over a copy to safely modify the original list
+        for item in list(item_list):
+            if not item: continue
+
+            # 1. Recursion: Clean inside this item first
+            if hasattr(item, 'inventory') and item.inventory:
+                Item.cleanup_disposables(item.inventory, modals, message_func)
+
+            # 2. Check if this item itself should be destroyed
+            if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
+                # Close associated modal if it's open
+                if modals:
+                    for m in list(modals):
+                        if m.get('item') == item:
+                            modals.remove(m)
+                
+                # Notify
+                if message_func:
+                    message_func(f"Discarded empty {item.name}.")
+                
+                # Remove the item from the list
+                if item in item_list:
+                    item_list.remove(item)
 
     def draw(self, surface, offset_x, offset_y, opacity=0):
         draw_rect = self.rect.move(offset_x, offset_y)

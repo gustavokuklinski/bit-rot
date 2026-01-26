@@ -195,6 +195,13 @@ def update_game_state(game):
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
     
+
+    Item.cleanup_disposables(
+        game.items_on_ground, 
+        game.modals, 
+        lambda t: display_message_player(t) if game.player else None
+    )
+
     # --- Zombie AI Update (OPTIMIZED) ---
     zombies_alive = game.zombies[:] 
     

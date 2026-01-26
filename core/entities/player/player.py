@@ -653,6 +653,57 @@ class Player:
                         if item.durability <= 0:
                             item.durability = 0
                             self.toggle_utility_item(item, None, None, None) 
+        
+        # Disposable item
+        def msg(text):
+            display_message_player(text)
+
+        # Helper to close modal for a single item (used for fixed slots like Backpack/Belt)
+        def close_modal(target_item):
+            for m in list(game.modals):
+                if m.get('item') == target_item:
+                    game.modals.remove(m)
+
+        # 1. Clean Main Inventory (Recursive)
+        # This handles items directly in inventory AND items inside containers in inventory
+        Item.cleanup_disposables(self.inventory, game.modals, msg)
+
+        # 2. Clean Belt (Fixed Slots)
+        for i, item in enumerate(self.belt):
+            if item:
+                # Clean INSIDE the belt item recursively
+                if hasattr(item, 'inventory') and item.inventory:
+                     Item.cleanup_disposables(item.inventory, game.modals, msg)
+                
+                # Check the belt item itself
+                if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
+                    close_modal(item)
+                    self.belt[i] = None
+                    msg(f"Discarded empty {item.name}.")
+
+        # 3. Clean Backpack
+        if self.backpack:
+            # Clean INSIDE the backpack recursively
+            Item.cleanup_disposables(self.backpack.inventory, game.modals, msg)
+            
+            # Check the backpack itself
+            if getattr(self.backpack, 'disposable', False) and hasattr(self.backpack, 'inventory') and len(self.backpack.inventory) == 0:
+                close_modal(self.backpack)
+                self.backpack = None
+                msg(f"Discarded empty backpack container.")
+
+        # 4. Clean Utility Container (InvContainer)
+        if self.invcontainer:
+             # Clean INSIDE the utility container recursively
+             if hasattr(self.invcontainer, 'inventory'):
+                Item.cleanup_disposables(self.invcontainer.inventory, game.modals, msg)
+
+             # Check the utility container itself
+             if getattr(self.invcontainer, 'disposable', False) and hasattr(self.invcontainer, 'inventory') and len(self.invcontainer.inventory) == 0:
+                 name = self.invcontainer.name
+                 close_modal(self.invcontainer)
+                 self.invcontainer = None
+                 msg(f"Discarded empty {name}.")
 
         if self.is_reloading:
             self.reload_timer -= 1

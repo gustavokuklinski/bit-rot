@@ -8,7 +8,7 @@ from core.ui.tabs import Tabs
 
 class CraftingModal(BaseModal):
     def __init__(self, surface, modal_data, assets, game):
-        super().__init__(surface, modal_data, assets, "Crafting Station")
+        super().__init__(surface, modal_data, assets, "Craft (C)")
         self.game = game
         self.player = game.player
         
@@ -92,13 +92,17 @@ class CraftingModal(BaseModal):
             
         return False
 
-    def _has_ingredients(self, recipe):
+    def _has_ingredients(self, recipe, nearby_items=None):
+        search_items = self.player.inventory
+        if nearby_items:
+            search_items = search_items + nearby_items
+
         for req in recipe.ingredients:
             needed = req['amount']
             valid_names = req['names']
             
             have = sum((item.load if item.load is not None else 1) 
-                       for item in self.player.inventory 
+                       for item in search_items 
                        if item.name in valid_names)
             
             if have < needed:
@@ -207,6 +211,16 @@ class CraftingModal(BaseModal):
         filtered_recipes = []
         active_tab = self.modal.get('active_tab', 'All')
 
+        nearby_items = []
+        nearby_containers = self.game.find_nearby_containers()
+        if nearby_containers:
+            for cont in nearby_containers:
+                if hasattr(cont, 'inventory') and cont.inventory:
+                    nearby_items.extend(cont.inventory)
+
+        filtered_recipes = []
+        active_tab = self.modal.get('active_tab', 'All')
+
         for r in self.recipes:
             craft_type = getattr(r, 'craft_type', 'create')
             if active_tab == "Craft" and craft_type == 'repair': continue
@@ -217,7 +231,11 @@ class CraftingModal(BaseModal):
             
             filtered_recipes.append(r)
 
-        filtered_recipes.sort(key=lambda r: (not self._has_ingredients(r), r.output_name))
+        filtered_recipes.sort(key=lambda r: (
+            not self._has_ingredients(r, None),          # 1. Inventory-only (Priority)
+            not self._has_ingredients(r, nearby_items),  # 2. Nearby-only
+            r.output_name
+        ))
 
         row_h = 28
         # [FIXED] Cast result to integer to prevent TypeError in range()
@@ -244,14 +262,18 @@ class CraftingModal(BaseModal):
             
             is_selected = (self.selected_recipe == recipe)
             is_hovered = row_rect.collidepoint(mouse_pos)
-            has_ingredients = self._has_ingredients(recipe)
+            has_ingredients_local = self._has_ingredients(recipe, None)          # Player only
+            has_ingredients_global = self._has_ingredients(recipe, nearby_items) # Player + Nearby
             
             bg_color = (60, 60, 80) if is_selected else ((50, 50, 50) if is_hovered else (30, 30, 30))
             
+            # [CHANGED] Text Color Logic
             if is_selected:
                 text_color = YELLOW
-            elif has_ingredients:
-                text_color = GREEN
+            elif has_ingredients_local:
+                text_color = GREEN   # Can craft with just inventory
+            elif has_ingredients_global:
+                text_color = YELLOW  # Can craft BUT requires nearby items
             elif is_hovered:
                 text_color = WHITE
             else:
@@ -320,6 +342,11 @@ class CraftingModal(BaseModal):
                            for item in self.player.inventory 
                            if item.name in valid_names)
                 
+                if nearby_items:
+                    have += sum((item.load if item.load is not None else 1) 
+                           for item in nearby_items 
+                           if item.name in valid_names)
+                
                 color = GREEN if have >= needed else RED
                 if have < needed: can_craft = False
                 
@@ -347,6 +374,27 @@ class CraftingModal(BaseModal):
                 self.surface.blit(ing_surf, (text_x, curr_y + 8))
                 curr_y += 35
                 
+            # 1. Define Button Position (Fixed at bottom)
+            btn_h = 40
+            bottom_y = details_y + list_h
+            btn_rect = pygame.Rect(details_x, bottom_y - btn_h, details_w, btn_h)
+            
+            # Cursor for elements strictly above the button
+            element_cursor_y = btn_rect.top - 5
+
+            # 2. Draw Loading Bar (Only if action is active)
+            if self.player.action_timer > 0 and self.player.action_total_time > 0:
+                bar_h = 10
+                # Background
+                pygame.draw.rect(self.surface, (30, 30, 30), (details_x, element_cursor_y - bar_h, details_w, bar_h))
+                # Fill
+                progress = 1.0 - (self.player.action_timer / self.player.action_total_time)
+                fill_w = int(details_w * progress)
+                pygame.draw.rect(self.surface, GREEN, (details_x, element_cursor_y - bar_h, fill_w, bar_h))
+                
+                element_cursor_y -= (bar_h + 10) # Move cursor up
+
+            # 3. Magazine Requirement Text (If applicable)
             recipe_known = True
             if r.magazine:
                 is_read = r.magazine in self.player.known_recipes
@@ -358,12 +406,17 @@ class CraftingModal(BaseModal):
                 mag_text = f"Requires Magazine: {r.magazine}"
                 mag_surf = font_small.render(mag_text, True, mag_color)
                 
-                mag_y = details_y + list_h - 65 
-                self.surface.blit(mag_surf, (details_x, mag_y))
+                element_cursor_y -= 20 # Height of text
+                self.surface.blit(mag_surf, (details_x, element_cursor_y))
+                element_cursor_y -= 5 # Padding
 
-            btn_h = 40
-            btn_rect = pygame.Rect(details_x, details_y + list_h - btn_h, details_w, btn_h)
-            
+            # 4. Craft Time Display (Always visible above everything else)
+            time_text = f"Time: {r.time_required}s"
+            time_surf = font_small.render(time_text, True, GRAY)
+            element_cursor_y -= 20
+            self.surface.blit(time_surf, (details_x, element_cursor_y))
+
+            # 5. Draw Button (Standard logic)
             btn_color = (0, 100, 0) if can_craft else (60, 60, 60)
             border_color = WHITE if can_craft else GRAY
             
@@ -433,6 +486,13 @@ class CraftingModal(BaseModal):
         if self.player.action_timer > 0: return
 
         def craft_complete():
+            source_inventories = [self.player.inventory]
+            nearby = self.game.find_nearby_containers()
+            if nearby:
+                for obj in nearby:
+                    if hasattr(obj, 'inventory') and obj.inventory:
+                        source_inventories.append(obj.inventory)
+
             if getattr(recipe, 'craft_type', 'create') == 'repair':
                 target_item = None
                 for item in self.player.inventory:
@@ -455,27 +515,30 @@ class CraftingModal(BaseModal):
                     valid_names = req['names']
                     removed = 0
                     
-                    for i in range(len(self.player.inventory) - 1, -1, -1):
-                        item = self.player.inventory[i]
-                        
-                        if item.name in valid_names:
-                            item_qty = item.load if item.load is not None else 1
-                            take = min(to_remove - removed, item_qty)
+                    for inv in source_inventories:
+                        if removed >= to_remove: break
+
+                        for i in range(len(inv) - 1, -1, -1):
+                            item = inv[i]
                             
-                            if item.min_restore is not None and item.max_restore is not None:
-                                restore_per_unit = random.randint(item.min_restore, item.max_restore)
-                                total_repair_amount += (restore_per_unit * take)
-                            
-                            if item.load is not None:
-                                item.load -= take
-                            
-                            removed += take
-                            
-                            if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
-                                self.player.inventory.pop(i)
+                            if item.name in valid_names:
+                                item_qty = item.load if item.load is not None else 1
+                                take = min(to_remove - removed, item_qty)
                                 
-                            if removed >= to_remove:
-                                break
+                                if item.min_restore is not None and item.max_restore is not None:
+                                    restore_per_unit = random.randint(item.min_restore, item.max_restore)
+                                    total_repair_amount += (restore_per_unit * take)
+                                
+                                if item.load is not None:
+                                    item.load -= take
+                                
+                                removed += take
+                                
+                                if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
+                                    inv.pop(i)
+                                    
+                                if removed >= to_remove:
+                                    break
                 
                 old_durability = target_item.durability
                 target_item.durability = min(target_item.max_durability, target_item.durability + total_repair_amount)
@@ -497,23 +560,26 @@ class CraftingModal(BaseModal):
                     valid_names = req['names']
                     removed = 0
                     
-                    for i in range(len(self.player.inventory) - 1, -1, -1):
-                        item = self.player.inventory[i]
-                        
-                        if item.name in valid_names:
-                            item_qty = item.load if item.load is not None else 1
-                            take = min(to_remove - removed, item_qty)
+                    for inv in source_inventories:
+                        if removed >= to_remove: break
+
+                        for i in range(len(inv) - 1, -1, -1):
+                            item = inv[i]
                             
-                            if item.load is not None:
-                                item.load -= take
-                            
-                            removed += take
-                            
-                            if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
-                                self.player.inventory.pop(i)
+                            if item.name in valid_names:
+                                item_qty = item.load if item.load is not None else 1
+                                take = min(to_remove - removed, item_qty)
                                 
-                            if removed >= to_remove:
-                                break
+                                if item.load is not None:
+                                    item.load -= take
+                                
+                                removed += take
+                                
+                                if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
+                                    inv.pop(i)
+                                    
+                                if removed >= to_remove:
+                                    break
                 
                 result = Item.create_from_name(recipe.output_name)
                 if result:

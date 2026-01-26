@@ -1,0 +1,10 @@
+<item name="Plastic Bottle" type="container" allow_liquid="true">
+    <properties>
+        <capacity value="1" />
+        <sprite file="water_bottle.png" />
+    </properties>
+    <loot>
+        <item name="Water Unit" chance="1" />
+    </loot>
+    <spawn chance="1" />
+</item>

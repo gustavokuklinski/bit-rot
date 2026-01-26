@@ -31,37 +31,27 @@ def check_recursive_containment(dragged_item, target_container):
     return False
 
 def handle_mouse_down(game, event, mouse_pos):
+    # ... (No changes in handle_mouse_down) ...
     if event.button == 1:
-        # [FIX] 0. Context Menu Priority - Check this FIRST
-        # If the menu is active, it floats above everything else.
         if game.context_menu['active']:
             menu_clicked = False
-            # Check if we clicked on an option
             for rect in game.context_menu.get('rects', []):
                 if rect.collidepoint(mouse_pos):
                     handle_context_menu_click(game, mouse_pos)
-                    return # Stop processing (Action taken)
-            
-            # If we clicked outside the menu, close it
+                    return 
             game.context_menu['active'] = False
-            # We allow the code to "fall through" here so the click 
-            # registers on whatever was underneath the menu (e.g. closing it by clicking a modal)
 
-        # [OPTIMIZATION] 1. Check Topmost Modal Logic First
         topmost_modal = None
         for modal in reversed(game.modals):
             if modal['rect'].collidepoint(mouse_pos):
                 topmost_modal = modal
                 break
         
-        # [OPTIMIZATION] Handle Topmost Modal Specifics
         if topmost_modal:
-            # Bring to front
             if game.modals[-1] != topmost_modal:
                 game.modals.remove(topmost_modal)
                 game.modals.append(topmost_modal)
             
-            # Check Modal Buttons (Close/Minimize) attached to this modal
             for button in getattr(game, 'modal_buttons', []):
                 if button['id'] == topmost_modal['id'] and button['rect'].collidepoint(mouse_pos):
                     if button['type'] == 'close':
@@ -86,16 +76,12 @@ def handle_mouse_down(game, event, mouse_pos):
                         is_image_mode = topmost_modal.get('full_map_image') is not None
                         
                         if is_image_mode:
-                            # [CHANGED] Dynamic step size for smoother zooming at high levels
-                            # [CHANGED] Increased max zoom from 8.0 to 50.0
                             step = max(0.2, current_zoom * 0.2)
                             if button['type'] == 'map_zoom_in':
                                 topmost_modal['map_zoom'] = min(50.0, current_zoom + step)
                             else:
                                 topmost_modal['map_zoom'] = max(0.2, current_zoom - step)
                         else:
-                            # Tile Map: Use integer steps, min zoom 2
-                            # [CHANGED] Increased max zoom for tile mode as well
                             current_zoom = int(current_zoom)
                             if button['type'] == 'map_zoom_in':
                                 topmost_modal['map_zoom'] = min(32, current_zoom + 1)
@@ -103,7 +89,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                 topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
             
-            # If minimized, we only care about header dragging
             if topmost_modal.get('minimized', False):
                  modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
                  if modal_header_rect.collidepoint(mouse_pos):
@@ -111,16 +96,12 @@ def handle_mouse_down(game, event, mouse_pos):
                     topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
                     return
             else:
-                # Not minimized: Check Tabs, Scrollbars, Content
-                
-                # Header Drag
                 modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
                 if modal_header_rect.collidepoint(mouse_pos):
                     topmost_modal['is_dragging'] = True
                     topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
                     return
 
-                # Scrollbar Drag
                 scrollbar_rect = topmost_modal.get('scrollbar_handle_rect') 
                 if scrollbar_rect and scrollbar_rect.collidepoint(mouse_pos):
                     topmost_modal['is_dragging_scrollbar'] = True
@@ -133,11 +114,11 @@ def handle_mouse_down(game, event, mouse_pos):
                         topmost_modal['is_dragging_scrollbar'] = True
                         topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
                         return
-                # [FIX] Specific Modal Logic (Correctly checking for instance)
+                
                 if 'instance' in topmost_modal and hasattr(topmost_modal['instance'], 'handle_event'):
                     if topmost_modal['instance'].handle_event(event): 
                         return
-                # Tabs
+                
                 if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                         if tab_rect.collidepoint(mouse_pos):
@@ -146,7 +127,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                  topmost_modal['active_tab'] = tabs_data[i]['label']
                                  return
 
-                # Specific Modal Logic
                 if hasattr(topmost_modal, 'handle_event'):
                     if topmost_modal.handle_event(event): return
 
@@ -158,11 +138,9 @@ def handle_mouse_down(game, event, mouse_pos):
                     if 'lights_off' in rects and rects['lights_off'].collidepoint(mouse_pos):
                         veh.toggle_lights(); return
 
-                # Specific Inventory Logic (Opening Backpack)
                 if topmost_modal['type'] == 'inventory' and topmost_modal.get('active_tab', 'Inventory') == 'Inventory':
                      backpack_slot_rect = get_backpack_slot_rect(topmost_modal['position'])
                      if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
-                         # Open backpack container if not already open
                          modal_exists = any(m for m in game.modals if m['type'] == 'container' and m['item'] == game.player.backpack)
                          if not modal_exists:
                             new_container_modal = {
@@ -177,16 +155,11 @@ def handle_mouse_down(game, event, mouse_pos):
                             game.modals.append(new_container_modal)
                          return
 
-                # If we clicked inside the topmost modal but didn't hit a button/tab, 
-                # check for drag candidate (items) within that modal
                 handle_left_click_drag_candidate(game, mouse_pos)
                 return
 
-        # [END OPTIMIZATION] - If we reach here, we clicked OUTSIDE any modal
-
-        # 2. Global UI Buttons (HUD)
         for button in getattr(game, 'modal_buttons', []):
-             if not button.get('id'): # Global buttons?
+             if not button.get('id'): 
                  if button['rect'].collidepoint(mouse_pos):
                       if button['type'] == 'send_msg':
                            if game.chat_input_text.strip():
@@ -204,7 +177,6 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.chat_active:
             game.chat_active = False
 
-        # HUD Icons
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game); return
         if game.inventory_button_rect and game.inventory_button_rect.collidepoint(mouse_pos):
@@ -218,7 +190,6 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
             toggle_crafting_modal(game); return
 
-        # Belt HUD
         for i, item in enumerate(game.player.belt):
             slot_rect = get_belt_hud_slot_rect(i)
             if slot_rect.collidepoint(mouse_pos):
@@ -230,7 +201,6 @@ def handle_mouse_down(game, event, mouse_pos):
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                     return
             
-        # Attack / World Interaction
         if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
             handle_attack(game, mouse_pos)
             return
@@ -278,7 +248,6 @@ def handle_mouse_up(game, event, mouse_pos):
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
                 
-                # [CHANGED] Logic: External only if it's NOT the player's own backpack
                 is_raw_external = type_orig in ['container', 'nearby', 'container_stack_split', 'nearby_stack_split']
                 is_source_backpack = (container_obj == game.player.backpack and container_obj is not None)
                 is_external_source = is_raw_external and not is_source_backpack
@@ -323,6 +292,12 @@ def handle_mouse_up(game, event, mouse_pos):
                         if item_in_slot and check_recursive_containment(game.dragged_item, item_in_slot):
                             print("Cannot drop a container into itself.")
                             dropped_successfully = False
+                            break
+                        
+                        # [ADDED] Liquid Check for Belt
+                        if game.dragged_item.liquid:
+                            print(f"The {game.dragged_item.name} spills and is lost (belt cannot hold liquid).")
+                            dropped_successfully = True # Destroyed
                             break
 
                         if is_external_source:
@@ -378,6 +353,11 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if game.player.backpack and check_recursive_containment(game.dragged_item, game.player.backpack):
                                         print("Cannot put a container inside itself."); break
                                     
+                                    # [ADDED] Liquid Check for Backpack Equip Slot
+                                    if game.dragged_item.liquid:
+                                        print(f"The {game.dragged_item.name} spills and is lost.")
+                                        dropped_successfully = True; break
+
                                     if is_external_source:
                                         if game.player.backpack is None:
                                             item_ref = game.dragged_item
@@ -407,6 +387,11 @@ def handle_mouse_up(game, event, mouse_pos):
                             if not dropped_successfully and invcontainer_slot_rect.collidepoint(mouse_pos):
                                 if game.player.invcontainer and check_recursive_containment(game.dragged_item, game.player.invcontainer):
                                     print("Cannot put a container inside itself."); break
+                                
+                                # [ADDED] Liquid Check for Utility Slot
+                                if game.dragged_item.liquid:
+                                     print(f"The {game.dragged_item.name} spills and is lost.")
+                                     dropped_successfully = True; break
 
                                 if (game.player.invcontainer and 
                                     hasattr(game.player.invcontainer, 'inventory') and
@@ -442,7 +427,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                     )
                                     if is_allowed_type:
                                         if is_external_source:
-                                        # Only allow if empty or stackable (simple logic)
                                             can_loot = False
                                             is_stack = False
                                         if game.player.invcontainer is None:
@@ -483,7 +467,12 @@ def handle_mouse_up(game, event, mouse_pos):
                                         target_index = i
                                         break
                                 
-                                if target_index != -1: 
+                                # [ADDED] Liquid Check for Inventory (Pockets)
+                                if target_index != -1 and game.dragged_item.liquid:
+                                    print(f"The {game.dragged_item.name} spills and is lost (pockets cannot hold liquid).")
+                                    dropped_successfully = True
+                                
+                                elif target_index != -1: 
                                     if target_index < len(game.player.inventory):
                                         item_in_slot = game.player.inventory[target_index]
                                         
@@ -534,17 +523,22 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = True
                                 
                                 elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    
+                                    # [ADDED] Check for append
+                                    if game.dragged_item.liquid:
+                                        print(f"The {game.dragged_item.name} spills and is lost.")
+                                        dropped_successfully = True
+                                    else:
+                                        if is_external_source:
+                                            item_ref = game.dragged_item
+                                            def do_inv_append():
+                                                game.player.inventory.append(item_ref)
+                                            game.player.start_action("Looting", 1.0, do_inv_append, xp_reward=0.5)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
 
-                                    if is_external_source:
-                                        item_ref = game.dragged_item
-                                        def do_inv_append():
-                                            game.player.inventory.append(item_ref)
-                                        game.player.start_action("Looting", 1.0, do_inv_append, xp_reward=0.5)
-                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                        return
-
-                                    game.player.inventory.append(game.dragged_item)
-                                    dropped_successfully = True
+                                        game.player.inventory.append(game.dragged_item)
+                                        dropped_successfully = True
                                 
                                 if dropped_successfully: break
                         
@@ -555,6 +549,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                     print("Recursion detected: Cannot put the container inside itself.")
                                     dropped_successfully = False
                                     break
+                                
+                                # [ADDED] Liquid Restriction: Container Logic
+                                # 1. If Container allow_liquid=True, ONLY allow liquids.
+                                # 2. If Container allow_liquid=False, DO NOT allow liquids (spill).
+                                if getattr(container, 'allow_liquid', False):
+                                    if not getattr(game.dragged_item, 'liquid', False):
+                                        print(f"This {container.name} only accepts liquids.")
+                                        dropped_successfully = False # Prevent drop, do not destroy
+                                        break
+                                elif game.dragged_item.liquid:
+                                    print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
+                                    dropped_successfully = True # Destroy
+                                    break
 
                                 target_index = -1
                                 pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
@@ -563,7 +570,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                         target_index = i
                                         break
                                 
-                                # [CHANGED] Looting Logic for Bag Tab (Nearby -> Backpack)
                                 if is_external_source:
                                     can_loot = False
                                     is_stack = False
@@ -597,7 +603,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
-                                # [EXISTING] Instant Drop Logic (Inventory -> Backpack is now instant because is_external_source is False)
                                 if target_index != -1:
                                     if target_index < len(container.inventory):
                                         item_in_slot = container.inventory[target_index]
@@ -632,6 +637,11 @@ def handle_mouse_up(game, event, mouse_pos):
                                         
                                     if item_slot == slot_name:
                                         
+                                        # [ADDED] Liquid Check for Gear
+                                        if dragged_item.liquid:
+                                            print(f"The {dragged_item.name} spills and is lost.")
+                                            dropped_successfully = True; break
+
                                         if is_external_source:
                                             # If coming from external (Nearby/Container), use Timer
                                             item_in_slot = game.player.clothes.get(slot_name)
@@ -698,6 +708,17 @@ def handle_mouse_up(game, event, mouse_pos):
                             dropped_successfully = False
                             break
 
+                        # [ADDED] Liquid Restriction: Container Logic
+                        if getattr(container, 'allow_liquid', False):
+                            if not getattr(game.dragged_item, 'liquid', False):
+                                print(f"This {container.name} only accepts liquids.")
+                                dropped_successfully = False # Prevent drop, do not destroy
+                                break
+                        elif game.dragged_item.liquid:
+                            print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
+                            dropped_successfully = True # Destroy
+                            break
+
                         target_index = -1
                         pos = modal['position']
                         if modal['type'] == 'nearby': pos = modal['content_rect'].topleft
@@ -707,21 +728,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                 target_index = i
                                 break
                         
-                        # [CHANGED] Generalized Loader Logic for Container/Nearby
-                        # Determine if we should show a loader and which one (Looting vs Storing)
                         is_target_backpack = (container == game.player.backpack)
                         use_loader = False
-                        action_name = "Storing" # Default
+                        action_name = "Storing" 
                         
                         if is_target_backpack:
-                            # Target is Backpack (Internal)
-                            # Show loader only if Source is External (Nearby -> Backpack)
                             if is_external_source:
                                 use_loader = True
                                 action_name = "Looting"
                         else:
-                            # Target is External (Nearby/Chest)
-                            # Show loader if Source is Internal (Inv/Backpack -> Nearby)
                             if not is_external_source:
                                 use_loader = True
                                 action_name = "Storing"
@@ -755,7 +770,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                         item_in_dst.load += trans
                                         item_ref.load -= trans
                                         if item_ref.load > 0:
-                                            # Return remainder (simplified)
                                             pass
                                     else:
                                         if target_index != -1 and target_index <= len(container.inventory):
@@ -767,7 +781,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
 
-                        # [EXISTING] Instant Drop Logic (Fallback)
                         if target_index != -1 and target_index < len(container.inventory):
                             item_in_slot = container.inventory[target_index]
                             if item_in_slot.can_stack_with(game.dragged_item):
@@ -804,12 +817,27 @@ def handle_mouse_up(game, event, mouse_pos):
                 game_world_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
                 if game.dragged_item:
                     if game_world_rect.collidepoint(mouse_pos) and not is_over_modal:
-                        if find_free_tile(game.dragged_item.rect, game.obstacles, game.items_on_ground, initial_pos=game.player.rect.center, max_radius=1):
-                            game.items_on_ground.append(game.dragged_item)
-                            dropped_successfully = True
-                        else:
-                            dropped_successfully = False
-                            print("No free space to drop the item.")
+                        
+                        # [ADDED] Ground Drop Logic for Liquids
+                        is_safe_ground = False
+                        if game.dragged_item.liquid:
+                            grid_x = int(mouse_pos[0] // TILE_SIZE)
+                            grid_y = int(mouse_pos[1] // TILE_SIZE)
+                            tile_def = game.map_manager.get_tile_at(grid_x, grid_y)
+                            if tile_def and tile_def.get('allow_liquid', False):
+                                is_safe_ground = True
+                                print(f"Placed {game.dragged_item.name} on {tile_def.get('name')}.")
+                            else:
+                                print(f"The {game.dragged_item.name} spills on the ground.")
+                                dropped_successfully = True # Destroyed
+                        
+                        if (not game.dragged_item.liquid) or is_safe_ground:
+                            if find_free_tile(game.dragged_item.rect, game.obstacles, game.items_on_ground, initial_pos=game.player.rect.center, max_radius=1):
+                                game.items_on_ground.append(game.dragged_item)
+                                dropped_successfully = True
+                            else:
+                                dropped_successfully = False
+                                print("No free space to drop the item.")
                     
                     if not dropped_successfully and game.dragged_item:
                         # BOUNCE BACK
@@ -861,6 +889,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
 
 def find_item_at_pos(game, mouse_pos):
+    # ... (No changes) ...
     for i, item in enumerate(game.player.belt):
         if item and get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
             return item
@@ -924,7 +953,7 @@ def find_item_at_pos(game, mouse_pos):
     return None
 
 def handle_mouse_motion(game, event, mouse_pos):
-
+    # ... (No changes) ...
     if game.player:
         player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
         player_screen_y = GAME_HEIGHT / 2
@@ -1066,6 +1095,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                 game.last_modal_positions[modal['type']] = modal['position']
 
 def handle_context_menu_click(game, mouse_pos):
+    # ... (No changes) ...
     clicked_on_menu = False
     for i, rect in enumerate(game.context_menu['rects']):
         if rect.collidepoint(mouse_pos):
@@ -1168,20 +1198,6 @@ def handle_context_menu_click(game, mouse_pos):
                     game.modals.append(new_container_modal)
                  clicked_on_menu = True
 
-            #elif option == 'Open':
-            #    if getattr(item, 'item_type', '') != 'vehicle':
-            #         if getattr(item, 'inventory', None) is not None:
-            #            modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-            #            if not modal_exists:
-            #                new_container_modal = {
-            #                    'id': uuid.uuid4(), 'type': 'container', 'item': item,
-            #                    'position': game.last_modal_positions['container'],
-            #                    'is_dragging': False, 'drag_offset': (0, 0),
-            #                    'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-            #                    'minimized': False
-            #                }
-            #                game.modals.append(new_container_modal)
-            #    clicked_on_menu = True
             
             if option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
@@ -1496,7 +1512,7 @@ def handle_context_menu_click(game, mouse_pos):
 
 
 def handle_right_click(game, mouse_pos):
-
+    # ... (No changes) ...
     clicked_item = None
     click_source = None
     click_index = -1
@@ -1579,7 +1595,6 @@ def handle_right_click(game, mouse_pos):
         
         if clicked_item: break
 
-    # [FIX] Check if we are clicking "through" a modal to the ground
     is_over_any_modal = any(modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
     if not clicked_item and not is_over_any_modal:
@@ -1626,7 +1641,6 @@ def handle_right_click(game, mouse_pos):
 
             if tile and tile.get('type') == "maptile_car":
                 if dist <= TILE_SIZE * 2:
-                    # [CHANGED] Use the new get_vehicle_at method with grid coordinates
                     vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                     if vehicle:
                         clicked_item = vehicle
@@ -1642,7 +1656,6 @@ def handle_right_click(game, mouse_pos):
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
         for light in game.map_lights:
-            # Check if we clicked the specific tile of the light
             if light['rect'].collidepoint(world_pos):
                 clicked_item = light
                 click_source = 'light_source'
@@ -1659,7 +1672,6 @@ def handle_right_click(game, mouse_pos):
                 break
 
     if not clicked_item and not is_over_any_modal:
-        # [CHANGED] Final fallback: Clicked on empty ground
         clicked_item = {'name': 'Ground', 'type': 'ground'}
         click_source = 'ground_context'
         click_index = 0
@@ -1687,7 +1699,6 @@ def handle_right_click(game, mouse_pos):
         elif click_source == 'player_self':
             options = ['Status', 'Inventory', 'Gear']
         elif click_source == 'ground_context':
-            # [CHANGED] Add Rest option for ground click
             options = ['Rest']
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
@@ -1718,18 +1729,15 @@ def handle_right_click(game, mouse_pos):
             if isinstance(clicked_item, Corpse):
                 can_grab = False
             elif is_camp and clicked_item.inventory:
-                # Prevent grabbing a camp if it has items inside
                 can_grab = False
             
             if can_grab:
                 if 'Grab' not in options: options.insert(0, 'Grab') 
 
-            # Restrict "Place on Backpack" if we can't grab it (e.g. full camp)
             if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
                 if can_grab:
                     if 'Place on Backpack' not in options: options.append('Place on Backpack')
 
-            # Add "Sleep" option for camps
             if is_camp and getattr(clicked_item, 'allow_sleep', False):
                 options.append('Sleep')
 
@@ -1883,6 +1891,7 @@ def handle_left_click_drag_candidate(game, mouse_pos):
     
 
 def handle_attack(game, mouse_pos):
+    # ... (No changes) ...
     if any(modal['is_dragging'] for modal in game.modals):
         return
 

@@ -1,0 +1,10 @@
+<item name="Chocolate Bar" type="container" disposable="true">
+    <properties>
+        <capacity value="1" />
+        <sprite file="chocolate_bar.png" />
+    </properties>
+    <loot>
+        <item name="Chocolate Black" chance="1" />
+    </loot>
+    <spawn chance="1" />
+</item>

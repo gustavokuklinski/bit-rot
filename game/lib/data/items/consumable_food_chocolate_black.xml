@@ -1,0 +1,11 @@
+<item name="Chocolate Black" type="consumable_food">
+    <properties>
+        <restore status="[food]" min="1" max="3" />
+        <restore status="[tireness]" min="1" max="2" />
+        <restore status="[stamina]" min="2" max="5" />
+        <load min="1" max="6" />
+        <capacity value="6" />
+        <sprite file="chocolate_black.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

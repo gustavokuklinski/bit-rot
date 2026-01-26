@@ -93,6 +93,11 @@ def draw_tooltip(surface, item, pos):
             # Format as: "  Lucky: +0.5%"
             lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")
 
+    # --- NEW: Add preview of items at the bottom ---
+    if hasattr(item, 'inventory') and item.inventory:
+        if len(item.inventory) > 0:
+            lines.append({'type': 'item_preview', 'items': item.inventory[:5]})
+    # -----------------------------------------------
 
     # font = pygame.font.Font(None, 24) # Unused in original code effectively
     rendered_lines = []
@@ -135,7 +140,38 @@ def draw_tooltip(surface, item, pos):
             pygame.draw.rect(line_surf, (150, 150, 150), (bar_x, bar_y, bar_w, bar_h), 1)
             
             rendered_lines.append(line_surf)
-        # ----------------------------------
+        
+        # --- NEW: Handle Item Preview Rendering ---
+        elif isinstance(line, dict) and line.get('type') == 'item_preview':
+            items_to_draw = line['items']
+            slot_size = 32  # Small size for tooltip
+            gap = 4
+            
+            total_w = len(items_to_draw) * (slot_size + gap)
+            total_h = slot_size
+            
+            line_surf = pygame.Surface((total_w, total_h), pygame.SRCALPHA)
+            
+            for i, p_item in enumerate(items_to_draw):
+                x_pos = i * (slot_size + gap)
+                slot_rect = pygame.Rect(x_pos, 0, slot_size, slot_size)
+                
+                # Draw dark background for the slot
+                pygame.draw.rect(line_surf, (40, 40, 40), slot_rect)
+                pygame.draw.rect(line_surf, (100, 100, 100), slot_rect, 1) # Border
+                
+                if p_item.image:
+                    # Scale image to fit within slot with small padding
+                    icon_size = slot_size - 4
+                    scaled_icon = pygame.transform.scale(p_item.image, (icon_size, icon_size))
+                    icon_rect = scaled_icon.get_rect(center=slot_rect.center)
+                    line_surf.blit(scaled_icon, icon_rect)
+                else:
+                    # Fallback if no image
+                    pygame.draw.rect(line_surf, p_item.color, slot_rect.inflate(-6, -6))
+
+            rendered_lines.append(line_surf)
+        # ------------------------------------------
 
         elif isinstance(line, list):
             # Handle composite line: [(text, color), (text, color)]
