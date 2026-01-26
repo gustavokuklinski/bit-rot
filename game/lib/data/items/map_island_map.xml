@@ -1,0 +1,6 @@
+<item name="Island Map" type="map">
+    <properties>
+        <sprite file="map.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

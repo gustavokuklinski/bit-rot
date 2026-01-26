@@ -154,6 +154,13 @@ def handle_mouse_down(game, event, mouse_pos):
                             }
                             game.modals.append(new_container_modal)
                          return
+                
+                if topmost_modal['type'] == 'big_map' and not topmost_modal.get('minimized', False):
+                    map_rect = topmost_modal.get('map_area_rect')
+                    if map_rect and map_rect.collidepoint(mouse_pos):
+                        topmost_modal['is_dragging_map'] = True
+                        topmost_modal['drag_map_start'] = mouse_pos
+                        return
 
                 handle_left_click_drag_candidate(game, mouse_pos)
                 return
@@ -237,6 +244,7 @@ def handle_mouse_up(game, event, mouse_pos):
     for modal in reversed(game.modals):
         modal['is_dragging'] = False
         modal['is_dragging_scrollbar'] = False
+        modal['is_dragging_map'] = False
 
     if event.button == 1:
         dropped_successfully = False
@@ -1003,6 +1011,28 @@ def handle_mouse_motion(game, event, mouse_pos):
                      modal['crafting_scroll_offset'] = int(pct * max_scroll)
              return
 
+
+    for modal in reversed(game.modals):
+        if modal.get('is_dragging_map'):
+            # Calculate pixel delta
+            start_pos = modal.get('drag_map_start', mouse_pos)
+            dx = mouse_pos[0] - start_pos[0]
+            dy = mouse_pos[1] - start_pos[1]
+            
+            # Convert to Tile Delta (depend on zoom)
+            zoom = modal.get('map_zoom', 6)
+            
+            # Update start pos for next frame
+            modal['drag_map_start'] = mouse_pos
+            
+            # Update Offset (Accumulate floats for smoothness, store as float)
+            current_off = modal.get('map_offset', (0, 0))
+            new_off_x = current_off[0] + (dx / zoom)
+            new_off_y = current_off[1] + (dy / zoom)
+            
+            modal['map_offset'] = (new_off_x, new_off_y)
+            return
+
     for modal in reversed(game.modals):
         if modal.get('is_dragging_scrollbar'):
             mouse_delta_y = mouse_pos[1] - modal['scrollbar_drag_last_y']
@@ -1377,7 +1407,31 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             elif option == 'Open' or option == 'Inspect':
-                if getattr(item, 'item_type', None) == 'mobile':
+                # [FIXED] Changed to exclusive if/elif structure to prevent multiple modals
+                if getattr(item, 'item_type', None) == 'map':
+                    # Close existing map modals to prevent duplicates
+                    game.modals = [m for m in game.modals if m['type'] != 'big_map']
+                    
+                    default_pos = (VIRTUAL_SCREEN_WIDTH // 2 - 450, VIRTUAL_GAME_HEIGHT // 2 - 350)
+                    
+                    new_map_modal = {
+                        'id': uuid.uuid4(), 
+                        'type': 'big_map', 
+                        'item': item,
+                        'position': default_pos,
+                        'rect': pygame.Rect(default_pos, (MAP_MODAL_WIDTH, MAP_MODAL_HEIGHT)),
+                        'minimized': False,
+                        'is_dragging': False, 
+                        'drag_offset': (0, 0),
+                        'map_zoom': 6,
+                        'map_offset': (0, 0),
+                        'is_dragging_map': False
+                    }
+                    game.modals.append(new_map_modal)
+                    clicked_on_menu = True
+                    
+                # [CHANGED] Changed 'if' to 'elif' to ensure mutual exclusivity
+                elif getattr(item, 'item_type', None) == 'mobile':
                     modal_exists = any(m['type'] == 'mobile' and m['item'] == item for m in game.modals)
                     if not modal_exists:
                         new_mobile_modal = {

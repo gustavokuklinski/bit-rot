@@ -975,11 +975,13 @@ class Player:
             return options
         
         # [MODIFIED] Check for both text AND reciple
-        if item.item_type == 'text' or item.item_type == 'recipe':
+        if item.item_type == 'text' or item.item_type == 'recipe' or item.item_type == 'map':
             # Use 'Use' for recipes to trigger the consume_item -> read_recipe_book timer logic.
             # 'Read' usually triggers instant text display.
             if item.item_type == 'recipe':
                 options.append('Use')
+            elif item.item_type == 'map':
+                options.append('Open')
             else:
                 options.append('Read')
 

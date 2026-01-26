@@ -151,6 +151,15 @@ def handle_input(game):
                             modal['map_zoom'] = min(16, current_zoom + 1)
                         elif event.y < 0: 
                             modal['map_zoom'] = max(2, current_zoom - 1)
+                
+                elif modal.get('type') == 'big_map' and not modal.get('minimized', False):
+                    map_area = modal.get('map_area_rect')
+                    if map_area and map_area.collidepoint(mouse_pos):
+                        current_zoom = modal.get('map_zoom', 6)
+                        if event.y > 0: 
+                            modal['map_zoom'] = min(32, current_zoom + 1)
+                        elif event.y < 0: 
+                            modal['map_zoom'] = max(2, current_zoom - 1)
 
         if event.type == pygame.VIDEORESIZE:
             game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)

@@ -28,6 +28,8 @@
         <item item="Car Key Jeep" chance="0.1" />
         <item item="38 Revolver" chance="0.1" />
         <item item="38 Ammo" chance="0.1" />
+        <item item="Ammo Canister 556" chance="0.1" />
+        <item item="Ammo Canister 9mm" chance="0.1" />
         <item item="MPK5" chance="0.1" />
         <item item="MAC10" chance="0.1" />
         <item item="Sleeping Bag" chance="0.1" />
@@ -38,5 +40,6 @@
         <item item="Survivor Kit" chance="0.2" />
         <item item="Medical Kit" chance="0.2" />
         <item item="Sewing Kit" chance="0.1" />
+        <item item="Island Map" chance="0.1" />
     </loot>
 </map>

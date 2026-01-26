@@ -27,5 +27,6 @@
         <item item="Sewing Kit" chance="0.1" />
         <item item="Car Key Jeep" chance="0.1" />
         <item item="Car Key Pickup" chance="0.1" />
+        <item item="Island Map" chance="0.1" />
     </loot>
 </map>
