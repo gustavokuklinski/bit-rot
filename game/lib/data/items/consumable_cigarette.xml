@@ -8,7 +8,6 @@
         <load min="2" max="20" />
         <capacity value="20" />
         <require type="[Matches, Lighter on]" />
-        
         <sprite file="cigarette.png" />
     </properties>
     <spawn chance="0" />

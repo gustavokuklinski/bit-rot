@@ -4,12 +4,13 @@
         <sprite file="survivor_kit.png" />
     </properties>
     <loot>
-        <item name="Survivor Guide Basic" chance="1" />
-        <item name="Scissor" chance="0.5" />
-        <item name="Needle" chance="0.5" />
-        <item name="Alcohol Bottle" chance="0.5" />
-        <item name="Portable Hand Saw" chance="0.5" />
-        <item name="Screwdriver" chance="0.5" />
+        <item name="Survivor Guide Basic" chance="0.8" />
+        <item name="Plastic Bottle" chance="0.6" />
+        <item name="Scissor" chance="0.4" />
+        <item name="Needle" chance="0.4" />
+        <item name="Alcohol Bottle" chance="0.4" />
+        <item name="Portable Hand Saw" chance="0.4" />
+        <item name="Screwdriver" chance="0.4" />
         <item item="Island Map" chance="0.2" />
     </loot>
     <spawn chance="1" />

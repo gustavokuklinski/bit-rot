@@ -1403,7 +1403,20 @@ def handle_context_menu_click(game, mouse_pos):
                         game.items_on_ground.append(dropped_item)
 
             elif option == 'Read':
-                game.player.read_recipe_book(item)
+                # [FIX] Handle 'text' items (like ID cards) here instead of expecting them to be recipes
+                if getattr(item, 'item_type', None) == 'text':
+                    modal_exists = any(m['type'] == 'text' and m['item'] == item for m in game.modals)
+                    if not modal_exists:
+                        new_text_modal = {
+                            'id': uuid.uuid4(), 'type': 'text', 'item': item,
+                            'position': game.last_modal_positions['text'], 
+                            'is_dragging': False, 'drag_offset': (0, 0),
+                            'rect': pygame.Rect(game.last_modal_positions['text'][0], game.last_modal_positions['text'][1], TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT),
+                            'minimized': False, 'scroll_offset_y': 0
+                        }
+                        game.modals.append(new_text_modal)
+                else:
+                    game.player.read_recipe_book(item)
                 clicked_on_menu = True
 
             elif option == 'Open' or option == 'Inspect':
