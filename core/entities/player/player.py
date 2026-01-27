@@ -9,7 +9,7 @@ import core.data.config
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.player.player_progression import PlayerProgression
-from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
+from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 from core.messages import display_message, display_message_player
 from core.placement import find_free_tile
 from core.data.recipe_manager import RecipeManager
@@ -65,7 +65,6 @@ class Player:
 
         self.inventory = []
         self.backpack = None
-        self.invcontainer = None
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
@@ -642,8 +641,7 @@ class Player:
         if self.backpack:
             all_inventories.append(self.backpack.inventory)
             
-        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
-             all_inventories.append(self.invcontainer.inventory)
+        
 
         for inv in all_inventories:
             for item in inv:
@@ -692,18 +690,7 @@ class Player:
                 self.backpack = None
                 msg(f"Discarded empty backpack container.")
 
-        # 4. Clean Utility Container (InvContainer)
-        if self.invcontainer:
-             # Clean INSIDE the utility container recursively
-             if hasattr(self.invcontainer, 'inventory'):
-                Item.cleanup_disposables(self.invcontainer.inventory, game.modals, msg)
-
-             # Check the utility container itself
-             if getattr(self.invcontainer, 'disposable', False) and hasattr(self.invcontainer, 'inventory') and len(self.invcontainer.inventory) == 0:
-                 name = self.invcontainer.name
-                 close_modal(self.invcontainer)
-                 self.invcontainer = None
-                 msg(f"Discarded empty {name}.")
+        
 
         if self.is_reloading:
             self.reload_timer -= 1
@@ -775,10 +762,7 @@ class Player:
             slot_rect = get_backpack_slot_rect()
             if slot_rect.collidepoint(mouse_pos):
                 return self.backpack, 'backpack', 0
-        if self.invcontainer:
-            slot_rect = get_invcontainer_slot_rect()
-            if slot_rect.collidepoint(mouse_pos):
-                return self.invcontainer, 'invcontainer', 0
+        
 
         return None, None, None
 
@@ -804,10 +788,7 @@ class Player:
                  if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
                     return item, 'container', i, self.backpack
 
-        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
-             for i, item in enumerate(self.invcontainer.inventory):
-                 if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                    return item, 'container', i, self.invcontainer
+        
         
         return None, None, None, None
 
@@ -828,10 +809,7 @@ class Player:
                 if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
                     return item, 'container', i, self.backpack
                     
-        if self.invcontainer and hasattr(self.invcontainer, 'inventory'):
-            for i, item in enumerate(self.invcontainer.inventory):
-                 if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
-                    return item, 'container', i, self.invcontainer
+        
 
         return None, None, None, None
 
@@ -922,9 +900,7 @@ class Player:
             for i, item in enumerate(self.backpack.inventory):
                 if is_valid_kit(item): return item, 'container', i, self.backpack
 
-        if self.invcontainer:
-            for i, item in enumerate(self.invcontainer.inventory):
-                if is_valid_kit(item): return item, 'container', i, self.invcontainer
+        
         
         return None, None, None, None
 
@@ -1039,8 +1015,7 @@ class Player:
             if self.backpack and container_item is not self.backpack:
                 options.append('Send all to Backpack')
             
-            if self.invcontainer and container_item is not self.invcontainer and source != 'invcontainer':
-                 options.append('Send all to Utility')
+            
 
             if source != 'inventory':
                 options.append('Send all to Inventory')
@@ -1120,8 +1095,7 @@ class Player:
             return self.inventory
         elif source_type == 'belt':
             return self.belt
-        elif source_type == 'invcontainer':
-            return [self.invcontainer] if self.invcontainer else []
+        
         elif (source_type == 'container' or source_type == 'nearby') and container_item:
             return container_item.inventory
         return None
@@ -1135,16 +1109,7 @@ class Player:
              print(f"Error: Could not find source inventory for {source_type}")
              return False
 
-        if item not in source_inventory:
-            if source_type == 'invcontainer' and item == self.invcontainer:
-                 for i, slot in enumerate(self.belt):
-                    if slot is None:
-                        self.belt[i] = item
-                        self.invcontainer = None 
-                        display_message_player(f"Equipped {item.name} to belt.")
-                        return True
-            print(f"Error: Item {item.name} not found in source {source_type}")
-            return False
+        
         
         for i, slot in enumerate(self.belt):
             if slot is None:
@@ -1186,12 +1151,7 @@ class Player:
                         if it and it.name == name:
                              if it.load is not None and it.load <= 0: continue
                              return True
-                # Search Utility Container
-                if self.invcontainer:
-                     for it in self.invcontainer.inventory:
-                        if it and it.name == name:
-                             if it.load is not None and it.load <= 0: continue
-                             return True
+                
                 return False
 
             for req_name in required_list:
@@ -1286,8 +1246,6 @@ class Player:
             return True
         else:
             return self.start_action(f"Using {item.name}", duration_mult, execute_consume, xp_reward=5)
-
-    # ... [Keep remaining methods: toggle_utility_item, reload_utility_item, find_item_and_stack, drop_item_stack, transfer_item_stack, drop_item, stack_item_in_inventory, destroy_broken_weapon, find_water_to_auto_drink] ...
     
     def toggle_utility_item(self, item, source, index, container_item):
         if not hasattr(item, 'state'):
@@ -1377,8 +1335,7 @@ class Player:
         
         if source == 'backpack' and self.backpack:
             return self.backpack, [self] 
-        if source == 'invcontainer' and self.invcontainer:
-            return self.invcontainer, [self]
+        
             
         return None, None
 
@@ -1420,8 +1377,7 @@ class Player:
             
             if source == 'backpack':
                 item = self.backpack
-            elif source == 'invcontainer':
-                item = self.invcontainer
+            
             elif source_inventory and 0 <= index < len(source_inventory):
                 item = source_inventory[index] 
 
@@ -1459,8 +1415,7 @@ class Player:
             if item.load <= 0:
                 if source == 'backpack':
                     self.backpack = None
-                elif source == 'invcontainer':
-                    self.invcontainer = None
+                
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                     source_inventory.pop(index)
                     if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
@@ -1477,8 +1432,7 @@ class Player:
                     
                     if source == 'backpack':
                         self.backpack = None
-                    elif source == 'invcontainer':
-                        self.invcontainer = None
+                    
                     elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                         source_inventory.pop(index)
                         if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
@@ -1488,12 +1442,28 @@ class Player:
                 else:
                     display_message_player(f"{target_name} is full. Could not transfer remaining {remaining_load}.")
 
-        is_external_source = (source == 'container' or source == 'nearby')
-        is_external_target = (target_container is not self and 
-                              target_container is not self.backpack and 
-                              target_container is not self.invcontainer)
+        # --- Helper to check if a container is part of the player's equipment ---
+        def is_on_player(container):
+            if not container: return False
+            if container is self: return True # Main Inventory
+            if container is self.backpack: return True
+            if container in self.belt: return True
+            # Check if container is one of the equipped clothes
+            if container in self.clothes.values(): return True
+            return False
+
+        # 1. Check if source is on player
+        # 'gear' means unequipping a slot directly. 'container' + is_on_player means moving from inside an equipped bag/vest.
+        source_is_on_player = (
+            source in ['inventory', 'belt', 'backpack', 'gear'] or
+            (source == 'container' and is_on_player(container_item))
+        )
+
+        # 2. Check if target is on player
+        target_is_on_player = is_on_player(target_container)
         
-        needs_timer = is_external_source or is_external_target
+        # Only require a timer if one of the locations is NOT on the player (e.g., ground, world container)
+        needs_timer = not (source_is_on_player and target_is_on_player)
         
         if needs_timer:
             self.start_action("Transferring", 1.5, execute_transfer, xp_reward=2)
@@ -1525,11 +1495,7 @@ class Player:
             self.backpack = None
             source_inventory = [self] 
             source_index = 0 
-        elif source == 'invcontainer':
-            item_to_drop = self.invcontainer
-            self.invcontainer = None
-            source_inventory = [self] 
-            source_index = 1 
+        
         elif source == 'gear':
             item_to_drop = self.clothes.get(index) 
             self.clothes[index] = None
@@ -1553,8 +1519,7 @@ class Player:
                     source_inventory[source_index] = item_to_drop
                 elif source == 'backpack':
                     self.backpack = item_to_drop
-                elif source == 'invcontainer':
-                    self.invcontainer = item_to_drop
+                
                 elif source == 'gear':
                     self.clothes[index] = item_to_drop 
                 elif source == 'container' or source == 'nearby':

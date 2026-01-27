@@ -19,7 +19,7 @@ from core.entities.zombie.corpse import Corpse
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
 from core.ui.helpers.player_setup import run_player_setup
-from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -330,6 +330,7 @@ class Game:
                     "health": npc.health,
                     "is_following": npc.is_following,
                     "is_friendly": npc.is_friendly,
+                    "is_static": getattr(npc, 'is_static', False),
                     "inventory": safe_inventory,
                     "equipped_weapon": safe_weapon,
                     "clothes": safe_clothes
@@ -585,7 +586,8 @@ class Game:
                      npc_list = json.load(f)
                  self.npcs.empty()
                  for n_data in npc_list:
-                     npc = NPC(n_data['x'], n_data['y'], self)
+                     is_static = n_data.get('is_static', False)
+                     npc = NPC(n_data['x'], n_data['y'], self, is_static=is_static)
                      npc.name = n_data.get('name', 'Survivor')
                      npc.health = n_data.get('health', 100)
                      
@@ -738,7 +740,6 @@ class Game:
                         # Gather all single equipped items into one list to iterate
                         equipped_roots = []
                         if self.player.backpack: equipped_roots.append(self.player.backpack)
-                        if self.player.invcontainer: equipped_roots.append(self.player.invcontainer)
                         if self.player.clothes: 
                             equipped_roots.extend([c for c in self.player.clothes.values() if c])
 
@@ -1054,6 +1055,12 @@ class Game:
                 for x, char in enumerate(row):
                     if char.strip() == 'NPC':
                         self.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
+
+                    elif char.strip() == 'S':
+                        px, py = x * TILE_SIZE, y * TILE_SIZE
+                        # Instantiate directly (is_static=True)
+                        npc = NPC(px, py, self, is_static=True)
+                        self.npcs.add(npc)
         
         if self.player_spawn:
             self.logger.info(f"Player spawn point found at {self.player_spawn}. Setting player position.")
@@ -1404,13 +1411,28 @@ class Game:
 
 
     def find_nearby_containers(self):
-        nearby_containers = []
-        for item in self.items_on_ground + self.containers:
-            if hasattr(item, 'inventory'):
-                dist = math.hypot(self.player.rect.centerx - item.rect.centerx, self.player.rect.centery - item.rect.centery)
+        """
+        Finds all interactable objects (items, containers, corpses) near the player.
+        Ensures objects are unique and includes loose items without inventory.
+        """
+        nearby_objects = []
+        seen_ids = set()
+        
+        # Combine all potential sources: loose items, static containers/vehicles, and corpses
+        all_candidates = self.items_on_ground + self.containers + self.corpses
+        
+        for obj in all_candidates:
+            # Prevent duplicates using ID check
+            if id(obj) in seen_ids:
+                continue
+                
+            if hasattr(obj, 'rect'):
+                dist = math.hypot(self.player.rect.centerx - obj.rect.centerx, self.player.rect.centery - obj.rect.centery)
                 if dist <= TILE_SIZE * 1.5:
-                    nearby_containers.append(item)
-        return nearby_containers
+                    nearby_objects.append(obj)
+                    seen_ids.add(id(obj))
+                    
+        return nearby_objects
 
     def screen_to_world(self, screen_pos):
         screen_x, screen_y = screen_pos

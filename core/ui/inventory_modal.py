@@ -173,21 +173,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     else:
         pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
     
-    # 3. Draw Utility Slot
-    invcontainer_slot_rect = get_invcontainer_slot_rect(modal['position'])
-    pygame.draw.rect(surface, GRAY_40, invcontainer_slot_rect, 0, 3)
-    surface.blit(font_small.render("", True, WHITE), (invcontainer_slot_rect.x + 1, invcontainer_slot_rect.y - 15))
-    if (invcontainer := player.invcontainer):
-        pygame.draw.rect(surface, invcontainer.color, invcontainer_slot_rect, 2, 5)
-        if invcontainer.image:
-            img_h = invcontainer_slot_rect.height - 10
-            img_w = int(invcontainer.image.get_width() * (img_h / invcontainer.image.get_height()))
-            scaled_sprite = pygame.transform.scale(invcontainer.image, (img_w, img_h))
-            sprite_rect = scaled_sprite.get_rect(centery=invcontainer_slot_rect.centery, left=invcontainer_slot_rect.left + 5)
-            surface.blit(scaled_sprite, sprite_rect)
-    else:
-        pygame.draw.rect(surface, GRAY, invcontainer_slot_rect, 1, 3)
-
+    
     # 4. Draw Belt Slots (in Modal) - UPDATED TO MATCH HUD
     belt_y_start = backpack_slot_rect.bottom + 15
 
@@ -321,20 +307,12 @@ def get_belt_slot_rect_in_modal(i, modal_position):
 
 def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
     modal_x, modal_y = modal_position
-    slot_w = 218
+    slot_w = 272
     slot_h = 48
     x = modal_x + 10
     y = modal_y + 155
     return pygame.Rect(x, y, slot_w, slot_h)
 
-def get_invcontainer_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
-    modal_x, modal_y = modal_position
-    slot_w = 48
-    slot_h = 48
-    gap = 8
-    x = modal_x + 235
-    y = modal_y + 155 
-    return pygame.Rect(x, y, slot_w, slot_h)
 
 def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory (I)")
@@ -370,9 +348,6 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     if player.backpack:
         register_container(player.backpack, "Bag")
     
-    # 2. Check Utility Slot
-    if player.invcontainer:
-        register_container(player.invcontainer, "Utility")
 
     # 3. Check Belt Slots
     for item in player.belt:

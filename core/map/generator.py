@@ -828,6 +828,16 @@ class ProceduralGenerator:
             for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
         print(f"PLACED: {tmpl_name} at ({tx},{ty})")
 
+        if NPC_STATIC_SPAWN > 0:
+            for sy in range(ty + 1, ty + th - 1):
+                for sx in range(tx + 1, tx + tw - 1):
+                    if 0 <= sx < w and 0 <= sy < h:
+                        # Check if tile is empty ground (no furniture/walls in base layer)
+                        # and no other spawn marker exists
+                        if layers['base'][sy][sx] == ' ' and layers['spawn'][sy][sx] == ' ':
+                            if random.random() < NPC_STATIC_SPAWN:
+                                layers['spawn'][sy][sx] = 'S'
+
     def _scatter_zombies(self, layers, mask, w, h):
         building_tiles = []
         street_tiles = []
@@ -960,10 +970,11 @@ class ProceduralGenerator:
                     bg_surf.blit(defs[l_char]['image'], (px, py))
                 
                 s_char = spawn[y][x]
-                if s_char in ['Z', 'P', 'I', 'NPC']:
+                if s_char in ['Z', 'P', 'I', 'NPC', 'S']:
                     color = (0, 0, 0)
                     if s_char == 'Z': color = (255, 0, 0)
                     elif s_char == 'P': color = (0, 255, 0)
                     elif s_char == 'I': color = (0, 0, 255)
                     elif s_char == 'NPC': color = (255, 255, 0)
+                    elif s_char == 'S': color = (0, 0, 255) # Blue for Static NPCs
                     pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

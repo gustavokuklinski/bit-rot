@@ -20,7 +20,8 @@ class CraftingModal(BaseModal):
         self.padding = 20
         
         self.selected_recipe = None
-        
+        self.warning_message = None
+
         if 'crafting_scroll_offset' not in self.modal:
             self.modal['crafting_scroll_offset'] = 0
             
@@ -318,6 +319,8 @@ class CraftingModal(BaseModal):
 
             r = self.selected_recipe
             
+            self.warning_message = self._validate_ingredients(r, nearby_containers)
+
             title_surf = font.render(r.output_name, True, WHITE)
             self.surface.blit(title_surf, (details_x, details_y))
             
@@ -416,7 +419,14 @@ class CraftingModal(BaseModal):
             element_cursor_y -= 20
             self.surface.blit(time_surf, (details_x, element_cursor_y))
 
-            # 5. Draw Button (Standard logic)
+            # 5. Warning Message Display
+            if self.warning_message:
+                warn_surf = font_small.render(self.warning_message, True, RED)
+                # Ensure it fits or wrap? For now, simple render above Time
+                element_cursor_y -= 20
+                self.surface.blit(warn_surf, (details_x, element_cursor_y))
+
+            # 6. Draw Button (Standard logic)
             btn_color = (0, 100, 0) if can_craft else (60, 60, 60)
             border_color = WHITE if can_craft else GRAY
             
@@ -482,8 +492,53 @@ class CraftingModal(BaseModal):
             self.surface.blit(s, (x + padding, curr_y))
             curr_y += line_height
 
+
+    def _validate_ingredients(self, recipe, nearby_containers=None):
+        source_inventories_check = [self.player.inventory]
+        
+        if nearby_containers is None:
+            nearby_containers = self.game.find_nearby_containers()
+            
+        if nearby_containers:
+            for obj in nearby_containers:
+                if hasattr(obj, 'inventory') and obj.inventory:
+                    source_inventories_check.append(obj.inventory)
+
+        for req in recipe.ingredients:
+            if not req['destroy']: 
+                continue
+
+            to_remove = req['amount']
+            valid_names = req['names']
+            removed_check = 0
+            
+            for inv in source_inventories_check:
+                if removed_check >= to_remove: break
+
+                for i in range(len(inv) - 1, -1, -1):
+                    item = inv[i]
+                    if item.name in valid_names:
+                        # Validation: Container with items
+                        if hasattr(item, 'inventory') and item.inventory:
+                             return f"Cannot use {item.name}: It contains items!"
+
+                        item_qty = item.load if item.load is not None else 1
+                        take = min(to_remove - removed_check, item_qty)
+                        removed_check += take
+                        
+                        if removed_check >= to_remove:
+                            break
+        return None
+
+
     def _craft(self, recipe):
         if self.player.action_timer > 0: return
+
+        # --- Validation Check ---
+        error = self._validate_ingredients(recipe)
+        if error:
+            self.warning_message = error
+            return
 
         def craft_complete():
             source_inventories = [self.player.inventory]

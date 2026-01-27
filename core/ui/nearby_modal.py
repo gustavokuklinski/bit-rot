@@ -4,6 +4,7 @@ from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
 from core.ui.container_modal import draw_container_content
 from core.entities.zombie.corpse import Corpse
+from core.entities.item.item import Container
 
 # --- NEW: Virtual Container for grouping loose items ---
 class VirtualGroundContainer:
@@ -41,14 +42,33 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
             elif hasattr(obj, 'inventory') and obj.inventory is not None:
                 # Only treat it as a container if it's explicitly a container type (e.g. Backpack)
                 # This prevents weird edge cases if regular items somehow get inventory attributes
-                if getattr(obj, 'item_type', '') in ['backpack', 'container','vehicle']:
+                if getattr(obj, 'item_type', '') in ['backpack', 'container','vehicle', 'cloth']:
                     is_independent_container = True
             
             if is_independent_container:
                 nearby_containers.append(obj)
-            else:
-                # It's a loose item (Ammo, Weapon, etc.) -> Group to Ground
+
+            should_show_on_ground = True
+            
+            
+
+            if not getattr(obj, 'item_type', None):
+                should_show_on_ground = False
+
+            if is_independent_container:
+                # If it's a container, filter out non-pickupable entities
+                if isinstance(obj, Corpse):
+                    should_show_on_ground = False
+                elif isinstance(obj, Container):
+                    should_show_on_ground = False
+
+                elif getattr(obj, 'item_type', '') == 'vehicle':
+                    should_show_on_ground = False
+                # 'backpack' and generic 'container' items will remain True
+            
+            if should_show_on_ground:
                 ground_items.append(obj)
+            # -------------------------------------
     
     # If we have loose items, create a "Ground" tab at the very beginning
     if ground_items:

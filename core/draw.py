@@ -7,7 +7,7 @@ import core.data.config
 from core.entities.item.item import Item
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
-from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, get_invcontainer_slot_rect, draw_belt_hud, get_belt_hud_slot_rect
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, draw_belt_hud, get_belt_hud_slot_rect
 from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -220,8 +220,7 @@ def draw_game(game):
     # 2. Collect Light Sources
     all_player_inventories = [game.player.belt, game.player.inventory]
     if game.player.backpack: all_player_inventories.append(game.player.backpack.inventory)
-    if game.player.invcontainer and hasattr(game.player.invcontainer, 'inventory'):
-        all_player_inventories.append(game.player.invcontainer.inventory)
+    
 
     for inv in all_player_inventories:
         for item in inv:
@@ -518,7 +517,7 @@ def draw_game(game):
             buttons = draw_big_map_modal(game.virtual_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'npc_dialog':
-            draw_npc_dialog_modal(game.virtual_screen, modal, game)
+            buttons = draw_npc_dialog_modal(game.virtual_screen, modal, game)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'crafting':
             # Instantiate Logic on the fly (or you could store instance in modal dict)
@@ -564,17 +563,7 @@ def draw_game(game):
                         highlighted_rect = slot
                         highlighted_allowed = (preview_item.item_type == 'backpack')
                         break
-                    slot = get_invcontainer_slot_rect(modal['position'])
-                    if slot.collidepoint(game._get_scaled_mouse_pos()):
-                        highlighted_rect = slot
-                        dragged_type = getattr(preview_item, 'item_type', None)
-                        dragged_ammo_type = getattr(preview_item, 'ammo_type', None)
-                        highlighted_allowed = (
-                            dragged_type == 'container' or
-                            dragged_type == 'utility' or
-                            (dragged_type == 'consumable' and dragged_ammo_type is not None)
-                        )
-                        break
+                    
             elif modal['type'] == 'gear':
                 if 'gear_slot_rects' in modal:
                     for slot_name, slot_rect in modal['gear_slot_rects'].items():

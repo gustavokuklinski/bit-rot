@@ -12,7 +12,8 @@ def draw_mobile_modal(surface, game, modal, assets):
         total_minutes_in_day = int(day_progress * 24 * 60)
         
         hour = (total_minutes_in_day // 60) % 24
-        minute = total_minutes_in_day % 60
+        raw_minute = total_minutes_in_day % 60
+        minute = raw_minute - (raw_minute % 10)
         
         time_str = f"{hour:02d}:{minute:02d}"
     except:

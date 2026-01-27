@@ -9,7 +9,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     surface.blit(name_text, (x_offset, y_offset))
     y_offset += 20
 
-    profession_text = font_notification.render(f"Profession: {player.profession}", True, WHITE)
+    profession_text = font_notification.render(f"", True, WHITE)
     surface.blit(profession_text, (x_offset, y_offset))
     y_offset += 20
 

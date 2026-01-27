@@ -114,6 +114,16 @@ def manage_dynamic_npcs(game):
                 current_count += 1
                 spawned_this_frame += 1
 
+def spawn_static_npcs(game, building_tiles):
+    """New function to spawn NPCs specifically inside buildings."""
+    for (tx, ty) in building_tiles:
+        if random.random() < NPC_STATIC_SPAWN:
+            px, py = tx * TILE_SIZE, ty * TILE_SIZE
+            # Ensure not spawning on top of an obstacle
+            if not any(ob.collidepoint(px, py) for ob in game.obstacles):
+                npc = NPC(px, py, game, is_static=True)
+                game.npcs.add(npc)
+
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128):
     zombies = []
     SAFE_RADIUS_TILES = 1  # Changed from 45 to 15 to allow spawning at player birth chunk

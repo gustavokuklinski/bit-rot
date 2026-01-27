@@ -12,7 +12,7 @@
         <zoom_near value="6.0" name="Zoom max near (Default: 6.0)"/>
     </game>
     <map>
-        <map_chunks value="3" name="Max map chunks (Default: 3, Max: 9)"/>
+        <map_chunks value="2" name="Max map chunks (Default: 2, Max: 9)"/>
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
@@ -53,6 +53,7 @@
     </vehicle>
     <npc>
         <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
+        <static_spawn_chance value="0.005" name="Max Static NPC (Default: 0.005)"/>
         <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
         <spawn_chance value="1.0" name="Spawn Chance (Default: 1.0)"/>
         <health_multiplier value="1.0" name="Health Multiplier (Default: 1.0)"/>

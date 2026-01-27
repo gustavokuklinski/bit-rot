@@ -19,7 +19,7 @@ class NPC(Zombie):
     NPC_TEMPLATES = [] 
     NPC_DIALOGS = None
 
-    def __init__(self, x, y, game):
+    def __init__(self, x, y, game, is_static=False):
         if not NPC.NPC_TEMPLATES:
             NPC.load_templates()
 
@@ -58,9 +58,10 @@ class NPC(Zombie):
         if self.name == "Zombie" or self.name == "RANDOM":
              self.name = f"Survivor {random.randint(100, 999)}"
 
+        self.is_static = is_static
         self.is_friendly = random.random() > 0.4
         self.is_following = False
-        self.state = 'wandering'
+        self.state = 'wandering' if not is_static else 'idle'
 
         # [FIX 1] Initialize idle timer
         self.idle_timer = 0
@@ -313,6 +314,7 @@ class NPC(Zombie):
         obstacles = game.obstacles
         if self.is_dead: return 
 
+
         current_time = pygame.time.get_ticks()
         
         if self.knockback_timer > 0:
@@ -376,7 +378,6 @@ class NPC(Zombie):
                 target_entity = game.player
                 self.state = 'following'
 
-        # [FIX 3] If explicitly stopped by interaction, hold position
         # Check idle timer unless we have a target (combat priority)
         if self.idle_timer > 0 and not target_entity:
             self.idle_timer -= 1
@@ -414,14 +415,22 @@ class NPC(Zombie):
                 
                 if dist > move_threshold and not is_avoiding:
                     self.angle = math.degrees(math.atan2(-dy, dx))
-                    scale = self.speed / dist
-                    self.dx = dx * scale
-                    self.dy = dy * scale
+
+                    if not self.is_static:
+                        scale = self.speed / dist
+                        self.dx = dx * scale
+                        self.dy = dy * scale
+                    else:
+                        self.dx, self.dy = 0, 0
+
                 elif is_avoiding:
-                    self.angle = self.stuck_angle
-                    rad = math.radians(self.angle)
-                    self.dx = math.cos(rad) * self.speed * 1.0 
-                    self.dy = -math.sin(rad) * self.speed * 1.0
+                    if not self.is_static:
+                        self.angle = self.stuck_angle
+                        rad = math.radians(self.angle)
+                        self.dx = math.cos(rad) * self.speed * 1.0 
+                        self.dy = -math.sin(rad) * self.speed * 1.0
+                    else:
+                        self.dx, self.dy = 0, 0
                 else:
                     self.dx, self.dy = 0, 0
                     if self.state == 'following':
@@ -511,11 +520,14 @@ class NPC(Zombie):
                             
             else:
                 self.state = 'wandering'
-                if random.random() < 0.02:
-                    self.angle += random.randint(-45, 45)
-                rad = math.radians(self.angle)
-                self.dx = math.cos(rad) * self.speed * 0.5
-                self.dy = -math.sin(rad) * self.speed * 0.5
+                if not self.is_static:
+                    if random.random() < 0.02:
+                        self.angle += random.randint(-45, 45)
+                    rad = math.radians(self.angle)
+                    self.dx = math.cos(rad) * self.speed * 0.5
+                    self.dy = -math.sin(rad) * self.speed * 0.5
+                else:
+                    self.dx, self.dy = 0, 0
 
         is_moving = self.dx != 0 or self.dy != 0
 
