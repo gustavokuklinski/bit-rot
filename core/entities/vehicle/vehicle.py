@@ -317,33 +317,54 @@ class Vehicle:
         if slot not in self.equipment: return False
 
         if slot == 'key':
-            # If the vehicle requires a key (required_key_id is not None)
-            if self.required_key_id:
-                # 1. Verify it is a key type item
-                is_key_type = getattr(item, 'item_type', None) == 'car_key' or getattr(item, 'type', None) == 'car_key'
+            # 2. Check if Vehicle requires a key
+            # If required_key_id is None, the vehicle is configured to NOT use a key.
+            if not self.required_key_id:
+                # Get key ID from item (try 'key_id' or 'key')
+                item_key_id = getattr(item, 'key_id', getattr(item, 'key', None))
                 
-                # 2. Get clean strings for comparison
-                required = str(self.required_key_id).strip()
-                item_name = getattr(item, 'name', '').strip()
-                # Get the item's internal key code (from <key value="..." /> in item properties)
-                item_key_id = getattr(item, 'key_id', '')
-                if item_key_id: 
-                    item_key_id = str(item_key_id).strip()
+                # Check if Key ID matches Vehicle Name (e.g. "car_jeep" == "car_jeep")
+                if item_key_id and str(item_key_id).strip().lower() == self.name.lower():
+                    print(f"[DEBUG] REPAIR: Auto-assigning key requirement '{item_key_id}' to legacy vehicle.")
+                    self.required_key_id = str(item_key_id).strip()
+                    # Continue to allow the equip...
+                else:
+                    # Genuine failure: Vehicle is configured to not need a key
+                    print(f"[DEBUG] Vehicle '{self.name}' has no key requirement (ID is None).")
+                    return False
 
-                # 3. Check for Match:
-                # Allow match by Name ("Car Key Jeep" == "Car Key Jeep")
-                # OR match by Key ID ("car_jeep" == "car_jeep") - *Recommended for future XML updates*
-                matches_requirement = (item_name == required) or (item_key_id and item_key_id == required)
-
-                if matches_requirement and is_key_type: 
-                    return True
-                
-                # Debugging: Uncomment if issues persist
-                # print(f"Key Mismatch: Req='{required}' vs Name='{item_name}' / ID='{item_key_id}'")
+            # 3. Validate Item Type
+            # Checks both modern 'item_type' and legacy 'type'
+            item_type = getattr(item, 'item_type', getattr(item, 'type', None))
+            if item_type != 'car_key':
+                print(f"[DEBUG] Item '{item.name}' rejected. Type is '{item_type}', expected 'car_key'.")
                 return False
+
+            # 4. Normalize Data for Comparison (Lower case + Strip whitespace)
+            # This fixes "Car Key Jeep" vs "car key jeep" issues
+            required_val = str(self.required_key_id).strip().lower()
             
-            # If required_key_id is None, this vehicle does not accept a key.
-            return False
+            item_name = getattr(item, 'name', '').strip().lower()
+            
+            item_key_id = getattr(item, 'key_id', '')
+            if item_key_id:
+                item_key_id = str(item_key_id).strip().lower()
+
+            # 5. Robust Matching Logic
+            # Match if Item NAME matches Requirement OR Item internal ID matches Requirement
+            matches_name = (item_name == required_val)
+            matches_id = (item_key_id and item_key_id == required_val)
+
+            if matches_name or matches_id:
+                return True
+            else:
+                # 6. Detailed Failure Log
+                print(f"--- KEY MISMATCH DEBUG ---")
+                print(f"Vehicle Requires: '{required_val}'")
+                print(f"Item Name:        '{item_name}' (Match: {matches_name})")
+                print(f"Item Key ID:      '{item_key_id}' (Match: {matches_id})")
+                print(f"--------------------------")
+                return False
             
         elif slot == 'fuel': return getattr(item, 'status_effect', None) == 'fuel'
             

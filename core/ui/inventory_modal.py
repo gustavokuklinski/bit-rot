@@ -341,34 +341,85 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
-
     
     if base_modal.minimized:
         return None, close_button, minimize_button
 
-    # --- Tabs ---
-    tabs_data = [
-        {'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'}
-    ]
+    # --- 1. DYNAMIC TAB GENERATION ---
+    tabs_data = [{'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'}]
+    container_mapping = {}
 
+    def register_container(item, default_name):
+        # [CHANGE] Added check: ensure item has 'inventory' attribute before creating a tab
+        valid_container_types = ['container', 'backpack']
+        
+        if item and hasattr(item, 'inventory') and item.item_type in valid_container_types:
+            # Create a unique label to handle multiple containers of the same type
+            count = sum(1 for label in container_mapping if label.startswith(default_name))
+            label = f"{default_name} #{count + 1}" if count > 0 else default_name
+            
+            tabs_data.append({
+                'label': label,
+                'icon': item.image if item.image else None
+            })
+            container_mapping[label] = item
+
+    # Scan all possible player slots for items that are containers
+    
+    # 1. Check Backpack Slot
     if player.backpack:
-        bag_tab = {
-            'label': 'Bag',
-            'icon': player.backpack.image if player.backpack.image else None 
-        }
-        tabs_data.append(bag_tab)
+        register_container(player.backpack, "Bag")
+    
+    # 2. Check Utility Slot
+    if player.invcontainer:
+        register_container(player.invcontainer, "Utility")
+
+    # 3. Check Belt Slots
+    for item in player.belt:
+        if item:
+            register_container(item, item.name)
+
+    # 4. Check Main Inventory Slots for nested containers
+    for item in player.inventory:
+        if item:
+            register_container(item, item.name)
 
     modal['tabs_data'] = tabs_data
-
+    modal['container_mapping'] = container_mapping
+    # Ensure the active tab remains valid after potential inventory changes
     if 'active_tab' not in modal or modal['active_tab'] not in {t['label'] for t in tabs_data}:
         modal['active_tab'] = 'Inventory'
 
+    # --- 2. RENDER TABS ---
     tabs = Tabs(surface, modal, tabs_data, assets)
     tabs.draw()
 
-    if modal['active_tab'] == 'Inventory':
+    # --- 3. RENDER CONTENT ---
+    active_label = modal['active_tab']
+    if active_label == 'Inventory':
         _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal)
-    elif modal['active_tab'] == 'Bag':
-        _draw_backpack_tab(surface, game, player, modal, mouse_pos)
+    elif active_label in container_mapping:
+        # Use the generic container drawer for any detected container
+        _draw_container_tab(surface, game, player, modal, mouse_pos, container_mapping[active_label])
     
     return None, close_button, minimize_button
+
+def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
+    """Generic drawer that reuses slot logic for any container object."""
+    if not container_obj or not hasattr(container_obj, 'inventory'):
+        return
+
+    padding = 10
+    start_x = modal['rect'].x + padding
+    start_y = modal['rect'].y + 80 
+    
+    _draw_slots(
+        surface, 
+        game, 
+        container_obj, 
+        start_x, 
+        start_y, 
+        modal['rect'].height, 
+        80, 
+        mouse_pos
+    )

@@ -684,37 +684,106 @@ class Game:
             traceback.print_exc()
             self.game_state = 'MENU'
 
-
     def _cleanup_modals(self):
-        """Removes the Vehicle modal if the player moves too far from the vehicle."""
+        """Removes modals if the player moves too far from the associated entity."""
         modals_to_remove = []
         if not self.player: return
 
+        # Helper: Recursively check if item is in an inventory structure (handles Bags inside Bags)
+        def is_item_in_inventory(target, inventory):
+            if not inventory: return False
+            if target in inventory: return True
+            for item in inventory:
+                if hasattr(item, 'inventory') and item.inventory:
+                    if is_item_in_inventory(target, item.inventory):
+                        return True
+            return False
+
         for modal in self.modals:
+            # Distance threshold for interaction
+            MAX_DISTANCE = TILE_SIZE * 2 
+
             if modal['type'] == 'vehicle':
                 vehicle = modal['vehicle']
-                # Check distance between player and vehicle (center to center)
                 dist = math.hypot(self.player.rect.centerx - vehicle.rect.centerx, self.player.rect.centery - vehicle.rect.centery)
-                
-                # Close modal if player is farther than 2 tiles
-                if dist > TILE_SIZE * 2: 
+                if dist > MAX_DISTANCE: 
                     modals_to_remove.append(modal)
 
             elif modal['type'] == 'npc_dialog':
                 npc = modal['npc']
-                # Calculate distance
                 dist = math.hypot(self.player.rect.centerx - npc.rect.centerx, self.player.rect.centery - npc.rect.centery)
-                
-                # Check if NPC is dead or too far (2 tiles)
-                if npc.is_dead or dist > TILE_SIZE * 2:
+                if npc.is_dead or dist > MAX_DISTANCE:
                     modals_to_remove.append(modal)
+
+            elif modal['type'] == 'container':
+                container_item = modal.get('item')
+                
+                if container_item:
+                    is_equipped = False
+
+                    # --- UPDATED CHECK: Check ALL Player Equipment Locations ---
+                    
+                    # 1. Check Main Inventory (Recursive for nested bags)
+                    if is_item_in_inventory(container_item, self.player.inventory):
+                        is_equipped = True
+
+                    # 2. Check Belt (Recursive)
+                    if not is_equipped:
+                        belt_items = [i for i in self.player.belt if i]
+                        if is_item_in_inventory(container_item, belt_items):
+                            is_equipped = True
+
+                    # 3. Check Single Slots: Backpack, Utility, AND CLOTHES
+                    if not is_equipped:
+                        # Gather all single equipped items into one list to iterate
+                        equipped_roots = []
+                        if self.player.backpack: equipped_roots.append(self.player.backpack)
+                        if self.player.invcontainer: equipped_roots.append(self.player.invcontainer)
+                        if self.player.clothes: 
+                            equipped_roots.extend([c for c in self.player.clothes.values() if c])
+
+                        for item in equipped_roots:
+                            # A. Is the container the item itself? (e.g. Opening the Vest)
+                            if item == container_item:
+                                is_equipped = True
+                                break
+                            
+                            # B. Is the container INSIDE this item? (e.g. A pouch inside the Vest)
+                            if hasattr(item, 'inventory') and is_item_in_inventory(container_item, item.inventory):
+                                is_equipped = True
+                                break
+                    # -----------------------------------------------------------
+
+                    if is_equipped:
+                        continue 
+
+                    # 2. Check if IN WORLD (World Hierarchy) -> Check Distance
+                    world_root = None
+                    
+                    # A. Is it directly on the ground or a static container?
+                    if hasattr(container_item, 'rect') and (container_item in self.items_on_ground or container_item in self.containers):
+                         world_root = container_item
+                    
+                    # B. Is it NESTED inside a world object?
+                    if not world_root:
+                        potential_roots = self.items_on_ground + self.containers + self.zombies + self.npcs.sprites()
+                        for root in potential_roots:
+                            if hasattr(root, 'inventory') and is_item_in_inventory(container_item, root.inventory):
+                                world_root = root
+                                break
+                    
+                    # 3. Perform Distance Check against the Root Object
+                    if world_root and hasattr(world_root, 'rect'):
+                        dist = math.hypot(self.player.rect.centerx - world_root.rect.centerx, 
+                                          self.player.rect.centery - world_root.rect.centery)
+                        if dist > MAX_DISTANCE:
+                            modals_to_remove.append(modal)
+                    else:
+                        if hasattr(container_item, 'name') and container_item.name != "Ground":
+                            modals_to_remove.append(modal)
             
         for modal in modals_to_remove:
             self.modals.remove(modal)
-            if 'npc' in modal:
-                pass # Optional: Reset NPC state if needed
-            else:
-                self.logger.info(f"Closed {modal['vehicle'].name} modal: player moved away.")
 
 
     def run_paused(self):

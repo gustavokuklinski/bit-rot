@@ -52,7 +52,7 @@
         <has_battery value="0.2" name="Car Battery chance (Default: 0.2)"/>
     </vehicle>
     <npc>
-        <npc_spawn_per_chunk value="25" name="Max NPC spawn on chunk (Default: 5)"/>
+        <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
         <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
         <spawn_chance value="1.0" name="Spawn Chance (Default: 1.0)"/>
         <health_multiplier value="1.0" name="Health Multiplier (Default: 1.0)"/>
@@ -61,7 +61,7 @@
         <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 15)"/>
+        <zombie_spawn_per_chunk value="15" name="Max Zombie spawn on chunk (Default: 15)"/>
         <speed value="0.5" name="Speed (Default: 0.5)"/>
         <drop value="1" name="Drop (Default: 1)"/>
         <detection value="30" name="Player detection tiles (Default: 30)"/>

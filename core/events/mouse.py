@@ -576,6 +576,95 @@ def handle_mouse_up(game, event, mouse_pos):
                                 
                                 if dropped_successfully: break
                         
+                        elif modal.get('active_tab') in modal.get('container_mapping', {}):
+                            container = modal['container_mapping'][modal['active_tab']]
+                            
+                            if container:
+                                # Recursion Check
+                                if check_recursive_containment(game.dragged_item, container):
+                                    print("Recursion detected: Cannot put the container inside itself.")
+                                    dropped_successfully = False
+                                    break
+                                
+                                # Liquid Check
+                                if getattr(container, 'allow_liquid', False):
+                                    if not getattr(game.dragged_item, 'liquid', False):
+                                        print(f"This {container.name} only accepts liquids.")
+                                        dropped_successfully = False 
+                                        break
+                                elif getattr(game.dragged_item, 'liquid', False):
+                                    print(f"The {game.dragged_item.name} spills and is lost.")
+                                    dropped_successfully = True 
+                                    break
+
+                                target_index = -1
+                                # Calculate slot positions relative to the modal
+                                pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                                for i in range(container.capacity or 0):
+                                    if get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                                        target_index = i
+                                        break
+                                
+                                # Looting / External Source Logic
+                                if is_external_source:
+                                    can_loot = False
+                                    is_stack = False
+                                    if target_index != -1 and target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            can_loot = True; is_stack = True
+                                        else:
+                                            print("Cannot swap while looting.")
+                                            dropped_successfully = False
+                                            break
+                                    elif len(container.inventory) < (container.capacity or 0):
+                                        can_loot = True
+                                    
+                                    if can_loot:
+                                        item_ref = game.dragged_item
+                                        def do_container_loot():
+                                            if is_stack:
+                                                item_in_dst = container.inventory[target_index]
+                                                avail = item_in_dst.capacity - item_in_dst.load
+                                                trans = min(avail, item_ref.load)
+                                                item_in_dst.load += trans
+                                                item_ref.load -= trans
+                                            else:
+                                                if target_index != -1 and target_index <= len(container.inventory):
+                                                    container.inventory.insert(target_index, item_ref)
+                                                else:
+                                                    container.inventory.append(item_ref)
+                                        
+                                        game.player.start_action("Looting", 1.0, do_container_loot, xp_reward=0.5)
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+
+                                # Standard Drop Logic
+                                if target_index != -1:
+                                    if target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            available = item_in_slot.capacity - item_in_slot.load
+                                            transfer = min(available, game.dragged_item.load)
+                                            item_in_slot.load += transfer
+                                            game.dragged_item.load -= transfer
+                                            if game.dragged_item.load <= 0: dropped_successfully = True
+                                        else:
+                                            item_to_swap = container.inventory.pop(target_index)
+                                            container.inventory.insert(target_index, game.dragged_item)
+                                            game.dragged_item = item_to_swap
+                                            dropped_successfully = False
+                                    else:
+                                        container.inventory.insert(target_index, game.dragged_item)
+                                        dropped_successfully = True
+                                
+                                elif len(container.inventory) < (container.capacity or 0):
+                                    container.inventory.append(game.dragged_item)
+                                    dropped_successfully = True
+                                
+                                if dropped_successfully: break
+
+
                         elif modal.get('active_tab') == 'Bag':
                             if game.player.backpack:
                                 container = game.player.backpack
@@ -944,6 +1033,14 @@ def find_item_at_pos(game, mouse_pos):
                     return game.player.backpack
                 if game.player.invcontainer and get_invcontainer_slot_rect(modal['position']).collidepoint(mouse_pos):
                     return game.player.invcontainer
+            
+            elif modal.get('active_tab') in modal.get('container_mapping', {}):
+                container = modal['container_mapping'][modal['active_tab']]
+                if container:
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                    for i, item in enumerate(container.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            return item
             
             elif modal.get('active_tab') == 'Bag':
                 if game.player.backpack:
@@ -1489,7 +1586,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'id': uuid.uuid4(), 'type': 'mobile', 'item': item,
                             'position': game.last_modal_positions['mobile'],
                             'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['mobile'][0], game.last_modal_positions['mobile'][1], 250, 400), 
+                            'rect': pygame.Rect(game.last_modal_positions['mobile'][0], game.last_modal_positions['mobile'][1], MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT), 
                             'minimized': False, 'active_tab': 'Clock'
                         }
                         game.modals.append(new_mobile_modal)
@@ -1649,6 +1746,19 @@ def handle_right_click(game, mouse_pos):
                     if game.player.invcontainer and get_invcontainer_slot_rect(modal['position']).collidepoint(mouse_pos):
                         clicked_item, click_source, click_index = game.player.invcontainer, 'invcontainer', 0
             
+            elif modal.get('active_tab') in modal.get('container_mapping', {}):
+                container = modal['container_mapping'][modal['active_tab']]
+                if container:
+                    # Calculate slot positions relative to the modal content area
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                    for i, item in enumerate(container.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            clicked_item = item
+                            click_source = 'container' # This ensures correct context menu options (like 'Drop')
+                            click_index = i
+                            click_container_item = container
+                            break
+                            
             elif modal.get('active_tab') == 'Gear':
                 if 'gear_slot_rects' in modal:
                     for slot_name, slot_rect in modal['gear_slot_rects'].items():
@@ -1982,6 +2092,19 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                     return 
         
+        elif modal.get('active_tab') in modal.get('container_mapping', {}):
+            container = modal['container_mapping'][modal['active_tab']]
+            if container:
+                pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+                for i, item in enumerate(container.inventory):
+                    if item:
+                        slot_rect = get_container_slot_rect(pos_for_calc, i)
+                        if slot_rect.collidepoint(mouse_pos):
+                            game.drag_candidate = (item, (i, 'container', container, modal['id']))
+                            game.drag_start_pos = mouse_pos
+                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                            return
+
         elif modal.get('active_tab') == 'Gear':
             if 'gear_slot_rects' in modal:
                 for slot_name, slot_rect in modal['gear_slot_rects'].items():
