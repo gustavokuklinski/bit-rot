@@ -1,16 +1,56 @@
 <npc_dialog>
-    <options player_question="How is going on?" npc_awnser="It was fast, I just escaped with: [inventory_list] and [clothes_list]" required="true" />
-    <options player_question="Do you have any tip?" npc_awnser="You can use an Axe or Primitive Axe to chop tress." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Be carefull, some people went rogue!" type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Stay away from the infected!" type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Search for resources and magazines, this can keep your sanity alive." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="I'm feeling dizzy..." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="I don't know what the hell are you doing here." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="If you do something with me you die!" type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="They say the continent was the first to fall. I’m glad I was out here." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Yeah. Stop bothering me before I lose my temper." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Does it look like I'm in a talking mood? Look at this place!" type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Every man for himself. That's the only rule left." type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="Have you heard anything from the continent?" type="random" />
-    <options player_question="Do you have any tip?" npc_awnser="I had a tip for my brother, but he didn't listen. Now he's... one of them." type="random" />
+    <node id="greeting">
+        <options 
+            player_question="How's it going?" 
+            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
+            priority="100"/>
+    </node>
+    <node id="tips">
+        <options
+            player_question="Got any advice?" 
+            npc_answer="Use an Axe or Primitive Axe to chop trees. Wood is life out here." 
+            priority="10"/>
+        <options
+            player_question="Got any advice?" 
+            npc_answer="Search for magazines. Reading keeps the mind from rotting before the body does. Take this, it may help you."
+            priority="1"
+            award_item="[Bible, Island Map]" />
+        <options
+            player_question="Got any advice?" 
+            npc_answer="For our lucky the company made all vehicle keys the same. Here is a gift."
+            priority="1"
+            award_item="[Car Key Jeep, Car Key Pickup]" />
+        <options
+            player_question="Got any advice?" 
+            npc_answer="Run, and..." 
+            unlock_flag="just_run"
+            priority="10" />
+    </node>
+
+    <node id="lore_branch">
+        <options 
+            player_question="What happened to the continent?"
+            npc_answer="They say it was the first to fall. Total chaos. Glad I was out here when the world ended."
+            priority="100" />
+        <options 
+            player_question="Is anyone else out there?"
+            npc_answer="Just rogues and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
+            priority="100" />
+    </node>
+
+    <node id="just_run">
+        <options
+            player_question="So...why?" 
+            npc_answer="Maybe you can finish my misery." 
+            unlock_flag="is_hostile" />
+    </node>
+
+    <node id="is_hostile">
+        <options 
+            player_question="One more thing..."
+            npc_answer="Yeah. Stop bothering me before I lose my temper. Every man for himself, remember?"
+            npc_state_friendly="false"
+            npc_state_static="false"
+            priority="100" />
+    </node>
 </npc_dialog>

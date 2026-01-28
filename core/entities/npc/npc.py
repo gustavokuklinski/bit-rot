@@ -8,11 +8,7 @@ from core.entities.zombie.corpse import Corpse
 from core.messages import display_message
 import xml.etree.ElementTree as ET
 from core.entities.zombie.zombie import Zombie, ZOMBIE_CLOTHES_POOL
-from core.data.config import (
-    TILE_SIZE, SPRITE_PATH, DATA_PATH,
-    NPC_HEALTH_MULTIPLIER, NPC_DAMAGE_MULTIPLIER, 
-    NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
-)
+from core.data.config import *
 
 class NPC(Zombie):
     _base_cache = {} 
@@ -59,16 +55,17 @@ class NPC(Zombie):
              self.name = f"Survivor {random.randint(100, 999)}"
 
         self.is_static = is_static
-        self.is_friendly = random.random() > 0.4
+        self.is_friendly = random.random() > NPC_HOSTILE_SPAWN
         self.is_following = False
         self.state = 'wandering' if not is_static else 'idle'
 
-        # [FIX 1] Initialize idle timer
         self.idle_timer = 0
-
+        
         self.stuck_timer = 0
         self.stuck_angle = 0
         
+        self.dialog_flags = set()
+
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
 
@@ -630,11 +627,13 @@ class NPC(Zombie):
         if self in game.npcs:
             game.npcs.remove(self)
 
+
     @staticmethod
     def load_dialogs():
+        """Parses the new Node-based XML structure."""
         if NPC.NPC_DIALOGS is not None: return
         
-        NPC.NPC_DIALOGS = {'required': [], 'random': []}
+        NPC.NPC_DIALOGS = {} 
         path = os.path.join(DATA_PATH, 'npc', 'dialogs.xml')
         
         if not os.path.exists(path):
@@ -644,35 +643,86 @@ class NPC(Zombie):
         try:
             tree = ET.parse(path)
             root = tree.getroot()
-            for opt in root.findall('options'):
-                answer = opt.get('npc_awnser') or opt.get('npc_answer') 
-                question = opt.get('player_question')
+            
+            # [CHANGED] Iterate through <node> elements instead of flat <options>
+            for node in root.findall('node'):
+                node_id = node.get('id')
+                if not node_id: continue
                 
-                if not answer or not question: continue
+                NPC.NPC_DIALOGS[node_id] = []
+                
+                for opt in node.findall('options'):
+                    question = opt.get('player_question')
+                    answer = opt.get('npc_answer')
+                    
+                    # Read priority (default 100) and unlock_flag
+                    try:
+                        priority = int(opt.get('priority', '100'))
+                    except ValueError:
+                        priority = 100
+                        
+                    unlock_flag = opt.get('unlock_flag') # Can be None
+                    npc_state_friendly = opt.get('npc_state_friendly') # Returns string "true"/"false" or None
+                    npc_state_static = opt.get('npc_state_static')     # Returns string "true"/"false" or None
+                    award_item = opt.get('award_item')
 
-                entry = {'q': question, 'a': answer}
-                
-                if opt.get('required') == 'true':
-                    NPC.NPC_DIALOGS['required'].append(entry)
-                elif opt.get('type') == 'random':
-                    NPC.NPC_DIALOGS['random'].append(entry)
+                    if question and answer:
+                        NPC.NPC_DIALOGS[node_id].append({
+                            'q': question, 
+                            'a': answer,
+                            'priority': priority,
+                            'unlock_flag': unlock_flag,
+                            'npc_state_friendly': npc_state_friendly, # Store raw string
+                            'npc_state_static': npc_state_static,     # Store raw string
+                            'award_item': award_item
+                        })
                     
         except Exception as e:
             print(f"NPC Error: Could not load dialogs: {e}")
 
+
     def get_dialog_options(self):
+        """Generates options based on mandatory nodes + unlocked flags."""
         if NPC.NPC_DIALOGS is None:
             NPC.load_dialogs()
         
         options = []
         
-        for d in NPC.NPC_DIALOGS.get('required', []):
-            options.append(d.copy())
+        # 1. Define Mandatory Nodes
+        mandatory_nodes = {"greeting", "tips", "lore_branch"}
+        
+        # 2. Determine Active Nodes (Mandatory + Unlocked)
+        active_nodes = mandatory_nodes.union(self.dialog_flags)
+        
+        # [CHANGED] Sort the nodes. 
+        # Since we now refresh the menu dynamically, using a Set (unordered) 
+        # would cause questions to jump around randomly every time we go back.
+        sorted_nodes = sorted(list(active_nodes))
+        
+        # 3. Generate one option per active node
+        for node_id in sorted_nodes:
+            node_options = NPC.NPC_DIALOGS.get(node_id)
+            if not node_options:
+                continue
+                
+            # Weighted Random Selection
+            total_priority = sum(opt['priority'] for opt in node_options)
+            if total_priority <= 0: continue
             
-        random_pool = NPC.NPC_DIALOGS.get('random', [])
-        if random_pool:
-            options.append(random.choice(random_pool).copy())
+            pick = random.randint(1, total_priority)
+            current = 0
+            selected_opt = None
             
+            for opt in node_options:
+                current += opt['priority']
+                if pick <= current:
+                    selected_opt = opt.copy() 
+                    break
+            
+            if selected_opt:
+                options.append(selected_opt)
+            
+        # 4. Format Text (Replacements)
         inv_str = ", ".join([i.name for i in self.inventory]) if self.inventory else "nothing"
         cloth_str = ", ".join([i.name for i in self.clothes.values()]) if self.clothes else "ragged clothes"
         
@@ -682,6 +732,14 @@ class NPC(Zombie):
                 opt['a'] = opt['a'].replace('[clothes_list]', cloth_str)
                 
         return options
+
+
+    def unlock_node(self, node_id):
+        """Unlocks a new dialog node for this NPC."""
+        if node_id:
+            self.dialog_flags.add(node_id)
+            print(f"NPC Dialog unlocked: {node_id}")
+
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
         if self.is_dead and self.dead_image:

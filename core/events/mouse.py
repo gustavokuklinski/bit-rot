@@ -51,9 +51,6 @@ def handle_mouse_down(game, event, mouse_pos):
         if topmost_modal:
 
             if topmost_modal['type'] == 'npc_dialog':
-                # [FIX] Check if we clicked a standard header button (Close/Minimize) FIRST.
-                # If we did, let the generic button handler below handle it. 
-                # Otherwise, the "Go Back" logic swallows the click.
                 clicked_header_button = False
                 for button in getattr(game, 'modal_buttons', []):
                     if button['id'] == topmost_modal['id'] and button['rect'].collidepoint(mouse_pos):
@@ -70,10 +67,73 @@ def handle_mouse_down(game, event, mouse_pos):
                             rect = get_npc_dialog_option_rect(topmost_modal['position'], i)
                             if rect.collidepoint(mouse_pos):
                                 topmost_modal['active_dialog_index'] = i
-                                return # Handled
+                                
+                                selected_opt = dialogs[i]
+                                
+                                # 1. Handle Unlock Flag
+                                unlock_flag = selected_opt.get('unlock_flag')
+                                if unlock_flag:
+                                    topmost_modal['npc'].unlock_node(unlock_flag)
+
+                                # [CHANGED] 2. Handle State Changes
+                                npc_ref = topmost_modal['npc']
+
+                                # Handle Friendly/Hostile Change
+                                friendly_flag = selected_opt.get('npc_state_friendly')
+                                if friendly_flag is not None:
+                                    # Convert string "true"/"false" to boolean
+                                    is_friendly = str(friendly_flag).lower() == 'true'
+                                    npc_ref.is_friendly = is_friendly
+                                    print(f"NPC {npc_ref.name} friendly state set to: {is_friendly}")
+                                    
+                                    # If turning hostile, ensure they start looking for targets immediately
+                                    if not is_friendly:
+                                        npc_ref.state = 'chasing'
+
+                                # Handle Static/Moving Change
+                                static_flag = selected_opt.get('npc_state_static')
+                                if static_flag is not None:
+                                    is_static = str(static_flag).lower() == 'true'
+                                    npc_ref.is_static = is_static
+                                    print(f"NPC {npc_ref.name} static state set to: {is_static}")
+                                    
+                                    # If we tell them to move, reset idle timers so they don't wait
+                                    if not is_static:
+                                        npc_ref.idle_timer = 0
+
+                                award_raw = selected_opt.get('award_item')
+                                if award_raw:
+                                    # Remove brackets if present
+                                    cleaned_raw = award_raw.replace('[', '').replace(']', '')
+                                    
+                                    # Split by comma and strip whitespace to get list of options
+                                    possible_items = [name.strip() for name in cleaned_raw.split(',')]
+                                    
+                                    if possible_items:
+                                        # Randomly select one item from the list
+                                        item_name = random.choice(possible_items)
+                                        
+                                        # Create Item
+                                        new_item = Item.create_from_name(item_name)
+                                        if new_item:
+                                            # Check Inventory Space
+                                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                                game.player.inventory.append(new_item)
+                                                display_message(game, f"Received {new_item.name}!")
+                                            else:
+                                                # Drop on ground if full
+                                                new_item.rect.center = game.player.rect.center
+                                                game.items_on_ground.append(new_item)
+                                                display_message(game, f"Inventory full. {new_item.name} dropped on ground.")
+                                        else:
+                                            print(f"Error: Could not create award item '{item_name}'")
+
+                                
+                                return
                     else:
                         # Logic: Clicking anywhere inside (except buttons) while viewing answer goes back
                         topmost_modal['active_dialog_index'] = -1
+                        topmost_modal['dialogs'] = topmost_modal['npc'].get_dialog_options()
                         return
 
             if game.modals[-1] != topmost_modal:

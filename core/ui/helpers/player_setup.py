@@ -1079,6 +1079,8 @@ def run_player_setup(game):
                         final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                         final_player_data['sounds'] = { 'steps': 'steps.ogg' }
                         
+                        final_player_data['game_settings'] = state.get('settings_data')
+
                         # --- NEW: Generate Seed if empty ---
                         raw_seed = state.get('world_seed', "").strip()
                         if not raw_seed:
@@ -1120,7 +1122,10 @@ def run_player_setup(game):
                              state['selected_config_preset'] = option_name
                              state['game_config_dropdown_active'] = False
                              # We might want to load the config data into settings_data here if needed
-                             state['settings_data'] = load_config_data(f"./game/save/config/{option_name}.xml")
+                             path = os.path.join("game", "save", "config", f"{option_name}.xml")
+                             new_settings = load_config_data(path)
+                             if new_settings:
+                                 state['settings_data'] = new_settings
                              dropdown_clicked = True
                              break
                     if dropdown_clicked: continue

@@ -151,6 +151,7 @@ NPC_MAX_CHUNK = 0
 MAX_NPCS_GLOBAL = 0
 NPC_SPAWN_CHANCE = 0.0
 NPC_STATIC_SPAWN = 0.0
+NPC_HOSTILE_SPAWN = 0.0
 NPC_HEALTH_MULTIPLIER = 1.0
 NPC_DAMAGE_MULTIPLIER = 1.0
 NPC_SPEED_MULTIPLIER = 1.0
@@ -187,7 +188,7 @@ def load_settings(preset="default"):
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
-    global NPC_STATIC_SPAWN
+    global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
     global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
@@ -243,24 +244,15 @@ def load_settings(preset="default"):
         ZOMBIE_SPEED = float(zombie_config.find('speed').get('value'))
         MAX_ZOMBIES_GLOBAL = int(zombie_config.find('max_zombies').get('value'))
         ZOMBIE_DROP = int(zombie_config.find('drop').get('value'))
-        ZOMBIE_DETECTION_RADIUS = int(zombie_config.find('detection').get('value')) * TILE_SIZE
-        
+        ZOMBIE_DETECTION_RADIUS = int(zombie_config.find('zombie_detection_radius').get('value')) * TILE_SIZE
         val_wander = zombie_config.find('wander').get('value')
         ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
-        
         ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
-        
         val_sight = zombie_config.find('sight_check').get('value')
         ZOMBIE_LINE_OF_SIGHT_CHECK = str(val_sight).lower() == 'true'
-        
         ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
         ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
-        
-        # Maintain override from original file
-        ZOMBIE_DETECTION_RADIUS = 100
-        
         ZOMBIE_INFECTION_CHANCE = float(zombie_config.find('infection_chance').get('value'))
-
         ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value'))
 
 
@@ -291,6 +283,7 @@ def load_settings(preset="default"):
         MAX_NPCS_GLOBAL = int(npc_config.find('max_npcs').get('value'))
         NPC_SPAWN_CHANCE = float(npc_config.find('spawn_chance').get('value'))
         NPC_STATIC_SPAWN = float(npc_config.find('static_spawn_chance').get('value'))
+        NPC_HOSTILE_SPAWN = float(npc_config.find('hostile_spawn_chance').get('value'))
         NPC_HEALTH_MULTIPLIER = float(npc_config.find('health_multiplier').get('value'))
         NPC_DAMAGE_MULTIPLIER = float(npc_config.find('damage_multiplier').get('value'))
         NPC_SPEED_MULTIPLIER = float(npc_config.find('speed_multiplier').get('value'))
@@ -298,10 +291,10 @@ def load_settings(preset="default"):
         NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
 
         vehicle_config = root.find('vehicle')
-        VEH_HAS_FUEL = float(vehicle_config.find('has_fuel').get('value'))
-        VEH_HAS_KEY = float(vehicle_config.find('has_key').get('value'))
-        VEH_HAS_MOTOR = float(vehicle_config.find('has_motor').get('value'))
-        VEH_HAS_BATTERY = float(vehicle_config.find('has_battery').get('value'))
+        VEH_HAS_FUEL = float(vehicle_config.find('has_fuel_chance').get('value'))
+        VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value'))
+        VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value'))
+        VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value'))
         
         
 
