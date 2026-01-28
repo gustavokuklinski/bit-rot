@@ -926,18 +926,23 @@ class Game:
         # The manager will now look for maps here, not in lib/map
         self.map_manager.map_folder = map_path
 
+        if not save_dir_name:
+            preset_name = self.player_setup_state.get('selected_config_preset', 'default')
+            self.logger.info(f"Reloading game configuration from XML: {preset_name}.xml")
+            
+            # This forces the config module to re-read the file and update global variables
+            core.data.config.load_settings(preset_name)
+
         if 'attributes' not in player_data:
             player_data['attributes'] = {} 
 
-        preset = self.player_setup_state.get('selected_config_preset', 'default')
-        try:
-            self.logger.info(f"Loading config preset: {preset}")
-            
-            core.data.config.load_settings(preset)
-
-
-        except Exception as e:
-            self.logger.info(f"Error applying custom config '{preset}': {e}")
+        #preset = self.player_setup_state.get('selected_config_preset', 'default')
+        #try:
+        #    self.logger.info(f"Loading config preset: {preset}")
+        #    
+        #    core.data.config.load_settings(preset)
+        #except Exception as e:
+        #    self.logger.info(f"Error applying custom config '{preset}': {e}")
            
 
         # 4. Initialize Generator with the specific OUTPUT folder

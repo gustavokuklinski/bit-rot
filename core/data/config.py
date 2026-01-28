@@ -97,7 +97,7 @@ title_font = pygame.font.Font(FONT_FACE, 16)
 font_notification = pygame.font.Font(FONT_FACE, 14)
 
 
-CHUNK_SIZE = 100
+CHUNK_SIZE = 128
 TILE_SIZE = 16
 
 # Global Default game settings

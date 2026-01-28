@@ -12,7 +12,7 @@
         <zoom_near value="6.0" name="Zoom max near (Default: 6.0)"/>
     </game>
     <map>
-        <map_chunks value="2" name="Max map chunks (Default: 2, Max: 9)"/>
+        <map_chunks value="3" name="Max map chunks (Default: 3, Max: 9)"/>
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
@@ -65,9 +65,9 @@
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="15" name="Max Zombie spawn on chunk (Default: 15)"/>
-        <speed value="0.5" name="Speed (Default: 0.5)"/>
+        <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="130" name="Player detection tiles (Default: 130)"/>
+        <zombie_detection_radius value="100" name="Player detection tiles (Default: 100)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>

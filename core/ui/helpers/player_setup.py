@@ -187,16 +187,17 @@ def _draw_player_build_screen(game, state, mouse_pos):
     padding = 10
     
     # --- Column 1, Block 0: Game Settings (Top-Left) ---
+    
     # NEW BLOCK
     config_rect = pygame.Rect(col1_x, 50, col1_width, 90)
     config_header_rect = pygame.Rect(config_rect.x, config_rect.y, config_rect.width, header_height)
     config_body_rect = pygame.Rect(config_rect.x, config_rect.y + header_height, config_rect.width, config_rect.height - header_height)
-    
+    """
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), config_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.virtual_screen, GRAY_60, config_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.virtual_screen, WHITE, config_rect, 1, border_radius=border_radius)
     game.virtual_screen.blit(font.render("Game settings", True, WHITE), (config_header_rect.x + 10, config_header_rect.y + 7))
-
+    
     # Game Config Dropdown
     game_conf_dd_rect = pygame.Rect(config_body_rect.x + padding, config_body_rect.y + 15, config_body_rect.width - padding*2, 30)
     clickable_rects['game_config_dropdown_button'] = game_conf_dd_rect
@@ -209,11 +210,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     # Arrow
     pygame.draw.polygon(game.virtual_screen, WHITE, [(game_conf_dd_rect.right - 15, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 5, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 10, game_conf_dd_rect.y + 15)])
-
+    """
 
     # --- Column 1, Block 1: Preset Management Panel ---
     # Adjusted Y position (pushed down) and Height (shrunk)
-    preset_rect = pygame.Rect(col1_x, config_rect.bottom + 20, col1_width, 260) # Moved down, height 280 -> 250
+    preset_rect = pygame.Rect(col1_x, config_rect.bottom - 90, col1_width, 260) # Moved down, height 280 -> 250
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -317,7 +318,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Column 1, Block 2: Gear Selection ---
     # Adjusted Y position and Height (shrunk)
-    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 250) # Moved down, height 340 -> 290
+    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 360) # Moved down, height 340 -> 290
 
     gear_header_rect = pygame.Rect(gear_rect.x, gear_rect.y, gear_rect.width, header_height)
     gear_body_rect = pygame.Rect(gear_rect.x, gear_rect.y + header_height, gear_rect.width, gear_rect.height - header_height)
@@ -974,6 +975,9 @@ def run_player_setup(game):
 
 
                 elif clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
+                    preset_name = state.get('selected_config_preset', 'default')
+                    save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
+                    core.data.config.load_settings(preset_name)
                     # Switch back to Player tab
                     # The settings data is already in state['settings_data'] 
                     # and will be picked up by start_new_game when the user clicks START.
