@@ -1,9 +1,23 @@
 import pygame
 import math
 from core.data.config import *
+from core.ui.tooltip import draw_tooltip  # [1] Import the existing tooltip function
 
 # Cache for icons to prevent reloading every frame
 _alert_icons = {}
+
+# [2] Create a Proxy class to mimic an Item for the tooltip renderer
+class AlertTooltipProxy:
+    def __init__(self, text):
+        self.name = text
+        # Initialize attributes required by draw_tooltip to None to skip those logic blocks
+        self.item_type = None
+        self.durability = None
+        self.defence = None
+        self.load = None
+        self.min_damage = None
+        self.max_damage = None
+        self.ammo_type = None
 
 def _get_alert_icon(filename):
     """Loads and caches alert icons."""
@@ -31,35 +45,35 @@ def draw_player_alerts(surface, player):
     active_alerts = []
 
     # --- 1. Define Alert Rules ---
-    # Format: (Condition, Icon Path, Background/Border Color, Pulse Speed)
+    # Format: (Icon Path, Color, Tooltip Text)
     
     # Health (Low)
     if player.health <= 50:
-        active_alerts.append(("ui/hp.png", RED))
+        active_alerts.append(("ui/hp.png", RED, "Health Critical"))
     
     # Stamina (Low) - Exhausted
     if player.stamina <= 50:
-        active_alerts.append(("ui/stamina.png", GRAY))
+        active_alerts.append(("ui/stamina.png", GRAY, "You are tired, take a Rest"))
 
     # Water (Low) - Thirsty
     if player.water <= 50:
-        active_alerts.append(("ui/water.png", BLUE))
+        active_alerts.append(("ui/water.png", BLUE, "You are thirsty"))
 
     # Food (Low) - Hungry
     if player.food <= 50:
-        active_alerts.append(("ui/food.png", GREEN))
+        active_alerts.append(("ui/food.png", GREEN, "You are hungry"))
 
     # Tireness (High) - Tired
     if player.tireness <= 50:
-        active_alerts.append(("ui/tireness.png", (100, 100, 150)))
+        active_alerts.append(("ui/tireness.png", (100, 100, 150), "You are feeling sleepy"))
 
     # Anxiety (High) - Panicked
     if player.anxiety >= 10:
-        active_alerts.append(("ui/axiety.png", (150, 0, 150)))
+        active_alerts.append(("ui/axiety.png", (150, 0, 150), "You are anxious"))
         
     # Infection (High) - Sick
-    if player.infection >= 5: # 10% is significant for infection
-        active_alerts.append(("ui/infection.png", YELLOW))
+    if player.infection >= 5: 
+        active_alerts.append(("ui/infection.png", YELLOW, "You are infected"))
 
     if not active_alerts:
         return
@@ -67,26 +81,24 @@ def draw_player_alerts(surface, player):
     # --- 2. Calculate Layout (Center Top, Side-by-Side) ---
     num_alerts = len(active_alerts)
     icon_size = 32
-    padding = 15  # Spacing between icons
+    padding = 15 
     
-    # Calculate total width of the entire alert block
     total_width = (num_alerts * icon_size) + (max(0, num_alerts - 1) * padding)
-    
-    # Calculate the starting X position to center the block
     start_x = (VIRTUAL_SCREEN_WIDTH // 2) - (total_width // 2)
-    fixed_y = 10 # Fixed distance from the very top of the screen
+    fixed_y = 10 
 
-    # --- 3. Draw Alerts ---
+    # --- 3. Draw Alerts & Detect Hover ---
     current_time = pygame.time.get_ticks()
-    
-    for i, (icon_file, color) in enumerate(active_alerts):
-        # Calculate X position for this specific icon (Side by Side)
+    mouse_pos = pygame.mouse.get_pos()
+    tooltip_proxy = None # Store the proxy item if we need to draw it
+
+    for i, (icon_file, color, tooltip_text) in enumerate(active_alerts):
+        # Calculate X position
         x = start_x + (i * (icon_size + padding))
         y = fixed_y
         
         icon = _get_alert_icon(icon_file)
         
-        # Determine final positions
         draw_x = int(x)
         draw_y = int(y)
 
@@ -97,3 +109,14 @@ def draw_player_alerts(surface, player):
         
         # Draw Icon
         surface.blit(icon, (draw_x, draw_y))
+
+        # [3] Check Hover
+        if bg_rect.collidepoint(mouse_pos):
+            # Create a lightweight proxy object for this specific alert
+            tooltip_proxy = AlertTooltipProxy(tooltip_text)
+
+    # --- 4. Render Tooltip using standard system ---
+    if tooltip_proxy:
+        # Draw the tooltip slightly offset from the mouse cursor
+        draw_pos = (mouse_pos[0] + 5, mouse_pos[1] + 5)
+        draw_tooltip(surface, tooltip_proxy, draw_pos)

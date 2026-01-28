@@ -21,9 +21,18 @@
         <fitness value="0.0" />
         <melee value="0.0"  />
         <ranged value="0.0" />
-        <lucky value="0.0" /> <!-- Passive Skill - Better sort of loot -->
-        <speed value="0.0" /> <!-- Passive Skill - Boost Stamina -->
+        <lucky value="0.0" />
+        <speed value="0.0" />
     </attributes>
+
+    <body>
+        <head value="100.0" defence="0.0" />
+        <legs value="100.0" defence="0.0" />
+        <feet value="100.0" defence="0.0" />
+        <torso value="100.0" defence="0.0" />
+        <hand value="100.0" defence="0.0" />
+        <body value="100.0" defence="0.0" />
+    </body>
 
     <initial_loot>
     </initial_loot>

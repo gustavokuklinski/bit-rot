@@ -29,12 +29,21 @@
 
     <node id="lore_branch">
         <options 
+            player_question="Did you get any news from the continent?"
+            npc_answer="Here was the last place to fall apart. If we get lucky we could clean up the island."
+            priority="100" />
+        <options 
+            player_question="How is the oil rigs?"
+            npc_answer="Fully functional for years. I miss my family so much."
+            award_item="[Family Photo]"
+            priority="100" />
+        <options 
             player_question="What happened to the continent?"
             npc_answer="They say it was the first to fall. Total chaos. Glad I was out here when the world ended."
             priority="100" />
         <options 
             player_question="Is anyone else out there?"
-            npc_answer="Just rogues and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
+            npc_answer="Just rogues, some military and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
             priority="100" />
     </node>
 
@@ -48,7 +57,7 @@
     <node id="is_hostile">
         <options 
             player_question="One more thing..."
-            npc_answer="Yeah. Stop bothering me before I lose my temper. Every man for himself, remember?"
+            npc_answer="Stop bothering me before I lose my temper. Every man for himself, remember?"
             npc_state_friendly="false"
             npc_state_static="false"
             priority="100" />
