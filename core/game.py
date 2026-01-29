@@ -243,6 +243,7 @@ class Game:
                 "melee": self.player.progression.get_level('melee'),
                 "ranged": self.player.progression.get_level('ranged'),
                 "lucky": self.player.progression.get_level('lucky'),
+                "intelligence": self.player.progression.get_level('intelligence'),
                 "speed": self.player.progression.get_level('speed')
             }
             

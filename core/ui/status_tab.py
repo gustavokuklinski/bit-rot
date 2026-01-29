@@ -39,14 +39,14 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
             stat_icons[k] = None
 
     stats = [
-        ("HP", player.health, player.max_health, RED),
+        ("HP", player.health, player.max_health, GRAY),
         ("STM", player.stamina, player.max_stamina, GRAY),
-        ("TIR", player.tireness, 100, (100, 100, 150)),
-        ("WTR", player.water, 100, BLUE),
-        ("FOD", player.food, 100, GREEN),
-        ("INF", player.infection, 100, YELLOW),
-        ("ANX", player.anxiety, 100, (150, 0, 150)),
-        ("DEF", player.get_total_defence(), 100, (160, 160, 160))
+        ("TIR", player.tireness, 100, GRAY),
+        ("WTR", player.water, 100, GRAY),
+        ("FOD", player.food, 100, GRAY),
+        ("INF", player.infection, 100, GRAY),
+        ("ANX", player.anxiety, 100, GRAY),
+        ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
@@ -63,7 +63,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         text = font_notification.render(f"[{int(value)}%]", True, WHITE)
         surface.blit(text, (label_x, y_pos + 3))
 
-        bar_x = label_x + 45
+        bar_x = label_x + 50
         bar_width = int(100 * (value / max_value)) if max_value > 0 else 0
         bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
         pygame.draw.rect(surface, color, bar_rect)
@@ -80,17 +80,18 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         max_val = 100.0
         
         # Color based on damage
-        p_color = GREEN if val > 80 else (255, 165, 0) if val > 40 else RED
+        #p_color = GREEN if val > 80 else (255, 165, 0) if val > 40 else RED
         
         part_name = font_notification.render(part.capitalize(), True, WHITE)
         surface.blit(part_name, (col1_x + 200, y_offset))
         
         bar_w = 60
         fill_w = int(bar_w * (val / max_val))
-        pygame.draw.rect(surface, WHITE, (col1_x + 295, y_offset + 3, bar_w, 8))
-        pygame.draw.rect(surface, p_color, (col1_x + 295, y_offset + 3, fill_w, 8))
+        pygame.draw.rect(surface, WHITE, (col1_x + 294, y_offset + 2, bar_w +2, 10))
+        pygame.draw.rect(surface, (40, 40, 40), (col1_x + 295, y_offset + 3, bar_w, 8))
+        pygame.draw.rect(surface, GRAY, (col1_x + 295, y_offset + 3, fill_w, 8))
         
-        val_text = font_notification.render(f"[{int(val)}%]", True, p_color)
+        val_text = font_notification.render(f"[{int(val)}%]", True, WHITE)
         surface.blit(val_text, (col1_x + 240, y_offset))
         
         y_offset += 20

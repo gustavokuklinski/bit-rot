@@ -942,12 +942,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                 dropped_successfully = True # Destroyed
                         
                         if (not game.dragged_item.liquid) or is_safe_ground:
-                            if find_free_tile(game.dragged_item.rect, game.obstacles, game.items_on_ground, initial_pos=game.player.rect.center, max_radius=1):
-                                game.items_on_ground.append(game.dragged_item)
-                                dropped_successfully = True
-                            else:
-                                dropped_successfully = False
-                                print("No free space to drop the item.")
+                            offset_x = random.randint(-8, 8)
+                            offset_y = random.randint(-8, 8)
+                            
+                            game.dragged_item.rect.center = (
+                                game.player.rect.centerx + offset_x, 
+                                game.player.rect.centery + offset_y
+                            )
+                            # Sync coordinate variables
+                            game.dragged_item.x = game.dragged_item.rect.x
+                            game.dragged_item.y = game.dragged_item.rect.y
+                            
+                            game.items_on_ground.append(game.dragged_item)
+                            dropped_successfully = True
                     
                     if not dropped_successfully and game.dragged_item:
                         # BOUNCE BACK
@@ -1232,7 +1239,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                 game.last_modal_positions[modal['type']] = modal['position']
 
 def handle_context_menu_click(game, mouse_pos):
-    # ... (No changes) ...
+    
     clicked_on_menu = False
     for i, rect in enumerate(game.context_menu['rects']):
         if rect.collidepoint(mouse_pos):
@@ -1486,11 +1493,11 @@ def handle_context_menu_click(game, mouse_pos):
                         game.player.equip_item_to_belt(item, source, index, container_item)
 
             elif option == 'Drop one':
-                dropped = game.player.drop_item_stack(game, source, index, container_item, 1)
-                if dropped: game.items_on_ground.append(dropped)
+                game.player.drop_item_stack(game, source, index, container_item, 1)
+                
             elif option == 'Drop all':
-                dropped = game.player.drop_item_stack(game, source, index, container_item, 'all')
-                if dropped: game.items_on_ground.append(dropped)
+                game.player.drop_item_stack(game, source, index, container_item, 'all')
+                
             elif option == 'Send all to Backpack':
                 game.player.transfer_item_stack(source, index, container_item, game.player.backpack)
             
@@ -1501,7 +1508,6 @@ def handle_context_menu_click(game, mouse_pos):
                 if source == 'backpack':
                     dropped_item = game.player.drop_item(game, source, index, container_item)
                     if dropped_item:
-                        game.items_on_ground.append(dropped_item)
                         print(f"Dropped {dropped_item.name} from backpack slot.")
                 elif source == 'gear':
                     slot_name = index 
@@ -1509,14 +1515,11 @@ def handle_context_menu_click(game, mouse_pos):
                     if item_to_drop and item_to_drop == item:
                         dropped_item = game.player.drop_item(game, source, index, container_item)
                         if dropped_item:
-                            game.items_on_ground.append(dropped_item)
                             print(f"Dropped {dropped_item.name} from {slot_name} slot.")
                 
                 else:
-                    dropped_item = game.player.drop_item(game, source, index, container_item)
-                    if dropped_item:
-                        dropped_item.rect.center = game.player.rect.center
-                        game.items_on_ground.append(dropped_item)
+                    game.player.drop_item(game, source, index, container_item)
+                    
 
             elif option == 'Read':
                 # [FIX] Handle 'text' items (like ID cards) here instead of expecting them to be recipes

@@ -1419,8 +1419,21 @@ class Player:
                 self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
-            if find_free_tile(item_to_drop.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
-                return item_to_drop 
+            offset_x = random.randint(-8, 8)
+            offset_y = random.randint(-8, 8)
+            
+            item_to_drop.rect.center = (
+                self.rect.centerx + offset_x, 
+                self.rect.centery + offset_y
+            )
+            item_to_drop.x = item_to_drop.rect.x
+            item_to_drop.y = item_to_drop.rect.y
+            
+            # Add to ground if not already added by drop_item()
+            if item_to_drop not in game.items_on_ground:
+                game.items_on_ground.append(item_to_drop)
+                
+            return item_to_drop
             
         return None
 
@@ -1595,24 +1608,23 @@ class Player:
             source_index = index
 
         if item_to_drop:
-            if find_free_tile(item_to_drop.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
-                item_to_drop.x = item_to_drop.rect.x
-                item_to_drop.y = item_to_drop.rect.y
-                return item_to_drop 
-            else:
-                display_message_player("No free space to drop the item.")
-                if source == 'inventory':
-                    source_inventory.insert(source_index, item_to_drop)
-                elif source == 'belt':
-                    source_inventory[source_index] = item_to_drop
-                elif source == 'backpack':
-                    self.backpack = item_to_drop
-                
-                elif source == 'gear':
-                    self.clothes[index] = item_to_drop 
-                elif source == 'container' or source == 'nearby':
-                    source_inventory.insert(source_index, item_to_drop)
-                return None 
+            offset_x = random.randint(-8, 8)
+            offset_y = random.randint(-8, 8)
+            
+            item_to_drop.rect.center = (
+                self.rect.centerx + offset_x, 
+                self.rect.centery + offset_y
+            )
+            
+            # 3. Ensure the coordinate variables used for saving/loading are updated
+            item_to_drop.x = item_to_drop.rect.x
+            item_to_drop.y = item_to_drop.rect.y
+            
+            # 4. Add to the world list
+            game.items_on_ground.append(item_to_drop)
+            self.drop_cooldown = 10 # Optional: prevent spamming
+            
+            return item_to_drop
 
         return None
 

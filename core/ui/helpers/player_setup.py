@@ -568,12 +568,20 @@ def _draw_player_build_screen(game, state, mouse_pos):
             base_value = state['base_data']['stats'].get(stat, 100.0)
 
             # trait_mod = value - base_value
-            display_modifiers.get(stat, 0)
+        
+
+
+            trait_mod = display_modifiers.get(stat, 0)
+            
             stat_name_str = f"{stat.capitalize()}"
+            
+            # Display as % (e.g., "+20% Rate" or just "+20%")
             trait_str = f"{int(trait_mod):+}% Rate"
+            
             mod_color = WHITE
-            if trait_mod > 0: mod_color = (100, 255, 100)
-            elif trait_mod < 0: mod_color = (255, 100, 100)
+            if trait_mod > 0: mod_color = (100, 255, 100) # Green for positive
+            elif trait_mod < 0: mod_color = (255, 100, 100) # Red for negative
+
             text_surf = font.render(f"{stat_name_str}", True, WHITE)
             
             # Only draw modifier if exists

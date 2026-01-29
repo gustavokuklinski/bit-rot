@@ -146,7 +146,7 @@
         <ingredient name="Scissor" destroy="false" amount="1" />
     </recipe>
 
-    <recipe type="backpack" craft="create" output="Bag" magazine="Survivor Guide Basic" amount="1" time="4.5">
+    <recipe type="backpack" craft="create" output="Bag" magazine="Survivor Guide Basic" level="[intelligence:1, maintenance:2]" amount="1" time="4.5">
         <ingredient name="Ragged Cloth" destroy="true" amount="8" />
         <ingredient name="Line Twine" destroy="true" amount="4" />
         <ingredient name="Needle" destroy="false" amount="1" />

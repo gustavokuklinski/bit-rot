@@ -8,15 +8,15 @@
         <stats stamina="10" />
     </trait>
 
-    <trait id="strong" name="Strong" cost="2" tooltip="+2% level strong">
+    <trait id="strong" name="Strong" cost="2" tooltip="+2% XP level strong">
         <attributes strength="2" />
     </trait>
 
-    <trait id="luck" name="Luck" cost="2" tooltip="+2% level lucky">
+    <trait id="luck" name="Luck" cost="2" tooltip="+2% XP level lucky">
         <attributes lucky="2" />
     </trait>
 
-    <trait id="runner" name="Runner" cost="2" tooltip="+2% level speed">
+    <trait id="runner" name="Runner" cost="2" tooltip="+2% XP level speed">
         <attributes speed="2" />
     </trait>
 
@@ -36,15 +36,15 @@
         <stats food="15" />
     </trait>
 
-    <trait id="fit" name="Fit" cost="2" tooltip="+2 level fitness">
+    <trait id="fit" name="Fit" cost="2" tooltip="+2 XP level fitness">
         <attributes fitness="2" />
     </trait>
 
-    <trait id="brawler" name="Browler" cost="2" tooltip="+2% level melee">
+    <trait id="brawler" name="Browler" cost="2" tooltip="+2% XP level melee">
         <attributes melee="2" />
     </trait>
 
-    <trait id="shooter" name="Shooter" cost="2" tooltip="+2% level ranged weapons">
+    <trait id="shooter" name="Shooter" cost="2" tooltip="+2% XP level ranged weapons">
         <attributes ranged="2" />
     </trait>
 
@@ -54,11 +54,11 @@
 
 
     <!-- Negative traits -->
-    <trait id="weak" name="Weak" cost="-2" tooltip="-2% level strength gain">
+    <trait id="weak" name="Weak" cost="-2" tooltip="-2% XP level strength gain">
         <attributes strength="-2" />
     </trait>
 
-    <trait id="unlucky" name="Unlucky" cost="-2" tooltip="-1% level lucky gain">
+    <trait id="unlucky" name="Unlucky" cost="-2" tooltip="-1% XP level lucky gain">
         <attributes lucky="-1" />
     </trait>
 
@@ -66,7 +66,7 @@
         <stats stamina="-15" anxiety="15" />
     </trait>
 
-    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% speed penality and +15% faster increase anxiety">
+    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% XP speed penality and +15% faster increase anxiety">
         <attributes speed="-15" />
         <stats anxiety="15" />
     </trait>
@@ -80,7 +80,7 @@
         <attributes strength="-1" />
     </trait>
 
-    <trait id="myopia" name="Myopia" cost="-1" tooltip="-10% ranged penality" >
+    <trait id="myopia" name="Myopia" cost="-1" tooltip="-10% XP ranged penality" >
         <attributes ranged="-10" />
     </trait>
 
@@ -100,11 +100,11 @@
         <stats food="-20" />
     </trait>
 
-    <trait id="unfit" name="Unfit" cost="-2"  tooltip="-2% fitness level">
+    <trait id="unfit" name="Unfit" cost="-2"  tooltip="-2% XP fitness level">
         <attributes fitness="-2" />
     </trait>
 
-    <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% melee level">
+    <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% XP melee level">
         <attributes melee="-2" />
     </trait>
 
