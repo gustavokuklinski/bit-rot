@@ -131,7 +131,8 @@ class Game:
             'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100)
         }
-
+        self.pause_button_rect = None
+        self.forward_button_rect = None
         self.status_button_rect = None
         self.inventory_button_rect = None
         self.nearby_button_rect = None

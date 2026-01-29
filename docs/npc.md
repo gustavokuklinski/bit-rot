@@ -1,4 +1,4 @@
-### Zombies
+# NPC
 
 ```xml
 <zombie>
@@ -10,7 +10,7 @@
     <xp min="1" max="10" />
     
     <stats>
-        <health min="10" max="80" />
+        <health min="100" max="100" />
         <speed min="1" max="1" />
         <attack min="1" max="5" />
         <infection min="1" max="5" />
@@ -26,9 +26,9 @@
     </clothes>
 
     <visuals>
-        <sprite id="center" file="zombie.png" />
-        <sprite id="left" file="zombie_left.png" />
-        <sprite id="right" file="zombie_right.png" />
+        <sprite id="center" file="player.png" />
+        <sprite id="left" file="player_left.png" />
+        <sprite id="right" file="player_right.png" />
     </visuals>
     
     <loot>

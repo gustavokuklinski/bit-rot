@@ -273,6 +273,10 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.chat_active:
             game.chat_active = False
 
+        if game.pause_button_rect and game.pause_button_rect.collidepoint(mouse_pos):
+            return
+        if game.forward_button_rect and game.forward_button_rect.collidepoint(mouse_pos):
+            return
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game); return
         if game.inventory_button_rect and game.inventory_button_rect.collidepoint(mouse_pos):

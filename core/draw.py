@@ -12,7 +12,7 @@ from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby_modal import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button,draw_forward_button,draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.gear_modal import draw_gear_modal
 from core.ui.messages_modal import draw_messages_modal
@@ -529,7 +529,8 @@ def draw_game(game):
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
         
-
+    game.pause_button_rect = draw_pause_button(game.virtual_screen)
+    game.forward_button_rect = draw_forward_button(game.virtual_screen)
     game.status_button_rect = draw_status_button(game.virtual_screen)
     game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
     game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
@@ -644,6 +645,8 @@ def draw_game(game):
 
     elif not game.context_menu['active']:
         ui_buttons = [
+            (game.pause_button_rect, "Pause and Save (F2)"),
+            (game.forward_button_rect, "Skip time (F3)"),
             (game.status_button_rect, "Player Status (H)"),
             (game.inventory_button_rect, "Inventory (I)"),
             (game.gear_button_rect, "Gear (G)"),

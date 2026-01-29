@@ -7,6 +7,39 @@ _nearby_img = None
 _message_img = None
 _gear_img = None
 _crafting_img = None
+_pause_img = None
+_forward_img = None
+
+def draw_pause_button(surface):
+    global _pause_img
+    if _pause_img is None:
+        try:
+            _pause_img = pygame.image.load(SPRITE_PATH + 'ui/pause.png').convert_alpha()
+            _pause_img = pygame.transform.scale(_pause_img, (15, 15))
+        except pygame.error:
+            _pause_img = pygame.Surface((15, 15), pygame.SRCALPHA)
+            _pause_img.fill(GRAY)
+    
+    # Position: 10 (Top)
+    button_rect = pygame.Rect(10, 10, 15, 15)
+    surface.blit(_pause_img, button_rect)
+    return button_rect
+
+def draw_forward_button(surface):
+    global _forward_img
+    if _forward_img is None:
+        try:
+            _forward_img = pygame.image.load(SPRITE_PATH + 'ui/fast_forward.png').convert_alpha()
+            _forward_img = pygame.transform.scale(_forward_img, (15, 15))
+        except pygame.error:
+            _forward_img = pygame.Surface((15, 15), pygame.SRCALPHA)
+            _forward_img.fill(GRAY)
+    
+    # Position: 10 (Top)
+    button_rect = pygame.Rect(30, 10, 15, 15)
+    surface.blit(_forward_img, button_rect)
+    return button_rect
+
 
 def draw_status_button(surface):
     global _status_img
@@ -19,7 +52,7 @@ def draw_status_button(surface):
             _status_img.fill(GRAY)
     
     # Position: 10 (Top)
-    button_rect = pygame.Rect(10, 10, 40, 40)
+    button_rect = pygame.Rect(10, 40, 40, 40)
     surface.blit(_status_img, button_rect)
     return button_rect
 
@@ -34,7 +67,7 @@ def draw_inventory_button(surface):
             _inventory_img.fill(GRAY)
             
     # Previous: 50. New: 60 (Status 10+40=50 + 10 gap)
-    button_inventory_rect = pygame.Rect(10, 60, 40, 40)
+    button_inventory_rect = pygame.Rect(10, 90, 40, 40)
     surface.blit(_inventory_img, button_inventory_rect)
     return button_inventory_rect
 
@@ -49,7 +82,7 @@ def draw_gear_button(surface):
             _gear_img.fill(GRAY)
             
     # Previous: 90 (Overlap). New: 130 (Inventory 60+60=120 + 10 gap)
-    button_gear_rect = pygame.Rect(10, 110, 40, 40)
+    button_gear_rect = pygame.Rect(10, 140, 40, 40)
     surface.blit(_gear_img, button_gear_rect)
     return button_gear_rect
 
@@ -64,7 +97,7 @@ def draw_nearby_button(surface):
             _nearby_img.fill(GRAY)
             
     # Previous: 145. New: 200 (Gear 130+60=190 + 10 gap)
-    button_nearby_rect = pygame.Rect(10, 160, 40, 40)
+    button_nearby_rect = pygame.Rect(10, 190, 40, 40)
     surface.blit(_nearby_img, button_nearby_rect)
     return button_nearby_rect
 
@@ -80,7 +113,7 @@ def draw_messages_button(surface):
             _message_img.fill(GRAY)
     
     # Previous: 200. New: 270 (Nearby 200+60=260 + 10 gap)
-    button_messages_rect = pygame.Rect(10, 210, 40, 40) 
+    button_messages_rect = pygame.Rect(10, 240, 40, 40) 
     surface.blit(_message_img, button_messages_rect)
     return button_messages_rect
 
@@ -97,6 +130,6 @@ def draw_crafting_button(surface):
             pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1) # Simple icon
             
     # Position: 260 (Messages 210 + 40 + 10 gap)
-    button_rect = pygame.Rect(10, 260, 40, 40)
+    button_rect = pygame.Rect(10, 290, 40, 40)
     surface.blit(_crafting_img, button_rect)
     return button_rect

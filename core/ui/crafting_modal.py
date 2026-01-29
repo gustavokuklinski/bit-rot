@@ -53,20 +53,16 @@ class CraftingModal(BaseModal):
         self.search_rect = None
 
     def handle_event(self, event):
-        # [FIXED] Use scaled mouse position for accurate UI collision detection
         mouse_pos = self.game._get_scaled_mouse_pos()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # 1. Check Tabs
             if self.tabs_manager.check_click(mouse_pos):
                 self.modal['crafting_scroll_offset'] = 0 
                 return True
             
-            # 2. Check Search Bar Focus
             if self.search_rect:
                 if self.search_rect.collidepoint(mouse_pos):
                     self.search_active = True
-                    # Enable key repeat for smoother backspace/typing
                     pygame.key.set_repeat(500, 50) 
                     return True
                 else:
@@ -82,7 +78,6 @@ class CraftingModal(BaseModal):
             elif event.key == pygame.K_ESCAPE:
                 self.search_active = False
                 pygame.key.set_repeat()
-                # Return True to consume the ESC key so it doesn't close the modal immediately
                 return True 
             else:
                 if len(self.search_text) < 20 and len(event.unicode) > 0 and event.unicode.isprintable():
@@ -107,6 +102,17 @@ class CraftingModal(BaseModal):
                        if item.name in valid_names)
             
             if have < needed:
+                return False
+        return True
+    
+    # [ADDED] Helper to check attribute requirements
+    def _check_skill_reqs(self, recipe):
+        if not recipe.req_level:
+            return True
+        
+        for attr, level_req in recipe.req_level.items():
+            player_level = self.player.progression.get_level(attr)
+            if player_level < level_req:
                 return False
         return True
 
@@ -146,7 +152,6 @@ class CraftingModal(BaseModal):
             return None
 
     def draw(self):
-        # [FIX] Ensure Tabs Manager uses the correct surface (Virtual Screen)
         self.tabs_manager.surface = self.surface
 
         self.minimized = self.modal.get('minimized', False)
@@ -170,10 +175,7 @@ class CraftingModal(BaseModal):
         mouse_pos = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()[0]
 
-        # 1. LEFT PANEL: TABS, SEARCH, LIST
         list_x = self.modal_x + self.padding
-        
-        # Draw Tabs
         self.tabs_manager.draw()
         
         tab_area_height = 35 
@@ -219,9 +221,6 @@ class CraftingModal(BaseModal):
                 if hasattr(cont, 'inventory') and cont.inventory:
                     nearby_items.extend(cont.inventory)
 
-        filtered_recipes = []
-        active_tab = self.modal.get('active_tab', 'All')
-
         for r in self.recipes:
             craft_type = getattr(r, 'craft_type', 'create')
             if active_tab == "Craft" and craft_type == 'repair': continue
@@ -233,13 +232,12 @@ class CraftingModal(BaseModal):
             filtered_recipes.append(r)
 
         filtered_recipes.sort(key=lambda r: (
-            not self._has_ingredients(r, None),          # 1. Inventory-only (Priority)
-            not self._has_ingredients(r, nearby_items),  # 2. Nearby-only
+            not self._has_ingredients(r, None),          
+            not self._has_ingredients(r, nearby_items),  
             r.output_name
         ))
 
         row_h = 28
-        # [FIXED] Cast result to integer to prevent TypeError in range()
         self.visible_items = int(list_h // row_h)
 
         list_rect = pygame.Rect(list_x, list_y, self.list_width, list_h)
@@ -263,18 +261,17 @@ class CraftingModal(BaseModal):
             
             is_selected = (self.selected_recipe == recipe)
             is_hovered = row_rect.collidepoint(mouse_pos)
-            has_ingredients_local = self._has_ingredients(recipe, None)          # Player only
-            has_ingredients_global = self._has_ingredients(recipe, nearby_items) # Player + Nearby
+            has_ingredients_local = self._has_ingredients(recipe, None)          
+            has_ingredients_global = self._has_ingredients(recipe, nearby_items) 
             
             bg_color = (60, 60, 80) if is_selected else ((50, 50, 50) if is_hovered else (30, 30, 30))
             
-            # [CHANGED] Text Color Logic
             if is_selected:
                 text_color = YELLOW
             elif has_ingredients_local:
-                text_color = GREEN   # Can craft with just inventory
+                text_color = GREEN   
             elif has_ingredients_global:
-                text_color = YELLOW  # Can craft BUT requires nearby items
+                text_color = YELLOW  
             elif is_hovered:
                 text_color = WHITE
             else:
@@ -300,7 +297,6 @@ class CraftingModal(BaseModal):
                 handle_color = (140, 140, 140)
             pygame.draw.rect(self.surface, handle_color, handle_rect, border_radius=4)
 
-        # 2. RIGHT PANEL: DETAILS
         details_x = list_x + self.list_width + self.padding
         details_y = list_y 
         details_w = self.modal_w - self.list_width - (self.padding * 3)
@@ -377,64 +373,101 @@ class CraftingModal(BaseModal):
                 self.surface.blit(ing_surf, (text_x, curr_y + 8))
                 curr_y += 35
                 
-            # 1. Define Button Position (Fixed at bottom)
             btn_h = 40
             bottom_y = details_y + list_h
             btn_rect = pygame.Rect(details_x, bottom_y - btn_h, details_w, btn_h)
             
-            # Cursor for elements strictly above the button
             element_cursor_y = btn_rect.top - 5
 
-            # 2. Draw Loading Bar (Only if action is active)
             if self.player.action_timer > 0 and self.player.action_total_time > 0:
                 bar_h = 10
-                # Background
                 pygame.draw.rect(self.surface, (30, 30, 30), (details_x, element_cursor_y - bar_h, details_w, bar_h))
-                # Fill
                 progress = 1.0 - (self.player.action_timer / self.player.action_total_time)
                 fill_w = int(details_w * progress)
                 pygame.draw.rect(self.surface, GREEN, (details_x, element_cursor_y - bar_h, fill_w, bar_h))
-                
-                element_cursor_y -= (bar_h + 10) # Move cursor up
+                element_cursor_y -= (bar_h + 10) 
 
-            # 3. Magazine Requirement Text (If applicable)
-            recipe_known = True
+            # [CHANGED] Requirement Logic (Magazine OR Skills)
+            is_unlocked = True
+            
+            # 1. Check Magazine
+            knows_magazine = True
             if r.magazine:
-                is_read = r.magazine in self.player.known_recipes
-                if not is_read:
-                    recipe_known = False
-                    can_craft = False 
+                knows_magazine = r.magazine in self.player.known_recipes
+            
+            # 2. Check Skills
+            skills_met = self._check_skill_reqs(r)
+
+            # 3. Determine Unlock State
+            # Logic: If Magazine exists, you need Magazine OR Skills.
+            #        If NO Magazine but Skills exist, you need Skills.
+            #        If neither, it is unlocked (Basic).
+            if r.magazine:
+                if not knows_magazine and not skills_met:
+                    is_unlocked = False
+            elif r.req_level:
+                if not skills_met:
+                    is_unlocked = False
+
+            if not is_unlocked:
+                can_craft = False
+
+            # [DISPLAY] Render Requirements
+            
+            # A. Skills (Bottom-up rendering)
+            if r.req_level:
+                for attr, lvl in reversed(list(r.req_level.items())):
+                    # Get nicely formatted name if possible, else capitalize
+                    attr_name = attr.replace('_', ' ').capitalize()
+                    p_lvl = self.player.progression.get_level(attr)
+                    
+                    s_color = GREEN if p_lvl >= lvl else RED
+                    txt = f"- {attr_name}: {p_lvl}/{int(lvl)}"
+                    s_surf = font_small.render(txt, True, s_color)
+                    
+                    element_cursor_y -= 20
+                    self.surface.blit(s_surf, (details_x + 10, element_cursor_y))
                 
-                mag_color = GREEN if is_read else RED
+                head_txt = "OR Skills:" if r.magazine else "Requires Skills:"
+                head_surf = font_small.render(head_txt, True, WHITE)
+                element_cursor_y -= 20
+                self.surface.blit(head_surf, (details_x, element_cursor_y))
+                element_cursor_y -= 5
+
+            # B. Magazine
+            if r.magazine:
+                mag_color = GREEN if knows_magazine else RED
                 mag_text = f"Requires Magazine: {r.magazine}"
                 mag_surf = font_small.render(mag_text, True, mag_color)
                 
-                element_cursor_y -= 20 # Height of text
+                element_cursor_y -= 20
                 self.surface.blit(mag_surf, (details_x, element_cursor_y))
-                element_cursor_y -= 5 # Padding
+                element_cursor_y -= 5 
 
-            # 4. Craft Time Display (Always visible above everything else)
             time_text = f"Time: {r.time_required}s"
             time_surf = font_small.render(time_text, True, GRAY)
             element_cursor_y -= 20
             self.surface.blit(time_surf, (details_x, element_cursor_y))
 
-            # 5. Warning Message Display
             if self.warning_message:
                 warn_surf = font_small.render(self.warning_message, True, RED)
-                # Ensure it fits or wrap? For now, simple render above Time
                 element_cursor_y -= 20
                 self.surface.blit(warn_surf, (details_x, element_cursor_y))
 
-            # 6. Draw Button (Standard logic)
             btn_color = (0, 100, 0) if can_craft else (60, 60, 60)
             border_color = WHITE if can_craft else GRAY
             
             pygame.draw.rect(self.surface, btn_color, btn_rect, border_radius=5)
             pygame.draw.rect(self.surface, border_color, btn_rect, 1, border_radius=5)
             
-            if not recipe_known:
-                btn_text = "UNKNOWN RECIPE"
+            if not is_unlocked:
+                # Differentiate why it's locked
+                if r.magazine and not knows_magazine and r.req_level:
+                    btn_text = "LOCKED (MAG/SKILL)"
+                elif r.magazine:
+                     btn_text = "NEED MAGAZINE"
+                else:
+                     btn_text = "NEED SKILLS"
             elif can_craft:
                 if getattr(r, 'craft_type', 'create') == 'repair':
                     btn_text = "REPAIR ITEM"
@@ -462,7 +495,6 @@ class CraftingModal(BaseModal):
         close_btn, min_btn = self.get_buttons()
         return None, close_btn, min_btn
 
-    # [ADDED] Missing tooltip method
     def _draw_ingredient_tooltip(self, names, pos):
         line_height = 20
         padding = 10
@@ -477,7 +509,6 @@ class CraftingModal(BaseModal):
         tt_w = max_w + (padding * 2)
         tt_h = (len(surfaces) * line_height) + (padding * 2)
         
-        # Ensure tooltip stays within screen bounds
         x, y = pos[0] + 15, pos[1] + 15
         if x + tt_w > VIRTUAL_SCREEN_WIDTH:
             x = pos[0] - tt_w - 5
@@ -491,7 +522,6 @@ class CraftingModal(BaseModal):
         for s in surfaces:
             self.surface.blit(s, (x + padding, curr_y))
             curr_y += line_height
-
 
     def _validate_ingredients(self, recipe, nearby_containers=None):
         source_inventories_check = [self.player.inventory]
@@ -518,7 +548,6 @@ class CraftingModal(BaseModal):
                 for i in range(len(inv) - 1, -1, -1):
                     item = inv[i]
                     if item.name in valid_names:
-                        # Validation: Container with items
                         if hasattr(item, 'inventory') and item.inventory:
                              return f"Cannot use {item.name}: It contains items!"
 
@@ -530,11 +559,9 @@ class CraftingModal(BaseModal):
                             break
         return None
 
-
     def _craft(self, recipe):
         if self.player.action_timer > 0: return
 
-        # --- Validation Check ---
         error = self._validate_ingredients(recipe)
         if error:
             self.warning_message = error
@@ -547,6 +574,13 @@ class CraftingModal(BaseModal):
                 for obj in nearby:
                     if hasattr(obj, 'inventory') and obj.inventory:
                         source_inventories.append(obj.inventory)
+
+            # [ADDED] Apply XP rewards
+            if recipe.gain_xp:
+                for attr, amount in recipe.gain_xp.items():
+                    # Check if method exists (it should, but safety first)
+                    if hasattr(self.player.progression, 'add_xp'):
+                        self.player.progression.add_xp(self.player, attr, amount)
 
             if getattr(recipe, 'craft_type', 'create') == 'repair':
                 target_item = None
