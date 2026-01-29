@@ -504,10 +504,22 @@ class NPC(Zombie):
                                     game.sound_manager.play_sound(weapon.sounds['swing'], subdir='items', game=game, source_pos=self.rect.center)
                                 
                                 if target_entity == game.player:
-                                     if hasattr(target_entity, 'take_durability_damage'):
-                                         target_entity.take_durability_damage(damage_to_deal, game)
-                                     target_entity.take_damage(game, damage_to_deal, 0)
-                                     display_message(game, f"{self.name} attacked you!")
+                                    if hasattr(target_entity, 'take_durability_damage'):
+                                        target_entity.take_durability_damage(damage_to_deal, game)
+                                    target_part = target_entity.get_vulnerable_part()
+                                     
+                                    # Calculate defence and reduction (replicating Player.take_damage logic)
+                                    total_defence = target_entity.get_total_defence()
+                                    health_bonus_perc = target_entity.progression.get_health_bonus(target_entity)
+                                     
+                                    total_reduction_perc = health_bonus_perc + total_defence
+                                    damage_modifier = 1.0 - (total_reduction_perc / 100.0)
+                                    damage_modifier = max(0.0, damage_modifier)
+                                     
+                                    final_damage = max(0, damage_to_deal * damage_modifier)
+                                     
+                                    target_entity.take_damage_to_part(target_part, final_damage)
+                                    display_message(game, f"{self.name} attacked your {target_part}!")
                                 else:
                                      is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                             

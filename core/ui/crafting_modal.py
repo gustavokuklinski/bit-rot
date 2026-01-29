@@ -600,7 +600,7 @@ class CraftingModal(BaseModal):
                 restored = target_item.durability - old_durability
                 
                 if hasattr(self.player, 'progression'):
-                    self.player.progression._add_xp(self.player, self.player.progression.maintenance, 'maintenance', 15)
+                    self.player.progression.add_xp(self.player, 'maintenance', 15)
 
                 from core.messages import display_message_player
                 display_message_player(f"Repaired {target_item.name} by {int(restored)} points.")

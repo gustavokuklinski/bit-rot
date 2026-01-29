@@ -1,4 +1,4 @@
-<item name="Vaccine" type="consumable_medication">
+<item name="Vaccine" type="consumable_drugs">
     <properties>
         <reduce status="[infection]" min="5" max="15" />
         <load value="1" />

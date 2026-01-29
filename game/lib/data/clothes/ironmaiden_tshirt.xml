@@ -1,4 +1,4 @@
-<cloth name="Ironmaiden Tshirt" type="cloth" id="torso">
+<cloth name="Ironmaiden Tshirt" type="cloth" id="body">
     <properties>
         <defence value="1" />
         <durability min="1" max="100" />

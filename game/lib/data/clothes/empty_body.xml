@@ -1,4 +1,4 @@
-<cloth name="Empty Body" type="cloth" id="body">
+<cloth name="Empty Arms" type="cloth" id="arms">
     <properties>
         <defence value="0" />
         <durability min="1" max="100" />

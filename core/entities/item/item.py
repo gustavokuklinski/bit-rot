@@ -149,7 +149,7 @@ class Item:
 
     def is_stackable(self):
         return (self.capacity is not None and self.capacity > 1 and 
-                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_repair','consumable_medication','consumable_drink','consumable_ammo','consumable_food', 'utility'])
+                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_repair','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility'])
 
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():
@@ -446,6 +446,14 @@ class Item:
                 multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
             elif t_type == 'text':
                 multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
+            elif t_type == 'map':
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
+            elif t_type == 'resource':
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
+            elif t_type == 'recipe':
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
+            elif t_type == 'utility':
+                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY
             
             elif t_type and t_type.startswith('consumable'):
                 multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
@@ -456,6 +464,8 @@ class Item:
                     multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
                 elif t_type == 'consumable_medication':
                     multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
+                elif t_type == 'consumable_drugs':
+                    multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS
                 elif t_type == 'consumable_ammo':
                     multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
             

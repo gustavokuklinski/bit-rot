@@ -19,6 +19,6 @@ Build executable system target
 
 ```shell
 # Nuitka
-$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --output-dir=./build bit-rot.py # Compile the Game
+$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --output-dir=./build main.py # Compile the Game
 $ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --output-dir=./build editor.py # Compile map editor
 ```

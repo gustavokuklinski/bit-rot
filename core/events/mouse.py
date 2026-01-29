@@ -1368,6 +1368,11 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             if option == 'Use': game.player.consume_item(item, source, index, container_item)
+            elif option.startswith('Bandage '):
+                # Extract the body part (e.g., "Bandage Head" -> "head")
+                part = option.split(' ')[1].lower()
+                game.player.consume_item(item, source, index, container_item, target_part=part)
+                clicked_on_menu = True
             elif option == 'Reload':
                 if getattr(item, 'item_type', None) in ['utility', 'mobile']:
                     game.player.reload_utility_item(item, source, index, container_item)
@@ -2174,7 +2179,7 @@ def handle_attack(game, mouse_pos):
                 game.player.gun_flash_timer = 5
                 if weapon.durability <= 0:
                     print(f"{weapon.name} broke!")
-                    game.player.progression._add_xp(game.player, game.player.progression.maintenance, 'maintenance', 50)
+                    game.player.progression.add_xp(game.player, 'maintenance', 50)
                     game.player.destroy_broken_weapon(weapon)
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:

@@ -512,6 +512,7 @@ class Zombie(pygame.sprite.Sprite):
 
         self.rect.topleft = (int(self.x), int(self.y))
 
+
     def attack(self, target_entity, game):
         self.melee_swing_timer = 10
         dx = target_entity.rect.centerx - self.rect.centerx
@@ -519,11 +520,14 @@ class Zombie(pygame.sprite.Sprite):
         self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
 
-        if hasattr(target_entity, 'take_durability_damage'):
-            # It's a Player
+        if hasattr(target_entity, 'take_damage_to_part'):
+            # It's a Player or Entity with complex health
             target_entity.take_durability_damage(damage, game)
             
-            total_defence = target_entity.get_total_defence()
+            # [MODIFIED] Intelligent targeting: Find vulnerable part
+            target_part = target_entity.get_vulnerable_part()
+            
+            total_defence = target_entity.get_total_defence() # Or part-specific defence if calculated inside player
             damage_reduction = 1.0 - (total_defence / 100.0)
             
             infection = 0
@@ -534,26 +538,27 @@ class Zombie(pygame.sprite.Sprite):
             final_damage = max(0, damage * damage_reduction)
             final_infection = max(0, infection * infection_reduction)
 
-            final_damage_taken, final_infection_taken = target_entity.take_damage(game, final_damage, final_infection)
+            # Apply damage to the specific part
+            target_entity.take_damage_to_part(target_part, final_damage)
             
-            if final_infection_taken > 0:
-                 display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage and {final_infection_taken:.1f}% infection.")
+            # Apply infection globally
+            if final_infection > 0:
+                target_entity.infection = min(100, target_entity.infection + final_infection)
+            
+            if final_infection > 0:
+                 display_message(f"**HIT!** Zombie hit {target_part} for {final_damage:.1f} damage and infection!")
             else:
-                 display_message(f"**HIT!** Player takes {final_damage_taken:.1f} damage.")
+                 display_message(f"**HIT!** Zombie hit {target_part} for {final_damage:.1f} damage.")
 
         # Handle NPC specific damage logic (NPC inherits Zombie)
         else:
-            # It's an NPC (Zombie class logic)
             is_dead = target_entity.take_damage(damage, game) 
             if is_dead and target_entity in game.npcs:
-                # [MODIFIED] Use the new die method instead of just removing
                 target_entity.die(game)
                 display_message("A survivor has been killed by a zombie.")
 
         if self.sound_attack:
             game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
-
-
         
 
     @staticmethod

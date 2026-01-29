@@ -35,11 +35,11 @@ def get_gear_slot_rects(modal_position, modal_width=GEAR_MODAL_WIDTH):
         # [HEAD]
         'head': pygame.Rect(modal_center_x - (slot_size / 2), y1, slot_size, slot_size),
         
-        # [HANDS][TORSO][BODY]
+        # [HANDS][body][arms]
         # Adjust X positions relative to the calculated center
         'hands': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 5, y2, slot_size, slot_size),
-        'torso': pygame.Rect(modal_center_x - (slot_size / 2), y2, slot_size, slot_size),
-        'body': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 5, y2, slot_size, slot_size),
+        'body': pygame.Rect(modal_center_x - (slot_size / 2), y2, slot_size, slot_size),
+        'arms': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 5, y2, slot_size, slot_size),
         
         # [LEGS][FEET] (PANTS maps to LEGS)
         # These are overwritten below for better centering, but initialized here

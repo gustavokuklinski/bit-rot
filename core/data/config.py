@@ -43,7 +43,7 @@ INVENTORY_MODAL_WIDTH = 300
 INVENTORY_MODAL_HEIGHT = 330
 
 # Status Modal
-STATUS_MODAL_WIDTH = 250
+STATUS_MODAL_WIDTH = 380 # 250
 STATUS_MODAL_HEIGHT = 360
 
 # Nearby Modal
@@ -187,12 +187,15 @@ def load_settings(preset="default"):
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS, ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY, ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE, ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
     global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
+
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -278,6 +281,12 @@ def load_settings(preset="default"):
         ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = float(spawning_config.find('item_consumable_ammo_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = float(spawning_config.find('item_currency_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = float(spawning_config.find('item_text_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS = float(spawning_config.find('item_consumable_drugs_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY = float(spawning_config.find('item_utility_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE = float(spawning_config.find('item_recipe_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE = float(spawning_config.find('item_resource_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_MAP = float(spawning_config.find('item_map_spawn_chance_multiplier').get('value'))
+
 
         npc_config = root.find('npc')
         MAX_NPCS_GLOBAL = int(npc_config.find('max_npcs').get('value'))

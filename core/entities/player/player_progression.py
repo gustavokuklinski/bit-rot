@@ -1,217 +1,198 @@
 import random
 import math
-from core.data.config import *
 import core.data.config
+from core.data.config import *
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.messages import display_message_player
+# Import the new loader
+from core.data.progression_loader import PROGRESSION_CONFIG
 
 class PlayerProgression:
     def __init__(self, player_data):
-        # Attributes with XP and level
-        self.strength = self._create_attribute(player_data, 'strength')
-        self.fitness = self._create_attribute(player_data, 'fitness')
-        self.melee = self._create_attribute(player_data, 'melee')
-        self.ranged = self._create_attribute(player_data, 'ranged')
-        self.maintenance = self._create_attribute(player_data, 'maintenance')
-        self.speed = self._create_attribute(player_data, 'speed')
-        self.lucky = self._create_attribute(player_data, 'luck')
-        
-        
-    def get_total_attribute_bonus(self, player, attr_name):
-        """Calculates the total percentage bonus from 'charm' items in player's inventory."""
-        total_bonus = 0.0
-        
-        # Check main inventory
-        for item in player.inventory:
-            if item and item.item_type == 'charm' and item.attribute_modifiers:
-                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
-        
-        # Check belt
-        for item in player.belt:
-            if item and item.item_type == 'charm' and item.attribute_modifiers:
-                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
-        
-        for trait in player.traits:
-            if trait in TRAIT_DEFINITIONS:
-                # Check BOTH 'attributes' (for charm) and 'stats' (for core stats)
-                if attr_name in TRAIT_DEFINITIONS[trait].get('attributes', {}):
-                    total_bonus += TRAIT_DEFINITIONS[trait]['attributes'][attr_name]
-                if attr_name in TRAIT_DEFINITIONS[trait].get('stats', {}):
-                    total_bonus += TRAIT_DEFINITIONS[trait]['stats'][attr_name]
+        self.config = PROGRESSION_CONFIG
+        self.attributes = {}
+        # Store traits locally for initialization of XP reqs
+        self.initial_traits = player_data.get('traits', [])
 
-        return total_bonus
+        # 1. Dynamic Initialization
+        # Instead of hardcoding self.strength, self.fitness, etc.,
+        # we iterate through the loaded XML configuration.
+        for attr_id in self.config.attributes.keys():
+            self.attributes[attr_id] = self._create_attribute(player_data, attr_id)
 
+    # --- GENERIC GETTERS ---
 
+    def get_level(self, attr_id):
+        """Returns the level of a specific attribute (e.g. 'strength')."""
+        return self.attributes.get(attr_id, {}).get('level', 0)
 
-    def get_item_attribute_bonus(self, player, attr_name):
+    def get_derived_bonus(self, target_effect):
         """
-        Calculates the total percentage bonus from 'charm' items ONLY.
-        This is used for display on the Record tab.
+        Calculates the total passive bonus for a specific effect from ALL attributes.
+        Example: get_derived_bonus('melee_damage') sums up bonuses from Strength, Melee, etc.
         """
-        total_bonus = 0.0
-        
-        # Check main inventory
-        for item in player.inventory:
-            if item and item.item_type == 'charm' and item.attribute_modifiers:
-                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
-        
-        # Check belt
-        for item in player.belt:
-            if item and item.item_type == 'charm' and item.attribute_modifiers:
-                total_bonus += item.attribute_modifiers.get(attr_name, 0.0)
-        
-        return total_bonus
+        total_mult = 0.0
+        total_flat = 0.0
 
+        for attr_id, attr_data in self.attributes.items():
+            effect = self.config.get_attr_effect(attr_id, target_effect)
+            if effect:
+                lvl = attr_data['level']
+                val = effect['value']
+                
+                if effect['type'] == 'multiplier_add':
+                    total_mult += (lvl * val)
+                elif effect['type'] == 'flat':
+                    total_flat += (lvl * val)
 
-    def get_strength(self, player):
-        return self.strength['level']
+        return total_mult, total_flat
 
-    def get_fitness(self, player):
-        return self.fitness['level']
-
-    def get_melee(self, player):
-        return self.melee['level']
-
-    def get_ranged(self, player):
-        return self.ranged['level']
-
-    def get_maintenance(self, player):
-        return self.maintenance['level']
-
+    # --- COMPATIBILITY GETTERS (Wrappers) ---
+    
+    def get_strength(self, player): return self.get_level('strength')
+    def get_fitness(self, player): return self.get_level('fitness')
+    def get_melee(self, player): return self.get_level('melee')
+    def get_ranged(self, player): return self.get_level('ranged')
+    def get_maintenance(self, player): return self.get_level('maintenance')
+    
     def get_lucky(self, player):
-        base = self.lucky['level']
+        # Base Luck + Trait Bonus
+        base = self.get_level('lucky')
         bonus_perc = self.get_total_attribute_bonus(player, 'lucky')
         return base * (1 + (bonus_perc / 100.0))
-    
+
     def get_speed(self, player):
-        # [MODIFIED] Use 'level' from the speed attribute dict
-        base = self.speed['level']
+        base = self.get_level('speed')
         bonus_perc = self.get_total_attribute_bonus(player, 'speed')
         return base * (1 + (bonus_perc / 100.0))
 
-    def get_stamina_bonus(self, player):
-        """Gets bonus from 'stamina' traits (e.g., athletic)."""
-        return self.get_total_attribute_bonus(player, 'stamina')
+    # --- BONUS CALCULATORS (Traits & Items) ---
 
-    def get_anxiety_bonus(self, player):
-        """Gets bonus from 'anxiety' traits (e.g., smoker)."""
-        return self.get_total_attribute_bonus(player, 'anxiety')
-
-    def get_infection_bonus(self, player):
-        """Gets bonus from 'infection' traits (e.g., vaccine)."""
-        return self.get_total_attribute_bonus(player, 'infection')
-
-    def get_health_bonus(self, player):
-        """Gets bonus from 'health' traits."""
-        return self.get_total_attribute_bonus(player, 'health')
+    def get_total_attribute_bonus(self, player, attr_name):
+        """Calculates percentage bonus from Traits and Charms (Inventory)."""
+        total_bonus = 0.0
         
-    def get_tireness_bonus(self, player):
-        """Gets bonus from 'tireness' traits."""
-        return self.get_total_attribute_bonus(player, 'tireness')
+        # Helper to check an item
+        def check_item(item):
+            if item and item.item_type == 'charm' and item.attribute_modifiers:
+                return item.attribute_modifiers.get(attr_name, 0.0)
+            return 0.0
+
+        for item in player.inventory: total_bonus += check_item(item)
+        for item in player.belt: total_bonus += check_item(item)
         
-    def get_food_bonus(self, player):
-        """Gets bonus from 'food' traits (e.g., slower metabolism)."""
-        return self.get_total_attribute_bonus(player, 'food')
+        # Traits
+        for trait in player.traits:
+            t_def = TRAIT_DEFINITIONS.get(trait)
+            if t_def:
+                total_bonus += t_def.get('attributes', {}).get(attr_name, 0.0)
+                total_bonus += t_def.get('stats', {}).get(attr_name, 0.0)
+
+        return total_bonus
+
+    # Convenience wrappers for traits
+    def get_stamina_bonus(self, player): return self.get_total_attribute_bonus(player, 'stamina')
+    def get_anxiety_bonus(self, player): return self.get_total_attribute_bonus(player, 'anxiety')
+    def get_infection_bonus(self, player): return self.get_total_attribute_bonus(player, 'infection')
+    def get_health_bonus(self, player): return self.get_total_attribute_bonus(player, 'health')
+    def get_tireness_bonus(self, player): return self.get_total_attribute_bonus(player, 'tireness')
+    def get_food_bonus(self, player): return self.get_total_attribute_bonus(player, 'food')
+    def get_water_bonus(self, player): return self.get_total_attribute_bonus(player, 'water')
+
+    # --- XP & LEVELING ---
+
+    def _create_attribute(self, player_data, attr_id):
+        raw = player_data.get('attributes', {}).get(attr_id, 0.0)
         
-    def get_water_bonus(self, player):
-        """Gets bonus from 'water' traits (e.g., slower metabolism)."""
-        return self.get_total_attribute_bonus(player, 'water')
+        if isinstance(raw, dict):
+            level = raw.get('level', 0)
+            xp = raw.get('xp', 0)
+        else:
+            level = int(raw)
+            xp = 0
 
-
-    def _get_xp_for_next_level(self, current_level, attr_name=None):
-        if current_level >= 100: return 999999 # Cap at level 100
-
-        # Default base
-        base_xp = 100
-
-        # Specific XP requirements for Level 1 (scaling from there)
-        if attr_name in ['strength', 'fitness', 'lucky']:
-            base_xp = 1000
-        elif attr_name == 'ranged':
-            base_xp = 200
-        elif attr_name == 'maintenance':
-            base_xp = 100
-        elif attr_name == 'melee':
-            base_xp = 100
-        elif attr_name == 'speed':
-            base_xp = 500
-            
-        # Linear scaling: Level 0->1 = Base. Level 1->2 = Base * 2.
-        return base_xp * (current_level + 1)
-
-    def _create_attribute(self, player_data, attr_name):
-        
-
-        # [FIX] Handle both loading (dict) and new creation (float/int)
-        raw_value = player_data['attributes'].get(attr_name, 0.0)
-        
-        # If it's already a dictionary (from a save file), return it directly
-        if isinstance(raw_value, dict):
-            # Ensure xp_to_next_level exists (backward compatibility fix)
-            if 'xp_to_next_level' not in raw_value:
-                 current_lvl = raw_value.get('level', 0)
-                 raw_value['xp_to_next_level'] = self._get_xp_for_next_level(current_lvl, attr_name)
-            return raw_value
-
-        # Otherwise, treat it as a base level (float/int) for new initialization
-        base_level_from_traits = raw_value
-        start_level = max(0.0, int(base_level_from_traits))
+        # Calculate XP req based on XML config and Initial Traits
+        xp_req = self._calc_xp_req(attr_id, level, traits=self.initial_traits)
         
         return {
-            "name": attr_name,
-            "level": start_level,
-            "xp": 0,
-            "xp_to_next_level": self._get_xp_for_next_level(start_level, attr_name)
+            "name": attr_id,
+            "level": level,
+            "xp": xp,
+            "xp_to_next_level": xp_req
         }
 
-    def _add_xp(self, player, attribute, attr_name, base_amount):
-        """Adds XP to an attribute, modified by the attribute's level and bonuses."""
+    def _calc_xp_req(self, attr_id, current_level, player=None, traits=None):
+        if current_level >= 100: return 999999
         
-        # 1. Get the skill modifier (e.g., -10% or +5%)
-        #    We use get_total_attribute_bonus here, NOT get_melee(), 
-        #    because the level itself shouldn't affect XP gain.
-        skill_bonus_perc = self.get_total_attribute_bonus(player, attr_name)
+        attr_def = self.config.attributes.get(attr_id)
+        base_xp = attr_def['base_xp'] if attr_def else 100
         
-        # 2. Calculate the modifier (e.g., 1.0 + (-10 / 100.0) = 0.9)
-        xp_modifier = 1.0 + (skill_bonus_perc / 100.0)
+        base_req = base_xp * (current_level + 1)
 
-        # 3. Calculate final XP, ensuring it's never negative
-        final_xp_gain = max(0, base_amount * xp_modifier)
-
-        attribute['xp'] += final_xp_gain
-        #display_message_player(f"Gained {final_xp_gain:.2f} XP for {attr_name}.") 
+        # Calculate Modifier (Percentage)
+        bonus_perc = 0.0
         
-        # 4. Check for level up
-        #    We calculate a modified XP-to-next-level to apply the penalty/bonus
+        if player:
+            bonus_perc = self.get_total_attribute_bonus(player, attr_id)
+        elif traits:
+             # Fallback for initialization when 'player' object doesn't exist yet
+             for trait in traits:
+                t_def = TRAIT_DEFINITIONS.get(trait)
+                if t_def:
+                     bonus_perc += t_def.get('attributes', {}).get(attr_id, 0.0)
+                     bonus_perc += t_def.get('stats', {}).get(attr_id, 0.0)
+
+        # Apply User's Logic:
+        # Positive Bonus (e.g. +20%) -> Needs Less XP (Multiplier < 1.0)
+        # Negative Bonus (e.g. -20%) -> Needs More XP (Multiplier > 1.0)
         
-        # This is the base amount needed (e.g., 100)
-        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name'))
+        modifier = 1.0 - (bonus_perc / 100.0)
+        
+        # Safety clamp to prevent 0 or negative requirement
+        modifier = max(0.1, modifier)
+        
+        return base_req * modifier
 
-        if attribute['xp'] >= attribute['xp_to_next_level']:
-            self._level_up(attribute)
+    def add_xp(self, player, attr_id, amount):
+        if attr_id not in self.attributes: return
+        
+        # [MODIFIED] Removed modifier here. Raw amount is added.
+        # Modifier is now applied to the TARGET (xp_to_next_level).
+        final_gain = max(0, amount)
 
-    def _level_up(self, attribute):
-        attribute['level'] += 1
-        attribute['xp'] = 0
-        attribute['xp_to_next_level'] = self._get_xp_for_next_level(attribute['level'], attribute.get('name')) # Use the formula
-        display_message_player(f"Leveled up {attribute.get('name', 'attribute')} to level {attribute['level']}!")
+        attr = self.attributes[attr_id]
+        attr['xp'] += final_gain
+        
+        # 2. Level Up Check
+        if attr['xp'] >= attr['xp_to_next_level']:
+            self._level_up(player, attr)
 
-    # [NEW] Public method to add speed XP
+    def _level_up(self, player, attr):
+        attr['level'] += 1
+        attr['xp'] = 0
+        # [MODIFIED] Pass player to recalculate dynamic requirements
+        attr['xp_to_next_level'] = self._calc_xp_req(attr['name'], attr['level'], player=player)
+        
+        # Get nice name for display
+        display_name = self.config.attributes.get(attr['name'], {}).get('name', attr['name'])
+        display_message_player(f"Leveled up {display_name} to level {attr['level']}!")
+
     def add_speed_xp(self, player, amount):
-        self._add_xp(player, self.speed, 'speed', amount)
+        self.add_xp(player, 'speed', amount)
 
     def process_kill(self, player, weapon, zombie):
-        xp_amount = zombie.xp_value
-        
-        # Base XP (includes lucky bonus)
-        base_xp = xp_amount * self.get_xp_bonus(player)
+        # XP Calculation
+        xp_val = zombie.xp_value
+        lucky_mod = 1 + (self.get_lucky(player) * 0.01)
+        base_xp = xp_val * lucky_mod
 
-        if weapon and weapon.item_type == 'weapon_ranged' and weapon.ammo_type:  # Ranged
-            self._add_xp(player, self.ranged, 'ranged', base_xp)
-            
-        else:  # Melee or bare hands
-            self._add_xp(player, self.melee, 'melee', base_xp)
-            self._add_xp(player, self.strength, 'strength', base_xp * 0.5)
+        if weapon and getattr(weapon, 'item_type', '') == 'weapon_ranged' and getattr(weapon, 'ammo_type', None):
+            self.add_xp(player, 'ranged', base_xp)
+        else:
+            self.add_xp(player, 'melee', base_xp)
+            self.add_xp(player, 'strength', base_xp * 0.5)
+
+    # --- UPDATE LOOPS (Data Driven) ---
 
     def update(self, player, is_moving, game):
         self.update_stamina(player, is_moving)
@@ -220,12 +201,12 @@ class PlayerProgression:
         self.update_anxiety(player, game)
         self.update_tireness(player, game, is_moving)
 
-        # Earn Fitness XP when running
         if is_moving and player.is_running:
-            self._add_xp(player, self.fitness, 'fitness', 0.02)
+            self.add_xp(player, 'fitness', 0.02)
 
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)
+        
         if is_moving and player.stamina > 0:
             consumption = self.get_stamina_consumption(player.is_running, player)
             player.stamina = max(0, player.stamina - consumption)
@@ -234,166 +215,206 @@ class PlayerProgression:
             player.stamina = min(stamina_cap, player.stamina + regeneration)
 
     def update_hp(self, player):
-        health_cap = player.max_health * (1 - player.infection / 100)
+        # 1. Calculate Healing Speed Modifier
+        bonus_perc = self.get_health_bonus(player)
+        trait_speed_mult = 1.0 + (bonus_perc / 100.0)
+        trait_speed_mult = max(0.0, trait_speed_mult)
+
+        # 2. Load Base Healing Rates from Config
+        # This now pulls from XML. If XML is missing, it falls back to a default dict.
+        part_rates = self.config.healing_rates
         
-        # Clamp current health if it exceeds the new cap
-        if player.health > health_cap:
-            player.health = health_cap
+        # 3. Calculate Infection Penalty
+        div = self.config.get_stat('health', 'infection_regen_divisor', 25.0)
+        infection_penalty = 1.0
+        if player.infection > 0:
+            infection_penalty = 1.0 / (1.0 + player.infection / div)
 
-        regen_rate = self.get_hp_regeneration(player.infection)
-        if player.health < health_cap:
-            player.health = min(health_cap, player.health + regen_rate)
+        # 4. Heal Body Parts
+        if hasattr(player, 'body_parts'):
+            damage_healed = False
+            
+            for part_name, part_data in player.body_parts.items():
+                current_val = part_data['value']
+                
+                if current_val < 100.0:
+                    # Get rate from loaded config (default to slow 0.005 if part name missing)
+                    base_rate = part_rates.get(part_name, 0.005)
+                    
+                    # Final Heal
+                    final_heal = base_rate * trait_speed_mult * infection_penalty
+                    
+                    part_data['value'] = min(100.0, current_val + final_heal)
+                    damage_healed = True
 
+            if damage_healed:
+                player.update_global_health()
+                
+        else:
+            # Fallback
+            health_cap = player.max_health * (1 - player.infection / 100)
+            if player.health < health_cap:
+                rate = 0.01 * trait_speed_mult * infection_penalty
+                player.health = min(health_cap, player.health + rate)
     def update_anxiety(self, player, game):
+        # 1. Calculate Zombies nearby
         nearby_zombies = 0
-        # Count zombies within detection radius
+        det_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
         for zombie in game.zombies:
             dist = math.hypot(player.rect.centerx - zombie.rect.centerx, player.rect.centery - zombie.rect.centery)
-            # Using ZOMBIE_DETECTION_RADIUS as the "seeing" range
-            if dist < core.data.config.ZOMBIE_DETECTION_RADIUS:
+            if dist < det_radius:
                 nearby_zombies += 1
         
-        anxiety_gain = 0.0
-        if nearby_zombies > 2:
-            # High anxiety gain when seeing a horde
-            anxiety_gain = 0.05 # 20% of 0.01% is unclear, using a balanced rate
-        else:
-            # Slow base anxiety gain
-            anxiety_gain = 0.001 # User's 0.01% is 0.0001 which is too slow
-            
+        # 2. Get XML Constants
+        horde_gain = self.config.get_stat('anxiety', 'horde_gain', 0.05)
+        passive_gain = self.config.get_stat('anxiety', 'passive_gain', 0.001)
 
-        anxiety_bonus_perc = self.get_anxiety_bonus(player) # e.g., +15%
-        anxiety_modifier = 1.0 + (anxiety_bonus_perc / 100.0) # e.g., 1.15
+        base = horde_gain if nearby_zombies > 2 else passive_gain
         
-        final_anxiety_gain = anxiety_gain * anxiety_modifier
+        # 3. Apply Trait Modifiers
+        bonus_perc = self.get_anxiety_bonus(player)
+        final = base * (1.0 + (bonus_perc / 100.0))
         
-        player.anxiety = min(100, player.anxiety + final_anxiety_gain)
-        # Note: Anxiety doesn't decrease on its own here, only via items (e.g., smoker trait)
-    
+        player.anxiety = min(100, player.anxiety + final)
+
     def update_tireness(self, player, game, is_moving):
+        # 1. Get XML Constants
+        night_decay = self.config.get_stat('tireness', 'night_decay', -0.03)
+        day_recov = self.config.get_stat('tireness', 'day_recovery', 0.002)
+        
+        # 2. Determine Base Change (Day/Night)
         world_state = game.world_time.state
-        base_change = 0.0
-        if world_state == "NIGHT" or world_state == "TRANSITION_TO_NIGHT":
-            base_change = -0.03 # Rate of getting tired (negative)
-        else: # DAY or TRANSITION_TO_DAY
-            base_change = 0.002 # Rate of recovery (positive)
+        base_change = night_decay if "NIGHT" in world_state else day_recov
 
-        # 2. Modifiers that *decrease* tireness (penalties)
-        stamina_penalty = 0.0
-        if player.stamina <= 0:
-            stamina_penalty = -0.01 # Extra penalty for being exhausted
-            
-        running_penalty = 0.0
-        if is_moving and player.is_running:
-            running_penalty = -0.02 # Tireness drain from running
-
-        # 3. Anxiety modifier
-        # Anxiety makes you more tired (makes recovery slower, decay faster)
-        anxiety_modifier = 1.0 + (player.anxiety / 100.0) # 1.0 (calm) to 2.0 (max anxiety)
+        # 3. Penalties (from XML)
+        stam_penalty = self.config.get_stat('tireness', 'stamina_penalty', -0.01)
+        run_penalty = self.config.get_stat('tireness', 'run_penalty', -0.02)
         
-        if base_change < 0: # If decaying (at night)
-            base_change *= anxiety_modifier # Make decay faster
-        else: # If recovering (during day)
-            base_change /= anxiety_modifier # Make recovery slower
-            
-        # 4. Trait modifier
-        # "rested" (+15) -> 1.15 multiplier
-        # "sleepy" (-20) -> 0.80 multiplier
-        tireness_bonus_perc = self.get_tireness_bonus(player) 
-        tireness_modifier = 1.0 + (tireness_bonus_perc / 100.0) 
+        current_penalty = 0.0
+        if player.stamina <= 0: current_penalty += stam_penalty
+        if is_moving and player.is_running: current_penalty += run_penalty
 
-        if base_change < 0: # If decaying (at night)
-            base_change /= tireness_modifier # Rested (1.15) makes decay slower
-        else: # If recovering (during day)
-            base_change *= tireness_modifier # Rested (1.15) makes recovery faster
+        # 4. Anxiety Modifier (Higher anxiety = faster tireness/slower recovery)
+        anxiety_mod = 1.0 + (player.anxiety / 100.0)
         
-        # 5. Combine all changes
-        final_gain_modified = base_change + stamina_penalty + running_penalty
-        
-        player.tireness = max(0, min(player.max_tireness, player.tireness + final_gain_modified))
+        if base_change < 0: base_change *= anxiety_mod
+        else: base_change /= anxiety_mod
 
+        # 5. Trait Modifiers (Rested/Sleepy)
+        trait_perc = self.get_tireness_bonus(player)
+        trait_mod = 1.0 + (trait_perc / 100.0)
+
+        if base_change < 0: base_change /= trait_mod # Rested slows decay
+        else: base_change *= trait_mod               # Rested speeds recovery
+
+        final_change = base_change + current_penalty
+        player.tireness = max(0, min(player.max_tireness, player.tireness + final_change))
 
     def update_infection(self, player):
         if player.infection > 0:
-            player.infection += 0.0005
+            gain = self.config.get_stat('infection', 'passive_gain', 0.0005)
+            cap = self.config.get_stat('infection', 'death_threshold', 100.0)
+            
+            # [NEW] Apply Trait Modifier (Resilient / Prone to Illness)
+            # Positive bonus means Resistance (LOWER infection gain)
+            bonus_perc = self.get_infection_bonus(player)
+            
+            # Example: +20% Bonus -> 1.0 - 0.2 = 0.8 (80% infection rate)
+            modifier = 1.0 - (bonus_perc / 100.0)
+            
+            # Safety clamp: Minimum 10% gain, maximum 500% gain
+            modifier = max(0.1, min(5.0, modifier))
+            
+            player.infection += (gain * modifier)
+            
+            if player.infection >= cap:
+                player.health = 1
 
-            if player.infection >= 100:
-                player.health = 1 # Player dies
+    # --- COMBAT & ACTIONS (Calculated via Attributes) ---
 
     def handle_melee_attack(self, player):
-        # Cost to swing (energy consumption)
-        fatigue_cost = 0.5 
-        
-        # [CHANGED] Logic to allow swinging even when exhausted (tireness <= 0)
-        # If player has energy (tireness > 0), we consume it.
-        # If player has NO energy, we still allow the swing (Return True).
-        # Since 'tireness' is low/zero, 'get_melee_damage_multiplier' will naturally 
-        # reduce damage to near zero, but the attack event will fire, allowing knockback.
-        
+        fatigue_cost = 0.5 # Could move to XML if desired
         if player.tireness > 0:
             player.tireness = max(0.0, player.tireness - fatigue_cost)
-            
         return True
 
-    # --- HELPER FUNCTIONS ---
     def get_melee_damage_multiplier(self, player):
-        base_multiplier = 1 + (self.get_melee(player) / 100.0)
-        tireness_modifier = player.tireness / player.max_tireness
-        return base_multiplier * tireness_modifier
+        # Replaces: 1 + (melee / 100.0)
+        # Now: Base 1.0 + (Sum of all attribute effects targeting 'melee_damage')
+        mult_bonus, flat_bonus = self.get_derived_bonus('melee_damage')
+        
+        base_multiplier = 1.0 + mult_bonus
+        
+        tireness_mod = player.tireness / player.max_tireness
+        return (base_multiplier * tireness_mod) + flat_bonus
 
     def get_unarmed_damage(self, player):
-        base_damage = 1 + (self.get_strength(player) / 100.0)
-        tireness_modifier = player.tireness / player.max_tireness
-        return base_damage * tireness_modifier
+        # Replaces: 1 + (strength / 100.0)
+        mult_bonus, flat_bonus = self.get_derived_bonus('unarmed_damage')
+        
+        base_damage = 1.0 + mult_bonus
+        tireness_mod = player.tireness / player.max_tireness
+        return (base_damage * tireness_mod) + flat_bonus
 
     def get_ranged_damage_multiplier(self, player):
-        # Ranged level gives a small bonus
-        base_multiplier = 1 + (self.get_ranged(player) / 100.0)
-        # Tiredness reduces it
-        tireness_modifier = player.tireness / player.max_tireness
-        return base_multiplier * tireness_modifier
+        mult_bonus, flat_bonus = self.get_derived_bonus('ranged_damage')
+        
+        base_multiplier = 1.0 + mult_bonus
+        tireness_mod = player.tireness / player.max_tireness
+        return base_multiplier * tireness_mod
 
     def get_headshot_chance(self, player):
-        return 0.1 + (self.get_ranged(player) * 0.004)
+        # Replaces: 0.1 + (ranged * 0.004)
+        mult_bonus, flat_bonus = self.get_derived_bonus('headshot_chance')
+        base_chance = 0.1 
+        return base_chance + flat_bonus
 
-    def get_weapon_durability_loss(self, player):
-        """Calculates melee durability loss, reduced by Maintenance."""
-        # Maintenance Chance to save durability
-        # Level 0 = 0%, Level 10 = 10%, Level 50 = 50%
-        maintenance_lvl = self.get_maintenance(player)
-        if random.randint(0, 100) < maintenance_lvl:
-            return 0 # Saved by maintenance skill!
-
-        if random.randint(0, 10) < (self.get_melee(player) / 100.0):
-            return 0.5
-        else:
-            return 2.0
-    
-    def get_ranged_durability_loss(self, player):
-        """Calculates ranged durability loss, reduced by Maintenance."""
-        maintenance_lvl = self.get_maintenance(player)
-        if random.randint(0, 100) < maintenance_lvl:
-            return 0 # Saved by maintenance skill!
-        return 0.5 # Standard loss per shot
-    
     def get_stamina_consumption(self, is_running, player):
-        base_consumption = 0.08 if is_running else 0.0
-        modifier = 1 - (self.get_speed(player) / 100.0)
-        return base_consumption * modifier
+        # Replaces: 0.08 * (1 - speed/100)
+        
+        base_run_cost = self.config.get_stat('stamina', 'run_cost_base', 0.08)
+        base = base_run_cost if is_running else 0.0
+        
+        # Look for attributes that reduce consumption (e.g. Speed)
+        # XML Effect target: 'stamina_consumption_reduction'
+        mult_red, flat_red = self.get_derived_bonus('stamina_consumption_reduction')
+        
+        # If speed level 5 gives 0.05 reduction: 1 - 0.05 = 0.95 multiplier
+        modifier = max(0.1, 1.0 - flat_red) 
+        
+        return base * modifier
 
     def get_stamina_regeneration(self, player):
-        base_regen = 0.03 + (self.get_fitness(player) / 100.0)
-        stamina_bonus_perc = self.get_stamina_bonus(player) # e.g., +10%
-        regen_modifier = 1.0 + (stamina_bonus_perc / 100.0) # e.g., 1.1
-        # A negative bonus (e.g., -15%) will make this 0.85
-        return max(0, base_regen * regen_modifier)
-
-    def get_xp_bonus(self, player):
-        return 1 + (self.get_lucky(player) * 0.01)
-
-    def get_hp_regeneration(self, infection_level):
-        hp_regen_rate = 0.01
-        if infection_level > 0:
-            hp_regen_rate /= (1 + infection_level / 25)
+        # Base from XML
+        base_regen = self.config.get_stat('stamina', 'regen_base', 0.03)
         
-        return hp_regen_rate
+        # Attribute Bonuses (Fitness)
+        # XML Effect target: 'stamina_regen' (flat add)
+        mult, flat = self.get_derived_bonus('stamina_regen')
+        
+        # Trait Bonuses (Athletic)
+        trait_perc = self.get_stamina_bonus(player)
+        trait_mod = 1.0 + (trait_perc / 100.0)
+        
+        return max(0, (base_regen + flat) * trait_mod)
+
+    def get_weapon_durability_loss(self, player):
+        # XML Effect target: 'durability_save_chance'
+        # e.g., Maintenance gives 1.0 (1%) per level
+        _, save_chance = self.get_derived_bonus('durability_save_chance')
+        
+        if random.uniform(0, 100) < save_chance:
+            return 0 # Saved
+
+        # Keep hardcoded minor check for Strength/Melee or move to XML?
+        # Keeping logic close to original for now but using generic getter
+        _, minor_save = self.get_derived_bonus('durability_save_chance_minor')
+        if random.uniform(0, 100) < minor_save:
+             return 0.5
+        return 2.0
+
+    def get_ranged_durability_loss(self, player):
+        _, save_chance = self.get_derived_bonus('durability_save_chance')
+        if random.uniform(0, 100) < save_chance:
+            return 0
+        return 0.5

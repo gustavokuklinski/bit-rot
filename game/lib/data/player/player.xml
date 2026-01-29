@@ -21,6 +21,7 @@
         <fitness value="0.0" />
         <melee value="0.0"  />
         <ranged value="0.0" />
+        <maintenance value="0.0" />
         <lucky value="0.0" />
         <speed value="0.0" />
     </attributes>
@@ -29,9 +30,9 @@
         <head value="100.0" defence="0.0" />
         <legs value="100.0" defence="0.0" />
         <feet value="100.0" defence="0.0" />
-        <torso value="100.0" defence="0.0" />
-        <hand value="100.0" defence="0.0" />
         <body value="100.0" defence="0.0" />
+        <hand value="100.0" defence="0.0" />
+        <arms value="100.0" defence="0.0" />
     </body>
 
     <initial_loot>
@@ -45,11 +46,11 @@
 
     <clothes>
         <head></head>
-        <legs></legs>
         <feet></feet>
-        <torso></torso>
         <hand></hand>
         <body></body>
+        <arms></arms>
+        <legs></legs>
     </clothes>
 
     <recipes>

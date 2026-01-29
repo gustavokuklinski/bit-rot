@@ -8,7 +8,6 @@ def parse_player_data():
     Parses the player.xml file and returns a dictionary of attributes
     and a list of trait names.
     """
-    # Use the provided player.xml file
     tree = ET.parse(PLAYER_XML_PATH)
     root = tree.getroot()
     
@@ -18,6 +17,7 @@ def parse_player_data():
         'profession': root.find('profession').get('value'),
         'stats': {},
         'attributes': {},
+        'body_parts': {},
         'initial_loot': [],
         'visuals': {},
         'known_recipes': []
@@ -27,23 +27,41 @@ def parse_player_data():
     for stat in root.findall('stats/*'):
         data['stats'][stat.tag] = float(stat.get('value'))
         
-    # Parse attributes
+    # Parse attributes (NEW)
     for attr in root.findall('attributes/*'):
         data['attributes'][attr.tag] = float(attr.get('value'))
+
+    # Parse body parts (NEW)
+    body_node = root.find('body')
+    if body_node is not None:
+        for part in body_node:
+             data['body_parts'][part.tag] = {
+                 'value': float(part.get('value', 100.0)),
+                 'defence': float(part.get('defence', 0.0))
+             }
         
     # Parse initial loot
-    for item in root.findall('initial_loot/inventory'): # Corrected path if items are under 'inventory' tag
-        data['initial_loot'].append(item.get('item'))
+    if root.find('initial_loot') is not None:
+        for item in root.findall('initial_loot/inventory'): 
+            data['initial_loot'].append(item.get('item'))
     
     # Parse visuals
-    sprite_path_relative = root.find('visuals/sprite').get('file')
-    # Assumes player.png is in 'game/sprites/player/'
-    data['visuals']['sprite'] = 'player/' + sprite_path_relative
-    
-    # --- MODIFICATION: Parse the trait names ---
+    visuals_node = root.find('visuals')
+    if visuals_node is not None:
+        if visuals_node.find('sprite') is not None:
+            sprite_path_relative = visuals_node.find('sprite').get('file')
+            data['visuals']['sprite'] = 'player/' + sprite_path_relative
+        # Handle multiple sprites (left, right, center) if present
+        for s in visuals_node.findall('sprite'):
+            sid = s.get('id')
+            if sid:
+                data['visuals'][sid] = s.get('file')
+
     trait_names = []
-    for trait in root.findall('traits/*'):
-        trait_names.append(trait.tag)
+    traits_node = root.find('traits')
+    if traits_node is not None:
+        for trait in traits_node:
+            trait_names.append(trait.tag)
     
     recipes_node = root.find('recipes')
     if recipes_node is not None:
@@ -52,5 +70,4 @@ def parse_player_data():
             if magazine:
                 data['known_recipes'].append(magazine)
                 
-    # Return both the data dictionary and the list of trait names
     return data, trait_names

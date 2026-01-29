@@ -38,6 +38,7 @@ def _load_stat_icons():
         "strength": SPRITE_PATH + "ui/strength.png",
         "fitness": SPRITE_PATH + "ui/fitness.png",
         "melee": SPRITE_PATH + "ui/melee.png",
+        "maintenance": SPRITE_PATH + "ui/maintenance.png",
         "ranged": SPRITE_PATH + "ui/range.png",
         "lucky": SPRITE_PATH + "ui/lucky.png",
         "speed": SPRITE_PATH + "ui/speed.png",
@@ -522,14 +523,26 @@ def _draw_player_build_screen(game, state, mouse_pos):
     game.virtual_screen.blit(font.render("Current Stats", True, WHITE), (stats_header_rect.x + 10, stats_header_rect.y + 7))
     stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + 40, stats_rect.width - (padding * 2) - 10, stats_rect.height - (padding * 2) - 30)
     state['stats_content_rect'] = stats_content_rect
+
     current_stats = state['base_data']['stats'].copy()
     current_attrs = state['base_data']['attributes'].copy()
+
+    display_modifiers = {}
+    
     for trait_name in state['chosen_traits']:
         effects = TRAIT_DEFINITIONS.get(trait_name, {})
         if "stats" in effects:
-            for stat, value in effects["stats"].items(): current_stats[stat] = current_stats.get(stat, 0) + value
+            for stat, value in effects["stats"].items():
+                # For flat stats (Health, etc), we DO modify the base?
+                # Usually YES, flat stats like HP are modified directly.
+                # current_stats[stat] = current_stats.get(stat, 0) + value
+                display_modifiers[stat] = display_modifiers.get(stat, 0) + value
         if "attributes" in effects:
-            for attr, value in effects["attributes"].items(): current_attrs[attr] = current_attrs.get(attr, 0) + value
+            for attr, value in effects["attributes"].items():
+                # For Attributes (Strength, etc), we DO NOT modify the base level (preventing negative levels).
+                # Instead we just store the modifier for display.
+                display_modifiers[attr] = display_modifiers.get(attr, 0) + value
+
     state['final_stats'] = current_stats
     state['final_attrs'] = current_attrs
     line_height = 25
@@ -553,16 +566,24 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 text_x = icon_padding
             else: text_x = 0
             base_value = state['base_data']['stats'].get(stat, 100.0)
-            trait_mod = value - base_value
+
+            # trait_mod = value - base_value
+            display_modifiers.get(stat, 0)
             stat_name_str = f"{stat.capitalize()}"
-            trait_str = f"{int(trait_mod):+}%"
+            trait_str = f"{int(trait_mod):+}% Rate"
             mod_color = WHITE
             if trait_mod > 0: mod_color = (100, 255, 100)
             elif trait_mod < 0: mod_color = (255, 100, 100)
             text_surf = font.render(f"{stat_name_str}", True, WHITE)
-            mod_surf = font.render(f"{trait_str}", True, mod_color)
-            content_surface.blit(text_surf, (text_x, y_offset + 3))
-            content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
+            
+            # Only draw modifier if exists
+            if trait_mod != 0:
+                mod_surf = font.render(f"{trait_str}", True, mod_color)
+                content_surface.blit(text_surf, (text_x, y_offset + 3))
+                content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
+            else:
+                content_surface.blit(text_surf, (text_x, y_offset + 3))
+                
             y_offset += line_height
         for attr, value in current_attrs.items():
             icon = _stat_icons_cache.get(attr)
@@ -570,10 +591,17 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 content_surface.blit(icon, (0, y_offset + (line_height - icon.get_height()) // 2))
                 text_x = icon_padding
             else: text_x = 0
-            base_value = state['base_data']['attributes'].get(attr, 0.0)
-            trait_mod = value - base_value
+
+            #base_value = state['base_data']['attributes'].get(attr, 0.0)
+            #trait_mod = value - base_value
+            #stat_name_str = f"{attr.capitalize()}"
+            #trait_str = f"{int(trait_mod):+}%"
+            trait_mod = display_modifiers.get(attr, 0)
+            
             stat_name_str = f"{attr.capitalize()}"
-            trait_str = f"{int(trait_mod):+}"
+            # Show modifier as percentage XP
+            trait_str = f"{int(trait_mod):+}% XP"
+
             mod_color = WHITE
             if trait_mod > 0: mod_color = (100, 255, 100)
             elif trait_mod < 0: mod_color = (255, 100, 100)
@@ -746,7 +774,7 @@ def run_player_setup(game):
         Item.load_item_templates()
         Zombie.load_templates()
 
-        state['clothes_slots'] = ['head','legs', 'feet',  'torso' ,'body', 'hands']
+        state['clothes_slots'] = ['head','legs', 'feet',  'body' ,'arms', 'hands']
         state['available_clothes'] = {slot: [] for slot in state['clothes_slots']}
         state['chosen_clothes'] = {slot: "None" for slot in state['clothes_slots']}
         state['active_dropdown'] = None

@@ -238,22 +238,16 @@ class Game:
                 self.logger.info("Map folder is already in the save directory. Skipping map copy.")
             
             attributes_base = {
-                "strength": self.player.progression.strength['level'],
-                "fitness": self.player.progression.fitness['level'],
-                "melee": self.player.progression.melee['level'],
-                "ranged": self.player.progression.ranged['level'],
-                "lucky": self.player.progression.lucky['level'],
-                "speed": self.player.progression.speed['level']
+                "strength": self.player.progression.get_level('strength'),
+                "fitness": self.player.progression.get_level('fitness'),
+                "melee": self.player.progression.get_level('melee'),
+                "ranged": self.player.progression.get_level('ranged'),
+                "lucky": self.player.progression.get_level('lucky'),
+                "speed": self.player.progression.get_level('speed')
             }
             
-            progression_data = {
-                "strength": self.player.progression.strength,
-                "fitness": self.player.progression.fitness,
-                "melee": self.player.progression.melee,
-                "ranged": self.player.progression.ranged,
-                "lucky": self.player.progression.lucky,
-                "speed": self.player.progression.speed
-            }
+            # [FIXED] Dump the entire attributes dictionary (includes XP and level)
+            progression_data = self.player.progression.attributes
 
             player_data = {
                 "name": self.player.name,
@@ -273,6 +267,7 @@ class Game:
                     "infection": self.player.infection,
                     "anxiety": self.player.anxiety
                 },
+                "body_parts": self.player.body_parts,
                 "attributes": attributes_base,
                 "progression": progression_data,
                 "traits": self.player.traits,
@@ -464,15 +459,16 @@ class Game:
             self.npc_spawn_points = npc_spawns
 
             # 4. Restore Player State
-            if 'progression' in player_data:
-                prog_data = player_data['progression']
-                self.player.progression.strength = prog_data.get('strength', self.player.progression.strength)
-                self.player.progression.fitness = prog_data.get('fitness', self.player.progression.fitness)
-                self.player.progression.melee = prog_data.get('melee', self.player.progression.melee)
-                self.player.progression.ranged = prog_data.get('ranged', self.player.progression.ranged)
-                self.player.progression.lucky = prog_data.get('lucky', self.player.progression.lucky)
-                self.player.progression.speed = prog_data.get('speed', self.player.progression.speed)
-            
+            prog_data = player_data['progression']
+            # [FIXED] Update attributes dictionary instead of direct assignment
+            if hasattr(self.player.progression, 'attributes'):
+                for key, value in prog_data.items():
+                    if key in self.player.progression.attributes:
+                            self.player.progression.attributes[key] = value
+            if 'body_parts' in player_data:
+                self.player.body_parts = player_data['body_parts']
+                if hasattr(self.player, 'update_global_health'):
+                    self.player.update_global_health()
             self.player.x = player_data['x']
             self.player.y = player_data['y']
             self.player.rect.topleft = (self.player.x, self.player.y)
@@ -993,7 +989,7 @@ class Game:
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         # starter_items = ["ID", "Mobile off"]
-        starter_items = ["Survivor Kit", "Wallet", "Car Key Jeep"]
+        starter_items = ["Survivor Kit", "Infection Pills", "Medical Bandage", "Medkit", "Vaccine"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

@@ -1,4 +1,4 @@
-<item name="Infection Pills" type="consumable_medication">
+<item name="Infection Pills" type="consumable_drugs">
     <properties>
         <reduce status="[infection]" min="1" max="5" />
         <load value="1" />
