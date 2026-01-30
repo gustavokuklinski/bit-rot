@@ -66,14 +66,14 @@ def draw_game(game):
     target_pan_y = 0
 
     if is_aiming and game.player:
-        screen_center_x = GAME_WIDTH / 2
-        screen_center_y = GAME_HEIGHT / 2
-        dx = mouse_pos[0] - screen_center_x
-        dy = mouse_pos[1] - screen_center_y
-        mouse_dist_screen = math.hypot(dx, dy)
-        pan_threshold_screen = game.player_view_radius
+        edge_margin = 80 # Pixels from the edge to trigger pan
         
-        if mouse_dist_screen > pan_threshold_screen:
+        at_left_edge = mouse_pos[0] < edge_margin
+        at_right_edge = mouse_pos[0] > GAME_WIDTH - edge_margin
+        at_top_edge = mouse_pos[1] < edge_margin
+        at_bottom_edge = mouse_pos[1] > GAME_HEIGHT - edge_margin
+
+        if at_left_edge or at_right_edge or at_top_edge or at_bottom_edge:
             pan_distance = min(view_w, view_h) * 0.5
             target_pan_x = math.cos(game.player.aim_angle) * pan_distance
             target_pan_y = -math.sin(game.player.aim_angle) * pan_distance

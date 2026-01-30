@@ -801,22 +801,54 @@ class Player:
             return None, None, None, None
         ammo_type_needed = weapon.ammo_type
         
+        # 1. Search Belt (Direct and Nested)
         for i, item in enumerate(self.belt):
-            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                return item, 'belt', i, None
+            if item:
+                # Direct check
+                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                    return item, 'belt', i, None
+                # Nested check (if belt item is a container)
+                if hasattr(item, 'inventory') and item.inventory:
+                     for sub_i, sub_item in enumerate(item.inventory):
+                         if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
+                             return sub_item, 'container', sub_i, item
 
+        # 2. Search Inventory (Direct and Nested)
         for i, item in enumerate(self.inventory):
-            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                return item, 'inventory', i, None
+            if item:
+                # Direct check
+                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                    return item, 'inventory', i, None
+                # Nested check (Containers inside inventory)
+                if hasattr(item, 'inventory') and item.inventory:
+                    for sub_i, sub_item in enumerate(item.inventory):
+                        if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
+                            return sub_item, 'container', sub_i, item
         
+        # 3. Search Gear/Clothes (Direct and Nested)
         for slot, item in self.clothes.items():
-            if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                return item, 'gear', slot, None
+            if item:
+                # Direct check (e.g. if the gear itself is ammo)
+                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                    return item, 'gear', slot, None
+                # Nested check (Items inside Vest/Pants pockets)
+                if hasattr(item, 'inventory') and item.inventory:
+                     for sub_i, sub_item in enumerate(item.inventory):
+                         if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
+                             return sub_item, 'container', sub_i, item
 
+        # 4. Search Backpack (Direct and Nested)
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
-                 if item and item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                    return item, 'container', i, self.backpack
+                 if item:
+                     # Direct check inside backpack
+                     if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                        return item, 'container', i, self.backpack
+                     # Nested check (Containers inside backpack)
+                     if hasattr(item, 'inventory') and item.inventory:
+                        for sub_i, sub_item in enumerate(item.inventory):
+                            if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
+                                return sub_item, 'container', sub_i, item
 
         return None, None, None, None
 

@@ -1762,7 +1762,6 @@ def handle_context_menu_click(game, mouse_pos):
 
 
 def handle_right_click(game, mouse_pos):
-    # ... (No changes) ...
     clicked_item = None
     click_source = None
     click_index = -1

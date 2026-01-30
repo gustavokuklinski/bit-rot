@@ -33,7 +33,7 @@ class WorldTime:
 
         # Visual settings
         self.day_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 1.5
-        self.night_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 0.5
+        self.night_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 1.0
         self.day_ambient = 255 
         self.night_ambient = 255 - core.data.config.MAX_DARKNESS_OPACITY 
 
