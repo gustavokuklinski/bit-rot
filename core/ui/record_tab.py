@@ -88,7 +88,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
 
         # --- Draw Value (e.g., "5") ---
         value_x = text_x + 160
-        value_surf = font_notification.render(str(level), True, WHITE)
+        value_surf = font_notification.render(f"{str(level)}/10", True, WHITE)
         surface.blit(value_surf, (value_x - 40, current_y + 2))
 
         # --- Draw XP Progress Bar ---

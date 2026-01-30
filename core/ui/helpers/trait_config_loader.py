@@ -30,7 +30,9 @@ def load_trait_definitions():
             trait_data = {
                 'cost': cost, 
                 'stats': {}, 
-                'attributes': {}, 
+                'attributes': {},
+                'starting_levels': {},
+                'conflicts': [],
                 'recipes': [],
                 'name': trait_node.get('name', trait_id), # Default to ID if name missing
                 'tooltip': trait_node.get('tooltip')      # Capture tooltip text
@@ -46,11 +48,37 @@ def load_trait_definitions():
                     except ValueError:
                         pass
 
+            disable_str = trait_node.get('disable')
+            if disable_str:
+                clean_str = disable_str.strip("[] ")
+                if clean_str:
+                    parts = clean_str.split(',')
+                    for part in parts:
+                        t_id = part.strip()
+                        if t_id:
+                            trait_data['conflicts'].append(t_id)
+
             # Parse 'attributes' modifiers (e.g., strength, lucky)
             attrs_node = trait_node.find('attributes')
             if attrs_node is not None:
                 trait_data['attributes'] = {}
+                level_str = attrs_node.get('level')
+                if level_str:
+                    # Remove brackets and whitespace
+                    clean_str = level_str.strip("[] ")
+                    if clean_str:
+                        parts = clean_str.split(',')
+                        for part in parts:
+                            if ':' in part:
+                                attr_key, lvl_val = part.split(':')
+                                try:
+                                    # Store as integer in starting_levels
+                                    trait_data['starting_levels'][attr_key.strip()] = int(lvl_val)
+                                except ValueError:
+                                    pass
+
                 for attr_name, val in attrs_node.attrib.items():
+                    if attr_name == 'level': continue # Skip the level attribute itself
                     try:
                         trait_data['attributes'][attr_name] = float(val)
                     except ValueError:

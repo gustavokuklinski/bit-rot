@@ -122,7 +122,7 @@ class PlayerProgression:
         }
 
     def _calc_xp_req(self, attr_id, current_level, player=None, traits=None):
-        if current_level >= 100: return 999999
+        if current_level >= 10: return 999999
         
         attr_def = self.config.attributes.get(attr_id)
         base_xp = attr_def['base_xp'] if attr_def else 100
@@ -156,11 +156,16 @@ class PlayerProgression:
     def add_xp(self, player, attr_id, amount):
         if attr_id not in self.attributes: return
         
+        attr = self.attributes[attr_id]
+        
+        # [CHANGED] Prevent gaining XP if already at max level (10)
+        if attr['level'] >= 10:
+            return
+
         # [MODIFIED] Removed modifier here. Raw amount is added.
         # Modifier is now applied to the TARGET (xp_to_next_level).
         final_gain = max(0, amount)
 
-        attr = self.attributes[attr_id]
         attr['xp'] += final_gain
         
         # 2. Level Up Check
@@ -201,8 +206,8 @@ class PlayerProgression:
         self.update_anxiety(player, game)
         self.update_tireness(player, game, is_moving)
 
-        if is_moving and player.is_running:
-            self.add_xp(player, 'fitness', 0.02)
+        if is_moving and player.is_running and player.stamina > 0:
+            self.add_xp(player, 'fitness', 0.002)
 
     def update_stamina(self, player, is_moving):
         stamina_cap = player.max_stamina * (1 - player.infection / 100)

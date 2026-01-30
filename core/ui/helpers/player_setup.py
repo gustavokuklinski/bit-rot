@@ -527,7 +527,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     current_stats = state['base_data']['stats'].copy()
     current_attrs = state['base_data']['attributes'].copy()
 
+    current_attrs = {k: (v.copy() if isinstance(v, dict) else v) for k, v in state['base_data']['attributes'].items()}
+
     display_modifiers = {}
+    level_modifiers = {}
     
     for trait_name in state['chosen_traits']:
         effects = TRAIT_DEFINITIONS.get(trait_name, {})
@@ -542,6 +545,19 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 # For Attributes (Strength, etc), we DO NOT modify the base level (preventing negative levels).
                 # Instead we just store the modifier for display.
                 display_modifiers[attr] = display_modifiers.get(attr, 0) + value
+
+        if "starting_levels" in effects:
+            for attr, value in effects["starting_levels"].items():
+                level_modifiers[attr] = level_modifiers.get(attr, 0) + value
+                
+                # Apply boost to our SAFE copy of attributes
+                if attr in current_attrs:
+                    curr_val = current_attrs[attr]
+                    if isinstance(curr_val, dict):
+                        curr_val['level'] = curr_val.get('level', 0) + value
+                    else:
+                        # Fallback if attribute is just a number
+                        current_attrs[attr] = curr_val + value
 
     state['final_stats'] = current_stats
     state['final_attrs'] = current_attrs
@@ -593,31 +609,46 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 content_surface.blit(text_surf, (text_x, y_offset + 3))
                 
             y_offset += line_height
-        for attr, value in current_attrs.items():
+
+        for attr, value_obj in current_attrs.items():
             icon = _stat_icons_cache.get(attr)
             if icon:
                 content_surface.blit(icon, (0, y_offset + (line_height - icon.get_height()) // 2))
                 text_x = icon_padding
             else: text_x = 0
 
-            #base_value = state['base_data']['attributes'].get(attr, 0.0)
-            #trait_mod = value - base_value
-            #stat_name_str = f"{attr.capitalize()}"
-            #trait_str = f"{int(trait_mod):+}%"
-            trait_mod = display_modifiers.get(attr, 0)
+            # Determine Level to display
+            if isinstance(value_obj, dict):
+                current_level = value_obj.get('level', 0)
+            else:
+                current_level = int(value_obj)
+
+            xp_mod = display_modifiers.get(attr, 0)   # XP Multiplier
+            lvl_mod = level_modifiers.get(attr, 0)    # Level Boost
             
             stat_name_str = f"{attr.capitalize()}"
-            # Show modifier as percentage XP
-            trait_str = f"{int(trait_mod):+}% XP"
-
-            mod_color = WHITE
-            if trait_mod > 0: mod_color = (100, 255, 100)
-            elif trait_mod < 0: mod_color = (255, 100, 100)
+            
+            # Draw Name
             text_surf = font.render(f"{stat_name_str}", True, WHITE)
-            mod_surf = font.render(f"{trait_str}", True, mod_color)
             content_surface.blit(text_surf, (text_x, y_offset + 3))
-            content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
+            
+            current_draw_x = text_x + 100
+            
+            # [NEW] Draw Level Boost (+5 Level)
+            if lvl_mod > 0:
+                lvl_surf = font.render(f"+{lvl_mod} Level", True, (100, 255, 100)) # Green
+                content_surface.blit(lvl_surf, (current_draw_x, y_offset + 3))
+                current_draw_x += lvl_surf.get_width() + 8
+            
+            # Draw XP Bonus (+20% XP)
+            if xp_mod != 0:
+                mod_color = (100, 255, 100) if xp_mod > 0 else (255, 100, 100)
+                # Ensure we explicitly say "XP" so user knows it's an XP boost, not level
+                mod_surf = font.render(f"{int(xp_mod):+}% XP", True, mod_color)
+                content_surface.blit(mod_surf, (current_draw_x, y_offset + 3))
+            
             y_offset += line_height
+
     if total_text_height > visible_height:
         scrollbar_area_height = stats_content_rect.height
         scrollbar_area_rect = pygame.Rect(stats_content_rect.right + 2, stats_content_rect.top, 8, scrollbar_area_height)
@@ -746,6 +777,43 @@ def _draw_player_build_screen(game, state, mouse_pos):
             draw_tooltip(game.virtual_screen, t_item, mouse_pos)
 
     return clickable_rects
+
+def _update_available_traits(state):
+    """
+    Recalculates available traits based on:
+    1. Traits already chosen (cannot pick again)
+    2. Traits disabled by currently chosen traits (conflicts)
+    """
+    all_defs = state['all_traits']
+    chosen = state['chosen_traits']
+    
+    # 1. Identify all traits disabled by current selection
+    disabled_ids = set()
+    for t_id in chosen:
+        t_def = all_defs.get(t_id)
+        if t_def and 'conflicts' in t_def:
+            for conflict_id in t_def['conflicts']:
+                disabled_ids.add(conflict_id)
+    
+    # 2. Filter all traits
+    valid_ids = []
+    for t_id in all_defs.keys():
+        if t_id in chosen: continue        # Already picked
+        if t_id in disabled_ids: continue  # Disabled by another trait
+        valid_ids.append(t_id)
+
+    # 3. Sort them (Positive first, then Negative) like before
+    pos_traits = sorted(
+        [t for t in valid_ids if all_defs[t].get('cost', 0) > 0], 
+        key=lambda t: (all_defs[t].get('cost', 0), t)
+    )
+    neg_traits = sorted(
+        [t for t in valid_ids if all_defs[t].get('cost', 0) < 0], 
+        key=lambda t: (abs(all_defs[t].get('cost', 0)), t)
+    )
+    
+    state['available_traits'] = pos_traits + neg_traits
+
 
 def run_player_setup(game):
     # Initialize state on the game object the first time
@@ -1190,14 +1258,22 @@ def run_player_setup(game):
                 for trait_name, rect in clickable_rects["add_trait"]:
                     if rect.collidepoint(mouse_pos):
                         if trait_name in state['available_traits']:
-                            state['available_traits'].remove(trait_name); state['chosen_traits'].append(trait_name); break 
+                            state['chosen_traits'].append(trait_name)
+                            _update_available_traits(state) # Refresh list
+                            break 
+                
+                # [CHANGED] Handling Remove Trait
                 for trait_name, rect in clickable_rects["remove_trait"]:
                     if rect.collidepoint(mouse_pos):
                         if trait_name in state['chosen_traits']:
-                            state['chosen_traits'].remove(trait_name); state['available_traits'].append(trait_name); break
+                            state['chosen_traits'].remove(trait_name)
+                            _update_available_traits(state) # Refresh list
+                            break
                 
                 if clickable_rects['save_button'].collidepoint(mouse_pos): _save_preset(state)
-                if clickable_rects['random_button'].collidepoint(mouse_pos): _randomize_character(state)
+                if clickable_rects['random_button'].collidepoint(mouse_pos): 
+                    _randomize_character(state)
+                    _update_available_traits(state)
                 if clickable_rects['delete_button'].collidepoint(mouse_pos): _delete_preset(state)
 
                 if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
