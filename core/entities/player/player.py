@@ -32,7 +32,6 @@ class Player:
         # Stats
         self.name = data.get('name', "Player")
         self.profession = data.get('profession', "Survivor")
-        # [UPDATED] Body Parts Initialization
         self.body_parts = data.get('body_parts', {
             'head': {'value': 100.0, 'defence': 0.0},
             'legs': {'value': 100.0, 'defence': 0.0},
@@ -42,14 +41,12 @@ class Player:
             'arms': {'value': 100.0, 'defence': 0.0}
         })
         
-        # Attributes (Strength, Fitness, etc.)
         self.attributes = data.get('attributes', {
             'strength': 0.0, 'fitness': 0.0, 'melee': 0.0, 
             'ranged': 0.0, 'lucky': 0.0, 'speed': 0.0
         })
 
         self.max_health = stats.get('health', 100.0)
-        # Health is now derived from body parts, update it immediately
         self.update_global_health()
         
         self.max_tireness = stats.get('tireness', 100.0)
@@ -64,7 +61,6 @@ class Player:
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
         
-        # Initialize known recipes
         self.known_recipes = data.get('known_recipes', [])
         
         if self.traits:
@@ -151,7 +147,6 @@ class Player:
         self.last_shot_time = 0
         self.is_resting = False
 
-    # [NEW] Calculate global health based on body parts
     def update_global_health(self):
         if not self.body_parts:
             return
@@ -159,20 +154,13 @@ class Player:
         max_possible = 100.0 * len(self.body_parts)
         self.health = (total_value / max_possible) * 100.0
 
-    # [NEW] Find the body part with the lowest defense (Base + Clothes)
     def get_vulnerable_part(self):
-        # Map clothes slots to body parts
-        # Body Part Keys: head, legs, feet, torso, hand, body
-        # Clothes Slots: head, legs, feet, torso, body, hands
         slot_map = {'hand': 'hands'} 
-        
         candidates = []
         lowest_def = float('inf')
 
         for part, data in self.body_parts.items():
             defence = data.get('defence', 0.0)
-            
-            # Add clothes defence
             c_slot = slot_map.get(part, part)
             item = self.clothes.get(c_slot)
             if item and hasattr(item, 'defence'):
@@ -186,24 +174,20 @@ class Player:
         
         return random.choice(candidates) if candidates else 'body'
 
-    # [NEW] Apply damage to a specific part
     def take_damage_to_part(self, part, amount):
         if part in self.body_parts:
             self.body_parts[part]['value'] = max(0.0, self.body_parts[part]['value'] - amount)
             self.update_global_health()
 
-    # [NEW] Find most damaged part for healing
     def get_most_damaged_part(self):
         candidates = []
         lowest_val = 101.0
-        
         for part, data in self.body_parts.items():
             if data['value'] < lowest_val:
                 lowest_val = data['value']
                 candidates = [part]
             elif data['value'] == lowest_val:
                 candidates.append(part)
-        
         if lowest_val >= 100.0:
             return None
         return random.choice(candidates)
@@ -305,16 +289,13 @@ class Player:
 
     def take_durability_damage(self, raw_damage, game):
         worn_clothes = [item for item in self.clothes.values() if item and hasattr(item, 'durability') and item.durability is not None and item.durability > 0]
-        
-        if not worn_clothes:
-            return
+        if not worn_clothes: return
 
         item_hit = random.choice(worn_clothes)
         dur_damage = raw_damage * 0.25 
         
         if dur_damage > 0:
             item_hit.durability = max(0, item_hit.durability - dur_damage)
-
             if item_hit.durability <= 0:
                 slot_to_clear = None
                 for slot, item in self.clothes.items():
@@ -325,10 +306,8 @@ class Player:
                     self.clothes[slot_to_clear] = None
                     display_message(f"Your {item_hit.name} broke!")
 
-    # [MODIFIED] Global damage now hits a generic part or distributes if needed
     def take_damage(self, game, base_damage, base_infection):
-        if self.vehicle:
-            return 0, 0
+        if self.vehicle: return 0, 0
         
         self.take_durability_damage(base_damage, game)
 
@@ -346,7 +325,6 @@ class Player:
         final_damage_taken = max(0, base_damage * damage_modifier)
         final_infection_taken = max(0, base_infection * infection_modifier)
         
-        # Apply global damage to the 'body' part by default if not specified
         self.take_damage_to_part('body', final_damage_taken)
 
         if final_infection_taken > 0:
@@ -629,22 +607,22 @@ class Player:
                 self.stamina = min(self.max_stamina, self.stamina + 0.5)
 
         if self.is_sleeping:
-            restore_amount = 0.8
+            # [CHANGED] Sleep Logic to Simulate World
             
-            if self.max_tireness > 0:
-                restore_fraction = restore_amount / self.max_tireness
-            else:
-                restore_fraction = 0
-
-            eight_hours_ms = game.world_time.day_length_ms / 3
-            time_jump = restore_fraction * eight_hours_ms
-            game.world_time.game_time_ms += time_jump
-
+            # 1. Enable Fast Forward (Simulate World)
+            game.is_fast_forwarding = True
+            
+            # 2. Restore Energy slower per frame (because simulated frames are many)
+            # 0.05 per frame * 60 FPS * 50x speed = 150 points per real-time second
+            # This makes sleeping very fast but actually runs the game loop.
+            restore_amount = 0.05 
+            
             self.tireness = max(0.0, self.tireness + restore_amount)
             
             if self.tireness >= self.max_tireness:
                 self.tireness = self.max_tireness
                 self.is_sleeping = False
+                game.is_fast_forwarding = False # Disable FF on wake
                 display_message_player("You wake up refreshed.")
 
         mouse_buttons = pygame.mouse.get_pressed()
@@ -679,6 +657,11 @@ class Player:
 
         self.progression.update(self, is_moving, game)
         
+        if getattr(game, 'is_fast_forwarding', False):
+             dt = 1.0 / 60.0
+             decay_boost = dt * (game.fast_forward_speed - 1.0)
+             self.last_decay_time -= decay_boost
+
         if current_time - self.last_decay_time >= core.data.config.DECAY_RATE_SECONDS:
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
             food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
@@ -695,18 +678,14 @@ class Player:
                 self.health = max(0, self.health)
 
             if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:
-                print(f"Water level {self.water} <= threshold {core.data.config.AUTO_DRINK_THRESHOLD}. Attempting auto-drink.") 
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
                     self.consume_item(water_item, source, index, container, is_auto_drink=True, game=game)
-                    print(f"Auto-consuming {water_item.name} from {source} index {index}")
         
         all_inventories = [self.belt, self.inventory]
         if self.backpack:
             all_inventories.append(self.backpack.inventory)
             
-        
-
         for inv in all_inventories:
             for item in inv:
                 if getattr(item, 'state', 'off') == 'on':
@@ -744,8 +723,6 @@ class Player:
                 self.backpack = None
                 msg(f"Discarded empty backpack container.")
 
-        
-
         if self.is_reloading:
             self.reload_timer -= 1
             if self.reload_timer <= 0:
@@ -766,6 +743,7 @@ class Player:
 
         return False
 
+    # ... (rest of the file remains unchanged)
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
         if self.action_timer > 0:
             display_message_player("Busy...")
@@ -984,7 +962,6 @@ class Player:
 
         self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
 
-    # [MODIFIED] Added options for medical items to target specific parts
     def get_item_context_options(self, item, source, container_item=None):
         options = []
 
@@ -1016,9 +993,7 @@ class Player:
             if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
                 options.append('Reload') 
             elif item.item_type == 'consumable_medication' or 'Medkit' in item.name or 'Bandage' in item.name:
-                # Add default use
                 options.append('Use')
-                # Add specific body part options if damaged
                 for part, data in self.body_parts.items():
                     if data['value'] < 100.0:
                         options.append(f"Bandage {part.capitalize()}")
@@ -1233,9 +1208,7 @@ class Player:
                     val = random.randint(effect['min'], effect['max'])
                     
                     for target_stat in targets:
-                        # [MODIFIED] Heal logic to target body parts
                         if eff_type == 'restore' and target_stat == 'health':
-                             # Logic: Heal specific part if requested, otherwise most damaged
                              part = target_part.lower() if target_part else self.get_most_damaged_part()
                              
                              if part and part in self.body_parts:
@@ -1429,7 +1402,6 @@ class Player:
             item_to_drop.x = item_to_drop.rect.x
             item_to_drop.y = item_to_drop.rect.y
             
-            # Add to ground if not already added by drop_item()
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
                 
@@ -1452,17 +1424,14 @@ class Player:
             elif source_inventory and 0 <= index < len(source_inventory):
                 item = source_inventory[index] 
 
-            # [FIX START] Define potential target inventories (Pockets -> Backpack)
             targets = []
             
             if target_container is self:
-                # Priority 1: Pockets
                 targets.append({
                     'inv': self.inventory, 
                     'cap': self.base_inventory_slots, 
                     'name': "Inventory"
                 })
-                # Priority 2: Backpack (if equipped)
                 if self.backpack:
                     targets.append({
                         'inv': self.backpack.inventory, 
@@ -1470,7 +1439,6 @@ class Player:
                         'name': self.backpack.name
                     })
             elif target_container and hasattr(target_container, 'inventory'):
-                # Target is a specific container (e.g. Chest, Corpse)
                 targets.append({
                     'inv': target_container.inventory, 
                     'cap': target_container.capacity or 0, 
@@ -1479,13 +1447,11 @@ class Player:
             else:
                 print("Error: Invalid source or target container.")
                 return
-            # [FIX END]
 
             if not item: return
             
             remaining_load = item.load
             
-            # 1. Try to merge with existing stacks in ANY target inventory
             for target in targets:
                 target_inv = target['inv']
                 for target_item in target_inv:
@@ -1502,7 +1468,6 @@ class Player:
                 if remaining_load <= 0:
                     break
             
-            # Clean up source if item is fully moved/merged
             if item.load <= 0:
                 if source == 'backpack':
                     self.backpack = None
@@ -1511,12 +1476,10 @@ class Player:
                     if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                         game.items_on_ground.remove(item)
                 
-                # Determine where it went for the message
                 dest_name = targets[0]['name'] if targets else "Inventory"
                 display_message_player(f"Merged all of {item.name} into {dest_name}.")
                 return
                 
-            # 2. If load remains, try to append to FIRST target with free slots
             if remaining_load > 0:
                 transferred = False
                 for target in targets:
@@ -1530,7 +1493,6 @@ class Player:
                         new_stack.durability = item.durability 
                         target_inv.append(new_stack)
                         
-                        # Cleanup source
                         if source == 'backpack':
                             self.backpack = None
                         elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
@@ -1540,7 +1502,7 @@ class Player:
 
                         display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
                         transferred = True
-                        break # Stop after finding a slot
+                        break 
                 
                 if not transferred:
                     display_message_player(f"Inventory full. Could not transfer remaining {remaining_load}.")
@@ -1561,8 +1523,6 @@ class Player:
         target_is_on_player = is_on_player(target_container)
         
         needs_timer = not (source_is_on_player and target_is_on_player)
-        
-        # Use "Looting" if that's what the UI expects, or keep generic
         action_label = "Looting" if not source_is_on_player and target_is_on_player else "Transferring"
 
         if needs_timer:
@@ -1616,13 +1576,11 @@ class Player:
                 self.rect.centery + offset_y
             )
             
-            # 3. Ensure the coordinate variables used for saving/loading are updated
             item_to_drop.x = item_to_drop.rect.x
             item_to_drop.y = item_to_drop.rect.y
             
-            # 4. Add to the world list
             game.items_on_ground.append(item_to_drop)
-            self.drop_cooldown = 10 # Optional: prevent spamming
+            self.drop_cooldown = 10 
             
             return item_to_drop
 

@@ -3,7 +3,8 @@
         <options 
             player_question="How's it going?" 
             npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
-            priority="100"/>
+            priority="100"
+            gain_xp="[lucky:10]" />
     </node>
     <node id="tips">
         <options
@@ -14,11 +15,15 @@
             player_question="Got any advice?" 
             npc_answer="Search for magazines. Reading keeps the mind from rotting before the body does. Take this, it may help you."
             priority="1"
+            req_level="[lucky:2]"
+            gain_xp="[lucky:20]"
             award_item="[Bible, Island Map]" />
         <options
             player_question="Got any advice?" 
             npc_answer="For our lucky the company made all vehicle keys the same. Here is a gift."
             priority="1"
+            req_level="[lucky:3]"
+            gain_xp="[lucky:30]"
             award_item="[Car Key Jeep, Car Key Pickup]" />
         <options
             player_question="Got any advice?" 
@@ -29,29 +34,34 @@
 
     <node id="lore_branch">
         <options 
-            player_question="Did you get any news from the continent?"
+            player_question="Did you get any news?"
             npc_answer="Here was the last place to fall apart. If we get lucky we could clean up the island."
-            priority="100" />
+            priority="100" 
+            gain_xp="[lucky:10]" />
         <options 
             player_question="How is the oil rigs?"
             npc_answer="Fully functional for years. I miss my family so much."
             award_item="[Family Photo]"
-            priority="100" />
+            priority="100"
+            gain_xp="[lucky:10]" />
         <options 
             player_question="What happened to the continent?"
             npc_answer="They say it was the first to fall. Total chaos. Glad I was out here when the world ended."
-            priority="100" />
+            priority="100"
+            gain_xp="[lucky:10]" />
         <options 
             player_question="Is anyone else out there?"
             npc_answer="Just rogues, some military and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
-            priority="100" />
+            priority="100" 
+            gain_xp="[lucky:10]" />
     </node>
 
     <node id="just_run">
         <options
             player_question="So...why?" 
             npc_answer="Maybe you can finish my misery." 
-            unlock_flag="is_hostile" />
+            unlock_flag="is_hostile" 
+            gain_xp="[lucky:-10]"/>
     </node>
 
     <node id="is_hostile">
@@ -60,6 +70,7 @@
             npc_answer="Stop bothering me before I lose my temper. Every man for himself, remember?"
             npc_state_friendly="false"
             npc_state_static="false"
-            priority="100" />
+            priority="100"
+            gain_xp="[lucky:-50]" />
     </node>
 </npc_dialog>

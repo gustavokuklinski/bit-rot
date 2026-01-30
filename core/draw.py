@@ -669,8 +669,8 @@ def draw_game(game):
                     height = text_surf.get_height() + padding * 2
                     
                     # Position tooltip near mouse but keep on screen
-                    tip_x = mouse_pos[0] + 15
-                    tip_y = mouse_pos[1] + 15
+                    tip_x = mouse_pos[0] + 10
+                    tip_y = mouse_pos[1] + 10
                     
                     if tip_x + width > VIRTUAL_SCREEN_WIDTH:
                         tip_x = mouse_pos[0] - width - 5

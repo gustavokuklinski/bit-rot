@@ -49,7 +49,11 @@ class WorldTime:
     def update(self):
         """Runs the day/night state machine based on specific clock times."""
         current_real_time = pygame.time.get_ticks()
-        delta_time = current_real_time - self.last_update_time
+        
+        base_delta = current_real_time - self.last_update_time
+        multiplier = self.game.fast_forward_speed if getattr(self.game, 'is_fast_forwarding', False) else 1.0
+        delta_time = base_delta * multiplier
+        
         self.last_update_time = current_real_time
         
         # Advance game time

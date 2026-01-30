@@ -202,6 +202,9 @@ class Game:
         self.loading_data = None
         self.loading_done = False
         self.loading_saved_game_folder = None
+        
+        self.is_fast_forwarding = False
+        self.fast_forward_speed = 50.0
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""
@@ -375,8 +378,27 @@ class Game:
             with open(os.path.join(save_path, "vehicles.rot"), "w") as f:
                 json.dump(vehicle_data, f, indent=4)
 
+            container_data = []
+            for c in self.containers:
+                if isinstance(c, Vehicle):
+                    continue
+                
+                safe_inv = []
+                if hasattr(c, 'inventory'):
+                    for i in c.inventory:
+                        if hasattr(i, 'to_dict'):
+                            safe_inv.append(i.to_dict())
+                        else:
+                            safe_inv.append(i)
+                
+                c_entry = {
+                    "x": c.rect.x if hasattr(c, 'rect') else c.x,
+                    "y": c.rect.y if hasattr(c, 'rect') else c.y,
+                    "inventory": safe_inv
+                }
+                container_data.append(c_entry)
+
             # --- World Data Save ---
-            # Safe checking for items on ground
             safe_ground_items = []
             for i in self.items_on_ground:
                 item_data = i.to_dict() if hasattr(i, 'to_dict') else i
@@ -393,6 +415,7 @@ class Game:
                 },
                 "layer_spawn_triggers": {str(k): list(v) for k, v in self.layer_spawn_triggers.items()},
                 "items": safe_ground_items,
+                "containers": container_data, # Add containers to world data
                 "modal_positions": self.last_modal_positions,
                 "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in self.zombies]
             }
@@ -521,6 +544,22 @@ class Game:
             self.world_time.game_time_ms = time_data.get('game_time_ms', 0)
             self.world_time.day_count = time_data.get('day_count', 0)
             
+            saved_containers = world_data.get('containers', [])
+            saved_container_map = {f"{c['x']}_{c['y']}": c['inventory'] for c in saved_containers}
+
+            for c in self.containers:
+                # self.containers only has static containers at this point (vehicles removed above)
+                if hasattr(c, 'rect'):
+                    key = f"{c.rect.x}_{c.rect.y}"
+                    if key in saved_container_map:
+                        c.inventory = [] # Clear default generated loot
+                        for i_data in saved_container_map[key]:
+                            if isinstance(i_data, dict):
+                                item = Item.from_dict(i_data)
+                            else:
+                                item = Item.create_from_name(i_data)
+                            if item: c.inventory.append(item)
+
             # Triggers
             raw_layer_triggers = world_data.get('layer_spawn_triggers', {})
             self.layer_spawn_triggers = {}
@@ -991,7 +1030,7 @@ class Game:
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         # starter_items = ["ID", "Mobile off"]
-        starter_items = ["Survivor Kit", "Infection Pills", "Medical Bandage", "Medkit", "Vaccine"]
+        starter_items = ["Survivor Kit", "Mobile off", "Medical Bandage", "Medkit", "Vaccine"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

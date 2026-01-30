@@ -35,6 +35,11 @@ def handle_movement(game):
                 return
 
     keys = pygame.key.get_pressed()
+    
+    if (keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d] or
+        keys[pygame.K_UP] or keys[pygame.K_DOWN] or keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]):
+        game.is_fast_forwarding = False
+
     mouse_buttons = pygame.mouse.get_pressed()
     current_speed = 0
 
@@ -86,6 +91,7 @@ def handle_movement(game):
     
 
 def handle_input(game):
+
     mouse_pos = game._get_scaled_mouse_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

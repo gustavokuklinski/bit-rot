@@ -11,7 +11,7 @@ from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_s
 from core.ui.container_modal import get_container_slot_rect
 from core.ui.npc_dialog_modal import get_npc_dialog_option_rect
 from core.messages import display_message
-from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal
+from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause
 from core.placement import find_free_tile
 from core.messages import display_message
 
@@ -274,8 +274,9 @@ def handle_mouse_down(game, event, mouse_pos):
             game.chat_active = False
 
         if game.pause_button_rect and game.pause_button_rect.collidepoint(mouse_pos):
-            return
+            toggle_pause(game); return
         if game.forward_button_rect and game.forward_button_rect.collidepoint(mouse_pos):
+            game.is_fast_forwarding = not game.is_fast_forwarding
             return
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game); return
@@ -831,6 +832,82 @@ def handle_mouse_up(game, event, mouse_pos):
                         elif game.dragged_item.liquid:
                             print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
                             dropped_successfully = True # Destroy
+                            break
+                        
+                        is_ground = getattr(container, 'item_type', '') == 'ground'
+                        # Fallback: if we are in Nearby modal's Ground tab, force it to be ground even if item_type is missing
+                        if not is_ground and modal['type'] == 'nearby' and modal.get('active_tab') == 'Ground':
+                            is_ground = True
+
+                        if is_ground:
+                            target_index = -1
+                            pos = modal['position']
+                            if modal['type'] == 'nearby': pos = modal['content_rect'].topleft
+                            
+                            for i in range(container.capacity or 0):
+                                if get_container_slot_rect(pos, i).collidepoint(mouse_pos):
+                                    target_index = i
+                                    break
+                            
+                            # Case 1: Drop on existing item (Stack or Swap)
+                            if target_index != -1 and target_index < len(container.inventory):
+                                item_in_slot = container.inventory[target_index]
+                                
+                                if item_in_slot.can_stack_with(game.dragged_item):
+                                    # Stack
+                                    avail = item_in_slot.capacity - item_in_slot.load
+                                    trans = min(avail, game.dragged_item.load)
+                                    item_in_slot.load += trans
+                                    game.dragged_item.load -= trans
+                                    if game.dragged_item.load <= 0:
+                                        dropped_successfully = True
+                                else:
+                                    # Swap Logic
+                                    # 1. Remove the item we are dropping ON (item_in_slot) from the world
+                                    if item_in_slot in game.items_on_ground:
+                                        game.items_on_ground.remove(item_in_slot)
+                                    
+                                    # 2. Add the item we are holding (game.dragged_item) to the world
+                                    game.dragged_item.rect.center = item_in_slot.rect.center
+                                    game.dragged_item.x = game.dragged_item.rect.x
+                                    game.dragged_item.y = game.dragged_item.rect.y
+                                    game.items_on_ground.append(game.dragged_item)
+                                    
+                                    # 3. Handle the swapped-out item (item_in_slot)
+                                    if type_orig == 'nearby' or type_orig == 'ground':
+                                        # Fix for Ground-to-Ground Swap:
+                                        # Directly append the swapped item (B) back to the ground list.
+                                        # This avoids "Bounce Back" logic which might use stale virtual containers.
+                                        game.items_on_ground.append(item_in_slot)
+                                        dropped_successfully = True # Transaction complete, both items on ground
+                                    else:
+                                        # Fix for Inventory-to-Ground Swap:
+                                        # We must hold the swapped item (B) so "Bounce Back" can put it 
+                                        # into the inventory/belt slot we came from.
+                                        game.dragged_item = item_in_slot
+                                        dropped_successfully = False 
+                            
+                            # Case 2: Drop in empty slot or space
+                            else:
+                                game.items_on_ground.append(game.dragged_item)
+                                
+                                # Validate Coordinates (if coming from off-ground/inventory)
+                                dist_chk = math.hypot(game.dragged_item.rect.centerx - game.player.rect.centerx,
+                                                    game.dragged_item.rect.centery - game.player.rect.centery)
+                                if dist_chk > TILE_SIZE * 5: # If too far/undefined
+                                    off_x = random.randint(-16, 16)
+                                    off_y = random.randint(-16, 16)
+                                    game.dragged_item.rect.center = (game.player.rect.centerx + off_x, game.player.rect.centery + off_y)
+                                    game.dragged_item.x = game.dragged_item.rect.x
+                                    game.dragged_item.y = game.dragged_item.rect.y
+                                
+                                dropped_successfully = True
+                            
+                            # [IMPORTANT FIX] 
+                            # If dropped_successfully is True, we return.
+                            # If False (Inventory-to-Ground Swap), we fall through to Bounce Back.
+                            # We MUST break the modal loop here to prevent fallthrough to generic container logic.
+                            if dropped_successfully: break 
                             break
 
                         target_index = -1

@@ -311,6 +311,9 @@ class NPC(Zombie):
         obstacles = game.obstacles
         if self.is_dead: return 
 
+        # [CHANGED] Apply multiplier
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+        effective_speed = self.speed * multiplier
 
         current_time = pygame.time.get_ticks()
         
@@ -327,7 +330,7 @@ class NPC(Zombie):
                 if self.rect.colliderect(obstacle):
                     self.y -= kb_y; self.rect.y = int(self.y); break
             self.rect.topleft = (int(self.x), int(self.y))
-            dt = 16 
+            dt = 16 * multiplier # Faster knockback recovery too? Or keep absolute time? Keep simple.
             self.knockback_timer -= dt
             self.knockback_velocity[0] *= 0.9
             self.knockback_velocity[1] *= 0.9
@@ -377,7 +380,8 @@ class NPC(Zombie):
 
         # Check idle timer unless we have a target (combat priority)
         if self.idle_timer > 0 and not target_entity:
-            self.idle_timer -= 1
+            # [CHANGED] Reduce timer faster
+            self.idle_timer -= 1 * multiplier
             self.state = 'idle'
             self.dx = 0
             self.dy = 0
@@ -393,15 +397,15 @@ class NPC(Zombie):
                     self.stuck_timer -= 1
                     is_avoiding = True
 
-                attack_cooldown = self.attack_cooldown
+                attack_cooldown = self.attack_cooldown / multiplier # [CHANGED] Scale Cooldown
                 effective_attack_range = self.attack_range
                 
                 if is_ranged_weapon:
                     effective_attack_range = TILE_SIZE * 8 
-                    attack_cooldown = 500 
+                    attack_cooldown = 500 / multiplier # [CHANGED]
                 elif weapon and weapon.item_type in ['weapon_melee', 'tool']:
                     effective_attack_range = TILE_SIZE * 1.2
-                    attack_cooldown = 1000
+                    attack_cooldown = 1000 / multiplier # [CHANGED]
 
                 if self.state == 'chasing':
                     move_threshold = effective_attack_range * 0.8 if is_ranged_weapon else TILE_SIZE * 0.8
@@ -414,7 +418,7 @@ class NPC(Zombie):
                     self.angle = math.degrees(math.atan2(-dy, dx))
 
                     if not self.is_static:
-                        scale = self.speed / dist
+                        scale = effective_speed / dist # Use effective_speed
                         self.dx = dx * scale
                         self.dy = dy * scale
                     else:
@@ -424,8 +428,8 @@ class NPC(Zombie):
                     if not self.is_static:
                         self.angle = self.stuck_angle
                         rad = math.radians(self.angle)
-                        self.dx = math.cos(rad) * self.speed * 1.0 
-                        self.dy = -math.sin(rad) * self.speed * 1.0
+                        self.dx = math.cos(rad) * effective_speed * 1.0 # Use effective_speed
+                        self.dy = -math.sin(rad) * effective_speed * 1.0
                     else:
                         self.dx, self.dy = 0, 0
                 else:
@@ -451,7 +455,7 @@ class NPC(Zombie):
                                      self.equipped_weapon = None 
                                      weapon = None 
                              else:
-                                 self.last_attack_time = current_time + 1000
+                                 self.last_attack_time = current_time + (1000 / multiplier) # Add scaled delay
                                  weapon_is_ready = True
                         
                         has_los = True
@@ -533,8 +537,8 @@ class NPC(Zombie):
                     if random.random() < 0.02:
                         self.angle += random.randint(-45, 45)
                     rad = math.radians(self.angle)
-                    self.dx = math.cos(rad) * self.speed * 0.5
-                    self.dy = -math.sin(rad) * self.speed * 0.5
+                    self.dx = math.cos(rad) * effective_speed * 0.5 # Use effective_speed
+                    self.dy = -math.sin(rad) * effective_speed * 0.5
                 else:
                     self.dx, self.dy = 0, 0
 
@@ -555,48 +559,68 @@ class NPC(Zombie):
 
         if not is_moving: return
 
-        self.x += self.dx
-        self.rect.x = int(self.x)
-        for obstacle in obstacles:
-            if self.rect.colliderect(obstacle):
-                if self.dx > 0: self.rect.right = obstacle.left
-                elif self.dx < 0: self.rect.left = obstacle.right
-                self.x = self.rect.x
-                self.stuck_timer = 30 
-                self.stuck_angle = random.randint(0, 360)
-                self.dx = 0
-                break
+        # [CHANGED] Physics Sub-Stepping Loop for NPCs
+        total_dist_x = abs(self.dx)
+        total_dist_y = abs(self.dy)
+        
+        step_size_limit = TILE_SIZE * 0.45
+        steps = int(math.ceil(max(total_dist_x, total_dist_y) / step_size_limit))
+        steps = max(1, steps)
+        
+        step_dx = self.dx / steps
+        step_dy = self.dy / steps
+        
+        for _ in range(steps):
+            # Move X
+            self.x += step_dx
+            self.rect.x = int(self.x)
+            collided_x = False
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    if self.dx > 0: self.rect.right = obstacle.left
+                    elif self.dx < 0: self.rect.left = obstacle.right
+                    self.x = self.rect.x
+                    self.stuck_timer = 30 
+                    self.stuck_angle = random.randint(0, 360)
+                    self.dx = 0
+                    collided_x = True
+                    break
+            if not collided_x:
+                for entity in entities_to_check:
+                    if self.rect.colliderect(entity.rect):
+                        if self.dx > 0: self.rect.right = entity.rect.left
+                        elif self.dx < 0: self.rect.left = entity.rect.right
+                        self.x = self.rect.x
+                        self.dx = 0
+                        break
 
-        for entity in entities_to_check:
-            if self.rect.colliderect(entity.rect):
-                if self.dx > 0: self.rect.right = entity.rect.left
-                elif self.dx < 0: self.rect.left = entity.rect.right
-                self.x = self.rect.x
-                self.dx = 0
-                break
-
-        self.y += self.dy
-        self.rect.y = int(self.y)
-        for obstacle in obstacles:
-            if self.rect.colliderect(obstacle):
-                if self.dy > 0: self.rect.bottom = obstacle.top
-                elif self.dy < 0: self.rect.top = obstacle.bottom
-                self.y = self.rect.y
-                self.stuck_timer = 30 
-                self.stuck_angle = random.randint(0, 360)
-                self.dy = 0
-                break
-
-        for entity in entities_to_check:
-            if self.rect.colliderect(entity.rect):
-                if self.dy > 0: self.rect.bottom = entity.rect.top
-                elif self.dy < 0: self.rect.top = entity.rect.bottom
-                self.y = self.rect.y
-                self.dy = 0
-                break
+            # Move Y
+            self.y += step_dy
+            self.rect.y = int(self.y)
+            collided_y = False
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    if self.dy > 0: self.rect.bottom = obstacle.top
+                    elif self.dy < 0: self.rect.top = obstacle.bottom
+                    self.y = self.rect.y
+                    self.stuck_timer = 30 
+                    self.stuck_angle = random.randint(0, 360)
+                    self.dy = 0
+                    collided_y = True
+                    break
+            
+            if not collided_y:
+                for entity in entities_to_check:
+                    if self.rect.colliderect(entity.rect):
+                        if self.dy > 0: self.rect.bottom = entity.rect.top
+                        elif self.dy < 0: self.rect.top = entity.rect.bottom
+                        self.y = self.rect.y
+                        self.dy = 0
+                        break
 
         self.rect.topleft = (int(self.x), int(self.y))
 
+    # ... (rest of methods) ...
     def stop_moving(self):
         """Forces the NPC to stop moving and enter idle state."""
         self.state = 'idle'

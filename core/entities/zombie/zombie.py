@@ -340,6 +340,9 @@ class Zombie(pygame.sprite.Sprite):
     def update_ai(self, player_rect, obstacles, other_zombies, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
+        
+        # [CHANGED] Get Time Multiplier for cooldown scaling
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
 
         target_rect = player_rect
         target_entity = game.player  # Default target
@@ -380,7 +383,9 @@ class Zombie(pygame.sprite.Sprite):
             
             # Check attack range
             if dist_to_target < self.attack_range:
-                if current_time - self.last_attack_time > 1000: # 1 sec attack speed
+                # [CHANGED] Scale the cooldown logic
+                # 1000ms real time cooldown. If FF is 50x, we wait 1000/50 = 20ms real time.
+                if current_time - self.last_attack_time > (1000.0 / multiplier): 
                     self.attack(target_entity, game) # Attack the specific entity
                     self.last_attack_time = current_time
 
@@ -401,7 +406,11 @@ class Zombie(pygame.sprite.Sprite):
 
             if core.data.config.ZOMBIE_WANDER_ENABLED:
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
-                if (current_time - self.last_wander_change > core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL) or \
+                
+                # [CHANGED] Scale wander change interval too
+                wander_interval = core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL / multiplier
+                
+                if (current_time - self.last_wander_change > wander_interval) or \
                    (self.wander_target is None) or target_reached:
 
                     wander_radius = 5 * TILE_SIZE
@@ -418,15 +427,23 @@ class Zombie(pygame.sprite.Sprite):
         if target_pos:
             self.move_towards(target_pos, obstacles, other_zombies, game)
 
+
     def move_towards(self, target_pos, obstacles, other_zombies, game):
         """Calculates movement vector towards a target_pos and handles collisions."""
+        
+        # [CHANGED] 1. Get Multiplier
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+        
+        # [CHANGED] 2. Scale Speed
+        effective_speed = self.speed * multiplier
+
         # [NEW] Check stuck timer
         if self.stuck_timer > 0:
             self.stuck_timer -= 1
             # Move in random stuck angle
             rad = math.radians(self.stuck_angle)
-            move_x = math.cos(rad) * self.speed
-            move_y = -math.sin(rad) * self.speed
+            move_x = math.cos(rad) * effective_speed
+            move_y = -math.sin(rad) * effective_speed
         else:
             # Normal movement
             dx = target_pos[0] - self.rect.centerx
@@ -438,8 +455,8 @@ class Zombie(pygame.sprite.Sprite):
                 stop_distance = self.attack_range * 1
 
             if dist > stop_distance:
-                move_x = (dx / dist) * self.speed
-                move_y = (dy / dist) * self.speed
+                move_x = (dx / dist) * effective_speed
+                move_y = (dy / dist) * effective_speed
             else:
                 move_x, move_y = 0, 0
         
@@ -469,49 +486,63 @@ class Zombie(pygame.sprite.Sprite):
                 else:
                     next_delay = random.randint(420, 520)
                 
-                self.last_step_sound_time = current_time + next_delay
+                # Scale sound delay roughly
+                self.last_step_sound_time = current_time + (next_delay / max(1, multiplier * 0.1))
 
-        # Collision Handling (separated X and Y checks)
+        # [CHANGED] 3. Physics Sub-Stepping Loop to prevent tunneling
+        # Determine number of steps needed. Safest is roughly half a tile size.
+        safe_step_size = TILE_SIZE * 0.45
+        total_dist_x = abs(move_x)
+        total_dist_y = abs(move_y)
+        
+        steps = int(math.ceil(max(total_dist_x, total_dist_y) / safe_step_size))
+        steps = max(1, steps)
+        
+        step_x = move_x / steps
+        step_y = move_y / steps
+        
         old_x, old_y = self.x, self.y
 
-        # Move X
-        self.x += move_x
-        self.rect.x = int(self.x)
-        collided_x = False
-        for obs in obstacles:
-            if self.rect.colliderect(obs): collided_x = True; break
-        if not collided_x:
-            for z in other_zombies:
-                if z is not self and self.rect.colliderect(z.rect): collided_x = True; break
-
-        if collided_x:
-            self.x = old_x
+        for _ in range(steps):
+            # --- Move X ---
+            self.x += step_x
             self.rect.x = int(self.x)
-            # [NEW] Trigger Stuck Logic
-            if self.state == 'chasing':
-                self.stuck_timer = 20 # 20 frames of avoidance
-                self.stuck_angle = random.randint(0, 360)
+            collided_x = False
+            for obs in obstacles:
+                if self.rect.colliderect(obs): collided_x = True; break
+            if not collided_x:
+                for z in other_zombies:
+                    if z is not self and self.rect.colliderect(z.rect): collided_x = True; break
 
-        # Move Y
-        self.y += move_y
-        self.rect.y = int(self.y)
-        collided_y = False
-        for obs in obstacles:
-            if self.rect.colliderect(obs): collided_y = True; break
-        if not collided_y:
-            for z in other_zombies:
-                 if z is not self and self.rect.colliderect(z.rect): collided_y = True; break
-
-        if collided_y:
-            self.y = old_y
+            if collided_x:
+                self.x -= step_x # Revert step
+                self.rect.x = int(self.x)
+                if self.state == 'chasing':
+                    self.stuck_timer = 20
+                    self.stuck_angle = random.randint(0, 360)
+            
+            # --- Move Y ---
+            self.y += step_y
             self.rect.y = int(self.y)
-            # [NEW] Trigger Stuck Logic
-            if self.state == 'chasing':
-                self.stuck_timer = 20
-                self.stuck_angle = random.randint(0, 360)
+            collided_y = False
+            for obs in obstacles:
+                if self.rect.colliderect(obs): collided_y = True; break
+            if not collided_y:
+                for z in other_zombies:
+                     if z is not self and self.rect.colliderect(z.rect): collided_y = True; break
+
+            if collided_y:
+                self.y -= step_y # Revert step
+                self.rect.y = int(self.y)
+                if self.state == 'chasing':
+                    self.stuck_timer = 20
+                    self.stuck_angle = random.randint(0, 360)
+            
+            # Optimization: If blocked on both axes, break loop (unlikely to unblock in same frame)
+            if collided_x and collided_y:
+                break
 
         self.rect.topleft = (int(self.x), int(self.y))
-
 
     def attack(self, target_entity, game):
         self.melee_swing_timer = 10
