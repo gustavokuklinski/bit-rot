@@ -122,11 +122,7 @@ class ProceduralGenerator:
                 if f.startswith("map_L1_world") and f.endswith("_map.csv"):
                     print(f"World already exists at {self.output_folder}. Skipping generation.")
                     return f
-            # Fallback check (though we are moving away from this)
-            for f in os.listdir(self.output_folder):
-                if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
-                    print(f"World already exists at {self.output_folder}. Skipping generation.")
-                    return f
+            
 
         current_chunks = core.data.config.MAP_CHUNKS
         

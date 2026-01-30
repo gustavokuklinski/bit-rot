@@ -12,7 +12,7 @@ class MapManager:
     def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game
         self.map_folder = map_folder
-        self.current_map_filename = 'map_L1_P0_0_1_0_0_map.csv' # Updated default filename
+        self.current_map_filename = 'map_L1_world_map.csv' # Updated default to world map
         self.map_files = self._discover_maps()
         self.shaking_tiles = {}
 
@@ -25,10 +25,12 @@ class MapManager:
 
     def _discover_maps(self):
         maps = {}
-        # Regex for legacy chunks: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
-        pattern_chunk = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
         # Regex for single world map: map_L<layer>_world_map.csv
         pattern_world = re.compile(r'map_L(\d+)_world_map\.csv')
+
+        if not os.path.exists(self.map_folder):
+            print(f"Warning: Map folder '{self.map_folder}' does not exist.")
+            return maps
 
         for filename in os.listdir(self.map_folder):
             # Check for World Map
@@ -40,109 +42,23 @@ class MapManager:
                         'filename': filename,
                         'layer': layer,
                         'position': 0,
-                        'connections': (0, 0, 0, 0) # No external connections needed
+                        # 'connections' removed as they are legacy
                     }
-                    continue
                 except ValueError:
                     print(f"Warning: Could not parse world map filename {filename}")
-
-            # Check for Chunk Map
-            match = pattern_chunk.match(filename)
-            if match:
-                try:
-                    layer = int(match.group(1))
-                    position = int(match.group(2))
-                    connections = tuple(int(x) for x in match.groups()[2:])
-                    maps[filename] = {
-                        'filename': filename,
-                        'layer': layer,
-                        'position': position,
-                        'connections': connections
-                    }
-                except ValueError:
-                    print(f"Warning: Could not parse chunk map filename {filename}")
         return maps
 
     def get_current_map_connections(self):
-        map_info = self.map_files.get(self.current_map_filename)
-        return map_info['connections'] if map_info else None
+        # Legacy connections are removed
+        return None
 
     def transition(self, direction):
-        current_map_info = self.map_files.get(self.current_map_filename)
-        if not current_map_info:
-            print(f"Error: Could not find current map info for {self.current_map_filename}")
-            return None
-
-
-        if "world_map" in self.current_map_filename:
-            return None
-
-        connections = current_map_info['connections']
-        current_layer = current_map_info['layer']
-
-        connection_index = -1
-        opposite_index = -1
-        if direction == 'top':
-            connection_index = 0
-            opposite_index = 2 # bottom
-        elif direction == 'right':
-            connection_index = 1
-            opposite_index = 3 # left
-        elif direction == 'bottom':
-            connection_index = 2
-            opposite_index = 0 # top
-        elif direction == 'left':
-            connection_index = 3
-            opposite_index = 1 # right
-
-        if connection_index == -1:
-            print(f"Error: Invalid transition direction '{direction}'")
-            return None
-            
-        connection_id = connections[connection_index]
-        if connection_id == 0:
-            # print("No connection in that direction.")
-            return None
-
-        for filename, map_info in self.map_files.items():
-            if filename == self.current_map_filename:
-                continue
-                
-            # Check if the target map has a matching connection ID and is on the same layer
-            if map_info['connections'][opposite_index] == connection_id and map_info['layer'] == current_layer:
-                
-                # --- [THIS IS THE FIX] ---
-                
-                # 1. Update the manager's state to the new map
-                self.current_map_filename = filename
-                
-                # 2. Get the base name (e.g., "map_L1_P0_0_0_0_1")
-                base_name = filename.rsplit('_map.csv', 1)[0]
-                
-                # 3. Construct the other filenames
-                ground_filename = f"{base_name}_ground.csv"
-                spawn_filename = f"{base_name}_spawn.csv"
-                
-                # 4. Return all three so the game can fully load them
-                print(f"Transitioning to map: {filename}")
-                return (filename, ground_filename, spawn_filename)
-                # --- [END FIX] ---
-        
-        print(f"Warning: No map found for transition '{direction}' from {self.current_map_filename}")
+        # Transitions via top/left/right/bottom are legacy and not used for the single world map.
         return None
 
     def get_tile_at(self, grid_x, grid_y):
         """Gets the tile definition at a specific grid coordinate."""
-        if 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
-            char = self.game.map_data[grid_y][grid_x]
-            if char in self.game.tile_manager.definitions:
-                # Return the definition dictionary
-                return self.game.tile_manager.definitions[char]
-        return None
-
-    def get_tile_at(self, grid_x, grid_y):
-        """Gets the tile definition at a specific grid coordinate."""
-        if 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
+        if self.game.map_data and 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
             char = self.game.map_data[grid_y][grid_x]
             if char in self.game.tile_manager.definitions:
                 return self.game.tile_manager.definitions[char]
@@ -150,6 +66,8 @@ class MapManager:
 
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
+        if not self.game.map_data: return
+
         current_char = self.game.map_data[grid_y][grid_x]
         current_def = self.game.tile_manager.definitions.get(current_char)
 
@@ -183,26 +101,20 @@ class MapManager:
                 self.game.obstacles.append(tile_rect)
                 
             # 3. Update renderable_tiles list AND gather tiles for redraw in ONE pass.
-            # This prevents iterating the massive list twice, eliminating the delay.
             original_image = current_def['image'] 
             tiles_to_redraw = []
             door_updated = False
             
             for i, (img, rect) in enumerate(self.game.renderable_tiles):
-                # We only care about tiles at this specific location
                 if rect.colliderect(tile_rect):
-                    # Check if this is the door we need to update
                     if not door_updated and rect == tile_rect and img == original_image:
-                        # Update the main list in-place
                         self.game.renderable_tiles[i] = (new_def['image'], rect)
-                        # Add the NEW image to the local redraw list
                         tiles_to_redraw.append((new_def['image'], rect))
                         door_updated = True
                     else:
-                        # This is a floor or other overlapping tile; add to redraw list as is
                         tiles_to_redraw.append((img, rect))
             
-            # 4. Patch the cache directly using the small gathered list
+            # 4. Patch the cache directly
             if hasattr(self.game, '_tile_cache_surface') and self.game._tile_cache_surface:
                 try:
                     origin_x, origin_y = self.game._tile_cache_world_origin
@@ -214,11 +126,8 @@ class MapManager:
                         tile_rect.height
                     )
                     
-                    # Clear the specific spot (erasing old door AND floor)
                     self.game._tile_cache_surface.fill(PANEL_COLOR, cache_rect)
                     
-                    # Redraw only the gathered tiles (Floor + New Door)
-                    # This loop is now instant because tiles_to_redraw has only ~2 items
                     for img, r in tiles_to_redraw:
                         draw_pos = (r.x - origin_x, r.y - origin_y)
                         self.game._tile_cache_surface.blit(img, draw_pos)
@@ -234,7 +143,7 @@ class MapManager:
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
                     new_def['sound_src'],
-                    subdir='map', # As requested: game/lib/sfx/map/
+                    subdir='map',
                     game=self.game,
                     source_pos=tile_rect.center,
                     base_volume=random.uniform(0.2, 0.7)
@@ -244,7 +153,7 @@ class MapManager:
             print(f"Warning: Could not find matching door state '{new_char}'")
     
     def hit_tile(self, grid_x, grid_y, damage, weapon=None):
-        if not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
+        if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
 
         char = self.game.map_data[grid_y][grid_x]
@@ -270,11 +179,9 @@ class MapManager:
             display_message_player("You are too exhausted to chop!")
             return True
 
-        # [ADDED] Apply Fatigue and Stamina Loss
         self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
         self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
 
-        # [ADDED] Apply Weapon Durability Loss
         if weapon and weapon.durability is not None:
             DURABILITY_COST = 0.7
             weapon.durability = max(0, weapon.durability - DURABILITY_COST)
@@ -288,7 +195,7 @@ class MapManager:
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             self.game.sound_manager.play_sound(
                 definition['sound_src'],
-                subdir='map', # As requested: game/lib/sfx/map/
+                subdir='map',
                 game=self.game,
                 source_pos=tile_rect.center,
                 base_volume=random.uniform(0.2, 0.7)
@@ -314,13 +221,11 @@ class MapManager:
         display_message_player(f"Chop! ({max(0, current_hp)} HP left)")
         
         if current_hp <= 0:
-            # 1. Clear health state
             del self.game.map_states[map_name]['tile_health'][pos_key]
             
             if (grid_x, grid_y) in self.shaking_tiles:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
-            # 2. [CHANGED] Remove the Tile FIRST to clear the obstacle
             try:
                 ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
             except (KeyError, IndexError):
@@ -328,7 +233,6 @@ class MapManager:
 
             self._replace_tile(grid_x, grid_y, char, ground_char)
 
-            # 3. [CHANGED] NOW drop the items (since the tile is free)
             if 'drops' in definition:
                 for drop in definition['drops']:
                      if random.random() <= drop['chance']:
@@ -336,12 +240,10 @@ class MapManager:
                          for _ in range(qty):
                              item = Item.create_from_name(drop['item'])
                              if item:
-                                 # Spawn exact center of the now-empty tile
                                  center_x = grid_x * TILE_SIZE + TILE_SIZE // 2
                                  center_y = grid_y * TILE_SIZE + TILE_SIZE // 2
                                  item.rect.center = (center_x, center_y)
                                  
-                                 # We still check find_free_tile to handle items stacking or other nearby obstacles
                                  if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
                                      self.game.items_on_ground.append(item)
                                  else:

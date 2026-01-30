@@ -27,8 +27,8 @@ def resize_map_layer(layer_data, target_width, target_height, fill_value=' '):
 
 def load_giant_map(game):
     """
-    Discovers all map chunks, builds a world grid,
-    and stitches them into a single giant map.
+    Loads the single big world map file. 
+    Replaces the old logic that stitched multiple chunks together.
     """
     print("Starting giant map load...")
     map_files = game.map_manager.map_files
@@ -37,122 +37,55 @@ def load_giant_map(game):
         
     map_folder = game.map_manager.map_folder
     
-    world_grid = {}
-    layouts = {}
-    to_process = []
-    processed_files = set()
-    
-    min_x, max_x, min_y, max_y = 0, 0, 0, 0
-
     start_file = game.map_manager.current_map_filename
     if start_file not in map_files:
-         raise Exception(f"Starting map file {start_file} not found in discovered maps.")
-         
-    start_info = map_files[start_file]
+         # Fallback search if the exact filename isn't in the list but exists on disk
+         if os.path.exists(os.path.join(map_folder, start_file)):
+             print(f"Warning: {start_file} not in discovered list, but exists. Loading anyway.")
+         else:
+             raise Exception(f"Starting map file {start_file} not found in discovered maps.")
     
-    world_grid[(0, 0)] = start_info
-    to_process.append((0, 0, start_info))
-    processed_files.add(start_file)
+    # Load the single world map files
+    base_name = start_file.rsplit('_map.csv', 1)[0]
     
-    print("Building world grid...")
+    print(f"Loading world map from: {base_name}")
     
-    while to_process:
-        (cx, cy, c_info) = to_process.pop(0)
-        
-        min_x, max_x = min(min_x, cx), max(max_x, cx)
-        min_y, max_y = min(min_y, cy), max(max_y, cy)
+    base_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_map.csv"))
+    ground_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_ground.csv"))
+    spawn_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_spawn.csv"))
+    roof_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_roof.csv"))
+    light_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_light.csv"))
 
-        try:
-            base_name = c_info['filename'].rsplit('_map.csv', 1)[0]
-            base_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_map.csv"))
-            ground_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_ground.csv"))
-            spawn_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_spawn.csv"))
-            roof_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_roof.csv"))
-            light_layout = load_map_from_file(os.path.join(map_folder, f"{base_name}_light.csv"))
+    if not base_layout:
+        raise Exception("Error: World map file is empty or missing.")
 
-            if not base_layout:
-                print(f"Warning: Missing layout files for {base_name}. Skipping chunk.")
-                continue
-            
-            if not ground_layout: ground_layout = []
-            if not spawn_layout: spawn_layout = []
-            if not roof_layout: roof_layout = []
-            if not light_layout: light_layout = []
+    if not ground_layout: ground_layout = []
+    if not spawn_layout: spawn_layout = []
+    if not roof_layout: roof_layout = []
+    if not light_layout: light_layout = []
 
-            layouts[(cx, cy)] = (base_layout, ground_layout, spawn_layout, roof_layout, light_layout)
-        except Exception as e:
-            print(f"Error loading layouts for {c_info['filename']}: {e}")
-            continue
-
-        neighbors = [
-            (0, 0, -1, 2), # Top
-            (1, 1, 0, 3),  # Right
-            (2, 0, 1, 0),  # Bottom
-            (3, -1, 0, 1)  # Left
-        ]
-        
-        for conn_idx, dx, dy, opp_idx in neighbors:
-            conn_id = c_info['connections'][conn_idx]
-            if conn_id == 0:
-                continue
-            
-            nx, ny = cx + dx, cy + dy
-            if (nx, ny) in world_grid:
-                continue 
-
-            found_neighbor = False
-            for filename, n_info in map_files.items():
-                if filename in processed_files:
-                    continue
-                
-                if n_info['layer'] == c_info['layer'] and n_info['connections'][opp_idx] == conn_id:
-                    world_grid[(nx, ny)] = n_info
-                    to_process.append((nx, ny, n_info))
-                    processed_files.add(filename)
-                    found_neighbor = True
-                    break
-
-    chunk_w, chunk_h = CHUNK_SIZE, CHUNK_SIZE
-    grid_w = (max_x - min_x) + 1
-    grid_h = (max_y - min_y) + 1
+    # Get dimensions directly from the loaded file
+    mega_h = len(base_layout)
+    mega_w = len(base_layout[0]) if mega_h > 0 else 0
     
-    mega_w, mega_h = grid_w * chunk_w, grid_h * chunk_h
-    print(f"Creating {grid_w}x{grid_h} mega-map ({mega_w}x{mega_h} tiles)...")
+    print(f"World map dimensions: {mega_w}x{mega_h} tiles.")
 
-    mega_base = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_ground = [['bg_grass' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_spawn = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_roof = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    mega_light_grid = [[' ' for _ in range(mega_w)] for _ in range(mega_h)]
-    
+    # In this new system, the loaded file IS the mega map. 
+    # We no longer need to copy it into a larger grid.
+    mega_base = base_layout
+    mega_ground = ground_layout
+    mega_spawn = spawn_layout
+    mega_roof = roof_layout
+    mega_light_grid = light_layout
+
+    # Extract possible player spawns from the loaded spawn layer
     possible_player_spawns = []
-
-    for (grid_x, grid_y), (base, ground, spawn, roof, light) in layouts.items():
-        offset_x = (grid_x - min_x) * chunk_w
-        offset_y = (grid_y - min_y) * chunk_h
-        
-
-        for r in range(chunk_h):
-            for c in range(chunk_w):
-                if r < len(base) and c < len(base[r]) and base[r][c] and base[r][c] != ' ':
-                    mega_base[offset_y + r][offset_x + c] = base[r][c]
-                    
-                if r < len(ground) and c < len(ground[r]) and ground[r][c] and ground[r][c] != ' ':
-                    mega_ground[offset_y + r][offset_x + c] = ground[r][c]
-                    
-                if r < len(spawn) and c < len(spawn[r]) and spawn[r][c] and spawn[r][c] != ' ':
-                    char = spawn[r][c]
-                    if char == 'P':
-                        possible_player_spawns.append((offset_x + c, offset_y + r))
-                        mega_spawn[offset_y + r][offset_x + c] = ' '
-                    else:
-                        mega_spawn[offset_y + r][offset_x + c] = char
-                        
-                if r < len(roof) and c < len(roof[r]) and roof[r][c] and roof[r][c] != ' ':
-                    mega_roof[offset_y + r][offset_x + c] = roof[r][c]
-
-                if light and r < len(light) and c < len(light[r]) and light[r][c] and light[r][c] != ' ':
-                    mega_light_grid[offset_y + r][offset_x + c] = light[r][c]
+    for r in range(mega_h):
+        for c in range(mega_w):
+            if r < len(mega_spawn) and c < len(mega_spawn[r]):
+                if mega_spawn[r][c] == 'P':
+                    possible_player_spawns.append((c * TILE_SIZE, r * TILE_SIZE))
+                    mega_spawn[r][c] = ' ' # Clear marker
 
     print("Parsing mega-layouts...")
     
@@ -169,43 +102,11 @@ def load_giant_map(game):
      )
     
     if possible_player_spawns:
-        gx, gy = random.choice(possible_player_spawns)
-        game.player_spawn = (gx * TILE_SIZE, gy * TILE_SIZE)
+        game.player_spawn = random.choice(possible_player_spawns)
         print(f"Selected player spawn from markers at: {game.player_spawn}")
     else:
-        print("No 'P' markers found. Attempting to spawn in random chunk...")
-        chunk_coords = list(layouts.keys())
-        spawn_found = False
-        
-        if chunk_coords:
-            random.shuffle(chunk_coords)
-            
-            for (g_x, g_y) in chunk_coords:
-                chunk_pixel_x = (g_x - min_x) * chunk_w * TILE_SIZE
-                chunk_pixel_y = (g_y - min_y) * chunk_h * TILE_SIZE
-                
-                center_x = chunk_pixel_x + (chunk_w * TILE_SIZE // 2)
-                center_y = chunk_pixel_y + (chunk_h * TILE_SIZE // 2)
-                
-                spawn_rect = pygame.Rect(center_x, center_y, TILE_SIZE, TILE_SIZE)
-                
-                collision = False
-                for obs in game.obstacles:
-                    if spawn_rect.colliderect(obs):
-                        collision = True
-                        break
-                
-                if not collision:
-                    game.player_spawn = (center_x, center_y)
-                    print(f"Selected random chunk spawn at: {game.player_spawn} (Chunk {g_x},{g_y})")
-                    spawn_found = True
-                    break
-        
-        if not spawn_found:
-             if _parsed_spawn:
-                  game.player_spawn = _parsed_spawn
-             else:
-                  game.player_spawn = (mega_w * TILE_SIZE // 2, mega_h * TILE_SIZE // 2)
+        print("No 'P' markers found. Defaulting to center.")
+        game.player_spawn = (mega_w * TILE_SIZE // 2, mega_h * TILE_SIZE // 2)
 
     game.map_data = mega_base
     game.current_zombie_spawns = game.zombie_spawns
@@ -255,71 +156,57 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     all_roof_layers = {}
     all_light_layers = {}
 
-    # Regex for legacy chunks: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
-    pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
-    base_name_match = pattern.match(base_map_filename)
-    
     # Regex for new single world map: map_L<layer>_world_map.csv
     world_pattern = re.compile(r'map_L(\d+)_world_map\.csv')
     world_match = world_pattern.match(base_map_filename)
 
-    is_legacy = False
+    if not world_match:
+        # Fallback check for exact filename matching if using custom names, 
+        # or if caller passed full path, but strictly enforce no legacy chunk parsing here.
+        if "world_map" not in base_map_filename:
+             print(f"Note: Base map filename '{base_map_filename}' does not match standard world pattern.")
     
-    if base_name_match:
-        is_legacy = True
-        base_pos_id = base_name_match.group(2)
-        base_conn_tuple = base_name_match.groups()[2:]
-        base_connections_str = "_".join(base_conn_tuple)
-    elif world_match:
-        is_legacy = False
-    else:
-        print(f"CRITICAL: Base map filename does not match any expected pattern: {base_map_filename}")
+    # Load dimensions from Layer 1 first to determine target width/height
+    base_map_file = os.path.join(base_path, base_map_filename)
+    if not os.path.exists(base_map_file):
+         print(f"CRITICAL: World map file not found: {base_map_file}")
+         return {}, {}, {}, {}, {}
+
+    base_map_data = load_map_from_file(base_map_file)
+    if not base_map_data or not base_map_data[0]:
+        print(f"CRITICAL: Base map file is empty or invalid: {base_map_file}")
         return {}, {}, {}, {}, {}
 
     if master_width is not None and master_height is not None:
         target_width = master_width
         target_height = master_height
     else:
-        base_map_file = os.path.join(base_path, base_map_filename)
-        if not os.path.exists(base_map_file) and is_legacy:
-            # Fallback search only for legacy files that might rely on implicit P IDs
-            found_any = False
-            for i in range(1, 10):
-                any_layer_file = os.path.join(base_path, f"map_L{i}_P{base_pos_id}_{base_connections_str}_map.csv")
-                if os.path.exists(any_layer_file):
-                    base_map_file = any_layer_file
-                    found_any = True
-                    break
-            if not found_any:
-                 print(f"CRITICAL: No map files found at all for base prefix P{base_pos_id} in {base_path}.")
-                 return {}, {}, {}, {}, {}
-        
-        base_map_data = load_map_from_file(base_map_file)
-        if not base_map_data or not base_map_data[0]:
-            print(f"CRITICAL: Base map file is empty or invalid: {base_map_file}")
-            return {}, {}, {}, {}, {}
-
         target_height = len(base_map_data)
-        target_width = 0
-        for row in base_map_data:
-            if row:
-                target_width = len(row)
-                break
-        
-        if target_width == 0:
-            target_width = 100
+        target_width = len(base_map_data[0]) if target_height > 0 else 0
 
+    # Load Layers 1 through 9
     for i in range(1, 10):
-        if is_legacy:
-            layer_prefix = f"map_L{i}_P{base_pos_id}_{base_connections_str}"
+        # Construct filename based on the new standard
+        layer_prefix = f"map_L{i}_world"
+        
+        # If the base filename provided was somehow different (e.g. custom save),
+        # we might need to handle that, but for now we assume standard naming 
+        # for layers L2-L9 if L1 is standard.
+        if "world_map" not in base_map_filename and i == 1:
+             # Special case: Just load the provided filename for L1
+             layer_map_file_relative = base_map_filename
+             # Try to deduce suffix for others
+             base_prefix = base_map_filename.rsplit('_map.csv', 1)[0]
+             layer_ground_file_relative = f"{base_prefix}_ground.csv"
+             layer_spawn_file_relative = f"{base_prefix}_spawn.csv"
+             layer_roof_file_relative = f"{base_prefix}_roof.csv"
+             layer_light_file_relative = f"{base_prefix}_light.csv"
         else:
-            layer_prefix = f"map_L{i}_world"
-
-        layer_map_file_relative = f"{layer_prefix}_map.csv"
-        layer_ground_file_relative = f"{layer_prefix}_ground.csv"
-        layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
-        layer_roof_file_relative = f"{layer_prefix}_roof.csv"
-        layer_light_file_relative = f"{layer_prefix}_light.csv"
+             layer_map_file_relative = f"{layer_prefix}_map.csv"
+             layer_ground_file_relative = f"{layer_prefix}_ground.csv"
+             layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
+             layer_roof_file_relative = f"{layer_prefix}_roof.csv"
+             layer_light_file_relative = f"{layer_prefix}_light.csv"
         
         layer_map_file = os.path.join(base_path, layer_map_file_relative)
         layer_ground_file = os.path.join(base_path, layer_ground_file_relative)
@@ -477,63 +364,3 @@ def check_for_layer_teleport(game):
                 game.player.layer_switch_cooldown = 30
             else:
                 print(f"Warning: Tile [ {target_layer} ] points to non-existent layer.")
-
-def check_for_map_transition(game):
-    if getattr(game, 'is_giant_map', False):
-        return
-
-    if hasattr(game.player, 'map_transition_cooldown') and game.player.map_transition_cooldown > 0:
-        game.player.map_transition_cooldown -= 1
-        return
-
-    player = game.player
-    direction = None
-
-    if player.rect.right < 0:
-        direction = 'left'
-    elif player.rect.left > game.map_width_pixels:
-        direction = 'right'
-    elif player.rect.bottom < 0:
-        direction = 'top'
-    elif player.rect.top > game.map_height_pixels:
-        direction = 'bottom'
-
-    if not direction:
-        return 
-
-    old_map_filename = game.map_manager.current_map_filename
-    new_map_filename = game.map_manager.transition(direction)
-
-    if new_map_filename:
-        print(f"Transitioning from {old_map_filename} to map: {new_map_filename}")
-
-        # [FIX] Unpack 5 return values (previously 4)
-        game.all_map_layers, game.all_ground_layers, game.all_spawn_layers, game.all_roof_layers, game.all_light_layers = \
-            load_all_map_layers(new_map_filename, base_path=game.map_manager.map_folder)
-
-        game.layer_items.clear()
-        game.layer_zombies.clear()
-        game.layer_spawn_triggers.clear()
-
-        if not set_active_layer(game, game.current_layer_index):
-            print(f"CRITICAL: Failed to set active layer {game.current_layer_index} on new map {new_map_filename}")
-            if not set_active_layer(game, 1):
-                print("CRITICAL: Failed to load layer 1 as fallback. Transition aborted.")
-                return 
-
-        if direction == 'left':
-            player.rect.right = game.map_width_pixels - 5
-            player.x = player.rect.x
-        elif direction == 'right':
-            player.rect.left = 5
-            player.x = player.rect.x
-        elif direction == 'top':
-            player.rect.bottom = game.map_height_pixels - 5
-            player.y = player.rect.y
-        elif direction == 'bottom':
-            player.rect.top = 5
-            player.y = player.rect.y
-            
-        if not hasattr(game.player, 'map_transition_cooldown'):
-            game.player.map_transition_cooldown = 0
-        game.player.map_transition_cooldown = 30
