@@ -87,87 +87,88 @@ def draw_game(game):
 
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
-    # >>> START TILE RENDERING OPTIMIZATION (Tile Surface Caching) <<<
-    if not hasattr(game, '_tile_cache_surface'):
-        game._tile_cache_surface = None
+    # ---------------------------------------------------------
+    # 2. OPTIMIZED GRID RENDERING (VIEWPORT CULLING)
+    # ---------------------------------------------------------
+    # Instead of blitting a giant cached surface, we iterate only the visible tiles.
     
-    dynamic_update_needed = getattr(game, 'dynamic_tiles_dirty', False)
+    tile_size = TILE_SIZE
     
-    if getattr(game, 'tiles_dirty', True) or dynamic_update_needed: 
-        if game.renderable_tiles:
-            min_x = min(rect.x for _, rect in game.renderable_tiles)
-            min_y = min(rect.y for _, rect in game.renderable_tiles)
-            max_x = max(rect.right for _, rect in game.renderable_tiles)
-            max_y = max(rect.bottom for _, rect in game.renderable_tiles)
-
-            cache_w = max_x - min_x
-            cache_h = max_y - min_y
-            game._tile_cache_world_origin = (min_x, min_y)
-
-            game._tile_cache_surface = pygame.Surface((cache_w, cache_h)).convert()
-            game._tile_cache_surface.fill(PANEL_COLOR) 
-
-            cache_offset_x = -min_x
-            cache_offset_y = -min_y
-
-            for image, rect in game.renderable_tiles:
-                game._tile_cache_surface.blit(image, rect.move(cache_offset_x, cache_offset_y))
-            
-            game.tiles_dirty = False
-            if dynamic_update_needed:
-                game.dynamic_tiles_dirty = False 
-        else:
-            game._tile_cache_surface = pygame.Surface((1, 1)).convert()
-            game._tile_cache_world_origin = (0, 0)
-            game.tiles_dirty = False
-            if dynamic_update_needed:
-                game.dynamic_tiles_dirty = False
+    # Calculate visible grid bounds
+    # We want visible WorldX from 0 to view_w (relative to screen)
+    # WorldCoord = ScreenCoord - offset
+    min_world_x = -offset_x
+    min_world_y = -offset_y
+    max_world_x = -offset_x + view_w
+    max_world_y = -offset_y + view_h
     
-    if game._tile_cache_surface:
-        cache_origin_x, cache_origin_y = game._tile_cache_world_origin
-        source_x = screen_rect.x - cache_origin_x
-        source_y = screen_rect.y - cache_origin_y
-        source_rect_on_cache = pygame.Rect(source_x, source_y, view_w, view_h)
-        world_view_surface.blit(game._tile_cache_surface, (0, 0), source_rect_on_cache)
-    # >>> END TILE RENDERING OPTIMIZATION <<<
-
-
+    # Add buffer of 2 tiles to avoid popping at edges
+    buffer_tiles = 2
+    min_grid_x = max(0, int(min_world_x // tile_size) - buffer_tiles)
+    min_grid_y = max(0, int(min_world_y // tile_size) - buffer_tiles)
+    
+    # Map Dimensions
+    map_h = len(game.map_data) if game.map_data else 0
+    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    
+    max_grid_x = min(map_w, int(max_world_x // tile_size) + 1 + buffer_tiles)
+    max_grid_y = min(map_h, int(max_world_y // tile_size) + 1 + buffer_tiles)
+    
+    ground_layer = getattr(game, 'ground_data', None)
+    base_layer = getattr(game, 'map_data', None)
+    roof_layer = getattr(game, 'roof_data', None)
+    
+    tm = game.tile_manager
+    shaking_tiles = game.map_manager.shaking_tiles
+    
     current_time = time.time()
     tiles_to_remove = []
-    
-    for (grid_x, grid_y), start_time in game.map_manager.shaking_tiles.items():
-        if current_time - start_time > 0.2:
-            tiles_to_remove.append((grid_x, grid_y))
-            continue
-            
-        tile_def = game.map_manager.get_tile_at(grid_x, grid_y)
-        if tile_def and tile_def.get('image'):
-            screen_x = grid_x * TILE_SIZE + offset_x
-            screen_y = grid_y * TILE_SIZE + offset_y
-            
-            # Optimization: Don't animate if off-screen
-            if -TILE_SIZE < screen_x < view_w and -TILE_SIZE < screen_y < view_h:
-                # 1. Erase static tree (draw ground over it)
-                try:
-                    layer_idx = getattr(game, 'current_layer_index', 0)
-                    if hasattr(game, 'all_ground_layers'):
-                        ground_char = game.all_ground_layers[layer_idx][grid_y][grid_x]
-                        ground_def = game.tile_manager.definitions.get(ground_char)
-                        if ground_def:
-                            world_view_surface.blit(ground_def['image'], (screen_x, screen_y))
-                except Exception: pass
 
-                # 2. Draw Shaking Tree
-                shake_x = random.randint(-2, 2)
-                shake_y = random.randint(-2, 2)
-                world_view_surface.blit(tile_def['image'], (screen_x + shake_x, screen_y + shake_y))
+    player_tile_x = game.player.rect.centerx // tile_size
+    player_tile_y = game.player.rect.centery // tile_size
+    roof_hide_radius = 3
 
+    # Main Render Loop
+    for gy in range(min_grid_y, max_grid_y):
+        for gx in range(min_grid_x, max_grid_x):
+            screen_px = int(gx * tile_size + offset_x)
+            screen_py = int(gy * tile_size + offset_y)
+            
+            # --- Ground Layer ---
+            if ground_layer:
+                g_key = ground_layer[gy][gx]
+                if g_key and g_key != ' ':
+                    g_def = tm.definitions.get(g_key)
+                    if g_def:
+                        world_view_surface.blit(g_def['image'], (screen_px, screen_py))
+
+            # --- Base Layer (Walls, Trees, Objects) ---
+            if base_layer:
+                b_key = base_layer[gy][gx]
+                if b_key and b_key != ' ':
+                     b_def = tm.definitions.get(b_key)
+                     if b_def:
+                         # Handle Shaking
+                         draw_x, draw_y = screen_px, screen_py
+                         if (gx, gy) in shaking_tiles:
+                             if current_time - shaking_tiles[(gx, gy)] > 0.2:
+                                 tiles_to_remove.append((gx, gy))
+                             else:
+                                 draw_x += random.randint(-2, 2)
+                                 draw_y += random.randint(-2, 2)
+                         
+                         world_view_surface.blit(b_def['image'], (draw_x, draw_y))
+            
+            # --- Roof Layer ---
+            
+
+    # Clean up shaking tiles
     for k in tiles_to_remove:
-        del game.map_manager.shaking_tiles[k]
+        if k in game.map_manager.shaking_tiles:
+            del game.map_manager.shaking_tiles[k]
 
 
     # --- [MOVED] Draw Persistent Blood Stains (Decals) ---
-    # Moved here so they appear on the ground, below entities
     if hasattr(game, 'blood_stains'):
         min_view_x = -offset_x - 100
         max_view_x = -offset_x + view_w + 100
@@ -329,16 +330,33 @@ def draw_game(game):
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
-    # --- Draw Persistent Blood Stains was removed from here ---
+    player_tile_x = game.player.rect.centerx // tile_size
+    player_tile_y = game.player.rect.centery // tile_size
+    roof_hide_radius = 3
+
+    if roof_layer:
+        for gy in range(min_grid_y, max_grid_y):
+            for gx in range(min_grid_x, max_grid_x):
+                r_key = roof_layer[gy][gx]
+                if r_key and r_key != ' ':
+                    # Hide Roof Logic
+                    dx = abs(gx - player_tile_x)
+                    dy = abs(gy - player_tile_y)
+                    if not (dx <= roof_hide_radius and dy <= roof_hide_radius):
+                         r_def = tm.definitions.get(r_key)
+                         if r_def:
+                             screen_px = int(gx * tile_size + offset_x)
+                             screen_py = int(gy * tile_size + offset_y)
+                             world_view_surface.blit(r_def['image'], (screen_px, screen_py))
 
     SPLASH_COLOR = (139, 0, 0)
-    current_time = pygame.time.get_ticks()
+    current_time_ms = pygame.time.get_ticks()
     
     # Pre-configure scratch surface
     scratch = game.particle_scratch 
     
     for splash in game.splashes:
-        time_elapsed = current_time - splash['time']
+        time_elapsed = current_time_ms - splash['time']
         if time_elapsed > splash['duration']: continue
         
         fade_factor = max(0.0, 1.0 - (time_elapsed / splash['duration']))
@@ -365,16 +383,7 @@ def draw_game(game):
             pygame.draw.circle(scratch, trail_color, (p_radius, p_radius), p_radius)
             world_view_surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
-    player_tile_x = game.player.rect.centerx // TILE_SIZE
-    player_tile_y = game.player.rect.centery // TILE_SIZE
-    roof_hide_radius = 3
-
-    for image, rect, (tile_x, tile_y) in game.roof_tiles:
-        if not screen_rect.colliderect(rect): continue # Frustum culling added
-        dx = abs(tile_x - player_tile_x)
-        dy = abs(tile_y - player_tile_y)
-        if dx <= roof_hide_radius and dy <= roof_hide_radius: continue
-        world_view_surface.blit(image, rect.move(offset_x, offset_y))
+    # Roof rendering is now integrated into the main grid loop for better performance
 
     if game.hovered_container:
         hover_rect = game.hovered_container.rect.move(offset_x, offset_y)

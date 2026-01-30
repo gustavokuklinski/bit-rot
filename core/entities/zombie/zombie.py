@@ -563,7 +563,7 @@ class Zombie(pygame.sprite.Sprite):
             
             infection = 0
             if random.random() < core.data.config.ZOMBIE_INFECTION_CHANCE:
-                infection = random.randint(self.min_infection, self.max_infection)
+                infection = random.uniform(self.min_infection, self.max_infection)
             
             infection_reduction = 1.0 - ((total_defence / 2.0) / 100.0)
             final_damage = max(0, damage * damage_reduction)
@@ -691,16 +691,16 @@ class Zombie(pygame.sprite.Sprite):
                             template['max_health'] = int(health_node.get('max'))
 
                             speed_node = stats_node.find('speed')
-                            template['min_speed'] = int(speed_node.get('min'))
-                            template['max_speed'] = int(speed_node.get('max'))
+                            template['min_speed'] = int(speed_node.get('min')) * core.data.config.ZOMBIE_SPEED
+                            template['max_speed'] = int(speed_node.get('max')) * core.data.config.ZOMBIE_SPEED
 
                             attack_node = stats_node.find('attack')
                             template['min_attack'] = int(attack_node.get('min'))
                             template['max_attack'] = int(attack_node.get('max'))
 
                             infection_node = stats_node.find('infection')
-                            template['min_infection'] = int(infection_node.get('min'))
-                            template['max_infection'] = int(infection_node.get('max'))
+                            template['min_infection'] = int(infection_node.get('min')) * ZOMBIE_INFECTION_CHANCE
+                            template['max_infection'] = int(infection_node.get('max')) * ZOMBIE_INFECTION_CHANCE
 
                             template['sprites'] = {} # Use a dict to store multiple sprites
                             if visuals_node is not None:
@@ -840,7 +840,7 @@ class Zombie(pygame.sprite.Sprite):
         zombie.health = zombie.max_health
 
         # Set other stats
-        zombie.speed = random.randint(template['min_speed'], template['max_speed'])
+        zombie.speed = random.uniform(template['min_speed'], template['max_speed'])
 
         return zombie
 

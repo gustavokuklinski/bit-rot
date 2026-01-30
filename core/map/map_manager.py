@@ -42,7 +42,6 @@ class MapManager:
                         'filename': filename,
                         'layer': layer,
                         'position': 0,
-                        # 'connections' removed as they are legacy
                     }
                 except ValueError:
                     print(f"Warning: Could not parse world map filename {filename}")
@@ -92,54 +91,16 @@ class MapManager:
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
             
-            # 1. Update the map data
+            # 1. Update the map data (Visuals update automatically via draw loop)
             self.game.map_data[grid_y][grid_x] = new_char
             
             # 2. Update obstacles list
             self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
             if new_def['is_obstacle']:
                 self.game.obstacles.append(tile_rect)
-                
-            # 3. Update renderable_tiles list AND gather tiles for redraw in ONE pass.
-            original_image = current_def['image'] 
-            tiles_to_redraw = []
-            door_updated = False
             
-            for i, (img, rect) in enumerate(self.game.renderable_tiles):
-                if rect.colliderect(tile_rect):
-                    if not door_updated and rect == tile_rect and img == original_image:
-                        self.game.renderable_tiles[i] = (new_def['image'], rect)
-                        tiles_to_redraw.append((new_def['image'], rect))
-                        door_updated = True
-                    else:
-                        tiles_to_redraw.append((img, rect))
+            # Legacy cache patching removed as it is no longer used for rendering.
             
-            # 4. Patch the cache directly
-            if hasattr(self.game, '_tile_cache_surface') and self.game._tile_cache_surface:
-                try:
-                    origin_x, origin_y = self.game._tile_cache_world_origin
-                    
-                    cache_rect = pygame.Rect(
-                        tile_rect.x - origin_x, 
-                        tile_rect.y - origin_y, 
-                        tile_rect.width, 
-                        tile_rect.height
-                    )
-                    
-                    self.game._tile_cache_surface.fill(PANEL_COLOR, cache_rect)
-                    
-                    for img, r in tiles_to_redraw:
-                        draw_pos = (r.x - origin_x, r.y - origin_y)
-                        self.game._tile_cache_surface.blit(img, draw_pos)
-                    
-                    self.game.dynamic_tiles_dirty = False
-                    
-                except Exception as e:
-                    print(f"Error patching tile cache: {e}")
-                    self.game.dynamic_tiles_dirty = True
-            else:
-                self.game.dynamic_tiles_dirty = True
-
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
                     new_def['sound_src'],
@@ -268,34 +229,4 @@ class MapManager:
         if new_def['is_obstacle']:
             self.game.obstacles.append(tile_rect)
             
-        # 3. Update Visual Cache
-        original_image = old_def['image'] 
-        tiles_to_redraw = []
-        
-        for i, (img, rect) in enumerate(self.game.renderable_tiles):
-            if rect.colliderect(tile_rect):
-                if rect == tile_rect and img == original_image:
-                    self.game.renderable_tiles[i] = (new_def['image'], rect)
-                    tiles_to_redraw.append((new_def['image'], rect))
-                else:
-                    tiles_to_redraw.append((img, rect))
-        
-        if hasattr(self.game, '_tile_cache_surface') and self.game._tile_cache_surface:
-            try:
-                origin_x, origin_y = self.game._tile_cache_world_origin
-                cache_rect = pygame.Rect(
-                    tile_rect.x - origin_x, 
-                    tile_rect.y - origin_y, 
-                    tile_rect.width, 
-                    tile_rect.height
-                )
-                self.game._tile_cache_surface.fill(PANEL_COLOR, cache_rect)
-                for img, r in tiles_to_redraw:
-                    draw_pos = (r.x - origin_x, r.y - origin_y)
-                    self.game._tile_cache_surface.blit(img, draw_pos)
-                self.game.dynamic_tiles_dirty = False
-            except Exception as e:
-                print(f"Error patching tile cache: {e}")
-                self.game.dynamic_tiles_dirty = True
-        else:
-            self.game.dynamic_tiles_dirty = True
+        # Legacy cache update removed. Visuals update automatically in draw loop.

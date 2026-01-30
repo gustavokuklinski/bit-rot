@@ -101,6 +101,14 @@ def load_giant_map(game):
          mega_base, mega_ground, mega_spawn, mega_roof, mega_light_grid, game.tile_manager
      )
     
+    # [MEMORY OPTIMIZATION] 
+    # Clear the huge render lists for giant maps to save RAM.
+    # The new draw loop uses grid-based rendering (game.map_data) instead.
+    if mega_w > 500 or mega_h > 500:
+        print("Optimizing memory for giant map...")
+        game.renderable_tiles = [] 
+        game.roof_tiles = []
+    
     if possible_player_spawns:
         game.player_spawn = random.choice(possible_player_spawns)
         print(f"Selected player spawn from markers at: {game.player_spawn}")
@@ -259,6 +267,14 @@ def _rebuild_world_from_data(game):
     game.roof_tiles = roof_tiles
     game.map_lights = map_lights
     game.npc_spawn_points = npc_spawns
+    
+    # [MEMORY OPTIMIZATION]
+    # Clear render lists if huge
+    map_h = len(game.map_data)
+    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    if map_w > 500 or map_h > 500:
+         game.renderable_tiles = []
+         game.roof_tiles = []
 
     return item_spawns, zombie_spawns
 

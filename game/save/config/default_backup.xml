@@ -12,17 +12,17 @@
         <zoom_near value="6.0" name="Zoom max near (Default: 6.0)"/>
     </game>
     <map>
-        <map_chunks value="3" name="Max map chunks (Default: 3, Max: 9)"/>
+        <map_chunks value="2" name="Max map chunks (Default: 2)"/>
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
+        <view_radius value="15" name="View radius tiles (Default: 15)"/>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>
         <food_decay value="0.2" name="Food decay % (Default: 0.2)"/>
         <water_decay value="0.3" name="Water decay % (Default: 0.3)"/>
         <water_autodrink value="true" name="Allow Autodrink"/>
         <water_threshold value="99" name="Minimum % to start autodrink (Default: 50)"/>
         <food_water_multiplier_decay value="1.0" name="Food and water decay % (Default: 1.0)"/>
-        <view_radius value="15" name="View radius tiles (Default: 15)"/>
     </player>
     <durability>
         <multiplier value="1.0" name="Base multiplier (Default: 1.0)"/>
@@ -70,10 +70,10 @@
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
-        <spawn value="5" name="Zombies per spawn (Default: 10)"/>
+        <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="100" name="Player detection tiles (Default: 100)"/>
+        <zombie_detection_radius value="10" name="Player detection tiles (Default: 100)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>
