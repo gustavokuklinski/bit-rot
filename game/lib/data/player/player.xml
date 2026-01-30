@@ -36,6 +36,7 @@
     </body>
 
     <initial_loot>
+        <item name="wallet" chance="100" />
     </initial_loot>
 
     <visuals>

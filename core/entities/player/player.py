@@ -605,6 +605,8 @@ class Player:
         if not self.is_sleeping and is_active_resting:
             if self.stamina < self.max_stamina:
                 self.stamina = min(self.max_stamina, self.stamina + 0.5)
+            if self.tireness < self.max_tireness:
+                self.tireness = min(self.max_tireness, self.tireness + 0.03)
 
         if self.is_sleeping:
             # [CHANGED] Sleep Logic to Simulate World
@@ -615,7 +617,7 @@ class Player:
             # 2. Restore Energy slower per frame (because simulated frames are many)
             # 0.05 per frame * 60 FPS * 50x speed = 150 points per real-time second
             # This makes sleeping very fast but actually runs the game loop.
-            restore_amount = 0.05 
+            restore_amount = 0.5 
             
             self.tireness = max(0.0, self.tireness + restore_amount)
             

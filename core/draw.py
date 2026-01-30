@@ -419,6 +419,21 @@ def draw_game(game):
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
     game.virtual_screen.blit(scaled_world, game_rect)
 
+    if game.player and game.player.is_sleeping:
+        # Cover the whole virtual screen with black
+        game.virtual_screen.fill((0, 0, 0))
+        
+        font = game.assets.get('font') or pygame.font.Font(None, 30)
+        text_surf = font.render("Sweet Dreams. Press Space to Wake up.", True, (255, 255, 255))
+        
+        text_rect = text_surf.get_rect(center=(GAME_WIDTH // 2 + GAME_OFFSET_X // 2, GAME_HEIGHT // 2))
+        
+        # Adjust for the sidebar offset if necessary, usually centering on the whole screen is fine
+        # creating a true center:
+        text_rect.center = (game.virtual_screen.get_width() // 2, game.virtual_screen.get_height() // 2)
+        
+        game.virtual_screen.blit(text_surf, text_rect)
+
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
@@ -707,7 +722,7 @@ def draw_game(game):
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
-    
+
     if hasattr(game, 'clock'):
         fps = int(game.clock.get_fps())
         fps_text = f"FPS: {fps}"

@@ -64,7 +64,7 @@ def draw_player_alerts(surface, player):
         active_alerts.append(("ui/food.png", GREEN, "You are hungry"))
 
     # Tireness (High) - Tired
-    if player.tireness <= 50:
+    if player.tireness <= 20:
         active_alerts.append(("ui/tireness.png", (100, 100, 150), "You are feeling sleepy, take a nap"))
 
     # Anxiety (High) - Panicked

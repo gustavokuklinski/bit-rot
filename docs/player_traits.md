@@ -2,9 +2,16 @@
 
 ```xml
 <traits>
-    <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-15% stamina, +15% tireness and -2% level strength gain">
-        <stats stamina="-15" tireness="15" />
-        <attributes strength="-1" />
+    <trait 
+        id="strong" 
+        name="Strong" 
+        cost="2" 
+        tooltip="+2% XP, +5 Level strength, +2 Level Fitness" 
+        disable="[fit, weak]">
+        
+        <attributes 
+            strength="2" 
+            level="[strength:5, fitness:2]" />
     </trait>
 </traits>
 ```
