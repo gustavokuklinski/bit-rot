@@ -22,14 +22,32 @@ class MapManager:
         self.map_files = self._discover_maps()
         print(f"Found {len(self.map_files)} map files.")
 
+
     def _discover_maps(self):
         maps = {}
-        # Regex to match the new naming convention: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
-        # Example: map_L1_P0_0_1_0_0_map.csv
-        pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
+        # Regex for legacy chunks: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
+        pattern_chunk = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
+        # Regex for single world map: map_L<layer>_world_map.csv
+        pattern_world = re.compile(r'map_L(\d+)_world_map\.csv')
 
         for filename in os.listdir(self.map_folder):
-            match = pattern.match(filename)
+            # Check for World Map
+            match = pattern_world.match(filename)
+            if match:
+                try:
+                    layer = int(match.group(1))
+                    maps[filename] = {
+                        'filename': filename,
+                        'layer': layer,
+                        'position': 0,
+                        'connections': (0, 0, 0, 0) # No external connections needed
+                    }
+                    continue
+                except ValueError:
+                    print(f"Warning: Could not parse world map filename {filename}")
+
+            # Check for Chunk Map
+            match = pattern_chunk.match(filename)
             if match:
                 try:
                     layer = int(match.group(1))
@@ -42,7 +60,7 @@ class MapManager:
                         'connections': connections
                     }
                 except ValueError:
-                    print(f"Warning: Could not parse map filename {filename}")
+                    print(f"Warning: Could not parse chunk map filename {filename}")
         return maps
 
     def get_current_map_connections(self):
@@ -53,6 +71,10 @@ class MapManager:
         current_map_info = self.map_files.get(self.current_map_filename)
         if not current_map_info:
             print(f"Error: Could not find current map info for {self.current_map_filename}")
+            return None
+
+
+        if "world_map" in self.current_map_filename:
             return None
 
         connections = current_map_info['connections']

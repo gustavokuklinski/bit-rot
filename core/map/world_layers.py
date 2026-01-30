@@ -156,7 +156,6 @@ def load_giant_map(game):
 
     print("Parsing mega-layouts...")
     
-    # [FIX] Unpack 9 values including game.npc_spawn_points
     (game.obstacles, 
      game.renderable_tiles, 
      _parsed_spawn, 
@@ -256,23 +255,34 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     all_roof_layers = {}
     all_light_layers = {}
 
+    # Regex for legacy chunks: map_L<layer>_P<position>_<top>_<right>_<bottom>_<left>_map.csv
     pattern = re.compile(r'map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)_map\.csv')
     base_name_match = pattern.match(base_map_filename)
     
-    if not base_name_match:
-        print(f"CRITICAL: Base map filename does not match expected pattern: {base_map_filename}")
-        return {}, {}, {}, {}, {}
+    # Regex for new single world map: map_L<layer>_world_map.csv
+    world_pattern = re.compile(r'map_L(\d+)_world_map\.csv')
+    world_match = world_pattern.match(base_map_filename)
 
-    base_pos_id = base_name_match.group(2)
-    base_conn_tuple = base_name_match.groups()[2:]
-    base_connections_str = "_".join(base_conn_tuple)
+    is_legacy = False
+    
+    if base_name_match:
+        is_legacy = True
+        base_pos_id = base_name_match.group(2)
+        base_conn_tuple = base_name_match.groups()[2:]
+        base_connections_str = "_".join(base_conn_tuple)
+    elif world_match:
+        is_legacy = False
+    else:
+        print(f"CRITICAL: Base map filename does not match any expected pattern: {base_map_filename}")
+        return {}, {}, {}, {}, {}
 
     if master_width is not None and master_height is not None:
         target_width = master_width
         target_height = master_height
     else:
         base_map_file = os.path.join(base_path, base_map_filename)
-        if not os.path.exists(base_map_file):
+        if not os.path.exists(base_map_file) and is_legacy:
+            # Fallback search only for legacy files that might rely on implicit P IDs
             found_any = False
             for i in range(1, 10):
                 any_layer_file = os.path.join(base_path, f"map_L{i}_P{base_pos_id}_{base_connections_str}_map.csv")
@@ -300,7 +310,10 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
             target_width = 100
 
     for i in range(1, 10):
-        layer_prefix = f"map_L{i}_P{base_pos_id}_{base_connections_str}"
+        if is_legacy:
+            layer_prefix = f"map_L{i}_P{base_pos_id}_{base_connections_str}"
+        else:
+            layer_prefix = f"map_L{i}_world"
 
         layer_map_file_relative = f"{layer_prefix}_map.csv"
         layer_ground_file_relative = f"{layer_prefix}_ground.csv"
@@ -358,7 +371,6 @@ def _rebuild_world_from_data(game):
     game.containers = containers
     game.roof_tiles = roof_tiles
     game.map_lights = map_lights
-    # [FIX] Assign npc spawns to game
     game.npc_spawn_points = npc_spawns
 
     return item_spawns, zombie_spawns

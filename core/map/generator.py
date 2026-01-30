@@ -117,9 +117,12 @@ class ProceduralGenerator:
 
     def generate_world(self, seed_pattern=None, regenerate=False):
         if not regenerate and os.path.exists(self.output_folder):
-            # If we are loading (not regenerating), check if the start map exists.
-            # We skip the 'expected_chunks' count check because it relies on the seed,
-            # which might be missing or default if loading an old save.
+            # Check for the new single map format first
+            for f in os.listdir(self.output_folder):
+                if f.startswith("map_L1_world") and f.endswith("_map.csv"):
+                    print(f"World already exists at {self.output_folder}. Skipping generation.")
+                    return f
+            # Fallback check (though we are moving away from this)
             for f in os.listdir(self.output_folder):
                 if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
                     print(f"World already exists at {self.output_folder}. Skipping generation.")
@@ -147,15 +150,6 @@ class ProceduralGenerator:
 
         print(f"Applying World Seed: {actual_seed} | Size: {grid_w}x{grid_h}")
         random.seed(actual_seed)
-
-        expected_chunks = grid_w * grid_h
-        
-        #if not regenerate and self._maps_exist(expected_chunks):
-        #    print("World already exists. Skipping.")
-        #    for f in os.listdir(self.output_folder):
-        #        if f.startswith("map_L1_P0_") and f.endswith("_map.csv"):
-        #            return f
-        #    return None
 
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
@@ -197,10 +191,8 @@ class ProceduralGenerator:
             elif category == 'Military':
                 self.military_template = selected_for_category[0] if selected_for_category else None
             elif category == 'Petrol':
-                # Reserve ONE Petrol for the military chunk
                 if selected_for_category:
                     self.mil_petrol_template = selected_for_category.pop(0)
-                # Add the REST to global deck
                 global_deck.extend(selected_for_category)
             else:
                 global_deck.extend(selected_for_category)
@@ -245,18 +237,12 @@ class ProceduralGenerator:
             print(f"Populating Military Chunk at {military_chunk_coord}")
             if self.heli_template:
                 chunk_priority_map[military_chunk_coord].append(self.heli_template)
-            else:
-                print("FAILED to assign Heli to Military Chunk (Template missing).")
-                
+            
             if self.military_template:
                 chunk_priority_map[military_chunk_coord].append(self.military_template)
-            else:
-                print("FAILED to assign Military Base to Military Chunk (Template missing).")
 
             if self.mil_petrol_template:
                 chunk_priority_map[military_chunk_coord].append(self.mil_petrol_template)
-            else:
-                print("FAILED to assign Petrol to Military Chunk (Template missing).")
 
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
@@ -266,7 +252,18 @@ class ProceduralGenerator:
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
         heat_map_surface = pygame.Surface((total_map_w, total_map_h))
         
-        start_map_filename = None
+        # --- PREPARE GLOBAL LAYERS ---
+        global_tiles_w = grid_w * self.chunk_size
+        global_tiles_h = grid_h * self.chunk_size
+        
+        global_layers = {
+            'base': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'ground': [['bg_grass' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'spawn': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
+        }
+        # -----------------------------
 
         for gy in range(grid_h):
             for gx in range(grid_w):
@@ -288,26 +285,31 @@ class ProceduralGenerator:
                                                        allow_buildings=is_urban,
                                                        force_forest=False) 
                 
-                conn_top = conns.get('top_id', 0)
-                conn_right = conns.get('right_id', 0)
-                conn_bottom = conns.get('bottom_id', 0)
-                conn_left = conns.get('left_id', 0)
+                # --- MERGE CHUNK INTO GLOBAL MAP ---
+                offset_x = gx * self.chunk_size
+                offset_y = gy * self.chunk_size
                 
-                filename_base = f"map_L1_P{pos_id}_{conn_top}_{conn_right}_{conn_bottom}_{conn_left}"
-                self._save_chunk(filename_base, chunk_data)
+                for layer_key, layer_grid in chunk_data.items():
+                    if layer_key in global_layers:
+                        for r in range(self.chunk_size):
+                            for c in range(self.chunk_size):
+                                global_layers[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
+                # -----------------------------------
+
                 self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, chunk_data)
 
-                if pos_id == 0:
-                    start_map_filename = filename_base + "_map.csv"
-
-        # DEBUG to display the saved map and Heat places
+        # SAVE GLOBAL MAP
+        print("Saving global world map...")
+        filename_base = "map_L1_world"
+        self._save_chunk(filename_base, global_layers)
+        
+        # DEBUG images
         try:
             scale_factor = 0.5
             new_w = int(total_map_w * scale_factor)
             new_h = int(total_map_h * scale_factor)
             preview_size = (new_w, new_h)
 
-            # Use smoothscale for better quality reduction, or scale for speed
             small_map_surface = pygame.transform.smoothscale(full_map_surface, preview_size)
             pygame.image.save(small_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
             
@@ -318,11 +320,16 @@ class ProceduralGenerator:
         except Exception as e:
             print(f"Error saving map images: {e}")
 
-        return start_map_filename
+        return filename_base + "_map.csv"
 
     def _maps_exist(self, expected_count):
         if not os.path.exists(self.output_folder): return False
-        return len([f for f in os.listdir(self.output_folder) if f.endswith('_map.csv')]) >= expected_count
+        # Check for global map
+        for f in os.listdir(self.output_folder):
+            if f.startswith("map_L1_world") and f.endswith("_map.csv"):
+                return True
+        return False
+
 
     def _generate_maze_connections(self, w, h):
         grid = [[{
