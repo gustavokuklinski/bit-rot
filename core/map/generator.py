@@ -13,7 +13,7 @@ class ProceduralGenerator:
                  chunk_settings=None):
         self.game = game
         # --- SIZE SETTINGS ---
-        self.chunk_size = CHUNK_SIZE # Reset to 100x100
+        self.chunk_size = CHUNK_SIZE 
         # ---------------------
         self.tile_size = TILE_SIZE
         self.output_folder = output_folder if output_folder else MAP_DIR
@@ -38,6 +38,7 @@ class ProceduralGenerator:
             'Shed': MAP_CHUNKS * 2,
             'Building': MAP_CHUNKS * 3,
             'Petrol': MAP_CHUNKS * 3,
+            'Cave': MAP_CHUNKS * 2,
             'Heli': 1,
             'Military': 1
         }
@@ -72,7 +73,8 @@ class ProceduralGenerator:
             'Building': [],
             'Petrol': [],
             'Heli': [],
-            'Military': []
+            'Military': [],
+            'Cave': []
         }
         self.forest_templates = []
 
@@ -80,6 +82,10 @@ class ProceduralGenerator:
         for name in self.templates.keys():
             lower_name = name.lower()
             
+            # --- FILTER: Exclude L2 Caves from L1 selection pools ---
+            if "cave" in lower_name and "l2" in lower_name:
+                continue
+
             if name.startswith("Forest_"):
                 self.forest_templates.append(name)
                 continue
@@ -89,6 +95,14 @@ class ProceduralGenerator:
             
             if "heli" in lower_name:
                 self.categorized_templates['Heli'].append(name)
+                assigned = True
+            elif "cave" in lower_name: 
+                # --- FIX: ROBUST EXCLUSION OF L2 MAPS ---
+                # Check if "l2" is in the name to prevent it from entering the random L1 pool
+                if "l2" in lower_name:
+                    print(f"  > Identified Linked Template: {name} (Excluded from random gen)")
+                else:
+                    self.categorized_templates['Cave'].append(name)
                 assigned = True
             if "military" in lower_name:
                 self.categorized_templates['Military'].append(name)
@@ -161,6 +175,10 @@ class ProceduralGenerator:
         self.mil_petrol_template = None
 
         for category, limit in self.global_building_limits.items():
+            # Skip Cave here - we handle it manually to ensure 1 per chunk
+            if category == 'Cave':
+                continue
+
             available = self.categorized_templates.get(category, [])
             if not available:
                 if category in ['Heli', 'Military', 'Petrol']:
@@ -217,6 +235,16 @@ class ProceduralGenerator:
         
         # 5. Distribute Deck
         chunk_priority_map = {coord: [] for coord in all_coords}
+        
+        # --- MANDATORY: 1 Cave Per Chunk ---
+        cave_temps = self.categorized_templates.get('Cave', [])
+        if cave_temps:
+            for c_coord in all_coords:
+                chunk_priority_map[c_coord].append(random.choice(cave_temps))
+        else:
+            print("WARNING: No L1 Cave templates found to place in chunks.")
+        # -----------------------------------
+
         urban_list = list(urban_coords)
         
         if urban_list:
@@ -245,16 +273,32 @@ class ProceduralGenerator:
         
         total_map_w = grid_w * self.chunk_size * self.tile_size
         total_map_h = grid_h * self.chunk_size * self.tile_size
+        
+        # Surfaces for L1
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
         heat_map_surface = pygame.Surface((total_map_w, total_map_h))
         
-        # --- PREPARE GLOBAL LAYERS ---
+        # Surfaces for L2
+        full_map_surface_l2 = pygame.Surface((total_map_w, total_map_h))
+        full_map_surface_l2.fill((0, 0, 0)) # Fill darkness for underground
+        heat_map_surface_l2 = pygame.Surface((total_map_w, total_map_h))
+        
+        # --- PREPARE GLOBAL LAYERS L1 ---
         global_tiles_w = grid_w * self.chunk_size
         global_tiles_h = grid_h * self.chunk_size
         
         global_layers = {
             'base': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'ground': [['bg_grass' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'spawn': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
+        }
+
+        # --- PREPARE GLOBAL LAYERS L2 (Underground) ---
+        global_layers_l2 = {
+            'base': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'ground': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)], # Empty void default
             'spawn': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
@@ -275,6 +319,7 @@ class ProceduralGenerator:
                 if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
                     is_urban = True
 
+                # Generate Chunk (Produces data for L1 and optionally L2 keys)
                 chunk_data = self._generate_chunk_data(gx, gy, conns, 
                                                        is_start=is_center_chunk, 
                                                        assigned_templates=assigned_buildings, 
@@ -285,19 +330,50 @@ class ProceduralGenerator:
                 offset_x = gx * self.chunk_size
                 offset_y = gy * self.chunk_size
                 
+                # Separate L1 and L2 data for rendering
+                render_data_l1 = {}
+                render_data_l2 = {}
+
                 for layer_key, layer_grid in chunk_data.items():
-                    if layer_key in global_layers:
+                    # Handle L2 Layers
+                    if layer_key.endswith('_L2'):
+                        base_key = layer_key.replace('_L2', '')
+                        if base_key in global_layers_l2:
+                            for r in range(self.chunk_size):
+                                for c in range(self.chunk_size):
+                                    global_layers_l2[base_key][offset_y + r][offset_x + c] = layer_grid[r][c]
+                        render_data_l2[base_key] = layer_grid
+                    
+                    # Handle L1 Layers
+                    elif layer_key in global_layers:
                         for r in range(self.chunk_size):
                             for c in range(self.chunk_size):
                                 global_layers[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
+                        render_data_l1[layer_key] = layer_grid
                 # -----------------------------------
 
-                self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, chunk_data)
+                # Render L1
+                self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
+                
+                # Render L2 (if any data exists, otherwise it stays black/empty)
+                # Need to ensure render_data_l2 has all keys to prevent errors in render func
+                for k in ['base', 'ground', 'spawn', 'roof', 'light']:
+                    if k not in render_data_l2:
+                        render_data_l2[k] = [[' ' for _ in range(self.chunk_size)] for _ in range(self.chunk_size)]
+                
+                self._render_chunk_to_surface(full_map_surface_l2, heat_map_surface_l2, gx, gy, render_data_l2)
 
-        # SAVE GLOBAL MAP
-        print("Saving global world map...")
-        filename_base = "map_L1_world"
-        self._save_chunk(filename_base, global_layers)
+        # SAVE GLOBAL MAP L1
+        print("Saving global world map L1...")
+        self._save_chunk("map_L1_world", global_layers)
+
+        # --- NEW: Connect Isolated L2 Buildings ---
+        self._connect_l2_drunkards(global_layers_l2)
+        # ------------------------------------------
+
+        # SAVE GLOBAL MAP L2
+        print("Saving global world map L2...")
+        self._save_chunk("map_L2_world", global_layers_l2)
         
         # DEBUG images
         try:
@@ -306,17 +382,154 @@ class ProceduralGenerator:
             new_h = int(total_map_h * scale_factor)
             preview_size = (new_w, new_h)
 
+            # L1
             small_map_surface = pygame.transform.smoothscale(full_map_surface, preview_size)
             pygame.image.save(small_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
-            
             small_heat_surface = pygame.transform.smoothscale(heat_map_surface, preview_size)
             pygame.image.save(small_heat_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
+
+            # L2
+            small_map_l2 = pygame.transform.smoothscale(full_map_surface_l2, preview_size)
+            pygame.image.save(small_map_l2, os.path.join(self.output_folder, "full_map_L2.jpg"))
+            small_heat_l2 = pygame.transform.smoothscale(heat_map_surface_l2, preview_size)
+            pygame.image.save(small_heat_l2, os.path.join(self.output_folder, "full_map_L2_heat.jpg"))
             
-            print(f"Saved compressed map previews ({new_w}x{new_h}) to {self.output_folder}")
+            print(f"Saved compressed map previews to {self.output_folder}")
         except Exception as e:
             print(f"Error saving map images: {e}")
 
-        return filename_base + "_map.csv"
+        return "map_L1_world_map.csv"
+
+    def _connect_l2_drunkards(self, layers):
+        """
+        Post-processing step to connect isolated L2 structures (caves/basements)
+        using a Drunkard's Walk algorithm.
+        """
+        ground = layers.get('ground')
+        if not ground: return
+
+        h = len(ground)
+        w = len(ground[0])
+        
+        # 1. Identify Connected Components (Islands of non-void tiles)
+        visited = set()
+        components = [] # Stores centroid (x, y) of each island
+
+        for y in range(h):
+            for x in range(w):
+                if (x, y) not in visited and ground[y][x] != ' ':
+                    # Found new island, traverse it (DFS)
+                    stack = [(x, y)]
+                    visited.add((x, y))
+                    island_pixels = []
+                    
+                    while stack:
+                        cx, cy = stack.pop()
+                        island_pixels.append((cx, cy))
+                        
+                        # Check 4 neighbors
+                        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                            nx, ny = cx + dx, cy + dy
+                            if 0 <= nx < w and 0 <= ny < h:
+                                if (nx, ny) not in visited and ground[ny][nx] != ' ':
+                                    visited.add((nx, ny))
+                                    stack.append((nx, ny))
+                    
+                    # Calculate Centroid
+                    if island_pixels:
+                        avg_x = sum(p[0] for p in island_pixels) // len(island_pixels)
+                        avg_y = sum(p[1] for p in island_pixels) // len(island_pixels)
+                        components.append((avg_x, avg_y))
+
+        if len(components) < 2:
+            return
+
+        print(f"L2 Processing: Found {len(components)} isolated structures. Connecting via Drunkard's Walk...")
+
+        # 2. Connect components (Nearest Neighbor Chain)
+        # We start with the first component and progressively connect the nearest unconnected one.
+        connected_set = [components[0]]
+        unconnected_set = components[1:]
+
+        while unconnected_set:
+            best_dist = float('inf')
+            best_link = None # (start_pos, index_in_unconnected)
+
+            # Find shortest path from any connected node to any unconnected node
+            for c_pos in connected_set:
+                for i, u_pos in enumerate(unconnected_set):
+                    dist = (c_pos[0] - u_pos[0])**2 + (c_pos[1] - u_pos[1])**2
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_link = (c_pos, i)
+            
+            if best_link:
+                start_pos, u_index = best_link
+                target_pos = unconnected_set[u_index]
+                
+                # Dig path
+                self._carve_drunkard_path(layers, start_pos, target_pos)
+                
+                # Mark as connected
+                connected_set.append(target_pos)
+                unconnected_set.pop(u_index)
+
+    def _carve_drunkard_path(self, layers, start, end):
+        cx, cy = start
+        tx, ty = end
+        
+        ground = layers['ground']
+        base = layers['base']
+        h, w = len(ground), len(ground[0])
+        
+        path_tile = 'dirty_01' 
+        max_steps = (abs(tx - cx) + abs(ty - cy)) * 5 # Allow some wandering
+        steps = 0
+        
+        while (cx != tx or cy != ty) and steps < max_steps:
+            steps += 1
+            
+            # 1. Dig (Brush size 2 for playability)
+            for dy in [-1, 0, 1]:
+                for dx in [-1, 0, 1]:
+                    nx, ny = cx + dx, cy + dy
+                    if 0 <= nx < w and 0 <= ny < h:
+                        # Only dig if void (don't overwrite existing floors unless necessary)
+                        # Actually, we want to ensure connection, so we overwrite void.
+                        if ground[ny][nx] == ' ':
+                            ground[ny][nx] = path_tile
+                        # Clear walls in the way
+                        if base[ny][nx] != ' ':
+                            base[ny][nx] = ' '
+            
+            # 2. Move (Biased Random Walk)
+            dx, dy = 0, 0
+            dist_x = tx - cx
+            dist_y = ty - cy
+            
+            choice = random.random()
+            
+            # 40% chance move X towards target
+            if choice < 0.4 and dist_x != 0:
+                dx = 1 if dist_x > 0 else -1
+            # 40% chance move Y towards target
+            elif choice < 0.8 and dist_y != 0:
+                dy = 1 if dist_y > 0 else -1
+            # 20% Random deviation
+            else:
+                if random.random() < 0.5: dx = random.choice([-1, 1])
+                else: dy = random.choice([-1, 1])
+
+            cx += dx
+            cy += dy
+            
+            # Clamp bounds (keep 1 tile margin)
+            cx = max(1, min(w - 2, cx))
+            cy = max(1, min(h - 2, cy))
+            
+            # Check proximity to snap
+            if abs(cx - tx) <= 1 and abs(cy - ty) <= 1:
+                break
 
     def _maps_exist(self, expected_count):
         if not os.path.exists(self.output_folder): return False
@@ -406,12 +619,21 @@ class ProceduralGenerator:
         w, h = self.chunk_size, self.chunk_size
         cx, cy = w // 2, h // 2
         
+    
+
         layers = {
             'base': [[' ' for _ in range(w)] for _ in range(h)],
             'ground': [['bg_grass' for _ in range(w)] for _ in range(h)],
             'spawn': [[' ' for _ in range(w)] for _ in range(h)],
             'roof': [[' ' for _ in range(w)] for _ in range(h)],
-            'light': [[' ' for _ in range(w)] for _ in range(h)]
+            'light': [[' ' for _ in range(w)] for _ in range(h)],
+            
+            # L2 Layers
+            'base_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'spawn_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'light_L2': [[' ' for _ in range(w)] for _ in range(h)]
         }
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
 
@@ -725,23 +947,59 @@ class ProceduralGenerator:
                                 self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
                                 placed = True
                                 break
+                
+                # --- NEW LINKED LAYER SPAWNING LOGIC ---
+                if placed:
+                    # Check if this is an L1 map that needs an L2 counterpart
+                    if 'l1' in tmpl_name.lower():
+                        # Try to find L2 counterpart dynamically
+                        potential_l2_name_base = tmpl_name.replace('L1', 'L2').replace('l1', 'l2') 
+                        
+                        # Search case-insensitive in templates
+                        found_l2_key = None
+                        for key in self.templates.keys():
+                            if key.lower() == potential_l2_name_base.lower():
+                                found_l2_key = key
+                                break
+                        
+                        if found_l2_key:
+                            print(f"  > LINKING: Spawning {found_l2_key} at ({tx}, {ty}) on Layer 2")
+                            tmpl_l2 = self.templates[found_l2_key]
+                            # Use the EXACT same coordinates (tx, ty)
+                            self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                        else:
+                            # Only warn if it's a Cave, as other buildings might not have L2
+                            if 'cave' in tmpl_name.lower():
+                                print(f"  > WARNING: Linked map {tmpl_name} placed, but L2 counterpart not found!")
 
                 if not placed:
                     print(f"CRITICAL FAILURE: Could not place {tmpl_name} even with force!")
 
         # 7. Forest / Nature (Fill remaining gaps)
         if self.forest_templates and not force_forest:
-            for _ in range(12): 
+            # Increased iterations to ensure caves appear frequently
+            for _ in range(20): 
                 tmpl_name = random.choice(self.forest_templates)
                 tmpl = self.templates[tmpl_name]
                 tw, th = tmpl['width'], tmpl['height']
                 tx = random.randint(1, w - tw - 1)
                 ty = random.randint(1, h - th - 1)
+                
+                # Use the margin=0 check to fit into tight spots
                 if is_area_free(tx, ty, tw, th, margin=0):
                     self._blit_template(layers, tmpl, tx, ty, w, h)
+                    
+                    # Ensure linked L2 layers (Underground caves) still spawn
+                    if 'l1' in tmpl_name.lower():
+                        potential_l2 = tmpl_name.replace('L1', 'L2').replace('l1', 'l2')
+                        found_l2_key = next((k for k in self.templates if k.lower() == potential_l2.lower()), None)
+                        if found_l2_key:
+                            self._blit_template_mapped(layers, self.templates[found_l2_key], tx, ty, w, h, suffix='_L2')
+
                     placed_rects.append(pygame.Rect(tx, ty, tw, th))
                     for ry in range(ty, ty + th):
-                        for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+                        for rx in range(tx, tx + tw): 
+                            occupied_mask[ry][rx] = 1
 
         # 8. Tile Clusters
         if force_forest:
@@ -932,6 +1190,26 @@ class ProceduralGenerator:
                         if 0 <= gx < mw and 0 <= gy < mh:
                             target[layer][gy][gx] = tile
 
+    def _blit_template_mapped(self, target_layers, source_tmpl, tx, ty, mw, mh, suffix=''):
+        """Blits a template to target layers with key mapping (e.g. base -> base_L2)"""
+        for layer in ['base', 'light', 'ground', 'spawn', 'roof']:
+            if layer not in source_tmpl: continue
+            
+            target_key = layer + suffix # e.g. base_L2
+            
+            # Ensure target layer exists in the dict
+            if target_key not in target_layers:
+                 target_layers[target_key] = [[' ' for _ in range(mw)] for _ in range(mh)]
+            
+            grid = source_tmpl[layer]
+            for r in range(len(grid)):
+                for c in range(len(grid[r])):
+                    tile = grid[r][c]
+                    if tile and tile != ' ':
+                        gx, gy = tx + c, ty + r
+                        if 0 <= gx < mw and 0 <= gy < mh:
+                            target_layers[target_key][gy][gx] = tile
+
     def _save_chunk(self, fname, layers):
         for name, data in layers.items():
             suffix = f"_{name}.csv" if name != 'base' else "_map.csv"
@@ -945,39 +1223,48 @@ class ProceduralGenerator:
         ox = gx * self.chunk_size * self.tile_size
         oy = gy * self.chunk_size * self.tile_size
         
-        ground = data['ground']
-        base = data['base']
-        roof = data['roof']
-        light = data['light']
-        spawn = data['spawn']
+        ground = data.get('ground', [])
+        base = data.get('base', [])
+        roof = data.get('roof', [])
+        light = data.get('light', [])
+        spawn = data.get('spawn', [])
         
-        for y in range(self.chunk_size):
-            for x in range(self.chunk_size):
+        # Determine size from available data or default to chunk size
+        h = len(ground) if ground else self.chunk_size
+        w = len(ground[0]) if ground and h > 0 else self.chunk_size
+
+        for y in range(h):
+            for x in range(w):
                 px = ox + x * self.tile_size
                 py = oy + y * self.tile_size
                 
-                g_char = ground[y][x]
-                if g_char in defs: 
-                    bg_surf.blit(defs[g_char]['image'], (px, py))
+                if ground:
+                    g_char = ground[y][x]
+                    if g_char in defs: 
+                        bg_surf.blit(defs[g_char]['image'], (px, py))
                 
-                b_char = base[y][x]
-                if b_char in defs and b_char != ' ': 
-                    bg_surf.blit(defs[b_char]['image'], (px, py))
+                if base:
+                    b_char = base[y][x]
+                    if b_char in defs and b_char != ' ': 
+                        bg_surf.blit(defs[b_char]['image'], (px, py))
                 
-                r_char = roof[y][x]
-                if r_char in defs and r_char != ' ':
-                    bg_surf.blit(defs[r_char]['image'], (px, py))
+                if roof:
+                    r_char = roof[y][x]
+                    if r_char in defs and r_char != ' ':
+                        bg_surf.blit(defs[r_char]['image'], (px, py))
                 
-                l_char = light[y][x]
-                if l_char in defs and l_char != ' ':
-                    bg_surf.blit(defs[l_char]['image'], (px, py))
+                if light:
+                    l_char = light[y][x]
+                    if l_char in defs and l_char != ' ':
+                        bg_surf.blit(defs[l_char]['image'], (px, py))
                 
-                s_char = spawn[y][x]
-                if s_char in ['Z', 'P', 'I', 'NPC', 'S']:
-                    color = (0, 0, 0)
-                    if s_char == 'Z': color = (255, 0, 0)
-                    elif s_char == 'P': color = (0, 255, 0)
-                    elif s_char == 'I': color = (0, 0, 255)
-                    elif s_char == 'NPC': color = (255, 255, 0)
-                    elif s_char == 'S': color = (0, 0, 255) # Blue for Static NPCs
-                    pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
+                if spawn:
+                    s_char = spawn[y][x]
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'S']:
+                        color = (0, 0, 0)
+                        if s_char == 'Z': color = (255, 0, 0)
+                        elif s_char == 'P': color = (0, 255, 0)
+                        elif s_char == 'I': color = (0, 0, 255)
+                        elif s_char == 'NPC': color = (255, 255, 0)
+                        elif s_char == 'S': color = (0, 0, 255) # Blue for Static NPCs
+                        pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

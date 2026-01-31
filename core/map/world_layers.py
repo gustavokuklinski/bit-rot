@@ -371,7 +371,7 @@ def check_for_layer_teleport(game):
         
     tile_id = current_map_data[tile_y][tile_x]
     
-    match = re.match(r'\[(\d)\]', tile_id)
+    match = re.match(r'\[?(?:L)?(\d+)\]?', tile_id)
     
     if match:
         target_layer = int(match.group(1))

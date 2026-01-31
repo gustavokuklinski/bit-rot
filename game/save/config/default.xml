@@ -12,7 +12,7 @@
         <zoom_near value="6.0" name="Zoom max near (Default: 6.0)"/>
     </game>
     <map>
-        <map_chunks value="2" name="Max map chunks (Default: 2)"/>
+        <map_chunks value="3" name="Max map chunks (Default: 2)"/>
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
