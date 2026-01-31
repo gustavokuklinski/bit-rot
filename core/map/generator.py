@@ -1040,48 +1040,52 @@ class ProceduralGenerator:
         return layers
 
     def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
+        is_cave = 'cave' in tmpl_name.lower()
         road_tile = 'asphalt_01'
-        # Lot -> Sand
-        lot_m = 2
-        for ry in range(ty-lot_m, ty+th+lot_m):
-            for rx in range(tx-lot_m, tx+tw+lot_m):
-                if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
-                    layers['ground'][ry][rx] = sand_tile
-                    occupied_mask[ry][rx] = 1
         
-        # Driveway
-        bx, by = tx + tw // 2, ty + th // 2
-        
-        def draw_secondary_road(start_x, start_y, target_x, target_y):
-            # Simple Manhattan connector for driveway
-            cur_x, cur_y = start_x, start_y
-            while cur_x != target_x or cur_y != target_y:
-                if cur_x < target_x: cur_x += 1
-                elif cur_x > target_x: cur_x -= 1
-                elif cur_y < target_y: cur_y += 1
-                elif cur_y > target_y: cur_y -= 1
-                
-                if 0<=cur_x<w and 0<=cur_y<h:
-                     if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != self.water_tile:
-                         layers['ground'][cur_y][cur_x] = sand_tile
-                         occupied_mask[cur_y][cur_x] = 1
-
-        if (tw > 30 or th > 30) and not is_building2:
-            draw_secondary_road(bx, by, cx, cy)
-        else:
-            x_s, x_e = min(cx, bx), max(cx, bx)
-            for rx in range(x_s, x_e + 1): 
-                for off in range(2): 
-                    yy = cy + off
-                    if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=self.water_tile: 
-                        layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+        # Only generate sand lots and driveways if NOT a cave
+        if not is_cave:
+            # Lot -> Sand
+            lot_m = 2
+            for ry in range(ty-lot_m, ty+th+lot_m):
+                for rx in range(tx-lot_m, tx+tw+lot_m):
+                    if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                        layers['ground'][ry][rx] = sand_tile
+                        occupied_mask[ry][rx] = 1
             
-            y_s, y_e = min(cy, by), max(cy, by)
-            for ry in range(y_s, y_e + 1):
-                for off in range(2): 
-                    xx = bx + off
-                    if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=self.water_tile: 
-                        layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+            # Driveway
+            bx, by = tx + tw // 2, ty + th // 2
+            
+            def draw_secondary_road(start_x, start_y, target_x, target_y):
+                # Simple Manhattan connector for driveway
+                cur_x, cur_y = start_x, start_y
+                while cur_x != target_x or cur_y != target_y:
+                    if cur_x < target_x: cur_x += 1
+                    elif cur_x > target_x: cur_x -= 1
+                    elif cur_y < target_y: cur_y += 1
+                    elif cur_y > target_y: cur_y -= 1
+                    
+                    if 0<=cur_x<w and 0<=cur_y<h:
+                        if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != self.water_tile:
+                            layers['ground'][cur_y][cur_x] = sand_tile
+                            occupied_mask[cur_y][cur_x] = 1
+
+            if (tw > 30 or th > 30) and not is_building2:
+                draw_secondary_road(bx, by, cx, cy)
+            else:
+                x_s, x_e = min(cx, bx), max(cx, bx)
+                for rx in range(x_s, x_e + 1): 
+                    for off in range(2): 
+                        yy = cy + off
+                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=self.water_tile: 
+                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                
+                y_s, y_e = min(cy, by), max(cy, by)
+                for ry in range(y_s, y_e + 1):
+                    for off in range(2): 
+                        xx = bx + off
+                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=self.water_tile: 
+                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
         
         self._blit_template(layers, tmpl, tx, ty, w, h)
         placed_rects.append(pygame.Rect(tx, ty, tw, th))
