@@ -109,6 +109,15 @@ def manage_dynamic_npcs(game):
                     break
             
             if not too_crowded:
+                # [NEW] Optional Check: Ensure we don't spawn dynamically on invalid tiles if we are on L2
+                if game.current_layer_index == 2:
+                    tx, ty = int(px // TILE_SIZE), int(py // TILE_SIZE)
+                    tile = game.map_manager.get_tile_at(tx, ty)
+                    if not tile: continue
+                    t_name = tile.get('name', '').lower()
+                    if 'cave_l2' not in t_name and 'path' not in t_name and 'floor' not in t_name:
+                        continue
+
                 npc = NPC(px, py, game)
                 game.npcs.add(npc)
                 current_count += 1
@@ -124,7 +133,57 @@ def spawn_static_npcs(game, building_tiles):
                 npc = NPC(px, py, game, is_static=True)
                 game.npcs.add(npc)
 
-def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128):
+def spawn_l2_population(game, count=10):
+    """
+    [NEW] Spawns entities (NPCs and Zombies) randomly on valid L2 tiles.
+    Used to populate Map_L2 correctly, avoiding void spawns.
+    """
+    if not game.map_data: return
+    
+    map_h = len(game.map_data)
+    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    
+    npc_count = 0
+    zombie_count = 0
+    target_npcs = 3
+    target_zombies = count
+    
+    attempts = 0
+    max_attempts = 1000
+    
+    while (npc_count < target_npcs or zombie_count < target_zombies) and attempts < max_attempts:
+        attempts += 1
+        rx = random.randint(0, map_w - 1)
+        ry = random.randint(0, map_h - 1)
+        
+        tile = game.map_manager.get_tile_at(rx, ry)
+        if not tile: continue
+        
+        # Validation: Only Cave_L2 or Pathways
+        t_name = tile.get('name', '').lower()
+        if 'cave_l2' not in t_name and 'path' not in t_name and 'floor' not in t_name:
+            continue
+            
+        # Check occupancy
+        px, py = rx * TILE_SIZE, ry * TILE_SIZE
+        rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+        
+        if any(ob.colliderect(rect) for ob in game.obstacles): continue
+        
+        # Spawn NPC
+        if npc_count < target_npcs:
+            npc = NPC(px, py, game, is_static=False) # Free roaming
+            game.npcs.add(npc)
+            npc_count += 1
+            continue
+            
+        # Spawn Zombie
+        if zombie_count < target_zombies:
+            zombie = Zombie.create_random(px, py)
+            game.zombies.append(zombie)
+            zombie_count += 1
+
+def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
     zombies = []
     SAFE_RADIUS_TILES = 1  # Changed from 45 to 15 to allow spawning at player birth chunk
     safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
@@ -203,6 +262,21 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
             spawn_spot_px = _find_spawn_spot_near(pos, occupied_tiles, map_width_px, map_height_px)
             
             if spawn_spot_px:
+                # [NEW] Layer 2 Validation - Ensure zombies only spawn on Cave_L2 or Pathways
+                if game and game.current_layer_index == 2:
+                    gx = int(spawn_spot_px[0] // TILE_SIZE)
+                    gy = int(spawn_spot_px[1] // TILE_SIZE)
+                    tile = game.map_manager.get_tile_at(gx, gy)
+                    
+                    is_valid = False
+                    if tile:
+                        t_name = tile.get('name', '').lower()
+                        if 'cave_l2' in t_name or 'path' in t_name or 'floor' in t_name:
+                             is_valid = True
+                    
+                    if not is_valid:
+                        continue # Skip this spot
+
                 zombie = Zombie.create_random(spawn_spot_px[0], spawn_spot_px[1])
                 zombies.append(zombie)
             else:

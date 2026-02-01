@@ -32,7 +32,7 @@ from core.map.tile_manager import TileManager
 from core.map.map_manager import MapManager
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.entities.npc.npc import NPC
-from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies, manage_dynamic_npcs
+from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population
 from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
 from core.map.world_time import WorldTime
 from core.ui.mobile_modal import draw_mobile_modal
@@ -1100,10 +1100,13 @@ class Game:
 
                     elif char.strip() == 'S':
                         px, py = x * TILE_SIZE, y * TILE_SIZE
-                        # Instantiate directly (is_static=True)
                         npc = NPC(px, py, self, is_static=True)
                         self.npcs.add(npc)
-        
+
+        if self.current_layer_index == 2:
+            self.logger.info("Initializing L2 (Cave) Population...")
+            spawn_l2_population(self, count=20)
+
         if self.player_spawn:
             self.logger.info(f"Player spawn point found at {self.player_spawn}. Setting player position.")
             self.player.x, self.player.y = self.player_spawn
@@ -1145,7 +1148,8 @@ class Game:
                 map_width_px=self.map_width_pixels,
                 map_height_px=self.map_height_pixels,
                 player=self.player, # Pass player for Safe Radius check (15 tiles)
-                obstacle_grid=getattr(self, 'cached_obstacle_grid', None)
+                obstacle_grid=getattr(self, 'cached_obstacle_grid', None),
+                game=self
              )
              self.zombies.extend(initial_zombies)
              self.layer_zombies[self.current_layer_index] = self.zombies[:]

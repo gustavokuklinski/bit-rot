@@ -1,3 +1,5 @@
+# core/map/generator.py
+
 import os
 import random
 import csv
@@ -349,6 +351,11 @@ class ProceduralGenerator:
         self._connect_l2_drunkards(global_layers_l2)
         # -----------------------------------------------------------------
 
+        # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
+        print("Populating L2 Spawns (80% Pathways, 20% Buildings)...")
+        self._populate_l2_spawns(global_layers_l2)
+        # -------------------------------------------
+
         # --- RENDER COMPLETE L2 MAP ---
         # Now that pathways are generated, we render the FULL L2 map
         print("Rendering global world map L2 with pathways...")
@@ -383,6 +390,94 @@ class ProceduralGenerator:
             print(f"Error saving map images: {e}")
 
         return "map_L1_world_map.csv"
+
+    def _populate_l2_spawns(self, layers):
+        """
+        Populates Layer 2 with Zombies and Static NPCs.
+        Rules:
+          - 80% Zombies on Pathways (dirty/asphalt).
+          - 20% Zombies in Buildings (sand/wood/tiles).
+          - No spawning inside walls (checks valid neighbors).
+          - Adds Static NPCs ('S').
+        """
+        ground = layers.get('ground')
+        base = layers.get('base')
+        spawn = layers.get('spawn')
+        
+        if not ground or not base or not spawn: return
+        
+        h = len(ground)
+        w = len(ground[0])
+        
+        pathway_candidates = []
+        building_candidates = []
+        
+        # 1. Categorize Candidates
+        for y in range(2, h-2):
+            for x in range(2, w-2):
+                # Basic validity: Floor exists, Base empty, No existing spawn
+                if ground[y][x] == ' ' or ground[y][x] == '@': continue
+                if base[y][x] != ' ': continue
+                if spawn[y][x] != ' ': continue
+                
+                # STUCK FIX: Check 4 neighbors to ensure we aren't inside a thick wall or tight corner
+                # We require at least 4 empty neighbors in the BASE layer.
+                empty_neighbors = 0
+                for dy, dx in [(-1,0), (1,0), (0,-1), (0,1)]:
+                    if base[y+dy][x+dx] == ' ':
+                        empty_neighbors += 1
+                
+                if empty_neighbors < 4: 
+                    continue # Skip this tile, too tight
+                
+                g_char = ground[y][x].lower()
+                
+                if 'dirty' in g_char or 'asphalt' in g_char or 'path' in g_char:
+                    pathway_candidates.append((x, y))
+                else:
+                    # Assumed to be building floor (sand, wood, tiles, etc.)
+                    building_candidates.append((x, y))
+
+        # 2. Calculate Targets
+        # Estimate total zombies based on map size
+        total_zombies = (w * h) // 1000 # Rough density estimate
+        total_zombies = max(50, min(total_zombies, 2000))
+        
+        target_pathway = int(total_zombies * 0.80)
+        target_building = int(total_zombies * 0.20)
+        
+        # 3. Spawn Zombies on Pathways (80%)
+        if pathway_candidates:
+            count = min(len(pathway_candidates), target_pathway)
+            chosen = random.sample(pathway_candidates, count)
+            for (zx, zy) in chosen:
+                spawn[zy][zx] = 'Z'
+                
+        # 4. Spawn Zombies in Buildings (20%)
+        if building_candidates:
+            count = min(len(building_candidates), target_building)
+            chosen = random.sample(building_candidates, count)
+            for (zx, zy) in chosen:
+                spawn[zy][zx] = 'Z'
+
+        # 5. Spawn Static NPCs ('S') - Rare
+        # Try to place a few in buildings and a few on paths
+        if building_candidates:
+            npc_count = max(2, len(building_candidates) // 150)
+            npc_chosen = random.sample(building_candidates, min(len(building_candidates), npc_count))
+            for (nx, ny) in npc_chosen:
+                if spawn[ny][nx] == ' ': # Don't overwrite zombie
+                    spawn[ny][nx] = 'S'
+
+        if pathway_candidates:
+            npc_count = max(2, len(pathway_candidates) // 400)
+            npc_chosen = random.sample(pathway_candidates, min(len(pathway_candidates), npc_count))
+            for (nx, ny) in npc_chosen:
+                if spawn[ny][nx] == ' ':
+                    spawn[ny][nx] = 'S'
+
+        print(f"  > Spawning Report L2: {target_pathway} Zombies on Paths, {target_building} Zombies in Buildings.")
+
 
     def _render_full_map_to_surface(self, bg_surf, heat_surf, layers):
         """Renders the entire global map dictionary to the surface."""
@@ -522,12 +617,16 @@ class ProceduralGenerator:
                         is_core = (abs(dx) <= 1 and abs(dy) <= 1)
                         
                         if is_core:
-                            # Core Path: Overwrite void or existing border
-                            if ground[ny][nx] == ' ' or ground[ny][nx] == border_tile:
+                            # Core Path: Only modify if tile is currently VOID (' ') or BORDER ('@')
+                            # This preserves existing building tiles (like wood, sand, etc.)
+                            current_tile = ground[ny][nx]
+                            if current_tile == ' ' or current_tile == border_tile:
                                 ground[ny][nx] = path_tile
-                            # Clear walls in path
-                            if base[ny][nx] != ' ':
-                                base[ny][nx] = ' '
+                                
+                                # Only clear walls/objects if we are creating a NEW path on void.
+                                # If we are walking over an existing template, we leave the base (walls) alone.
+                                if base[ny][nx] != ' ':
+                                    base[ny][nx] = ' '
                         else:
                             # Border Ring: Only place on void
                             if ground[ny][nx] == ' ':
@@ -963,6 +1062,9 @@ class ProceduralGenerator:
                             tmpl_l2 = self.templates[found_l2_key]
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                             
+                            # NEW: Apply border
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2['width'], tmpl_l2['height'], w, h)
+                            
                             # UPDATE L2 MASK to prevent random spawn overlapping linked spawn
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -991,6 +1093,9 @@ class ProceduralGenerator:
                         if found_l2_key:
                             tmpl_l2 = self.templates[found_l2_key]
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                            
+                            # NEW: Apply border
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2['width'], tmpl_l2['height'], w, h)
                             
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -1062,6 +1167,10 @@ class ProceduralGenerator:
                     if not collision:
                         # Place it
                         self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
+                        
+                        # NEW: Apply border
+                        self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+
                         # Mark mask
                         for ly in range(ty, ty + l2_h):
                             for lx in range(tx, tx + l2_w):
@@ -1071,6 +1180,43 @@ class ProceduralGenerator:
                         break
 
         return layers
+
+    def _apply_l2_border(self, layers, tx, ty, tw, th, mw, mh):
+        ground = layers.get('ground_L2')
+        if not ground: return
+        
+        padding = 4
+        border_tile = '@'
+        padding_tile = 'dirty_01'
+        
+        # Determine bounds
+        x1 = max(0, tx - padding)
+        y1 = max(0, ty - padding)
+        x2 = min(mw, tx + tw + padding)
+        y2 = min(mh, ty + th + padding)
+        
+        for y in range(y1, y2):
+            for x in range(x1, x2):
+                # If outside the building rectangle
+                if not (tx <= x < tx + tw and ty <= y < ty + th):
+                    # Only overwrite void
+                    if ground[y][x] == ' ':
+                        # Identify outermost border of the 4-tile padding
+                        # The bounding box of the padding area is [x1, x2) and [y1, y2)
+                        # Actually, we should check distance from the template rect?
+                        # Simplest: The bounding box indices are min_x = tx-4, max_x = tx+tw+4
+                        # If x is at min_x or max_x-1, or y is at min_y or max_y-1, it is border.
+                        
+                        is_border = False
+                        if x == tx - padding or x == tx + tw + padding - 1:
+                            is_border = True
+                        if y == ty - padding or y == ty + th + padding - 1:
+                            is_border = True
+                        
+                        if is_border:
+                            ground[y][x] = border_tile
+                        else:
+                            ground[y][x] = padding_tile
 
     def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
         is_cave = 'cave' in tmpl_name.lower()

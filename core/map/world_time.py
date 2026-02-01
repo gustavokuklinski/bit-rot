@@ -1,3 +1,5 @@
+# core/map/world_time.py
+
 import pygame
 import math
 from core.data.config import *
@@ -48,6 +50,24 @@ class WorldTime:
 
     def update(self):
         """Runs the day/night state machine based on specific clock times."""
+        
+        # [NEW] Force Eternal Night on Layer 2 (Caves)
+        if self.game.current_layer_index == 2:
+            self.state = "NIGHT"
+            self.current_ambient_light = self.night_ambient
+            self.game.player_view_radius = self.night_radius
+            
+            # Still update time counter in background, but visuals are locked
+            current_real_time = pygame.time.get_ticks()
+            base_delta = current_real_time - self.last_update_time
+            multiplier = self.game.fast_forward_speed if getattr(self.game, 'is_fast_forwarding', False) else 1.0
+            self.game_time_ms += base_delta * multiplier
+            self.last_update_time = current_real_time
+            if self.game_time_ms >= self.day_length_ms:
+                self.game_time_ms %= self.day_length_ms
+                self.day_count += 1
+            return
+
         current_real_time = pygame.time.get_ticks()
         
         base_delta = current_real_time - self.last_update_time
