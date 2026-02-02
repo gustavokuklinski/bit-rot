@@ -351,6 +351,10 @@ class ProceduralGenerator:
         self._connect_l2_drunkards(global_layers_l2)
         # -----------------------------------------------------------------
 
+        # --- DECORATE PATHWAYS (VEGETATION) ---
+        self._decorate_l2_pathways(global_layers_l2)
+        # --------------------------------------
+
         # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
         print("Populating L2 Spawns (80% Pathways, 20% Buildings)...")
         self._populate_l2_spawns(global_layers_l2)
@@ -478,6 +482,25 @@ class ProceduralGenerator:
 
         print(f"  > Spawning Report L2: {target_pathway} Zombies on Paths, {target_building} Zombies in Buildings.")
 
+    def _decorate_l2_pathways(self, layers):
+        ground = layers.get('ground')
+        base = layers.get('base')
+        if not ground or not base: return
+
+        h = len(ground)
+        w = len(ground[0])
+        
+        veg_options = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_stone', 'garden_tree_11']
+
+        print("Decorating L2 Pathways with vegetation...")
+
+        for y in range(h):
+            for x in range(w):
+                # Place only on dirty_01 (Pathways & Padding) and where base is empty
+                if ground[y][x] == 'dirty_01' and base[y][x] == ' ':
+                    # 15% chance to place random vegetation
+                    if random.random() < 0.15:
+                        base[y][x] = random.choice(veg_options)
 
     def _render_full_map_to_surface(self, bg_surf, heat_surf, layers):
         """Renders the entire global map dictionary to the surface."""
@@ -1145,7 +1168,7 @@ class ProceduralGenerator:
         # 10. Random L2 Spawning (Independent of L1)
         if self.l2_templates:
             # Try to spawn 3 random L2 templates per chunk
-            for _ in range(MAP_CHUNKS * 2):
+            for _ in range(MAP_CHUNKS):
                 l2_name = random.choice(self.l2_templates)
                 l2_tmpl = self.templates[l2_name]
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
