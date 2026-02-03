@@ -600,7 +600,7 @@ class Player:
         is_active_resting = (tile and tile.get('rest')) or self.is_resting
 
         if not self.is_sleeping and not is_active_resting:
-            self.tireness = min(self.max_tireness, self.tireness - 0.005)
+            self.tireness = min(self.max_tireness, self.tireness - 0.002)
 
         if not self.is_sleeping and is_active_resting:
             if self.stamina < self.max_stamina:

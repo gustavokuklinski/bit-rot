@@ -49,10 +49,10 @@
         </stat>
 
         <stat id="tireness">
-            <param name="night_decay" value="-0.03" />
+            <param name="night_decay" value="-0.003" />
             <param name="day_recovery" value="0.002" />
-            <param name="stamina_penalty" value="-0.01" />
-            <param name="run_penalty" value="-0.02" />
+            <param name="stamina_penalty" value="-0.001" />
+            <param name="run_penalty" value="-0.002" />
         </stat>
 
         <stat id="anxiety">

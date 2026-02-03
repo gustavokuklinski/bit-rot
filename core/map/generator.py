@@ -429,14 +429,17 @@ class ProceduralGenerator:
         w = len(ground[0])
         
         pathway_candidates = []
-        
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
         # 1. Categorize Candidates (Pathways ONLY)
         for y in range(2, h-2):
             for x in range(2, w-2):
                 # Basic validity: Floor exists, Base empty, No existing spawn
-                if ground[y][x] == ' ' or ground[y][x] == '@': continue
-                if base[y][x] != ' ': continue
-                if spawn[y][x] != ' ': continue
+                base_tile = layers['base'][y][x]
+                if base_tile != ' ':
+                    if base_tile in defs and defs[base_tile].get('is_obstacle', False):
+                        continue
+                    if base_tile == '@': # Explicitly skip border tiles
+                        continue
                 
                 # STUCK FIX: Check 4 neighbors
                 empty_neighbors = 0
@@ -627,11 +630,11 @@ class ProceduralGenerator:
             steps += 1
             
             # Dig with border (Brush size 3x3 for path, 5x5 for border ring)
-            for dy in range(-2, 3):
-                for dx in range(-2, 3):
+            for dy in range(-3, 4):
+                for dx in range(-3, 4):
                     nx, ny = cx + dx, cy + dy
                     if 0 <= nx < w and 0 <= ny < h:
-                        is_core = (abs(dx) <= 1 and abs(dy) <= 1)
+                        is_core = (abs(dx) <= 2 and abs(dy) <= 2)
                         
                         if is_core:
                             # Core Path: Only modify if tile is currently VOID (' ') or BORDER ('@')
@@ -1403,18 +1406,21 @@ class ProceduralGenerator:
         base = layers['base_L2']
         spawn = layers['spawn_L2']
         
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
+
         for y in range(h):
             for x in range(w):
                 if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
                 
-                # Check occupancy
-                if base[y][x] != ' ': continue
+                b_char = base[y][x]
+                if b_char != ' ':
+                    if b_char in defs and defs[b_char].get('is_obstacle', False): continue
+                    if b_char == '@': continue
+
                 if spawn[y][x] != ' ': continue
                 
                 g_char = ground[y][x]
-                if g_char == ' ': continue # Must have a floor
-                if g_char == '@': continue # Must not be border
-                if g_char == 'dirty_01': continue # Skip outside padding/pathways (optional, usually want inside)
+                if g_char == ' ' or g_char == '@': continue # Must not be void or border
                 
                 potential_tiles.append((x, y))
 
