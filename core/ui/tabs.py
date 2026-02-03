@@ -56,11 +56,10 @@ class Tabs:
 
         current_active_label = self.modal.get('active_tab', 'NONE SET')
 
+        # 1. Calculate Rects First
         for i, tab in enumerate(self.tabs_data):
             # Calculate width for this specific tab
-            # Distribute remaining width to ensure all tabs fit perfectly
             tab_width = self.base_modal.modal_w // total_tabs
-            # Add 1 pixel to the first few tabs to make up for integer division rounding
             if i < self.base_modal.modal_w % total_tabs:
                 tab_width += 1
 
@@ -68,29 +67,36 @@ class Tabs:
             self.tab_rects.append(tab_rect)
             current_x += tab_width
 
-            # Draw tab background - Check the logic here carefully
-            is_active = (current_active_label == tab['label']) # Use the variable fetched before the loop
+        # 2. Draw Inactive Tabs
+        for i, tab in enumerate(self.tabs_data):
+            if tab['label'] != current_active_label:
+                self._draw_single_tab(tab, self.tab_rects[i], is_active=False)
 
-
-            if is_active: # Use the boolean variable
-                pygame.draw.rect(self.surface, GRAY_60, tab_rect) # Active color
-            else:
-                pygame.draw.rect(self.surface, DARK_GRAY, tab_rect) # Inactive color
-            pygame.draw.rect(self.surface, WHITE, tab_rect, 1) # Border
-
-            # Draw icon or fallback text
-            if tab.get('icon'): # Check if icon exists and loaded successfully
-                icon_rect = tab['icon'].get_rect(center=tab_rect.center)
-                self.surface.blit(tab['icon'], icon_rect)
-            else:
-                # Fallback to text if icon fails to load or not provided
-                text = font_small.render(tab['label'], True, WHITE)
-                text_rect = text.get_rect(center=tab_rect.center)
-                self.surface.blit(text, text_rect)
+        # 3. Draw Active Tab (Last, so it stays on top)
+        for i, tab in enumerate(self.tabs_data):
+            if tab['label'] == current_active_label:
+                self._draw_single_tab(tab, self.tab_rects[i], is_active=True)
 
         # Store calculated rects for click detection
         self.modal['tab_rects'] = self.tab_rects
-        # print(f"Stored tab_rects for modal {self.modal.get('id', 'N/A')}: {self.tab_rects}") # DEBUG
+
+    def _draw_single_tab(self, tab, rect, is_active):
+        if is_active: 
+            pygame.draw.rect(self.surface, GRAY_60, rect) # Active color
+        else:
+            pygame.draw.rect(self.surface, DARK_GRAY, rect) # Inactive color
+        
+        pygame.draw.rect(self.surface, WHITE, rect, 1) # Border
+
+        # Draw icon or fallback text
+        if tab.get('icon'): 
+            icon_rect = tab['icon'].get_rect(center=rect.center)
+            self.surface.blit(tab['icon'], icon_rect)
+        else:
+            # Fallback to text if icon fails to load or not provided
+            text = font_small.render(tab['label'], True, WHITE)
+            text_rect = text.get_rect(center=rect.center)
+            self.surface.blit(text, text_rect)
 
     def handle_input(self):
         # This method is no longer needed as input will be handled in mouse.py

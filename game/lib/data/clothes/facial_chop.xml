@@ -1,0 +1,7 @@
+<cloth name="Chop" type="cloth" id="facial" builder="true">
+    <properties>
+        <defence value="0" />
+        <sprite file="facial_chop.png" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

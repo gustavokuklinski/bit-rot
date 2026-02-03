@@ -62,7 +62,8 @@ class Player:
         self.traits = data.get('traits', [])
         
         self.known_recipes = data.get('known_recipes', [])
-        
+        self.dialog_history = data.get('dialog_history', [])
+
         if self.traits:
             for trait_id in self.traits:
                 trait_def = TRAIT_DEFINITIONS.get(trait_id)
@@ -81,7 +82,7 @@ class Player:
         self.last_decay_time = time.time()
         self.base_inventory_slots = 5
         
-        self.clothes_slots =  ['head','legs', 'feet',  'body' ,'arms', 'hands']
+        self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
@@ -155,7 +156,11 @@ class Player:
         self.health = (total_value / max_possible) * 100.0
 
     def get_vulnerable_part(self):
-        slot_map = {'hand': 'hands'} 
+        slot_map = {
+            'hand': 'hands',
+            'facial': 'facial_hair', 
+            'utility': 'util'
+        } 
         candidates = []
         lowest_def = float('inf')
 
@@ -803,54 +808,59 @@ class Player:
             return None, None, None, None
         ammo_type_needed = weapon.ammo_type
         
+        # Helper for recursive search
+        def search_recursive(container_item):
+            if not hasattr(container_item, 'inventory') or not container_item.inventory:
+                return None
+            
+            for i, item in enumerate(container_item.inventory):
+                if item:
+                    # Check match
+                    if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
+                        return item, 'container', i, container_item
+                    
+                    # Recursive check
+                    result = search_recursive(item)
+                    if result:
+                        return result
+            return None
+
         # 1. Search Belt (Direct and Nested)
         for i, item in enumerate(self.belt):
             if item:
                 # Direct check
-                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'belt', i, None
-                # Nested check (if belt item is a container)
-                if hasattr(item, 'inventory') and item.inventory:
-                     for sub_i, sub_item in enumerate(item.inventory):
-                         if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
-                             return sub_item, 'container', sub_i, item
+                # Nested check
+                res = search_recursive(item)
+                if res: return res
 
         # 2. Search Inventory (Direct and Nested)
         for i, item in enumerate(self.inventory):
             if item:
                 # Direct check
-                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'inventory', i, None
-                # Nested check (Containers inside inventory)
-                if hasattr(item, 'inventory') and item.inventory:
-                    for sub_i, sub_item in enumerate(item.inventory):
-                        if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
-                            return sub_item, 'container', sub_i, item
+                # Nested check
+                res = search_recursive(item)
+                if res: return res
         
         # 3. Search Gear/Clothes (Direct and Nested)
         for slot, item in self.clothes.items():
             if item:
-                # Direct check (e.g. if the gear itself is ammo)
-                if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
+                # Direct check
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'gear', slot, None
-                # Nested check (Items inside Vest/Pants pockets)
-                if hasattr(item, 'inventory') and item.inventory:
-                     for sub_i, sub_item in enumerate(item.inventory):
-                         if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
-                             return sub_item, 'container', sub_i, item
+                # Nested check
+                res = search_recursive(item)
+                if res: return res
 
         # 4. Search Backpack (Direct and Nested)
-        if self.backpack and hasattr(self.backpack, 'inventory'):
-            for i, item in enumerate(self.backpack.inventory):
-                 if item:
-                     # Direct check inside backpack
-                     if item.item_type.startswith('consumable') and getattr(item, 'load', 0) > 0 and item.name == ammo_type_needed:
-                        return item, 'container', i, self.backpack
-                     # Nested check (Containers inside backpack)
-                     if hasattr(item, 'inventory') and item.inventory:
-                        for sub_i, sub_item in enumerate(item.inventory):
-                            if sub_item and sub_item.item_type.startswith('consumable') and getattr(sub_item, 'load', 0) > 0 and sub_item.name == ammo_type_needed:
-                                return sub_item, 'container', sub_i, item
+        if self.backpack:
+            # Check inside backpack
+            if hasattr(self.backpack, 'inventory'):
+                 res = search_recursive(self.backpack)
+                 if res: return res
 
         return None, None, None, None
 
@@ -1659,34 +1669,65 @@ class Player:
             pass
 
     def find_water_to_auto_drink(self):
+        # Helper for recursive search
+        def search_recursive(container_item):
+            if not hasattr(container_item, 'inventory') or not container_item.inventory:
+                return None
+            
+            for i, item in enumerate(container_item.inventory):
+                if item:
+                    # Check match
+                    if 'Water' in item.name and (item.load or 0) > 0:
+                        return item, 'container', i, container_item
+                    
+                    # Recursive check
+                    result = search_recursive(item)
+                    if result:
+                        return result
+            return None
+
+        # 1. Search Belt
         for i, item in enumerate(self.belt):
-            if item and 'Water' in item.name and item.load > 0:
-                print(f"Found water in belt slot {i}") 
-                return item, 'belt', i, None 
+            if item:
+                if 'Water' in item.name and (item.load or 0) > 0:
+                    print(f"Found water in belt slot {i}") 
+                    return item, 'belt', i, None 
+                
+                res = search_recursive(item)
+                if res: 
+                    print(f"Found water nested in belt slot {i}")
+                    return res
 
+        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
-            if item and 'Water' in item.name and item.load > 0:
-                print(f"Found water in inventory slot {i}") 
-                return item, 'inventory', i, None 
+            if item:
+                if 'Water' in item.name and (item.load or 0) > 0:
+                    print(f"Found water in inventory slot {i}") 
+                    return item, 'inventory', i, None 
+                
+                res = search_recursive(item)
+                if res: 
+                    print(f"Found water nested in inventory slot {i}")
+                    return res
 
+        # 3. Search Gear
         for slot, item in self.clothes.items():
-            if item and 'Water' in item.name and item.load > 0:
-                print(f"Found water in gear slot {slot}")
-                return item, 'gear', slot, None
+            if item:
+                if 'Water' in item.name and (item.load or 0) > 0:
+                    print(f"Found water in gear slot {slot}")
+                    return item, 'gear', slot, None
+                
+                res = search_recursive(item)
+                if res:
+                    print(f"Found water nested in gear slot {slot}") 
+                    return res
 
-        for i, container_item in enumerate(self.inventory):
-            if container_item and hasattr(container_item, 'inventory') and container_item.inventory:
-                print(f"Checking inside container '{container_item.name}' in inventory slot {i}") 
-                for sub_index, sub_item in enumerate(container_item.inventory):
-                    if sub_item and 'Water' in sub_item.name and sub_item.load > 0:
-                        print(f"Found water inside '{container_item.name}' at sub-index {sub_index}")
-                        return sub_item, 'container', sub_index, container_item
-
-        if self.backpack and hasattr(self.backpack, 'inventory'):
-            for i, item in enumerate(self.backpack.inventory):
-                if item and 'Water' in item.name and item.load > 0:
-                    print(f"Found water in backpack slot {i}") 
-                    return item, 'container', i, self.backpack
+        # 4. Search Backpack
+        if self.backpack:
+            res = search_recursive(self.backpack)
+            if res:
+                 print(f"Found water in backpack")
+                 return res
 
         print("No water found for auto-drink.") 
         return None, None, None, None

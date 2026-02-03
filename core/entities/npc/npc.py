@@ -247,7 +247,7 @@ class NPC(Zombie):
 
     def _assign_random_clothes(self):
         self.clothes = {}
-        slots = ['legs', 'body', 'head']
+        slots = ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
         for slot in slots:
             if slot == 'head' and random.random() < 0.3: continue 
             available = ZOMBIE_CLOTHES_POOL.get(slot, [])
@@ -690,7 +690,9 @@ class NPC(Zombie):
                 for opt in node.findall('options'):
                     question = opt.get('player_question')
                     answer = opt.get('npc_answer')
-                    
+                    req_level = opt.get('req_level')
+                    gain_xp = opt.get('gain_xp')
+                    dialog_type = opt.get('dialog_type')
                     # Read priority (default 100) and unlock_flag
                     try:
                         priority = int(opt.get('priority', '100'))
@@ -710,7 +712,11 @@ class NPC(Zombie):
                             'unlock_flag': unlock_flag,
                             'npc_state_friendly': npc_state_friendly, # Store raw string
                             'npc_state_static': npc_state_static,     # Store raw string
-                            'award_item': award_item
+                            'award_item': award_item,
+                            'req_level': req_level,
+                            'gain_xp': gain_xp,
+                            'dialog_type': dialog_type,
+                            'node_id': node_id
                         })
                     
         except Exception as e:
@@ -734,29 +740,51 @@ class NPC(Zombie):
         # Since we now refresh the menu dynamically, using a Set (unordered) 
         # would cause questions to jump around randomly every time we go back.
         sorted_nodes = sorted(list(active_nodes))
-        
+        player_lucky = self.game.player.progression.get_lucky(self.game.player)
+
         # 3. Generate one option per active node
         for node_id in sorted_nodes:
             node_options = NPC.NPC_DIALOGS.get(node_id)
-            if not node_options:
-                continue
+
+            if not node_options: continue
                 
-            # Weighted Random Selection
-            total_priority = sum(opt['priority'] for opt in node_options)
-            if total_priority <= 0: continue
-            
-            pick = random.randint(1, total_priority)
-            current = 0
-            selected_opt = None
-            
+            # [NEW] Filter options based on Lucky level and "once" status
+            valid_options = []
             for opt in node_options:
-                current += opt['priority']
-                if pick <= current:
-                    selected_opt = opt.copy() 
-                    break
-            
-            if selected_opt:
-                options.append(selected_opt)
+                # Check dialog_type="once" (using a global game flag or player flag)
+                if opt.get('dialog_type') == 'once':
+                    dialog_key = f"{node_id}_{opt['q']}"
+                    if dialog_key in self.game.player.dialog_history: # Reusing known_recipes or similar set
+                        continue
+
+                # Check req_level="[lucky:3]"
+                req = opt.get('req_level')
+                if req and "[lucky:" in req:
+                    try:
+                        req_val = int(req.split(':')[1].replace(']', ''))
+                        if player_lucky < req_val:
+                            continue
+                    except: pass
+                
+                valid_options.append(opt)
+
+                if not valid_options: continue
+
+                # Weighted Random Selection from valid_options
+                total_priority = sum(opt['priority'] for opt in valid_options)
+                if total_priority <= 0: continue
+                
+                pick = random.randint(1, total_priority)
+                current = 0
+                selected_opt = None
+                for opt in valid_options:
+                    current += opt['priority']
+                    if pick <= current:
+                        selected_opt = opt.copy() 
+                        break
+                
+                if selected_opt:
+                    options.append(selected_opt)
             
         # 4. Format Text (Replacements)
         inv_str = ", ".join([i.name for i in self.inventory]) if self.inventory else "nothing"

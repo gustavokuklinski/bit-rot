@@ -1,9 +1,9 @@
-<cloth name="Military Jacket" type="cloth" id="arms">
+<cloth name="Military Vest" type="cloth" id="util">
     <properties>
         <defence value="5" />
-        <capacity value="5" />
+        <capacity value="4" />
         <durability min="1" max="100" />
-        <sprite file="military_jacket.png" />
+        <sprite file="military_vest.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

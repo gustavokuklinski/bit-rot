@@ -32,7 +32,6 @@ def check_recursive_containment(dragged_item, target_container):
     return False
 
 def handle_mouse_down(game, event, mouse_pos):
-    # ... (No changes in handle_mouse_down) ...
     if event.button == 1:
         if game.context_menu['active']:
             menu_clicked = False
@@ -74,6 +73,26 @@ def handle_mouse_down(game, event, mouse_pos):
                                 unlock_flag = selected_opt.get('unlock_flag')
                                 if unlock_flag:
                                     topmost_modal['npc'].unlock_node(unlock_flag)
+
+                                gain_raw = selected_opt.get('gain_xp')
+                                if gain_raw and "[lucky:" in gain_raw:
+                                    try:
+                                        # Parse "[lucky:30]" -> 30
+                                        val_str = gain_raw.split(':')[1].replace(']', '')
+                                        xp_amount = int(val_str)
+                                        # Add XP (can be negative)
+                                        game.player.progression.add_xp(game.player, 'lucky', xp_amount)
+                                    except Exception as e:
+                                        print(f"Error applying dialog XP: {e}")
+
+                                # [NEW] 1.2 Handle 'Once' Dialog History
+                                if selected_opt.get('dialog_type') == 'once':
+                                    node_id = selected_opt.get('node_id')
+                                    q_text = selected_opt.get('q')
+                                    if node_id and q_text:
+                                        dialog_key = f"{node_id}_{q_text}"
+                                        if dialog_key not in game.player.dialog_history:
+                                            game.player.dialog_history.append(dialog_key)
 
                                 # [CHANGED] 2. Handle State Changes
                                 npc_ref = topmost_modal['npc']
@@ -208,7 +227,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     if topmost_modal['instance'].handle_event(event): 
                         return
                 
-                if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle'] and 'tab_rects' in topmost_modal:
+                if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle', 'gear'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                         if tab_rect.collidepoint(mouse_pos):
                              tabs_data = topmost_modal.get('tabs_data', [])
@@ -357,6 +376,7 @@ def handle_mouse_up(game, event, mouse_pos):
                 # --- Vehicle Equipment Logic ---
                 for modal in reversed(game.modals):
                     if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Info':
+                        # ... (Vehicle Equipment Logic - Same as before) ...
                         if 'equipment_rects' in modal:
                             for slot_name, slot_rect in modal['equipment_rects'].items():
                                 if slot_rect.collidepoint(mouse_pos):
@@ -381,6 +401,7 @@ def handle_mouse_up(game, event, mouse_pos):
                
                 # --- Drop on BELT ---
                 for i_target in range(len(game.player.belt)):
+                    # ... (Belt Drop Logic - Same as before) ...
                     is_modal_slot = any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals))
                     is_hud_slot = get_belt_hud_slot_rect(i_target).collidepoint(mouse_pos)
 
@@ -447,6 +468,7 @@ def handle_mouse_up(game, event, mouse_pos):
                 for modal in reversed(game.modals):
                     if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
                         
+                        # ... (Inventory Modal Drop Logic - Same as before) ...
                         if modal.get('active_tab', 'Inventory') == 'Inventory':
                             # Backpack slot
                             backpack_slot_rect = get_backpack_slot_rect(modal['position'])
@@ -570,6 +592,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 if dropped_successfully: break
                         
                         elif modal.get('active_tab') in modal.get('container_mapping', {}):
+                            # ... (Generic Container in Inventory Modal Drop Logic) ...
                             container = modal['container_mapping'][modal['active_tab']]
                             
                             if container:
@@ -660,19 +683,17 @@ def handle_mouse_up(game, event, mouse_pos):
 
                         elif modal.get('active_tab') == 'Bag':
                             if game.player.backpack:
+                                # ... (Bag Tab Logic - Same as before) ...
                                 container = game.player.backpack
                                 if check_recursive_containment(game.dragged_item, container):
                                     print("Recursion detected: Cannot put the container inside itself.")
                                     dropped_successfully = False
                                     break
                                 
-                                # [ADDED] Liquid Restriction: Container Logic
-                                # 1. If Container allow_liquid=True, ONLY allow liquids.
-                                # 2. If Container allow_liquid=False, DO NOT allow liquids (spill).
                                 if getattr(container, 'allow_liquid', False):
                                     if not getattr(game.dragged_item, 'liquid', False):
                                         print(f"This {container.name} only accepts liquids.")
-                                        dropped_successfully = False # Prevent drop, do not destroy
+                                        dropped_successfully = False 
                                         break
                                 elif game.dragged_item.liquid:
                                     print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
@@ -744,59 +765,203 @@ def handle_mouse_up(game, event, mouse_pos):
                                 if dropped_successfully: break
                         
                     elif modal['type'] == 'gear' and modal['rect'].collidepoint(mouse_pos):
-                        if 'gear_slot_rects' in modal:
-                            for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                                if slot_rect.collidepoint(mouse_pos):
-                                    dragged_item = game.dragged_item
-                                    item_slot = getattr(dragged_item, 'slot', None)
-                                    if item_slot == 'hand': item_slot = 'hands'
+                        # [NEW] Check for Drop on Tab Header FIRST
+                        if not dropped_successfully and 'tab_rects' in modal:
+                            for i, tab_rect in enumerate(modal.get('tab_rects', [])):
+                                if tab_rect.collidepoint(mouse_pos):
+                                    tabs_data = modal.get('tabs_data', [])
+                                    if i < len(tabs_data):
+                                        target_label = tabs_data[i]['label']
                                         
-                                    if item_slot == slot_name:
+                                        # Switch active tab so user sees where it went
+                                        modal['active_tab'] = target_label
                                         
-                                        # [ADDED] Liquid Check for Gear
-                                        if dragged_item.liquid:
-                                            print(f"The {dragged_item.name} spills and is lost.")
-                                            dropped_successfully = True; break
-
-                                        if is_external_source:
-                                            # If coming from external (Nearby/Container), use Timer
-                                            item_in_slot = game.player.clothes.get(slot_name)
-                                            if item_in_slot:
-                                                print("Cannot swap items while equipping from external source.")
+                                        # If it's a container tab, try to add the item
+                                        target_container = modal.get('container_mapping', {}).get(target_label)
+                                        if target_container:
+                                            # Recursion Check
+                                            if check_recursive_containment(game.dragged_item, target_container):
+                                                print("Recursion detected.")
                                                 dropped_successfully = False
                                                 break
                                             
-                                            item_ref = dragged_item
-                                            def do_gear_equip():
-                                                game.player.clothes[slot_name] = item_ref
-                                            
-                                            game.player.start_action("Equipping", 1.0, do_gear_equip, xp_reward=0.5)
-                                            # Clear drag manually as we return early
-                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                            return
+                                            # Liquid Check
+                                            if getattr(target_container, 'allow_liquid', False):
+                                                if not getattr(game.dragged_item, 'liquid', False):
+                                                    print(f"This {target_container.name} only accepts liquids.")
+                                                    dropped_successfully = False
+                                                    break
+                                            elif getattr(game.dragged_item, 'liquid', False):
+                                                print("Liquid spills.")
+                                                dropped_successfully = True
+                                                break
 
-                                        item_in_slot = game.player.clothes.get(slot_name)
-                                        game.player.clothes[slot_name] = dragged_item
-                                        
-                                        if item_in_slot:
-                                            if type_orig == 'inventory' and 0 <= i_orig <= len(game.player.inventory):
-                                                game.player.inventory.insert(i_orig, item_in_slot)
-                                            elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
-                                                game.player.belt[i_orig] = item_in_slot
-                                            elif type_orig == 'backpack':
-                                                game.player.backpack = item_in_slot
-                                            
-                                            elif type_orig == 'gear':
-                                                game.player.clothes[i_orig] = item_in_slot
-                                            elif (type_orig == 'container' or type_orig == 'nearby') and container_obj:
-                                                 container_obj.inventory.insert(i_orig, item_in_slot)
+                                            # Try to add to container (Append Mode)
+                                            if len(target_container.inventory) < (target_container.capacity or 0):
+                                                 if is_external_source:
+                                                     item_ref = game.dragged_item
+                                                     def do_tab_loot():
+                                                         target_container.inventory.append(item_ref)
+                                                     game.player.start_action("Looting", 1.0, do_tab_loot, xp_reward=0.5)
+                                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                                     return
+                                                 else:
+                                                     target_container.inventory.append(game.dragged_item)
+                                                     dropped_successfully = True
                                             else:
-                                                game.player.inventory.append(item_in_slot)
+                                                print(f"{target_container.name} is full.")
+                                                dropped_successfully = False
                                         
-                                        dropped_successfully = True
-                                    else:
-                                        dropped_successfully = False 
+                                        # If dropped on 'Gear' tab (no container), just switch.
+                                        # Item stays dragged (bounces back) but tab changes.
+                                        break 
+                            
+                            # If we successfully dropped on a tab, exit
+                            if dropped_successfully:
+                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                return
+
+                        # [EXISTING] Slot Drop Logic
+                        active_tab = modal.get('active_tab', 'Gear')
+                        
+                        if active_tab == 'Gear':
+                            if 'gear_slot_rects' in modal:
+                                for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                                    if slot_rect.collidepoint(mouse_pos):
+                                        dragged_item = game.dragged_item
+                                        item_slot = getattr(dragged_item, 'slot', None)
+                                        if item_slot == 'hand': item_slot = 'hands'
+                                            
+                                        if item_slot == slot_name:
+                                            
+                                            # [ADDED] Liquid Check for Gear
+                                            if dragged_item.liquid:
+                                                print(f"The {dragged_item.name} spills and is lost.")
+                                                dropped_successfully = True; break
+
+                                            if is_external_source:
+                                                # If coming from external (Nearby/Container), use Timer
+                                                item_in_slot = game.player.clothes.get(slot_name)
+                                                if item_in_slot:
+                                                    print("Cannot swap items while equipping from external source.")
+                                                    dropped_successfully = False
+                                                    break
+                                                
+                                                item_ref = dragged_item
+                                                def do_gear_equip():
+                                                    game.player.clothes[slot_name] = item_ref
+                                                
+                                                game.player.start_action("Equipping", 1.0, do_gear_equip, xp_reward=0.5)
+                                                # Clear drag manually as we return early
+                                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                                return
+
+                                            item_in_slot = game.player.clothes.get(slot_name)
+                                            game.player.clothes[slot_name] = dragged_item
+                                            
+                                            if item_in_slot:
+                                                if type_orig == 'inventory' and 0 <= i_orig <= len(game.player.inventory):
+                                                    game.player.inventory.insert(i_orig, item_in_slot)
+                                                elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
+                                                    game.player.belt[i_orig] = item_in_slot
+                                                elif type_orig == 'backpack':
+                                                    game.player.backpack = item_in_slot
+                                                
+                                                elif type_orig == 'gear':
+                                                    game.player.clothes[i_orig] = item_in_slot
+                                                elif (type_orig == 'container' or type_orig == 'nearby') and container_obj:
+                                                     container_obj.inventory.insert(i_orig, item_in_slot)
+                                                else:
+                                                    game.player.inventory.append(item_in_slot)
+                                            
+                                            dropped_successfully = True
+                                        else:
+                                            dropped_successfully = False 
+                                        break
+                        elif active_tab in modal.get('container_mapping', {}):
+                            container = modal['container_mapping'][active_tab]
+                            if container:
+                                # Recursion Check
+                                if check_recursive_containment(game.dragged_item, container):
+                                    print("Recursion detected: Cannot put the container inside itself.")
+                                    dropped_successfully = False
                                     break
+                                
+                                # Liquid Restriction
+                                if getattr(container, 'allow_liquid', False):
+                                    if not getattr(game.dragged_item, 'liquid', False):
+                                        print(f"This {container.name} only accepts liquids.")
+                                        dropped_successfully = False 
+                                        break
+                                elif getattr(game.dragged_item, 'liquid', False):
+                                    print(f"The {game.dragged_item.name} spills and is lost.")
+                                    dropped_successfully = True 
+                                    break
+                                
+                                # Use y+80 offset for gear modal tabs
+                                pos_for_calc = (modal['rect'].x, modal['rect'].y)
+                                target_index = -1
+                                for i in range(container.capacity or 0):
+                                    if get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                                        target_index = i
+                                        break
+                                
+                                # Looting Logic
+                                if is_external_source:
+                                    can_loot = False
+                                    is_stack = False
+                                    if target_index != -1 and target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            can_loot = True; is_stack = True
+                                        else:
+                                            print("Cannot swap while looting.")
+                                            dropped_successfully = False
+                                            break
+                                    elif len(container.inventory) < (container.capacity or 0):
+                                        can_loot = True
+                                    
+                                    if can_loot:
+                                        item_ref = game.dragged_item
+                                        def do_gear_container_loot():
+                                            if is_stack:
+                                                item_in_dst = container.inventory[target_index]
+                                                avail = item_in_dst.capacity - item_in_dst.load
+                                                trans = min(avail, item_ref.load)
+                                                item_in_dst.load += trans
+                                                item_ref.load -= trans
+                                            else:
+                                                if target_index != -1 and target_index <= len(container.inventory):
+                                                    container.inventory.insert(target_index, item_ref)
+                                                else:
+                                                    container.inventory.append(item_ref)
+                                        
+                                        game.player.start_action("Looting", 1.0, do_gear_container_loot, xp_reward=0.5)
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+                                
+                                # Standard Drop Logic
+                                if target_index != -1:
+                                    if target_index < len(container.inventory):
+                                        item_in_slot = container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            available = item_in_slot.capacity - item_in_slot.load
+                                            transfer = min(available, game.dragged_item.load)
+                                            item_in_slot.load += transfer
+                                            game.dragged_item.load -= transfer
+                                            if game.dragged_item.load <= 0: dropped_successfully = True
+                                        else:
+                                            item_to_swap = container.inventory.pop(target_index)
+                                            container.inventory.insert(target_index, game.dragged_item)
+                                            game.dragged_item = item_to_swap
+                                            dropped_successfully = False
+                                    else:
+                                        container.inventory.insert(target_index, game.dragged_item)
+                                        dropped_successfully = True
+                                elif len(container.inventory) < (container.capacity or 0):
+                                    container.inventory.append(game.dragged_item)
+                                    dropped_successfully = True
+                        
                         if dropped_successfully: break
                     
 
@@ -805,6 +970,7 @@ def handle_mouse_up(game, event, mouse_pos):
                     return
 
                 # --- Drop on CONTAINER/NEARBY ---
+                # ... (Rest of function remains same) ...
                 for modal in reversed(game.modals):
                     if modal['type'] in ['container', 'nearby'] and modal['rect'].collidepoint(mouse_pos):
                         container = None
@@ -1129,10 +1295,20 @@ def find_item_at_pos(game, mouse_pos):
                     return item
 
         elif modal['type'] == 'gear':
-            if 'gear_slot_rects' in modal:
-                for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                    if slot_rect.collidepoint(mouse_pos):
-                        return game.player.clothes.get(slot_name)
+            active_tab = modal.get('active_tab', 'Gear')
+            if active_tab == 'Gear':
+                if 'gear_slot_rects' in modal:
+                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                        if slot_rect.collidepoint(mouse_pos):
+                            return game.player.clothes.get(slot_name)
+            elif active_tab in modal.get('container_mapping', {}):
+                container = modal['container_mapping'][active_tab]
+                if container:
+                    # Offset Y+80
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                    for i, item in enumerate(container.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            return item
 
         elif modal['type'] == 'nearby':
             active_tab_label = modal.get('active_tab')
@@ -1320,7 +1496,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                 game.last_modal_positions[modal['type']] = modal['position']
 
 def handle_context_menu_click(game, mouse_pos):
-    
+    # ... (No changes here) ...
     clicked_on_menu = False
     for i, rect in enumerate(game.context_menu['rects']):
         if rect.collidepoint(mouse_pos):
@@ -1824,12 +2000,22 @@ def handle_right_click(game, mouse_pos):
                             break
         
         elif modal['type'] == 'gear':
-             if 'gear_slot_rects' in modal:
-                for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                    if slot_rect.collidepoint(mouse_pos):
-                        item = game.player.clothes.get(slot_name)
-                        if item:
-                            clicked_item, click_source, click_index = item, 'gear', slot_name
+            active_tab = modal.get('active_tab', 'Gear')
+            if active_tab == 'Gear':
+                if 'gear_slot_rects' in modal:
+                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                        if slot_rect.collidepoint(mouse_pos):
+                            item = game.player.clothes.get(slot_name)
+                            if item:
+                                clicked_item, click_source, click_index = item, 'gear', slot_name
+                                break
+            elif active_tab in modal.get('container_mapping', {}):
+                container = modal['container_mapping'][active_tab]
+                if container:
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                    for i, item in enumerate(container.inventory):
+                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
+                            clicked_item, click_source, click_index, click_container_item = item, 'container', i, container
                             break
 
         elif modal['type'] == 'container':
@@ -2162,19 +2348,34 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                             return
 
     elif modal['type'] == 'gear':
-        if 'gear_slot_rects' in modal:
-            for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                if slot_rect.collidepoint(mouse_pos):
-                    item = game.player.clothes.get(slot_name)
+        active_tab = modal.get('active_tab', 'Gear')
+        if active_tab == 'Gear':
+            if 'gear_slot_rects' in modal:
+                for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                    if slot_rect.collidepoint(mouse_pos):
+                        item = game.player.clothes.get(slot_name)
+                        if item:
+                            game.drag_candidate = (item, (slot_name, 'gear'))
+                            game.drag_start_pos = mouse_pos
+                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                            return
+        elif active_tab in modal.get('container_mapping', {}):
+            container = modal['container_mapping'][active_tab]
+            if container:
+                # Offset Y+80
+                pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                for i, item in enumerate(container.inventory):
                     if item:
-                        game.drag_candidate = (item, (slot_name, 'gear'))
-                        game.drag_start_pos = mouse_pos
-                        game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                        return
+                        slot_rect = get_container_slot_rect(pos_for_calc, i)
+                        if slot_rect.collidepoint(mouse_pos):
+                            game.drag_candidate = (item, (i, 'container', container, modal['id']))
+                            game.drag_start_pos = mouse_pos
+                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                            return
     
 
 def handle_attack(game, mouse_pos):
-    # ... (No changes) ...
+    # ... (No changes here) ...
     if any(modal['is_dragging'] for modal in game.modals):
         return
 

@@ -47,6 +47,9 @@
 
     <clothes>
         <head></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
         <feet></feet>
         <hand></hand>
         <body></body>

@@ -1,6 +1,13 @@
 <npc_dialog>
     <node id="greeting">
         <options 
+            player_question="Hello!" 
+            npc_answer="I'm not in the mood now, filho da puta!" 
+            priority="10"
+            npc_state_friendly="false"
+            npc_state_static="false"
+            gain_xp="[lucky:10]" />
+        <options 
             player_question="How's it going?" 
             npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
             priority="100"
@@ -8,52 +15,63 @@
     </node>
     <node id="tips">
         <options
-            player_question="Got any advice?" 
-            npc_answer="Use an Axe or Primitive Axe to chop trees. Wood is life out here." 
-            priority="10"/>
-        <options
-            player_question="Got any advice?" 
-            npc_answer="Search for magazines. Reading keeps the mind from rotting before the body does. Take this, it may help you."
-            priority="1"
+            player_question="How do I stay sane out here?" 
+            npc_answer="Don't just survive; learn. Read everything. Manuals, magazines... it keeps the fear away. Here."
+            priority="10"
             req_level="[lucky:2]"
             gain_xp="[lucky:20]"
+            dialog_type="once"
             award_item="[Bible, Island Map]" />
         <options
-            player_question="Got any advice?" 
-            npc_answer="For our lucky the company made all vehicle keys the same. Here is a gift."
-            priority="1"
+            player_question="Any way to get around?" 
+            npc_answer="Lucky for us, Next Petrol cut costs and made all the ignition tumblers the same. These keys might work on the Jeeps."
+            priority="10"
             req_level="[lucky:3]"
             gain_xp="[lucky:30]"
+            dialog_type="once"
             award_item="[Car Key Jeep, Car Key Pickup]" />
         <options
-            player_question="Got any advice?" 
-            npc_answer="Run, and..." 
+            player_question="What should I do now?" 
+            npc_answer="Run. Don't look back at the burning labs. Just run..." 
             unlock_flag="just_run"
             priority="10" />
     </node>
 
     <node id="lore_branch">
         <options 
-            player_question="Did you get any news?"
-            npc_answer="Here was the last place to fall apart. If we get lucky we could clean up the island."
-            priority="100" 
+            player_question="Any news from the outside?"
+            npc_answer="The satellite phone died yesterday. Last I heard, Rio went dark. If the capital falls, we're truly alone."
+            priority="10" 
             gain_xp="[lucky:10]" />
         <options 
-            player_question="How is the oil rigs?"
-            npc_answer="Fully functional for years. I miss my family so much."
+            player_question="What is the status of the Rigs?"
+            npc_answer="They've been fully functional for years, but without the crews... they're just ticking time bombs."
             award_item="[Family Photo]"
-            priority="100"
+            dialog_type="once"
+            req_level="[lucky:1]"
+            priority="10"
             gain_xp="[lucky:10]" />
         <options 
             player_question="What happened to the continent?"
-            npc_answer="They say it was the first to fall. Total chaos. Glad I was out here when the world ended."
-            priority="100"
+            npc_answer="Brazil was the first to close the borders, but it didn't help. It's total chaos down south."
+            priority="10"
             gain_xp="[lucky:10]" />
         <options 
             player_question="Is anyone else out there?"
             npc_answer="Just rogues, some military and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
-            priority="100" 
+            priority="10" 
             gain_xp="[lucky:10]" />
+        <options 
+            player_question="Why did the helicopter leave us?"
+            npc_answer="Standard containment protocol. Next Petrol doesn't rescue liabilities. We are the liability now."
+            priority="10"
+            gain_xp="[lucky:15]" />
+        <options 
+            player_question="Did you know about the cure?"
+            npc_answer="I saw the crates labeled 'Vaccine-B'. They weren't shipping it out... they were burning it. That's when I knew it was over."
+            priority="10"
+            req_level="[lucky:5]" 
+            gain_xp="[lucky:50]" />
     </node>
 
     <node id="just_run">

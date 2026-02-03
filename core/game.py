@@ -123,7 +123,7 @@ class Game:
         self.last_modal_positions = {
             'status': (65, 10),
             'inventory': (1050, 10),
-            'gear': (830, 10),
+            'gear': (730, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'nearby': (1050, 360),
             'messages': (10, 360),
@@ -1030,7 +1030,7 @@ class Game:
 
         # starter_items = ["Mobile off", "Shotgun", "Car Fuel", "Car Key Jeep", "Powerbank"]
         # starter_items = ["ID", "Mobile off"]
-        starter_items = ["Survivor Kit", "Mobile off", "Medical Bandage", "Medkit", "Vaccine"]
+        starter_items = ["Wallet", "Survivor Kit"]
         for name in starter_items:
              try:
                 item = Item.create_from_name(name)

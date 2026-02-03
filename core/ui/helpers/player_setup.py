@@ -850,7 +850,7 @@ def run_player_setup(game):
         Item.load_item_templates()
         Zombie.load_templates()
 
-        state['clothes_slots'] = ['head','legs', 'feet',  'body' ,'arms', 'hands']
+        state['clothes_slots'] = ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
         state['available_clothes'] = {slot: [] for slot in state['clothes_slots']}
         state['chosen_clothes'] = {slot: "None" for slot in state['clothes_slots']}
         state['active_dropdown'] = None

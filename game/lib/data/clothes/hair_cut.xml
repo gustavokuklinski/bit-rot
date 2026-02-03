@@ -1,0 +1,7 @@
+<cloth name="Cut" type="cloth" id="hair" builder="true">
+    <properties>
+        <defence value="0" />
+        <sprite file="hair_cut.png" />
+    </properties>
+    <spawn chance="1" />
+</cloth>
