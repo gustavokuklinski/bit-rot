@@ -30,6 +30,10 @@ class TileManager:
                         # [NEW] Parse allow_liquid tag
                         allow_liquid = root.get('allow_liquid', 'false').lower() == 'true'
 
+                        is_stair = root.get('is_stair', 'false').lower() == 'true'
+                        # Default to 0 if not specified
+                        target_layer = int(root.get('target_layer', '0'))
+
                         sprite_node = root.find('visuals/sprite')
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
@@ -50,7 +54,9 @@ class TileManager:
                                     'rest': root.get('rest', 'false').lower() == 'true',
                                     'sleep': root.get('sleep', 'false').lower() == 'true',
                                     'light_state': root.get('light', 'off'), 
-                                    'light_radius': int(root.get('light_radius', '0'))
+                                    'light_radius': int(root.get('light_radius', '0')),
+                                    'is_stair': is_stair,
+                                    'target_layer': target_layer,
                                 }
 
                                 # Parse Explicit Health

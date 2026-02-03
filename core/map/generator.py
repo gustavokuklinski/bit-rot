@@ -135,6 +135,10 @@ class ProceduralGenerator:
 
 
     def generate_world(self, seed_pattern=None, regenerate=False):
+        # [FIX] Force refresh size settings from config to ensure consistency
+        self.chunk_size = core.data.config.CHUNK_SIZE
+        self.tile_size = core.data.config.TILE_SIZE
+
         if not regenerate and os.path.exists(self.output_folder):
             for f in os.listdir(self.output_folder):
                 if f.startswith("map_L1_world") and f.endswith("_map.csv"):
@@ -273,6 +277,9 @@ class ProceduralGenerator:
         
         # Surfaces
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
+        # [FIX] Fill surface to ensure no uninitialized black void artifacts
+        full_map_surface.fill((20, 100, 20)) 
+        
         heat_map_surface = pygame.Surface((total_map_w, total_map_h))
         
         full_map_surface_l2 = pygame.Surface((total_map_w, total_map_h))
@@ -301,9 +308,6 @@ class ProceduralGenerator:
         
         # L2 Occupied Mask (Tracks Template Interiors)
         occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
-        
-        # [NEW] Collection list for L2 NPC Spawn candidates for this chunk
-        l2_npc_candidates = []
 
         # --- CHUNK GENERATION LOOP ---
         for gy in range(grid_h):
@@ -342,20 +346,9 @@ class ProceduralGenerator:
                             for c in range(self.chunk_size):
                                 global_layers[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
                         render_data_l1[layer_key] = layer_grid
-                
-                # --- COLLECT L2 NPC CANDIDATES PER CHUNK ---
-                # NOTE: _generate_chunk_data already populated l2_npc_candidates via callbacks 
-                # inside _finalize_placement. But wait, _generate_chunk_data creates a fresh 
-                # `l2_npc_candidates` list for THAT chunk.
-                # However, our current logic passes `l2_npc_candidates` (local to chunk) 
-                # into `_distribute_chunk_npcs` which writes to `chunk_data['spawn_L2']`.
-                # This `chunk_data` is then merged into `global_layers_l2` above.
-                # So we are GOOD. The distribution happens per chunk during the loop.
 
                 # Render L1 (Chunk by chunk is fine for L1)
                 self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
-                
-                # NOTE: We DO NOT render L2 here anymore, because it needs post-processing (pathways)
         # -----------------------------
 
         # SAVE L1
@@ -381,7 +374,7 @@ class ProceduralGenerator:
         # --------------------------------------
 
         # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
-        print("Populating L2 Spawns (Zombies on Paths, Spawns already in Templates)...")
+        print("Populating L2 Spawns (Zombies on Paths)...")
         self._populate_l2_spawns(global_layers_l2)
         # -------------------------------------------
 
@@ -403,15 +396,16 @@ class ProceduralGenerator:
             preview_size = (new_w, new_h)
 
             # L1
-            small_map_surface = pygame.transform.smoothscale(full_map_surface, preview_size)
+            # [FIX] Use scale instead of smoothscale for better reliability on large surfaces
+            small_map_surface = pygame.transform.scale(full_map_surface, preview_size)
             pygame.image.save(small_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
-            small_heat_surface = pygame.transform.smoothscale(heat_map_surface, preview_size)
+            small_heat_surface = pygame.transform.scale(heat_map_surface, preview_size)
             pygame.image.save(small_heat_surface, os.path.join(self.output_folder, "full_map_heat.jpg"))
 
             # L2
-            small_map_l2 = pygame.transform.smoothscale(full_map_surface_l2, preview_size)
+            small_map_l2 = pygame.transform.scale(full_map_surface_l2, preview_size)
             pygame.image.save(small_map_l2, os.path.join(self.output_folder, "full_map_L2.jpg"))
-            small_heat_l2 = pygame.transform.smoothscale(heat_map_surface_l2, preview_size)
+            small_heat_l2 = pygame.transform.scale(heat_map_surface_l2, preview_size)
             pygame.image.save(small_heat_l2, os.path.join(self.output_folder, "full_map_L2_heat.jpg"))
             
             print(f"Saved compressed map previews to {self.output_folder}")
@@ -420,90 +414,10 @@ class ProceduralGenerator:
 
         return "map_L1_world_map.csv"
 
-    def _collect_l2_spawn_candidates(self, candidates, tx, ty, tmpl, tmpl_name, w, h):
-        """
-        Collects valid spawn positions within a template instead of spawning immediately.
-        This allows us to respect NPC_MAX_CHUNK globally for the chunk later.
-        """
-        # We only consider 'floor' areas for NPCs in L2
-        # is_bunker = 'bunker' in tmpl_name.lower()
-        # We store (x, y, is_bunker) to decide Type later
-        
-        tw, th = tmpl.get('width', 10), tmpl.get('height', 10)
-        
-        # Iterate inside the template bounds
-        for y in range(ty, ty + th):
-            for x in range(tx, tx + tw):
-                if 0 <= x < w and 0 <= y < h:
-                    # Basic check: Inside building logic
-                    # We assume 'base_L2' layer has walls. ' ' means floor/space.
-                    # This check mirrors _spawn_in_l2_template but without writing to layer
-                    # NOTE: We need to check the layer data in the generator flow, 
-                    # but here we are passed the template. We assume the template's 'base'
-                    # corresponds to what was just blitted.
-                    
-                    # Look up tile in template data
-                    cy, cx = y - ty, x - tx
-                    base_tile = tmpl['base'][cy][cx] if cy < len(tmpl['base']) and cx < len(tmpl['base'][cy]) else ' '
-                    spawn_tile = tmpl['spawn'][cy][cx] if cy < len(tmpl['spawn']) and cx < len(tmpl['spawn'][cy]) else ' '
-                    
-                    if base_tile == ' ' and spawn_tile == ' ':
-                         candidates.append((x, y))
-
-    def _distribute_chunk_npcs(self, layers, candidates, layer_key='spawn'):
-        """
-        Calculates the probability to spawn at least 1 NPC of required categories 
-        (Static/Normal) and respects the Chunk Limit.
-        """
-        if not candidates: return
-        
-        # 1. Config & Limits
-        max_npcs = NPC_MAX_CHUNK
-        static_chance = NPC_STATIC_SPAWN
-        # hostile_chance = NPC_HOSTILE_SPAWN # (Logic handled by NPC class at runtime, but probability accounted for)
-        
-        total_candidates = len(candidates)
-        count_to_spawn = min(total_candidates, max_npcs)
-        
-        if count_to_spawn <= 0: return
-
-        # 2. Determine Composition
-        # User Req: "calculate the probability ... to spawn at least 1 NPC of each of those categories."
-        # Categories: Static ('S'), Normal ('NPC' - can be hostile or friendly)
-        
-        num_static = 0
-        if static_chance > 0:
-            # Probability calculation: average expected static
-            expected = int(count_to_spawn * static_chance)
-            # "At least 1" rule
-            num_static = max(1, expected)
-        
-        # Cap static to total
-        num_static = min(num_static, count_to_spawn)
-        num_normal = count_to_spawn - num_static
-        
-        spawn_types = ['S'] * num_static + ['NPC'] * num_normal
-        random.shuffle(spawn_types)
-        
-        # 3. Select Locations
-        # We shuffle candidates to randomize positions
-        selected_locs = random.sample(candidates, count_to_spawn)
-        
-        # 4. Assign
-        w = len(layers[layer_key][0])
-        h = len(layers[layer_key])
-        
-        for i, (x, y) in enumerate(selected_locs):
-            if 0 <= x < w and 0 <= y < h:
-                layers[layer_key][y][x] = spawn_types[i]
-                
-        print(f"    > NPC Distribution: {num_static} Static, {num_normal} Normal (Total {count_to_spawn})")
-
-
     def _populate_l2_spawns(self, layers):
         """
         Populates Layer 2 with Zombies on Pathways only.
-        NPCs are now handled during chunk generation via _collect_l2_spawn_candidates + _distribute_chunk_npcs.
+        NPCs are now handled during chunk generation via _scatter_npcs_l2.
         """
         ground = layers.get('ground')
         base = layers.get('base')
@@ -862,9 +776,6 @@ class ProceduralGenerator:
         }
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
         occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)] # NEW: L2 Mask
-        
-        # [NEW] Collection list for L2 NPC Spawn candidates for this chunk
-        l2_npc_candidates = []
 
         road_tile = 'asphalt_01'
         dirt_tile = 'dirty_01'
@@ -1121,7 +1032,7 @@ class ProceduralGenerator:
                         ty = random.randint(safe_pad, h - safe_pad - th)
                     
                     if is_area_free(tx, ty, tw, th, margin=1):
-                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, l2_npc_candidates)
+                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
                         placed = True
                         break
                 
@@ -1132,7 +1043,7 @@ class ProceduralGenerator:
                         if placed: break
                         for sx in range(border_w + 2, w - border_w - tw - 2, stride):
                             if is_area_free(sx, sy, tw, th, margin=1):
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile, l2_npc_candidates)
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile)
                                 placed = True
                                 break
                 
@@ -1151,7 +1062,7 @@ class ProceduralGenerator:
                                             layers['base'][cy_clr][cx_clr] = ' ' 
                                             layers['ground'][cy_clr][cx_clr] = sand_tile 
                                             occupied_mask[cy_clr][cx_clr] = 0 
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, l2_npc_candidates)
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
                                 placed = True
                                 break
                 
@@ -1171,9 +1082,6 @@ class ProceduralGenerator:
                             # NEW: Apply border
                             self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
                             
-                            # Insert Spawn Logic for Linked Templates
-                            self._collect_l2_spawn_candidates(l2_npc_candidates, tx, ty, tmpl_l2, found_l2_key, w, h)
-
                             # UPDATE L2 MASK to prevent random spawn overlapping linked spawn
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -1205,9 +1113,6 @@ class ProceduralGenerator:
                             
                             # NEW: Apply border
                             self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
-                            
-                            # Insert Spawn Logic for Linked Forest (if applicable)
-                            self._collect_l2_spawn_candidates(l2_npc_candidates, tx, ty, tmpl_l2, found_l2_key, w, h)
                             
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -1283,9 +1188,6 @@ class ProceduralGenerator:
                         
                         # NEW: Apply border
                         self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
-                        
-                        # Insert Spawn Logic for Random L2 Templates
-                        self._collect_l2_spawn_candidates(l2_npc_candidates, tx, ty, l2_tmpl, l2_name, w, h)
 
                         # Mark mask
                         for ly in range(ty, ty + l2_h):
@@ -1295,8 +1197,8 @@ class ProceduralGenerator:
                         print(f"Spawned Random L2 Template: {l2_name} at ({tx}, {ty})")
                         break
         
-        # [NEW] DISTRIBUTE L2 NPCS
-        self._distribute_chunk_npcs(layers, l2_npc_candidates, layer_key='spawn_L2')
+        # [NEW] DISTRIBUTE L2 NPCS - Using strict scatter method instead of candidate lists
+        self._scatter_npcs_l2(layers, w, h)
 
         return layers
 
@@ -1335,7 +1237,7 @@ class ProceduralGenerator:
                         else:
                             ground[y][x] = padding_tile
 
-    def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, l2_npc_candidates):
+    def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
         is_cave = 'cave' in tmpl_name.lower()
         road_tile = 'asphalt_01'
         
@@ -1484,6 +1386,61 @@ class ProceduralGenerator:
         for i, (nx, ny) in enumerate(chosen):
             if i < len(spawn_types):
                 layers['spawn'][ny][nx] = spawn_types[i]
+
+    def _scatter_npcs_l2(self, layers, w, h):
+        """
+        [NEW] L2 specific NPC scattering using standard floor detection.
+        Replaces the complex candidate collection logic.
+        """
+        # 1. Config
+        max_npcs = NPC_MAX_CHUNK
+        static_chance = NPC_STATIC_SPAWN
+        if max_npcs <= 0: return
+        
+        # 2. Gather Candidates in L2 Layers
+        potential_tiles = []
+        ground = layers['ground_L2']
+        base = layers['base_L2']
+        spawn = layers['spawn_L2']
+        
+        for y in range(h):
+            for x in range(w):
+                if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
+                
+                # Check occupancy
+                if base[y][x] != ' ': continue
+                if spawn[y][x] != ' ': continue
+                
+                g_char = ground[y][x]
+                if g_char == ' ': continue # Must have a floor
+                if g_char == '@': continue # Must not be border
+                if g_char == 'dirty_01': continue # Skip outside padding/pathways (optional, usually want inside)
+                
+                potential_tiles.append((x, y))
+
+        if not potential_tiles: return
+
+        # 3. Calculate Distribution (Copied logic from _scatter_npcs)
+        count_to_spawn = min(len(potential_tiles), max_npcs)
+        
+        num_static = 0
+        if static_chance > 0:
+            expected = int(count_to_spawn * static_chance)
+            num_static = max(1, expected) 
+        
+        num_static = min(num_static, count_to_spawn)
+        num_normal = count_to_spawn - num_static
+        
+        spawn_types = ['S'] * num_static + ['NPC'] * num_normal
+        random.shuffle(spawn_types)
+        
+        # 4. Spawn
+        chosen = random.sample(potential_tiles, count_to_spawn)
+        for i, (nx, ny) in enumerate(chosen):
+            if i < len(spawn_types):
+                spawn[ny][nx] = spawn_types[i]
+                
+        print(f"  > NPC Scatter L2: Placed {count_to_spawn} NPCs ({num_static} Static).")
 
     def _blit_template(self, target, source, ox, oy, mw, mh):
         for layer in ['base', 'light', 'ground', 'spawn', 'roof']:

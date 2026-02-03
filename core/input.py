@@ -5,6 +5,7 @@ from core.data.config import *
 import core.data.config
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
+from core.map.world_layers import set_active_layer
 
 keys_held = {}
 def handle_movement(game):
@@ -183,6 +184,32 @@ def handle_input(game):
                         if game.player.vehicle:
                             game.player.exit_vehicle(game)
                         else:
+                            px = int(game.player.rect.centerx // TILE_SIZE)
+                            py = int(game.player.rect.centery // TILE_SIZE)
+                            
+                            #print(f"[DEBUG] Player at grid: {px}, {py}") # DEBUG 1
+
+                            if 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
+                                current_tile_char = game.map_data[py][px]
+                                current_tile_def = game.tile_manager.definitions.get(current_tile_char)
+                                
+                                # DEBUG 2: Check what the game thinks this tile is
+                                #if current_tile_def:
+                                #    print(f"[DEBUG] Tile Def: {current_tile_def.get('name')} | Stair: {current_tile_def.get('is_stair')} | Target: {current_tile_def.get('target_layer')}")
+                                #else:
+                                #    print(f"[DEBUG] No definition found for char: {current_tile_char}")
+
+                                if current_tile_def and current_tile_def.get('is_stair'):
+                                    target_layer = current_tile_def.get('target_layer')
+                                #    print(f"[DEBUG] Attempting switch to Layer {target_layer}") # DEBUG 3
+
+                                    if game.player.layer_switch_cooldown <= 0:
+                                        if set_active_layer(game, target_layer):
+                                            game.player.layer_switch_cooldown = 30
+                                #            print("[DEBUG] Switch SUCCESS")
+                                            return 
+                                
+
                             found_vehicle = None
                             for obj in game.containers:
                                 if getattr(obj, 'item_type', '') == 'vehicle':

@@ -351,32 +351,37 @@ def set_active_layer(game, layer_index):
     return True
 
 def check_for_layer_teleport(game):
+    # 1. Respect Cooldown (prevents instant bouncing back and forth)
     if game.player.layer_switch_cooldown > 0:
         return
 
     player = game.player
     
+    # 2. Get Player Grid Position
     try:
-        tile_x = player.rect.centerx // TILE_SIZE
-        tile_y = player.rect.centery // TILE_SIZE
+        tile_x = int(player.rect.centerx // TILE_SIZE)
+        tile_y = int(player.rect.centery // TILE_SIZE)
     except (AttributeError, TypeError):
         return
 
     current_map_data = game.map_data
     if not current_map_data:
         return
-        
+    
+    # 3. Check Bounds
     if not (0 <= tile_y < len(current_map_data) and 0 <= tile_x < len(current_map_data[0])):
         return
         
-    tile_id = current_map_data[tile_y][tile_x]
+    # 4. Get Tile Definition
+    tile_char = current_map_data[tile_y][tile_x]
+    tile_def = game.tile_manager.definitions.get(tile_char)
     
-    match = re.match(r'\[?(?:L)?(\d+)\]?', tile_id)
-    
-    if match:
-        target_layer = int(match.group(1))
-        if 0 < target_layer <= 9 and target_layer != game.current_layer_index:
+    # 5. Check 'is_stair' Attribute and Teleport
+    if tile_def and tile_def.get('is_stair'):
+        target_layer = tile_def.get('target_layer')
+        
+        if target_layer and target_layer != game.current_layer_index:
+            print(f"Auto-teleport detected: Moving to Layer {target_layer}")
             if set_active_layer(game, target_layer):
-                game.player.layer_switch_cooldown = 30
-            else:
-                print(f"Warning: Tile [ {target_layer} ] points to non-existent layer.")
+                # Set a longer cooldown for auto-teleport to ensure player steps off the target stair
+                game.player.layer_switch_cooldown = 60

@@ -82,7 +82,7 @@ def update_game_state(game):
     nearby_player_obstacles = get_nearby_obstacles(game.player.rect, game.cached_obstacle_grid, GRID_SIZE)
     game.player.update_position(nearby_player_obstacles, game.zombies, game)
 
-    check_for_layer_teleport(game)
+    #check_for_layer_teleport(game)
 
     game.hovered_interactable_tile_rect = None 
     facing_x, facing_y = game.get_player_facing_tile()
