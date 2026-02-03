@@ -115,7 +115,10 @@ def manage_dynamic_npcs(game):
                     tile = game.map_manager.get_tile_at(tx, ty)
                     if not tile: continue
                     t_name = tile.get('name', '').lower()
-                    if 'cave_l2' not in t_name and 'path' not in t_name and 'floor' not in t_name:
+                    
+                    # Normal NPCs on L2 only spawn in buildings
+                    is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
+                    if not is_building:
                         continue
 
                 npc = NPC(px, py, game)
@@ -159,9 +162,13 @@ def spawn_l2_population(game, count=10):
         tile = game.map_manager.get_tile_at(rx, ry)
         if not tile: continue
         
-        # Validation: Only Cave_L2 or Pathways
         t_name = tile.get('name', '').lower()
-        if 'cave_l2' not in t_name and 'path' not in t_name and 'floor' not in t_name:
+        
+        # Define Categories
+        is_path = 'path' in t_name or 'cave_l2' in t_name or 'dirty' in t_name or 'asphalt' in t_name
+        is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
+
+        if not is_path and not is_building:
             continue
             
         # Check occupancy
@@ -170,15 +177,15 @@ def spawn_l2_population(game, count=10):
         
         if any(ob.colliderect(rect) for ob in game.obstacles): continue
         
-        # Spawn NPC
-        if npc_count < target_npcs:
-            npc = NPC(px, py, game, is_static=False) # Free roaming
+        # Spawn NPC (Strictly in Buildings)
+        if npc_count < target_npcs and is_building:
+            npc = NPC(px, py, game, is_static=False) # Free roaming Normal NPC
             game.npcs.add(npc)
             npc_count += 1
             continue
             
-        # Spawn Zombie
-        if zombie_count < target_zombies:
+        # Spawn Zombie (Strictly on Pathways)
+        if zombie_count < target_zombies and is_path:
             zombie = Zombie.create_random(px, py)
             game.zombies.append(zombie)
             zombie_count += 1
@@ -262,7 +269,7 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
             spawn_spot_px = _find_spawn_spot_near(pos, occupied_tiles, map_width_px, map_height_px)
             
             if spawn_spot_px:
-                # [NEW] Layer 2 Validation - Ensure zombies only spawn on Cave_L2 or Pathways
+                # [NEW] Layer 2 Validation - Ensure zombies only spawn on Pathways
                 if game and game.current_layer_index == 2:
                     gx = int(spawn_spot_px[0] // TILE_SIZE)
                     gy = int(spawn_spot_px[1] // TILE_SIZE)
@@ -271,7 +278,8 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
                     is_valid = False
                     if tile:
                         t_name = tile.get('name', '').lower()
-                        if 'cave_l2' in t_name or 'path' in t_name or 'floor' in t_name:
+                        # Strictly Pathways or Cave floor. NO buildings/floors.
+                        if 'cave_l2' in t_name or 'path' in t_name or 'dirty' in t_name or 'asphalt' in t_name:
                              is_valid = True
                     
                     if not is_valid:

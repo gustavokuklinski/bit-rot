@@ -58,9 +58,9 @@
         <has_battery_chance value="0.2" name="Car Battery chance (Default: 0.2)"/>
     </vehicle>
     <npc>
-        <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
-        <static_spawn_chance value="0.005" name="Max Static NPC (Default: 0.005)"/>
-        <hostile_spawn_chance value="0.0" name="Max Hostile NPC (Default: 0.4)"/>
+        <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk (Default: 10)"/>
+        <static_spawn_chance value="0.1" name="Max Static NPC (Default: 0.1)"/>
+        <hostile_spawn_chance value="0.3" name="Max Hostile NPC (Default: 0.3)"/>
         <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
         <spawn_chance value="1.0" name="Spawn Chance (Default: 1.0)"/>
         <health_multiplier value="1.0" name="Health Multiplier (Default: 1.0)"/>

@@ -298,6 +298,9 @@ class ProceduralGenerator:
             'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
+        
+        # L2 Occupied Mask (Tracks Template Interiors)
+        occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
 
         # --- CHUNK GENERATION LOOP ---
         for gy in range(grid_h):
@@ -346,17 +349,27 @@ class ProceduralGenerator:
         # SAVE L1
         print("Saving global world map L1...")
         self._save_chunk("map_L1_world", global_layers)
+        
+        # --- RE-SCAN FOR L2 TEMPLATE MASKS ---
+        # Build mask based on roof/base presence to prevent vegetation inside templates
+        print("Building L2 Occupancy Mask...")
+        for y in range(global_tiles_h):
+            for x in range(global_tiles_w):
+                # If there is a roof or a wall, it is a template.
+                if global_layers_l2['roof'][y][x] != ' ' or global_layers_l2['base'][y][x] != ' ':
+                    occupied_mask_L2[y][x] = 1
 
         # --- POST-PROCESSING: Connect Isolated L2 Buildings (Pathways) ---
         self._connect_l2_drunkards(global_layers_l2)
         # -----------------------------------------------------------------
 
         # --- DECORATE PATHWAYS (VEGETATION) ---
-        self._decorate_l2_pathways(global_layers_l2)
+        # [UPDATED] Now accepts the mask to avoid decorating inside templates
+        self._decorate_l2_pathways(global_layers_l2, occupied_mask_L2)
         # --------------------------------------
 
         # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
-        print("Populating L2 Spawns (80% Pathways, 20% Buildings)...")
+        print("Populating L2 Spawns (Zombies on Paths, Spawns already in Templates)...")
         self._populate_l2_spawns(global_layers_l2)
         # -------------------------------------------
 
@@ -395,14 +408,34 @@ class ProceduralGenerator:
 
         return "map_L1_world_map.csv"
 
+    def _spawn_in_l2_template(self, layers, tx, ty, tmpl, tmpl_name, w, h):
+        # Determine Type
+        is_bunker = 'bunker' in tmpl_name.lower()
+        # Static NPC 'S' for Bunker, Normal NPC 'NPC' for other L2 buildings
+        spawn_char = 'S' if is_bunker else 'NPC' 
+        
+        # [MODIFIED] Use Config variables for Spawn Chances
+        if is_bunker:
+            spawn_chance = NPC_STATIC_SPAWN
+        else:
+            spawn_chance = NPC_SPAWN_CHANCE
+        
+        tw, th = tmpl.get('width', 10), tmpl.get('height', 10)
+        
+        # Iterate inside the template bounds
+        for y in range(ty, ty + th):
+            for x in range(tx, tx + tw):
+                if 0 <= x < w and 0 <= y < h:
+                    # Check if valid spawn spot (empty base = walkable inside building)
+                    # We assume 'base_L2' layer has walls. ' ' means floor/space.
+                    if layers['base_L2'][y][x] == ' ' and layers['spawn_L2'][y][x] == ' ':
+                         if random.random() < spawn_chance:
+                             layers['spawn_L2'][y][x] = spawn_char
+
     def _populate_l2_spawns(self, layers):
         """
-        Populates Layer 2 with Zombies and Static NPCs.
-        Rules:
-          - 80% Zombies on Pathways (dirty/asphalt).
-          - 20% Zombies in Buildings (sand/wood/tiles).
-          - No spawning inside walls (checks valid neighbors).
-          - Adds Static NPCs ('S').
+        Populates Layer 2 with Zombies on Pathways only.
+        Static NPCs (Bunkers) and Normal NPCs (Buildings) are handled during placement.
         """
         ground = layers.get('ground')
         base = layers.get('base')
@@ -414,9 +447,8 @@ class ProceduralGenerator:
         w = len(ground[0])
         
         pathway_candidates = []
-        building_candidates = []
         
-        # 1. Categorize Candidates
+        # 1. Categorize Candidates (Pathways ONLY)
         for y in range(2, h-2):
             for x in range(2, w-2):
                 # Basic validity: Floor exists, Base empty, No existing spawn
@@ -424,65 +456,44 @@ class ProceduralGenerator:
                 if base[y][x] != ' ': continue
                 if spawn[y][x] != ' ': continue
                 
-                # STUCK FIX: Check 4 neighbors to ensure we aren't inside a thick wall or tight corner
-                # We require at least 4 empty neighbors in the BASE layer.
+                # STUCK FIX: Check 4 neighbors
                 empty_neighbors = 0
                 for dy, dx in [(-1,0), (1,0), (0,-1), (0,1)]:
                     if base[y+dy][x+dx] == ' ':
                         empty_neighbors += 1
                 
                 if empty_neighbors < 4: 
-                    continue # Skip this tile, too tight
+                    continue 
                 
                 g_char = ground[y][x].lower()
                 
+                # STRICT RULE: Zombies only on pathways
                 if 'dirty' in g_char or 'asphalt' in g_char or 'path' in g_char:
                     pathway_candidates.append((x, y))
-                else:
-                    # Assumed to be building floor (sand, wood, tiles, etc.)
-                    building_candidates.append((x, y))
 
-        # 2. Calculate Targets
-        # Estimate total zombies based on map size
-        total_zombies = (w * h) // 1000 # Rough density estimate
-        total_zombies = max(50, min(total_zombies, 2000))
+        # 2. Calculate Targets [MODIFIED - Read from Config]
+        # Calculate total chunks in the map based on dimensions and chunk size
+        chunks_x = w // self.chunk_size
+        chunks_y = h // self.chunk_size
+        total_chunks = max(1, chunks_x * chunks_y)
         
-        target_pathway = int(total_zombies * 0.80)
-        target_building = int(total_zombies * 0.20)
+        # Use the configuration per-chunk limit
+        total_zombies = ZOMBIE_MAX_CHUNK
         
-        # 3. Spawn Zombies on Pathways (80%)
+        # 3. Spawn Zombies on Pathways (100% of the zombie pool goes here now)
         if pathway_candidates:
-            count = min(len(pathway_candidates), target_pathway)
+            count = min(len(pathway_candidates), total_zombies)
             chosen = random.sample(pathway_candidates, count)
             for (zx, zy) in chosen:
                 spawn[zy][zx] = 'Z'
                 
-        # 4. Spawn Zombies in Buildings (20%)
-        if building_candidates:
-            count = min(len(building_candidates), target_building)
-            chosen = random.sample(building_candidates, count)
-            for (zx, zy) in chosen:
-                spawn[zy][zx] = 'Z'
+        print(f"  > Spawning Report L2: {count if pathway_candidates else 0} Zombies on Pathways.")
 
-        # 5. Spawn Static NPCs ('S') - Rare
-        # Try to place a few in buildings and a few on paths
-        if building_candidates:
-            npc_count = max(2, len(building_candidates) // 150)
-            npc_chosen = random.sample(building_candidates, min(len(building_candidates), npc_count))
-            for (nx, ny) in npc_chosen:
-                if spawn[ny][nx] == ' ': # Don't overwrite zombie
-                    spawn[ny][nx] = 'S'
-
-        if pathway_candidates:
-            npc_count = max(2, len(pathway_candidates) // 400)
-            npc_chosen = random.sample(pathway_candidates, min(len(pathway_candidates), npc_count))
-            for (nx, ny) in npc_chosen:
-                if spawn[ny][nx] == ' ':
-                    spawn[ny][nx] = 'S'
-
-        print(f"  > Spawning Report L2: {target_pathway} Zombies on Paths, {target_building} Zombies in Buildings.")
-
-    def _decorate_l2_pathways(self, layers):
+    def _decorate_l2_pathways(self, layers, mask):
+        """
+        [UPDATED] Decorates L2 pathways with vegetation.
+        Uses 'mask' (1=occupied/template, 0=path/void) to prevent spawning inside templates.
+        """
         ground = layers.get('ground')
         base = layers.get('base')
         if not ground or not base: return
@@ -497,7 +508,8 @@ class ProceduralGenerator:
         for y in range(h):
             for x in range(w):
                 # Place only on dirty_01 (Pathways & Padding) and where base is empty
-                if ground[y][x] == 'dirty_01' and base[y][x] == ' ':
+                # AND ensure we are NOT inside a template (mask == 0)
+                if ground[y][x] == 'dirty_01' and base[y][x] == ' ' and mask[y][x] == 0:
                     # 15% chance to place random vegetation
                     if random.random() < 0.15:
                         base[y][x] = random.choice(veg_options)
@@ -1086,8 +1098,11 @@ class ProceduralGenerator:
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                             
                             # NEW: Apply border
-                            self._apply_l2_border(layers, tx, ty, tmpl_l2['width'], tmpl_l2['height'], w, h)
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
                             
+                            # Insert Spawn Logic for Linked Templates
+                            self._spawn_in_l2_template(layers, tx, ty, tmpl_l2, found_l2_key, w, h)
+
                             # UPDATE L2 MASK to prevent random spawn overlapping linked spawn
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -1118,7 +1133,10 @@ class ProceduralGenerator:
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                             
                             # NEW: Apply border
-                            self._apply_l2_border(layers, tx, ty, tmpl_l2['width'], tmpl_l2['height'], w, h)
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
+                            
+                            # Insert Spawn Logic for Linked Forest (if applicable)
+                            self._spawn_in_l2_template(layers, tx, ty, tmpl_l2, found_l2_key, w, h)
                             
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -1193,6 +1211,9 @@ class ProceduralGenerator:
                         
                         # NEW: Apply border
                         self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+                        
+                        # Insert Spawn Logic for Random L2 Templates
+                        self._spawn_in_l2_template(layers, tx, ty, l2_tmpl, l2_name, w, h)
 
                         # Mark mask
                         for ly in range(ty, ty + l2_h):
@@ -1225,15 +1246,13 @@ class ProceduralGenerator:
                     # Only overwrite void
                     if ground[y][x] == ' ':
                         # Identify outermost border of the 4-tile padding
-                        # The bounding box of the padding area is [x1, x2) and [y1, y2)
-                        # Actually, we should check distance from the template rect?
-                        # Simplest: The bounding box indices are min_x = tx-4, max_x = tx+tw+4
-                        # If x is at min_x or max_x-1, or y is at min_y or max_y-1, it is border.
+                        # We use the CLAMPED bounds (x1, x2) to ensure borders are drawn 
+                        # even if the padding area is cut off by the map edge.
                         
                         is_border = False
-                        if x == tx - padding or x == tx + tw + padding - 1:
+                        if x == x1 or x == x2 - 1:
                             is_border = True
-                        if y == ty - padding or y == ty + th + padding - 1:
+                        if y == y1 or y == y2 - 1:
                             is_border = True
                         
                         if is_border:
