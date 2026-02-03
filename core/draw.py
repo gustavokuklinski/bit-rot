@@ -491,7 +491,10 @@ def draw_game(game):
 
     if game.game_state == 'PLAYING':
         draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
-        draw_player_alerts(game.virtual_screen, game.player)
+        # [CHANGED] Capture alert tooltip proxy instead of drawing immediately
+        alert_tooltip = draw_player_alerts(game.virtual_screen, game.player)
+        if alert_tooltip:
+             game.hovered_item = alert_tooltip
 
     top_tooltip = None
     game.modal_buttons = []
@@ -664,8 +667,8 @@ def draw_game(game):
         pygame.draw.rect(game.virtual_screen, bar_color, (bar_x, bar_y, fill_w, bar_h))
         pygame.draw.rect(game.virtual_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
 
-    if game.hovered_item and not game.context_menu['active']:
-        draw_tooltip(game.virtual_screen, game.hovered_item, game._get_scaled_mouse_pos())
+    #if game.hovered_item and not game.context_menu['active']:
+    #    draw_tooltip(game.virtual_screen, game.hovered_item, game._get_scaled_mouse_pos())
 
     elif not game.context_menu['active']:
         ui_buttons = [
@@ -709,8 +712,8 @@ def draw_game(game):
                     game.virtual_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
                 break
 
-    if game.context_menu['active']:
-        draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
+    #if game.context_menu['active']:
+    #    draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
 
     if game.player.is_aiming:
         pygame.mouse.set_visible(False) 

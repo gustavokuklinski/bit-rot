@@ -768,23 +768,23 @@ class NPC(Zombie):
                 
                 valid_options.append(opt)
 
-                if not valid_options: continue
+            if not valid_options: continue
 
-                # Weighted Random Selection from valid_options
-                total_priority = sum(opt['priority'] for opt in valid_options)
-                if total_priority <= 0: continue
-                
-                pick = random.randint(1, total_priority)
-                current = 0
-                selected_opt = None
-                for opt in valid_options:
-                    current += opt['priority']
-                    if pick <= current:
-                        selected_opt = opt.copy() 
-                        break
-                
-                if selected_opt:
-                    options.append(selected_opt)
+            # Weighted Random Selection from valid_options
+            total_priority = sum(opt['priority'] for opt in valid_options)
+            if total_priority <= 0: continue
+            
+            pick = random.randint(1, total_priority)
+            current = 0
+            selected_opt = None
+            for opt in valid_options:
+                current += opt['priority']
+                if pick <= current:
+                    selected_opt = opt.copy() 
+                    break
+            
+            if selected_opt:
+                options.append(selected_opt)
             
         # 4. Format Text (Replacements)
         inv_str = ", ".join([i.name for i in self.inventory]) if self.inventory else "nothing"

@@ -330,7 +330,8 @@ class Player:
         final_damage_taken = max(0, base_damage * damage_modifier)
         final_infection_taken = max(0, base_infection * infection_modifier)
         
-        self.take_damage_to_part('body', final_damage_taken)
+        target_part = random.choice(list(self.body_parts.keys()))
+        self.take_damage_to_part(target_part, final_damage_taken)
 
         if final_infection_taken > 0:
             self.infection = min(100, self.infection + final_infection_taken)

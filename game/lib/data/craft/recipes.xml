@@ -126,6 +126,26 @@
         <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
     </recipe>
 
+    <!-- Camp -->
+    <recipe type="camp" craft="create" output="Sleeping Bag" magazine="Survivor Guide Basic" amount="1" time="7.0">
+        <ingredient name="Denim Stripes" destroy="true" amount="15" />
+        <ingredient name="Line Twine" destroy="true" amount="10" />
+        <ingredient name="Needle" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="camp" craft="create" output="Camp Tent" magazine="Survivor Guide Basic" amount="1" time="10.0">
+        <ingredient name="[Leather Piece, Denim Stripes]" destroy="true" amount="4" />
+        <ingredient name="Line Twine" destroy="true" amount="20" />
+        <ingredient name="Stick" destroy="true" amount="4" />
+        <ingredient name="Needle" destroy="false" amount="1" />
+    </recipe>
+
+    <recipe type="utility" craft="create" output="Campfire off" amount="1" time="2.0">
+        <ingredient name="[Denim Stripes, Ragged Cloth]" destroy="true" amount="2" />
+        <ingredient name="[Stick, Tree Branch]" destroy="true" amount="3" />
+        <ingredient name="Stone" destroy="true" amount="2" />
+    </recipe>
+
     <!-- Clothes -->
     <recipe type="resource" craft="create" output="Line Twine" amount="10" time="3.0">
         <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
@@ -149,19 +169,6 @@
     <recipe type="backpack" craft="create" output="Bag" magazine="Survivor Guide Basic" req_level="[intelligence:1, maintenance:2]" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="4.5">
         <ingredient name="Ragged Cloth" destroy="true" amount="8" />
         <ingredient name="Line Twine" destroy="true" amount="4" />
-        <ingredient name="Needle" destroy="false" amount="1" />
-    </recipe>
-
-    <recipe type="camp" craft="create" output="Sleeping Bag" magazine="Survivor Guide Basic" amount="1" time="7.0">
-        <ingredient name="Denim Stripes" destroy="true" amount="15" />
-        <ingredient name="Line Twine" destroy="true" amount="10" />
-        <ingredient name="Needle" destroy="false" amount="1" />
-    </recipe>
-
-    <recipe type="camp" craft="create" output="Camp Tent" magazine="Survivor Guide Basic" amount="1" time="10.0">
-        <ingredient name="[Leather Piece, Denim Stripes]" destroy="true" amount="4" />
-        <ingredient name="Line Twine" destroy="true" amount="20" />
-        <ingredient name="Stick" destroy="true" amount="4" />
         <ingredient name="Needle" destroy="false" amount="1" />
     </recipe>
 

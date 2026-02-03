@@ -1305,7 +1305,7 @@ def find_item_at_pos(game, mouse_pos):
                 container = modal['container_mapping'][active_tab]
                 if container:
                     # Offset Y+80
-                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             return item
@@ -2012,7 +2012,7 @@ def handle_right_click(game, mouse_pos):
             elif active_tab in modal.get('container_mapping', {}):
                 container = modal['container_mapping'][active_tab]
                 if container:
-                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             clicked_item, click_source, click_index, click_container_item = item, 'container', i, container
@@ -2363,7 +2363,7 @@ def handle_left_click_drag_candidate(game, mouse_pos):
             container = modal['container_mapping'][active_tab]
             if container:
                 # Offset Y+80
-                pos_for_calc = (modal['rect'].x, modal['rect'].y + 45)
+                pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
                 for i, item in enumerate(container.inventory):
                     if item:
                         slot_rect = get_container_slot_rect(pos_for_calc, i)

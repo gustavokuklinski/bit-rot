@@ -44,6 +44,8 @@ from core.map.generator import ProceduralGenerator
 from core.entities.vehicle.vehicle import Vehicle
 from core.ui.helpers.start_loading import draw_loading_screen
 from core.logger import GameLogger
+# [ADDED] Import draw_tooltip to handle Z-ordering
+from core.ui.tooltip import draw_tooltip
 
 class Game:
     def __init__(self):
@@ -1399,6 +1401,15 @@ class Game:
 
         self._cleanup_modals()
         draw_game(self)
+
+        if self.hovered_item:
+            mouse_pos = self._get_scaled_mouse_pos()
+            draw_tooltip(self.virtual_screen, self.hovered_item, mouse_pos)
+
+        # [NEW] Draw Context Menu LAST (Top Z-Index) so it covers tooltips
+        if self.context_menu['active']:
+            draw_context_menu(self.virtual_screen, self.context_menu, self._get_scaled_mouse_pos())
+
         self._update_screen()
 
     def _get_scaled_mouse_pos(self):

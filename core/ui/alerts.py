@@ -1,12 +1,12 @@
 import pygame
 import math
 from core.data.config import *
-from core.ui.tooltip import draw_tooltip  # [1] Import the existing tooltip function
+# [CHANGED] Removed draw_tooltip import as we now return the proxy instead of drawing it directly
+# from core.ui.tooltip import draw_tooltip 
 
 # Cache for icons to prevent reloading every frame
 _alert_icons = {}
 
-# [2] Create a Proxy class to mimic an Item for the tooltip renderer
 class AlertTooltipProxy:
     def __init__(self, text):
         self.name = text
@@ -38,9 +38,10 @@ def _get_alert_icon(filename):
 def draw_player_alerts(surface, player):
     """
     Checks player stats and draws alerts at the top center of the screen.
+    Returns the tooltip proxy if an alert is hovered, otherwise None.
     """
     if not player:
-        return
+        return None
 
     active_alerts = []
 
@@ -76,7 +77,7 @@ def draw_player_alerts(surface, player):
         active_alerts.append(("ui/infection.png", YELLOW, "You are feeling sick or infected?"))
 
     if not active_alerts:
-        return
+        return None
 
     # --- 2. Calculate Layout (Center Top, Side-by-Side) ---
     num_alerts = len(active_alerts)
@@ -115,8 +116,5 @@ def draw_player_alerts(surface, player):
             # Create a lightweight proxy object for this specific alert
             tooltip_proxy = AlertTooltipProxy(tooltip_text)
 
-    # --- 4. Render Tooltip using standard system ---
-    if tooltip_proxy:
-        # Draw the tooltip slightly offset from the mouse cursor
-        draw_pos = (mouse_pos[0] + 5, mouse_pos[1] + 5)
-        draw_tooltip(surface, tooltip_proxy, draw_pos)
+    # --- 4. Return Proxy instead of drawing immediately ---
+    return tooltip_proxy
