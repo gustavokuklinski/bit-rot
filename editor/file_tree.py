@@ -214,7 +214,7 @@ class FileTree:
 
                     # Draw Layers
                     if self.expanded_maps.get(map_key):
-                        layer_order = ['roof','light', 'map', 'spawn', 'ground']
+                        layer_order = ['light','roof','map', 'spawn', 'ground']
                         layer_file_lookup = {}
                         for lf in maps[map_name]:
                             for suffix in layer_order:
@@ -243,10 +243,7 @@ class FileTree:
                             vh_rect = pygame.Rect(self.x + self.width - 150, display_y - 6, ICON_SIZE, ICON_SIZE)
                             surface.blit(icon, vh_rect)
 
-                            op_rect = pygame.Rect(self.x + self.width - 80, display_y, 70, self.line_height - 5)
-                            op_text = f"OP:{prop['opacity']}"
-                            op_surf = self.font.render(op_text, True, (0,0,0))
-                            surface.blit(op_surf, (op_rect.x + 5, op_rect.y + 2))
+                            
 
                             display_y += self.line_height
         
@@ -293,7 +290,7 @@ class FileTree:
                                 
                                 # Layers
                                 if self.expanded_maps.get(map_key):
-                                    layer_order = ['roof', 'light','map', 'spawn', 'ground']
+                                    layer_order = ['light', 'roof', 'map', 'spawn', 'ground']
                                     layer_file_lookup = {}
                                     for lf in maps[map_name]:
                                         for suffix in layer_order:

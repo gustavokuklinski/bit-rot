@@ -15,7 +15,7 @@ class Map:
         self.undo_stack = []
 
         if default_layers is None:
-            default_layers = ['roof', 'light','map', 'ground', 'spawn'] # Default layers
+            default_layers = ['light', 'roof','map', 'ground', 'spawn'] # Default layers
 
         # FIX: Store default_layers as an instance attribute so editor.py can access it
         self.default_layers = default_layers 

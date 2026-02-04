@@ -9,7 +9,7 @@ from editor.config import (
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
     MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT
 )
-from editor.assets import load_map_tiles_from_xml
+from editor.assets import load_map_tiles_from_xml, load_sprite_images
 from editor.map import Map
 from editor.ui import Sidebar, Toolbar, NewBuildingModal # Removed ModeTabs, NewMapModal
 from editor.file_tree import FileTree
@@ -34,8 +34,8 @@ YELLOW = (255, 255, 0)
 FONT = pygame.font.Font(None, 24)
 
 # Regex Patterns
-MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_roof|_light|_map|_spawn|_ground)?\.csv")
-BUILDING_PATTERN = re.compile(r"(.+)(_roof|_light|_map|_spawn|_ground)\.csv")
+MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_ground)?\.csv")
+BUILDING_PATTERN = re.compile(r"(.+)(_light|_roof|_map|_spawn|_ground)\.csv")
 
 def get_map_dimensions(map_name, map_dir):
     """Attempts to determine map width and height by reading one of its files."""
@@ -74,7 +74,7 @@ def load_map_layers(game_map, map_name, map_dir):
     if os.path.exists(map_dir):
         for filename in os.listdir(map_dir):
             if filename.startswith(f'{map_name}_') and filename.endswith('.csv'):
-                for suffix in ['roof','light', 'map', 'ground', 'spawn']:
+                for suffix in ['light', 'roof', 'map', 'ground', 'spawn']:
                      if filename.endswith(f"_{suffix}.csv"):
                          # Check strict match to avoid partial matches
                          if filename == f"{map_name}_{suffix}.csv":
@@ -84,7 +84,7 @@ def load_map_layers(game_map, map_name, map_dir):
     if detected_layers:
         detected_layers.sort()
         # Restore default layers if missing
-        for l in ['roof','light', 'map', 'spawn', 'ground']:
+        for l in ['light', 'roof', 'map', 'spawn', 'ground']:
              if l not in game_map.layers:
                  game_map.layers[l] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
                  
@@ -92,7 +92,7 @@ def load_map_layers(game_map, map_name, map_dir):
         game_map.set_active_layer(detected_layers[0])
     else:
         # Default empty
-        game_map.default_layers = ['roof','light', 'map', 'spawn', 'ground']
+        game_map.default_layers = ['light', 'roof', 'map', 'spawn', 'ground']
         for l in game_map.default_layers:
             game_map.layers[l] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
         game_map.set_active_layer('map')
@@ -143,7 +143,7 @@ def paste_building_on_map(game_map, building_name, building_dir, target_x, targe
     if not os.path.exists(building_dir): return
     for f in os.listdir(building_dir):
         if f.startswith(f"{building_name}_") and f.endswith(".csv"):
-             for suffix in ['roof', 'light', 'map', 'ground', 'spawn']:
+             for suffix in ['light', 'roof', 'map', 'ground', 'spawn']:
                  if f == f"{building_name}_{suffix}.csv":
                      try:
                          with open(os.path.join(building_dir, f), 'r') as csvfile:
@@ -158,7 +158,18 @@ def editor():
     game_root = os.path.abspath(os.path.join('./game'))
     xml_path = os.path.join(game_root, 'lib', 'data', 'map')
     sprite_path = os.path.join(game_root, 'lib', 'sprites', 'map')
+    item_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'items')
     map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
+
+    # Load Items (Create dir if not exists)
+    if not os.path.exists(item_sprite_path):
+        try:
+            os.makedirs(item_sprite_path)
+        except OSError: pass
+    item_tiles = load_sprite_images(item_sprite_path)
+
+    # Combine for rendering (Items can override tiles if names collide)
+    all_render_tiles = {**map_tiles, **item_tiles}
 
     # Initialize State
     # Only using building_map now
@@ -174,7 +185,8 @@ def editor():
     building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
     
     toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
-    sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, FONT)
+    
+    sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, item_tiles, FONT)
     
     # REFRESH BUILDINGS REMOVED AS TAB IS GONE
 
@@ -274,7 +286,7 @@ def editor():
                     
                     if not os.path.exists(BUILDINGS_DIR): os.makedirs(BUILDINGS_DIR)
                     
-                    for suffix in ['roof','light', 'map', 'ground', 'spawn']:
+                    for suffix in ['light', 'roof', 'map', 'ground', 'spawn']:
                         path = os.path.join(BUILDINGS_DIR, f"{b_name}_{suffix}.csv")
                         with open(path, 'w', newline='') as f:
                             writer = csv.writer(f)
@@ -395,13 +407,7 @@ def editor():
                         status_msg = "Pasted!"
                         status_timer = pygame.time.get_ticks() + 1000
 
-                elif tb_action in ["PLAYER SPAWN", "ZOMBIE SPAWN", "ITEM SPAWN", "STAIR L1", "STAIR L2"]:
-                     map_map = {
-                         "PLAYER SPAWN": "P_SPAWN", "ZOMBIE SPAWN": "Z_SPAWN",
-                         "ITEM SPAWN": "ITEM", "STAIR L1": "L1", "STAIR L2": "L2"
-                     }
-                     tile_to_place = map_map[tb_action]
-                     is_selecting = False
+                
 
             # Map Interaction
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -419,11 +425,15 @@ def editor():
                             selection_rect = pygame.Rect(map_x, map_y, 1, 1)
                         
                         elif sidebar.selected_building and sidebar.active_tab == "Builds":
-                            paste_building_on_map(current_map_obj, sidebar.selected_building, BUILDINGS_DIR, map_x, map_y)
-                            modified_maps.add((current_folder, current_base_name))
+                             paste_building_on_map(current_map_obj, sidebar.selected_building, BUILDINGS_DIR, map_x, map_y)
+                             modified_maps.add((current_folder, current_base_name))
                         
-                        elif sidebar.selected_tile or tile_to_place:
-                            t = tile_to_place if tile_to_place else sidebar.selected_tile
+                        elif sidebar.selected_tile or sidebar.selected_item or tile_to_place:
+                            # Determine what to place: Tool -> Tile -> Item
+                            t = tile_to_place
+                            if not t:
+                                t = sidebar.selected_tile if sidebar.selected_tile else sidebar.selected_item
+                            
                             t = None if t == "eraser" else t
                             current_map_obj.set_tile(map_x, map_y, t)
                             modified_maps.add((current_folder, current_base_name))

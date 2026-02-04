@@ -325,12 +325,7 @@ class Toolbar:
             {"label": "UNDO", "icon": "undo", "action": "UNDO"},
             {"label": "COPY", "icon": "copy", "action": "COPY"},
             {"label": "PASTE", "icon": "paste", "action": "PASTE"},
-            {"label": "CLEAR", "icon": "clear", "action": "CLEAR"},
-            {"label": "P_SPAWN", "icon": "player_spawn", "action": "PLAYER SPAWN"},
-            {"label": "Z_SPAWN", "icon": "zombie_spawn", "action": "ZOMBIE SPAWN"},
-            {"label": "ITEM", "icon": "item", "action": "ITEM SPAWN"},
-            {"label": "L1", "icon": "stair", "action": "STAIR L1"},
-            {"label": "L2", "icon": "stair", "action": "STAIR L2"},
+            {"label": "CLEAR", "icon": "clear", "action": "CLEAR"}
             
         ]
 
@@ -377,20 +372,31 @@ class Toolbar:
         return None
 
 class Sidebar:
-    def __init__(self, x, y, tiles, font):
+    def __init__(self, x, y, tiles, items, font):
         self.x = x
         self.y = y
         self.font = font
-        self.all_tiles = tiles.copy() # Store all tiles
-        self.tiles = tiles.copy() # Tiles to be displayed (filtered)
+        
+        # Tiles Data
+        self.all_tiles = tiles.copy()
+        self.filtered_tiles = tiles.copy()
         self.selected_tile = None
         
-        # Tabs - Only Tiles available
-        self.tabs = ["Tiles"]
+        # Items Data
+        self.all_items = items.copy()
+        self.filtered_items = items.copy()
+        self.selected_item = None
+        
+        # Tabs
+        self.tabs = ["Tiles", "Items"]
         self.active_tab = "Tiles"
         self.tab_height = 30
+        
+        # Calculate Tab Rects (Split width evenly)
+        tab_w = SIDEBAR_WIDTH // 2
         self.tab_rects = {
-            "Tiles": pygame.Rect(x, y, SIDEBAR_WIDTH, self.tab_height), # Full width
+            "Tiles": pygame.Rect(x, y, tab_w, self.tab_height),
+            "Items": pygame.Rect(x + tab_w, y, tab_w, self.tab_height)
         }
 
         # Search / Filter
@@ -413,24 +419,24 @@ class Sidebar:
         self.scroll_start_mouse_y = 0
         self.scroll_start_offset = 0
         
-        # Building Previews Data (kept to minimal initialization as feature is disabled)
+        # Building Previews Data (kept to minimal initialization)
         self.building_previews = {} 
         self.building_dimensions = {} 
         self.selected_building = None
 
     def refresh_buildings(self, building_dir, tile_map):
-        # Feature disabled, but method kept to avoid breaking external calls if any remain
         pass
 
-    def _filter_tiles(self):
-        """Filters the displayed tiles based on the search text."""
+    def _filter_content(self):
+        """Filters both tiles and items based on the search text."""
         if not self.search_text:
-            self.tiles = self.all_tiles.copy()
+            self.filtered_tiles = self.all_tiles.copy()
+            self.filtered_items = self.all_items.copy()
         else:
-            self.tiles = {}
-            for name, image in self.all_tiles.items():
-                if self.search_text.lower() in name.lower():
-                    self.tiles[name] = image
+            text = self.search_text.lower()
+            self.filtered_tiles = {k: v for k, v in self.all_tiles.items() if text in k.lower()}
+            self.filtered_items = {k: v for k, v in self.all_items.items() if text in k.lower()}
+            
         self.scroll_offset = 0 # Reset scroll on search
 
     def draw(self, surface):
@@ -440,10 +446,13 @@ class Sidebar:
         # Tabs
         for tab in self.tabs:
             rect = self.tab_rects[tab]
-            color = (80, 80, 80) if self.active_tab == tab else (40, 40, 40)
+            is_active = (self.active_tab == tab)
+            color = (80, 80, 80) if is_active else (40, 40, 40)
             pygame.draw.rect(surface, color, rect)
             pygame.draw.rect(surface, (0, 0, 0), rect, 1)
-            text = self.font.render(tab, True, (255, 255, 255))
+            
+            text_color = (255, 255, 255) if is_active else (150, 150, 150)
+            text = self.font.render(tab, True, text_color)
             surface.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
 
         # Search Bar
@@ -468,24 +477,34 @@ class Sidebar:
 
         content_height = 0
         
+        # Determine which dict to draw based on active tab
+        items_to_draw = {}
+        selected_name = None
+        
         if self.active_tab == "Tiles":
-            row, col = 0, 0
-            for name, image in sorted(self.tiles.items()):
-                tile_x = self.x + col * (TILE_SIZE + 10) + 10
-                tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
+            items_to_draw = self.filtered_tiles
+            selected_name = self.selected_tile
+        elif self.active_tab == "Items":
+            items_to_draw = self.filtered_items
+            selected_name = self.selected_item
+
+        # Draw Grid
+        row, col = 0, 0
+        for name, image in sorted(items_to_draw.items()):
+            tile_x = self.x + col * (TILE_SIZE + 10) + 10
+            tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
+            
+            if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + SCREEN_HEIGHT:
+                surface.blit(image, (tile_x, tile_y))
+                if selected_name == name:
+                    pygame.draw.rect(surface, (255, 255, 0), (tile_x, tile_y, TILE_SIZE, TILE_SIZE), 3)
+
+            col += 1
+            if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
+                col = 0
+                row += 1
                 
-                if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + SCREEN_HEIGHT:
-                    surface.blit(image, (tile_x, tile_y))
-                    if self.selected_tile == name:
-                        pygame.draw.rect(surface, (255, 255, 0), (tile_x, tile_y, TILE_SIZE, TILE_SIZE), 3)
-
-                col += 1
-                if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
-                    col = 0
-                    row += 1
-            content_height = (row + 1) * (TILE_SIZE + 10)
-
-        # Removed Builds Draw Logic
+        content_height = (row + 1) * (TILE_SIZE + 10)
 
         surface.set_clip(None)
 
@@ -545,7 +564,6 @@ class Sidebar:
                         self.scroll_offset = ratio * self.max_scroll
                         self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
                         
-                        # Initiate drag from new position
                         self.dragging_scroll = True
                         self.scroll_start_mouse_y = my
                         self.scroll_start_offset = self.scroll_offset
@@ -553,10 +571,11 @@ class Sidebar:
 
                 # Check Tabs
                 if my < self.y + self.tab_height:
-                    # Only Tiles tab exists now
-                    if mx < self.x + SIDEBAR_WIDTH: 
-                        self.active_tab = "Tiles"
-                    self.scroll_offset = 0
+                    for tab_name, rect in self.tab_rects.items():
+                        if rect.collidepoint(mx, my):
+                            self.active_tab = tab_name
+                            self.scroll_offset = 0
+                            return True
                     return True
                 
                 # Check Search
@@ -575,13 +594,25 @@ class Sidebar:
                     return True
 
                 # Click Selection
-                if my > self.content_area_y and self.active_tab == "Tiles":
+                if my > self.content_area_y:
+                    items_to_check = {}
+                    if self.active_tab == "Tiles": items_to_check = self.filtered_tiles
+                    elif self.active_tab == "Items": items_to_check = self.filtered_items
+                    
                     row, col = 0, 0
-                    for name, image in sorted(self.tiles.items()):
+                    for name, image in sorted(items_to_check.items()):
                         tile_x = self.x + col * (TILE_SIZE + 10) + 10
                         tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
                         if pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE).collidepoint(mx, my):
-                            self.selected_tile = name
+                            
+                            # Handle Selection
+                            if self.active_tab == "Tiles":
+                                self.selected_tile = name
+                                self.selected_item = None
+                            elif self.active_tab == "Items":
+                                self.selected_item = name
+                                self.selected_tile = None
+                                
                             self.selected_building = None
                             return True
                         col += 1
@@ -593,6 +624,6 @@ class Sidebar:
         if event.type == pygame.KEYDOWN and self.search_active:
             if event.key == pygame.K_BACKSPACE: self.search_text = self.search_text[:-1]
             else: self.search_text += event.unicode
-            self._filter_tiles()
+            self._filter_content()
             return True
         return False
