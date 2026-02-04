@@ -7,12 +7,12 @@ import csv
 from editor.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
-    MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT
+    MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT,
+    LOG_WINDOW_HEIGHT
 )
-# CHANGED: Added load_items_from_xml to imports
 from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_items_from_xml
 from editor.map import Map
-from editor.ui import Sidebar, Toolbar, NewBuildingModal 
+from editor.ui import Sidebar, Toolbar, NewBuildingModal, LogConsole
 from editor.file_tree import FileTree
 
 # Initialize Pygame
@@ -173,7 +173,7 @@ def editor():
         try: os.makedirs(item_xml_path)
         except OSError: pass
 
-    # CHANGED: Use the new XML loader for items
+    # Use the new XML loader for items
     item_tiles = load_items_from_xml(item_xml_path, item_sprite_path)
 
     # Combine for rendering (Items can override tiles if names collide)
@@ -185,13 +185,17 @@ def editor():
     
     content_y = TOOLBAR_HEIGHT
     
-    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
+    # ADJUSTED: FileTree now shorter to make room for LogConsole
+    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y - LOG_WINDOW_HEIGHT, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
     
     toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     
     # Pass both map_tiles and item_tiles to Sidebar
     sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, item_tiles, FONT)
     
+    # ADDED: Log Console at the bottom
+    log_console = LogConsole(0, SCREEN_HEIGHT - LOG_WINDOW_HEIGHT, SCREEN_WIDTH - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, FONT)
+
     # Current State Pointers
     current_map_obj = building_map
     current_file_tree = building_file_tree
@@ -217,14 +221,12 @@ def editor():
     camera_offset_y = content_y + 20
     zoom_index = INITIAL_ZOOM_INDEX
     
-    # Interaction
-    map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 20, content_y + 20, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, SCREEN_HEIGHT - content_y - 20)
+    # ADJUSTED: Map View Rect shortened
+    map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 20, content_y + 20, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, SCREEN_HEIGHT - content_y - LOG_WINDOW_HEIGHT - 20)
     dragging = False
     drag_start = (0,0)
     
     modified_maps = set() 
-    status_msg = ""
-    status_timer = 0
     
     tile_to_place = None
     selection_start = None
@@ -245,31 +247,26 @@ def editor():
                 
                 if ctrl_held and event.key == pygame.K_z: # Undo
                     current_map_obj.undo()
-                    status_msg = "Undo"
-                    status_timer = pygame.time.get_ticks() + 1000
+                    log_console.add_message("Undo")
                 elif ctrl_held and event.key == pygame.K_s: # Save
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
                     modified_maps.discard((current_folder, current_base_name))
-                    status_msg = "Saved!"
-                    status_timer = pygame.time.get_ticks() + 1000
+                    log_console.add_message("Saved map")
                 elif ctrl_held and event.key == pygame.K_c: # Copy
                      if selection_rect:
                         clipboard = current_map_obj.get_tiles_in_rect(selection_rect, current_map_obj.active_layer_name)
-                        status_msg = "Copied!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Copied selection")
                 elif ctrl_held and event.key == pygame.K_v: # Paste
                      if clipboard:
                         tx, ty = (selection_rect.x, selection_rect.y) if selection_rect else (0,0)
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
-                        status_msg = "Pasted!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Pasted clipboard")
                         modified_maps.add((current_folder, current_base_name))
                 elif event.key == pygame.K_DELETE: # Delete/Clear
                      if selection_rect:
                         current_map_obj.clear_rect(selection_rect, current_map_obj.active_layer_name)
                         modified_maps.add((current_folder, current_base_name))
-                        status_msg = "Cleared Selection"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Cleared selection")
                 elif event.key == pygame.K_ESCAPE:
                     is_selecting = False
                     selection_rect = None
@@ -306,8 +303,7 @@ def editor():
                     
                     sidebar.active_tab = "Tiles" 
 
-                    status_msg = f"Created & Opened {b_name}"
-                    status_timer = pygame.time.get_ticks() + 2000
+                    log_console.add_message(f"Created & Opened {b_name}")
                 continue
 
             # Sidebar
@@ -334,6 +330,7 @@ def editor():
                     
                     load_map_layers(current_map_obj, map_name, current_root_dir)
                     modified_maps.discard((folder, map_name))
+                    log_console.add_message(f"Opened {map_name}")
                     
                 elif ft_res['action'] == 'toggle_visibility':
                      layer_name = ft_res['layer_name']
@@ -352,8 +349,7 @@ def editor():
                 elif tb_action == "SAVE MAP":
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
                     modified_maps.discard((current_folder, current_base_name))
-                    status_msg = "Saved!"
-                    status_timer = pygame.time.get_ticks() + 1000
+                    log_console.add_message("Saved map")
 
                 elif tb_action == "SELECTION":
                     is_selecting = True
@@ -366,14 +362,11 @@ def editor():
                     if selection_rect and sidebar.selected_tile:
                         current_map_obj.fill_rect(selection_rect, sidebar.selected_tile, current_map_obj.active_layer_name)
                         modified_maps.add((current_folder, current_base_name))
-                        status_msg = "Filled Selection!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Filled Selection")
                     elif not selection_rect:
-                        status_msg = "No Selection!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("No Selection!")
                     elif not sidebar.selected_tile:
-                        status_msg = "No Tile Selected!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("No Tile Selected!")
 
                 elif tb_action == "ERASER":
                     tile_to_place = "eraser"
@@ -384,6 +377,7 @@ def editor():
                     
                 elif tb_action == "UNDO":
                     current_map_obj.undo()
+                    log_console.add_message("Undo")
                     
                 elif tb_action == "CLEAR":
                     if selection_rect:
@@ -392,20 +386,22 @@ def editor():
                         r = pygame.Rect(0, 0, current_map_obj.width, current_map_obj.height)
                         current_map_obj.clear_rect(r, current_map_obj.active_layer_name)
                     modified_maps.add((current_folder, current_base_name))
+                    log_console.add_message("Cleared")
                         
                 elif tb_action == "COPY":
                     if selection_rect:
                         clipboard = current_map_obj.get_tiles_in_rect(selection_rect, current_map_obj.active_layer_name)
-                        status_msg = "Copied!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Copied selection")
 
                 elif tb_action == "PASTE":
                     if clipboard:
                         tx, ty = (selection_rect.x, selection_rect.y) if selection_rect else (0,0)
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
                         modified_maps.add((current_folder, current_base_name))
-                        status_msg = "Pasted!"
-                        status_timer = pygame.time.get_ticks() + 1000
+                        log_console.add_message("Pasted clipboard")
+            
+            # Log Console Event Handling
+            log_console.handle_event(event)
 
             # Map Interaction
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -443,8 +439,7 @@ def editor():
                                 current_map_obj.set_tile(map_x, map_y, sidebar.selected_item)
                                 modified_maps.add((current_folder, current_base_name))
                             else:
-                                status_msg = "Items only allowed on 'spawn' layer!"
-                                status_timer = pygame.time.get_ticks() + 2000
+                                log_console.add_message("Items only allowed on 'spawn' layer!")
 
             # Mouse Up / Motion
             if event.type == pygame.MOUSEBUTTONUP: 
@@ -472,9 +467,7 @@ def editor():
         # Render
         screen.fill(GREY)
         
-        # Render map using all_render_tiles.
-        # Since 'all_render_tiles' now contains the mapping "Sparkling Water" -> Image,
-        # the map will visually display the sprite even though the underlying data is the string "Sparkling Water".
+        # Render map
         current_map_obj.render(screen, all_render_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
         
         draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
@@ -494,10 +487,10 @@ def editor():
         sidebar.draw(screen)
         toolbar.draw(screen)
         
-        if new_building_modal.active: new_building_modal.draw(screen)
+        # Draw Log Console
+        log_console.draw(screen)
         
-        if pygame.time.get_ticks() < status_timer:
-            screen.blit(FONT.render(status_msg, True, BLACK), (FILE_TREE_WIDTH + 10, content_y + 50))
+        if new_building_modal.active: new_building_modal.draw(screen)
 
         pygame.display.flip()
 

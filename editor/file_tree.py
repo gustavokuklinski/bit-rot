@@ -32,6 +32,14 @@ class FileTree:
         
         self.selected_map = None   # (folder, map_name)
         
+        # Scrollbar State
+        self.max_scroll = 0
+        self.dragging_scroll = False
+        self.scrollbar_track_rect = None
+        self.scrollbar_thumb_rect = None
+        self.scroll_start_mouse_y = 0
+        self.scroll_start_offset = 0
+        
         self.refresh()
 
     def refresh(self):
@@ -128,7 +136,6 @@ class FileTree:
                 if first_folder != "":
                     self.expanded_folders[first_folder] = True
 
-    # ... (rest of class remains unchanged)
     def _group_maps(self, file_list):
         grouped = {}
         for f in file_list:
@@ -139,6 +146,22 @@ class FileTree:
                     grouped[base_name] = []
                 grouped[base_name].append(f)
         return grouped
+
+    def _get_content_height(self):
+        """Calculates the total height of the tree in pixels."""
+        h = 0
+        for folder in self.folders:
+            if folder != "":
+                h += self.line_height
+            
+            if folder == "" or self.expanded_folders.get(folder):
+                if folder in self.map_data:
+                    for map_name in self.map_data[folder]:
+                        h += self.line_height
+                        if self.expanded_maps.get((folder, map_name)):
+                            # 5 layers: light, roof, map, spawn, ground
+                            h += 5 * self.line_height 
+        return h
 
     def draw(self, surface, current_map_name, current_folder, active_layer_name, modified_maps=None):
         if modified_maps is None:
@@ -166,6 +189,12 @@ class FileTree:
 
         # List Area
         list_rect = pygame.Rect(self.x, self.y + (self.line_height * 2.5), self.width, self.height - (self.line_height * 2.5))
+        
+        # Calculate Scrolling
+        content_height = self._get_content_height()
+        self.max_scroll = max(0, content_height - list_rect.height)
+        self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+
         surface.set_clip(list_rect)
 
         display_y = list_rect.y - self.scroll_offset
@@ -187,13 +216,17 @@ class FileTree:
                 
                 icon = "[-]" if self.expanded_folders.get(folder) else "[+]"
                 text = f"{icon} {display_folder}"
-                surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + 10, display_y))
+                
+                # Optimization: Only draw if visible
+                if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                    surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + 10, display_y))
+                
                 display_y += self.line_height
                 indent = 25
 
             # Draw Maps
             if folder == "" or self.expanded_folders.get(folder):
-                maps = self.map_data[folder]
+                maps = self.map_data.get(folder, {})
                 for map_name in sorted(maps.keys()):
                     map_key = (folder, map_name)
                     
@@ -203,13 +236,18 @@ class FileTree:
                              is_modified = True
                     modified_indicator = "*" if is_modified else ""
                     
+                    # Highlight selected map
                     if map_name == current_map_name and folder == current_folder: 
-                        pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 10, self.line_height - 2))
+                        if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                            # Width reduced by 15 to account for scrollbar
+                            pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 15, self.line_height - 2))
                     
                     icon = "[-]" if self.expanded_maps.get(map_key) else "[+]"
                     text = f"{icon} {map_name}{modified_indicator}"
                     
-                    surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + indent, display_y))
+                    if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                        surface.blit(self.font.render(text, True, (0, 0, 0)), (self.x + indent, display_y))
+                    
                     display_y += self.line_height
 
                     # Draw Layers
@@ -232,31 +270,86 @@ class FileTree:
                             
                             prop = self.layer_properties[rel_path]
                             
-                            if layer_name == active_layer_name and map_name == current_map_name and folder == current_folder:
-                                pygame.draw.rect(surface, LIGHT_BLUE, (self.x + indent + 5, display_y, self.width - (indent + 15), self.line_height - 2))
+                            if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                                if layer_name == active_layer_name and map_name == current_map_name and folder == current_folder:
+                                    pygame.draw.rect(surface, LIGHT_BLUE, (self.x + indent + 5, display_y, self.width - (indent + 25), self.line_height - 2))
 
-                            layer_text_str = f"    {layer_name}"
-                            layer_surf = self.font.render(layer_text_str, True, (50, 50, 50))
-                            surface.blit(layer_surf, (self.x + indent + 5, display_y))
+                                layer_text_str = f"    {layer_name}"
+                                layer_surf = self.font.render(layer_text_str, True, (50, 50, 50))
+                                surface.blit(layer_surf, (self.x + indent + 5, display_y))
 
-                            icon = self.icons["hide"] if prop["visible"] else self.icons["view"]
-                            vh_rect = pygame.Rect(self.x + self.width - 150, display_y - 6, ICON_SIZE, ICON_SIZE)
-                            surface.blit(icon, vh_rect)
-
-                            
+                                icon = self.icons["hide"] if prop["visible"] else self.icons["view"]
+                                # Shifted left by 15px to make room for scrollbar
+                                vh_rect = pygame.Rect(self.x + self.width - 165, display_y - 6, ICON_SIZE, ICON_SIZE)
+                                surface.blit(icon, vh_rect)
 
                             display_y += self.line_height
         
         surface.set_clip(None)
 
+        # Scrollbar Rendering
+        if self.max_scroll > 0:
+            track_rect = pygame.Rect(self.x + self.width - 12, list_rect.y, 12, list_rect.height)
+            self.scrollbar_track_rect = track_rect
+            pygame.draw.rect(surface, (180, 180, 180), track_rect)
+            
+            thumb_height = max(20, (list_rect.height / content_height) * list_rect.height)
+            scroll_ratio = self.scroll_offset / self.max_scroll
+            thumb_y = list_rect.y + scroll_ratio * (list_rect.height - thumb_height)
+            
+            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_height)
+            self.scrollbar_thumb_rect = thumb_rect
+            pygame.draw.rect(surface, (100, 100, 100), thumb_rect)
+        else:
+            self.scrollbar_track_rect = None
+            self.scrollbar_thumb_rect = None
+
     def handle_event(self, event):
+        # Global mouse up
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.dragging_scroll = False
+
+        # Mouse motion for dragging scrollbar
+        if event.type == pygame.MOUSEMOTION:
+            if self.dragging_scroll and self.scrollbar_thumb_rect and self.max_scroll > 0:
+                dy = event.pos[1] - self.scroll_start_mouse_y
+                
+                track_h = self.scrollbar_track_rect.height
+                thumb_h = self.scrollbar_thumb_rect.height
+                movable_space = track_h - thumb_h
+                
+                if movable_space > 0:
+                    # Calculate amount to scroll based on pixel movement
+                    scroll_per_pixel = self.max_scroll / movable_space
+                    scroll_change = dy * scroll_per_pixel
+                    
+                    self.scroll_offset = self.scroll_start_offset + scroll_change
+                    self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+                return None 
+
         if event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            
+            # Check Scrollbar Interactions first (if visible)
+            if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
+                self.dragging_scroll = True
+                self.scroll_start_mouse_y = my
+                self.scroll_start_offset = self.scroll_offset
+                return None 
+            elif self.scrollbar_track_rect and self.scrollbar_track_rect.collidepoint(mx, my):
+                # Page jump on track click
+                if my < self.scrollbar_thumb_rect.y:
+                    self.scroll_offset = max(0, self.scroll_offset - self.height)
+                else:
+                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.height)
+                return None 
+
             if event.button == 1:
-                mouse_x, mouse_y = event.pos
-                if self.x <= mouse_x <= self.x + self.width and self.y <= mouse_y <= self.y + self.height:
+                # Content Area Clicks
+                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
                     
                     list_start_y = self.y + (self.line_height * 2.5)
-                    if mouse_y < list_start_y:
+                    if my < list_start_y:
                         return None 
 
                     current_y = list_start_y - self.scroll_offset
@@ -264,8 +357,9 @@ class FileTree:
                     for folder in self.folders:
                         # Folder Click
                         if folder != "":
-                            folder_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
-                            if folder_rect.collidepoint(mouse_x, mouse_y):
+                            # Use width-15 to avoid clicking through scrollbar
+                            folder_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
+                            if folder_rect.collidepoint(mx, my):
                                 self.expanded_folders[folder] = not self.expanded_folders.get(folder, False)
                                 return None
                             current_y += self.line_height
@@ -276,10 +370,10 @@ class FileTree:
                             for map_name in sorted(maps.keys()):
                                 map_key = (folder, map_name)
                                 
-                                map_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
-                                if map_rect.collidepoint(mouse_x, mouse_y):
+                                map_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
+                                if map_rect.collidepoint(mx, my):
                                     toggle_width = 40 if folder else 30
-                                    if mouse_x < self.x + toggle_width: 
+                                    if mx < self.x + toggle_width: 
                                         self.expanded_maps[map_key] = not self.expanded_maps.get(map_key, False)
                                         return None
                                     else:
@@ -306,10 +400,11 @@ class FileTree:
                                         if rel_path not in self.layer_properties:
                                             self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
 
-                                        layer_rect = pygame.Rect(self.x, current_y, self.width, self.line_height)
-                                        if layer_rect.collidepoint(mouse_x, mouse_y):
-                                            vh_rect = pygame.Rect(self.x + self.width - 150, current_y, ICON_SIZE, ICON_SIZE)
-                                            if vh_rect.collidepoint(mouse_x, mouse_y):
+                                        layer_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
+                                        if layer_rect.collidepoint(mx, my):
+                                            # Adjusted click target for eye icon (shifted left)
+                                            vh_rect = pygame.Rect(self.x + self.width - 165, current_y, ICON_SIZE, ICON_SIZE)
+                                            if vh_rect.collidepoint(mx, my):
                                                 self.layer_properties[rel_path]["visible"] = not self.layer_properties[rel_path]["visible"]
                                                 return {
                                                     "action": "toggle_visibility", 
@@ -317,8 +412,8 @@ class FileTree:
                                                     "properties": self.layer_properties[rel_path]
                                                 }
                                             
-                                            op_rect = pygame.Rect(self.x + self.width - 80, current_y, 70, self.line_height - 5)
-                                            if op_rect.collidepoint(mouse_x, mouse_y):
+                                            op_rect = pygame.Rect(self.x + self.width - 95, current_y, 70, self.line_height - 5)
+                                            if op_rect.collidepoint(mx, my):
                                                 current_op = self.layer_properties[rel_path]["opacity"]
                                                 self.layer_properties[rel_path]["opacity"] = 0 if current_op == 255 else 255
                                                 return {
@@ -332,17 +427,11 @@ class FileTree:
                                         current_y += self.line_height
 
             elif event.button == 4:  # Scroll up
-                self.scroll_offset = max(0, self.scroll_offset - self.line_height)
+                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
+                    self.scroll_offset = max(0, self.scroll_offset - (self.line_height * 2))
+                    return None
             elif event.button == 5:  # Scroll down
-                total_height = 0
-                for f in self.folders:
-                    if f != "": total_height += self.line_height
-                    if f == "" or self.expanded_folders.get(f):
-                         for m in self.map_data[f]:
-                             total_height += self.line_height
-                             if self.expanded_maps.get((f, m)):
-                                 total_height += 4 * self.line_height
-                
-                max_scroll = max(0, total_height - (self.height - self.line_height * 3))
-                self.scroll_offset = min(max_scroll, self.scroll_offset + self.line_height)
+                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
+                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + (self.line_height * 2))
+                    return None
         return None

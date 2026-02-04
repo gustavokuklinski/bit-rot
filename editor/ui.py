@@ -2,6 +2,7 @@ import pygame
 import re
 import os
 import csv
+from datetime import datetime
 from editor.config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
 from editor.assets import load_editor_icons
 
@@ -44,6 +45,109 @@ class ModeTabs:
                         self.active_mode = tab["mode"]
                         return self.active_mode
         return None
+
+# --- Log Console ---
+class LogConsole:
+    def __init__(self, x, y, width, height, font):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.font = font
+        self.messages = [] # List of strings
+        self.line_height = 20
+        self.scroll_offset = 0
+        self.max_scroll = 0
+        
+        # Scrollbar state
+        self.dragging_scroll = False
+        self.scrollbar_track_rect = None
+        self.scrollbar_thumb_rect = None
+        self.scroll_start_mouse_y = 0
+        self.scroll_start_offset = 0
+
+    def add_message(self, text):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        full_msg = f"<{timestamp}> {text}"
+        self.messages.append(full_msg)
+        
+        # Auto-scroll to bottom
+        total_h = len(self.messages) * self.line_height
+        if total_h > self.rect.height:
+            self.scroll_offset = total_h - self.rect.height
+
+    def draw(self, surface):
+        # Background
+        pygame.draw.rect(surface, (20, 20, 20), self.rect)
+        pygame.draw.line(surface, (100, 100, 100), self.rect.topleft, self.rect.topright)
+
+        # Content Area
+        surface.set_clip(self.rect)
+        
+        start_y = self.rect.y + 5 - self.scroll_offset
+        
+        for i, msg in enumerate(self.messages):
+            y = start_y + i * self.line_height
+            # Only draw if visible
+            if y + self.line_height > self.rect.y and y < self.rect.bottom:
+                text_surf = self.font.render(msg, True, (200, 200, 200))
+                surface.blit(text_surf, (self.rect.x + 10, y))
+        
+        surface.set_clip(None)
+
+        # Scrollbar logic
+        content_height = len(self.messages) * self.line_height + 10
+        self.max_scroll = max(0, content_height - self.rect.height)
+        
+        if self.max_scroll > 0:
+            track_x = self.rect.right - 12
+            self.scrollbar_track_rect = pygame.Rect(track_x, self.rect.y, 12, self.rect.height)
+            pygame.draw.rect(surface, (40, 40, 40), self.scrollbar_track_rect)
+            
+            view_h = self.rect.height
+            thumb_h = max(20, (view_h / content_height) * view_h)
+            
+            ratio = self.scroll_offset / self.max_scroll
+            thumb_y = self.rect.y + ratio * (view_h - thumb_h)
+            
+            self.scrollbar_thumb_rect = pygame.Rect(track_x, thumb_y, 12, thumb_h)
+            pygame.draw.rect(surface, (100, 100, 100), self.scrollbar_thumb_rect)
+        else:
+            self.scrollbar_thumb_rect = None
+            self.scrollbar_track_rect = None
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.dragging_scroll = False
+            
+        if event.type == pygame.MOUSEMOTION:
+            if self.dragging_scroll and self.scrollbar_thumb_rect and self.max_scroll > 0:
+                dy = event.pos[1] - self.scroll_start_mouse_y
+                view_h = self.scrollbar_track_rect.height
+                thumb_h = self.scrollbar_thumb_rect.height
+                track_space = view_h - thumb_h
+                
+                if track_space > 0:
+                    scroll_per_pixel = self.max_scroll / track_space
+                    self.scroll_offset = self.scroll_start_offset + (dy * scroll_per_pixel)
+                    self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+                return True
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            if self.rect.collidepoint(mx, my):
+                # Scrollbar click
+                if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
+                    self.dragging_scroll = True
+                    self.scroll_start_mouse_y = my
+                    self.scroll_start_offset = self.scroll_offset
+                    return True
+                
+                # Scroll wheel
+                if event.button == 4: # Up
+                    self.scroll_offset = max(0, self.scroll_offset - 40)
+                    return True
+                if event.button == 5: # Down
+                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + 40)
+                    return True
+        return False
 
 # --- New Building Modal ---
 class NewBuildingModal:
@@ -144,7 +248,7 @@ class NewMapModal:
         self.current_layer = 1
         self.current_pos_id = 0
         
-        match = re.match(r"map_L(\d+)_P(\d+)_(\d+)_(\d+)_(\d+)_(\d+)", current_map_name)
+        match = re.match(r"map_L(\d+)_P(?:\d+_)*(\d+)_(\d+)_(\d+)_(\d+)_(\d+)", current_map_name)
         if match:
             self.current_layer = int(match.group(1))
             self.current_pos_id = int(match.group(2))

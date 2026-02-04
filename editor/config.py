@@ -13,9 +13,7 @@ MAP_DEFAULT_HEIGHT = 100
 # UI Dimensions
 TAB_BAR_HEIGHT = 30   # New top bar for switching modes
 TOOLBAR_HEIGHT = 40
-
-# Toolbar height
-TOOLBAR_HEIGHT = 40
+LOG_WINDOW_HEIGHT = 150 # Height of the bottom log window
 
 # Tile size
 TILE_SIZE = 32
