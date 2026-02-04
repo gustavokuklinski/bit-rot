@@ -49,6 +49,9 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     # 4. Draw Content based on active tab
     active_label = modal['active_tab']
     
+    # [FIX] Clear gear slots to prevent ghost highlights when on other tabs
+    modal['gear_slot_rects'] = {} 
+
     if active_label == 'Gear':
         _draw_gear_tab(surface, player, modal, assets, mouse_pos)
     elif active_label in container_mapping:

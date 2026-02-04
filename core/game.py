@@ -104,6 +104,8 @@ class Game:
         self.zombies_killed = 0
 
         self.modals = []
+        self.saved_modals = [] # [NEW] Store closed modals here for restoration
+        
         self.context_menu = {
             'active': False,
             'item': None,

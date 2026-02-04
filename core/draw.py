@@ -51,10 +51,13 @@ def draw_game(game):
 
     # Check if mouse is over any UI modal
     is_over_modal = False
-    for modal in game.modals:
-        if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
-            is_over_modal = True
-            break
+    
+    # [CHECK] Respect hidden UI state for interaction checks
+    if not getattr(game, 'hide_modals', False):
+        for modal in game.modals:
+            if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+                is_over_modal = True
+                break
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
@@ -501,6 +504,8 @@ def draw_game(game):
     mouse_pos = game._get_scaled_mouse_pos()
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
+    # [CHANGE START] Only draw modals if they are not hidden
+    # [REVERTED] Removed hide_modals check to rely on list clearing instead
     for modal in game.modals:
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
@@ -555,7 +560,8 @@ def draw_game(game):
             modal['instance'].surface = game.virtual_screen
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
-        
+    # [CHANGE END]
+
     game.pause_button_rect = draw_pause_button(game.virtual_screen)
     game.forward_button_rect = draw_forward_button(game.virtual_screen)
     game.status_button_rect = draw_status_button(game.virtual_screen)
@@ -569,6 +575,9 @@ def draw_game(game):
     highlighted_allowed = False
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
+        
+        # [CHANGE START] Only highlight modal slots if they are not hidden
+        # [REVERTED] Removed hide_modals check
         for modal in reversed(game.modals):
             if modal['type'] == 'inventory':
                 if modal.get('active_tab', 'Inventory') == 'Inventory':
@@ -613,7 +622,7 @@ def draw_game(game):
                 if highlighted_rect: break
             elif modal['type'] == 'messages':
                 pass
-
+        # [CHANGE END]
 
         if not highlighted_rect:
             for i in range(5):

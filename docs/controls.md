@@ -22,6 +22,7 @@
 - **N**: Open Nearby
 - **M / ENTER**: Open Messages (enter enable chat mode)
 - **G**: Open Clothes
+- **TAB**: Close/Open latest modals
 
 **System**
-- **F2 / ESC**: Pause, save, back to menu
+- **F2 / ESC**: Pause and save

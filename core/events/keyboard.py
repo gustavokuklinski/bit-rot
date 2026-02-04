@@ -14,6 +14,9 @@ def toggle_inventory_modal(game):
             inventory_modal_exists = True
             break
     if not inventory_modal_exists:
+        # [FIX] Ensure saved modals are cleared if user opens new one, or just proceed
+        # game.saved_modals = []  # Optional: clear stack if user interacts
+        
         new_inventory_modal = {
             'id': uuid.uuid4(),
             'type': 'inventory',
@@ -166,8 +169,26 @@ def toggle_pause(game):
 
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
+        # [UPDATED] Toggle UI Visibility with TAB (Close/Restore Logic)
+        if event.key == pygame.K_TAB:
+            # Ensure storage exists if not added to game.py yet (safe fallback)
+            if not hasattr(game, 'saved_modals'):
+                game.saved_modals = []
+
+            if game.modals:
+                # If modals are active: Save them and Close them
+                game.saved_modals = game.modals[:] 
+                game.modals.clear()
+            else:
+                # If no modals active: Restore from saved if available
+                if game.saved_modals:
+                    game.modals = game.saved_modals[:]
+                    game.saved_modals = [] 
+            return
+
         # [ADDED] Check if a top modal wants to handle the event (e.g. Search Bar)
-        if game.modals:
+        # Ensure we don't handle events for hidden modals
+        if game.modals and not getattr(game, 'hide_modals', False):
             top_modal = game.modals[-1]
             if 'instance' in top_modal and hasattr(top_modal['instance'], 'handle_event'):
                 if top_modal['instance'].handle_event(event):

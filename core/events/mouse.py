@@ -899,7 +899,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                     break
                                 
                                 # Use y+80 offset for gear modal tabs
-                                pos_for_calc = (modal['rect'].x, modal['rect'].y)
+                                # [FIXED] Added +40 offset to Y to align with visual offset of 80 (since get_container_slot_rect adds 40)
+                                pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
                                 target_index = -1
                                 for i in range(container.capacity or 0):
                                     if get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
