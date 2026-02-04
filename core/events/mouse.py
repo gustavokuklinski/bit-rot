@@ -369,7 +369,10 @@ def handle_mouse_up(game, event, mouse_pos):
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
                 
-                is_raw_external = type_orig in ['container', 'nearby', 'container_stack_split', 'nearby_stack_split']
+                # [CHANGED] Limit 'raw_external' strictly to Nearby type (Nearby modal content)
+                # Removing 'container' type ensures dragging from opened Inventory Bags is treated as Internal (Instant).
+                is_raw_external = type_orig in ['nearby', 'nearby_stack_split']
+                
                 is_source_backpack = (container_obj == game.player.backpack and container_obj is not None)
                 is_external_source = is_raw_external and not is_source_backpack
 
@@ -1975,9 +1978,8 @@ def handle_right_click(game, mouse_pos):
                     pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
-                            clicked_item = item
-                            click_source = 'container' # This ensures correct context menu options (like 'Drop')
-                            click_index = i
+                            # [FIX] Unpack 3 values correctly
+                            clicked_item, click_source, click_index = item, 'container', i
                             click_container_item = container
                             break
                             
@@ -2465,7 +2467,10 @@ def handle_attack(game, mouse_pos):
                 if weapon.durability <= 0:
                     print(f"{weapon.name} broke!")
                     game.player.progression.add_xp(game.player, 'maintenance', 50)
-                    game.player.destroy_broken_weapon(weapon)
+                    # [MODIFIED] Do not destroy broken weapon, just unequip active slot to indicate unusable
+                    game.player.active_weapon = None 
+                    display_message(game, f"{weapon.name} is broken and unequipped.")
+                    
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
                     game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center)

@@ -1,5 +1,10 @@
-<map name="garden_grass_3" type="maptile" char="garden_grass_3" is_obstacle="false">
+<map name="garden_grass_3" type="maptile_container" char="garden_grass_3" is_obstacle="false">
     <visuals>
         <sprite file="garden_grass_3.png" />
     </visuals>
+    <capacity value="1" />
+    <loot>
+        <item item="Stone" chance="0.1" />
+        <item item="Tree Branch" chance="0.1" />
+    </loot>
 </map>

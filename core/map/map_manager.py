@@ -123,7 +123,7 @@ class MapManager:
         if not definition or not definition.get('destructible'):
             return False
 
-        valid_axes = ["Axe", "Primitive Axe"]
+        valid_axes = ["Axe", "Primitive Axe", 'Knife', 'Primitive Knife', 'Picaxe']
         has_axe = False
         if weapon:
             for axe_name in valid_axes:
@@ -147,8 +147,8 @@ class MapManager:
             DURABILITY_COST = 0.7
             weapon.durability = max(0, weapon.durability - DURABILITY_COST)
             if weapon.durability <= 0:
-                display_message_player(f"Your {weapon.name} broke!")
-                self.game.player.destroy_broken_weapon(weapon)
+                self.game.player.active_weapon = None
+                display_message_player(f"{weapon.name} is broken and unequipped.")
                 return True
         
 
@@ -179,7 +179,7 @@ class MapManager:
         
         self.game.map_states[map_name]['tile_health'][pos_key] -= damage
         current_hp = self.game.map_states[map_name]['tile_health'][pos_key]
-        display_message_player(f"Chop! ({max(0, current_hp)} HP left)")
+        display_message_player(f"({max(0, current_hp)} HP left)")
         
         if current_hp <= 0:
             del self.game.map_states[map_name]['tile_health'][pos_key]

@@ -302,14 +302,14 @@ class Player:
         if dur_damage > 0:
             item_hit.durability = max(0, item_hit.durability - dur_damage)
             if item_hit.durability <= 0:
-                slot_to_clear = None
-                for slot, item in self.clothes.items():
-                    if item == item_hit:
-                        slot_to_clear = slot
-                        break
-                if slot_to_clear:
-                    self.clothes[slot_to_clear] = None
-                    display_message(f"Your {item_hit.name} broke!")
+                #slot_to_clear = None
+                #for slot, item in self.clothes.items():
+                #    if item == item_hit:
+                #        slot_to_clear = slot
+                #        break
+                #if slot_to_clear:
+                #    self.clothes[slot_to_clear] = None
+                display_message(f"Your {item_hit.name} broke!")
 
     def take_damage(self, game, base_damage, base_infection):
         if self.vehicle: return 0, 0

@@ -31,6 +31,10 @@
         <ingredient name="Duck Tape" destroy="true" amount="1" />
         <ingredient name="Axe" destroy="false" amount="1" />
     </recipe>
+    <recipe type="weapon_melee" craft="repair" output="Picaxe" amount="1" time="2.0">
+        <ingredient name="Duck Tape" destroy="true" amount="1" />
+        <ingredient name="Picaxe" destroy="false" amount="1" />
+    </recipe>
     <recipe type="weapon_melee" craft="repair" output="Knife" amount="1" time="2.0">
         <ingredient name="Duck Tape" destroy="true" amount="1" />
         <ingredient name="Knife" destroy="false" amount="1" />

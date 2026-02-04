@@ -1,10 +1,11 @@
-<map name="garden_stone" type="maptile_container" char="garden_stone" is_obstacle="true">
+<map name="garden_stone" type="maptile" char="garden_stone" is_obstacle="true" destructible="true">
     <visuals>
         <sprite file="garden_stone.png" />
     </visuals>
-    <capacity value="5" />
-    <loot>
-        <item item="Stone" chance="0.4" />
-        <item item="Tree Branch" chance="0.1" />
-    </loot>
+    <properties>
+        <health min="70" max="120" />
+    </properties>
+    <drop>
+        <item item="Stone" chance="1" />
+    </drop>
 </map>

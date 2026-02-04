@@ -11,6 +11,7 @@
         <item name="Screws" chance="0.3" />
         <item name="Nails" chance="0.3" />
         <item name="Hammer" chance="0.3" />
+        <item name="Picaxe" chance="0.3" />
         <item name="Knife" chance="0.3" />
         <item name="Axe" chance="0.3" />
         <item name="Portable Hand Saw" chance="0.1" />
