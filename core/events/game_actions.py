@@ -20,21 +20,37 @@ def try_grab_item(game):
         if game.player.backpack and any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals):
             target_inventory = game.player.backpack.inventory
             target_capacity = game.player.backpack.capacity or 0
+        
+        success = False
         if len(target_inventory) < target_capacity:
             target_inventory.append(closest_item)
             game.items_on_ground.remove(closest_item)
+            success = True
             print(f"Grabbed {closest_item.name}.")
-            current_map_filename = game.map_manager.current_map_filename
-            if current_map_filename not in game.map_states:
-                game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()}
-            game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
             game.player.inventory.append(closest_item)
             game.items_on_ground.remove(closest_item)
+            success = True
             print(f"Grabbed {closest_item.name} into inventory.")
+        else:
+            print("No space to grab the item.")
+
+        if success:
             current_map_filename = game.map_manager.current_map_filename
             if current_map_filename not in game.map_states:
                 game.map_states[current_map_filename] = {'items': [], 'zombies': [], 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': pygame.time.get_ticks()}
             game.map_states[current_map_filename]['picked_up_items'].append(closest_item.id)
-        else:
-            print("No space to grab the item.")
+
+            # --- MAP UPDATE LOGIC ---
+            # Remove the item from the map's spawn layout so it doesn't respawn on reload
+            # This requires access to the spawn layout grid in game.
+            if hasattr(game, 'spawn_layout') and game.spawn_layout:
+                grid_x = int(closest_item.x // TILE_SIZE)
+                grid_y = int(closest_item.y // TILE_SIZE)
+                try:
+                    if 0 <= grid_y < len(game.spawn_layout) and 0 <= grid_x < len(game.spawn_layout[0]):
+                        if game.spawn_layout[grid_y][grid_x] == closest_item.name:
+                            game.spawn_layout[grid_y][grid_x] = ' '
+                            print(f"Removed world item '{closest_item.name}' from spawn layout at ({grid_x}, {grid_y})")
+                except Exception as e:
+                    print(f"Error updating map layout on pickup: {e}")

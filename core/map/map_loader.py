@@ -27,12 +27,9 @@ def load_map_from_file(filepath):
 def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layout, light_layout, tile_manager):
     """
     Creates lists of tiles, obstacles, and spawn points from layered map layouts.
-    - ground_layout defines floor tiles (never obstacles).
-    - base_layout defines walls and structural obstacles.
-    - spawn_layout defines player, zombie, and item start positions.
     """
     obstacles = []
-    renderable_tiles = [] # List to store (image, rect) tuples for drawing
+    renderable_tiles = [] 
     player_spawn = None
     zombie_spawns = []
     npc_spawns = []
@@ -40,7 +37,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
     containers = []
     roof_renderables = []
     map_lights = []
-    # Use dimensions from the base layout (assuming all layers match)
+    
     map_height = len(base_layout)
     map_width = len(base_layout[0]) if map_height > 0 else 0
 
@@ -48,44 +45,29 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         print("Error: Base map layout is empty.")
         return [], [], None, [], [], [], []
 
-    # 1. Process Ground Layer (Floor Tiles)
+    # 1. Process Ground Layer
     if len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
         print("Warning: Ground layout dimensions mismatch base layout.")
     for y, row in enumerate(ground_layout):
-         if y >= map_height: break # Prevent index error if mismatch
+         if y >= map_height: break 
          for x, char in enumerate(row):
             if x >= map_width: break
-            if char and char != ' ': # Ignore empty cells in ground layer
-                
-                # [FIX] Define position and rect here so they are available for use
+            if char and char != ' ': 
                 pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                 rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
 
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
-                    
-                    # --- START CHANGE ---
                     if tile_def['type'] == 'maptile_car':
-                        # Create Vehicle Entity
                         stats = tile_def.get('car_stats', {})
                         cap = tile_def.get('capacity', 0)
-                        
-                        # Generate Loot
                         loot_table = tile_def.get('loot')
-
-                        # Pass items to Vehicle constructor
                         vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, loot_table=loot_table)
-                        
-                        # Use the rect we created so it's the SAME object in both lists
                         vehicle.rect = rect 
-                        
-                        containers.append(vehicle) # Add to entities
-                        
+                        containers.append(vehicle) 
                         if tile_def['is_obstacle']:
-                            obstacles.append(rect) # Add to physics
-                    
+                            obstacles.append(rect)
                     else:
-                        # Standard Tile
                         renderable_tiles.append((tile_def['image'], rect))
                         if tile_def['is_obstacle']:
                             obstacles.append(rect) 
@@ -101,47 +83,35 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             container.rect = rect
                             container.image = tile_def['image']
                             containers.append(container)
-                    
-                    # renderable_tiles.append((tile_def['image'], rect)) 
-                    
                 else:
                     print(f"Warning: Undefined ground tile character '{char}' at ({x},{y}).")
 
-    # 2. Process Base Layer (Walls, Obstacles)
-    # This adds obstacle rects and potentially overwrites ground tiles if needed
+    # 2. Process Base Layer
     if len(base_layout) != map_height or (map_height > 0 and len(base_layout[0]) != map_width):
-        print("Error: Base layout dimensions are inconsistent.") # Base MUST match expected size
-        # Handle this error case as needed, maybe return empty
+        print("Error: Base layout dimensions are inconsistent.") 
     for y, row in enumerate(base_layout):
         if y >= map_height: break
         for x, char in enumerate(row):
             if x >= map_width: break
-            if char and char != ' ': # Ignore empty cells in base layer
+            if char and char != ' ': 
                 pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                 rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
 
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
-                    
-                    # Also check for cars in Base layer (where they usually are)
                     if tile_def['type'] == 'maptile_car':
                         stats = tile_def.get('car_stats', {})
                         cap = tile_def.get('capacity', 0)
-
-                        # Generate Loot
                         loot_table = tile_def.get('loot')
-
-                        # Pass items to Vehicle constructor
                         vehicle = Vehicle(tile_def['name'], pos_x, pos_y, TILE_SIZE, TILE_SIZE, tile_def['image'], stats, capacity=cap, loot_table=loot_table)
-
                         vehicle.rect = rect 
                         containers.append(vehicle)
                         if tile_def['is_obstacle']:
                             obstacles.append(rect)
                     else:
-                        renderable_tiles.append((tile_def['image'], rect)) # Add visuals
+                        renderable_tiles.append((tile_def['image'], rect)) 
                         if tile_def['is_obstacle']:
-                            obstacles.append(rect) # Add collision rect
+                            obstacles.append(rect) 
                         if tile_def['type'] == 'maptile_container':
                             items = []
                             if 'loot' in tile_def:
@@ -157,7 +127,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     print(f"Warning: Undefined base tile character '{char}' at ({x},{y}).")
 
 
-    # 3. Process Spawn Layer (P, Z, I)
+    # 3. Process Spawn Layer (P, Z, I, NPC, and Specific Items)
     possible_player_spawns = []
     if len(spawn_layout) != map_height or (map_height > 0 and len(spawn_layout[0]) != map_width):
         print("Warning: Spawn layout dimensions mismatch base layout.")
@@ -165,10 +135,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         if y >= map_height: break
         for x, char in enumerate(row):
             if x >= map_width: break
-            if char and char != ' ': # Ignore empty cells
+            if char and char != ' ': 
                 
-                # --- START CHANGE ---
-                # Check for spawn markers FIRST
                 if char == 'P':
                     if player_spawn:
                          print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
@@ -176,39 +144,40 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                 elif char == 'Z':
                     base_char = ground_layout[y][x]
                     tile_def = tile_manager.definitions.get(base_char)
-                    
                     is_valid_spawn = True
-                    if not tile_def:
-                        is_valid_spawn = False # Don't spawn on empty space
-                    elif tile_def['is_obstacle']:
-                        is_valid_spawn = False # Don't spawn on obstacles
+                    if not tile_def: is_valid_spawn = False 
+                    elif tile_def['is_obstacle']: is_valid_spawn = False 
                     elif base_char.startswith('water_') or base_char.startswith('petrol_'):
-                        is_valid_spawn = False # Don't spawn on forbidden tiles
+                        is_valid_spawn = False 
                         
                     if is_valid_spawn:
                         zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-                    else:
-                        # Optional: Log why a spawn point was skipped
-                        # print(f"Skipping zombie spawn at ({x},{y}), tile is '{base_char}'.")
-                        pass
+                
                 elif char == 'I':
+                    # Random Item Spawn
                     item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                
                 elif char.strip() == 'NPC':
                     npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                
                 else:
-                    # If not a standard spawn marker, it might be a player spawn point
-                    possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                    # Check for Specific Item Code
+                    test_item = Item.create_from_name(char)
+                    if test_item:
+                        # Append with name for spawn_manager to handle
+                        item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char))
+                    else:
+                        # Not an item, maybe player spawn fallback
+                        possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
 
-                # NOW, also check if the character is a renderable tile
+                # Check if the character is a renderable tile (e.g. specialized spawn markers)
                 if char in tile_manager.definitions:
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     tile_def = tile_manager.definitions[char]
-                    
-                    renderable_tiles.append((tile_def['image'], rect)) # Add visuals
-                    
+                    renderable_tiles.append((tile_def['image'], rect)) 
                     if tile_def['is_obstacle']:
-                        obstacles.append(rect) # Add collision rect
+                        obstacles.append(rect)
                         
                     if tile_def['type'] == 'maptile_container':
                         items = []
@@ -227,27 +196,17 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
              if y >= len(light_layout): break
              for x, char in enumerate(row):
                 if x >= len(row): break
-                
                 if char and char != ' ' and char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
-                    
-                    # 1. Add visual sprite (The lamp itself)
-                    # We add it to renderable_tiles so it draws on the world
                     renderable_tiles.append((tile_def['image'], rect))
-                 
-
-                    # 2. Add Light Source Data
                     if tile_def.get('light_state') == 'on':
                         base_radius = tile_def.get('light_radius', 0) * TILE_SIZE
-                           
                         random_radius = int(random.uniform(base_radius, base_radius * 2))
-                        
                         is_active = random.choice([True, False])
                         map_lights.append({
                             'rect': rect,
-                            # Convert tile radius to pixels (e.g., 10 tiles * 32px)
                             'radius': random_radius,
                             'active': is_active
                         })
@@ -256,25 +215,21 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         print("Warning: Roof layout dimensions mismatch base layout.")
 
     for y, row in enumerate(roof_layout):
-         if y >= map_height: break # Prevent index error if mismatch
+         if y >= map_height: break 
          for x, char in enumerate(row):
             if x >= map_width: break
-            if char and char != ' ': # Ignore empty cells
+            if char and char != ' ': 
                 if char in tile_manager.definitions:
                     tile_def = tile_manager.definitions[char]
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
-                    # Add to roof list WITH grid coordinates for the fade logic
                     roof_renderables.append((tile_def['image'], rect, (x, y)))
                 else:
                     print(f"Warning: Undefined roof tile character '{char}' at ({x},{y}).")
 
     if not player_spawn:
-        print("Warning: No player spawn ('P') defined in spawn layer. Player will spawn at a random available spawn point.")
+        print("Warning: No player spawn ('P') defined in spawn layer.")
         if possible_player_spawns:
             player_spawn = random.choice(possible_player_spawns)
-        # Optionally set a default spawn like center of map or (0,0)
-        # player_spawn = (map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2)
-
 
     return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights, npc_spawns

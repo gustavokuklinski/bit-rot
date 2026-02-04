@@ -21,15 +21,32 @@ def spawn_initial_items(obstacles, item_spawns):
     for ob in obstacles:
         occupied_tiles.add((ob.x // TILE_SIZE, ob.y // TILE_SIZE))
 
-    for pos in item_spawns:
-        item = Item.generate_random()
-        item.rect.topleft = pos
-        item.x = pos[0]
-        item.y = pos[1]
-        item_tile = (item.rect.x // TILE_SIZE, item.rect.y // TILE_SIZE)
-        if item_tile not in occupied_tiles:
-            items_on_ground.append(item)
-            occupied_tiles.add(item_tile)
+    for spawn_data in item_spawns:
+        # Check if it is a specific item tuple (x, y, name)
+        if len(spawn_data) == 3:
+            x, y, name = spawn_data
+            item = Item.create_from_name(name)
+            if item:
+                item.rect.topleft = (x, y)
+                item.x = x
+                item.y = y
+                item_tile = (x // TILE_SIZE, y // TILE_SIZE)
+                # We allow specific map items to spawn even if "occupied" (e.g. on top of a rug)
+                items_on_ground.append(item)
+                occupied_tiles.add(item_tile)
+        else:
+            # Random Item Spawn (x, y)
+            pos = spawn_data
+            item = Item.generate_random()
+            if item:
+                item.rect.topleft = pos
+                item.x = pos[0]
+                item.y = pos[1]
+                item_tile = (item.rect.x // TILE_SIZE, item.rect.y // TILE_SIZE)
+                if item_tile not in occupied_tiles:
+                    items_on_ground.append(item)
+                    occupied_tiles.add(item_tile)
+                    
     return items_on_ground
 
 def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_height_px, max_radius=5):
@@ -109,14 +126,11 @@ def manage_dynamic_npcs(game):
                     break
             
             if not too_crowded:
-                # [NEW] Optional Check: Ensure we don't spawn dynamically on invalid tiles if we are on L2
                 if game.current_layer_index == 2:
                     tx, ty = int(px // TILE_SIZE), int(py // TILE_SIZE)
                     tile = game.map_manager.get_tile_at(tx, ty)
                     if not tile: continue
                     t_name = tile.get('name', '').lower()
-                    
-                    # Normal NPCs on L2 only spawn in buildings
                     is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
                     if not is_building:
                         continue
@@ -127,20 +141,14 @@ def manage_dynamic_npcs(game):
                 spawned_this_frame += 1
 
 def spawn_static_npcs(game, building_tiles):
-    """New function to spawn NPCs specifically inside buildings."""
     for (tx, ty) in building_tiles:
         if random.random() < NPC_STATIC_SPAWN:
             px, py = tx * TILE_SIZE, ty * TILE_SIZE
-            # Ensure not spawning on top of an obstacle
             if not any(ob.collidepoint(px, py) for ob in game.obstacles):
                 npc = NPC(px, py, game, is_static=True)
                 game.npcs.add(npc)
 
 def spawn_l2_population(game, count=10):
-    """
-    [NEW] Spawns entities (NPCs and Zombies) randomly on valid L2 tiles.
-    Used to populate Map_L2 correctly, avoiding void spawns.
-    """
     if not game.map_data: return
     
     map_h = len(game.map_data)
@@ -163,28 +171,23 @@ def spawn_l2_population(game, count=10):
         if not tile: continue
         
         t_name = tile.get('name', '').lower()
-        
-        # Define Categories
         is_path = 'path' in t_name or 'cave_l2' in t_name or 'dirty' in t_name or 'asphalt' in t_name
         is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
 
         if not is_path and not is_building:
             continue
             
-        # Check occupancy
         px, py = rx * TILE_SIZE, ry * TILE_SIZE
         rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
         
         if any(ob.colliderect(rect) for ob in game.obstacles): continue
         
-        # Spawn NPC (Strictly in Buildings)
         if npc_count < target_npcs and is_building:
-            npc = NPC(px, py, game, is_static=False) # Free roaming Normal NPC
+            npc = NPC(px, py, game, is_static=False) 
             game.npcs.add(npc)
             npc_count += 1
             continue
             
-        # Spawn Zombie (Strictly on Pathways)
         if zombie_count < target_zombies and is_path:
             zombie = Zombie.create_random(px, py)
             game.zombies.append(zombie)
@@ -192,7 +195,7 @@ def spawn_l2_population(game, count=10):
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
     zombies = []
-    SAFE_RADIUS_TILES = 1  # Changed from 45 to 15 to allow spawning at player birth chunk
+    SAFE_RADIUS_TILES = 1 
     safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
     
     filtered_spawns = []
@@ -201,7 +204,6 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
 
     if not zombie_spawns: return []
     
-    # Calculate bounding box of spawns to limit obstacle search
     min_sx = min(s[0] for s in zombie_spawns) - (10 * TILE_SIZE)
     max_sx = max(s[0] for s in zombie_spawns) + (10 * TILE_SIZE)
     min_sy = min(s[1] for s in zombie_spawns) - (10 * TILE_SIZE)
@@ -216,12 +218,10 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
             for j in range(-min_spacing_tiles, min_spacing_tiles + 1):
                 marker_exclusion_zone.add((tx + i, ty + j))
 
-    # [OPTIMIZED] Use obstacle_grid if available to avoid O(N) loop
     occupied_tiles = set()
     relevant_obstacles = []
 
     if obstacle_grid:
-        # Use the grid to fetch ONLY obstacles near the spawn area
         start_grid_x = int(min_sx // grid_size)
         end_grid_x = int(max_sx // grid_size)
         start_grid_y = int(min_sy // grid_size)
@@ -233,11 +233,9 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
                 if cell in obstacle_grid:
                     relevant_obstacles.extend(obstacle_grid[cell])
     else:
-        # Fallback to full list if grid is missing (slow)
         relevant_obstacles = obstacles
 
     for ob in relevant_obstacles:
-        # Check if obstacle is actually in range (grid gives rough area)
         if ob.right > min_sx and ob.left < max_sx and ob.bottom > min_sy and ob.top < max_sy:
             for x_tile in range(ob.left // TILE_SIZE, (ob.right + TILE_SIZE - 1) // TILE_SIZE):
                 for y_tile in range(ob.top // TILE_SIZE, (ob.bottom + TILE_SIZE - 1) // TILE_SIZE):
@@ -269,7 +267,6 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
             spawn_spot_px = _find_spawn_spot_near(pos, occupied_tiles, map_width_px, map_height_px)
             
             if spawn_spot_px:
-                # [NEW] Layer 2 Validation - Ensure zombies only spawn on Pathways
                 if game and game.current_layer_index == 2:
                     gx = int(spawn_spot_px[0] // TILE_SIZE)
                     gy = int(spawn_spot_px[1] // TILE_SIZE)
@@ -278,12 +275,11 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
                     is_valid = False
                     if tile:
                         t_name = tile.get('name', '').lower()
-                        # Strictly Pathways or Cave floor. NO buildings/floors.
                         if 'cave_l2' in t_name or 'path' in t_name or 'dirty' in t_name or 'asphalt' in t_name:
                              is_valid = True
                     
                     if not is_valid:
-                        continue # Skip this spot
+                        continue 
 
                 zombie = Zombie.create_random(spawn_spot_px[0], spawn_spot_px[1])
                 zombies.append(zombie)

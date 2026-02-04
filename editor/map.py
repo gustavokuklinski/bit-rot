@@ -1,4 +1,3 @@
-# editor/map.py
 import csv
 import os
 import pygame
@@ -15,9 +14,8 @@ class Map:
         self.undo_stack = []
 
         if default_layers is None:
-            default_layers = ['light', 'roof','map', 'ground', 'spawn'] # Default layers
+            default_layers = ['light', 'roof','map', 'ground', 'spawn'] 
 
-        # FIX: Store default_layers as an instance attribute so editor.py can access it
         self.default_layers = default_layers 
 
         for layer_name in default_layers:
@@ -32,15 +30,11 @@ class Map:
         self.width = new_width
         self.height = new_height
         
-        # Re-initialize grids for existing layers with new dimensions
-        # Note: This clears the map content. Only call before loading new content.
-        # We prefer using self.default_layers to ensure all required layers exist
         layers_to_init = self.default_layers if hasattr(self, 'default_layers') else self.layers.keys()
         
         self.layers = {}
         for layer_name in layers_to_init:
             self.layers[layer_name] = [[None for _ in range(new_width)] for _ in range(new_height)]
-            # Preserve properties if they existed, else default
             if layer_name not in self.layer_properties:
                 self.layer_properties[layer_name] = {"visible": True, "opacity": 255}
             
@@ -58,7 +52,6 @@ class Map:
 
         last_changes = self.undo_stack.pop()
         for (x, y, layer_name, old_tile_name) in last_changes:
-            # Call set_tile with undoing=True to prevent re-adding to the stack
             self.set_tile(x, y, old_tile_name, layer_name, undoing=True)
 
 
@@ -72,7 +65,6 @@ class Map:
         return self.layers.get(self.active_layer_name)
 
     def load_from_csv(self, filepath, layer_name):
-        # Create layer if it doesn't exist (e.g. loading a layer not in defaults)
         if layer_name not in self.layers:
             self.layers[layer_name] = [[None for _ in range(self.width)] for _ in range(self.height)]
             self.layer_properties[layer_name] = {"visible": True, "opacity": 255}
@@ -91,7 +83,6 @@ class Map:
             print(f"Error: Layer '{layer_name}' does not exist to save.")
             return
 
-        # Ensure the directory exists
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         with open(filepath, 'w', newline='') as f:
@@ -115,7 +106,6 @@ class Map:
             pass
     
     def clear_rect(self, rect, layer_name):
-        """Clears (sets to None) all tiles in the given rect on the given layer."""
         if layer_name not in self.layers:
             return
         
@@ -131,7 +121,6 @@ class Map:
         self._push_to_undo(changes)
     
     def fill_rect(self, rect, tile_name, layer_name):
-        """Fills all tiles in the given rect with the given tile_name."""
         if layer_name not in self.layers:
             return
         
@@ -147,7 +136,6 @@ class Map:
         self._push_to_undo(changes)
 
     def get_tiles_in_rect(self, rect, layer_name):
-        """Copies tile data from the specified rect and layer into a 2D list."""
         if layer_name not in self.layers:
             return None
         
@@ -163,7 +151,6 @@ class Map:
         return clipboard
 
     def paste_tiles(self, topleft_coord, clipboard_data, layer_name):
-        """Pastes clipboard data (2D list) onto the map at the topleft coordinate."""
         if layer_name not in self.layers or not clipboard_data:
             return
 
@@ -204,9 +191,11 @@ class Map:
                     tile_rect = pygame.Rect(x * scaled_tile_size, y * scaled_tile_size, scaled_tile_size, scaled_tile_size)
 
                     if tile_name in tiles:
+                        # Items usually have transparency, so this will blend correctly onto the layer surface
                         scaled_image = pygame.transform.scale(tiles[tile_name], (scaled_tile_size, scaled_tile_size))
                         layer_surface.blit(scaled_image, tile_rect.topleft)
                     else:
+                        # Fallback for missing textures (including items if 'all_render_tiles' wasn't passed)
                         pygame.draw.rect(layer_surface, (240, 240, 240, 100), tile_rect)
                         text_surf = font.render(tile_name, True, (0, 0, 0))
                         text_rect = text_surf.get_rect(center=tile_rect.center)

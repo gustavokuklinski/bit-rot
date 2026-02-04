@@ -9,12 +9,12 @@ from editor.config import (
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
     MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT
 )
-from editor.assets import load_map_tiles_from_xml, load_sprite_images
+# CHANGED: Added load_items_from_xml to imports
+from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_items_from_xml
 from editor.map import Map
-from editor.ui import Sidebar, Toolbar, NewBuildingModal # Removed ModeTabs, NewMapModal
+from editor.ui import Sidebar, Toolbar, NewBuildingModal 
 from editor.file_tree import FileTree
 
-# ... [Init, Colors, Fonts, Regex Patterns, Helper Functions remain unchanged] ...
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
@@ -103,7 +103,6 @@ def save_map_layers(game_map, map_name, map_dir):
         game_map.save_to_csv(path, layer)
         print(f"Saved {path}")
         
-# ... [draw_rulers, draw_grid, paste_building_on_map remain unchanged] ...
 def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
     size = int(TILE_SIZE * scale)
     # Top
@@ -158,38 +157,41 @@ def editor():
     game_root = os.path.abspath(os.path.join('./game'))
     xml_path = os.path.join(game_root, 'lib', 'data', 'map')
     sprite_path = os.path.join(game_root, 'lib', 'sprites', 'map')
+    
+    # Paths for Items
     item_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'items')
-    map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
+    item_xml_path = os.path.join(game_root, 'lib', 'data', 'items')
 
-    # Load Items (Create dir if not exists)
+    # Load Tiles
+    map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
+    
+    # Load Items (Create dirs if not exists)
     if not os.path.exists(item_sprite_path):
-        try:
-            os.makedirs(item_sprite_path)
+        try: os.makedirs(item_sprite_path)
         except OSError: pass
-    item_tiles = load_sprite_images(item_sprite_path)
+    if not os.path.exists(item_xml_path):
+        try: os.makedirs(item_xml_path)
+        except OSError: pass
+
+    # CHANGED: Use the new XML loader for items
+    item_tiles = load_items_from_xml(item_xml_path, item_sprite_path)
 
     # Combine for rendering (Items can override tiles if names collide)
     all_render_tiles = {**map_tiles, **item_tiles}
 
     # Initialize State
-    # Only using building_map now
     building_map = Map(width=20, height=20) 
-    
-    # Modes: Always "BUILDING"
     editor_mode = "BUILDING" 
     
-    # UI Elements positions
-    content_y = TOOLBAR_HEIGHT # No Mode Tabs anymore
+    content_y = TOOLBAR_HEIGHT
     
-    # File Trees - Only Building Tree
     building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
     
     toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     
+    # Pass both map_tiles and item_tiles to Sidebar
     sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, item_tiles, FONT)
     
-    # REFRESH BUILDINGS REMOVED AS TAB IS GONE
-
     # Current State Pointers
     current_map_obj = building_map
     current_file_tree = building_file_tree
@@ -204,7 +206,6 @@ def editor():
         folder, map_name = building_file_tree.selected_map
         current_building_name = map_name
         current_base_name = map_name
-        # Buildings likely flat, so folder is ""
         b_root = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
         load_map_layers(building_map, current_building_name, b_root)
 
@@ -221,7 +222,7 @@ def editor():
     dragging = False
     drag_start = (0,0)
     
-    modified_maps = set() # Stores tuple: (folder, map_name)
+    modified_maps = set() 
     status_msg = ""
     status_timer = 0
     
@@ -238,7 +239,7 @@ def editor():
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
             
-            # Global Keyboard Shortcuts
+            # Keyboard Shortcuts
             if event.type == pygame.KEYDOWN:
                 ctrl_held = (event.mod & pygame.KMOD_CTRL)
                 
@@ -275,6 +276,7 @@ def editor():
                     selection_start = None
                     tile_to_place = None
                     sidebar.selected_tile = None
+                    sidebar.selected_item = None
                     sidebar.selected_building = None
             
             # Modal Handling
@@ -292,10 +294,9 @@ def editor():
                             writer = csv.writer(f)
                             for _ in range(h): writer.writerow([''] * w)
                     
-                    # Refresh to show new building
                     building_file_tree.refresh()
                     
-                    current_folder = "" # Buildings are flat
+                    current_folder = "" 
                     current_root_dir = BUILDINGS_DIR
                     current_base_name = b_name
                     current_building_name = b_name
@@ -311,7 +312,7 @@ def editor():
 
             # Sidebar
             if sidebar.handle_event(event):
-                if sidebar.selected_tile: 
+                if sidebar.selected_tile or sidebar.selected_item: 
                     tile_to_place = None
                     is_selecting = False
                 if sidebar.selected_building:
@@ -328,9 +329,7 @@ def editor():
                     
                     current_folder = folder
                     current_base_name = map_name
-                    
                     current_root_dir = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
-                    
                     current_building_name = map_name
                     
                     load_map_layers(current_map_obj, map_name, current_root_dir)
@@ -348,19 +347,19 @@ def editor():
             # Toolbar
             tb_action = toolbar.handle_event(event)
             if tb_action:
-                if tb_action == "NEW MAP": pass # Disabled
+                if tb_action == "NEW MAP": pass 
                 elif tb_action == "NEW BUILDING": new_building_modal.active = True
                 elif tb_action == "SAVE MAP":
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
                     modified_maps.discard((current_folder, current_base_name))
                     status_msg = "Saved!"
                     status_timer = pygame.time.get_ticks() + 1000
-                    # sidebar.refresh_buildings removed
 
                 elif tb_action == "SELECTION":
                     is_selecting = True
                     tile_to_place = None
                     sidebar.selected_tile = None
+                    sidebar.selected_item = None
                     sidebar.selected_building = None
                 
                 elif tb_action == "FILL":
@@ -379,6 +378,7 @@ def editor():
                 elif tb_action == "ERASER":
                     tile_to_place = "eraser"
                     sidebar.selected_tile = None
+                    sidebar.selected_item = None
                     sidebar.selected_building = None
                     is_selecting = False
                     
@@ -407,8 +407,6 @@ def editor():
                         status_msg = "Pasted!"
                         status_timer = pygame.time.get_ticks() + 1000
 
-                
-
             # Map Interaction
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 4: zoom_index = min(len(ZOOM_LEVELS)-1, zoom_index+1)
@@ -428,16 +426,27 @@ def editor():
                              paste_building_on_map(current_map_obj, sidebar.selected_building, BUILDINGS_DIR, map_x, map_y)
                              modified_maps.add((current_folder, current_base_name))
                         
-                        elif sidebar.selected_tile or sidebar.selected_item or tile_to_place:
-                            # Determine what to place: Tool -> Tile -> Item
-                            t = tile_to_place
-                            if not t:
-                                t = sidebar.selected_tile if sidebar.selected_tile else sidebar.selected_item
-                            
-                            t = None if t == "eraser" else t
-                            current_map_obj.set_tile(map_x, map_y, t)
+                        elif tile_to_place == "eraser":
+                            current_map_obj.set_tile(map_x, map_y, None)
                             modified_maps.add((current_folder, current_base_name))
+                        
+                        elif sidebar.selected_tile:
+                            current_map_obj.set_tile(map_x, map_y, sidebar.selected_tile)
+                            modified_maps.add((current_folder, current_base_name))
+                            
+                        elif sidebar.selected_item:
+                            # CONSTRAINT: Items only on spawn layer
+                            if current_map_obj.active_layer_name == "spawn":
+                                # Storing the item name (string) in the map grid.
+                                # Because we mapped the name to the image in load_items_from_xml, 
+                                # the sidebar.selected_item is now the user-friendly Name (e.g. "Sparkling Water")
+                                current_map_obj.set_tile(map_x, map_y, sidebar.selected_item)
+                                modified_maps.add((current_folder, current_base_name))
+                            else:
+                                status_msg = "Items only allowed on 'spawn' layer!"
+                                status_timer = pygame.time.get_ticks() + 2000
 
+            # Mouse Up / Motion
             if event.type == pygame.MOUSEBUTTONUP: 
                 dragging = False
                 if event.button == 1 and is_selecting and selection_start:
@@ -463,9 +472,11 @@ def editor():
         # Render
         screen.fill(GREY)
         
-        # Mode Tabs Removed
+        # Render map using all_render_tiles.
+        # Since 'all_render_tiles' now contains the mapping "Sparkling Water" -> Image,
+        # the map will visually display the sprite even though the underlying data is the string "Sparkling Water".
+        current_map_obj.render(screen, all_render_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
         
-        current_map_obj.render(screen, map_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
         draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
 
         if selection_rect:
@@ -475,21 +486,9 @@ def editor():
              sh = selection_rect.height * TILE_SIZE * current_zoom
              pygame.draw.rect(screen, YELLOW, (sx, sy, sw, sh), 2)
 
-        # Ghost Building Preview (Disabled since sidebar.selected_building is effectively disabled)
-        if sidebar.selected_building and sidebar.active_tab == "Builds" and map_view_rect.collidepoint(pygame.mouse.get_pos()):
-             mx, my = pygame.mouse.get_pos()
-             gx = int(((mx - camera_offset_x) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_x
-             gy = int(((my - camera_offset_y) / current_zoom) // TILE_SIZE) * TILE_SIZE * current_zoom + camera_offset_y
-             
-             dims = sidebar.building_dimensions.get(sidebar.selected_building, (1, 1))
-             b_w = dims[0] * TILE_SIZE * current_zoom
-             b_h = dims[1] * TILE_SIZE * current_zoom
-             
-             pygame.draw.rect(screen, (0, 255, 0), (gx, gy, b_w, b_h), 2)
-
+        # Rulers and UI
         draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect, FONT)
         
-        # Pass current_folder to file tree draw to properly highlight selection
         current_file_tree.draw(screen, current_base_name, current_folder, current_map_obj.active_layer_name, modified_maps)
         
         sidebar.draw(screen)
@@ -502,5 +501,5 @@ def editor():
 
         pygame.display.flip()
 
-#if __name__ == "__main__":
-#    main()
+if __name__ == "__main__":
+    editor()

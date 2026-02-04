@@ -1,5 +1,6 @@
 import os
 import re
+import csv
 import pygame
 import random
 import time
@@ -12,7 +13,7 @@ class MapManager:
     def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game
         self.map_folder = map_folder
-        self.current_map_filename = 'map_L1_world_map.csv' # Updated default to world map
+        self.current_map_filename = 'map_L1_world_map.csv' 
         self.map_files = self._discover_maps()
         self.shaking_tiles = {}
 
@@ -33,7 +34,6 @@ class MapManager:
             return maps
 
         for filename in os.listdir(self.map_folder):
-            # Check for World Map
             match = pattern_world.match(filename)
             if match:
                 try:
@@ -48,11 +48,9 @@ class MapManager:
         return maps
 
     def get_current_map_connections(self):
-        # Legacy connections are removed
         return None
 
     def transition(self, direction):
-        # Transitions via top/left/right/bottom are legacy and not used for the single world map.
         return None
 
     def get_tile_at(self, grid_x, grid_y):
@@ -62,6 +60,49 @@ class MapManager:
             if char in self.game.tile_manager.definitions:
                 return self.game.tile_manager.definitions[char]
         return None
+
+    def save_map_to_file(self, save_dir):
+        """Saves the current state of map layers to CSV files in the save directory."""
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        
+        # We assume self.game has the layout data loaded in memory:
+        # self.game.map_data (Base Layer - Modified by destruction)
+        # self.game.spawn_layout (Spawn Layer - Modified by pickups)
+        # self.game.ground_layout (Ground Layer)
+        
+        # Helper to write a layer
+        def write_layer(layout, filename):
+            path = os.path.join(save_dir, filename)
+            try:
+                with open(path, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerows(layout)
+                print(f"Saved map layer to {path}")
+            except Exception as e:
+                print(f"Error saving map layer {filename}: {e}")
+
+        # Determine filenames based on current layer index (assuming standard naming)
+        # Currently the game uses map_L{i}_world_map.csv. 
+        # But this single CSV usually contains ALL data in blocks, or the game loads separate files.
+        # Based on map_loader logic, it usually reads one file.
+        # If the game structure separates layers into variables in 'game', we can save them individually
+        # or implies we should overwrite the single file structure. 
+        # For this implementation, we will save specific layer files if they are available in 'game'.
+        
+        # NOTE: This assumes the game engine supports loading from these split files or 
+        # that 'map_data' corresponds to the file being loaded.
+        
+        if hasattr(self.game, 'map_data'):
+            # Save Base Layer (Walls/Obstacles)
+            write_layer(self.game.map_data, f'map_L{self.game.current_layer_index}_world_map.csv')
+            
+        if hasattr(self.game, 'spawn_layout'):
+            # Save Spawn Layer (Items/Entities)
+            write_layer(self.game.spawn_layout, f'map_L{self.game.current_layer_index}_world_spawn.csv')
+
+        # If you need to overwrite the main map file, you would combine them here, 
+        # but safely we usually save the modified state separately.
 
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
@@ -78,12 +119,10 @@ class MapManager:
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-        # Check if we are trying to close the door
         if new_state == "close":
-            # Check if the player's collision box is overlapping with the tile
             if self.game.player.rect.colliderect(tile_rect):
                 display_message_player("Player is in the doorway, cannot close.")
-                return # Stop the function
+                return 
         
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"
@@ -91,15 +130,11 @@ class MapManager:
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
             
-            # 1. Update the map data (Visuals update automatically via draw loop)
             self.game.map_data[grid_y][grid_x] = new_char
             
-            # 2. Update obstacles list
             self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
             if new_def['is_obstacle']:
                 self.game.obstacles.append(tile_rect)
-            
-            # Legacy cache patching removed as it is no longer used for rendering.
             
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
@@ -188,8 +223,9 @@ class MapManager:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
             try:
+                # Fallback to ground layer beneath it
                 ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
-            except (KeyError, IndexError):
+            except (KeyError, IndexError, AttributeError):
                 ground_char = "." 
 
             self._replace_tile(grid_x, grid_y, char, ground_char)
@@ -221,12 +257,10 @@ class MapManager:
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-        # 1. Update Map Data
+        # 1. Update Map Data (This changes the in-memory layout which save_map_to_file will read)
         self.game.map_data[grid_y][grid_x] = new_char
         
         # 2. Update Obstacles
         self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
         if new_def['is_obstacle']:
             self.game.obstacles.append(tile_rect)
-            
-        # Legacy cache update removed. Visuals update automatically in draw loop.
