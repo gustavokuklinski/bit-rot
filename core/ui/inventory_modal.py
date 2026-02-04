@@ -31,8 +31,8 @@ def get_belt_hud_slot_rect(i):
     slot_size = 48
     gap = 8
     total_width = (slot_size * 5) + (gap * 4)
-    start_x = (VIRTUAL_SCREEN_WIDTH - total_width) // 2
-    start_y = VIRTUAL_GAME_HEIGHT - slot_size - 15 
+    start_x = (GAME_WIDTH - total_width) // 2
+    start_y = GAME_HEIGHT - slot_size - 15 
     x = start_x + i * (slot_size + gap)
     return pygame.Rect(x, start_y, slot_size, slot_size)
 
@@ -285,7 +285,7 @@ def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
         mouse_pos
     )
 
-def get_inventory_slot_rect(i, modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
     slot_w = 48
     slot_h = 48
@@ -305,7 +305,7 @@ def get_belt_slot_rect_in_modal(i, modal_position):
     x = start_x + i * (slot_w + gap)
     return pygame.Rect(x, start_y, slot_w, slot_h)
 
-def get_backpack_slot_rect(modal_position=(VIRTUAL_SCREEN_WIDTH, 0)):
+def get_backpack_slot_rect(modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
     slot_w = 272
     slot_h = 48

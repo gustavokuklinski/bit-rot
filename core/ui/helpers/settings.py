@@ -66,19 +66,19 @@ def _draw_settings_screen(game, state, mouse_pos):
     control_body = pygame.Rect(control_rect.x, control_rect.y + header_height, control_rect.width, control_rect.height - header_height)
 
     # Backgrounds
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), control_body, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, control_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, control_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Settings Control", True, WHITE), (control_header.x + 10, control_header.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), control_body, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, control_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, control_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Settings Control", True, WHITE), (control_header.x + 10, control_header.y + 7))
 
     # --- Apply Button ---
     btn_w = 120
     apply_rect = pygame.Rect(0, 0, btn_w, 35)
     apply_rect.center = control_body.center
     
-    pygame.draw.rect(game.virtual_screen, BTN_BLUE, apply_rect, border_radius=4)
+    pygame.draw.rect(game.game_screen, BTN_BLUE, apply_rect, border_radius=4)
     apply_txt = font.render("Apply", True, WHITE)
-    game.virtual_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
+    game.game_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
     clickable_rects['apply_settings'] = apply_rect
 
 
@@ -92,11 +92,11 @@ def _draw_settings_screen(game, state, mouse_pos):
     settings_header = pygame.Rect(settings_rect.x, settings_rect.y, settings_rect.width, header_height)
     settings_body = pygame.Rect(settings_rect.x, settings_rect.y + header_height, settings_rect.width, settings_rect.height - header_height)
 
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), settings_body, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, settings_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, settings_rect, 1, border_radius=border_radius)
+    pygame.draw.rect(game.game_screen, (30, 30, 30), settings_body, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, settings_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, settings_rect, 1, border_radius=border_radius)
     
-    game.virtual_screen.blit(font.render("Configuration Values", True, WHITE), (settings_header.x + 10, settings_header.y + 7))
+    game.game_screen.blit(font.render("Configuration Values", True, WHITE), (settings_header.x + 10, settings_header.y + 7))
     
     content_rect = settings_body.inflate(-20, -20)
     line_h = 40
@@ -120,9 +120,9 @@ def _draw_settings_screen(game, state, mouse_pos):
     state['settings_max_scroll'] = max_scroll
     scroll_y = state.get('settings_scroll_y', 0)
     
-    clip_rect = game.virtual_screen.get_rect().clip(content_rect)
+    clip_rect = game.game_screen.get_rect().clip(content_rect)
     if clip_rect.width > 0 and clip_rect.height > 0:
-        sub = game.virtual_screen.subsurface(clip_rect)
+        sub = game.game_screen.subsurface(clip_rect)
         sub.fill((30, 30, 30))
         
         y_off = -scroll_y
@@ -187,7 +187,7 @@ def _draw_settings_screen(game, state, mouse_pos):
         
         state['settings_scroll_handle'] = pygame.Rect(bar_area.x, handle_y, 10, handle_h)
         state['settings_scrollbar_track'] = bar_area
-        pygame.draw.rect(game.virtual_screen, GRAY, state['settings_scroll_handle'], border_radius=2)
+        pygame.draw.rect(game.game_screen, GRAY, state['settings_scroll_handle'], border_radius=2)
     else:
         state['settings_scroll_handle'] = None
     

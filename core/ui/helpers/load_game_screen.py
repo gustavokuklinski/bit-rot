@@ -62,13 +62,13 @@ def draw_load_game_screen(game, state, mouse_pos):
         state['scroll_y'] = 0
         state['selected_save_index'] = None
     
-    game.virtual_screen.fill(DARK_GRAY)
+    game.game_screen.fill(DARK_GRAY)
     
     # Layout Constants
     panel_w = 600
     panel_h = 500
-    panel_x = (VIRTUAL_SCREEN_WIDTH - panel_w) // 2
-    panel_y = (VIRTUAL_GAME_HEIGHT - panel_h) // 2
+    panel_x = (GAME_WIDTH - panel_w) // 2
+    panel_y = (GAME_HEIGHT - panel_h) // 2
     header_height = 40
     border_radius = 4
     padding = 10
@@ -86,20 +86,20 @@ def draw_load_game_screen(game, state, mouse_pos):
     body_rect = pygame.Rect(panel_x, panel_y + header_height, panel_w, panel_h - header_height)
 
     # Body Background
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     # Header Background
-    pygame.draw.rect(game.virtual_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     # Border Outline
-    pygame.draw.rect(game.virtual_screen, WHITE, panel_rect, 1, border_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, panel_rect, 1, border_radius=border_radius)
 
     # Header Text
     title_surf = font.render("Load Game", True, WHITE)
-    game.virtual_screen.blit(title_surf, (header_rect.x + 15, header_rect.y + 10))
+    game.game_screen.blit(title_surf, (header_rect.x + 15, header_rect.y + 10))
 
     # --- Save List Area ---
     list_rect = pygame.Rect(body_rect.x + padding, body_rect.y + padding, body_rect.width - (padding * 2), body_rect.height - 70)
-    pygame.draw.rect(game.virtual_screen, (20, 20, 20), list_rect)
-    pygame.draw.rect(game.virtual_screen, GRAY, list_rect, 1)
+    pygame.draw.rect(game.game_screen, (20, 20, 20), list_rect)
+    pygame.draw.rect(game.game_screen, GRAY, list_rect, 1)
 
     # Calculate Scroll
     item_height = 35
@@ -111,9 +111,9 @@ def draw_load_game_screen(game, state, mouse_pos):
     state['scroll_y'] = max(0, min(state['scroll_y'], max_scroll))
     
     # Clipping Area
-    clip_rect = game.virtual_screen.get_rect().clip(list_rect)
+    clip_rect = game.game_screen.get_rect().clip(list_rect)
     if clip_rect.width > 0 and clip_rect.height > 0:
-        sub = game.virtual_screen.subsurface(clip_rect)
+        sub = game.game_screen.subsurface(clip_rect)
         sub.fill((20, 20, 20))
         
         y_offset = -state['scroll_y']
@@ -150,7 +150,7 @@ def draw_load_game_screen(game, state, mouse_pos):
 
     if max_scroll > 0:
         scrollbar_bg = pygame.Rect(list_rect.right - 10, list_rect.top, 10, list_rect.height)
-        pygame.draw.rect(game.virtual_screen, (40, 40, 40), scrollbar_bg)
+        pygame.draw.rect(game.game_screen, (40, 40, 40), scrollbar_bg)
         
         clickable_rects['scrollbar_track'] = scrollbar_bg # Store track
 
@@ -159,7 +159,7 @@ def draw_load_game_screen(game, state, mouse_pos):
         handle_y = list_rect.y + (scroll_pct * (list_rect.height - handle_h))
         
         handle_rect = pygame.Rect(list_rect.right - 10, handle_y, 10, handle_h)
-        pygame.draw.rect(game.virtual_screen, GRAY, handle_rect)
+        pygame.draw.rect(game.game_screen, GRAY, handle_rect)
         
         clickable_rects['scrollbar_handle'] = handle_rect # Store handle for clicking
 
@@ -170,23 +170,23 @@ def draw_load_game_screen(game, state, mouse_pos):
     
     load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
     load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
-    pygame.draw.rect(game.virtual_screen, load_color, load_btn_rect, border_radius=4)
+    pygame.draw.rect(game.game_screen, load_color, load_btn_rect, border_radius=4)
     load_txt = large_font.render("LOAD GAME", True, WHITE)
-    game.virtual_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
+    game.game_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
     if state['selected_save_index'] is not None:
         clickable_rects['load_button'] = load_btn_rect
 
     del_btn_rect = pygame.Rect(panel_rect.x + padding, button_area_y, btn_width - 20, btn_height)
     if state['selected_save_index'] is not None:
-        pygame.draw.rect(game.virtual_screen, RED, del_btn_rect, border_radius=4)
+        pygame.draw.rect(game.game_screen, RED, del_btn_rect, border_radius=4)
         del_txt = font.render("Delete", True, WHITE)
-        game.virtual_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
+        game.game_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
         clickable_rects['delete_button'] = del_btn_rect
     
     back_btn_rect = pygame.Rect(panel_rect.right - padding - (btn_width - 20), button_area_y, btn_width - 20, btn_height)
-    pygame.draw.rect(game.virtual_screen, GRAY_80, back_btn_rect, border_radius=4)
+    pygame.draw.rect(game.game_screen, GRAY_80, back_btn_rect, border_radius=4)
     back_txt = font.render("Back", True, WHITE)
-    game.virtual_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
+    game.game_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
     clickable_rects['back_button'] = back_btn_rect
 
     return clickable_rects

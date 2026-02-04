@@ -19,8 +19,8 @@ from editor.file_tree import FileTree
 pygame.init()
 pygame.font.init()
 
-# Display
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED | pygame.RESIZABLE)
+# Display - REMOVED SCALED to fix scrollbar/layout issues on resize
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Bit Rot - Map Editor")
 
 # Colors
@@ -153,6 +153,10 @@ def paste_building_on_map(game_map, building_name, building_dir, target_x, targe
                          print(f"Error pasting building layer {suffix}: {e}")
 
 def editor():
+    # Use global constants as initial values, but allow updates
+    current_screen_width = SCREEN_WIDTH
+    current_screen_height = SCREEN_HEIGHT
+
     # Load Assets
     game_root = os.path.abspath(os.path.join('./game'))
     xml_path = os.path.join(game_root, 'lib', 'data', 'map')
@@ -186,15 +190,15 @@ def editor():
     content_y = TOOLBAR_HEIGHT
     
     # ADJUSTED: FileTree now shorter to make room for LogConsole
-    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, SCREEN_HEIGHT - content_y - LOG_WINDOW_HEIGHT, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
+    building_file_tree = FileTree(0, content_y, FILE_TREE_WIDTH, current_screen_height - content_y - LOG_WINDOW_HEIGHT, BUILDINGS_DIR, BUILDING_PATTERN, FONT, show_saves=False)
     
-    toolbar = Toolbar(FILE_TREE_WIDTH, 0, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
+    toolbar = Toolbar(FILE_TREE_WIDTH, 0, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     
     # Pass both map_tiles and item_tiles to Sidebar
-    sidebar = Sidebar(SCREEN_WIDTH - SIDEBAR_WIDTH, content_y, map_tiles, item_tiles, FONT)
+    sidebar = Sidebar(current_screen_width - SIDEBAR_WIDTH, content_y, map_tiles, item_tiles, FONT)
     
     # ADDED: Log Console at the bottom
-    log_console = LogConsole(0, SCREEN_HEIGHT - LOG_WINDOW_HEIGHT, SCREEN_WIDTH - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, FONT)
+    log_console = LogConsole(0, current_screen_height - LOG_WINDOW_HEIGHT, current_screen_width - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, FONT)
 
     # Current State Pointers
     current_map_obj = building_map
@@ -214,7 +218,7 @@ def editor():
         load_map_layers(building_map, current_building_name, b_root)
 
     # Modals
-    new_building_modal = NewBuildingModal(SCREEN_WIDTH//2-150, SCREEN_HEIGHT//2-150, 300, 300, FONT)
+    new_building_modal = NewBuildingModal(current_screen_width//2-150, current_screen_height//2-150, 300, 300, FONT)
 
     # Camera
     camera_offset_x = FILE_TREE_WIDTH + 20
@@ -222,7 +226,7 @@ def editor():
     zoom_index = INITIAL_ZOOM_INDEX
     
     # ADJUSTED: Map View Rect shortened
-    map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 20, content_y + 20, SCREEN_WIDTH - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, SCREEN_HEIGHT - content_y - LOG_WINDOW_HEIGHT - 20)
+    map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 20, content_y + 20, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, current_screen_height - content_y - LOG_WINDOW_HEIGHT - 20)
     dragging = False
     drag_start = (0,0)
     
@@ -240,6 +244,29 @@ def editor():
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
+
+            # --- HANDLE WINDOW RESIZE ---
+            if event.type == pygame.VIDEORESIZE:
+                current_screen_width = event.w
+                current_screen_height = event.h
+                
+                # Resize the display surface
+                pygame.display.set_mode((current_screen_width, current_screen_height), pygame.RESIZABLE)
+                
+                # Resize UI Components
+                sidebar.resize(current_screen_width - SIDEBAR_WIDTH, content_y, current_screen_height)
+                building_file_tree.resize(current_screen_height - content_y - LOG_WINDOW_HEIGHT)
+                log_console.resize(current_screen_width - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, current_screen_height - LOG_WINDOW_HEIGHT)
+                toolbar.resize(current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH)
+                
+                # Update map view rect
+                map_view_rect = pygame.Rect(
+                    FILE_TREE_WIDTH + 20, 
+                    content_y + 20, 
+                    current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, 
+                    current_screen_height - content_y - LOG_WINDOW_HEIGHT - 20
+                )
+
             
             # Keyboard Shortcuts
             if event.type == pygame.KEYDOWN:

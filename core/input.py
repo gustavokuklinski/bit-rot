@@ -168,8 +168,8 @@ def handle_input(game):
                         elif event.y < 0: 
                             modal['map_zoom'] = max(2, current_zoom - 1)
 
-        if event.type == pygame.VIDEORESIZE:
-            game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+        #if event.type == pygame.VIDEORESIZE:
+        #    self.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
 
         if game.game_state == 'PLAYING':
             handle_keyboard_events(game, event) 

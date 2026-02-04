@@ -206,6 +206,9 @@ def handle_keyboard_events(game, event):
             else:
                 toggle_pause(game)
                 return
+        
+        if event.key == pygame.K_F11:
+            pygame.display.toggle_fullscreen()
 
         # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:

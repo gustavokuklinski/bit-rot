@@ -203,10 +203,10 @@ def draw_tooltip(surface, item, pos):
     tooltip_rect = pygame.Rect(pos[0], pos[1], width, height)
     
     # Adjust position to keep tooltip on screen
-    if tooltip_rect.right > VIRTUAL_SCREEN_WIDTH:
-        tooltip_rect.right = VIRTUAL_SCREEN_WIDTH
-    if tooltip_rect.bottom > VIRTUAL_GAME_HEIGHT:
-        tooltip_rect.bottom = VIRTUAL_GAME_HEIGHT
+    if tooltip_rect.right > GAME_WIDTH:
+        tooltip_rect.right = GAME_WIDTH
+    if tooltip_rect.bottom > GAME_HEIGHT:
+        tooltip_rect.bottom = GAME_HEIGHT
 
     pygame.draw.rect(surface, (0, 0, 0, 220), tooltip_rect) # Slightly darker opacity
     pygame.draw.rect(surface, WHITE, tooltip_rect, 1)

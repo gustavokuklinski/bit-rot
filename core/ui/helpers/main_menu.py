@@ -43,12 +43,12 @@ def draw_menu(screen, mouse_pos, has_save=False):
 
     if _logo_img:
         # Position logo in upper 3rd
-        logo_rect = _logo_img.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT * 0.3))
+        logo_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.3))
         screen.blit(_logo_img, logo_rect)
     else:
         # Fallback text
         title_text = title_font.render("Bit Rot", True, RED)
-        title_rect = title_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT * 0.25))
+        title_rect = title_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(title_text, title_rect)
 
 
@@ -58,8 +58,8 @@ def draw_menu(screen, mouse_pos, has_save=False):
     btn_height = 50
     spacing = 20
     
-    center_x = VIRTUAL_SCREEN_WIDTH // 2
-    start_y = VIRTUAL_GAME_HEIGHT * 0.55 # Start slightly below middle
+    center_x = GAME_WIDTH // 2
+    start_y = GAME_HEIGHT * 0.55 # Start slightly below middle
 
     # 1. Load Game Button (Top)
     load_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
@@ -81,7 +81,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     current_year = datetime.now().year
     footer_str = f"Developed by: Gustavo Kuklinski - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
     footer_text = font_notification.render(footer_str, True, (100, 100, 100))
-    footer_rect = footer_text.get_rect(center=(VIRTUAL_SCREEN_WIDTH // 2, VIRTUAL_GAME_HEIGHT - 20))
+    footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)
 
     # Return rects for click handling

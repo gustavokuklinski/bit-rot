@@ -40,6 +40,9 @@ class FileTree:
         self.scroll_start_offset = 0
         
         self.refresh()
+        
+    def resize(self, height):
+        self.height = height
 
     def refresh(self):
         """Refreshes the file list from the directory."""

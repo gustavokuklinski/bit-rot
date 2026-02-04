@@ -26,7 +26,7 @@ from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 
 def draw_game(game):
     # Clear the main screen that holds the game and UI panels
-    game.virtual_screen.fill(PANEL_COLOR)
+    game.game_screen.fill(PANEL_COLOR)
 
     # World Rendering with Pixelated Zoom ---
     zoom = game.zoom_level
@@ -429,11 +429,11 @@ def draw_game(game):
     # Final Scale to Screen
     scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
-    game.virtual_screen.blit(scaled_world, game_rect)
+    game.game_screen.blit(scaled_world, game_rect)
 
     if game.player and game.player.is_sleeping:
         # Cover the whole virtual screen with black
-        game.virtual_screen.fill((0, 0, 0))
+        game.game_screen.fill((0, 0, 0))
         
         font = game.assets.get('font') or pygame.font.Font(None, 30)
         text_surf = font.render("Sweet Dreams. Press Space to Wake up.", True, (255, 255, 255))
@@ -442,9 +442,9 @@ def draw_game(game):
         
         # Adjust for the sidebar offset if necessary, usually centering on the whole screen is fine
         # creating a true center:
-        text_rect.center = (game.virtual_screen.get_width() // 2, game.virtual_screen.get_height() // 2)
+        text_rect.center = (game.game_screen.get_width() // 2, game.game_screen.get_height() // 2)
         
-        game.virtual_screen.blit(text_surf, text_rect)
+        game.game_screen.blit(text_surf, text_rect)
 
     # --- UI & Effects Rendering (Unaffected by Zoom) ---
     if game.player.gun_flash_timer > 0:
@@ -456,7 +456,7 @@ def draw_game(game):
         flash_y = center_y - math.sin(game.player.aim_angle) * flash_distance
         
         flash_radius = (TILE_SIZE // 5) * zoom 
-        pygame.draw.circle(game.virtual_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
+        pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
 
 
@@ -478,7 +478,7 @@ def draw_game(game):
         
         bubble_rect = pygame.Rect(bubble_x, bubble_y, bubble_w, bubble_h)
         
-        pygame.draw.rect(game.virtual_screen, WHITE, bubble_rect, border_radius=8)
+        pygame.draw.rect(game.game_screen, WHITE, bubble_rect, border_radius=8)
         
         tri_center_x = screen_x + (TILE_SIZE * zoom / 2)
         tri_points = [
@@ -486,16 +486,16 @@ def draw_game(game):
             (tri_center_x + 6, bubble_rect.bottom),
             (tri_center_x, bubble_rect.bottom + 8)
         ]
-        pygame.draw.polygon(game.virtual_screen, WHITE, tri_points)
+        pygame.draw.polygon(game.game_screen, WHITE, tri_points)
         
         text_rect = text_surf.get_rect(center=bubble_rect.center)
-        game.virtual_screen.blit(text_surf, text_rect)
+        game.game_screen.blit(text_surf, text_rect)
 
 
     if game.game_state == 'PLAYING':
-        draw_belt_hud(game.virtual_screen, game, game.player, game._get_scaled_mouse_pos())
+        draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
         # [CHANGED] Capture alert tooltip proxy instead of drawing immediately
-        alert_tooltip = draw_player_alerts(game.virtual_screen, game.player)
+        alert_tooltip = draw_player_alerts(game.game_screen, game.player)
         if alert_tooltip:
              game.hovered_item = alert_tooltip
 
@@ -510,23 +510,23 @@ def draw_game(game):
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
         if modal['type'] == 'status':
-            buttons = draw_status_modal(game.virtual_screen, game.player, modal, game.assets, game.zombies_killed, mouse_pos)
+            buttons = draw_status_modal(game.game_screen, game.player, modal, game.assets, game.zombies_killed, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'inventory':
-            tooltip, *buttons = draw_inventory_modal(game.virtual_screen, game, game.player, modal, game.assets, game._get_scaled_mouse_pos())
+            tooltip, *buttons = draw_inventory_modal(game.game_screen, game, game.player, modal, game.assets, game._get_scaled_mouse_pos())
             top_tooltip = tooltip or top_tooltip
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'gear':
-            buttons = draw_gear_modal(game.virtual_screen, game, game.player, modal, game.assets, mouse_pos)
+            buttons = draw_gear_modal(game.game_screen, game, game.player, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'container':
-            buttons = draw_container_view(game.virtual_screen, game, modal['item'], modal, game.assets, mouse_pos)
+            buttons = draw_container_view(game.game_screen, game, modal['item'], modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'nearby':
-            buttons = draw_nearby_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
+            buttons = draw_nearby_modal(game.game_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'messages':
-            result = draw_messages_modal(game.virtual_screen, game, modal, game.assets)
+            result = draw_messages_modal(game.game_screen, game, modal, game.assets)
             if len(result) == 5:
                 _, close_button, minimize_button, send_btn, input_box = result
                 if send_btn: game.modal_buttons.append(send_btn)
@@ -536,40 +536,40 @@ def draw_game(game):
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
         elif modal['type'] == 'text':
-            _, close_button, minimize_button = draw_text_modal(game.virtual_screen, game, modal, game.assets)
+            _, close_button, minimize_button = draw_text_modal(game.game_screen, game, modal, game.assets)
             if close_button: game.modal_buttons.append(close_button)
             if minimize_button: game.modal_buttons.append(minimize_button)
         elif modal['type'] == 'mobile':
-            buttons = draw_mobile_modal(game.virtual_screen, game, modal, game.assets)
+            buttons = draw_mobile_modal(game.game_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'vehicle':
-            buttons = draw_vehicle_modal(game.virtual_screen, game, modal, game.assets, mouse_pos)
+            buttons = draw_vehicle_modal(game.game_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'big_map':
-            buttons = draw_big_map_modal(game.virtual_screen, game, modal, game.assets)
+            buttons = draw_big_map_modal(game.game_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'npc_dialog':
-            buttons = draw_npc_dialog_modal(game.virtual_screen, modal, game)
+            buttons = draw_npc_dialog_modal(game.game_screen, modal, game)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'crafting':
             # Instantiate Logic on the fly (or you could store instance in modal dict)
             if 'instance' not in modal:
-                modal['instance'] = CraftingModal(game.virtual_screen, modal, game.assets, game)
+                modal['instance'] = CraftingModal(game.game_screen, modal, game.assets, game)
             
             # Ensure surface is up to date
-            modal['instance'].surface = game.virtual_screen
+            modal['instance'].surface = game.game_screen
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
     # [CHANGE END]
 
-    game.pause_button_rect = draw_pause_button(game.virtual_screen)
-    game.forward_button_rect = draw_forward_button(game.virtual_screen)
-    game.status_button_rect = draw_status_button(game.virtual_screen)
-    game.inventory_button_rect = draw_inventory_button(game.virtual_screen)
-    game.nearby_button_rect = draw_nearby_button(game.virtual_screen)
-    game.gear_button_rect = draw_gear_button(game.virtual_screen)
-    game.messages_button_rect = draw_messages_button(game.virtual_screen)
-    game.crafting_button_rect = draw_crafting_button(game.virtual_screen)
+    game.pause_button_rect = draw_pause_button(game.game_screen)
+    game.forward_button_rect = draw_forward_button(game.game_screen)
+    game.status_button_rect = draw_status_button(game.game_screen)
+    game.inventory_button_rect = draw_inventory_button(game.game_screen)
+    game.nearby_button_rect = draw_nearby_button(game.game_screen)
+    game.gear_button_rect = draw_gear_button(game.game_screen)
+    game.messages_button_rect = draw_messages_button(game.game_screen)
+    game.crafting_button_rect = draw_crafting_button(game.game_screen)
 
     highlighted_rect = None
     highlighted_allowed = False
@@ -636,20 +636,20 @@ def draw_game(game):
             overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)
             color = (50, 220, 50, 80) if highlighted_allowed else (220, 50, 50, 80)
             overlay.fill(color)
-            game.virtual_screen.blit(overlay, highlighted_rect.topleft)
-            pygame.draw.rect(game.virtual_screen, YELLOW if highlighted_allowed else RED, highlighted_rect, 2)
+            game.game_screen.blit(overlay, highlighted_rect.topleft)
+            pygame.draw.rect(game.game_screen, YELLOW if highlighted_allowed else RED, highlighted_rect, 2)
 
         if preview_item and getattr(preview_item, 'image', None):
             img = pygame.transform.scale(preview_item.image, (int(highlighted_rect.height * 0.9) if highlighted_rect else 40, int(highlighted_rect.height * 0.9) if highlighted_rect else 40))
             img_rect = img.get_rect()
             img_rect.topleft = (game._get_scaled_mouse_pos()[0] - game.drag_offset[0], game._get_scaled_mouse_pos()[1] - game.drag_offset[1])
-            game.virtual_screen.blit(img, img_rect)
+            game.game_screen.blit(img, img_rect)
         elif preview_item:
             rect_w, rect_h = (int(highlighted_rect.width * 0.8), int(highlighted_rect.height * 0.8)) if highlighted_rect else (40, 40)
             preview_rect = pygame.Rect(game._get_scaled_mouse_pos()[0] - rect_w//2, game._get_scaled_mouse_pos()[1] - rect_h//2, rect_w, rect_h)
             s = pygame.Surface((rect_w, rect_h), pygame.SRCALPHA)
             s.fill((*preview_item.color, 180))
-            game.virtual_screen.blit(s, preview_rect.topleft)
+            game.game_screen.blit(s, preview_rect.topleft)
 
     if top_tooltip:
         tip_rect = top_tooltip['rect']
@@ -659,25 +659,25 @@ def draw_game(game):
 
         tip_s = pygame.Surface((tip_rect.width, tip_rect.height), pygame.SRCALPHA)
         tip_s.fill((10, 10, 10, 220))
-        game.virtual_screen.blit(tip_s, tip_rect.topleft)
-        pygame.draw.rect(game.virtual_screen, WHITE, tip_rect, 1)
+        game.game_screen.blit(tip_s, tip_rect.topleft)
+        pygame.draw.rect(game.game_screen, WHITE, tip_rect, 1)
 
         name_surf = game.assets['font'].render(f"{item.name}", True, WHITE)
         type_surf = game.assets['font'].render(f"Type: {item.item_type}", True, GRAY)
-        game.virtual_screen.blit(name_surf, (tip_rect.x + 8, tip_rect.y + 6))
-        game.virtual_screen.blit(type_surf, (tip_rect.x + 8, tip_rect.y + 26))
+        game.game_screen.blit(name_surf, (tip_rect.x + 8, tip_rect.y + 6))
+        game.game_screen.blit(type_surf, (tip_rect.x + 8, tip_rect.y + 26))
 
         bar_x = tip_rect.x + 8
         bar_y = tip_rect.y + 42
         bar_w = tip_rect.width - 16
         bar_h = 10
-        pygame.draw.rect(game.virtual_screen, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
+        pygame.draw.rect(game.game_screen, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
         fill_w = int(max(0.0, min(1.0, frac)) * bar_w)
-        pygame.draw.rect(game.virtual_screen, bar_color, (bar_x, bar_y, fill_w, bar_h))
-        pygame.draw.rect(game.virtual_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
+        pygame.draw.rect(game.game_screen, bar_color, (bar_x, bar_y, fill_w, bar_h))
+        pygame.draw.rect(game.game_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
 
     #if game.hovered_item and not game.context_menu['active']:
-    #    draw_tooltip(game.virtual_screen, game.hovered_item, game._get_scaled_mouse_pos())
+    #    draw_tooltip(game.game_screen, game.hovered_item, game._get_scaled_mouse_pos())
 
     elif not game.context_menu['active']:
         ui_buttons = [
@@ -708,21 +708,21 @@ def draw_game(game):
                     tip_x = mouse_pos[0] + 10
                     tip_y = mouse_pos[1] + 10
                     
-                    if tip_x + width > VIRTUAL_SCREEN_WIDTH:
+                    if tip_x + width > GAME_WIDTH:
                         tip_x = mouse_pos[0] - width - 5
-                    if tip_y + height > VIRTUAL_GAME_HEIGHT:
+                    if tip_y + height > GAME_HEIGHT:
                         tip_y = mouse_pos[1] - height - 5
                     
                     tooltip_rect = pygame.Rect(tip_x, tip_y, width, height)
                     
                     # Draw consistent tooltip style (Dark background, White border)
-                    pygame.draw.rect(game.virtual_screen, (0, 0, 0, 220), tooltip_rect)
-                    pygame.draw.rect(game.virtual_screen, WHITE, tooltip_rect, 1)
-                    game.virtual_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
+                    pygame.draw.rect(game.game_screen, (0, 0, 0, 220), tooltip_rect)
+                    pygame.draw.rect(game.game_screen, WHITE, tooltip_rect, 1)
+                    game.game_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
                 break
 
     #if game.context_menu['active']:
-    #    draw_context_menu(game.virtual_screen, game.context_menu, game._get_scaled_mouse_pos())
+    #    draw_context_menu(game.game_screen, game.context_menu, game._get_scaled_mouse_pos())
 
     if game.player.is_aiming:
         pygame.mouse.set_visible(False) 
@@ -735,7 +735,7 @@ def draw_game(game):
             new_h = max(1, int(base_h * scale_mult))
             scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))
             rect = scaled_reticle.get_rect(center=game._get_scaled_mouse_pos())
-            game.virtual_screen.blit(scaled_reticle, rect)
+            game.game_screen.blit(scaled_reticle, rect)
     else:
         pygame.mouse.set_visible(True)
         keys = pygame.key.get_pressed()
@@ -751,5 +751,5 @@ def draw_game(game):
         if font:
             fps_surface = font.render(fps_text, True, (0, 255, 0)) # Green color
             # Position 5 pixels from right and bottom edges
-            fps_rect = fps_surface.get_rect(bottomright=(game.virtual_screen.get_width() - 5, game.virtual_screen.get_height() - 5))
-            game.virtual_screen.blit(fps_surface, fps_rect)
+            fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
+            game.game_screen.blit(fps_surface, fps_rect)

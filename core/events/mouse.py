@@ -1491,8 +1491,8 @@ def handle_mouse_motion(game, event, mouse_pos):
             header_height = 35
             modal_width = modal['rect'].width
             modal_height = header_height if is_minimized else modal['rect'].height
-            clamped_x = max(0, min(new_x, VIRTUAL_SCREEN_WIDTH - modal_width))
-            clamped_y = max(0, min(new_y, VIRTUAL_GAME_HEIGHT - modal_height))
+            clamped_x = max(0, min(new_x, GAME_WIDTH - modal_width))
+            clamped_y = max(0, min(new_y, GAME_HEIGHT - modal_height))
             modal['position'] = (clamped_x, clamped_y)
             modal['rect'].topleft = modal['position']
 
@@ -1558,8 +1558,8 @@ def handle_context_menu_click(game, mouse_pos):
                     dialogs = item.get_dialog_options()
                     
                     # Center the modal
-                    pos_x = (VIRTUAL_SCREEN_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
-                    pos_y = (VIRTUAL_GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
+                    pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
+                    pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
                     
                     new_modal = {
                         'id': uuid.uuid4(),
@@ -1583,7 +1583,7 @@ def handle_context_menu_click(game, mouse_pos):
                 
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 game.modals = [m for m in game.modals if m['type'] != 'vehicle']
-                default_pos = (VIRTUAL_SCREEN_WIDTH // 2 - 200, VIRTUAL_GAME_HEIGHT // 2 - 200)
+                default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 - 200)
                 pos = game.last_modal_positions.get('vehicle', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
 
                 new_modal = {
@@ -1805,7 +1805,7 @@ def handle_context_menu_click(game, mouse_pos):
                     # Close existing map modals to prevent duplicates
                     game.modals = [m for m in game.modals if m['type'] != 'big_map']
                     
-                    default_pos = (VIRTUAL_SCREEN_WIDTH // 2 - 450, VIRTUAL_GAME_HEIGHT // 2 - 350)
+                    default_pos = (GAME_WIDTH // 2 - 450, GAME_HEIGHT // 2 - 350)
                     
                     new_map_modal = {
                         'id': uuid.uuid4(), 

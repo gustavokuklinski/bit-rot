@@ -63,6 +63,13 @@ class LogConsole:
         self.scroll_start_mouse_y = 0
         self.scroll_start_offset = 0
 
+    def resize(self, width, height, y=None):
+        """Updates the dimensions of the log console."""
+        if y is not None:
+            self.rect.y = y
+        self.rect.width = width
+        self.rect.height = height
+
     def add_message(self, text):
         timestamp = datetime.now().strftime("%H:%M:%S")
         full_msg = f"<{timestamp}> {text}"
@@ -448,6 +455,9 @@ class Toolbar:
             })
             current_x += button_width + padding
 
+    def resize(self, width):
+        self.width = width
+
     def draw(self, surface):
         pygame.draw.rect(surface, (80, 80, 80), (self.x, self.y, self.width, self.height))
         mouse_pos = pygame.mouse.get_pos()
@@ -480,6 +490,8 @@ class Sidebar:
         self.x = x
         self.y = y
         self.font = font
+        # Use initial SCREEN_HEIGHT as default, but allow updates via resize
+        self.height = SCREEN_HEIGHT - y 
         
         # Tiles Data
         self.all_tiles = tiles.copy()
@@ -531,6 +543,23 @@ class Sidebar:
     def refresh_buildings(self, building_dir, tile_map):
         pass
 
+    def resize(self, x, y, total_screen_height):
+        """Updates position and height on window resize."""
+        self.x = x
+        self.y = y
+        self.height = total_screen_height - y
+        
+        # Recalculate component positions
+        tab_w = SIDEBAR_WIDTH // 2
+        self.tab_rects = {
+            "Tiles": pygame.Rect(x, y, tab_w, self.tab_height),
+            "Items": pygame.Rect(x + tab_w, y, tab_w, self.tab_height)
+        }
+        
+        self.search_rect = pygame.Rect(self.x + 10, self.y + self.tab_height + 10, SIDEBAR_WIDTH - 20, 30)
+        self.content_area_y = self.y + self.tab_height + self.search_rect.height + 20 
+
+
     def _filter_content(self):
         """Filters both tiles and items based on the search text."""
         if not self.search_text:
@@ -544,8 +573,8 @@ class Sidebar:
         self.scroll_offset = 0 # Reset scroll on search
 
     def draw(self, surface):
-        # Background
-        pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, SIDEBAR_WIDTH, SCREEN_HEIGHT))
+        # Background - Use self.height, not SCREEN_HEIGHT
+        pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, SIDEBAR_WIDTH, self.height))
         
         # Tabs
         for tab in self.tabs:
@@ -576,7 +605,10 @@ class Sidebar:
         surface.set_clip(None)
         
         # Content Area
-        view_rect = pygame.Rect(self.x, self.content_area_y, SIDEBAR_WIDTH, SCREEN_HEIGHT - self.content_area_y)
+        # Calculate view height dynamically based on current self.height
+        view_height = self.y + self.height - self.content_area_y
+        view_rect = pygame.Rect(self.x, self.content_area_y, SIDEBAR_WIDTH, view_height)
+        
         surface.set_clip(view_rect)
 
         content_height = 0
@@ -598,7 +630,8 @@ class Sidebar:
             tile_x = self.x + col * (TILE_SIZE + 10) + 10
             tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
             
-            if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + SCREEN_HEIGHT:
+            # Check visibility using dynamic height
+            if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + self.height:
                 surface.blit(image, (tile_x, tile_y))
                 if selected_name == name:
                     pygame.draw.rect(surface, (255, 255, 0), (tile_x, tile_y, TILE_SIZE, TILE_SIZE), 3)
@@ -620,7 +653,7 @@ class Sidebar:
             pygame.draw.rect(surface, (40, 40, 40), self.scrollbar_track_rect)
             
             thumb_h = max(20, (view_rect.height / (content_height + view_rect.height)) * view_rect.height)
-            ratio = self.scroll_offset / self.max_scroll
+            ratio = self.scroll_offset / self.max_scroll if self.max_scroll > 0 else 0
             thumb_y = self.content_area_y + ratio * (view_rect.height - thumb_h)
             
             self.scrollbar_thumb_rect = pygame.Rect(self.scrollbar_track_rect.x, thumb_y, 10, thumb_h)

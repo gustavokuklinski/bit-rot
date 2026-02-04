@@ -7,15 +7,10 @@ import uuid
 pygame.init()
 infoObject = pygame.display.Info()
 
-# --- Scalable Screen Setup ---
-VIRTUAL_SCREEN_WIDTH = 1280
-VIRTUAL_GAME_HEIGHT = 720
-
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
-GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
-GAME_HEIGHT = VIRTUAL_GAME_HEIGHT
+GAME_WIDTH = 1280
+GAME_HEIGHT = 720
 
-RESOLUTION_SCALE = 1.0
 
 MAP_DIR = "./game/lib/map/" # Game map files
 DATA_PATH = "./game/lib/data/" # Folders with XML data files

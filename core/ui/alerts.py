@@ -85,7 +85,7 @@ def draw_player_alerts(surface, player):
     padding = 15 
     
     total_width = (num_alerts * icon_size) + (max(0, num_alerts - 1) * padding)
-    start_x = (VIRTUAL_SCREEN_WIDTH // 2) - (total_width // 2)
+    start_x = (GAME_WIDTH // 2) - (total_width // 2)
     fixed_y = 10 
 
     # --- 3. Draw Alerts & Detect Hover ---

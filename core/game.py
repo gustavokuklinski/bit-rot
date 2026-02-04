@@ -52,14 +52,10 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
         
-        current_scale = core.data.config.RESOLUTION_SCALE
-        initial_w = int(VIRTUAL_SCREEN_WIDTH * current_scale)
-        initial_h = int(VIRTUAL_GAME_HEIGHT * current_scale)
+        initial_w = int(GAME_WIDTH)
+        initial_h = int(GAME_HEIGHT)
         
-        self.screen = pygame.display.set_mode((initial_w, initial_h), pygame.RESIZABLE)
-       
-
-        self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
+        self.game_screen = pygame.display.set_mode((initial_w, initial_h), pygame.SCALED | pygame.RESIZABLE)
         
         pygame.display.set_caption("Bit Rot")
         try:
@@ -129,11 +125,11 @@ class Game:
             'status': (65, 10),
             'inventory': (970, 10),
             'gear': (650, 10),
-            'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
+            'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
             'nearby': (970, 360),
             'messages': (10, 360),
-            'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200),
+            'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
+            'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100)
         }
         self.pause_button_rect = None
@@ -213,7 +209,7 @@ class Game:
 
     def capture_pause_screen(self):
         """Creates a black and white version of the current screen for the pause menu."""
-        self.paused_surface = self.virtual_screen.copy()
+        self.paused_surface = self.game_screen.copy()
         try:
             self.paused_surface = pygame.transform.grayscale(self.paused_surface)
         except AttributeError:
@@ -831,16 +827,16 @@ class Game:
 
     def run_paused(self):
         if self.paused_surface:
-            self.virtual_screen.blit(self.paused_surface, (0, 0))
+            self.game_screen.blit(self.paused_surface, (0, 0))
         else:
-            self.virtual_screen.fill((50, 50, 50))
+            self.game_screen.fill((50, 50, 50))
 
-        overlay = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT), pygame.SRCALPHA)
+        overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
-        self.virtual_screen.blit(overlay, (0, 0))
+        self.game_screen.blit(overlay, (0, 0))
 
-        center_x = VIRTUAL_SCREEN_WIDTH // 2
-        center_y = VIRTUAL_GAME_HEIGHT // 2
+        center_x = GAME_WIDTH // 2
+        center_y = GAME_HEIGHT // 2
         btn_w, btn_h = 220, 50
         spacing = 20
         
@@ -852,10 +848,10 @@ class Game:
 
         def draw_btn(rect, text, color_base, color_hover):
             color = color_hover if rect.collidepoint(mouse_pos) else color_base
-            pygame.draw.rect(self.virtual_screen, color, rect, border_radius=5)
-            pygame.draw.rect(self.virtual_screen, WHITE, rect, 1, border_radius=5)
+            pygame.draw.rect(self.game_screen, color, rect, border_radius=5)
+            pygame.draw.rect(self.game_screen, WHITE, rect, 1, border_radius=5)
             txt_surf = large_font.render(text, True, WHITE)
-            self.virtual_screen.blit(txt_surf, txt_surf.get_rect(center=rect.center))
+            self.game_screen.blit(txt_surf, txt_surf.get_rect(center=rect.center))
 
         draw_btn(btn_continue, "Continue", (80, 80, 80), (60, 60, 60))
         draw_btn(btn_save, "Save Game", (80, 80, 80), (60, 60, 60))
@@ -1210,7 +1206,7 @@ class Game:
         mouse_pos = self._get_scaled_mouse_pos()
         
         # Draw the screen
-        start_btn = draw_loading_screen(self.virtual_screen, self.loading_done, mouse_pos)
+        start_btn = draw_loading_screen(self.game_screen, self.loading_done, mouse_pos)
         self._update_screen()
         
         # Logic
@@ -1252,14 +1248,18 @@ class Game:
         has_save = len(saves) > 0
 
         # Unpack the 4 return values (start, load, settings, quit)
-        start_btn, load_btn, settings_btn, quit_btn = draw_menu(self.virtual_screen, mouse_pos, has_save)
+        start_btn, load_btn, settings_btn, quit_btn = draw_menu(self.game_screen, mouse_pos, has_save)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 return
-            if event.type == pygame.VIDEORESIZE:
-                self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            #if event.type == pygame.VIDEORESIZE:
+            #    self.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                pygame.display.toggle_fullscreen()
+
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
                 
@@ -1299,8 +1299,8 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
                 return
-            if event.type == pygame.VIDEORESIZE:
-                self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            #if event.type == pygame.VIDEORESIZE:
+            #    self.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             
             if event.type == pygame.MOUSEWHEEL:
                  scroll_amount = event.y * 35 
@@ -1370,14 +1370,14 @@ class Game:
     def run_game_over(self):
         pygame.mouse.set_visible(True)
         mouse_pos = self._get_scaled_mouse_pos()
-        menu_button = draw_game_over(self.virtual_screen, self.zombies_killed, mouse_pos)
+        menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 return
-            if event.type == pygame.VIDEORESIZE:
-                self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            #if event.type == pygame.VIDEORESIZE:
+            #    self.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
                 
@@ -1407,19 +1407,19 @@ class Game:
 
         if self.hovered_item:
             mouse_pos = self._get_scaled_mouse_pos()
-            draw_tooltip(self.virtual_screen, self.hovered_item, mouse_pos)
+            draw_tooltip(self.game_screen, self.hovered_item, mouse_pos)
 
         # [NEW] Draw Context Menu LAST (Top Z-Index) so it covers tooltips
         if self.context_menu['active']:
-            draw_context_menu(self.virtual_screen, self.context_menu, self._get_scaled_mouse_pos())
+            draw_context_menu(self.game_screen, self.context_menu, self._get_scaled_mouse_pos())
 
         self._update_screen()
 
     def _get_scaled_mouse_pos(self):
         real_mouse_pos = pygame.mouse.get_pos()
-        current_w, current_h = self.screen.get_size()
-        scale = min(current_w / VIRTUAL_SCREEN_WIDTH, current_h / VIRTUAL_GAME_HEIGHT)
-        scaled_w, scaled_h = int(VIRTUAL_SCREEN_WIDTH * scale), int(VIRTUAL_GAME_HEIGHT * scale)
+        current_w, current_h = self.game_screen.get_size()
+        scale = min(current_w / GAME_WIDTH, current_h / GAME_HEIGHT)
+        scaled_w, scaled_h = int(GAME_WIDTH * scale), int(GAME_HEIGHT * scale)
         blit_x = (current_w - scaled_w) // 2
         blit_y = (current_h - scaled_h) // 2
         return ((real_mouse_pos[0] - blit_x) / scale, (real_mouse_pos[1] - blit_y) / scale)
@@ -1505,14 +1505,6 @@ class Game:
 
 
     def _update_screen(self):
-        current_w, current_h = self.screen.get_size()
-        scale = min(current_w / VIRTUAL_SCREEN_WIDTH, current_h / VIRTUAL_GAME_HEIGHT)
-        scaled_w, scaled_h = int(VIRTUAL_SCREEN_WIDTH * scale), int(VIRTUAL_GAME_HEIGHT * scale)
-        scaled_surf = pygame.transform.smoothscale(self.virtual_screen, (scaled_w, scaled_h))
-        blit_x = (current_w - scaled_w) // 2
-        blit_y = (current_h - scaled_h) // 2
-        self.screen.fill(BLACK)
-        self.screen.blit(scaled_surf, (blit_x, blit_y))
         pygame.display.flip()
         self.clock.tick(60)
 

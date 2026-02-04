@@ -13,9 +13,9 @@ def draw_context_menu(surface, menu_state, mouse_pos):
     max_width = max(font.size(opt)[0] for opt in options) + (padding * 2)
     menu_height = len(options) * item_height
     menu_x, menu_y = menu_state['position']
-    if menu_x + max_width > VIRTUAL_SCREEN_WIDTH:
+    if menu_x + max_width > GAME_WIDTH:
         menu_x -= max_width
-    if menu_y + menu_height > VIRTUAL_GAME_HEIGHT:
+    if menu_y + menu_height > GAME_HEIGHT:
         menu_y -= menu_height
     menu_rect = pygame.Rect(menu_x, menu_y, max_width, menu_height)
     s = pygame.Surface((max_width, menu_height), pygame.SRCALPHA)

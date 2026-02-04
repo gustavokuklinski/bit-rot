@@ -95,8 +95,8 @@ def _draw_dropdown(surface, state, slot_name, rect, mouse_pos):
         # Define rects
         list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
         # Content rect needs to be clipped by the *screen* edge
-        if list_rect.bottom > VIRTUAL_GAME_HEIGHT:
-            list_rect.height = VIRTUAL_GAME_HEIGHT - list_rect.top
+        if list_rect.bottom > GAME_HEIGHT:
+            list_rect.height = GAME_HEIGHT - list_rect.top
         
         content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height) # Room for scrollbar
         
@@ -194,23 +194,23 @@ def _draw_player_build_screen(game, state, mouse_pos):
     config_header_rect = pygame.Rect(config_rect.x, config_rect.y, config_rect.width, header_height)
     config_body_rect = pygame.Rect(config_rect.x, config_rect.y + header_height, config_rect.width, config_rect.height - header_height)
     """
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), config_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, config_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, config_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Game settings", True, WHITE), (config_header_rect.x + 10, config_header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), config_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, config_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, config_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Game settings", True, WHITE), (config_header_rect.x + 10, config_header_rect.y + 7))
     
     # Game Config Dropdown
     game_conf_dd_rect = pygame.Rect(config_body_rect.x + padding, config_body_rect.y + 15, config_body_rect.width - padding*2, 30)
     clickable_rects['game_config_dropdown_button'] = game_conf_dd_rect
     
-    pygame.draw.rect(game.virtual_screen, (50, 50, 50), game_conf_dd_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, game_conf_dd_rect, 1)
+    pygame.draw.rect(game.game_screen, (50, 50, 50), game_conf_dd_rect)
+    pygame.draw.rect(game.game_screen, WHITE, game_conf_dd_rect, 1)
     
     sel_conf = state.get('selected_config_preset', 'default')
-    game.virtual_screen.blit(font.render(sel_conf, True, WHITE), (game_conf_dd_rect.x + 5, game_conf_dd_rect.y + 5))
+    game.game_screen.blit(font.render(sel_conf, True, WHITE), (game_conf_dd_rect.x + 5, game_conf_dd_rect.y + 5))
     
     # Arrow
-    pygame.draw.polygon(game.virtual_screen, WHITE, [(game_conf_dd_rect.right - 15, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 5, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 10, game_conf_dd_rect.y + 15)])
+    pygame.draw.polygon(game.game_screen, WHITE, [(game_conf_dd_rect.right - 15, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 5, game_conf_dd_rect.y + 10), (game_conf_dd_rect.right - 10, game_conf_dd_rect.y + 15)])
     """
 
     # --- Column 1, Block 1: Preset Management Panel ---
@@ -220,24 +220,24 @@ def _draw_player_build_screen(game, state, mouse_pos):
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
     
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), preset_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, preset_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, preset_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Preset", True, WHITE), (preset_header_rect.x + 10, preset_header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), preset_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, preset_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, preset_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Preset", True, WHITE), (preset_header_rect.x + 10, preset_header_rect.y + 7))
 
     # 1. Name Input
-    game.virtual_screen.blit(font.render("Player Name:", True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + 10))
+    game.game_screen.blit(font.render("Player Name:", True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + 10))
     name_input_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 35, preset_body_rect.width - padding*2, 30)
-    pygame.draw.rect(game.virtual_screen, (50, 50, 50), name_input_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, name_input_rect, 1)
+    pygame.draw.rect(game.game_screen, (50, 50, 50), name_input_rect)
+    pygame.draw.rect(game.game_screen, WHITE, name_input_rect, 1)
     
     name_text = state.get('player_name', "Survivor")
     text_surf = font.render(name_text, True, WHITE)
-    game.virtual_screen.blit(text_surf, (name_input_rect.x + 5, name_input_rect.y + 5))
+    game.game_screen.blit(text_surf, (name_input_rect.x + 5, name_input_rect.y + 5))
     
     if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
         cursor_x = name_input_rect.x + 5 + text_surf.get_width()
-        pygame.draw.line(game.virtual_screen, WHITE, (cursor_x, name_input_rect.y + 5), (cursor_x, name_input_rect.bottom - 5), 2)
+        pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_input_rect.y + 5), (cursor_x, name_input_rect.bottom - 5), 2)
     
     clickable_rects['name_input'] = name_input_rect
 
@@ -265,32 +265,32 @@ def _draw_player_build_screen(game, state, mouse_pos):
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
     
     save_btn_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, GREEN, save_btn_rect, border_radius=4)
-    game.virtual_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
+    pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
+    game.game_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
     clickable_rects['save_button'] = save_btn_rect
     
     random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, (0, 100, 150), random_btn_rect, border_radius=4)
-    game.virtual_screen.blit(font.render("Random", True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
+    pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
+    game.game_screen.blit(font.render("Random", True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
     clickable_rects['random_button'] = random_btn_rect
 
     delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
-    pygame.draw.rect(game.virtual_screen, RED, delete_btn_rect, border_radius=4)
-    game.virtual_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
+    pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
+    game.game_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
     clickable_rects['delete_button'] = delete_btn_rect
     
     # 3. Load Preset Dropdown
     load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 125, preset_body_rect.width - padding*2, 30)
     clickable_rects['load_dropdown_button'] = load_dd_rect
-    pygame.draw.rect(game.virtual_screen, (50, 50, 50), load_dd_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, load_dd_rect, 1)
+    pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
+    pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
     selected_preset = state.get('selected_preset', "None")
-    game.virtual_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
-    pygame.draw.polygon(game.virtual_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
+    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
+    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
 
     
     sex_y = load_dd_rect.bottom + 10
-    game.virtual_screen.blit(font.render("Sex:", True, WHITE), (preset_body_rect.x + padding, sex_y))
+    game.game_screen.blit(font.render("Sex:", True, WHITE), (preset_body_rect.x + padding, sex_y))
     
     sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
     male_btn_rect = pygame.Rect(preset_body_rect.x + padding, sex_y + 25, sex_btn_width, 30)
@@ -299,20 +299,20 @@ def _draw_player_build_screen(game, state, mouse_pos):
     current_sex = state['base_data'].get('sex', 'Male')
     
     if current_sex == 'Male':
-        pygame.draw.rect(game.virtual_screen, (80, 80, 80), male_btn_rect, 0, border_radius=3)
-        pygame.draw.rect(game.virtual_screen, WHITE, male_btn_rect, 2, border_radius=3)
+        pygame.draw.rect(game.game_screen, (80, 80, 80), male_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.game_screen, WHITE, male_btn_rect, 2, border_radius=3)
     else:
-        pygame.draw.rect(game.virtual_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
-        pygame.draw.rect(game.virtual_screen, WHITE, male_btn_rect, 1, border_radius=3)
-    game.virtual_screen.blit(font.render("Male", True, WHITE), (male_btn_rect.centerx - 20, male_btn_rect.y + 5))
+        pygame.draw.rect(game.game_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.game_screen, WHITE, male_btn_rect, 1, border_radius=3)
+    game.game_screen.blit(font.render("Male", True, WHITE), (male_btn_rect.centerx - 20, male_btn_rect.y + 5))
     
     if current_sex == 'Female':
-        pygame.draw.rect(game.virtual_screen, (80, 80, 80), female_btn_rect, 0, border_radius=3)
-        pygame.draw.rect(game.virtual_screen, WHITE, female_btn_rect, 2, border_radius=3)
+        pygame.draw.rect(game.game_screen, (80, 80, 80), female_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.game_screen, WHITE, female_btn_rect, 2, border_radius=3)
     else:
-        pygame.draw.rect(game.virtual_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
-        pygame.draw.rect(game.virtual_screen, WHITE, female_btn_rect, 1, border_radius=3)
-    game.virtual_screen.blit(font.render("Female", True, WHITE), (female_btn_rect.centerx - 28, female_btn_rect.y + 5))
+        pygame.draw.rect(game.game_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
+        pygame.draw.rect(game.game_screen, WHITE, female_btn_rect, 1, border_radius=3)
+    game.game_screen.blit(font.render("Female", True, WHITE), (female_btn_rect.centerx - 28, female_btn_rect.y + 5))
     
     clickable_rects['sex_buttons'] = {'Male': male_btn_rect, 'Female': female_btn_rect}
  
@@ -324,10 +324,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     gear_header_rect = pygame.Rect(gear_rect.x, gear_rect.y, gear_rect.width, header_height)
     gear_body_rect = pygame.Rect(gear_rect.x, gear_rect.y + header_height, gear_rect.width, gear_rect.height - header_height)
 
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), gear_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, gear_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, gear_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Clothes", True, WHITE), (gear_header_rect.x + 10, gear_header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), gear_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, gear_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, gear_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Clothes", True, WHITE), (gear_header_rect.x + 10, gear_header_rect.y + 7))
 
     gear_content_rect = pygame.Rect(
         gear_rect.x + padding,
@@ -338,10 +338,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['gear_content_rect'] = gear_content_rect 
 
     
-    drawable_gear_rect = game.virtual_screen.get_rect().clip(gear_content_rect)
+    drawable_gear_rect = game.game_screen.get_rect().clip(gear_content_rect)
     dropdown_draw_list = []
     if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
-        gear_content_surface = game.virtual_screen.subsurface(drawable_gear_rect)
+        gear_content_surface = game.game_screen.subsurface(drawable_gear_rect)
         gear_content_surface.fill((30, 30, 30))
         label_width = 80
         dropdown_width = col1_width - label_width - (padding * 3)
@@ -359,10 +359,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, available_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Available Traits", True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, available_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Available Traits", True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
     traits_content_rect = pygame.Rect(available_rect.x + padding, available_rect.y + header_height + padding, available_rect.width - (padding * 2) - 10, available_rect.height - header_height - (padding * 2))
     state['traits_content_rect'] = traits_content_rect
     line_height = 35
@@ -374,9 +374,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['traits_max_scroll'] = max_scroll_offset
     scroll_offset_y = max(0, min(state.get('traits_scroll_offset_y', 0), max_scroll_offset))
     state['traits_scroll_offset_y'] = scroll_offset_y
-    drawable_traits_rect = game.virtual_screen.get_rect().clip(traits_content_rect)
+    drawable_traits_rect = game.game_screen.get_rect().clip(traits_content_rect)
     if drawable_traits_rect.width > 0 and drawable_traits_rect.height > 0:
-        content_surface = game.virtual_screen.subsurface(drawable_traits_rect)
+        content_surface = game.game_screen.subsurface(drawable_traits_rect)
         content_surface.fill((30, 30, 30))
     else: content_surface = None
     hovered_trait_id = None
@@ -408,7 +408,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
         traits_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.virtual_screen, GRAY, traits_scrollbar_handle_rect, 0, 2)
+        pygame.draw.rect(game.game_screen, GRAY, traits_scrollbar_handle_rect, 0, 2)
         state['traits_scrollbar_handle_rect'] = traits_scrollbar_handle_rect
     else: state['traits_scrollbar_handle_rect'] = None
 
@@ -416,10 +416,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     chosen_rect = pygame.Rect(col3_x, 30, col3_width, 640)
     header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
     body_rect = pygame.Rect(chosen_rect.x, chosen_rect.y + header_height, chosen_rect.width, chosen_rect.height - header_height)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Chosen Traits", True, WHITE), (header_rect.x + 10, header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Chosen Traits", True, WHITE), (header_rect.x + 10, header_rect.y + 7))
     total_cost = sum(TRAIT_DEFINITIONS.get(t, {}).get('cost', 0) for t in state['chosen_traits'])
     state['total_trait_cost'] = total_cost
     
@@ -434,7 +434,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     cost_surf = font.render(cost_text, True, cost_color)
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
-    game.virtual_screen.blit(cost_surf, cost_rect)
+    game.game_screen.blit(cost_surf, cost_rect)
     
     # [CHANGE] New Scrolling Logic for Chosen Traits
     chosen_content_rect = pygame.Rect(chosen_rect.x + padding, chosen_rect.y + header_height + padding, chosen_rect.width - (padding * 2) - 10, chosen_rect.height - header_height - (padding * 2))
@@ -452,9 +452,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['chosen_scroll_offset_y'] = scroll_offset_y
     
     # Clipping
-    drawable_chosen_rect = game.virtual_screen.get_rect().clip(chosen_content_rect)
+    drawable_chosen_rect = game.game_screen.get_rect().clip(chosen_content_rect)
     if drawable_chosen_rect.width > 0 and drawable_chosen_rect.height > 0:
-        content_surface = game.virtual_screen.subsurface(drawable_chosen_rect)
+        content_surface = game.game_screen.subsurface(drawable_chosen_rect)
         content_surface.fill((30, 30, 30))
     else:
         content_surface = None
@@ -495,7 +495,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
         
         chosen_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.virtual_screen, GRAY, chosen_scrollbar_handle_rect, 0, 2)
+        pygame.draw.rect(game.game_screen, GRAY, chosen_scrollbar_handle_rect, 0, 2)
         state['chosen_scrollbar_handle_rect'] = chosen_scrollbar_handle_rect
     else:
         state['chosen_scrollbar_handle_rect'] = None
@@ -503,24 +503,24 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # --- Column 4 ---
     sprite_rect_container = pygame.Rect(col4_x, 30, col4_width, 310)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), sprite_rect_container)
-    pygame.draw.rect(game.virtual_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
+    pygame.draw.rect(game.game_screen, (30, 30, 30), sprite_rect_container)
+    pygame.draw.rect(game.game_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     if state.get('player_sprite_large'):
         sprite_rect = state['player_sprite_large'].get_rect(center=sprite_rect_container.center)
-        game.virtual_screen.blit(state['player_sprite_large'], sprite_rect)
+        game.game_screen.blit(state['player_sprite_large'], sprite_rect)
         for slot in state['clothes_slots']:
             item_name = state['chosen_clothes'].get(slot)
             if item_name and item_name != "None":
                 clothing_img = state['clothing_sprites'].get(item_name)
-                if clothing_img: game.virtual_screen.blit(clothing_img, sprite_rect)
+                if clothing_img: game.game_screen.blit(clothing_img, sprite_rect)
 
     stats_rect = pygame.Rect(col4_x, sprite_rect_container.bottom + 20, col4_width, 240)
     stats_header_rect = pygame.Rect(stats_rect.x, stats_rect.y, stats_rect.width, header_height)
     stats_body_rect = pygame.Rect(stats_rect.x, stats_rect.y + header_height, stats_rect.width, stats_rect.height - header_height)
-    pygame.draw.rect(game.virtual_screen, (30, 30, 30), stats_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, GRAY_60, stats_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.virtual_screen, WHITE, stats_rect, 1, border_radius=border_radius)
-    game.virtual_screen.blit(font.render("Current Stats", True, WHITE), (stats_header_rect.x + 10, stats_header_rect.y + 7))
+    pygame.draw.rect(game.game_screen, (30, 30, 30), stats_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, stats_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, stats_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Current Stats", True, WHITE), (stats_header_rect.x + 10, stats_header_rect.y + 7))
     stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + 40, stats_rect.width - (padding * 2) - 10, stats_rect.height - (padding * 2) - 30)
     state['stats_content_rect'] = stats_content_rect
 
@@ -570,9 +570,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     state['stats_max_scroll'] = max_scroll_offset
     scroll_offset_y = max(0, min(state.get('stats_scroll_offset_y', 0), max_scroll_offset))
     state['stats_scroll_offset_y'] = scroll_offset_y
-    drawable_stats_rect = game.virtual_screen.get_rect().clip(stats_content_rect)
+    drawable_stats_rect = game.game_screen.get_rect().clip(stats_content_rect)
     if drawable_stats_rect.width > 0 and drawable_stats_rect.height > 0:
-        content_surface = game.virtual_screen.subsurface(drawable_stats_rect)
+        content_surface = game.game_screen.subsurface(drawable_stats_rect)
         content_surface.fill((30, 30, 30))
         y_offset = 0 - scroll_offset_y
         for stat, value in current_stats.items():
@@ -657,23 +657,23 @@ def _draw_player_build_screen(game, state, mouse_pos):
         handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
         stats_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.virtual_screen, GRAY, stats_scrollbar_handle_rect, 0, 2)
+        pygame.draw.rect(game.game_screen, GRAY, stats_scrollbar_handle_rect, 0, 2)
         state['stats_scrollbar_handle_rect'] = stats_scrollbar_handle_rect
     else: state['stats_scrollbar_handle_rect'] = None
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70)
     is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)
     if is_balanced:
-        pygame.draw.rect(game.virtual_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
+        pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
-            pygame.draw.rect(game.virtual_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4), border_radius=border_radius)
+            pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4), border_radius=border_radius)
         start_text = large_font.render("START GAME", True, WHITE)
     else:
-        pygame.draw.rect(game.virtual_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
-        pygame.draw.rect(game.virtual_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)
+        pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
+        pygame.draw.rect(game.game_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)
         start_text = large_font.render("START GAME", True, (100, 100, 100))
     text_rect = start_text.get_rect(center=start_btn_rect.center)
-    game.virtual_screen.blit(start_text, text_rect)
+    game.game_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
 
     # --- Draw dropdowns LAST ---
@@ -683,15 +683,15 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     # 1. Gear Buttons
     for slot_name, rect in dropdown_draw_list:
-        dropdown_rects = _draw_dropdown(game.virtual_screen, state, slot_name, rect, mouse_pos)
+        dropdown_rects = _draw_dropdown(game.game_screen, state, slot_name, rect, mouse_pos)
         clickable_rects['dropdown_buttons'][slot_name] = dropdown_rects['button']
 
     # 2. Preset Button
-    pygame.draw.rect(game.virtual_screen, (50, 50, 50), load_dd_rect)
-    pygame.draw.rect(game.virtual_screen, WHITE, load_dd_rect, 1)
+    pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
+    pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
     selected_preset = state.get('selected_preset', "None")
-    game.virtual_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
-    pygame.draw.polygon(game.virtual_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
+    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
+    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
     
     # 3. Gear List
     if active_dropdown_slot:
@@ -702,13 +702,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 max_options_visible = 6
                 list_height = min(max_options_visible * option_height, len(options) * option_height)
                 list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
-                if list_rect.bottom > VIRTUAL_GAME_HEIGHT: list_rect.height = VIRTUAL_GAME_HEIGHT - list_rect.top
+                if list_rect.bottom > GAME_HEIGHT: list_rect.height = GAME_HEIGHT - list_rect.top
                 content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height)
-                pygame.draw.rect(game.virtual_screen, (30, 30, 30), list_rect)
-                pygame.draw.rect(game.virtual_screen, WHITE, list_rect, 1)
-                drawable_rect = game.virtual_screen.get_rect().clip(content_rect)
+                pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
+                pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
+                drawable_rect = game.game_screen.get_rect().clip(content_rect)
                 if drawable_rect.width > 0 and drawable_rect.height > 0:
-                    content_surface = game.virtual_screen.subsurface(drawable_rect)
+                    content_surface = game.game_screen.subsurface(drawable_rect)
                     content_surface.fill((30, 30, 30))
                     scroll_state = state['gear_dropdown_scrolls'][slot_name]
                     y_offset = 0 - scroll_state['offset']
@@ -721,7 +721,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                             content_surface.blit(font.render(option_name, True, WHITE), (option_rect_rel.x + 5, option_rect_rel.y + 2))
                         clickable_rects['dropdown_options'].append((slot_name, option_name, option_rect_abs))
                         y_offset += option_height
-                    if scroll_state.get('handle_rect'): pygame.draw.rect(game.virtual_screen, GRAY, scroll_state['handle_rect'], 0, 2)
+                    if scroll_state.get('handle_rect'): pygame.draw.rect(game.game_screen, GRAY, scroll_state['handle_rect'], 0, 2)
                 break
     
     # 4. Preset List
@@ -730,14 +730,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
         option_height = 25
         list_height = len(options) * option_height
         list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom, load_dd_rect.width, list_height)
-        pygame.draw.rect(game.virtual_screen, (30, 30, 30), list_rect)
-        pygame.draw.rect(game.virtual_screen, WHITE, list_rect, 1)
+        pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
+        pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
         y_offset = list_rect.y
         clickable_rects["load_dropdown_options"] = []
         for option_name in options:
             option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
-            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.virtual_screen, (70, 70, 70), option_rect)
-            game.virtual_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
+            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
+            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
             clickable_rects["load_dropdown_options"].append((option_name, option_rect))
             y_offset += option_height
 
@@ -747,14 +747,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
         option_height = 25
         list_height = len(options) * option_height
         list_rect = pygame.Rect(game_conf_dd_rect.x, game_conf_dd_rect.bottom, game_conf_dd_rect.width, list_height)
-        pygame.draw.rect(game.virtual_screen, (30, 30, 30), list_rect)
-        pygame.draw.rect(game.virtual_screen, WHITE, list_rect, 1)
+        pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
+        pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
         y_offset = list_rect.y
         clickable_rects["game_config_options"] = []
         for option_name in options:
             option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
-            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.virtual_screen, (70, 70, 70), option_rect)
-            game.virtual_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
+            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
+            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
             clickable_rects["game_config_options"].append((option_name, option_rect))
             y_offset += option_height
 
@@ -774,7 +774,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 max_damage=None,
                 ammo_type=None
             )
-            draw_tooltip(game.virtual_screen, t_item, mouse_pos)
+            draw_tooltip(game.game_screen, t_item, mouse_pos)
 
     return clickable_rects
 
@@ -913,30 +913,30 @@ def run_player_setup(game):
     state = game.player_setup_state
     mouse_pos = game._get_scaled_mouse_pos()
     
-    game.virtual_screen.fill(DARK_GRAY)
+    game.game_screen.fill(DARK_GRAY)
     
     sidebar_width = 150
     btn_h = 40
     player_btn = pygame.Rect(10, 30, sidebar_width, btn_h)
     settings_btn = pygame.Rect(10, 90, sidebar_width, btn_h)
-    back_btn = pygame.Rect(10, VIRTUAL_GAME_HEIGHT - 91, sidebar_width, btn_h)
+    back_btn = pygame.Rect(10, GAME_HEIGHT - 91, sidebar_width, btn_h)
 
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
-    pygame.draw.rect(game.virtual_screen, p_col, player_btn, border_radius=4)
-    pygame.draw.rect(game.virtual_screen, WHITE, player_btn, 1, border_radius=4)
-    game.virtual_screen.blit(font.render("Player", True, WHITE), (player_btn.x + 10, player_btn.y + 10))
-    pygame.draw.rect(game.virtual_screen, s_col, settings_btn, border_radius=4)
-    pygame.draw.rect(game.virtual_screen, WHITE, settings_btn, 1, border_radius=4)
-    game.virtual_screen.blit(font.render("Settings", True, WHITE), (settings_btn.x + 10, settings_btn.y + 10))
+    pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
+    pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
+    game.game_screen.blit(font.render("Player", True, WHITE), (player_btn.x + 10, player_btn.y + 10))
+    pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
+    pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
+    game.game_screen.blit(font.render("Settings", True, WHITE), (settings_btn.x + 10, settings_btn.y + 10))
 
     b_col = GRAY_80
-    pygame.draw.rect(game.virtual_screen, b_col, back_btn, border_radius=4)
+    pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
   
     # Center text
     back_txt = font.render("Back", True, WHITE)
     txt_rect = back_txt.get_rect(center=back_btn.center)
-    game.virtual_screen.blit(back_txt, txt_rect)
+    game.game_screen.blit(back_txt, txt_rect)
 
     clickable_rects = {}
     if state['current_tab'] == 'Player':
@@ -948,8 +948,8 @@ def run_player_setup(game):
         if event.type == pygame.QUIT:
             game.running = False
             return
-        if event.type == pygame.VIDEORESIZE:
-            game.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+        #if event.type == pygame.VIDEORESIZE:
+        #    game.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             
         if event.type == pygame.MOUSEWHEEL:
             if state['current_tab'] == 'Settings':

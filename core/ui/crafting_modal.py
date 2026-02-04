@@ -510,9 +510,9 @@ class CraftingModal(BaseModal):
         tt_h = (len(surfaces) * line_height) + (padding * 2)
         
         x, y = pos[0] + 15, pos[1] + 15
-        if x + tt_w > VIRTUAL_SCREEN_WIDTH:
+        if x + tt_w > GAME_WIDTH:
             x = pos[0] - tt_w - 5
-        if y + tt_h > VIRTUAL_GAME_HEIGHT:
+        if y + tt_h > GAME_HEIGHT:
             y = pos[1] - tt_h - 5
             
         tt_rect = pygame.Rect(x, y, tt_w, tt_h)
