@@ -1,4 +1,3 @@
-# editor/file_tree.py
 import pygame
 import re
 import os
@@ -252,7 +251,7 @@ class FileTree:
 
                     # Draw Layers
                     if self.expanded_maps.get(map_key):
-                        layer_order = ['light','roof','map', 'spawn', 'ground']
+                        layer_order = ['light', 'roof', 'map', 'spawn', 'ground']
                         layer_file_lookup = {}
                         for lf in maps[map_name]:
                             for suffix in layer_order:
@@ -325,7 +324,7 @@ class FileTree:
                     
                     self.scroll_offset = self.scroll_start_offset + scroll_change
                     self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
-                return None 
+                return True # Event handled
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
@@ -335,14 +334,14 @@ class FileTree:
                 self.dragging_scroll = True
                 self.scroll_start_mouse_y = my
                 self.scroll_start_offset = self.scroll_offset
-                return None 
+                return True # Event handled
             elif self.scrollbar_track_rect and self.scrollbar_track_rect.collidepoint(mx, my):
                 # Page jump on track click
                 if my < self.scrollbar_thumb_rect.y:
                     self.scroll_offset = max(0, self.scroll_offset - self.height)
                 else:
                     self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.height)
-                return None 
+                return True # Event handled
 
             if event.button == 1:
                 # Content Area Clicks
@@ -361,7 +360,7 @@ class FileTree:
                             folder_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
                             if folder_rect.collidepoint(mx, my):
                                 self.expanded_folders[folder] = not self.expanded_folders.get(folder, False)
-                                return None
+                                return True # Handled
                             current_y += self.line_height
                         
                         # Maps
@@ -375,7 +374,7 @@ class FileTree:
                                     toggle_width = 40 if folder else 30
                                     if mx < self.x + toggle_width: 
                                         self.expanded_maps[map_key] = not self.expanded_maps.get(map_key, False)
-                                        return None
+                                        return True # Handled
                                     else:
                                         self.selected_map = map_key
                                         return {"action": "select_map", "folder": folder, "map_name": map_name}
@@ -412,26 +411,17 @@ class FileTree:
                                                     "properties": self.layer_properties[rel_path]
                                                 }
                                             
-                                            op_rect = pygame.Rect(self.x + self.width - 95, current_y, 70, self.line_height - 5)
-                                            if op_rect.collidepoint(mx, my):
-                                                current_op = self.layer_properties[rel_path]["opacity"]
-                                                self.layer_properties[rel_path]["opacity"] = 0 if current_op == 255 else 255
-                                                return {
-                                                    "action": "set_opacity", 
-                                                    "layer_name": layer_name,
-                                                    "properties": self.layer_properties[rel_path]
-                                                }
-                                            else:
-                                                return {"action": "set_active_layer", "layer_name": layer_name}
+                                            # Opacity controls removed
+                                            return {"action": "set_active_layer", "layer_name": layer_name}
 
                                         current_y += self.line_height
 
             elif event.button == 4:  # Scroll up
                 if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
                     self.scroll_offset = max(0, self.scroll_offset - (self.line_height * 2))
-                    return None
+                    return True # Handled
             elif event.button == 5:  # Scroll down
                 if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
                     self.scroll_offset = min(self.max_scroll, self.scroll_offset + (self.line_height * 2))
-                    return None
+                    return True # Handled
         return None

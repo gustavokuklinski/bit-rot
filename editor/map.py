@@ -173,9 +173,15 @@ class Map:
 
     def render(self, surface, tiles, font, offset=(0, 0), zoom_scale=1.0):
         scaled_tile_size = int(TILE_SIZE * zoom_scale)
-        sorted_layers = sorted(self.layers.items())
+        
+        # Render Order: Bottom -> Top
+        render_order = ['ground', 'map', 'spawn', 'light', 'roof']
 
-        for layer_name, layer_grid in sorted_layers:
+        for layer_name in render_order:
+            if layer_name not in self.layers:
+                continue
+                
+            layer_grid = self.layers[layer_name]
             properties = self.layer_properties.get(layer_name, {"visible": True, "opacity": 255})
             if not properties["visible"]:
                 continue

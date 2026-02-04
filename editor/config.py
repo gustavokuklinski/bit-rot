@@ -3,8 +3,8 @@
 import os
 
 # Screen dimensions
-SCREEN_WIDTH = 1480
-SCREEN_HEIGHT = 820
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
 
 # Map default size
 MAP_DEFAULT_WIDTH = 100

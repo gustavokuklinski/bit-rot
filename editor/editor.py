@@ -319,27 +319,31 @@ def editor():
             # File Tree
             ft_res = current_file_tree.handle_event(event)
             if ft_res:
-                if ft_res['action'] == 'select_map':
-                    folder = ft_res['folder']
-                    map_name = ft_res['map_name']
-                    
-                    current_folder = folder
-                    current_base_name = map_name
-                    current_root_dir = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
-                    current_building_name = map_name
-                    
-                    load_map_layers(current_map_obj, map_name, current_root_dir)
-                    modified_maps.discard((folder, map_name))
-                    log_console.add_message(f"Opened {map_name}")
-                    
-                elif ft_res['action'] == 'toggle_visibility':
-                     layer_name = ft_res['layer_name']
-                     properties = ft_res['properties']
-                     if layer_name in current_map_obj.layer_properties:
-                         current_map_obj.layer_properties[layer_name] = properties
+                if isinstance(ft_res, dict):
+                    if ft_res['action'] == 'select_map':
+                        folder = ft_res['folder']
+                        map_name = ft_res['map_name']
+                        
+                        current_folder = folder
+                        current_base_name = map_name
+                        current_root_dir = os.path.join(BUILDINGS_DIR, folder) if folder else BUILDINGS_DIR
+                        current_building_name = map_name
+                        
+                        load_map_layers(current_map_obj, map_name, current_root_dir)
+                        modified_maps.discard((folder, map_name))
+                        log_console.add_message(f"Opened {map_name}")
+                        
+                    elif ft_res['action'] == 'toggle_visibility':
+                        layer_name = ft_res['layer_name']
+                        properties = ft_res['properties']
+                        if layer_name in current_map_obj.layer_properties:
+                            current_map_obj.layer_properties[layer_name] = properties
 
-                elif ft_res['action'] == 'set_active_layer':
-                     current_map_obj.set_active_layer(ft_res['layer_name'])
+                    elif ft_res['action'] == 'set_active_layer':
+                        current_map_obj.set_active_layer(ft_res['layer_name'])
+                
+                # Consume the event to prevent map interaction (like zooming) if file tree handled it
+                continue
             
             # Toolbar
             tb_action = toolbar.handle_event(event)
