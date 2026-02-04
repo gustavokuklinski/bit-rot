@@ -3,7 +3,7 @@
         <sprite file="garden_tree_15.png" />
     </visuals>
     <properties>
-        <health min="60" max="100" />
+        <health min="160" max="260" />
     </properties>
     <drop>
         <item item="Tree Trunk" chance="1" />

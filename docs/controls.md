@@ -3,13 +3,13 @@
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
-- **CTRL + LMC**: Shoot + Aim / Attack
+- **CTRL + LMB**: Shoot + Aim / Attack
 - **1/2/3/4/5**: Equip and use item from Belt
 - **MOUSE SCROLL / - or =**: Zoom in/Zoom out
 
 **Game world interaction**
-- **SHIFT + LMC + Drag**: Get/drop only one item from stack
-- **LMC + Drag**: Place or Drop
+- **SHIFT + LMB + Drag**: Get/drop only one item from stack
+- **LMB + Drag**: Place or Drop
 - **RMC**: Opens context menu 
 - **E**: open or close door, enter vehicle
 - **R**: Reload weapon

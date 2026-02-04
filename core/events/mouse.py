@@ -2557,6 +2557,20 @@ def handle_attack(game, mouse_pos):
                              dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
                              
                              if dist <= TILE_SIZE * 2:
+                                 # [NEW] Check Hand Health & Apply Damage
+                                 if weapon is None:
+                                     hand_part = game.player.body_parts.get('hand')
+                                     if hand_part:
+                                         if hand_part['value'] <= 0:
+                                             display_message(game, "Your hands are too injured to hit this!")
+                                             hit_something = True # Stop the loop/swing message
+                                             break
+                                         else:
+                                             # Damage hands
+                                             self_damage = random.randint(1, 2)
+                                             game.player.take_damage_to_part('hand', self_damage)
+                                             # Optional: display_message(game, "Ouch!")
+
                                  damage = game.player.get_attack_damage()
                                  # This will now return TRUE if it hits (even if it just says "Need Axe")
                                  result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
@@ -2564,7 +2578,5 @@ def handle_attack(game, mouse_pos):
                                      hit_something = True
                                      target_found = True
                                      break 
-                             else:
-                                 print(f"Destructible target found at {clicked_grid_x},{target_y} but too far ({dist:.0f}px)")
 
                 if not hit_something: print("Swung and missed!")

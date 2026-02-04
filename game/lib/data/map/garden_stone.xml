@@ -3,7 +3,7 @@
         <sprite file="garden_stone.png" />
     </visuals>
     <properties>
-        <health min="70" max="120" />
+        <health min="200" max="400" />
     </properties>
     <drop>
         <item item="Stone" chance="1" />

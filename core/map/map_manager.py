@@ -166,7 +166,8 @@ class MapManager:
                     has_axe = True
                     break
         
-        if not has_axe:
+        # [UPDATED] Allow hands (weapon=None) to hit, but block invalid weapons
+        if weapon and not has_axe:
              display_message_player("You need an axe to chop this.")
              return True
              
@@ -186,7 +187,7 @@ class MapManager:
                 display_message_player(f"{weapon.name} is broken and unequipped.")
                 return True
         
-
+        # [NOTE] Shaking logic is reached now that we don't return early for hands
         if definition.get('sound_src'):
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             self.game.sound_manager.play_sound(
