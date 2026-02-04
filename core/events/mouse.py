@@ -1582,6 +1582,12 @@ def handle_context_menu_click(game, mouse_pos):
                 print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
                 
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
+                # [FIX] Remove the static tile rendering so we don't see a ghost car
+                grid_x = int(item.x // TILE_SIZE)
+                grid_y = int(item.y // TILE_SIZE)
+                if hasattr(game.map_manager, 'remove_vehicle_tile'):
+                     game.map_manager.remove_vehicle_tile(grid_x, grid_y)
+
                 game.modals = [m for m in game.modals if m['type'] != 'vehicle']
                 default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 - 200)
                 pos = game.last_modal_positions.get('vehicle', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
@@ -1602,6 +1608,13 @@ def handle_context_menu_click(game, mouse_pos):
                 return 
 
             elif option == 'Trunk':
+                 # [FIX] Remove static tile if it's a vehicle
+                 if getattr(item, 'item_type', '') == 'vehicle':
+                     grid_x = int(item.x // TILE_SIZE)
+                     grid_y = int(item.y // TILE_SIZE)
+                     if hasattr(game.map_manager, 'remove_vehicle_tile'):
+                        game.map_manager.remove_vehicle_tile(grid_x, grid_y)
+
                  modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
                  if not modal_exists:
                     new_container_modal = {

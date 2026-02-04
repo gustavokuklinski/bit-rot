@@ -17,6 +17,9 @@ class MapManager:
         self.map_files = self._discover_maps()
         self.shaking_tiles = {}
 
+        if not hasattr(self.game, 'vehicles'):
+            self.game.vehicles = []
+
     def refresh_maps(self):
         """Re-scans the map folder and updates the map_files list."""
         print("Refreshing map file list...")
@@ -53,6 +56,23 @@ class MapManager:
     def transition(self, direction):
         return None
 
+    def get_vehicle_at(self, grid_x, grid_y):
+        """
+        Finds a dynamic vehicle object located at the given grid coordinates.
+        Used by handle_right_click in mouse.py.
+        """
+        for vehicle in self.game.vehicles:
+            # Convert vehicle pixel position to grid coordinates
+            veh_grid_x = int(vehicle.x // TILE_SIZE)
+            veh_grid_y = int(vehicle.y // TILE_SIZE)
+            
+            # Check if the click is within the vehicle's grid footprint
+            # Vehicles might be larger than 1 tile, so we check the rect
+            tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            if vehicle.rect.colliderect(tile_rect):
+                return vehicle
+        return None
+
     def get_tile_at(self, grid_x, grid_y):
         """Gets the tile definition at a specific grid coordinate."""
         if self.game.map_data and 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
@@ -66,12 +86,6 @@ class MapManager:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         
-        # We assume self.game has the layout data loaded in memory:
-        # self.game.map_data (Base Layer - Modified by destruction)
-        # self.game.spawn_layout (Spawn Layer - Modified by pickups)
-        # self.game.ground_layout (Ground Layer)
-        
-        # Helper to write a layer
         def write_layer(layout, filename):
             path = os.path.join(save_dir, filename)
             try:
@@ -82,27 +96,17 @@ class MapManager:
             except Exception as e:
                 print(f"Error saving map layer {filename}: {e}")
 
-        # Determine filenames based on current layer index (assuming standard naming)
-        # Currently the game uses map_L{i}_world_map.csv. 
-        # But this single CSV usually contains ALL data in blocks, or the game loads separate files.
-        # Based on map_loader logic, it usually reads one file.
-        # If the game structure separates layers into variables in 'game', we can save them individually
-        # or implies we should overwrite the single file structure. 
-        # For this implementation, we will save specific layer files if they are available in 'game'.
+        # [FIX] Iterate through ALL loaded layers in memory and save them
+        if hasattr(self.game, 'all_map_layers'):
+            for layer_idx, layout in self.game.all_map_layers.items():
+                filename = f'map_L{layer_idx}_world_map.csv'
+                write_layer(layout, filename)
         
-        # NOTE: This assumes the game engine supports loading from these split files or 
-        # that 'map_data' corresponds to the file being loaded.
-        
-        if hasattr(self.game, 'map_data'):
-            # Save Base Layer (Walls/Obstacles)
-            write_layer(self.game.map_data, f'map_L{self.game.current_layer_index}_world_map.csv')
-            
-        if hasattr(self.game, 'spawn_layout'):
-            # Save Spawn Layer (Items/Entities)
-            write_layer(self.game.spawn_layout, f'map_L{self.game.current_layer_index}_world_spawn.csv')
-
-        # If you need to overwrite the main map file, you would combine them here, 
-        # but safely we usually save the modified state separately.
+        # Also save spawn layers if they were modified (e.g. items picked up)
+        if hasattr(self.game, 'all_spawn_layers'):
+            for layer_idx, layout in self.game.all_spawn_layers.items():
+                filename = f'map_L{layer_idx}_world_spawn.csv'
+                write_layer(layout, filename)
 
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
@@ -265,3 +269,15 @@ class MapManager:
         self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
         if new_def['is_obstacle']:
             self.game.obstacles.append(tile_rect)
+    
+    def remove_vehicle_tile(self, grid_x, grid_y):
+        """
+        Call this when a player starts driving to remove the static tile 
+        representation of the car from the map data.
+        """
+        try:
+            ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
+        except (KeyError, IndexError, AttributeError):
+            ground_char = "."
+            
+        self._replace_tile(grid_x, grid_y, self.game.map_data[grid_y][grid_x], ground_char)

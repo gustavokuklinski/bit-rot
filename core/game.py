@@ -241,6 +241,8 @@ class Game:
                 self.map_manager.map_folder = map_dst
             else:
                 self.logger.info("Map folder is already in the save directory. Skipping map copy.")
+
+            self.map_manager.save_map_to_file(map_dst)
             
             attributes_base = {
                 "strength": self.player.progression.get_level('strength'),

@@ -202,7 +202,8 @@ def draw_game(game):
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
-            radius_view_pixels = int(radius_world_pixels / zoom)
+            # radius_view_pixels = int(radius_world_pixels / zoom)
+            radius_view_pixels = int(radius_world_pixels)
             
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
@@ -262,7 +263,8 @@ def draw_game(game):
             if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly):
                 continue
             
-            radius_low = int((radius_world / zoom) / 2)
+            # radius_low = int((radius_world / zoom) / 2)
+            radius_low = int(radius_world / 2)
             if radius_low <= 0: continue
 
             try:

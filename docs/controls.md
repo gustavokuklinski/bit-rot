@@ -1,5 +1,10 @@
 ### Controls
 
+### System controls
+- **F11**: Toggle full screen (works in game)
+
+### In game controls
+
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
@@ -27,4 +32,3 @@
 
 **System**
 - **F2 / ESC**: Pause and save
-- **F11**: Toggle full screen

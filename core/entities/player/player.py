@@ -698,7 +698,7 @@ class Player:
             for item in inv:
                 if getattr(item, 'state', 'off') == 'on':
                     if item.durability is not None:
-                        item.durability -= 0.05 
+                        item.durability -= 0.005 
                         if item.durability <= 0:
                             item.durability = 0
                             self.toggle_utility_item(item, None, None, None) 

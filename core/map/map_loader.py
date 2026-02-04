@@ -157,9 +157,10 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     # Random Item Spawn
                     item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 
-                elif char.strip() == 'NPC':
+                elif char.strip() == 'NPC': 
                     npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
-                
+                elif char.strip() == 'S':
+                    pass
                 else:
                     # Check for Specific Item Code
                     test_item = Item.create_from_name(char)

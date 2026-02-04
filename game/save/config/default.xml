@@ -16,7 +16,7 @@
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
-        <view_radius value="15" name="View radius tiles (Default: 15)"/>
+        <view_radius value="8" name="View radius tiles (Default: 8)"/>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>
         <food_decay value="0.2" name="Food decay % (Default: 0.2)"/>
         <water_decay value="0.3" name="Water decay % (Default: 0.3)"/>
