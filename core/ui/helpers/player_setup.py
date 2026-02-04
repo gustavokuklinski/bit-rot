@@ -177,20 +177,20 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
 
     col1_x = 170
-    col1_width = 280
+    col1_width = 270
     col2_x = col1_x + col1_width + 20
-    col2_width = 280
+    col2_width = 225
     col3_x = col2_x + col2_width + 20
-    col3_width = 280
+    col3_width = 225
     col4_x = col3_x + col3_width + 20
-    col4_width = 280
+    col4_width = 275
 
     padding = 10
     
     # --- Column 1, Block 0: Game Settings (Top-Left) ---
     
     # NEW BLOCK
-    config_rect = pygame.Rect(col1_x, 50, col1_width, 90)
+    config_rect = pygame.Rect(col1_x, 30, col1_width, 90)
     config_header_rect = pygame.Rect(config_rect.x, config_rect.y, config_rect.width, header_height)
     config_body_rect = pygame.Rect(config_rect.x, config_rect.y + header_height, config_rect.width, config_rect.height - header_height)
     """
@@ -355,7 +355,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     
     # --- Column 2: Available Traits (Middle-Left) ---
-    available_rect = pygame.Rect(col2_x, 50, col2_width, 640)
+    available_rect = pygame.Rect(col2_x, 30, col2_width, 640)
     
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
@@ -413,7 +413,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else: state['traits_scrollbar_handle_rect'] = None
 
     # --- Column 3: Chosen Traits ---
-    chosen_rect = pygame.Rect(col3_x, 50, col3_width, 640)
+    chosen_rect = pygame.Rect(col3_x, 30, col3_width, 640)
     header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
     body_rect = pygame.Rect(chosen_rect.x, chosen_rect.y + header_height, chosen_rect.width, chosen_rect.height - header_height)
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
@@ -502,7 +502,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     # [END CHANGE]
 
     # --- Column 4 ---
-    sprite_rect_container = pygame.Rect(col4_x, 50, col4_width, 310)
+    sprite_rect_container = pygame.Rect(col4_x, 30, col4_width, 310)
     pygame.draw.rect(game.virtual_screen, (30, 30, 30), sprite_rect_container)
     pygame.draw.rect(game.virtual_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     if state.get('player_sprite_large'):
@@ -917,9 +917,9 @@ def run_player_setup(game):
     
     sidebar_width = 150
     btn_h = 40
-    player_btn = pygame.Rect(10, 50, sidebar_width, btn_h)
-    settings_btn = pygame.Rect(10, 100, sidebar_width, btn_h)
-    back_btn = pygame.Rect(10, VIRTUAL_GAME_HEIGHT - 70, sidebar_width, btn_h)
+    player_btn = pygame.Rect(10, 30, sidebar_width, btn_h)
+    settings_btn = pygame.Rect(10, 90, sidebar_width, btn_h)
+    back_btn = pygame.Rect(10, VIRTUAL_GAME_HEIGHT - 91, sidebar_width, btn_h)
 
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)

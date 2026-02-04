@@ -8,8 +8,8 @@ pygame.init()
 infoObject = pygame.display.Info()
 
 # --- Scalable Screen Setup ---
-VIRTUAL_SCREEN_WIDTH = 1360
-VIRTUAL_GAME_HEIGHT = 740
+VIRTUAL_SCREEN_WIDTH = 1280
+VIRTUAL_GAME_HEIGHT = 720
 
 GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
 GAME_WIDTH = VIRTUAL_SCREEN_WIDTH
@@ -90,10 +90,10 @@ NPC_DIALOG_MODAL_HEIGHT = 400
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 
 # Fonts
-font = pygame.font.Font(FONT_FACE, 16)
-font_small = pygame.font.Font(FONT_FACE, 16)
-large_font = pygame.font.Font(FONT_FACE, 16)
-title_font = pygame.font.Font(FONT_FACE, 16)
+font = pygame.font.Font(FONT_FACE, 14)
+font_small = pygame.font.Font(FONT_FACE, 14)
+large_font = pygame.font.Font(FONT_FACE, 14)
+title_font = pygame.font.Font(FONT_FACE, 14)
 font_notification = pygame.font.Font(FONT_FACE, 14)
 
 

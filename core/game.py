@@ -57,7 +57,8 @@ class Game:
         initial_h = int(VIRTUAL_GAME_HEIGHT * current_scale)
         
         self.screen = pygame.display.set_mode((initial_w, initial_h), pygame.RESIZABLE)
-        
+       
+
         self.virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_GAME_HEIGHT))
         
         pygame.display.set_caption("Bit Rot")
@@ -126,10 +127,10 @@ class Game:
 
         self.last_modal_positions = {
             'status': (65, 10),
-            'inventory': (1050, 10),
-            'gear': (730, 10),
+            'inventory': (970, 10),
+            'gear': (650, 10),
             'container': (VIRTUAL_SCREEN_WIDTH / 2 - 150, VIRTUAL_GAME_HEIGHT / 2 - 150),
-            'nearby': (1050, 360),
+            'nearby': (970, 360),
             'messages': (10, 360),
             'text': (VIRTUAL_SCREEN_WIDTH / 2 - 200, VIRTUAL_GAME_HEIGHT / 2 - 150),
             'mobile': (VIRTUAL_SCREEN_WIDTH / 2 - 125, VIRTUAL_GAME_HEIGHT / 2 - 200),

@@ -61,7 +61,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     # 1. Control Panel (Left Side)
     # ==========================================================
     # Simplified to just hold the Apply button
-    control_rect = pygame.Rect(col_start_x, 50, col_width - 60, 100)
+    control_rect = pygame.Rect(col_start_x, 30, col_width - 100, 100)
     control_header = pygame.Rect(control_rect.x, control_rect.y, control_rect.width, header_height)
     control_body = pygame.Rect(control_rect.x, control_rect.y + header_height, control_rect.width, control_rect.height - header_height)
 
@@ -85,9 +85,9 @@ def _draw_settings_screen(game, state, mouse_pos):
     # ==========================================================
     # 2. Settings List (Right Side)
     # ==========================================================
-    settings_area_x = col_start_x + col_width + 20
-    settings_area_w = 840
-    settings_rect = pygame.Rect(settings_area_x - 65, 50, settings_area_w, 660)
+    settings_area_x = col_start_x + col_width
+    settings_area_w = 830
+    settings_rect = pygame.Rect(settings_area_x - 87, 30, settings_area_w, 660)
     
     settings_header = pygame.Rect(settings_rect.x, settings_rect.y, settings_rect.width, header_height)
     settings_body = pygame.Rect(settings_rect.x, settings_rect.y + header_height, settings_rect.width, settings_rect.height - header_height)
