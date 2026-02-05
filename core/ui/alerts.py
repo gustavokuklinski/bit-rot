@@ -74,7 +74,7 @@ def draw_player_alerts(surface, player):
         
     # Infection (High) - Sick
     if player.infection >= 5: 
-        active_alerts.append(("ui/infection.png", YELLOW, "You are feeling sick or infected?"))
+        active_alerts.append(("ui/infection.png", YELLOW, "Are you feeling sick or infected?"))
 
     if not active_alerts:
         return None

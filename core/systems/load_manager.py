@@ -450,7 +450,7 @@ def load_game(game, save_folder_name):
                     'min_attack': z_data.get('min_attack', 1),
                     'max_attack': z_data.get('max_attack', 3),
                     'min_infection': z_data.get('min_infection', 0),
-                    'max_infection': z_data.get('max_infection', 1)
+                    'max_infection': z_data.get('max_infection', 1),
                     'loot': z_data.get('loot_table', []),
                     'clothes': z_data.get('clothes', {}), 
                     'sprites': {}

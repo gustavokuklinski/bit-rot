@@ -730,9 +730,14 @@ def draw_game(game):
         pygame.mouse.set_visible(False) 
         reticle_img = game.assets.get('aim_reticle')
         if reticle_img:
+            reticle_spread_base = 5
+            if game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
+                w_dist = getattr(game.player.active_weapon, 'distance', 10)
+                reticle_spread_base = w_dist / 1.5
+
             base_w = reticle_img.get_width()
             base_h = reticle_img.get_height()
-            scale_mult = 2.5 + (game.player.current_aim_factor * 10.5)
+            scale_mult = 2.5 + (game.player.current_aim_factor * reticle_spread_base)
             new_w = max(1, int(base_w * scale_mult))
             new_h = max(1, int(base_h * scale_mult))
             scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))

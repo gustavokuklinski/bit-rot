@@ -8,7 +8,7 @@
         <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" distance="30" />
         <skill type="range" />
         <sprite file="mpk5.png" />
-        <knockback value="5" />
+        <knockback value="3" />
     </properties>
     <sound>
         <shoot src="mpk5.ogg" />

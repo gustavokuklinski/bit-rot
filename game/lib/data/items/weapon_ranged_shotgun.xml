@@ -8,7 +8,7 @@
         <firing pellets="6" spread_angle="15" distance="10" />
         <skill type="range" />
         <sprite file="shotgun.png" />
-        <knockback value="10" />
+        <knockback value="6" />
     </properties>
     <sound>
         <shoot src="shotgun.ogg" />
