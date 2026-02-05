@@ -44,13 +44,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         else:
             self.name = name_val # Use the hard-coded name (e.g., "John Doe")
 
-        # 3. Generate Profession
-        prof_val = template.get('profession', 'Civilian') # Get value from XML
-        if prof_val.upper() == 'RANDOM':
-            self.profession = fake.job()
-        else:
-            self.profession = prof_val
-
         # 4. Generate Vaccine Status
         vacc_val = template.get('vaccine', 'False') # Get value from XML
         if vacc_val.upper() == 'RANDOM':
@@ -138,7 +131,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 id_item.name = f"ID: {self.name}"
                 
                 # Build the description text
-                info_text = f"Name: {self.name}\nSex: {self.sex}\nProfession: {self.profession}"
+                info_text = f"Name: {self.name}\nSex: {self.sex}\n"
                 if self.vaccine:
                     info_text += "\nVaccinated: Yes"
                 else:
@@ -169,7 +162,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 'min_infection':0, 
                 'max_infection':1,
                 'sex': 'Male', 
-                'profession': 'Civilian', 
                 'vaccine': 'False'
             }
             return Zombie(x, y, default_template)

@@ -68,7 +68,6 @@ class NPCData:
                                 if node is not None:
                                     template['sounds'][sound_type] = node.get('src')
                         template['sex'] = root.find('sex').get('value') if root.find('sex') is not None else 'Random'
-                        template['profession'] = root.find('profession').get('value') if root.find('profession') is not None else 'Survivor'
                         template['loot'] = [] 
                         NPCData.NPC_TEMPLATES.append(template)
                 except Exception as e:

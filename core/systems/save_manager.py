@@ -46,8 +46,6 @@ def save_game(game):
 
         player_data = {
             "name": game.player.name,
-            "world_seed": getattr(game, 'world_seed', "4-B1TR07"),
-            "profession": game.player.profession,
             "sex": game.player.sex,
             "x": game.player.x,
             "y": game.player.y,
@@ -170,7 +168,6 @@ def save_game(game):
                 "max_health": getattr(z, 'max_health', 10),
                 "name": getattr(z, 'name', 'Zombie'),
                 "sex": getattr(z, 'sex', 'Male'),
-                "profession": getattr(z, 'profession', 'Civilian'),
                 "vaccine": getattr(z, 'vaccine', False),
                 "speed": getattr(z, 'speed', 1.0),
                 "loot_table": getattr(z, 'loot_table', []),

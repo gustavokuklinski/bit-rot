@@ -15,7 +15,6 @@ def parse_player_data():
     data = {
         'name': root.find('name').get('value'),
         'sex': root.find('sex').get('value'),
-        'profession': root.find('profession').get('value'),
         'stats': {},
         'attributes': {},
         'body_parts': {},

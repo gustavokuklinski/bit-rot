@@ -37,7 +37,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         # Stats
         self.name = data.get('name', "Player")
-        self.profession = data.get('profession', "Survivor")
         self.body_parts = data.get('body_parts', {
             'head': {'value': 100.0, 'defence': 0.0},
             'legs': {'value': 100.0, 'defence': 0.0},

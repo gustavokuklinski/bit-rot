@@ -451,13 +451,18 @@ def load_game(game, save_folder_name):
                 template = {
                     'name': z_data.get('name', 'Zombie'),
                     'sex': z_data.get('sex', 'Male'),
-                    'profession': z_data.get('profession', 'Civilian'),
                     'health': z_data.get('max_health', 10), 
                     'speed': z_data.get('speed', 1.0),
                     'vaccine': str(z_data.get('vaccine', False)),
+                    'min_xp': z_data.get('xp_value', 1), 
+                    'max_xp': z_data.get('xp_value', 5),
+                    'min_attack': z_data.get('min_attack', 1),
+                    'max_attack': z_data.get('max_attack', 3),
+                    'min_infection': z_data.get('min_infection', 0),
+                    'max_infection': z_data.get('max_infection', 1)
                     'loot': z_data.get('loot_table', []),
                     'clothes': z_data.get('clothes', {}), 
-                    'sprites': {} 
+                    'sprites': {}
                 }
                 
                 z = Zombie(z_data['x'], z_data['y'], template)

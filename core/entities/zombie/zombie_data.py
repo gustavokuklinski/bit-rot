@@ -177,7 +177,6 @@ class ZombieData:
                                         template['sounds']['steps'] = steps_node.get('src')
                                 
                                 template['sex'] = root.find('sex').get('value') if root.find('sex') is not None else 'Random'
-                                template['profession'] = root.find('profession').get('value') if root.find('profession') is not None else 'Civilian'
                                 template['vaccine'] = root.find('vaccine').get('value') if root.find('vaccine') is not None else 'False'
 
                                 ZombieData.ZOMBIE_TEMPLATES.append(template)

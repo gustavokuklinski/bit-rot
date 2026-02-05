@@ -129,7 +129,7 @@ class Game:
         self.layer_zombies = {}
         self.player_name = ""
         self.name_input_active = False
-        self.selected_profession = None
+
         self.hovered_item = None
         self.hovered_container = None
         self.hovered_npc = None

@@ -1,7 +1,6 @@
 <player name="player">
     <name value="Player" />
     <sex value="Male" />
-    <profession value="Civilian" />
 
     <traits>
     </traits>
