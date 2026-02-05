@@ -1,0 +1,217 @@
+import os
+import shutil
+import json
+from datetime import datetime
+from core.entities.vehicle.vehicle import Vehicle
+from core.data.config import MAP_DIR
+
+def save_game(game):
+    if game.current_save_folder_name:
+        save_name = game.current_save_folder_name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_name = f"save_{timestamp}"
+        game.current_save_folder_name = save_name
+
+    save_path = os.path.join("game", "save", "game", save_name)
+    game.logger.info(f"Saving game to {save_path}...")
+
+    try:
+        os.makedirs(save_path, exist_ok=True)
+
+        map_src = os.path.abspath(game.map_manager.map_folder)
+        map_dst = os.path.abspath(os.path.join(save_path, "map"))
+        
+        if map_src != map_dst:
+            if os.path.exists(map_dst):
+                    shutil.rmtree(map_dst)
+            shutil.copytree(map_src, map_dst, dirs_exist_ok=True)
+            game.map_manager.map_folder = map_dst
+        else:
+            game.logger.info("Map folder is already in the save directory. Skipping map copy.")
+
+        game.map_manager.save_map_to_file(map_dst)
+        
+        attributes_base = {
+            "strength": game.player.progression.get_level('strength'),
+            "fitness": game.player.progression.get_level('fitness'),
+            "melee": game.player.progression.get_level('melee'),
+            "ranged": game.player.progression.get_level('ranged'),
+            "lucky": game.player.progression.get_level('lucky'),
+            "intelligence": game.player.progression.get_level('intelligence'),
+            "speed": game.player.progression.get_level('speed')
+        }
+        
+        progression_data = game.player.progression.attributes
+
+        player_data = {
+            "name": game.player.name,
+            "world_seed": getattr(game, 'world_seed', "4-B1TR07"),
+            "profession": game.player.profession,
+            "sex": game.player.sex,
+            "x": game.player.x,
+            "y": game.player.y,
+            "map_filename": game.map_manager.current_map_filename,
+            "zombies_killed": game.zombies_killed,
+            "stats": {
+                "health": game.player.health,
+                "water": game.player.water,
+                "food": game.player.food,
+                "stamina": game.player.stamina,
+                "tireness": game.player.tireness,
+                "infection": game.player.infection,
+                "anxiety": game.player.anxiety
+            },
+            "body_parts": game.player.body_parts,
+            "attributes": attributes_base,
+            "progression": progression_data,
+            "traits": game.player.traits,
+            "known_recipes": game.player.known_recipes,
+            "visuals": game.player.visuals,
+            "sounds": game.player.sounds_data,
+            "inventory": [item.to_dict() if hasattr(item, 'to_dict') else item for item in game.player.inventory if item],
+            "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in game.player.belt],
+            "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item)) if item else None for slot, item in game.player.clothes.items()},
+        }
+        
+        if game.player.backpack:
+                if hasattr(game.player.backpack, 'to_dict'):
+                    player_data["backpack"] = game.player.backpack.to_dict()
+                else:
+                    player_data["backpack"] = game.player.backpack
+
+        with open(os.path.join(save_path, "host.rot"), "w") as f:
+            json.dump(player_data, f, indent=4)
+
+        # --- NPC Save ---
+        npc_data = []
+        for npc in game.npcs:
+            safe_clothes = {}
+            for slot, item in npc.clothes.items():
+                if item:
+                    if hasattr(item, 'to_dict'):
+                        safe_clothes[slot] = item.to_dict()
+                    else:
+                        safe_clothes[slot] = item 
+                else:
+                    safe_clothes[slot] = None
+
+            safe_inventory = []
+            for i in npc.inventory:
+                if hasattr(i, 'to_dict'):
+                    safe_inventory.append(i.to_dict())
+                else:
+                    safe_inventory.append(i)
+
+            safe_weapon = None
+            if npc.equipped_weapon:
+                if hasattr(npc.equipped_weapon, 'to_dict'):
+                    safe_weapon = npc.equipped_weapon.to_dict()
+                else:
+                    safe_weapon = npc.equipped_weapon
+
+            npc_entry = {
+                "x": npc.rect.x,
+                "y": npc.rect.y,
+                "name": npc.name,
+                "health": npc.health,
+                "is_following": npc.is_following,
+                "is_friendly": npc.is_friendly,
+                "is_static": getattr(npc, 'is_static', False),
+                "inventory": safe_inventory,
+                "equipped_weapon": safe_weapon,
+                "clothes": safe_clothes
+            }
+            npc_data.append(npc_entry)
+        
+        with open(os.path.join(save_path, "npc.rot"), "w") as f:
+            json.dump(npc_data, f, indent=4)
+
+        # --- Vehicle Save ---
+        vehicle_data = []
+        vehicles_to_save = [obj for obj in game.containers if isinstance(obj, Vehicle)]
+        for v in vehicles_to_save:
+            safe_inv = []
+            if hasattr(v, 'inventory'):
+                for i in v.inventory:
+                    if hasattr(i, 'to_dict'):
+                        safe_inv.append(i.to_dict())
+                    else:
+                        safe_inv.append(i)
+
+            safe_equipment = {}
+            if hasattr(v, 'equipment'):
+                for slot, item in v.equipment.items():
+                    if item:
+                        if hasattr(item, 'to_dict'):
+                            safe_equipment[slot] = item.to_dict()
+                        else:
+                            safe_equipment[slot] = item
+                    else:
+                        safe_equipment[slot] = None
+
+            v_entry = {
+                "x": v.rect.x,
+                "y": v.rect.y,
+                "name": v.name, 
+                "inventory": safe_inv,
+                "equipment": safe_equipment, 
+                "lights": getattr(v, 'lights', 'off')
+            }
+            vehicle_data.append(v_entry)
+
+        with open(os.path.join(save_path, "vehicles.rot"), "w") as f:
+            json.dump(vehicle_data, f, indent=4)
+
+        container_data = []
+        for c in game.containers:
+            if isinstance(c, Vehicle):
+                continue
+            
+            safe_inv = []
+            if hasattr(c, 'inventory'):
+                for i in c.inventory:
+                    if hasattr(i, 'to_dict'):
+                        safe_inv.append(i.to_dict())
+                    else:
+                        safe_inv.append(i)
+            
+            c_entry = {
+                "x": c.rect.x if hasattr(c, 'rect') else c.x,
+                "y": c.rect.y if hasattr(c, 'rect') else c.y,
+                "inventory": safe_inv
+            }
+            container_data.append(c_entry)
+
+        # --- World Data Save ---
+        safe_ground_items = []
+        for i in game.items_on_ground:
+            item_data = i.to_dict() if hasattr(i, 'to_dict') else i
+            safe_ground_items.append({
+                "data": item_data, 
+                "x": i.rect.x if hasattr(i, 'rect') else i.x, 
+                "y": i.rect.y if hasattr(i, 'rect') else i.y
+            })
+
+        world_data = {
+            "time": {
+                "game_time_ms": game.world_time.game_time_ms,
+                "day_count": game.world_time.day_count
+            },
+            "layer_spawn_triggers": {str(k): list(v) for k, v in game.layer_spawn_triggers.items()},
+            "items": safe_ground_items,
+            "containers": container_data,
+            "modal_positions": game.last_modal_positions,
+            "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in game.zombies]
+        }
+        with open(os.path.join(save_path, "world.rot"), "w") as f:
+            json.dump(world_data, f, indent=4)
+
+        game.logger.info("Game saved successfully!")
+        return True
+        
+    except Exception as e:
+        game.logger.info(f"Error saving game: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
