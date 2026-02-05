@@ -40,7 +40,7 @@ from core.sound_manager import SoundManager
 from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.helpers.load_game_screen import draw_load_game_screen, get_save_files, delete_save
 from core.messages import display_message, init_messages
-from core.map.generator import ProceduralGenerator
+from core.map.procedural.generator import ProceduralGenerator
 from core.entities.vehicle.vehicle import Vehicle
 from core.ui.helpers.start_loading import draw_loading_screen
 from core.logger import GameLogger
