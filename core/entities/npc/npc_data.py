@@ -2,7 +2,7 @@ import os
 import random
 import xml.etree.ElementTree as ET
 from core.entities.item.item import Item
-from core.entities.zombie.zombie import ZOMBIE_CLOTHES_POOL
+from core.entities.zombie.zombie_data import ZombieData
 from core.data.config import DATA_PATH
 
 class NPCData:
@@ -79,7 +79,7 @@ class NPCData:
         slots = ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
         for slot in slots:
             if slot == 'head' and random.random() < 0.3: continue 
-            available = ZOMBIE_CLOTHES_POOL.get(slot, [])
+            available = ZombieData.ZOMBIE_CLOTHES_POOL.get(slot, [])
             if available:
                 choice = random.choice(available)
                 if isinstance(choice, str):

@@ -1,0 +1,113 @@
+import random
+import math
+import pygame
+from core.entities.zombie.corpse import Corpse
+from core.entities.item.item import Item
+from core.messages import display_message
+from core.data.config import ZOMBIE_INFECTION_CHANCE
+import core.data.config
+
+class ZombieCombat:
+    def take_damage(self, amount, game, attacker=None): 
+        self.health -= amount
+        self.health = max(0, self.health)
+        self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)
+
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_hit_sound_time > self.hit_sound_cooldown:
+            if self.sound_hit: # Check if a sound is defined
+                game.sound_manager.play_sound(self.sound_hit, subdir='zombie', game=game, source_pos=self.rect.center)
+            self.last_hit_sound_time = current_time
+
+        return self.health <= 0 # Return True if dead
+
+    def attack(self, target_entity, game):
+        self.melee_swing_timer = 10
+        dx = target_entity.rect.centerx - self.rect.centerx
+        dy = target_entity.rect.centery - self.rect.centery
+        self.melee_swing_angle = math.atan2(-dy, dx)
+        damage = random.randint(self.min_attack, self.max_attack)
+
+        if hasattr(target_entity, 'take_damage_to_part'):
+            # It's a Player or Entity with complex health
+            target_entity.take_durability_damage(damage, game)
+            
+            # [MODIFIED] Intelligent targeting: Find vulnerable part
+            target_part = target_entity.get_vulnerable_part()
+            
+            total_defence = target_entity.get_total_defence() # Or part-specific defence if calculated inside player
+            damage_reduction = 1.0 - (total_defence / 100.0)
+            
+            infection = 0
+            if random.random() < ZOMBIE_INFECTION_CHANCE:
+                infection = random.uniform(self.min_infection, self.max_infection)
+            
+            infection_reduction = 1.0 - ((total_defence / 2.0) / 100.0)
+            final_damage = max(0, damage * damage_reduction)
+            final_infection = max(0, infection * infection_reduction)
+
+            # Apply damage to the specific part
+            target_entity.take_damage_to_part(target_part, final_damage)
+            
+            # Apply infection globally
+            if final_infection > 0:
+                target_entity.infection = min(100, target_entity.infection + final_infection)
+            
+            if final_infection > 0:
+                 display_message(f"**HIT!** Zombie hit {target_part} for {final_damage:.1f} damage and infection!")
+            else:
+                 display_message(f"**HIT!** Zombie hit {target_part} for {final_damage:.1f} damage.")
+
+        # Handle NPC specific damage logic (NPC inherits Zombie)
+        else:
+            is_dead = target_entity.take_damage(damage, game) 
+            if is_dead and target_entity in game.npcs:
+                target_entity.die(game)
+                display_message("A survivor has been killed by a zombie.")
+
+        if self.sound_attack:
+            game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
+
+    def die(self, game):
+        """Handles zombie death: plays sound, creates corpse, generates loot."""
+        # 1. Play sound
+        if self.sound_dead:
+             game.sound_manager.play_sound(self.sound_dead, subdir='zombie', game=game, source_pos=self.rect.center)
+        
+        # 2. Create Corpse
+        corpse = Corpse(
+            name=f"Corpse of {self.name}",
+            capacity=20, 
+            image_path="zombie/dead.png", # Corpse class handles default if None
+            pos=self.rect.center,
+            decay_ms=300000 # 5 minutes decay
+        )
+
+        # 3. Add Fixed Inventory (like ID card)
+        for item in self.inventory:
+            corpse.inventory.append(item)
+
+        # 4. Add Random Loot Table Items
+        if self.loot_table:
+            for loot_entry in self.loot_table:
+                if random.random() * 100 < float(loot_entry.get('chance', 0)):
+                    item_name = loot_entry.get('item')
+                    new_item = Item.create_from_name(item_name)
+                    if new_item:
+                         corpse.inventory.append(new_item)
+
+        # 5. Add Clothes
+        #for slot, clothe in self.clothes.items():
+        #    if clothe:
+        #         item_name = clothe.get('name')
+        #         if item_name and not item_name.startswith("Empty"):
+        #             # Simple check to try and create the item version of the cloth
+        #             cloth_item = Item.create_from_name(item_name)
+        #             if cloth_item:
+        #                 corpse.inventory.append(cloth_item)
+
+        game.items_on_ground.append(corpse)
+        
+        # Remove self from game
+        if self in game.zombies:
+            game.zombies.remove(self)
