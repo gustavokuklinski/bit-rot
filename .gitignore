@@ -6,3 +6,4 @@ __pycache__
 build
 game/save/game
 game/logs
+game/multiplayer/server
