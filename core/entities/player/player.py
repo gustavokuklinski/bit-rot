@@ -751,7 +751,6 @@ class Player:
 
         return False
 
-    # ... (rest of the file remains unchanged)
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
         if self.action_timer > 0:
             display_message_player("Busy...")
@@ -865,21 +864,35 @@ class Player:
 
         return None, None, None, None
 
-    def find_fuel(self, fuel_name):
-        if not fuel_name:
+    def find_fuel(self, fuel_identifier):
+        if not fuel_identifier:
             return None, None, None, None
             
+        candidates = []
+        if isinstance(fuel_identifier, list):
+            candidates = fuel_identifier
+        elif isinstance(fuel_identifier, str):
+            if fuel_identifier.startswith('[') and fuel_identifier.endswith(']'):
+                # Parse string list like "[Matches, Lighter on]"
+                candidates = [s.strip() for s in fuel_identifier[1:-1].split(',')]
+            else:
+                candidates = [fuel_identifier]
+        
+        # Helper to check item match
+        def is_match(it):
+            return it and it.name in candidates and getattr(it, 'load', 0) > 0
+
         for i, item in enumerate(self.belt):
-            if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+            if is_match(item):
                 return item, 'belt', i, None
 
         for i, item in enumerate(self.inventory):
-            if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+            if is_match(item):
                 return item, 'inventory', i, None
         
         if self.backpack and hasattr(self.backpack, 'inventory'):
             for i, item in enumerate(self.backpack.inventory):
-                if item and item.name == fuel_name and getattr(item, 'load', 0) > 0:
+                if is_match(item):
                     return item, 'container', i, self.backpack
                     
         return None, None, None, None
@@ -1190,33 +1203,54 @@ class Player:
             self.read_recipe_book(item)
             return True
 
-        if hasattr(item, 'require') and item.require:
-            required_list = item.require if isinstance(item.require, list) else [item.require]
-            found_req = False
-            
-            def has_valid_item(name):
-                for it in self.belt:
-                    if it and it.name == name:
-                        if it.load is not None and it.load <= 0: continue
-                        return True
-                for it in self.inventory:
-                    if it and it.name == name:
-                         if it.load is not None and it.load <= 0: continue
-                         return True
-                if self.backpack:
-                    for it in self.backpack.inventory:
-                        if it and it.name == name:
-                             if it.load is not None and it.load <= 0: continue
-                             return True
-                return False
+        # Requirement Check Logic
+        required_item_found = None
+        required_source = None
+        required_index = -1
+        required_container = None
 
-            for req_name in required_list:
-                if has_valid_item(req_name):
-                    found_req = True
+        if hasattr(item, 'require') and item.require:
+            raw_req = item.require
+            candidates = []
+            if isinstance(raw_req, list):
+                candidates = raw_req
+            elif isinstance(raw_req, str):
+                if raw_req.startswith('[') and raw_req.endswith(']'):
+                    candidates = [s.strip() for s in raw_req[1:-1].split(',')]
+                else:
+                    candidates = [raw_req]
+            
+            # Helper to find candidate
+            def find_candidate(cand_name):
+                # Check Belt
+                for i, it in enumerate(self.belt):
+                    if it and it.name == cand_name:
+                        if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                        return it, 'belt', i, None
+                # Check Inventory
+                for i, it in enumerate(self.inventory):
+                    if it and it.name == cand_name:
+                        if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                        return it, 'inventory', i, None
+                # Check Backpack
+                if self.backpack and hasattr(self.backpack, 'inventory'):
+                    for i, it in enumerate(self.backpack.inventory):
+                        if it and it.name == cand_name:
+                             if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                             return it, 'container', i, self.backpack
+                return None, None, None, None
+
+            for cand in candidates:
+                r_item, r_src, r_idx, r_cont = find_candidate(cand)
+                if r_item:
+                    required_item_found = r_item
+                    required_source = r_src
+                    required_index = r_idx
+                    required_container = r_cont
                     break
             
-            if not found_req:
-                req_str = " or ".join(required_list)
+            if not required_item_found:
+                req_str = " or ".join(candidates)
                 display_message_player(f"Requires {req_str} to use.")
                 return False
 
@@ -1304,6 +1338,7 @@ class Player:
                     return 
 
             if consumed:
+                # Consume main item
                 item.load -= 1
                 if item.load <= 0:
                     if source_type == 'belt':
@@ -1316,6 +1351,27 @@ class Player:
                     elif (source_type == 'container' or source_type == 'nearby') and container_item:
                         if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
                             container_item.inventory.pop(item_index)
+
+                # Consume required item (Match/Lighter)
+                if required_item_found:
+                    if hasattr(required_item_found, 'load') and required_item_found.load is not None:
+                        required_item_found.load -= 1
+                        
+                        if required_item_found.load <= 0:
+                            if required_source == 'belt':
+                                self.belt[required_index] = None
+                            elif required_source == 'inventory':
+                                try:
+                                    idx = self.inventory.index(required_item_found)
+                                    self.inventory.pop(idx)
+                                except ValueError: pass
+                            elif required_source == 'container' and required_container:
+                                try:
+                                    idx = required_container.inventory.index(required_item_found)
+                                    required_container.inventory.pop(idx)
+                                except ValueError: pass
+                            
+                            display_message_player(f"{required_item_found.name} used up.")
 
         if is_auto_drink:
             execute_consume()
@@ -1389,14 +1445,14 @@ class Player:
             return
 
         if fuel_item.load <= 0:
-            display_message_player(f"No {item.fuel_type} left to use.")
+            display_message_player(f"No {fuel_item.name} left to use.")
             return
 
         fuel_item.load -= 1
         
         item.durability = max_dur
         
-        display_message_player(f"Used 1 {item.fuel_type} to reload {item.name}. Durability set to: {item.durability:.0f}")
+        display_message_player(f"Used 1 {fuel_item.name} to reload {item.name}. Durability set to: {item.durability:.0f}")
 
         if fuel_item.load <= 0:
             f_inv = self._get_source_inventory(f_source, f_container)
