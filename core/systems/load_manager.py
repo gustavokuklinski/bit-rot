@@ -146,15 +146,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     initial_loot = player_data.get('initial_loot', [])
     game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-    #starter_items = ["Lantern off", "Matches", "Survivor Kit", "Mobile off", "Powerbank"]
-    #for name in starter_items:
-    #        try:
-    #            item = Item.create_from_name(name)
-    #            if item and len(game.player.inventory) < game.player.get_total_inventory_slots():
-    #                if not any(i.name == name for i in game.player.inventory):
-    #                    game.player.inventory.append(item)
-    #        except: pass
-
     game.zombies_killed = 0
     stat_pos = game.last_modal_positions.get('status', (50, 50))
     inv_pos = game.last_modal_positions.get('inventory', (400, 50))
