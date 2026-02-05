@@ -175,7 +175,7 @@ def update_game_state(game):
              
              # [NEW] Calculate Knockback for NPC
              if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
-                  knockback_force = getattr(game.player.active_weapon, 'knockback', 5) # Default 5 if not set
+                  knockback_force = getattr(game.player.active_weapon, 'knockback', 0) # Default 5 if not set
                   
                   dx = hit_npc.rect.centerx - game.player.rect.centerx
                   dy = hit_npc.rect.centery - game.player.rect.centery
