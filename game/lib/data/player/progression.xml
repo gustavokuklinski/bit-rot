@@ -1,10 +1,10 @@
 <progression>
     <attributes>
-        <attribute id="strength" name="Strength" image="ui/strength.png" base_xp="1000">
+        <attribute id="strength" name="Strength" image="ui/strength.png" base_xp="500">
             <effect target="unarmed_damage" value="0.01" type="multiplier_add" />
         </attribute>
 
-        <attribute id="fitness" name="Fitness" image="ui/fitness.png" base_xp="1000">
+        <attribute id="fitness" name="Fitness" image="ui/fitness.png" base_xp="500">
             <effect target="stamina_regen" value="0.01" type="flat" />
         </attribute>
 
@@ -13,7 +13,7 @@
             <effect target="durability_save_chance_minor" value="1.0" type="flat" />
         </attribute>
 
-        <attribute id="ranged" name="Aiming" image="ui/range.png" base_xp="200">
+        <attribute id="ranged" name="Aiming" image="ui/range.png" base_xp="100">
             <effect target="ranged_damage" value="0.01" type="multiplier_add" />
             <effect target="headshot_chance" value="0.004" type="flat" />
         </attribute>
@@ -22,16 +22,16 @@
             <effect target="durability_save_chance" value="1.0" type="flat" />
         </attribute>
 
-        <attribute id="speed" name="Agility" image="ui/speed.png" base_xp="500">
+        <attribute id="speed" name="Agility" image="ui/speed.png" base_xp="100">
             <effect target="stamina_consumption_reduction" value="0.01" type="flat" />
             <effect target="action_speed_bonus" value="0.1" type="flat" />
         </attribute>
 
-        <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="1000">
+        <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="100">
             <effect target="xp_gain" value="0.01" type="multiplier_add" />
         </attribute>
 
-        <attribute id="intelligence" name="Intelligence" image="ui/intelligence.png"  base_xp="500">
+        <attribute id="intelligence" name="Intelligence" image="ui/intelligence.png"  base_xp="100">
             <effect target="xp_gain" value="0.01" type="multiplier_add" />
         </attribute>
 
