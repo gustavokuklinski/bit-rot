@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import random
 from core.data.config import DATA_PATH, SPRITE_PATH
 
 PLAYER_XML_PATH = DATA_PATH + 'player/player.xml'
@@ -41,9 +42,16 @@ def parse_player_data():
              }
         
     # Parse initial loot
-    if root.find('initial_loot') is not None:
-        for item in root.findall('initial_loot/inventory'): 
-            data['initial_loot'].append(item.get('item'))
+    if root.find('initial_loot') is not None:       
+        for item in root.findall('initial_loot/item'):
+            name = item.get('name')
+            try:
+                chance = float(item.get('chance', 1.0))
+            except (ValueError, TypeError):
+                chance = 1.0
+                
+            if name and random.random() < chance:
+                data['initial_loot'].append(name)
     
     # Parse visuals
     visuals_node = root.find('visuals')
