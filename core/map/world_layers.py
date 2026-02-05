@@ -193,7 +193,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         target_width = len(base_map_data[0]) if target_height > 0 else 0
 
     # Load Layers 1 through 9
-    for i in range(1, 10):
+    for i in range(1, 9):
         # Construct filename based on the new standard
         layer_prefix = f"map_L{i}_world"
         

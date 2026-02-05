@@ -10,7 +10,7 @@ class ModeTabs:
     def __init__(self, x, y, width, height, font):
         self.rect = pygame.Rect(x, y, width, height)
         self.font = font
-        self.modes = ["MAP", "BUILDING"]
+        self.modes = ["MAP"]
         self.active_mode = "MAP"
         self.tabs = []
         
