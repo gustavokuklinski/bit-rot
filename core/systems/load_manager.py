@@ -39,7 +39,11 @@ def load_map(game, map_filename):
     set_active_layer(game, layer_index)
     return None
 
-def start_new_game(game, player_data, save_dir_name=None):
+def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
+    """
+    Initializes a game session.
+    :param spawn_entities: If False, skips spawning initial zombies/NPCs (used when loading a save).
+    """
     game.is_giant_map = False
     
     # 1. Clear Map & Layer Data
@@ -202,21 +206,27 @@ def start_new_game(game, player_data, save_dir_name=None):
     load_map(game, game.map_manager.current_map_filename)
     load_giant_map(game)
     
-    game.npc_spawn_points = []
-    if game.current_layer_index in game.all_spawn_layers:
-        spawn_layer = game.all_spawn_layers[game.current_layer_index]
-        for y, row in enumerate(spawn_layer):
-            for x, char in enumerate(row):
-                if char.strip() == 'NPC':
-                    game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
-                elif char.strip() == 'S':
-                    px, py = x * TILE_SIZE, y * TILE_SIZE
-                    npc = NPC(px, py, game, is_static=True)
-                    game.npcs.add(npc)
+    # --- Entity Spawning Logic ---
+    # Only execute spawning if spawn_entities is True.
+    if spawn_entities:
+        game.npc_spawn_points = []
+        if game.current_layer_index in game.all_spawn_layers:
+            spawn_layer = game.all_spawn_layers[game.current_layer_index]
+            for y, row in enumerate(spawn_layer):
+                for x, char in enumerate(row):
+                    if char.strip() == 'NPC':
+                        game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
+                    elif char.strip() == 'S':
+                        px, py = x * TILE_SIZE, y * TILE_SIZE
+                        npc = NPC(px, py, game, is_static=True)
+                        game.npcs.add(npc)
 
-    if game.current_layer_index == 2:
-        game.logger.info("Initializing L2 (Cave) Population...")
-        spawn_l2_population(game, count=20)
+        if game.current_layer_index == 2:
+            game.logger.info("Initializing L2 (Cave) Population...")
+            spawn_l2_population(game, count=20)
+    else:
+        # Even if not spawning, we might need to know potential points for dynamic logic later
+        pass
 
     if game.player_spawn:
         game.logger.info(f"Player spawn point found at {game.player_spawn}. Setting player position.")
@@ -227,41 +237,42 @@ def start_new_game(game, player_data, save_dir_name=None):
         game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
         game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
-    nearby_spawns = []
-    GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
-    p_grid_x = int(game.player.x // GRID_SIZE_SPAWNS)
-    p_grid_y = int(game.player.y // GRID_SIZE_SPAWNS)
-    
-    for i in range(-2, 3): 
-        for j in range(-2, 3):
-                cell = (p_grid_x + i, p_grid_y + j)
-                if cell in game.spawn_point_grid:
-                    nearby_spawns.extend(game.spawn_point_grid[cell])
-                    
-    if nearby_spawns:
-            if game.current_layer_index not in game.layer_spawn_triggers:
-                game.layer_spawn_triggers[game.current_layer_index] = set()
-            
-            for pos in nearby_spawns:
-                game.layer_spawn_triggers[game.current_layer_index].add(pos)
+    if spawn_entities:
+        nearby_spawns = []
+        GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
+        p_grid_x = int(game.player.x // GRID_SIZE_SPAWNS)
+        p_grid_y = int(game.player.y // GRID_SIZE_SPAWNS)
+        
+        for i in range(-2, 3): 
+            for j in range(-2, 3):
+                    cell = (p_grid_x + i, p_grid_y + j)
+                    if cell in game.spawn_point_grid:
+                        nearby_spawns.extend(game.spawn_point_grid[cell])
+                        
+        if nearby_spawns:
+                if game.current_layer_index not in game.layer_spawn_triggers:
+                    game.layer_spawn_triggers[game.current_layer_index] = set()
+                
+                for pos in nearby_spawns:
+                    game.layer_spawn_triggers[game.current_layer_index].add(pos)
 
-            initial_zombies = spawn_initial_zombies(
-            game.obstacles, 
-            nearby_spawns, 
-            game.items_on_ground + [game.player],
-            limit=1000, 
-            spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
-            map_width_px=game.map_width_pixels,
-            map_height_px=game.map_height_pixels,
-            player=game.player,
-            obstacle_grid=getattr(game, 'cached_obstacle_grid', None),
-            game=game
-            )
-            game.zombies.extend(initial_zombies)
-            game.layer_zombies[game.current_layer_index] = game.zombies[:]
-            game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
+                initial_zombies = spawn_initial_zombies(
+                game.obstacles, 
+                nearby_spawns, 
+                game.items_on_ground + [game.player],
+                limit=1000, 
+                spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
+                map_width_px=game.map_width_pixels,
+                map_height_px=game.map_height_pixels,
+                player=game.player,
+                obstacle_grid=getattr(game, 'cached_obstacle_grid', None),
+                game=game
+                )
+                game.zombies.extend(initial_zombies)
+                game.layer_zombies[game.current_layer_index] = game.zombies[:]
+                game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
 
-    manage_dynamic_npcs(game)
+        manage_dynamic_npcs(game)
 
     game.world_time = WorldTime(game)
     game.game_start_time = pygame.time.get_ticks()
@@ -282,7 +293,9 @@ def load_game(game, save_folder_name):
         with open(os.path.join(save_path, "host.rot"), "r") as f:
             player_data = json.load(f)
 
-        start_new_game(game, player_data, save_dir_name=save_folder_name)
+        # Skip spawning entities because we will load them from file
+        start_new_game(game, player_data, save_dir_name=save_folder_name, spawn_entities=False)
+        
         game.zombies_killed = player_data.get('zombies_killed', 0)
 
         target_map = player_data.get('map_filename')
@@ -423,12 +436,58 @@ def load_game(game, save_folder_name):
             except Exception as e:
                 game.logger.info(f"Error loading an item on ground: {e}")
         
+        # --- ZOMBIES LOADING (FROM zombies.rot) ---
         game.zombies = [] 
-        for z_data in world_data.get('zombies', []):
-            z = Zombie.create_random(z_data['x'], z_data['y']) 
-            if z:
-                z.health = z_data['health']
+        zombies_path = os.path.join(save_path, "zombies.rot")
+        
+        if os.path.exists(zombies_path):
+             game.logger.info("Loading zombies from zombies.rot...")
+             with open(zombies_path, "r") as f:
+                 zombie_list = json.load(f)
+             
+             for z_data in zombie_list:
+                # Reconstruct via Template to support Zombie(x, y, template) structure
+                # We use the saved data as a 'template' to ensure the exact entity is recreated
+                template = {
+                    'name': z_data.get('name', 'Zombie'),
+                    'sex': z_data.get('sex', 'Male'),
+                    'profession': z_data.get('profession', 'Civilian'),
+                    'health': z_data.get('max_health', 10), 
+                    'speed': z_data.get('speed', 1.0),
+                    'vaccine': str(z_data.get('vaccine', False)),
+                    'loot': z_data.get('loot_table', []),
+                    'clothes': z_data.get('clothes', {}), 
+                    'sprites': {} 
+                }
+                
+                z = Zombie(z_data['x'], z_data['y'], template)
+                
+                # Restore runtime stats
+                z.health = z_data.get('health', z.max_health)
+                z.max_health = z_data.get('max_health', z.health)
+                if 'id' in z_data and z_data['id']:
+                    z.id = z_data['id']
+                
+                # Restore Inventory
+                if 'inventory' in z_data:
+                    z.inventory = [] # Clear default items (like fresh ID card)
+                    for i_data in z_data['inventory']:
+                        if isinstance(i_data, dict):
+                            item = Item.from_dict(i_data)
+                        else:
+                            item = Item.create_from_name(i_data)
+                        if item:
+                            z.inventory.append(item)
+                
                 game.zombies.append(z)
+
+        else:
+             game.logger.info("zombies.rot not found. Attempting to load zombies from world.rot (legacy)...")
+             for z_data in world_data.get('zombies', []):
+                z = Zombie.create_random(z_data['x'], z_data['y']) 
+                if z:
+                    z.health = z_data['health']
+                    game.zombies.append(z)
         
         if 'modal_positions' in world_data:
             saved_positions = world_data['modal_positions']
@@ -442,6 +501,7 @@ def load_game(game, save_folder_name):
                         modal['position'] = (int(pos[0]), int(pos[1]))
                         modal['rect'].topleft = modal['position']
 
+        # --- NPC LOADING (FROM npc.rot) ---
         if os.path.exists(os.path.join(save_path, "npc.rot")):
                 with open(os.path.join(save_path, "npc.rot"), "r") as f:
                     npc_list = json.load(f)
@@ -451,12 +511,21 @@ def load_game(game, save_folder_name):
                     npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static)
                     npc.name = n_data.get('name', 'Survivor')
                     npc.health = n_data.get('health', 100)
+                    npc.max_health = n_data.get('max_health', 100)
                     
                     npc.is_following = n_data.get('is_following', False)
                     npc.is_friendly = n_data.get('is_friendly', True)
+                    
+                    if 'id' in n_data and n_data['id']:
+                        npc.id = n_data['id']
+                    
+                    if 'dialog_flags' in n_data:
+                        npc.dialog_flags = set(n_data['dialog_flags'])
+
                     if npc.is_following:
                         npc.state = 'following'
                     
+                    # Restore Inventory
                     npc.inventory = []
                     for i_data in n_data.get('inventory', []):
                         if isinstance(i_data, dict):
@@ -465,13 +534,15 @@ def load_game(game, save_folder_name):
                             item = Item.create_from_name(i_data)
                         if item: npc.inventory.append(item)
                     
+                    # Restore Weapon
                     w_data = n_data.get('equipped_weapon')
                     if w_data:
                         if isinstance(w_data, dict):
                             npc.equipped_weapon = Item.from_dict(w_data)
                         else:
                             npc.equipped_weapon = Item.create_from_name(w_data)
-                        
+
+                    # Restore Clothes
                     clothes_data = n_data.get('clothes', {})
                     npc.clothes = {}
                     for slot, c_data in clothes_data.items():
@@ -480,6 +551,10 @@ def load_game(game, save_folder_name):
                                 npc.clothes[slot] = Item.from_dict(c_data)
                             else:
                                 npc.clothes[slot] = Item.create_from_name(c_data)
+                    
+                    # Restore Loot Table
+                    if 'loot_table' in n_data:
+                        npc.loot_table = n_data['loot_table']
                             
                     game.npcs.add(npc)
         

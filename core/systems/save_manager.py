@@ -83,7 +83,7 @@ def save_game(game):
         with open(os.path.join(save_path, "host.rot"), "w") as f:
             json.dump(player_data, f, indent=4)
 
-        # --- NPC Save ---
+        # --- NPC Save (npc.rot) ---
         npc_data = []
         for npc in game.npcs:
             safe_clothes = {}
@@ -109,23 +109,78 @@ def save_game(game):
                     safe_weapon = npc.equipped_weapon.to_dict()
                 else:
                     safe_weapon = npc.equipped_weapon
+            
+            # Use getattr to safely get loot_table if it exists
+            safe_loot = getattr(npc, 'loot_table', [])
+            
+            # Convert dialog flags set to list for JSON serialization
+            d_flags = list(getattr(npc, 'dialog_flags', []))
 
             npc_entry = {
+                "id": getattr(npc, 'id', None),
                 "x": npc.rect.x,
                 "y": npc.rect.y,
                 "name": npc.name,
                 "health": npc.health,
+                "max_health": getattr(npc, 'max_health', 100),
                 "is_following": npc.is_following,
                 "is_friendly": npc.is_friendly,
                 "is_static": getattr(npc, 'is_static', False),
                 "inventory": safe_inventory,
                 "equipped_weapon": safe_weapon,
-                "clothes": safe_clothes
+                "clothes": safe_clothes,
+                "loot_table": safe_loot,
+                "dialog_flags": d_flags
             }
             npc_data.append(npc_entry)
         
         with open(os.path.join(save_path, "npc.rot"), "w") as f:
             json.dump(npc_data, f, indent=4)
+
+        # --- Zombie Save (zombies.rot) ---
+        zombie_data = []
+        for z in game.zombies:
+            # Serialize Clothes
+            safe_clothes = {}
+            if hasattr(z, 'clothes') and z.clothes:
+                for slot, item in z.clothes.items():
+                    if item:
+                        if hasattr(item, 'to_dict'):
+                            safe_clothes[slot] = item.to_dict()
+                        else:
+                            # If it's a dict (common in Zombies) or string
+                            safe_clothes[slot] = item
+                    else:
+                        safe_clothes[slot] = None
+            
+            # Serialize Inventory
+            safe_inventory = []
+            if hasattr(z, 'inventory'):
+                for i in z.inventory:
+                    if hasattr(i, 'to_dict'):
+                        safe_inventory.append(i.to_dict())
+                    else:
+                        safe_inventory.append(i)
+
+            z_entry = {
+                "id": getattr(z, 'id', None),
+                "x": z.x,
+                "y": z.y,
+                "health": z.health,
+                "max_health": getattr(z, 'max_health', 10),
+                "name": getattr(z, 'name', 'Zombie'),
+                "sex": getattr(z, 'sex', 'Male'),
+                "profession": getattr(z, 'profession', 'Civilian'),
+                "vaccine": getattr(z, 'vaccine', False),
+                "speed": getattr(z, 'speed', 1.0),
+                "loot_table": getattr(z, 'loot_table', []),
+                "inventory": safe_inventory,
+                "clothes": safe_clothes
+            }
+            zombie_data.append(z_entry)
+
+        with open(os.path.join(save_path, "zombies.rot"), "w") as f:
+            json.dump(zombie_data, f, indent=4)
 
         # --- Vehicle Save ---
         vehicle_data = []
@@ -202,7 +257,7 @@ def save_game(game):
             "items": safe_ground_items,
             "containers": container_data,
             "modal_positions": game.last_modal_positions,
-            "zombies": [{"x": z.x, "y": z.y, "health": z.health} for z in game.zombies]
+            # Zombies are now in zombies.rot
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)
