@@ -49,7 +49,6 @@
             dialog_type="once"
             req_level="[lucky:1]"
             priority="10"
-            dialog_type="once"
             gain_xp="[lucky:10]" />
         <options 
             player_question="What happened to the continent?"
