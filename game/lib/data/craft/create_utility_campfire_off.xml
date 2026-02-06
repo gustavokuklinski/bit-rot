@@ -1,0 +1,5 @@
+<recipe type="utility" craft="create" output="Campfire off" amount="1" time="2.0">
+    <ingredient name="[Denim Stripes, Ragged Cloth]" destroy="true" amount="2" />
+    <ingredient name="[Stick, Tree Branch]" destroy="true" amount="3" />
+    <ingredient name="Stone" destroy="true" amount="2" />
+</recipe>

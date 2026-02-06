@@ -1,0 +1,5 @@
+<recipe type="weapon_melee" craft="create" output="Improvised Spear" amount="1" time="3.0">
+    <ingredient name="Knife" destroy="true" amount="1" />
+    <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+    <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+</recipe>

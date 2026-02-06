@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="1" />
         <capacity value="10" />
-        <sprite file="magazine_vehicle_engineering_vol_1.png" />
+        <sprite file="recipe_magazine_vehicle_engineering_vol_1.png" />
     </properties>
     <spawn chance="1" />
 </item>

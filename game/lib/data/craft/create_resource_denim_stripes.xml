@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Denim Stripes" amount="2" time="1.5">
+    <ingredient name="[Military Pants, Black Hat, Beret, Military Jacket, Jeans Pants, Blue Pants, Jeans Short, Blue Sneakers, Black Sneakers, Red Sneakers, Pink Sneakers, Grey Sneakers, Green Sneakers, Yellow Sneakers]" destroy="true" amount="1" />
+    <ingredient name="Scissor" destroy="false" amount="1" />
+</recipe>

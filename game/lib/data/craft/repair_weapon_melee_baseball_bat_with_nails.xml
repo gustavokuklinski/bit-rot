@@ -1,0 +1,4 @@
+<recipe type="weapon_melee" craft="repair" output="Baseball Bat with Nails" amount="1" time="2.0">
+    <ingredient name="Duck Tape" destroy="true" amount="1" />
+    <ingredient name="Baseball Bat with Nails" destroy="false" amount="1" />
+</recipe>

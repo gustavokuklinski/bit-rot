@@ -1,0 +1,5 @@
+<recipe type="backpack" craft="create" output="Bag" magazine="Survivor Guide Basic" req_level="[intelligence:1, maintenance:2]" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="4.5">
+    <ingredient name="Ragged Cloth" destroy="true" amount="8" />
+    <ingredient name="Line Twine" destroy="true" amount="4" />
+    <ingredient name="Needle" destroy="false" amount="1" />
+</recipe>

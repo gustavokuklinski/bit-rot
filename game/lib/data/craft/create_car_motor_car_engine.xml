@@ -1,0 +1,6 @@
+<recipe type="car_motor" craft="create" output="Car Engine" magazine="Vehicle Engineering Vol.2" amount="1" time="50.0">
+    <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
+    <ingredient name="Screwdriver" destroy="true" amount="1" />
+    <ingredient name="Car Oil" destroy="true" amount="3" />
+    <ingredient name="Engine Parts" destroy="true" amount="10" />
+</recipe>
