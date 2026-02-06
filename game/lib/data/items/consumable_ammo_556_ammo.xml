@@ -3,7 +3,7 @@
         <status value="ammo" />
         <load min="10" max="50" />
         <capacity value="100" />
-        <sprite file="556_ammo.png" />
+        <sprite file="consumable_ammo_556_ammo.png" />
     </properties>
     <spawn chance="1" />
 </item>

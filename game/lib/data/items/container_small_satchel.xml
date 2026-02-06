@@ -1,6 +1,6 @@
 <item name="Small Satchel" type="container">
     <properties>
-        <capacity value="3" />
+        <capacity value="4" />
         <sprite file="small_satchel.png" />
     </properties>
     <loot>

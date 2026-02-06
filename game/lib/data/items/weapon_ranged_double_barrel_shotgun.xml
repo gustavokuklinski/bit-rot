@@ -7,7 +7,7 @@
         <damage min="65" max="150" />
         <firing pellets="6" spread_angle="15" distance="10" />
         <skill type="range" />
-        <sprite file="double_barrel_shotgun.png" />
+        <sprite file="weapon_ranged_double_barrel_shotgun.png" />
         <knockback value="6" />
     </properties>
     <sound>

@@ -36,11 +36,12 @@ class CraftingModal(BaseModal):
         self.result_image = None
         self.ingredient_images = {}
 
-        # Tabs Configuration
+        # [CHANGED] Added "Dismantle" tab
         self.tabs_data = [
             {'label': "All"},
             {'label': "Craft"},
-            {'label': "Repair"}
+            {'label': "Repair"},
+            {'label': "Dismantle"} 
         ]
         self.tabs_manager = Tabs(surface, self.modal, self.tabs_data, assets)
         
@@ -105,7 +106,6 @@ class CraftingModal(BaseModal):
                 return False
         return True
     
-    # [ADDED] Helper to check attribute requirements
     def _check_skill_reqs(self, recipe):
         if not recipe.req_level:
             return True
@@ -221,10 +221,13 @@ class CraftingModal(BaseModal):
                 if hasattr(cont, 'inventory') and cont.inventory:
                     nearby_items.extend(cont.inventory)
 
+        # [CHANGED] Tab Filtering Logic
         for r in self.recipes:
             craft_type = getattr(r, 'craft_type', 'create')
-            if active_tab == "Craft" and craft_type == 'repair': continue
+            
+            if active_tab == "Craft" and (craft_type == 'repair' or craft_type == 'dismantle'): continue
             if active_tab == "Repair" and craft_type != 'repair': continue
+            if active_tab == "Dismantle" and craft_type != 'dismantle': continue
             
             if self.search_text:
                 if self.search_text.lower() not in r.output_name.lower(): continue
@@ -282,6 +285,7 @@ class CraftingModal(BaseModal):
             old_clip = self.surface.get_clip()
             self.surface.set_clip(row_rect)
             
+            # Display name is handled by recipe.output_name (calculated in RecipeManager)
             name_surf = font_small.render(recipe.output_name, True, text_color)
             self.surface.blit(name_surf, (row_rect.x + 8, row_rect.y + 6))
             
@@ -306,7 +310,16 @@ class CraftingModal(BaseModal):
         if self.selected_recipe:
             if self.selected_recipe != self.cached_recipe:
                 self.cached_recipe = self.selected_recipe
-                self.result_image = self.get_preview_image(self.selected_recipe.output_name)
+                # For dismantle, output_name is "Dismantle X". 
+                # We might want to preview the first ingredient instead of the output "Dismantle X" which doesn't exist as an item.
+                # However, your request focused on logic. For now, it tries to fetch image for "Dismantle X" which fails gracefully.
+                # Use first ingredient image if dismantle?
+                if self.selected_recipe.craft_type == 'dismantle':
+                     # Try to get image of the first ingredient being destroyed
+                     first_ing = self.selected_recipe.ingredients[0]['names'][0]
+                     self.result_image = self.get_preview_image(first_ing)
+                else:
+                    self.result_image = self.get_preview_image(self.selected_recipe.output_name)
                 
                 self.ingredient_images = {}
                 for req in self.selected_recipe.ingredients:
@@ -387,21 +400,14 @@ class CraftingModal(BaseModal):
                 pygame.draw.rect(self.surface, GREEN, (details_x, element_cursor_y - bar_h, fill_w, bar_h))
                 element_cursor_y -= (bar_h + 10) 
 
-            # [CHANGED] Requirement Logic (Magazine OR Skills)
             is_unlocked = True
             
-            # 1. Check Magazine
             knows_magazine = True
             if r.magazine:
                 knows_magazine = r.magazine in self.player.known_recipes
             
-            # 2. Check Skills
             skills_met = self._check_skill_reqs(r)
 
-            # 3. Determine Unlock State
-            # Logic: If Magazine exists, you need Magazine OR Skills.
-            #        If NO Magazine but Skills exist, you need Skills.
-            #        If neither, it is unlocked (Basic).
             if r.magazine:
                 if not knows_magazine and not skills_met:
                     is_unlocked = False
@@ -412,19 +418,14 @@ class CraftingModal(BaseModal):
             if not is_unlocked:
                 can_craft = False
 
-            # [DISPLAY] Render Requirements
-            
-            # A. Skills (Bottom-up rendering)
+            # Draw Skills / Mag info
             if r.req_level:
                 for attr, lvl in reversed(list(r.req_level.items())):
-                    # Get nicely formatted name if possible, else capitalize
                     attr_name = attr.replace('_', ' ').capitalize()
                     p_lvl = self.player.progression.get_level(attr)
-                    
                     s_color = GREEN if p_lvl >= lvl else RED
                     txt = f"- {attr_name}: {p_lvl}/{int(lvl)}"
                     s_surf = font_small.render(txt, True, s_color)
-                    
                     element_cursor_y -= 20
                     self.surface.blit(s_surf, (details_x + 10, element_cursor_y))
                 
@@ -434,12 +435,10 @@ class CraftingModal(BaseModal):
                 self.surface.blit(head_surf, (details_x, element_cursor_y))
                 element_cursor_y -= 5
 
-            # B. Magazine
             if r.magazine:
                 mag_color = GREEN if knows_magazine else RED
                 mag_text = f"Requires Magazine: {r.magazine}"
                 mag_surf = font_small.render(mag_text, True, mag_color)
-                
                 element_cursor_y -= 20
                 self.surface.blit(mag_surf, (details_x, element_cursor_y))
                 element_cursor_y -= 5 
@@ -460,8 +459,8 @@ class CraftingModal(BaseModal):
             pygame.draw.rect(self.surface, btn_color, btn_rect, border_radius=5)
             pygame.draw.rect(self.surface, border_color, btn_rect, 1, border_radius=5)
             
+            # [CHANGED] Button Text Logic for Dismantle
             if not is_unlocked:
-                # Differentiate why it's locked
                 if r.magazine and not knows_magazine and r.req_level:
                     btn_text = "LOCKED (MAG/SKILL)"
                 elif r.magazine:
@@ -471,6 +470,8 @@ class CraftingModal(BaseModal):
             elif can_craft:
                 if getattr(r, 'craft_type', 'create') == 'repair':
                     btn_text = "REPAIR ITEM"
+                elif getattr(r, 'craft_type', 'create') == 'dismantle':
+                    btn_text = "DISMANTLE"
                 else:
                     btn_text = "CRAFT ITEM"
             else:
@@ -575,13 +576,12 @@ class CraftingModal(BaseModal):
                     if hasattr(obj, 'inventory') and obj.inventory:
                         source_inventories.append(obj.inventory)
 
-            # [ADDED] Apply XP rewards
             if recipe.gain_xp:
                 for attr, amount in recipe.gain_xp.items():
-                    # Check if method exists (it should, but safety first)
                     if hasattr(self.player.progression, 'add_xp'):
                         self.player.progression.add_xp(self.player, attr, amount)
 
+            # --- Repair Logic ---
             if getattr(recipe, 'craft_type', 'create') == 'repair':
                 target_item = None
                 for item in self.player.inventory:
@@ -597,8 +597,7 @@ class CraftingModal(BaseModal):
                 total_repair_amount = 0
 
                 for req in recipe.ingredients:
-                    if not req['destroy']: 
-                        continue 
+                    if not req['destroy']: continue 
 
                     to_remove = req['amount']
                     valid_names = req['names']
@@ -626,8 +625,7 @@ class CraftingModal(BaseModal):
                                 if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
                                     inv.pop(i)
                                     
-                                if removed >= to_remove:
-                                    break
+                                if removed >= to_remove: break
                 
                 old_durability = target_item.durability
                 target_item.durability = min(target_item.max_durability, target_item.durability + total_repair_amount)
@@ -639,11 +637,11 @@ class CraftingModal(BaseModal):
                 from core.messages import display_message_player
                 display_message_player(f"Repaired {target_item.name} by {int(restored)} points.")
 
+            # --- Create / Dismantle Logic ---
             else:
+                # 1. Remove Ingredients
                 for req in recipe.ingredients:
-                    
-                    if not req['destroy']:
-                        continue
+                    if not req['destroy']: continue
 
                     to_remove = req['amount']
                     valid_names = req['names']
@@ -667,20 +665,44 @@ class CraftingModal(BaseModal):
                                 if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
                                     inv.pop(i)
                                     
-                                if removed >= to_remove:
-                                    break
+                                if removed >= to_remove: break
                 
-                result = Item.create_from_name(recipe.output_name)
-                if result:
-                    result.load = recipe.output_amount
-                    if len(self.player.inventory) < self.player.base_inventory_slots:
-                        self.player.inventory.append(result)
-                    else:
-                        self.game.items_on_ground.append(result)
-                        result.x, result.y = self.player.x, self.player.y
-                        result.rect.topleft = (result.x, result.y)
-                    from core.messages import display_message_player
-                    display_message_player(f"Successfully crafted {result.name}!")
+                # 2. Generate Results (Handling Multiple Outputs, Chance, and Random Choice)
+                created_items_log = []
+                
+                for res in recipe.results:
+                    # Check Chance
+                    if res['chance'] < 1.0 and random.random() > res['chance']:
+                        continue
+                        
+                    # Choose Name (Handle [A, B] brackets)
+                    final_name = random.choice(res['names'])
+                    
+                    result_item = Item.create_from_name(final_name)
+                    if result_item:
+                        result_item.load = res['amount']
+                        
+                        # Add to inventory logic
+                        added_to_inv = False
+                        if len(self.player.inventory) < self.player.base_inventory_slots:
+                            self.player.inventory.append(result_item)
+                            added_to_inv = True
+                        else:
+                            self.game.items_on_ground.append(result_item)
+                            result_item.x, result_item.y = self.player.x, self.player.y
+                            result_item.rect.topleft = (result_item.x, result_item.y)
+                        
+                        created_items_log.append(f"{res['amount']}x {final_name}")
 
-        verb = "Repairing" if getattr(recipe, 'craft_type', 'create') == 'repair' else "Crafting"
+                from core.messages import display_message_player
+                if created_items_log:
+                    msg = ", ".join(created_items_log)
+                    if getattr(recipe, 'craft_type', 'create') == 'dismantle':
+                        display_message_player(f"Dismantled into: {msg}")
+                    else:
+                        display_message_player(f"Crafted: {msg}")
+                else:
+                     display_message_player("Crafting/Dismantling yielded nothing.")
+
+        verb = "Dismantling" if getattr(recipe, 'craft_type', 'create') == 'dismantle' else "Crafting"
         self.player.start_action(f"{verb} {recipe.output_name}", recipe.time_required, craft_complete)

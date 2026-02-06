@@ -118,6 +118,13 @@
         <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
     </recipe>
 
+    <recipe type="weapon_melee" craft="dismantle" time="2.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+        <ingredient name="Primitive Hammer" destroy="true" amount="1" />
+        <result name="Stone" amount="1" />
+        <result name="[Stick, Tree Branch]" amount="1" />
+        <result name="[Ragged Cloth, Denim Stripes, Leather Piece]" amount="1" chance="0.5" /> 
+    </recipe>
+
     <recipe type="weapon_melee" craft="create" output="Improvised Spear" amount="1" time="3.0">
         <ingredient name="Knife" destroy="true" amount="1" />
         <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />

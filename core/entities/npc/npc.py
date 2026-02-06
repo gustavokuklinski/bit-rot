@@ -75,7 +75,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if not self.inventory:
              random_item = Item.generate_random()
-             if random_item:
+             # [CHANGED] Check if the item is liquid (e.g. water/fuel unit) and exclude it
+             if random_item and not random_item.liquid:
                  self.inventory.append(random_item)
 
         possible_weapons = [name for name, data in ITEM_TEMPLATES.items() 

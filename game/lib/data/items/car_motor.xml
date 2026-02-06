@@ -2,7 +2,7 @@
     <properties>
         <status value="motor" />
         <durability min="1" max="100" />
-        <sprite file="car_engine.png" />
+        <sprite file="car_motor.png" />
     </properties>
     <spawn chance="1" />
 </item> 

@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <damage min="20" max="50" />
         <skill type="melee" />
-        <sprite file="picaxe.png" />
+        <sprite file="weapon_melee_picaxe.png" />
         <knockback value="5" />
     </properties>
     <spawn chance="1" />

@@ -4,7 +4,7 @@
 
         <load min="2" max="20" />
         <capacity value="20" />
-        <sprite file="magazine.png" />
+        <sprite file="consumable_magazine_general_content.png" />
     </properties>
     <spawn chance="1" />
 </item>

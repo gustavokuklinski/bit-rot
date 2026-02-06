@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <damage min="1" max="3" />
         <skill type="melee" />
-        <sprite file="lug_wrench.png" />
+        <sprite file="weapon_melee_lug_wrench.png" />
         <knockback value="0" />
     </properties>
     <spawn chance="1" />

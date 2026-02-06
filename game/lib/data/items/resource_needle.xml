@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="5" />
         <capacity value="5" />
-        <sprite file="needle.png" />
+        <sprite file="resource_needle.png" />
     </properties>
     <spawn chance="1" />
 </item>

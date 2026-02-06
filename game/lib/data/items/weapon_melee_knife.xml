@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <damage min="5" max="10" />
         <skill type="melee" />
-        <sprite file="knife.png" />
+        <sprite file="weapon_melee_knife.png" />
         <knockback value="5" />
     </properties>
     <spawn chance="1" />

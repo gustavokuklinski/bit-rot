@@ -2,7 +2,7 @@
     <properties>
         <capacity value="1" />
         <allow_sleep value="true" />
-        <sprite file="sleeping_bag.png" />
+        <sprite file="camp_sleeping_bag.png" />
     </properties>
     <spawn chance="1" />
 </item>

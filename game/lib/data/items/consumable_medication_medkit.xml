@@ -3,7 +3,7 @@
         <restore status="[health]" min="1" max="25" />
         <load min="1" max="25" />
         <capacity value="25" />
-        <sprite file="medkit.png" />
+        <sprite file="consumable_medication_medkit.png" />
     </properties>
     <spawn chance="1" />
 </item>

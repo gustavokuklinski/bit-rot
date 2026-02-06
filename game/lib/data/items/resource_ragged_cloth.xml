@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="20" />
         <capacity value="20" />
-        <sprite file="ragged_cloth.png" />
+        <sprite file="resource_ragged_cloth.png" />
     </properties>
     <spawn chance="1" />
 </item>

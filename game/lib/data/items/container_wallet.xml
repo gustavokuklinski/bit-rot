@@ -1,16 +1,11 @@
 <item name="Wallet" type="container">
     <properties>
         <capacity value="3" />
-        <sprite file="wallet.png" />
+        <sprite file="container_wallet.png" />
     </properties>
     <loot>
         <item name="ID" chance="1" />
-        <item name="Mobile off" chance="0.8" />
-        <item name="Car Key Pickup" chance="0.1" />
-        <item name="Money 5" chance="0.1" />
-        <item name="Money 20" chance="0.1" />
-        <item name="Money 50" chance="0.1" />
-        <item name="Money 100" chance="0.1" />
+        <item name="Mobile off" chance="0.9" />
     </loot>
     <spawn chance="1" />
 </item>

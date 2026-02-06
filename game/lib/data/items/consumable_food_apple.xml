@@ -8,7 +8,7 @@
 
         <load value="1" />
         <capacity value="3" />
-        <sprite file="apple.png" />
+        <sprite file="consumable_food_apple.png" />
     </properties>
     <spawn chance="1" />
 </item>

@@ -1,7 +1,7 @@
 <item name="Cigarette Pack" type="container" disposable="true">
     <properties>
         <capacity value="1" />
-        <sprite file="cigarette_pack.png" />
+        <sprite file="container_disposable_cigarrete_pack.png" />
     </properties>
     <loot>
         <item name="Cigarette" chance="1" />

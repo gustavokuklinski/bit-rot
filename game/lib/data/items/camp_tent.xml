@@ -2,7 +2,7 @@
     <properties>
         <capacity value="20" />
         <allow_sleep value="true" />
-        <sprite file="tent.png" />
+        <sprite file="camp_tent.png" />
     </properties>
     <spawn chance="1" />
 </item>

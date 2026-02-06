@@ -1,6 +1,6 @@
 <item name="Money 100" type="currency">
     <properties>
-        <sprite file="money_100.png" />
+        <sprite file="currency_money_100.png" />
         <load min="100" max="100" />
         <capacity value="1000" /> 
     </properties>

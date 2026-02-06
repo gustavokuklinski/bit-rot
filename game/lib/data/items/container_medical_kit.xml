@@ -1,7 +1,7 @@
 <item name="Medical Kit" type="container">
     <properties>
         <capacity value="5" />
-        <sprite file="medical_kit.png" />
+        <sprite file="container_medical_kit.png" />
     </properties>
     <loot>
         <item name="Medical Bandage" chance="0.3" />

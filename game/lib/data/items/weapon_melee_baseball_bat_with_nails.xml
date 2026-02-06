@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <damage min="20" max="45" />
         <skill type="melee" />
-        <sprite file="baseball_bat_with_nails.png" />
+        <sprite file="weapon_melee_baseball_bat_with_nails.png" />
         <knockback value="6" />
     </properties>
     <spawn chance="1" />

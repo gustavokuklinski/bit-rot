@@ -78,7 +78,9 @@ class ZombieData:
                             root = tree.getroot()
                             if root.tag == 'item':
                                 item_name = root.get('name')
-                                if item_name:
+                                # [CHANGED] Check for liquid attribute to exclude from random zombie loot
+                                is_liquid = root.get('liquid', 'false').lower() == 'true'
+                                if item_name and not is_liquid:
                                     ZombieData.ALL_ITEM_TEMPLATES.append(item_name)
                         except Exception as e:
                             print(f"Error parsing item XML {filename}: {e}")

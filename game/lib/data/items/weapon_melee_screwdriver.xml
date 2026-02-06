@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <damage min="1" max="1" />
         <skill type="melee" />
-        <sprite file="screwdriver.png" />
+        <sprite file="weapon_melee_screwdriver.png" />
         <knockback value="0" />
     </properties>
     <spawn chance="1" />

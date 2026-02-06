@@ -1,7 +1,7 @@
 <item name="Tree Trunk" type="container">
     <properties>
         <capacity value="3" />
-        <sprite file="tree_trunk.png" />
+        <sprite file="container_tree_trunk.png" />
     </properties>
     <loot>
         <item name="Log" chance="1" />

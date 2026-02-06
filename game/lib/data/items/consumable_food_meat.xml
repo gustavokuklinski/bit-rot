@@ -7,7 +7,7 @@
         <restore status="[stamina]" min="2" max="5" />
         <load value="1" />
         <capacity value="1" />
-        <sprite file="meat.png" />
+        <sprite file="consumable_food_meat.png" />
     </properties>
     <spawn chance="1" />
 </item>

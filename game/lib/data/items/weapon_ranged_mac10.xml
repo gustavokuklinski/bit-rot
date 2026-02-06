@@ -7,7 +7,7 @@
         <damage min="20" max="60" />
         <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" distance="30" />
         <skill type="range" />
-        <sprite file="mac10.png" />
+        <sprite file="weapon_ranged_mac10.png" />
         <knockback value="3" />
     </properties>
     <sound>

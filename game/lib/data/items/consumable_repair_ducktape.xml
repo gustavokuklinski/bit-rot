@@ -4,7 +4,7 @@
         <load value="1" />
         <restore min="1" max="35" />
         <capacity value="60" />
-        <sprite file="duck_tape.png" />
+        <sprite file="consumable_repair_ducktape.png" />
     </properties>
     <spawn chance="1" />
 </item>

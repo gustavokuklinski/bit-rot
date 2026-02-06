@@ -1,7 +1,7 @@
 <item name="Sewing Kit" type="container">
     <properties>
         <capacity value="5" />
-        <sprite file="sewing_kit.png" />
+        <sprite file="container_seweing_kit.png" />
     </properties>
     <loot>
         <item name="Needle" chance="0.3" />

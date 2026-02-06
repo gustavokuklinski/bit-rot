@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="2" />
         <capacity value="2" />
-        <sprite file="tree_branch.png" />
+        <sprite file="resource_tree_branch.png" />
     </properties>
     <spawn chance="0" />
 </item>

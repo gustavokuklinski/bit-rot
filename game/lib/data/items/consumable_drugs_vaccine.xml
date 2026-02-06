@@ -3,7 +3,7 @@
         <reduce status="[infection]" min="5" max="15" />
         <load value="1" />
         <capacity value="5" />
-        <sprite file="vaccine.png" />
+        <sprite file="consumable_drugs_vaccine.png" />
     </properties>
     <spawn chance="1" />
 </item>

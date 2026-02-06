@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="20" />
         <capacity value="20" />
-        <sprite file="engine_parts.png" />
+        <sprite file="resource_engine_parts.png" />
     </properties>
     <spawn chance="1" />
 </item>

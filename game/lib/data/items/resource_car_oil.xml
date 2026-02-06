@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="20" />
         <capacity value="20" />
-        <sprite file="car_oil.png" />
+        <sprite file="resource_car_oil.png" />
     </properties>
     <spawn chance="1" />
 </item>

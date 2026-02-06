@@ -1,7 +1,7 @@
 <item name="Flask" type="container" allow_liquid="true">
     <properties>
         <capacity value="1" />
-        <sprite file="flask.png" />
+        <sprite file="container_liquid_flask.png" />
     </properties>
     <loot>
     </loot>

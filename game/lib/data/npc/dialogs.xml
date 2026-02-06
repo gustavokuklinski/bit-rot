@@ -1,16 +1,15 @@
 <npc_dialog>
     <node id="greeting">
         <options 
+            player_question="How's it going?" 
+            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
+            priority="100" />
+        <options 
             player_question="Hello!" 
             npc_answer="I'm not in the mood now, filho da puta!" 
             priority="10"
             npc_state_friendly="false"
             npc_state_static="false"
-            gain_xp="[lucky:10]" />
-        <options 
-            player_question="How's it going?" 
-            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
-            priority="100"
             gain_xp="[lucky:10]" />
     </node>
     <node id="tips">
@@ -42,7 +41,7 @@
             player_question="Any news from the outside?"
             npc_answer="The satellite phone died yesterday. Last I heard, Rio went dark. If the capital falls, we're truly alone."
             priority="10" 
-            gain_xp="[lucky:10]" />
+            gain_xp="[lucky:1]" />
         <options 
             player_question="What is the status of the Rigs?"
             npc_answer="They've been fully functional for years, but without the crews... they're just ticking time bombs."
@@ -50,22 +49,23 @@
             dialog_type="once"
             req_level="[lucky:1]"
             priority="10"
+            dialog_type="once"
             gain_xp="[lucky:10]" />
         <options 
             player_question="What happened to the continent?"
             npc_answer="Brazil was the first to close the borders, but it didn't help. It's total chaos down south."
             priority="10"
-            gain_xp="[lucky:10]" />
+            gain_xp="[lucky:1]" />
         <options 
             player_question="Is anyone else out there?"
             npc_answer="Just rogues, some military and the infected. If it moves and doesn't scream 'don't shoot', it's probably trying to kill you." 
             priority="10" 
-            gain_xp="[lucky:10]" />
+            gain_xp="[lucky:1]" />
         <options 
             player_question="Why did the helicopter leave us?"
             npc_answer="Standard containment protocol. Next Petrol doesn't rescue liabilities. We are the liability now."
             priority="10"
-            gain_xp="[lucky:15]" />
+            gain_xp="[lucky:1]" />
         <options 
             player_question="Did you know about the cure?"
             npc_answer="I saw the crates labeled 'Vaccine-B'. They weren't shipping it out... they were burning it. That's when I knew it was over."
@@ -78,8 +78,7 @@
         <options
             player_question="So...why?" 
             npc_answer="Maybe you can finish my misery." 
-            unlock_flag="is_hostile" 
-            gain_xp="[lucky:-10]"/>
+            unlock_flag="is_hostile" />
     </node>
 
     <node id="is_hostile">
@@ -88,7 +87,6 @@
             npc_answer="Stop bothering me before I lose my temper. Every man for himself, remember?"
             npc_state_friendly="false"
             npc_state_static="false"
-            priority="100"
-            gain_xp="[lucky:-50]" />
+            priority="100" />
     </node>
 </npc_dialog>
