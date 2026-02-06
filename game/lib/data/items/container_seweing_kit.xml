@@ -2,6 +2,7 @@
     <properties>
         <capacity value="5" />
         <sprite file="container_seweing_kit.png" />
+        <weight weight="0.5" reduction="0" />
     </properties>
     <loot>
         <item name="Needle" chance="0.3" />

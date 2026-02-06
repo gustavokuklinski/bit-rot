@@ -2,6 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <load min="10" max="40" />
+        <weight weight="2.5"/>
         <capacity value="40" />
         <ammo type="556 Ammo" />
         <damage min="30" max="80" />

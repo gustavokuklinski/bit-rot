@@ -187,15 +187,36 @@ def create_item_from_name(cls, item_name, randomize_durability=False):
     require = get_prop_val(props, 'require', 'type', None)
     if require and require.startswith('[') and require.endswith(']'):
         require = [t.strip() for t in require[1:-1].split(',')]
+    
+    # Weight & Reduction
+    weight = float(get_prop_val(props, 'weight', 'weight', '0.0'))
+    reduction_str = get_prop_val(props, 'weight', 'reduction', '0%').replace('%', '')
+    weight_reduction = float(reduction_str) / 100.0
 
-    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require)
+    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction)
 
     if 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
             if random.random() < loot_info['chance']:
                 loot_item = cls.create_from_name(loot_info['name'])
                 if loot_item:
-                    if len(new_item.inventory) < (new_item.capacity or 0):
+                    # Check 1: Slot Capacity (Standard check)
+                    fits = True
+                    max_cap = new_item.capacity or 0
+                    
+                    if len(new_item.inventory) >= max_cap:
+                        fits = False
+                    
+                    # Check 2: Weight Capacity (For containers/backpacks)
+                    # We treat 'capacity' as the Max Weight limit as well.
+                    if fits and new_item.item_type in ['container', 'backpack']:
+                         current_weight = sum(i.get_total_weight() for i in new_item.inventory)
+                         item_weight = loot_item.get_total_weight()
+                         
+                         if current_weight + item_weight > max_cap:
+                             fits = False
+
+                    if fits:
                         new_item.inventory.append(loot_item)
     
     return new_item

@@ -153,6 +153,30 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.last_shot_time = 0
         self.is_resting = False
 
+    @property
+    def current_weight(self):
+        total = 0.0
+        # Belt
+        for item in self.belt:
+             if item: total += item.get_total_weight()
+        # Inventory
+        for item in self.inventory:
+             total += item.get_total_weight() 
+        # Clothes
+        for item in self.clothes.values():
+             if item: total += item.get_total_weight()
+        # Backpack
+        if self.backpack:
+             total += self.backpack.get_total_weight()
+        
+        return total
+
+    @property
+    def max_carry_weight(self):
+        # Base 10 + scaling with strength
+        strength = self.progression.get_strength(self)
+        return 5.0 + (strength * 1.5)
+
     def update_stats(self, game):
         current_time = time.time()
 
@@ -266,6 +290,21 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 if water_item:
                     self.consume_item(water_item, source, index, container, is_auto_drink=True, game=game)
         
+        # --- Overweight Logic ---
+        overweight_ratio = 0
+        if self.max_carry_weight > 0:
+             overweight_ratio = self.current_weight / self.max_carry_weight
+        
+        if overweight_ratio > 1.0:
+             # Health Reduction due to overweight
+             # Apply small damage over time
+             loss = 0.01 * (overweight_ratio - 1.0) 
+             self.health = max(0, self.health - loss)
+             
+             # Gain Strength XP if running while overweight
+             if self.is_running and is_moving:
+                  self.progression.add_xp(self, 'strength', 0.001)
+
         all_inventories = [self.belt, self.inventory]
         if self.backpack:
             all_inventories.append(self.backpack.inventory)

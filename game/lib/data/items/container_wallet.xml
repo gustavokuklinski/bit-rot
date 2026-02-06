@@ -2,6 +2,7 @@
     <properties>
         <capacity value="3" />
         <sprite file="container_wallet.png" />
+        <weight weight="0.1" reduction="50%" />
     </properties>
     <loot>
         <item name="ID" chance="1" />

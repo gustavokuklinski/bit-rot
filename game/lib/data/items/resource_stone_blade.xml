@@ -1,6 +1,7 @@
 <item name="Stone Blade" type="resource">
     <properties>
         <load min="1" max="20" />
+        <weight weight="0.4"/>
         <capacity value="20" />
         <sprite file="resource_stone_blade.png" />
     </properties>

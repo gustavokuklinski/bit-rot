@@ -29,7 +29,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "INF": SPRITE_PATH + "ui/infection.png",
         "XP": SPRITE_PATH + "ui/xp.png",
         "ANX": SPRITE_PATH + "ui/axiety.png",
-        "DEF": SPRITE_PATH + "ui/defence.png"
+        "DEF": SPRITE_PATH + "ui/defence.png",
+        "WGT": SPRITE_PATH + "ui/weight.png" # Assuming we reuse backpack icon or similar for now
     }
     for k, path in icon_files.items():
         try:
@@ -38,6 +39,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         except Exception:
             stat_icons[k] = None
 
+    # Calculate Max Weight (capped at player limit)
+    # Note: Value can exceed max (overweight)
     stats = [
         ("HP", player.health, player.max_health, GRAY),
         ("STM", player.stamina, player.max_stamina, GRAY),
@@ -46,7 +49,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),
         ("ANX", player.anxiety, 100, GRAY),
-        ("DEF", player.get_total_defence(), 100, GRAY)
+        ("DEF", player.get_total_defence(), 100, GRAY),
+        ("WGT", player.current_weight, player.max_carry_weight, GRAY)
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
@@ -60,17 +64,31 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
             surface.blit(text, (col1_x, y_pos))
             label_x = col1_x + 40
 
-        text = font_notification.render(f"[{int(value)}%]", True, WHITE)
+        # For weight, we display actual values e.g. "12.5 / 10.0" if possible, or percentage
+        if name == "WGT":
+             text = font_notification.render(f"[{value:.1f}/{max_value:.1f}]", True, WHITE)
+        else:
+             text = font_notification.render(f"[{int(value)}%]", True, WHITE)
+             
         surface.blit(text, (label_x, y_pos + 3))
 
         bar_x = label_x + 50
-        bar_width = int(100 * (value / max_value)) if max_value > 0 else 0
+        
+        # Bar logic: If value > max, bar is full and maybe red?
+        ratio = value / max_value if max_value > 0 else 0
+        draw_color = color
+        
+        if name == "WGT" and ratio > 1.0:
+            draw_color = RED # Overweight warning color
+            
+        bar_width = int(100 * min(1.0, ratio))
+        
         bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
-        pygame.draw.rect(surface, color, bar_rect)
+        pygame.draw.rect(surface, draw_color, bar_rect)
         pygame.draw.rect(surface, WHITE, (bar_x, y_pos + 5, 100, 10), 1)
 
     # 3. Body Parts Section
-    y_offset += 80
+    y_offset += 80 + 28 # Added extra offset for new stat
     section_title = font_notification.render("", True, YELLOW)
     surface.blit(section_title, (col1_x, y_offset))
     y_offset += 23

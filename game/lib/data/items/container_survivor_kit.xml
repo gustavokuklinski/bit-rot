@@ -2,6 +2,7 @@
     <properties>
         <capacity value="4" />
         <sprite file="container_survivor_kit.png" />
+        <weight weight="1.5" reduction="10%" />
     </properties>
     <loot>
         <item name="Survivor Guide Basic" chance="0.8" />

@@ -1,0 +1,5 @@
+<map name="window_01_open" type="maptile" char="window_01_open"  state="open" is_obstacle="false">
+    <visuals>
+        <sprite id="open" file="window_01_open.png" />
+    </visuals>
+</map>

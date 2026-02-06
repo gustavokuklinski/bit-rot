@@ -76,6 +76,11 @@ def draw_player_alerts(surface, player):
     if player.infection >= 5: 
         active_alerts.append(("ui/infection.png", YELLOW, "Are you feeling sick or infected?"))
 
+    # Overweight
+    if player.current_weight > player.max_carry_weight:
+        # Using an orange/brown color for the weight warning
+        active_alerts.append(("ui/weight.png", (205, 127, 50), "You are carrying too much weight"))
+
     if not active_alerts:
         return None
 

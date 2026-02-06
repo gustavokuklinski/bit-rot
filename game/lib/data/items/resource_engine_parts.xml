@@ -1,6 +1,7 @@
 <item name="Engine Parts" type="resource">
     <properties>
         <load min="1" max="20" />
+        <weight weight="0.5"/>
         <capacity value="20" />
         <sprite file="resource_engine_parts.png" />
     </properties>

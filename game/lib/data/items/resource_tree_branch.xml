@@ -1,6 +1,7 @@
 <item name="Tree Branch" type="resource">
     <properties>
         <load min="1" max="2" />
+        <weight weight="0.4"/>
         <capacity value="2" />
         <sprite file="resource_tree_branch.png" />
     </properties>

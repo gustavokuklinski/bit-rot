@@ -1,6 +1,7 @@
 <item name="Half Stick" type="resource">
     <properties>
         <load min="1" max="20" />
+        <weight weight="0.1"/>
         <capacity value="20" />
         <sprite file="resource_half_stick.png" />
     </properties>

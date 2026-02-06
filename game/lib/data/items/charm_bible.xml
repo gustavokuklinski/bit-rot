@@ -1,6 +1,7 @@
 <item name="Bible" type="charm">
     <properties>
         <sprite file="bible_1.png" />
+        <weight weight="0.05" />
     </properties>
     <attributes>
         <lucky value="0.1" />

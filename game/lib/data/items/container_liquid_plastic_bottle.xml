@@ -2,6 +2,7 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_plastic_bottle.png" />
+        <weight weight="0.5" reduction="5%" />
     </properties>
     <loot>
         <item name="Water Unit" chance="1" />

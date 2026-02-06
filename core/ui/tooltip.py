@@ -34,7 +34,7 @@ def draw_tooltip(surface, item, pos):
             cap = item.capacity if item.capacity is not None else 0
             lines.append(f"Contents: {len(item.inventory)} / {cap}")
         
-    # --- MODIFIED: Logic to trigger bar rendering ---
+    # --- Durability Bar Logic ---
     if item.durability is not None:
         max_dur = item.max_durability # Get max from item property
         if max_dur > 0:
@@ -77,6 +77,25 @@ def draw_tooltip(surface, item, pos):
         lines.append(f"Load: {item.load:.0f}/{item.capacity:.0f}")
     elif item.load is not None:
         lines.append(f"Load: {item.load:.0f}")
+    
+    # --- Weight Info (Updated) ---
+    if hasattr(item, 'get_total_weight'):
+        total_weight = item.get_total_weight()
+        weight_str = f"Weight: {total_weight:.1f}"
+        
+        # Only show unit weight if the item is stackable
+        if item.is_stackable() and hasattr(item, 'weight'):
+             weight_str += f" (unit: {item.weight:.1f})"
+        
+        lines.append(weight_str)
+    elif hasattr(item, 'weight'):
+        # Fallback if get_total_weight doesn't exist for some reason
+        lines.append(f"Weight: {item.weight:.1f}")
+
+    if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
+        lines.append(f"Reduction: {int(item.weight_reduction * 100)}%")
+    # -------------------
+
     if item.min_damage is not None and item.max_damage is not None:
         min_damage, max_damage = item.current_damage_range
         lines.append(f"Damage: {min_damage}-{max_damage}")
@@ -97,16 +116,15 @@ def draw_tooltip(surface, item, pos):
             # Format as: "  Lucky: +0.5%"
             lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")
 
-    # --- NEW: Add preview of items at the bottom ---
+    # --- Item Preview ---
     if hasattr(item, 'inventory') and item.inventory:
         if len(item.inventory) > 0:
             lines.append({'type': 'item_preview', 'items': item.inventory[:5]})
     # -----------------------------------------------
 
-    # font = pygame.font.Font(None, 24) # Unused in original code effectively
     rendered_lines = []
     for line in lines:
-        # --- NEW: Handle Durability Bar ---
+        # --- Handle Durability Bar ---
         if isinstance(line, dict) and line.get('type') == 'durability_bar':
             # Settings
             bar_w = 100
@@ -145,7 +163,7 @@ def draw_tooltip(surface, item, pos):
             
             rendered_lines.append(line_surf)
         
-        # --- NEW: Handle Item Preview Rendering ---
+        # --- Handle Item Preview Rendering ---
         elif isinstance(line, dict) and line.get('type') == 'item_preview':
             items_to_draw = line['items']
             slot_size = 32  # Small size for tooltip

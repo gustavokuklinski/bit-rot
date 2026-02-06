@@ -7,6 +7,7 @@
         <restore status="[stamina]" min="2" max="5" />
         <load value="1" />
         <capacity value="3" />
+        <weight weight="0.03"/>
         <sprite file="consumable_food_carrot.png" />
     </properties>
     <spawn chance="1" />

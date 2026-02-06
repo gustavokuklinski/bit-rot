@@ -1,6 +1,7 @@
 <item name="Hammer" type="weapon_melee">
     <properties>
         <durability min="1" max="100" />
+        <weight weight="0.9"/>
         <damage min="5" max="8" />
         <skill type="melee" />
         <sprite file="weapon_melee_hammer.png" />

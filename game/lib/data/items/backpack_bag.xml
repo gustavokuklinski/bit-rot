@@ -2,6 +2,7 @@
     <properties>
         <capacity value="5" />
         <sprite file="backpack_bag.png" />
+        <weight weight="1.0" reduction="80%" /> 
     </properties>
     <loot>
     </loot>

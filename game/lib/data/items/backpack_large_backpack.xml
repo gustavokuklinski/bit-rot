@@ -1,6 +1,7 @@
 <item name="Large Backpack" type="backpack">
     <properties>
         <capacity value="20" />
+        <weight weight="2.0" reduction="80%" />
         <sprite file="backpack_large_backpack.png" />
     </properties>
     <loot>

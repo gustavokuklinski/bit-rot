@@ -1,6 +1,7 @@
 <item name="Wrench" type="weapon_melee">
     <properties>
         <durability min="1" max="100" />
+        <weight weight="0.5"/>
         <damage min="2" max="4" />
         <skill type="melee" />
         <sprite file="weapon_melee_wrench.png" />

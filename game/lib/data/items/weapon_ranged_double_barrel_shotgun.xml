@@ -2,6 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <load min="1" max="2" />
+        <weight weight="2.0"/>
         <capacity value="2" />
         <ammo type="Shotgun Shells" />
         <damage min="65" max="150" />

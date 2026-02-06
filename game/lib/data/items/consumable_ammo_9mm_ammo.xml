@@ -1,6 +1,7 @@
 <item name="9mm Ammo" type="consumable_ammo">
     <properties>
         <status value="ammo" />
+        <weight weight="0.01"/>
         <load min="10" max="50" />
         <capacity value="100" />
         <sprite file="consumable_ammo_9mm_ammo.png" />

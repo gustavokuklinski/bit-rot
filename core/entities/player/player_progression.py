@@ -392,6 +392,14 @@ class PlayerProgression:
         
         # If speed level 5 gives 0.05 reduction: 1 - 0.05 = 0.95 multiplier
         modifier = max(0.1, 1.0 - flat_red) 
+
+        # --- Overweight Penalty ---
+        # consume more stamina based on the percentage of overweight carriage
+        if hasattr(player, 'max_carry_weight') and player.max_carry_weight > 0:
+            weight_ratio = player.current_weight / player.max_carry_weight
+            if weight_ratio > 1.0:
+                # Example: 150% weight -> 1.5 multiplier to stamina cost
+                base *= weight_ratio
         
         return base * modifier
 

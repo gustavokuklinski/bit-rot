@@ -3,6 +3,7 @@
         <status value="durability" />
         <load value="1" />
         <restore min="1" max="100" />
+        <weight weight="1"/>
         <capacity value="5" />
         <sprite file="consumable_repair_motor.png" />
     </properties>

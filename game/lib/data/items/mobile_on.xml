@@ -1,6 +1,7 @@
 <item name="Mobile on" type="mobile" state="on">
     <properties>
         <durability min="1" max="100" />
+        <weight weight="0.08"/>
         <light min="1" max="5" />
         <fuel type="Powerbank" />
         <sprite file="mobile_on.png" />

@@ -2,6 +2,7 @@
     <properties>
         <capacity value="10" />
         <sprite file="container_toolkit.png" />
+        <weight weight="2.0" reduction="15%" />
     </properties>
     <loot>
         <item name="Screwdriver" chance="0.3" />

@@ -2,6 +2,7 @@
     <properties>
         <capacity value="3" />
         <sprite file="container_tree_trunk.png" />
+        <weight weight="10" reduction="15%" />
     </properties>
     <loot>
         <item name="Log" chance="1" />
