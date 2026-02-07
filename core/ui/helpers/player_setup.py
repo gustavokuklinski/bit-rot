@@ -41,7 +41,7 @@ def _load_stat_icons():
         "maintenance": SPRITE_PATH + "ui/maintenance.png",
         "ranged": SPRITE_PATH + "ui/range.png",
         "lucky": SPRITE_PATH + "ui/lucky.png",
-        "speed": SPRITE_PATH + "ui/speed.png",
+        "agility": SPRITE_PATH + "ui/agility.png",
     }
     
     for key, path in icon_files.items():

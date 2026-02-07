@@ -39,7 +39,7 @@ def save_game(game):
             "ranged": game.player.progression.get_level('ranged'),
             "lucky": game.player.progression.get_level('lucky'),
             "intelligence": game.player.progression.get_level('intelligence'),
-            "speed": game.player.progression.get_level('speed')
+            "agility": game.player.progression.get_level('agility')
         }
         
         progression_data = game.player.progression.attributes

@@ -1,23 +1,27 @@
 <traits>
+    <trait id="nurse" name="Nurse" cost="3" tooltip="Known basic medical reciples">
+        <recipe magazine="Medicine Vol.1" />
+    </trait>
+
     <!-- Positive traits -->
     <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% infection rate">
         <stats infection="-5" />
     </trait>
 
-    <trait id="athletic" name="Athletic"  cost="2" tooltip="+10% stamina recovery">
+    <trait id="athletic" name="Athletic" cost="2" tooltip="+10% stamina recovery">
         <stats stamina="10" />
     </trait>
 
-    <trait id="strong" name="Strong" cost="2" tooltip="+2% XP, +5 Level strength, +2 Level Fitness" disable="[fit, weak]">
-        <attributes strength="2" level="[strength:5, fitness:2]" />
+    <trait id="strong" name="Strong" cost="2" tooltip="+5 Level and +2% XP on Strength | +2 Level and +1% XP on Fitness" disable="[fit, weak]">
+        <attributes strength="2" fitness="1" level="[strength:5, fitness:2]" />
     </trait>
 
-    <trait id="luck" name="Luck" cost="2" tooltip="+2% XP level lucky">
-        <attributes lucky="2" />
+    <trait id="luck" name="Luck" cost="2" tooltip="+1 Level and +2% XP on Lucky">
+        <attributes lucky="2" level="[lucky: 1]" />
     </trait>
 
-    <trait id="runner" name="Runner" cost="2" tooltip="+2% XP level speed">
-        <attributes speed="2" />
+    <trait id="runner" name="Runner" cost="2" tooltip="+2% XP level agility">
+        <attributes agility="2" />
     </trait>
 
     <trait id="healthy" name="Healthy"  cost="2" tooltip="+15% health recovery">
@@ -44,14 +48,9 @@
         <attributes melee="2" />
     </trait>
 
-    <trait id="shooter" name="Shooter" cost="2" tooltip="+2% XP level ranged weapons">
-        <attributes ranged="2" />
+    <trait id="shooter" name="Shooter" cost="2" tooltip="+2 level and +2% XP on ranged weapons">
+        <attributes ranged="2" level="[ranged:2]" />
     </trait>
-
-    <trait id="nurse" name="Nurse" cost="3" tooltip="Known basic medical reciples">
-        <recipe magazine="Medicine Vol.1" />
-    </trait>
-
 
     <!-- Negative traits -->
     <trait id="weak" name="Weak" cost="-2" tooltip="-2% XP level strength gain">
@@ -66,8 +65,8 @@
         <stats stamina="-15" anxiety="15" />
     </trait>
 
-    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% XP speed penality and +15% faster increase anxiety">
-        <attributes speed="-15" />
+    <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% XP agility penality and +15% faster increase anxiety">
+        <attributes agility="-15" />
         <stats anxiety="15" />
     </trait>
 

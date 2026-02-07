@@ -61,9 +61,9 @@ class PlayerProgression:
         bonus_perc = self.get_total_attribute_bonus(player, 'lucky')
         return base * (1 + (bonus_perc / 100.0))
 
-    def get_speed(self, player):
-        base = self.get_level('speed')
-        bonus_perc = self.get_total_attribute_bonus(player, 'speed')
+    def get_agility(self, player):
+        base = self.get_level('agility')
+        bonus_perc = self.get_total_attribute_bonus(player, 'agility')
         return base * (1 + (bonus_perc / 100.0))
 
     # --- BONUS CALCULATORS (Traits & Items) ---
@@ -182,8 +182,8 @@ class PlayerProgression:
         display_name = self.config.attributes.get(attr['name'], {}).get('name', attr['name'])
         display_message_player(f"Leveled up {display_name} to level {attr['level']}!")
 
-    def add_speed_xp(self, player, amount):
-        self.add_xp(player, 'speed', amount)
+    def add_agility_xp(self, player, amount):
+        self.add_xp(player, 'agility', amount)
 
     def process_kill(self, player, weapon, zombie):
         # XP Calculation

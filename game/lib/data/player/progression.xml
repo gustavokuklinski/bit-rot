@@ -22,9 +22,9 @@
             <effect target="durability_save_chance" value="1.0" type="flat" />
         </attribute>
 
-        <attribute id="speed" name="Agility" image="ui/speed.png" base_xp="100">
+        <attribute id="agility" name="Agility" image="ui/agility.png" base_xp="100">
             <effect target="stamina_consumption_reduction" value="0.01" type="flat" />
-            <effect target="action_speed_bonus" value="0.1" type="flat" />
+            <effect target="action_agility_bonus" value="0.1" type="flat" />
         </attribute>
 
         <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="100">

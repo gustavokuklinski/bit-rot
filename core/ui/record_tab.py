@@ -15,7 +15,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     attributes_to_draw = [
         ("Strength", "strength"),
         ("Fitness", "fitness"),
-        ("Agility", "speed"),
+        ("Agility", "agility"),
         ("Luck", "lucky"),
         ("Melee", "melee"),
         ("Ranged", "ranged"),

@@ -48,7 +48,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         self.attributes = data.get('attributes', {
             'strength': 0.0, 'fitness': 0.0, 'melee': 0.0, 
-            'ranged': 0.0, 'lucky': 0.0, 'speed': 0.0
+            'ranged': 0.0, 'lucky': 0.0, 'agility': 0.0
         })
 
         self.max_health = stats.get('health', 100.0)
@@ -191,7 +191,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     self.action_callback()
                     self.action_callback = None
                     if self.action_xp_reward > 0:
-                        self.progression.add_speed_xp(self, self.action_xp_reward)
+                        self.progression.add_agility_xp(self, self.action_xp_reward)
                 self.action_name = ""
             return False
 
