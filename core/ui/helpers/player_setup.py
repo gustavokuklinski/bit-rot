@@ -893,7 +893,9 @@ def run_player_setup(game):
         state['preset_dropdown_active'] = False
         _load_presets(state)
 
-        state['current_tab'] = 'Player'
+        if 'current_tab' not in state:
+             state['current_tab'] = 'Player'
+
         state['settings_data'] = load_config_data("./game/save/config/default.xml")
         state['config_name'] = ""
         state['config_name_active'] = False

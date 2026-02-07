@@ -51,6 +51,12 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'Heli': 1,
             'Military': 1
         }
+        
+        # --- GLOBAL L2 LIMITS (Specific Templates) ---
+        self.global_l2_limits = {
+            'Bunker': MAP_CHUNKS * 2,
+            'Dungeon': MAP_CHUNKS * 3,
+        }
         # ------------------------------------------------
 
         # Forest settings
@@ -84,14 +90,9 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         current_chunks = core.data.config.MAP_CHUNKS
         
         if not seed_pattern or seed_pattern == "5-DEFAULT": 
-            # Assuming generate_random_seed is imported from config or global scope
-            # If not present in config import, it must be defined.
-            # Based on original file usage, we assume it exists.
             try:
                 seed_pattern = generate_random_seed(current_chunks)
             except NameError:
-                # Fallback if function missing
-                # REMOVED local import here to fix UnboundLocalError
                 seed_pattern = f"{current_chunks}-{random.randint(1000,9999)}"
             
         if '-' in seed_pattern:
@@ -118,7 +119,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         # 1. Generate Connections
         connections_grid = self._generate_maze_connections(grid_w, grid_h)
 
-        # 2. Build Global Deck
+        # 2. Build Global Deck (L1)
         global_deck = []
         
         self.heli_template = None
@@ -161,6 +162,27 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         random.shuffle(global_deck)
 
+        # 2b. Build Global L2 Deck (Controlled)
+        global_l2_deck = []
+        print("Building Global L2 Deck...")
+        for category, limit in self.global_l2_limits.items():
+            available = self.categorized_l2_templates.get(category, [])
+            if not available:
+                print(f"  > Warning: No L2 templates found for category '{category}'")
+                continue
+            
+            pool = list(available)
+            random.shuffle(pool)
+            for _ in range(limit):
+                if not pool:
+                    pool = list(available)
+                    random.shuffle(pool)
+                if pool:
+                    global_l2_deck.append(pool.pop())
+        
+        random.shuffle(global_l2_deck)
+        print(f"  > Total Controlled L2 Templates to Place: {len(global_l2_deck)}")
+
         # 3. Calculate Urban Chunks
         all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         total_chunks = grid_w * grid_h
@@ -181,7 +203,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         
         urban_coords = set(random.sample(urban_candidates, min(len(urban_candidates), num_building_chunks)))
         
-        # 5. Distribute Deck
+        # 5. Distribute Deck (L1)
         chunk_priority_map = {coord: [] for coord in all_coords}
         
         # MANDATORY: 1 Cave Per Chunk
@@ -212,6 +234,18 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             if self.mil_petrol_template:
                 chunk_priority_map[military_chunk_coord].append(self.mil_petrol_template)
 
+        # 5b. Distribute L2 Deck
+        chunk_l2_priority_map = {coord: [] for coord in all_coords}
+        l2_candidates = list(all_coords)
+        random.shuffle(l2_candidates)
+        
+        if global_l2_deck:
+            idx = 0
+            for tmpl in global_l2_deck:
+                target = l2_candidates[idx]
+                chunk_l2_priority_map[target].append(tmpl)
+                idx = (idx + 1) % len(l2_candidates)
+
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
         
@@ -220,7 +254,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         
         # Surfaces
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
-        # [FIX] Fill surface to ensure no uninitialized black void artifacts
         full_map_surface.fill((20, 100, 20)) 
         
         heat_map_surface = pygame.Surface((total_map_w, total_map_h))
@@ -257,6 +290,8 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             for gx in range(grid_w):
                 conns = connections_grid[gy][gx]
                 assigned_buildings = chunk_priority_map.get((gx, gy), [])
+                assigned_l2 = chunk_l2_priority_map.get((gx, gy), [])
+                
                 is_center_chunk = (gx == start_gx and gy == start_gy)
                 is_military_chunk = (gx, gy) == military_chunk_coord
                 is_urban = (gx, gy) in urban_coords or is_military_chunk or len(assigned_buildings) > 0
@@ -267,6 +302,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 chunk_data = self._generate_chunk_data(gx, gy, conns, 
                                                        is_start=is_center_chunk, 
                                                        assigned_templates=assigned_buildings, 
+                                                       assigned_l2_templates=assigned_l2,
                                                        allow_buildings=is_urban,
                                                        force_forest=False) 
                 
@@ -339,7 +375,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             preview_size = (new_w, new_h)
 
             # L1
-            # [FIX] Use scale instead of smoothscale for better reliability on large surfaces
             small_map_surface = pygame.transform.scale(full_map_surface, preview_size)
             pygame.image.save(small_map_surface, os.path.join(self.output_folder, "full_map.jpg"))
             small_heat_surface = pygame.transform.scale(heat_map_surface, preview_size)

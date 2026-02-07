@@ -4,7 +4,7 @@ import pygame
 from core.data.config import *
 
 class ProceduralGeneratorChunk:
-    def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, allow_buildings=True, force_forest=False):
+    def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, assigned_l2_templates=None, allow_buildings=True, force_forest=False):
         w, h = self.chunk_size, self.chunk_size
         cx, cy = w // 2, h // 2
         
@@ -408,11 +408,9 @@ class ProceduralGeneratorChunk:
         # [UPDATED] L1 NPC SCATTER
         self._scatter_npcs(layers, occupied_mask, w, h)
 
-        # 10. Random L2 Spawning (Independent of L1)
-        if self.l2_templates:
-            # Try to spawn 3 random L2 templates per chunk
-            for _ in range(MAP_CHUNKS):
-                l2_name = random.choice(self.l2_templates)
+        # 10. Assigned L2 Spawning (Controlled)
+        if assigned_l2_templates:
+            for l2_name in assigned_l2_templates:
                 l2_tmpl = self.templates[l2_name]
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
                 
@@ -442,7 +440,7 @@ class ProceduralGeneratorChunk:
                             for lx in range(tx, tx + l2_w):
                                 occupied_mask_L2[ly][lx] = 1
                         placed_l2 = True
-                        print(f"Spawned Random L2 Template: {l2_name} at ({tx}, {ty})")
+                        print(f"Spawned Controlled L2 Template: {l2_name} at ({tx}, {ty})")
                         break
         
         # [NEW] DISTRIBUTE L2 NPCS - Using strict scatter method instead of candidate lists

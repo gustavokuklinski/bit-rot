@@ -33,7 +33,6 @@ def draw_game(game):
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
 
-    # [OPTIMIZATION] Cache the world view surface to avoid expensive reallocation every frame
     if not hasattr(game, 'cached_view_surface') or \
        game.cached_view_surface.get_width() != view_w or \
        game.cached_view_surface.get_height() != view_h:

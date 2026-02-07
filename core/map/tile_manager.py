@@ -99,7 +99,6 @@ class TileManager:
                                 if sound_node is not None:
                                     definition['sound_src'] = sound_node.get('src')
 
-                                # ... (Keep Car/Container logic unchanged) ...
                                 if root.get('type') == 'maptile_car':
                                     car_node = root.find('car')
                                     if car_node is not None:

@@ -22,10 +22,17 @@ class ProceduralGeneratorTemplate:
             'Heli': [],
             'Military': [],
             'Cave': [],
-            'Bunker': [],
+            #'Bunker': [], # L1 Bunker
         }
+        
+        # NEW: Categorized L2 Templates
+        self.categorized_l2_templates = {
+            'Bunker': [],
+            'Dungeon': [],
+        }
+        
         self.forest_templates = []
-        self.l2_templates = [] 
+        self.l2_templates = [] # Generic L2
 
         print("--- Template Discovery & Categorization ---")
         for name in self.templates.keys():
@@ -35,7 +42,18 @@ class ProceduralGeneratorTemplate:
             if "l2" in lower_name:
                 # FIX: Exclude Caves from random L2 pool so they only spawn via links
                 if "cave" not in lower_name:
-                    self.l2_templates.append(name)
+                    assigned_l2 = False
+                    # Categorize specific L2 types
+                    if "bunker" in lower_name:
+                        self.categorized_l2_templates['Bunker'].append(name)
+                        assigned_l2 = True
+                    elif "dungeon" in lower_name:
+                        self.categorized_l2_templates['Dungeon'].append(name)
+                        assigned_l2 = True
+                    
+                    # If not specific, add to generic pool
+                    if not assigned_l2:
+                        self.l2_templates.append(name)
                 continue # Do not add to L1 pools
 
             if name.startswith("Forest_"):
@@ -77,4 +95,8 @@ class ProceduralGeneratorTemplate:
 
         for cat, lst in self.categorized_templates.items():
             print(f"Category {cat}: Found {len(lst)} templates.")
-        print(f"L2 Specific Templates (Random Spawn): Found {len(self.l2_templates)} templates.")
+            
+        for cat, lst in self.categorized_l2_templates.items():
+            print(f"L2 Category {cat}: Found {len(lst)} templates.")
+            
+        print(f"L2 Generic Templates (Random Spawn): Found {len(self.l2_templates)} templates.")
