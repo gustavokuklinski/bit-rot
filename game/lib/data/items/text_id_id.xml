@@ -1,7 +1,7 @@
 <item name="ID" type="text">
     <properties>
         <sprite file="text_id_id.png" />
-        <weight weight="0.01"/>
+        <weight weight="0.1"/>
         <text>
             Name: [PLAYER NAME]
             Sex: [PLAYER SEX]

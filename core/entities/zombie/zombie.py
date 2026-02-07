@@ -60,17 +60,19 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.xp_value = random.uniform(template.get('min_xp'), template.get('max_xp'))
 
         self.images = {} # Use a dict to store multiple sprites
-        sprites_data = template.get('sprites', {}) # e.g., {'center': 'zombie.png', ...}
+        self.sprites_data = template.get('sprites', {}) # e.g., {'center': 'zombie.png', ...}
         
-        if sprites_data:
+        if self.sprites_data:
             # Load all sprites defined in the new XML structure
-            for sprite_id, sprite_file in sprites_data.items():
+            for sprite_id, sprite_file in self.sprites_data.items():
                 img = self.load_sprite(sprite_file)
                 if img:
                     self.images[sprite_id] = img
         else:
             # Fallback for old templates that might still use the single 'sprite' key
             old_sprite_file = template.get('sprite')
+            if old_sprite_file:
+                self.sprites_data = {'center': old_sprite_file, 'left': old_sprite_file, 'right': old_sprite_file}
             fallback_image = self.load_sprite(old_sprite_file)
             if fallback_image:
                 self.images['center'] = fallback_image

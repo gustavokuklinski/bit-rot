@@ -5,7 +5,7 @@
         <restore status="[stamina]" min="2" max="5" />
         <load min="1" max="6" />
         <capacity value="6" />
-        <weight weight="0.03"/>
+        <weight weight="0.1"/>
         <sprite file="consumable_food_chocolate_black.png" />
     </properties>
     <spawn chance="0" />

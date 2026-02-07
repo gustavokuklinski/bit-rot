@@ -3,7 +3,7 @@
         <reduce status="[infection]" min="1" max="5" />
         <load value="1" />
         <capacity value="10" />
-        <weight weight="0.01" />
+        <weight weight="0.1" />
         <sprite file="consumable_drugs_infection_pills.png" />
     </properties>
     <spawn chance="1" />

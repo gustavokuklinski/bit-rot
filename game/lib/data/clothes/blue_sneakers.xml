@@ -1,7 +1,7 @@
 <cloth name="Blue Sneakers" type="cloth" id="feet" builder="true">
     <properties>
         <defence value="0" />
-        <speed value="0" />
+        <weight weight="0.1" /> 
         <durability min="1" max="100" />
         <sprite file="blue_sneakers.png" />
     </properties>

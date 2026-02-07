@@ -1,7 +1,7 @@
 <item name="Scissor" type="weapon_melee">
     <properties>
         <durability min="1" max="100" />
-        <weight weight="0.05"/>
+        <weight weight="0.1"/>
         <damage min="1" max="2" />
         <skill type="melee" />
         <sprite file="weapon_melee_scissor.png" />

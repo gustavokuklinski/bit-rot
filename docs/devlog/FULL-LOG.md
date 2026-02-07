@@ -1,0 +1,173 @@
+## Devlog
+- [x] Add: Create lootable containers on map
+- [x] Add: Add utility consumable item: Lantern consume matches
+- [x] Add: Clothes durability and defence
+- [x] Add: Add the Wallet slot
+- [x] Add: Create a player view 360 radius
+- [x] Add: Build day/night system
+- [x] Add: FoW (Fog of War) mechanism
+- [x] Add: Stackable items in inventory and container
+- [x] Add: new tab to inventory: Gear to display clothes
+- [x] Add: Player press ALT to Run
+- [x] Add: the defence bar to player Status (based on player Gear)
+- [x] Add: New mobile utility with charger (clock, minimap)
+- [x] Add: Display next level skill needed on hover
+- [x] Add: New item type="skill"
+- [x] Add: Tooltip for Skill values
+- [x] Fix: Ajust dynamic 'Nearby' lootable containers
+- [x] Fix: Ajust the walk controls: W/A goes fast, S/D goes slow
+- [x] Fix: Added scrool to messages
+- [x] Fix: Set the default open modals (Inventory and Nearby)
+- [x] Fix: Modals have default start alignment
+- [x] Fix: Modals have keybindings
+- [x] Fix: map boundaries, width/height Projectiles
+- [x] Fix: When cloth is not on correct slot, desapear
+- [x] Fix: Allow player drop only 1 tile away
+- [x] Fix: Turn on/off mobile
+- [x] Fix: Drop from right-click not working
+- [x] Fix: Nearby is duplicating loot
+- [x] Fix: Player close door in the middle of tile
+- [x] Fix: the extra 'invcontainer' for typos: Ammo, Utilities, Containers, Mobile
+- [x] Fix: If press SHIFT+DRAG get only one item from stack
+- [x] Fix: Add minimap to Mobile
+- [x] Fix: Make the game screen ajustable
+- [x] Fix: Scrollbar on type=text
+- [x] Fix: Modals beneath looks like on top of another
+- [x] Fix: Tooltips appearing from beneath modals
+- [x] Fix: Player balance always set 100 XP for next level
+- [x] Fix: Items pattern for consuption
+- [x] Fix: Game low FPS for Zombie Spawns
+- [x] Add: New item 'reduce' to debuf points
+- [x] Add: Display weapon when CTRL is pressed (Melee show when attack)
+- [x] Fix: Separated categories for weapons in XML: weapon_ranged, weapon_melee
+- [x] Fix: New weapons sprites for better integration
+- [x] Add: Game sounds (For Zombies and some weapons)
+- [x] Bug/Fix: After change types weapon_ranged added weapon_melee skill
+- [x] Fix: Invested tireness, 100% = Rest / 0% = Tired
+- [x] Add: Added more traits
+- [x] Add: To play game traits must be balanced to 0 (Zero)
+- [x] Fix: Ajust the time for the gameplay on Mobile
+- [x] Add: Bed to sleep and restore tireness (can be uppon a bench to restore tireness)
+- [x] Add: Backpack is also a Tab on inventory
+- [x] Add: Allow selection of an Area
+- [x] Add: Game map size: 100x100 (Can be increased)
+- [x] Add: Add open/closed doors
+- [x] Add: Add a menu buttom to connect a layared map (Make it search the connection on the same map codes and place correctly)
+- [x] Display some map relation on boundaries in editor using the map pattern: ```map_L<NUM>_P0_<TOP>_<RIGHT>_<BOTTOM>_<LEFT>``` and add a button: ```Create new Map Section```
+- [x] Fix: map stairs spawn on wrong position
+- [x] Add: New chunked sized map of each 100x100 all together
+- [x] Add: New map Layer 1
+- [x] Add: Map Roofs
+- [x] Add more traits (tireness, anxiety)
+- [x] Add: Create a character builder (traits and char sprite)
+- [x] Add: Generate Player ID
+- [x] Fix: Add sex to player ID
+- [x] Fix: Fair game, player status uses percentages starting at 1%.
+- [x] Fix: Player balance percentages, buff/debuf
+- [x] Add: Zombies are random generated
+- [x] Add: Zombie timer respawn in config
+- [x] Fix: Zombie only spawn with timer (make a initial spawn)
+- [x] Fix: Distance of zombie radius attack
+- [x] Add: New zombie max value
+- [x] Add: Zombies only spawn on player proximity
+- [x] Bug/Fix: Zombies Spawn not working
+- [x] Fix: Zombies not spawning at chunk
+- [x] Fix: Zombies spawning on water on Layer 2 map
+- [x] Add: Game NPC: Marechal Sousa
+- [x] Add: Game NPC: Dr. Yu
+- [x] Add: Generate a game lore based on the story
+- [x] Add: Player can't walk/run while looting
+- [x] Add: Game NPCs
+- [x] Fix: Aiming angle weapon fix (inverted on left)
+- [x] Fix: Action loader when dragging
+- [x] Fix: Save/load NPC states and item state
+- [x] Fix: Map bug when start new game caching previous map - Seed world
+- [x] Fix: Nearby modal: 'Drop' not working (Removed)
+- [x] Fix: Save/load Vehicle state
+- [x] Fix: Vehicle zombie colider
+- [x] Fix: Balance vehicle Fuel and Power consuption
+- [x] Fix: Stackable item types like: Repair kits, Car Fuel and Currency
+- [x] Fix: Balanced looting timer between internal (inventory and backpack) <> external containers (nearby and containers) 
+- [x] Fix: Context menu 'place on backpack' removed
+- [x] Fix: Balance currency on wardrobes. Keep currency only on wallets (and zombie/npc drops)
+- [x] Fix: Vehicle start with <loot> table
+- [x] Fix: Tireness bug divided by Zero crash
+- [x] Add: On Vehicle use a new tag: <seats value="4"> as the number of available seats. Wrap it as a second column labeled as Seats with 2 columns and 2 rows on Vehicle Options modal context menu. First seat is always the driver Player.
+- [x] Fix: Game FPS slowing down due spawn.
+- [x] Fix: Player not consumming items like Medkit.
+- [x] Fix: Vehicle loot table bug (it was being hard coded)
+- [x] Add: NPC option on Settings menu
+- [x] Add: New setting to set the max number of map chunks
+- [x] Fix: Game settings are not being applied to the game from Settings screen
+- [x] Add: New Setting option to set single chunk size
+- [x] Add: Player spawn at a random map chunk
+- [x] Fix: Allow player to play on negative traits
+- [x] Fix: Spawn radius very close to the player
+- [x] Add: Set the max zombies spawns per map chunk
+- [x] Fix: Spawn radius very close to the player
+- [x] Add: Drop the current clothes
+- [x] Add: Player can attack NPC and NPC can fight back
+- [x] Add: Weapon spread pallets (Shotgun)
+- [x] Add: Set the max NPC spawns per map chunk
+- [x] Fix: Motor repair kit to fix vehicle motor
+- [x] Add: Item: 38 revolver, Ammo and SFX
+- [x] Fix: Remove the option 'Use' from consumable_repair items
+- [x] Fix: Added a tooltip list of repaiable items with type="consubable_repair"
+- [x] Fix: Show what Ammo ranged weapon requires on tooltip
+- [x] Add: Item: Machine gun MPK5
+- [x] Add: Cloth: Beret, Balacrava and Medical Mask face items
+- [x] Add: Game map island border like a big continent (coming back to the main game lore).
+- [x] Add: Item: Weapon Reloading sound
+- [x] Add: Items can have multiple reduce, restore player stats
+- [x] Add: Durabilitie as percentages
+- [x] Fix: Item tooltip signed (+ for Restore and - for Reduce)
+- [x] Add: Config menu to setup game presets
+- [x] Fix: Ajust settings layout design
+- [x] Fix: Updated game flash radius and smaller bullets for best visuals
+- [x] Fix: Config menu with naming conventions on XML name attribute for best user readbility
+- [x] Fix: Some parts of the code were breaking due missing imports
+- [x] Add: Save/Load game on F2
+- [x] Fix: Add a Back button to Player Creator
+- [x] Fix: Add a Menu button on Pause game
+- [x] Add: Right-Click allow player to aim
+- [x] Add: Panning aim camera
+- [x] Add: Replace Gear (Named 'Clothes') from Tab to it's own modal
+- [x] Add: Belt HUD on screen
+- [x] Fix: New game UI menus (best patterned)
+- [x] Add: Game 'moodles' on top to show player status
+- [x] Fix: Game fully darkness by duplicated values
+- [x] Fix: Game night is too much dark
+- [x] Fix: Pan camera deadzone
+- [x] Fix: Settings timming more user friendly functions (ui/helpers/settings.py)
+- [x] Fix: Invert scroll on messages modal
+- [x] Add: Separate messages modal in three tabs: CHAT (User speak) | ZOMBIE (Hits by Zombie) | PLAYER (Game level info) | ITEMS (Items info like: No bullets and infos)
+- [x] Bug: CTRL/L-Click+WASD make player walk slow
+- [x] Add: Aim reticle shrink speed over the Ranged level
+- [x] Add: Enable player to get ranged weapon bullets
+- [x] Fix: Allow the player to reload weapons even if not equiped
+- [x] Add: Player balance action
+- [x] Fix: Player XML traits
+- [x] Add: Generate Zombie ID
+- [x] Fix: Do not spawn zombies on water
+- [x] Add: Procedual mapping (Map editor is used only to create buildings)
+- [x] Add: Driveable car
+- [x] Fix: Some new performace fix
+- [x] Fix: World Seed box in settings
+- [x] Add: Game world creation loading screen
+- [x] Fix: Backpack context menu on top of everything
+- [x] Add: Game devlog
+- [x] Add: Player animation
+- [x] Add: Zombie animation
+- [x] Add: Vehicle speed grow and get fast
+- [x] Add: Vehicle damage hitting obstacle
+- [x] Add: Append the important player and zombies messages to Messages modal ```display_message("Replace print('messages')")```
+- [x] Bug: Save/load game chunks are not being rendered
+- [x] Bug: Game lights just spawn where player
+- [x] Add: Using itens add a time based on player speed, ex: using medkit, drinking water, reparing items. Every type of consumable have different usage timeout.
+- [x] Bug: Non stackable items crashed when try to put on top of each other
+- [x] Add: Auto save game when PAUSE (ESC or F2)
+- [x] Add: Vehicle SPACEBAR to break
+- [x] Add: Repairable item for motors (engine)
+- [x] Fix: Game performace on large game chunks
+- [x] Fix: Player View Radius as the same Fog of War
+- [x] Add: Player spawn at a random map chunk

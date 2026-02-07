@@ -2,6 +2,7 @@
     <properties>
         <defence value="0" />
         <sprite file="facial_chop.png" />
+        <weight weight="0.0" /> 
     </properties>
     <spawn chance="1" />
 </cloth>

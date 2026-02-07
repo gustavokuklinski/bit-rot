@@ -1,7 +1,7 @@
 <item name="Lighter Fluid" type="utility">
     <properties>
         <load min="1" max="50" />
-        <weight weight="0.2"/>
+        <weight weight="0.1"/>
         <capacity value="50" />
         <sprite file="utility_lighter_fluid.png" />
     </properties>

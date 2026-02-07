@@ -453,7 +453,7 @@ def load_game(game, save_folder_name):
                     'max_infection': z_data.get('max_infection', 1),
                     'loot': z_data.get('loot_table', []),
                     'clothes': z_data.get('clothes', {}), 
-                    'sprites': {}
+                    'sprites': z_data.get('sprites', {})
                 }
                 
                 z = Zombie(z_data['x'], z_data['y'], template)

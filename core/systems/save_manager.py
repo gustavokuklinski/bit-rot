@@ -172,7 +172,8 @@ def save_game(game):
                 "speed": getattr(z, 'speed', 1.0),
                 "loot_table": getattr(z, 'loot_table', []),
                 "inventory": safe_inventory,
-                "clothes": safe_clothes
+                "clothes": safe_clothes,
+                "sprites": getattr(z, 'sprites_data', {})
             }
             zombie_data.append(z_entry)
 

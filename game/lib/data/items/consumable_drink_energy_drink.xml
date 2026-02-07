@@ -5,7 +5,7 @@
         <restore status="[stamina]" min="3" max="8" />
         <load value="1" />
         <capacity value="5" />
-        <weight weight="0.03"/>
+        <weight weight="0.1"/>
         <sprite file="consumable_drink_energy_drink.png" />
     </properties>
     <spawn chance="1" />

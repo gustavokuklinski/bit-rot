@@ -11,8 +11,14 @@ class PlayerActions:
             return False
 
         UNIT_TIME = 60
-        speed_lvl = self.progression.get_speed(self)
-        speed_factor = 1.0 / (1.0 + (speed_lvl * 0.1)) 
+        
+        # [UPDATED] Replaced legacy 'get_speed' with XML derived bonus
+        # This looks for 'action_agility_bonus' in progression.xml
+        # Example: Level 1 Agility * 0.1 value = 0.1 bonus
+        _, agility_bonus = self.progression.get_derived_bonus("action_agility_bonus")
+        
+        # Formula: 1.0 / (1.0 + 0.1) = 0.909 (approx 9% faster)
+        speed_factor = 1.0 / (1.0 + agility_bonus) 
         
         total_duration = int(UNIT_TIME * base_duration_mult * speed_factor)
         
