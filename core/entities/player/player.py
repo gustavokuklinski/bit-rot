@@ -152,6 +152,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.dead_image = self._load_sprite(self.visuals.get('dead_sprite', 'dead.png'))
         self.last_shot_time = 0
         self.is_resting = False
+        self.action_xp_attr = 'agility'
 
     @property
     def current_weight(self):
@@ -191,7 +192,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     self.action_callback()
                     self.action_callback = None
                     if self.action_xp_reward > 0:
-                        self.progression.add_agility_xp(self, self.action_xp_reward)
+                        self.progression.add_xp(self, self.action_xp_attr, self.action_xp_reward)
                 self.action_name = ""
             return False
 

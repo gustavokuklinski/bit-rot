@@ -12,15 +12,17 @@ class PlayerActions:
 
         UNIT_TIME = 60
         
-        # [UPDATED] Replaced legacy 'get_speed' with XML derived bonus
-        # This looks for 'action_agility_bonus' in progression.xml
-        # Example: Level 1 Agility * 0.1 value = 0.1 bonus
-        _, agility_bonus = self.progression.get_derived_bonus("action_agility_bonus")
+        # Calculate transfer timer based on Agility
+        # Default (Level 0): 5.0 seconds
+        # Max (Level 10): 1.0 second
+        agility = self.attributes.get('agility', 0.0)
+        agility = max(0.0, min(10.0, agility))
         
-        # Formula: 1.0 / (1.0 + 0.1) = 0.909 (approx 9% faster)
-        speed_factor = 1.0 / (1.0 + agility_bonus) 
+        # Linear interpolation: 5.0s at 0 -> 1.0s at 10
+        # Slope = (1.0 - 5.0) / 10 = -0.4
+        base_seconds = 5.0 - (0.4 * agility)
         
-        total_duration = int(UNIT_TIME * base_duration_mult * speed_factor)
+        total_duration = int(UNIT_TIME * base_seconds * base_duration_mult)
         
         self.action_timer = total_duration
         self.action_total_time = total_duration
@@ -283,7 +285,7 @@ class PlayerActions:
             else:
                  display_message_player(f"You reviewed {item.name}.")
 
-        self.start_action(f"Reading {item.name}", 3.0, finish_reading)
+        self.start_action(f"Reading {item.name}", 3.0, finish_reading, xp_attr='intelligence')
 
     def find_repair_kit(self, target_item):
         if not target_item: return None, None, None, None

@@ -194,7 +194,11 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     spr_node = props_node.find('sprite')
                     if spr_node is not None:
                         template['properties']['sprite'] = {'file': spr_node.attrib.get('file')}
-                
+
+                    weight_node = props_node.find('weight')
+                    if weight_node is not None:
+                        template['properties']['weight'] = {k: v for k, v in weight_node.attrib.items()}
+                        
                 if name in ITEM_TEMPLATES:
                     print(f"Warning: Duplicate item/cloth name '{name}'")
                 ITEM_TEMPLATES[name] = template
