@@ -1,5 +1,8 @@
 <?xml version="1.0" ?>
 <config>
+    <ui>
+        <ui_background_music value="true"/>
+    </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 900000)"/>
         <time_sunrise_hr value="5.5" name="Time sunrise (Default: 5.5)"/>
@@ -73,7 +76,7 @@
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="10" name="Player detection tiles (Default: 100)"/>
+        <zombie_detection_radius value="10" name="Player detection tiles (Default: 10)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>

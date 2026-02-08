@@ -31,7 +31,7 @@
             <effect target="xp_gain" value="0.02" type="multiplier_add" />
         </attribute>
 
-        <attribute id="intelligence" name="Intelligence" base_xp="300">
+        <attribute id="intelligence" name="Intelligence" image="ui/intelligence.png" base_xp="300">
             <effect target="reading_speed" value="0.4" type="flat" />
             <effect target="crafting_speed" value="0.2" type="flat" />
             <effect target="xp_gain" value="0.01" type="multiplier_add" />

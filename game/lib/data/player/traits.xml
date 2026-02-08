@@ -1,7 +1,17 @@
 <traits>
-    <trait id="nurse" name="Nurse" cost="3" tooltip="Known basic medical reciples">
+
+    <trait id="Profession_Unemployed" name="Profession Unemployed" cost="1" tooltip="" disable="[Profession_Nurse, Profession_Police_Officer]">
+        <attributes level="[strength:5, fitness:5, agility: 5]" />
+    </trait>
+    <trait id="Profession_Nurse" name="Profession Nurse" cost="1" tooltip="" disable="[Profession_Unemployed, Profession_Police_Officer]">
+        <attributes level="[strength:5, fitness:5, agility: 5, intelligence: 3, lucky: 1]" />
         <recipe magazine="Medicine Vol.1" />
     </trait>
+    <trait id="Profession_Police_Officer" name="Profession Police Officer" cost="1" tooltip="" disable="[Profession_Unemployed, Profession_Nurse]">
+        <attributes level="[strength:5, fitness:5, agility: 3, ranged: 3, lucky: 2]" />
+    </trait>
+
+
 
     <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% infection rate">
         <stats infection="-5" />

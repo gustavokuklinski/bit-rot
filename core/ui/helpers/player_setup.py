@@ -1084,9 +1084,15 @@ def run_player_setup(game):
                     preset_name = state.get('selected_config_preset', 'default')
                     save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
                     core.data.config.load_settings(preset_name)
-                    # Switch back to Player tab
-                    # The settings data is already in state['settings_data'] 
-                    # and will be picked up by start_new_game when the user clicks START.
+                    
+                    if core.data.config.UI_BACKGROUND_MUSIC:
+                        # If music should be on but isn't playing, start it
+                        if not pygame.mixer.music.get_busy():
+                            game.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=0.2)
+                    else:
+                        # If music should be off, stop it
+                        pygame.mixer.music.stop()
+
                     state['current_tab'] = 'Player'
                     print("Settings applied. Returning to Player Builder.")
 

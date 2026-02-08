@@ -164,6 +164,9 @@ class Game:
 
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.sound_manager = SoundManager()
+        
+        if core.data.config.UI_BACKGROUND_MUSIC:
+            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=0.2)
 
         self.world_min_x = 0
         self.world_min_y = 0

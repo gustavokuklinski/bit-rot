@@ -156,6 +156,7 @@ VEH_HAS_KEY = 1.0
 VEH_HAS_MOTOR = 1.0
 VEH_HAS_BATTERY = 1.0
 MAP_CHUNKS = 0
+UI_BACKGROUND_MUSIC = True
 
 def generate_random_seed(chunks=None):
     """Generates a formatted seed string: 'CHUNKS-HASH'."""
@@ -190,7 +191,7 @@ def load_settings(preset="default"):
     global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
-
+    global UI_BACKGROUND_MUSIC
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -295,7 +296,9 @@ def load_settings(preset="default"):
         VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value'))
         VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value'))
         
-        
+        ui_config = root.find('ui')
+        val_music = ui_config.find('ui_background_music').get('value')
+        UI_BACKGROUND_MUSIC = str(val_music).lower() == 'true'
 
         print(f"Configuration loaded from {filepath}")
 

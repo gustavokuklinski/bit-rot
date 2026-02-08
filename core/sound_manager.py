@@ -36,14 +36,13 @@ class SoundManager:
             print(f"Warning: Could not load sound '{name}' from '{full_path}': {e}")
             return False
 
-    # [START MODIFICATION]
+
     def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0):
         """
         Plays a sound by its name. Loads it if not already loaded.
         'subdir' specifies the subfolder within SOUND_PATH (e.g., 'zombie' or 'items').
         'game' and 'source_pos' are used to calculate spatial audio.
         """
-    # [END MODIFICATION]
         
         if not name: # Don't try to play None or empty string
             return
@@ -138,3 +137,17 @@ class SoundManager:
         channel.play(sound, loops=loops)
 
         return channel
+    
+    def play_music(self, path, volume=0.5, loops=-1):
+        """
+        Plays background music using pygame.mixer.music (streaming).
+        """
+        try:
+            if os.path.exists(path):
+                pygame.mixer.music.load(path)
+                pygame.mixer.music.set_volume(volume)
+                pygame.mixer.music.play(loops)
+            else:
+                print(f"Warning: Music file not found at '{path}'")
+        except pygame.error as e:
+            print(f"Warning: Could not load music '{path}': {e}")
