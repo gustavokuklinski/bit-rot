@@ -153,6 +153,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.last_shot_time = 0
         self.is_resting = False
         self.action_xp_attr = 'agility'
+        self.saved_detection_radius = None
 
     @property
     def current_weight(self):
@@ -213,6 +214,24 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         tile = game.map_manager.get_tile_at(grid_x, grid_y)
         
         is_active_resting = (tile and tile.get('rest')) or self.is_resting
+
+        is_sleeping_or_resting = self.is_sleeping or is_active_resting
+        
+        # Entering sleep state
+        if is_sleeping_or_resting and self.saved_detection_radius is None:
+            # Save the current 'real' radius
+            self.saved_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
+            # Set to ZOMBIE_MULTIPLIER * 2 (very small/stealthy)
+            core.data.config.ZOMBIE_DETECTION_RADIUS = core.data.config.ZOMBIE_DETECTION_RADIUS * core.data.config.ZOMBIE_MULTIPLIER
+            # Optional: Log for debugging
+            print(f"Stealth Mode: Radius set to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
+
+        # Exiting sleep state
+        elif not is_sleeping_or_resting and self.saved_detection_radius is not None:
+            # Restore the 'real' radius (which might have increased if day passed)
+            core.data.config.ZOMBIE_DETECTION_RADIUS = self.saved_detection_radius
+            self.saved_detection_radius = None
+            print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
         if not self.is_sleeping and not is_active_resting:
             self.tireness = min(self.max_tireness, self.tireness - 0.002)

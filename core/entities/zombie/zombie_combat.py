@@ -32,8 +32,10 @@ class ZombieCombat:
             # It's a Player or Entity with complex health
             target_entity.take_durability_damage(damage, game)
             
-            # [MODIFIED] Intelligent targeting: Find vulnerable part
-            target_part = target_entity.get_vulnerable_part()
+            parts = ['head', 'feet', 'arms', 'body','hand','legs']
+            # Optional: You can use weighted choice if you want legs to be hit less/more often
+            # target_part = random.choices(parts, weights=[10, 30, 30, 30], k=1)[0]
+            target_part = random.choice(parts)
             
             total_defence = target_entity.get_total_defence() # Or part-specific defence if calculated inside player
             damage_reduction = 1.0 - (total_defence / 100.0)

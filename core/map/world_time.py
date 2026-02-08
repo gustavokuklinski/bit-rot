@@ -83,6 +83,26 @@ class WorldTime:
         if self.game_time_ms >= self.day_length_ms:
             self.game_time_ms %= self.day_length_ms
             self.day_count += 1
+
+            z_mult = core.data.config.ZOMBIE_MULTIPLIER * self.day_count
+            
+            # 1. Double/Triple Spawn Count
+            core.data.config.ZOMBIES_PER_SPAWN *= z_mult
+            
+            # 2. Double/Triple Infection Chance
+            core.data.config.ZOMBIE_INFECTION_CHANCE *= z_mult
+            
+            # 3. Double/Triple Detection Radius
+            # Check if player is currently sleeping (radius is overridden)
+            if hasattr(self.game.player, 'saved_detection_radius') and self.game.player.saved_detection_radius is not None:
+                # Multiply the saved base value so it applies when they wake up
+                self.game.player.saved_detection_radius *= z_mult
+            else:
+                # Multiply the active value directly
+                core.data.config.ZOMBIE_DETECTION_RADIUS *= z_mult
+            
+            print(f"Day {self.day_count} Complete. Difficulty Increased (x{z_mult})!")
+            display_message(self.game, f"The horde grows stronger... (Day {self.day_count})")
             
         # Calculate current game hour (0.0 - 24.0)
         exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0

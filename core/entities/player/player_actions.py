@@ -13,14 +13,14 @@ class PlayerActions:
         UNIT_TIME = 60
         
         # Calculate transfer timer based on Agility
-        # Default (Level 0): 5.0 seconds
+        # Default (Level 0): 3.0 seconds
         # Max (Level 10): 1.0 second
         agility = self.attributes.get('agility', 0.0)
         agility = max(0.0, min(10.0, agility))
         
-        # Linear interpolation: 5.0s at 0 -> 1.0s at 10
-        # Slope = (1.0 - 5.0) / 10 = -0.4
-        base_seconds = 5.0 - (0.4 * agility)
+        # Linear interpolation: 3.0s at 0 -> 1.0s at 10
+        # Slope = (1.0 - 3.0) / 10 = -0.2
+        base_seconds = 3.0 - (0.2 * agility)
         
         total_duration = int(UNIT_TIME * base_seconds * base_duration_mult)
         
