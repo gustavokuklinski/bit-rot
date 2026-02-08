@@ -1,74 +1,77 @@
 <progression>
     <attributes>
-        <attribute id="strength" name="Strength" image="ui/strength.png" base_xp="500">
-            <effect target="unarmed_damage" value="0.01" type="multiplier_add" />
+        <attribute id="strength" name="Strength" image="ui/strength.png" base_xp="750">
+            <effect target="unarmed_damage" value="0.05" type="multiplier_add" />
+            <effect target="carry_weight" value="1.5" type="flat" />
         </attribute>
 
-        <attribute id="fitness" name="Fitness" image="ui/fitness.png" base_xp="500">
-            <effect target="stamina_regen" value="0.01" type="flat" />
+        <attribute id="fitness" name="Fitness" image="ui/fitness.png" base_xp="750">
+            <effect target="stamina_regen" value="0.02" type="flat" />
         </attribute>
 
-        <attribute id="melee" name="Melee"  image="ui/melee.png" base_xp="100">
-            <effect target="melee_damage" value="0.01" type="multiplier_add" />
-            <effect target="durability_save_chance_minor" value="1.0" type="flat" />
+        <attribute id="melee" name="Melee"  image="ui/melee.png" base_xp="200">
+            <effect target="melee_damage" value="0.05" type="multiplier_add" />
+            <effect target="durability_save_chance_minor" value="2.0" type="flat" />
         </attribute>
 
-        <attribute id="ranged" name="Aiming" image="ui/range.png" base_xp="100">
-            <effect target="ranged_damage" value="0.01" type="multiplier_add" />
-            <effect target="headshot_chance" value="0.004" type="flat" />
+        <attribute id="ranged" name="Aiming" image="ui/range.png" base_xp="200">
+            <effect target="ranged_damage" value="0.05" type="multiplier_add" />
+            <effect target="headshot_chance" value="0.015" type="flat" />
         </attribute>
 
-        <attribute id="maintenance" name="Maintenance" image="ui/maintenance.png" base_xp="100">
-            <effect target="durability_save_chance" value="1.0" type="flat" />
+        <attribute id="maintenance" name="Maintenance" image="ui/maintenance.png" base_xp="150">
+            <effect target="durability_save_chance" value="2.5" type="flat" />
         </attribute>
 
-        <attribute id="agility" name="Agility" image="ui/agility.png" base_xp="100">
-            <effect target="stamina_consumption_reduction" value="0.01" type="flat" />
+        <attribute id="agility" name="Agility" image="ui/agility.png" base_xp="200">
+            <effect target="stamina_consumption_reduction" value="0.03" type="flat" />
         </attribute>
 
-        <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="100">
+        <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="300">
+            <effect target="xp_gain" value="0.02" type="multiplier_add" />
+        </attribute>
+
+        <attribute id="intelligence" name="Intelligence" base_xp="300">
+            <effect target="reading_speed" value="0.4" type="flat" />
+            <effect target="crafting_speed" value="0.2" type="flat" />
             <effect target="xp_gain" value="0.01" type="multiplier_add" />
+            <effect target="durability_save_chance" value="0.5" type="flat" />
         </attribute>
-
-        <attribute id="intelligence" name="Intelligence" image="ui/intelligence.png"  base_xp="100">
-            <effect target="xp_gain" value="0.01" type="multiplier_add" />
-        </attribute>
-
     </attributes>
 
     <stats>
         <stat id="stamina">
-            <param name="regen_base" value="0.03" />
-            <param name="run_cost_base" value="0.05" />
+            <param name="regen_base" value="0.02" />
+            <param name="run_cost_base" value="0.12" />
         </stat>
 
         <stat id="health">
-            <param name="regen_base" value="0.01" />
-            <param name="infection_regen_divisor" value="25.0" />
+            <param name="regen_base" value="0.005" />
+            <param name="infection_regen_divisor" value="50.0" />
         </stat>
 
         <stat id="tireness">
-            <param name="night_decay" value="-0.003" />
-            <param name="day_recovery" value="0.002" />
-            <param name="stamina_penalty" value="-0.001" />
-            <param name="run_penalty" value="-0.002" />
+            <param name="night_decay" value="-0.002" />
+            <param name="day_recovery" value="0.001" />
+            <param name="stamina_penalty" value="-0.005" />
+            <param name="run_penalty" value="-0.005" />
         </stat>
 
         <stat id="anxiety">
-            <param name="horde_gain" value="0.005" />
-            <param name="passive_gain" value="0.001" />
+            <param name="horde_gain" value="0.02" />
+            <param name="passive_gain" value="0.002" />
         </stat>
 
         <stat id="infection">
-            <param name="passive_gain" value="0.0005" />
+            <param name="passive_gain" value="0.002" />
             <param name="death_threshold" value="100.0" />
         </stat>
     </stats>
 
     <healing_rates>
-        <part name="hand" rate="0.05" />
-        <part name="arms" rate="0.05" />
-        <part name="legs" rate="0.02" />
+        <part name="hand" rate="0.02" />
+        <part name="arms" rate="0.02" />
+        <part name="legs" rate="0.01" />
         <part name="feet" rate="0.005" />
         <part name="head" rate="0.005" />
         <part name="body" rate="0.005" />

@@ -6,13 +6,14 @@ import core.data.config
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
 from core.map.world_layers import set_active_layer
+# [NEW] Import the definitions to access dynamic config modifiers
+from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 keys_held = {}
 def handle_movement(game):
     if game.player.is_sleeping:
         return
     
-    # [FIX] Block movement if performing an action (looting, consuming, etc.)
     if game.player.action_timer > 0:
         game.player.vx = 0
         game.player.vy = 0
@@ -25,10 +26,8 @@ def handle_movement(game):
         game.player.is_running = False
         return
 
-    # [ADDED] Block movement if any modal has an active search bar (e.g. Crafting)
     for modal in game.modals:
         if 'instance' in modal:
-            # Check if the modal instance has 'search_active' set to True
             if getattr(modal['instance'], 'search_active', False):
                 game.player.vx = 0
                 game.player.vy = 0
@@ -42,6 +41,22 @@ def handle_movement(game):
         game.is_fast_forwarding = False
 
     mouse_buttons = pygame.mouse.get_pressed()
+    
+    # --- [MODIFIED] Dynamic Speed Calculation using XML Config ---
+    base_move_speed = core.data.config.PLAYER_SPEED
+    speed_multiplier = 1.0
+
+    # Iterate over player traits and apply 'PLAYER_SPEED' modifiers defined in XML
+    if game.player:
+        for trait_id in game.player.traits:
+            t_def = TRAIT_DEFINITIONS.get(trait_id)
+            if t_def and 'config_modifiers' in t_def:
+                # Look for a modifier specifically for PLAYER_SPEED
+                mod = t_def['config_modifiers'].get('PLAYER_SPEED')
+                if mod is not None:
+                    speed_multiplier *= mod
+
+    final_base_speed = base_move_speed * speed_multiplier
     current_speed = 0
 
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
@@ -50,13 +65,13 @@ def handle_movement(game):
     game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
 
     if game.player.stamina <= 0:
-        current_speed = core.data.config.PLAYER_SPEED / 3
+        current_speed = final_base_speed / 3
     elif is_running:
-        current_speed = core.data.config.PLAYER_SPEED
+        current_speed = final_base_speed
     elif game.player.is_aiming:
-        current_speed = core.data.config.PLAYER_SPEED / 3.5
+        current_speed = final_base_speed / 3.5
     else:
-        current_speed = core.data.config.PLAYER_SPEED / 2
+        current_speed = final_base_speed / 2
 
     dx, dy = 0, 0
     if keys[pygame.K_w] or keys[pygame.K_UP]:
@@ -68,7 +83,6 @@ def handle_movement(game):
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         dx += 1
 
-    # [OPTIMIZATION] Reduce Memory Churn: Only update facing_direction if changed
     new_facing = None
     if dx > 0: 
         new_facing = (1, 0)
@@ -82,15 +96,14 @@ def handle_movement(game):
     if new_facing is not None and new_facing != game.player.facing_direction:
         game.player.facing_direction = new_facing
 
-    # Normalize for diagonal movement
     if dx != 0 and dy != 0:
         dx /= math.sqrt(2)
         dy /= math.sqrt(2)
 
     game.player.vx = dx * current_speed
     game.player.vy = dy * current_speed
-    
 
+# ... (rest of handle_input remains unchanged) ...
 def handle_input(game):
 
     mouse_pos = game._get_scaled_mouse_pos()

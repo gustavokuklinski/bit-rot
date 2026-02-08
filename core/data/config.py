@@ -209,11 +209,6 @@ def load_settings(preset="default"):
         TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
         MAX_DARKNESS_OPACITY = int(game_config.find('day_night_cycle_darkness').get('value'))
 
-        try:
-            val_scale = game_config.find('resolution_scale').get('value')
-            RESOLUTION_SCALE = float(val_scale)
-        except (AttributeError, ValueError):
-            RESOLUTION_SCALE = 1.0
 
         START_ZOOM = float(game_config.find('zoom_start').get('value'))
         FAR_ZOOM = float(game_config.find('zoom_far').get('value'))
@@ -311,7 +306,7 @@ try:
     # Get the short hash (e.g., "a1b2c3d")
     GAME_VERSION =  "git+" + subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip() + "(main)"
 except Exception:
-    GAME_VERSION = "pre+Alpha(0.0.1)"
+    GAME_VERSION = "preview+Alpha(0.0.4)"
 
 # Initial load
 load_settings()

@@ -65,6 +65,11 @@ class PlayerProgression:
         base = self.get_level('agility')
         bonus_perc = self.get_total_attribute_bonus(player, 'agility')
         return base * (1 + (bonus_perc / 100.0))
+        
+    def get_intelligence(self, player):
+        base = self.get_level('intelligence')
+        bonus_perc = self.get_total_attribute_bonus(player, 'intelligence')
+        return base * (1 + (bonus_perc / 100.0))
 
     # --- BONUS CALCULATORS (Traits & Items) ---
 
@@ -158,13 +163,20 @@ class PlayerProgression:
         
         attr = self.attributes[attr_id]
         
-        # [CHANGED] Prevent gaining XP if already at max level (10)
+        # Prevent gaining XP if already at max level (10)
         if attr['level'] >= 10:
             return
 
-        # [MODIFIED] Removed modifier here. Raw amount is added.
-        # Modifier is now applied to the TARGET (xp_to_next_level).
-        final_gain = max(0, amount)
+        # [MODIFIED] Calculate Global XP Gain Multiplier (Intelligence, Luck, etc.)
+        # XML target: 'xp_gain' (multiplier_add)
+        mult_bonus, _ = self.get_derived_bonus('xp_gain')
+        
+        # Base multiplier is 1.0. 
+        # Example: Intelligence 5 (value 0.01) -> +0.05 bonus -> 1.05x multiplier
+        final_multiplier = 1.0 + mult_bonus
+        
+        # Apply the multiplier to the incoming amount
+        final_gain = max(0, amount * final_multiplier)
 
         attr['xp'] += final_gain
         
@@ -175,7 +187,7 @@ class PlayerProgression:
     def _level_up(self, player, attr):
         attr['level'] += 1
         attr['xp'] = 0
-        # [MODIFIED] Pass player to recalculate dynamic requirements
+        # Pass player to recalculate dynamic requirements
         attr['xp_to_next_level'] = self._calc_xp_req(attr['name'], attr['level'], player=player)
         
         # Get nice name for display
@@ -232,7 +244,6 @@ class PlayerProgression:
         trait_speed_mult = max(0.0, trait_speed_mult)
 
         # 2. Load Base Healing Rates from Config
-        # This now pulls from XML. If XML is missing, it falls back to a default dict.
         part_rates = self.config.healing_rates
         
         # 3. Calculate Infection Penalty
@@ -267,6 +278,7 @@ class PlayerProgression:
             if player.health < health_cap:
                 rate = 0.01 * trait_speed_mult * infection_penalty
                 player.health = min(health_cap, player.health + rate)
+
     def update_anxiety(self, player, game):
         # 1. Calculate Zombies nearby
         nearby_zombies = 0
@@ -326,14 +338,9 @@ class PlayerProgression:
             gain = self.config.get_stat('infection', 'passive_gain', 0.0005)
             cap = self.config.get_stat('infection', 'death_threshold', 100.0)
             
-            # [NEW] Apply Trait Modifier (Resilient / Prone to Illness)
-            # Positive bonus means Resistance (LOWER infection gain)
+            # Apply Trait Modifier (Resilient / Prone to Illness)
             bonus_perc = self.get_infection_bonus(player)
-            
-            # Example: +20% Bonus -> 1.0 - 0.2 = 0.8 (80% infection rate)
             modifier = 1.0 - (bonus_perc / 100.0)
-            
-            # Safety clamp: Minimum 10% gain, maximum 500% gain
             modifier = max(0.1, min(5.0, modifier))
             
             player.infection += (gain * modifier)
@@ -350,7 +357,6 @@ class PlayerProgression:
         return True
 
     def get_melee_damage_multiplier(self, player):
-        # Replaces: 1 + (melee / 100.0)
         # Now: Base 1.0 + (Sum of all attribute effects targeting 'melee_damage')
         mult_bonus, flat_bonus = self.get_derived_bonus('melee_damage')
         
@@ -360,7 +366,6 @@ class PlayerProgression:
         return (base_multiplier * tireness_mod) + flat_bonus
 
     def get_unarmed_damage(self, player):
-        # Replaces: 1 + (strength / 100.0)
         mult_bonus, flat_bonus = self.get_derived_bonus('unarmed_damage')
         
         base_damage = 1.0 + mult_bonus
@@ -375,30 +380,24 @@ class PlayerProgression:
         return base_multiplier * tireness_mod
 
     def get_headshot_chance(self, player):
-        # Replaces: 0.1 + (ranged * 0.004)
         mult_bonus, flat_bonus = self.get_derived_bonus('headshot_chance')
         base_chance = 0.1 
         return base_chance + flat_bonus
 
     def get_stamina_consumption(self, is_running, player):
-        # Replaces: 0.08 * (1 - speed/100)
-        
         base_run_cost = self.config.get_stat('stamina', 'run_cost_base', 0.08)
         base = base_run_cost if is_running else 0.0
         
-        # Look for attributes that reduce consumption (e.g. Speed)
-        # XML Effect target: 'stamina_consumption_reduction'
+        # Look for attributes that reduce consumption (e.g. Speed/Agility)
         mult_red, flat_red = self.get_derived_bonus('stamina_consumption_reduction')
         
         # If speed level 5 gives 0.05 reduction: 1 - 0.05 = 0.95 multiplier
         modifier = max(0.1, 1.0 - flat_red) 
 
         # --- Overweight Penalty ---
-        # consume more stamina based on the percentage of overweight carriage
         if hasattr(player, 'max_carry_weight') and player.max_carry_weight > 0:
             weight_ratio = player.current_weight / player.max_carry_weight
             if weight_ratio > 1.0:
-                # Example: 150% weight -> 1.5 multiplier to stamina cost
                 base *= weight_ratio
         
         return base * modifier
@@ -408,7 +407,6 @@ class PlayerProgression:
         base_regen = self.config.get_stat('stamina', 'regen_base', 0.03)
         
         # Attribute Bonuses (Fitness)
-        # XML Effect target: 'stamina_regen' (flat add)
         mult, flat = self.get_derived_bonus('stamina_regen')
         
         # Trait Bonuses (Athletic)
@@ -420,6 +418,7 @@ class PlayerProgression:
     def get_weapon_durability_loss(self, player):
         # XML Effect target: 'durability_save_chance'
         # e.g., Maintenance gives 1.0 (1%) per level
+        # e.g., Intelligence gives 0.5 (0.5%) per level
         _, save_chance = self.get_derived_bonus('durability_save_chance')
         
         if random.uniform(0, 100) < save_chance:

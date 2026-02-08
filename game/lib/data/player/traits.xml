@@ -3,13 +3,17 @@
         <recipe magazine="Medicine Vol.1" />
     </trait>
 
-    <!-- Positive traits -->
     <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% infection rate">
         <stats infection="-5" />
     </trait>
 
-    <trait id="athletic" name="Athletic" cost="2" tooltip="+10% stamina recovery">
+    <trait id="athletic" name="Athletic" cost="2" tooltip="+10% stamina recovery, +5% Speed">
         <stats stamina="10" />
+        <config set="PLAYER_SPEED:1.05" />
+    </trait>
+
+    <trait id="runner" name="Runner" cost="3" tooltip="+15% Speed">
+        <config set="PLAYER_SPEED:1.15" />
     </trait>
 
     <trait id="strong" name="Strong" cost="2" tooltip="+5 Level and +2% XP on Strength | +2 Level and +1% XP on Fitness" disable="[fit, weak]">
@@ -20,8 +24,12 @@
         <attributes lucky="2" level="[lucky: 1]" />
     </trait>
 
-    <trait id="runner" name="Runner" cost="2" tooltip="+2% XP level agility">
-        <attributes agility="2" />
+    <trait id="light_hands" name="Light hands" cost="2" tooltip="+2% XP and +3 level Agility">
+        <attributes agility="2"  level="[agility: 3]" />
+    </trait>
+
+    <trait id="eagle_eyed" name="Eagle Eyed" cost="2" tooltip="+25% Vision Radius" disable="[myopia]">
+         <config set="BASE_PLAYER_VIEW_RADIUS:1.25" />
     </trait>
 
     <trait id="healthy" name="Healthy"  cost="2" tooltip="+15% health recovery">
@@ -44,7 +52,7 @@
         <attributes fitness="2" />
     </trait>
 
-    <trait id="brawler" name="Browler" cost="2" tooltip="+2% XP level melee">
+    <trait id="brawler" name="Brawler" cost="2" tooltip="+2% XP level melee">
         <attributes melee="2" />
     </trait>
 
@@ -52,13 +60,8 @@
         <attributes ranged="2" level="[ranged:2]" />
     </trait>
 
-    <!-- Negative traits -->
     <trait id="weak" name="Weak" cost="-2" tooltip="-2% XP level strength gain">
         <attributes strength="-2" />
-    </trait>
-
-    <trait id="unlucky" name="Unlucky" cost="-2" tooltip="-1% XP level lucky gain">
-        <attributes lucky="-1" />
     </trait>
 
     <trait id="smoker" name="Smoker" cost="-1" tooltip="-15% slower recovery stamina and +15% faster increase anxiety">
@@ -74,13 +77,15 @@
         <stats infection="15" />
     </trait>
 
-    <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-15% stamina, +15% tireness and -2% level strength gain">
+    <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-15% stamina, +15% tireness, -10% Speed">
         <stats stamina="-15" tireness="15" />
         <attributes strength="-1" />
+        <config set="PLAYER_SPEED:0.90" />
     </trait>
 
-    <trait id="myopia" name="Myopia" cost="-1" tooltip="-10% XP ranged penality" >
+    <trait id="myopia" name="Myopia" cost="-2" tooltip="-20% Aiming XP, -35% View Radius" disable="[eagle_eyed]" >
         <attributes ranged="-10" />
+        <config set="BASE_PLAYER_VIEW_RADIUS:0.65" />
     </trait>
 
     <trait id="frail" name="Frail" cost="-2" tooltip="-15% health recovery">
@@ -103,8 +108,9 @@
         <attributes fitness="-2" />
     </trait>
 
-    <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% XP melee level">
+    <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% XP melee level, -5% Speed">
         <attributes melee="-2" />
+        <config set="PLAYER_SPEED:0.95" />
     </trait>
 
 </traits>

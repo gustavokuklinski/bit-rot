@@ -4,6 +4,7 @@ import uuid
 import glob
 import os
 import math
+import core.data.config
 from core.data.config import *
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
@@ -22,6 +23,8 @@ from core.ui.helpers.start_loading import draw_loading_screen
 from core.logger import GameLogger
 from core.ui.tooltip import draw_tooltip
 from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population
+# [NEW] Import traits definitions
+from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 # Imported Systems
 from core.systems.save_manager import save_game
@@ -31,7 +34,9 @@ from core.systems.utils import (
     find_nearby_containers, screen_to_world, get_player_facing_tile
 )
 
+# ... (Game class definition remains the same until run_playing) ...
 class Game:
+    # ... (init and other methods unchanged) ...
     def __init__(self):
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
@@ -535,6 +540,21 @@ class Game:
         self.world_time.update()
         handle_input(self)
         update_game_state(self)
+        
+        # [NEW] Dynamic Attribute Updates via XML Config
+        if self.player:
+            base_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS
+            radius_mult = 1.0
+
+            # Iterate over traits and apply 'BASE_PLAYER_VIEW_RADIUS' modifiers
+            for trait_id in self.player.traits:
+                t_def = TRAIT_DEFINITIONS.get(trait_id)
+                if t_def and 'config_modifiers' in t_def:
+                    mod = t_def['config_modifiers'].get('BASE_PLAYER_VIEW_RADIUS')
+                    if mod is not None:
+                        radius_mult *= mod
+
+            self.player_view_radius = base_radius * radius_mult
         
         self.npc_spawn_timer += 1
         if self.npc_spawn_timer >= 30:
