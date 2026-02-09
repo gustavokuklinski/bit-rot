@@ -42,7 +42,7 @@
     <stats>
         <stat id="stamina">
             <param name="regen_base" value="0.02" />
-            <param name="run_cost_base" value="0.12" />
+            <param name="run_cost_base" value="0.03" />
         </stat>
 
         <stat id="health">

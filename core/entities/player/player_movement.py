@@ -87,21 +87,61 @@ class PlayerMovement:
                 
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
 
+            # Move the vehicle (handles wall collisions)
             self.vehicle.move(move_x, move_y, obstacles)
             
             vehicle_rect = self.vehicle.rect
+            
+            # --- ZOMBIE ROADKILL LOGIC ---
+            # Explicitly check collision with zombies and KILL them if hit
             for zombie in zombies[:]: 
                 if vehicle_rect.colliderect(zombie.rect):
-                    damage_to_zombie = 1000
-                    zombie.take_damage(damage_to_zombie, game)
+                    self.vehicle.damage_motor(1.5)
+                    # Massive damage to ensure instant kill
+                    damage_to_zombie = 2
+                    
+                    # Apply damage. take_damage returns True if health <= 0
+                    if zombie.take_damage(damage_to_zombie, game):
+                        # IMPORTANT: Must call die() to spawn corpse and remove from list
+                        zombie.die(game)
+                        display_message_player(f"Roadkill! Zombie splattered.")
+                        
+                        # Add kill count if not handled inside die
+                        if hasattr(game, 'zombies_killed'):
+                            game.zombies_killed += 1
+                    
+                    # Slow down vehicle on impact
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 
+            # --- NPC ROADKILL LOGIC ---
+            if hasattr(game, 'npcs'):
+                # Handle both List and SpriteGroup safely
+                npcs_to_check = game.npcs.sprites() if hasattr(game.npcs, 'sprites') else game.npcs
+                
+                for npc in list(npcs_to_check):
+                    if not npc.is_dead and vehicle_rect.colliderect(npc.rect):
+                        self.vehicle.damage_motor(1.5)
+                        damage_to_npc = 2
+                        # Apply damage (attacker=self works because PlayerMovement is a Player mixin)
+                        is_dead = npc.take_damage(damage_to_npc, game, attacker=self)
+                        
+                        # Slow down vehicle
+                        self.vehicle.velocity[0] *= 0.5
+                        self.vehicle.velocity[1] *= 0.5
+                        
+                        if is_dead:
+                            # IMPORTANT: Must call die() for NPCs too
+                            npc.die(game)
+                            display_message_player(f"You ran over {npc.name}!")
+
+            # Sync player position to vehicle
             self.x = self.vehicle.x
             self.y = self.vehicle.y
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
+            # Standard Player Walking Movement (when not in vehicle)
             self.x += self.vx
             self.rect.x = round(self.x)
 

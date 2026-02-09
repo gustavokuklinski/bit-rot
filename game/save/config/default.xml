@@ -55,10 +55,10 @@
         <item_text_spawn_chance_multiplier value="1.0" name="Text (Default: 1.0)"/>
     </item_spawning>
     <vehicle>
-        <has_fuel_chance value="0.2" name="Car Fuel chance (Default: 0.2)"/>
-        <has_key_chance value="0.2" name="Car Key chance (Default: 0.2)"/>
-        <has_motor_chance value="0.2" name="Car Motor chance (Default: 0.2)"/>
-        <has_battery_chance value="0.2" name="Car Battery chance (Default: 0.2)"/>
+        <has_fuel_chance value="1.0" name="Car Fuel chance (Default: 0.2)"/>
+        <has_key_chance value="1.0" name="Car Key chance (Default: 0.2)"/>
+        <has_motor_chance value="1.0" name="Car Motor chance (Default: 0.2)"/>
+        <has_battery_chance value="1.0" name="Car Battery chance (Default: 0.2)"/>
     </vehicle>
     <npc>
         <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>

@@ -22,7 +22,8 @@
         <config set="PLAYER_SPEED:1.05" />
     </trait>
 
-    <trait id="runner" name="Runner" cost="3" tooltip="+15% Speed">
+    <trait id="runner" name="Runner" cost="3" tooltip="+5% stamina recovery, +15% Speed">
+        <stats stamina="5" />
         <config set="PLAYER_SPEED:1.15" />
     </trait>
 

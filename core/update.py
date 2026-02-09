@@ -67,22 +67,76 @@ def get_nearby_zombies(entity, grid, grid_size):
                 nearby_zombies.extend(grid[cell])
     return nearby_zombies
 
+def create_blood_splatter(game, target_rect, damage, direction_vector=None):
+    """
+    Generates blood stain particles on the ground.
+    """
+    if not hasattr(game, 'blood_stains'):
+        return
+
+    if direction_vector is None:
+        angle = random.uniform(0, math.pi * 2)
+        direction_vector = [math.cos(angle), math.sin(angle)]
+
+    trail_dir_x, trail_dir_y = direction_vector[0], direction_vector[1]
+    
+    mag = math.hypot(trail_dir_x, trail_dir_y)
+    if mag > 0:
+        trail_dir_x /= mag
+        trail_dir_y /= mag
+    
+    perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
+    
+    base_x, base_y = target_rect.centerx, target_rect.bottom
+    stain_size = 4 + int(damage / 6)
+    
+    for i in range(1, 7): 
+        offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
+        lateral_scatter = random.uniform(-8, 8) 
+        
+        stain_pos_x = base_x - (trail_dir_x * offset_pixels) 
+        stain_pos_y = base_y - (trail_dir_y * offset_pixels)
+
+        stain_pos_x += perp_dir_x * lateral_scatter
+        stain_pos_y += perp_dir_y * lateral_scatter
+        
+        stain_rect = pygame.Rect(stain_pos_x - 1, stain_pos_y - 1, 2, 2)
+        
+        collides_with_obstacle = False
+        if hasattr(game, 'cached_obstacle_grid'):
+            GRID_SIZE_CHECK = 128
+            nearby_obs = get_nearby_obstacles(stain_rect, game.cached_obstacle_grid, GRID_SIZE_CHECK)
+            if any(stain_rect.colliderect(obs) for obs in nearby_obs):
+                collides_with_obstacle = True
+        else:
+            if any(stain_rect.colliderect(obs) for obs in game.obstacles):
+                collides_with_obstacle = True
+        
+        if collides_with_obstacle:
+            continue
+
+        game.blood_stains.append({
+            'pos': (stain_pos_x, stain_pos_y),
+            'size': stain_size,
+            'color': (139, 0, 0), 
+            'time': pygame.time.get_ticks(),
+            'duration': random.randint(30000, 60000) 
+        })
+    
+    if len(game.blood_stains) > 250:
+        game.blood_stains = game.blood_stains[-250:]
+
 def update_game_state(game):
     
-    # Consolidate spatial grid initialization at the start.
     GRID_SIZE = 128
     
-    # --- 1. Obstacle Grid (Cache check) ---
     current_obstacle_count = len(game.obstacles)
     if not hasattr(game, 'cached_obstacle_grid') or getattr(game, 'cached_obstacle_count', -1) != current_obstacle_count:
         game.cached_obstacle_grid = build_obstacle_grid(game.obstacles, GRID_SIZE)
         game.cached_obstacle_count = current_obstacle_count
 
-    # 1.1 Update player movement using ONLY nearby obstacles
     nearby_player_obstacles = get_nearby_obstacles(game.player.rect, game.cached_obstacle_grid, GRID_SIZE)
     game.player.update_position(nearby_player_obstacles, game.zombies, game)
-
-    #check_for_layer_teleport(game)
 
     game.hovered_interactable_tile_rect = None 
     facing_x, facing_y = game.get_player_facing_tile()
@@ -92,15 +146,13 @@ def update_game_state(game):
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
     check_zombie_respawn(game)
-    check_dynamic_zombie_spawns(game, GRID_SIZE) # Pass Grid Size
+    check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):
         game.game_state = 'GAME_OVER'
 
-    # --- 2. Build Zombie Grid ---
     zombie_grid = build_zombie_grid(game.zombies, GRID_SIZE)
     
-    # --- Projectile update logic ---
     projectiles_to_remove = []
     zombies_to_remove = []
     
@@ -135,20 +187,16 @@ def update_game_state(game):
         if hit_zombie:
             owner = getattr(p, 'owner', None)
 
-            # Case 1: Player Projectile (Owner is None or explicitly Player)
             if owner is None or owner == game.player:
                 if player_hit_zombie(game.player, hit_zombie, game):
                     zombies_to_remove.append(hit_zombie)
-                    # Pass active_weapon so process_kill() triggers XP/stats
                     handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
-                    game.zombies_killed += 1 # Increment Player Kill Count
+                    game.zombies_killed += 1
             
-            # Case 2: NPC Projectile
             else:
-                damage = getattr(p, 'damage', 5) # Use damage stored on projectile by NPC
+                damage = getattr(p, 'damage', 5)
                 is_dead = hit_zombie.take_damage(damage, game, attacker=owner)
                 
-                # Add Hit Visual (Puff)
                 game.splashes.append({
                     'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom),
                     'time': pygame.time.get_ticks(),
@@ -157,10 +205,8 @@ def update_game_state(game):
 
                 if is_dead:
                     zombies_to_remove.append(hit_zombie)
-                    # [FIX] Pass weapon=None to skip player XP/Kill processing
                     handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, None)
                     
-                    # Add Death Visual (Burst)
                     game.splashes.append({
                         'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom), 
                         'time': pygame.time.get_ticks(),
@@ -171,11 +217,17 @@ def update_game_state(game):
         
         hit_npc = next((n for n in game.npcs if not n.is_dead and p.rect.colliderect(n.rect)), None)
         if hit_npc:
-             damage = getattr(p, 'damage', game.player.get_attack_damage()) # Use projectile damage if available
+             damage = getattr(p, 'damage', game.player.get_attack_damage())
              
-             # [NEW] Calculate Knockback for NPC
+             dx = hit_npc.rect.centerx - p.rect.centerx
+             dy = hit_npc.rect.centery - p.rect.centery
+             mag = math.hypot(dx, dy)
+             direction = [dx/mag, dy/mag] if mag > 0 else None
+             
+             create_blood_splatter(game, hit_npc.rect, damage, direction)
+
              if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
-                  knockback_force = getattr(game.player.active_weapon, 'knockback', 0) # Default 5 if not set
+                  knockback_force = getattr(game.player.active_weapon, 'knockback', 0)
                   
                   dx = hit_npc.rect.centerx - game.player.rect.centerx
                   dy = hit_npc.rect.centery - game.player.rect.centery
@@ -183,12 +235,13 @@ def update_game_state(game):
                   if dist > 0:
                       ndx, ndy = dx/dist, dy/dist
                       hit_npc.knockback_velocity = [ndx * knockback_force, ndy * knockback_force]
-                      hit_npc.knockback_timer = 200 # ms of knockback duration
+                      hit_npc.knockback_timer = 200
              
              is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
              display_message_player(f"You shot {hit_npc.name}")
              if is_dead:
                 display_message_player(f"You killed {hit_npc.name}!")
+                # NPC death cleanup happens in the main cleanup block below
              projectiles_to_remove.append(p)
              continue
 
@@ -205,32 +258,22 @@ def update_game_state(game):
     # --- Zombie AI Update (OPTIMIZED) ---
     zombies_alive = game.zombies[:] 
     
-    # Define active zone. 
-    # Zombies outside this distance will be "dormant" (no AI/Physics)
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
-    ACTIVE_RADIUS_SQ = (1500)**2 # 1500px radius
+    ACTIVE_RADIUS_SQ = (1500)**2 
     DESPAWN_RADIUS_SQ = (2500)**2
 
-    # zombies_to_remove is already defined above, but we can reuse or extend it
-    # ensure we don't clear it if it has content from projectiles loop (though usually handled immediately above)
-    # Re-initializing here to be safe for this specific loop context if needed, but 'zombies_to_remove' was cleared at end of projectile loop.
     zombies_to_remove = [] 
 
     for zombie in zombies_alive:
         
-        # Distance check
         dx = zombie.rect.centerx - player_x
         dy = zombie.rect.centery - player_y
         dist_sq = dx*dx + dy*dy
         
-        # 1. Despawn Logic (Recycling)
         if dist_sq > DESPAWN_RADIUS_SQ:
-            # Silently remove distant zombies to free up performance/slots
             zombies_to_remove.append(zombie)
             continue
         
-        # 2. Dormant Logic (Optimization)
-        # Skip AI and physics if the zombie is too far to matter, but not far enough to despawn
         if dist_sq > ACTIVE_RADIUS_SQ:
             continue
 
@@ -242,43 +285,32 @@ def update_game_state(game):
         
         if getattr(zombie, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
-            
             dx = kb_vel_x * VELOCITY_MULTIPLIER
             dy = kb_vel_y * VELOCITY_MULTIPLIER
             
-            # 1. Move X
             original_x = zombie.x
             zombie.x += dx
             zombie.rect.x = int(zombie.x)
             
-            # Check collision on X axis
             collision_x = False
             for obs in nearby_obstacles:
                 if zombie.rect.colliderect(obs):
-                    collision_x = True
-                    break
+                    collision_x = True; break
             
             if collision_x:
-                zombie.x = original_x # Revert if hit wall
-                zombie.rect.x = int(zombie.x)
-                zombie.knockback_velocity[0] = 0 # Stop horizontal momentum
+                zombie.x = original_x; zombie.rect.x = int(zombie.x); zombie.knockback_velocity[0] = 0
             
-            # 2. Move Y
             original_y = zombie.y
             zombie.y += dy
             zombie.rect.y = int(zombie.y)
             
-            # Check collision on Y axis
             collision_y = False
             for obs in nearby_obstacles:
                 if zombie.rect.colliderect(obs):
-                    collision_y = True
-                    break
+                    collision_y = True; break
             
             if collision_y:
-                zombie.y = original_y # Revert if hit wall
-                zombie.rect.y = int(zombie.y)
-                zombie.knockback_velocity[1] = 0 # Stop vertical momentum
+                zombie.y = original_y; zombie.rect.y = int(zombie.y); zombie.knockback_velocity[1] = 0
 
             zombie.rect.topleft = (int(zombie.x), int(zombie.y))
 
@@ -297,19 +329,22 @@ def update_game_state(game):
                 zombie.attack(game.player, game) 
                 zombie.last_attack_time = current_time
         
-    # [FIX] This is now OUTSIDE the loop
     if zombies_to_remove:
         game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
+    
+    # [NEW] NPC Update Loop
+    if hasattr(game, 'npcs'):
+        for npc in game.npcs:
+            if not npc.is_dead:
+                npc.update(game)
 
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):
         if isinstance(ground_item, Corpse): 
             if ground_item.is_expired(now_ms):
                 display_message_zombie(f"{getattr(ground_item,'name','Corpse')} decayed.")
-                try:
-                    game.items_on_ground.remove(ground_item)
-                except ValueError:
-                    pass
+                try: game.items_on_ground.remove(ground_item)
+                except ValueError: pass
 
     for modal in list(game.modals):
         if modal['type'] == 'container':
@@ -318,12 +353,10 @@ def update_game_state(game):
                 distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
                 if distance > TILE_SIZE * 1.5:
                     game.modals.remove(modal)
-                    # display_message_player(f"Closed {container_item.name} because you moved away.")
     
     current_time = pygame.time.get_ticks()
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
 
-    # Blood Stain Cleanup
     if hasattr(game, 'blood_stains'):
         game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']]
 
@@ -334,54 +367,84 @@ def update_game_state(game):
         for vehicle in game.map_manager.vehicles:
             vehicle.update()
             
-            if vehicle.active:
+            # Detected entities logic
+            detected_entities = []
+            
+            # 1. Grab any hits detected by move() (Useful for non-player driven vehicles or edge cases)
+            if hasattr(vehicle, 'hit_entities') and vehicle.hit_entities:
+                detected_entities.extend(vehicle.hit_entities)
+                vehicle.hit_entities = []
+
+            # 2. Manual Check vs Zombies
+            nearby_zombies = get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE)
+            for z in nearby_zombies:
+                if z not in detected_entities and vehicle.rect.colliderect(z.rect):
+                    detected_entities.append(z)
+            
+            # 3. Manual Check vs NPCs
+            if hasattr(game, 'npcs'):
+                for npc in game.npcs:
+                    if not npc.is_dead and npc not in detected_entities and vehicle.rect.colliderect(npc.rect):
+                        detected_entities.append(npc)
+
+            if detected_entities:
                 speed = math.hypot(vehicle.velocity[0], vehicle.velocity[1])
                 
-                # Check for zombie impacts if speed is decent
-                if speed > 2.0:
-                    nearby_zombies_for_vehicle = [z for z in get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
-                    hit_list = [z for z in nearby_zombies_for_vehicle if vehicle.rect.colliderect(z.rect)]
-                    
-                    zombies_hit_this_frame = 0
-                    
-                    for zombie in hit_list:
-                        if zombie in roadkill_zombies: continue
+                if speed > 0.5: 
+                    for entity in detected_entities:
+                        if entity in roadkill_zombies: continue
+                        if getattr(entity, 'is_dead', False): continue
+
                         current_time = pygame.time.get_ticks()
-                        last_hit = getattr(zombie, 'last_vehicle_hit_time', 0)
-                        if current_time - last_hit < 500: continue 
-                        
-                        zombie.last_vehicle_hit_time = current_time
-                        
-                        # [KEEP] Lethal damage to ensure the kill
-                        impact_damage = 100
-                        
-                        zombies_hit_this_frame += 1
+                        last_hit = getattr(entity, 'last_vehicle_hit_time', 0)
+                        if current_time - last_hit < 500: continue
+                        entity.last_vehicle_hit_time = current_time
 
-                        if zombie.take_damage(impact_damage, game):
-                            roadkill_zombies.append(zombie)
-                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, None)
-                            game.zombies_killed += 1
-                            #display_message_player(f"Roadkill! Zombie Dead!")
-                        else:
-                             # Knockback alive zombies (rare if damage is 1000)
-                             if speed > 0:
-                                 push_x = (vehicle.velocity[0] / speed) * 15 
-                                 push_y = (vehicle.velocity[1] / speed) * 15
-                                 zombie.knockback_velocity = [push_x, push_y]
-                                 zombie.knockback_timer = 200 
+                        impact_damage = 10000 
+                        vehicle.damage_motor(2.0)
 
-                    if zombies_hit_this_frame > 0:
-                        # [CHANGED] Re-enabled motor damage.
-                        # 1.0 damage per zombie hit. 
-                        # If you hit many zombies, the engine will eventually break.
-                        vehicle.damage_motor(1.0 * zombies_hit_this_frame)
+                        velocity_dir = None
+                        if speed > 0:
+                             velocity_dir = [vehicle.velocity[0]/speed, vehicle.velocity[1]/speed]
+                        create_blood_splatter(game, entity.rect, impact_damage, velocity_dir)
+
+                        if entity in game.zombies:
+                             if entity.take_damage(impact_damage, game):
+                                roadkill_zombies.append(entity)
+                                handle_zombie_death(game, entity, game.items_on_ground, game.obstacles, None)
+                                game.zombies_killed += 1
+                             else:
+                                 if speed > 0:
+                                     push_x = (vehicle.velocity[0] / speed) * 15 
+                                     push_y = (vehicle.velocity[1] / speed) * 15
+                                     entity.knockback_velocity = [push_x, push_y]
+                                     entity.knockback_timer = 200
                         
-                        # [NOTE] Friction is still removed so you don't get stuck.
-                        # vehicle.velocity[0] *= 0.95 
-                        # vehicle.velocity[1] *= 0.95 
+                        elif hasattr(game, 'npcs') and entity in game.npcs:
+                             is_dead = entity.take_damage(impact_damage, game, attacker=game.player)
+                             if is_dead:
+                                 handle_zombie_death(game, entity, game.items_on_ground, game.obstacles, None)
+                                 display_message_player(f"You ran over {entity.name}!")
+                             else:
+                                 if speed > 0:
+                                     push_x = (vehicle.velocity[0] / speed) * 15 
+                                     push_y = (vehicle.velocity[1] / speed) * 15
+                                     entity.knockback_velocity = [push_x, push_y]
+                                     entity.knockback_timer = 200
 
         if roadkill_zombies:
             game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]
+        
+        # [FIX] Robust cleanup for ALL dead NPCs (from vehicle or player)
+        if hasattr(game, 'npcs'):
+            if hasattr(game.npcs, 'sprites'):
+                # It's a SpriteGroup
+                for n in list(game.npcs):
+                    if n.is_dead:
+                        n.kill() # Correct way to remove from Group
+            else:
+                # It's a List
+                game.npcs = [n for n in game.npcs if not n.is_dead]
 
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
@@ -409,7 +472,7 @@ def player_hit_zombie(player, zombie, game):
             if magnitude > 0:
                 projectile_dir = [dx / magnitude, dy / magnitude]
             knockback_force = getattr(active_weapon, 'knockback', 50)
-            is_ranged = True # Fix: Mark as ranged
+            is_ranged = True 
         else: 
             damage_multiplier = progression.get_melee_damage_multiplier(player)
             durability_loss = progression.get_weapon_durability_loss(player)
@@ -418,7 +481,6 @@ def player_hit_zombie(player, zombie, game):
                 if active_weapon.durability <= 0:
                     player.active_weapon = None
                     display_message_player(f"{active_weapon.name} is broken and unequipped.")
-                    #player.destroy_broken_weapon(active_weapon)
     else: 
         base_damage = progression.get_unarmed_damage(player)
 
@@ -428,51 +490,7 @@ def player_hit_zombie(player, zombie, game):
         zombie.knockback_velocity = [projectile_dir[0] * knockback_force, projectile_dir[1] * knockback_force]
         zombie.knockback_timer = 400 
         
-        if hasattr(game, 'blood_stains'):
-            stain_size = 4 + int(final_damage / 6) # [CHANGED] Smaller base size and scaling
-            trail_dir_x, trail_dir_y = projectile_dir[0], projectile_dir[1]
-            perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
-            base_x, base_y = zombie.rect.centerx, zombie.rect.bottom
-            
-            for i in range(1, 7): 
-                offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
-                lateral_scatter = random.uniform(-8, 8) 
-                
-                stain_pos_x = base_x - (trail_dir_x * offset_pixels) 
-                stain_pos_y = base_y - (trail_dir_y * offset_pixels)
-
-                stain_pos_x += perp_dir_x * lateral_scatter
-                stain_pos_y += perp_dir_y * lateral_scatter
-                
-                # Check Collision with Obstacles before adding stain
-                # This prevents blood from drawing on top of stones/trees/walls
-                stain_rect = pygame.Rect(stain_pos_x - 1, stain_pos_y - 1, 2, 2)
-                
-                collides_with_obstacle = False
-                if hasattr(game, 'cached_obstacle_grid'):
-                    GRID_SIZE_CHECK = 128
-                    nearby_obs = get_nearby_obstacles(stain_rect, game.cached_obstacle_grid, GRID_SIZE_CHECK)
-                    if any(stain_rect.colliderect(obs) for obs in nearby_obs):
-                        collides_with_obstacle = True
-                else:
-                    if any(stain_rect.colliderect(obs) for obs in game.obstacles):
-                        collides_with_obstacle = True
-                
-                if collides_with_obstacle:
-                    continue
-
-                game.blood_stains.append({
-                    'pos': (stain_pos_x, stain_pos_y),
-                    'size': stain_size, # [CHANGED] Smaller random range
-                    'color': (139, 0, 0), 
-                    'time': pygame.time.get_ticks(),
-                    # Add random duration (30-60 seconds)
-                    'duration': random.randint(30000, 60000) 
-                })
-            
-            # Limit the number of blood stains to prevent lag
-            if len(game.blood_stains) > 250:
-                game.blood_stains = game.blood_stains[-250:]
+        create_blood_splatter(game, zombie.rect, final_damage, projectile_dir)
 
     game.splashes.append({
         'pos': (zombie.rect.centerx, zombie.rect.bottom),

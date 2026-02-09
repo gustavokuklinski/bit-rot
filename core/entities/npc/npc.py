@@ -450,3 +450,28 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.target = None
         self.velocity = pygame.math.Vector2(0, 0)
         self.idle_timer = 500
+    
+    def die(self, game):
+        """
+        Overrides Zombie.die to ensure NPC inventory and weapons 
+        are dropped on the ground before the corpse is created.
+        """
+        # 1. Drop Inventory (ID Cards, Ammo, Meds)
+        if hasattr(self, 'inventory'):
+            for item in self.inventory:
+                if item:
+                    item.rect.center = self.rect.center
+                    # Scatter slightly so they don't stack perfectly
+                    item.rect.x += random.randint(-10, 10)
+                    item.rect.y += random.randint(-10, 10)
+                    game.items_on_ground.append(item)
+            self.inventory = [] # Clear list
+
+        # 2. Drop Equipped Weapon
+        if hasattr(self, 'equipped_weapon') and self.equipped_weapon:
+            self.equipped_weapon.rect.center = self.rect.center
+            game.items_on_ground.append(self.equipped_weapon)
+            self.equipped_weapon = None
+
+        # 3. Call Parent Die (Handles Corpse creation, XP, and standard loot_table if any)
+        super().die(game)

@@ -97,7 +97,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # Fuel
     fuel_item = vehicle.equipment.get('fuel')
     fuel_val = 0.0
-    fuel_max = 25.0
+    fuel_max = 100.0
     if fuel_item:
         if hasattr(fuel_item, 'load'): fuel_val = float(fuel_item.load)
         if hasattr(fuel_item, 'capacity'): fuel_max = float(fuel_item.capacity)

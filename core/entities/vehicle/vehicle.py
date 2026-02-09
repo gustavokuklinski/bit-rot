@@ -3,6 +3,8 @@ import math
 import random
 from core.data.config import *
 from core.entities.item.item import Item
+from core.entities.zombie.zombie import Zombie
+from core.entities.npc.npc import NPC
 
 class Vehicle:
     def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None):
@@ -23,12 +25,11 @@ class Vehicle:
        
         self.max_speed = float(stats.get('max_speed', 10))
         
-        # Initial stats (will be overwritten by equipment items if they spawn)
+        # Initial stats
         self.fuel = float(stats.get('fuel', 0.0))
         self.battery = float(stats.get('battery', 0.0))
         self.motor = float(stats.get('motor', 0.0))
 
-        
         self.lights = stats.get('lights', 'off')
         if self.lights == '1.0': self.lights = 'off' 
         
@@ -37,7 +38,6 @@ class Vehicle:
         self.car_state = "Off" 
         
         key_val = stats.get('key', 'false').strip()
-        
         if key_val.lower() in ['false', 'none', '0', '']:
             self.required_key_id = None 
         else:
@@ -51,20 +51,18 @@ class Vehicle:
         }
         
         self.velocity = [0, 0]
-
         self.acceleration = 0.4
         self.friction = 0.4
-
         self.active = False 
 
         self.seat_count = int(stats.get('seats', 4))
-
         self.seats = [None] * self.seat_count
 
+        # [NEW] Track entities hit during movement for processing in update.py
+        self.hit_entities = []
+
         self._spawn_random_equipment()
-        
         self.generate_trunk_loot(loot_table)
-        
         self.update_stats_from_equipment()
 
     @property
@@ -79,7 +77,7 @@ class Vehicle:
             self.velocity = [0, 0]
 
     def _spawn_random_equipment(self):
-        # 1. Spawn Key (30% chance, only if vehicle requires a key)
+        # 1. Spawn Key (30% chance)
         if self.required_key_id and random.random() < VEH_HAS_KEY:
             key_item = Item.create_from_name(self.required_key_id)
             if key_item:
@@ -111,25 +109,19 @@ class Vehicle:
                 self.equipment['battery'] = batt_item
 
     def generate_trunk_loot(self, loot_table=None):
-        if not loot_table:
-            return
+        if not loot_table: return
             
         for entry in loot_table:
-            if len(self.inventory) >= self.capacity:
-                break
+            if len(self.inventory) >= self.capacity: break
             
             item_name = entry.get('item')
             chance = entry.get('chance', 0)
-            
-            try:
-                chance = float(chance)
-            except (ValueError, TypeError):
-                chance = 0.0
+            try: chance = float(chance)
+            except (ValueError, TypeError): chance = 0.0
             
             if random.random() < chance:
                 item = Item.create_from_name(item_name)
-                if item:
-                    self.inventory.append(item)
+                if item: self.inventory.append(item)
 
     def is_driveable(self):
         if self.motor <= 0: return False
@@ -157,12 +149,10 @@ class Vehicle:
 
     def damage_motor(self, amount):
         motor_item = self.equipment.get('motor')
-        if not motor_item:
-            return 
+        if not motor_item: return 
 
         if hasattr(motor_item, 'load') and motor_item.load is not None:
              motor_item.load = max(0, motor_item.load - amount)
-             # Only print major status changes to avoid console spam
              if motor_item.load <= 0:
                  print(f"Motor hit! Damage: {amount}. Remaining Status: {motor_item.load}/{motor_item.capacity}")
              
@@ -179,36 +169,38 @@ class Vehicle:
     def move(self, dx, dy, obstacles):
         if not self.active: return
 
+        
+
         self.x += dx
         self.rect.x = int(self.x)
         collision_x = False
+        
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
-                # --- ROBUST ZOMBIE DETECTION ---
-                is_zombie = False
-                obs_name = getattr(obstacle, 'name', '')
-                obs_type = getattr(obstacle, '__class__', None)
+                # --- ROBUST ENTITY DETECTION (X-AXIS) ---
+                is_entity = False
                 
-                # Check 1: Name contains Zombie
-                if obs_name and ('Zombie' in obs_name or 'zombie' in obs_name):
-                    is_zombie = True
-                # Check 2: Class Name is Zombie
-                elif obs_type and obs_type.__name__ in ['Zombie', 'zombie']:
-                    is_zombie = True
+                # 1. Strict Type Check (Best for Sprites passed in obstacles)
+                if isinstance(obstacle, (Zombie, NPC)):
+                    is_entity = True
                 
-                if is_zombie:
-                    # Kill the zombie (Standard Entity methods)
-                    if hasattr(obstacle, 'take_damage'):
-                        obstacle.take_damage(100) 
-                    elif hasattr(obstacle, 'die'):
-                        obstacle.die()
-                    
-                    # Slight damage to motor (1.0)
-                    # This prevents the instant "Crash" logic below
+                # 2. Duck Typing (Works for any entity with health/damage)
+                elif hasattr(obstacle, 'take_damage') or hasattr(obstacle, 'health'):
+                    is_entity = True
+                
+                # 3. String Check (Fallback for weird imports)
+                elif type(obstacle).__name__ in ['Zombie', 'NPC', 'Player']:
+                    is_entity = True
+
+                if is_entity:
                     self.damage_motor(1.0)
+                    # Add to hit list for update.py to handle damage logic
+                    if obstacle not in self.hit_entities:
+                        self.hit_entities.append(obstacle)
                     
                     # IMPORTANT: Continue skips setting collision_x=True
-                    # This lets the car pass through the zombie
+                    # This allows the vehicle to physically pass through the NPC/Zombie
+                    # instead of treating it like a concrete wall.
                     continue 
                 # -------------------------------
 
@@ -220,25 +212,23 @@ class Vehicle:
         self.y += dy
         self.rect.y = int(self.y)
         collision_y = False
+        
         for obstacle in obstacles:
             if obstacle is not self.rect and self.rect.colliderect(obstacle):
-                # --- ROBUST ZOMBIE DETECTION (Y-AXIS) ---
-                is_zombie = False
-                obs_name = getattr(obstacle, 'name', '')
-                obs_type = getattr(obstacle, '__class__', None)
+                # --- ROBUST ENTITY DETECTION (Y-AXIS) ---
+                is_entity = False
                 
-                if obs_name and ('Zombie' in obs_name or 'zombie' in obs_name):
-                    is_zombie = True
-                elif obs_type and obs_type.__name__ in ['Zombie', 'zombie']:
-                    is_zombie = True
+                if isinstance(obstacle, (Zombie, NPC)):
+                    is_entity = True
+                elif hasattr(obstacle, 'take_damage') or hasattr(obstacle, 'health'):
+                    is_entity = True
+                elif type(obstacle).__name__ in ['Zombie', 'NPC', 'Player']:
+                    is_entity = True
                 
-                if is_zombie:
-                    if hasattr(obstacle, 'take_damage'):
-                        obstacle.take_damage(100)
-                    elif hasattr(obstacle, 'die'):
-                        obstacle.die()
-                    
+                if is_entity:
                     self.damage_motor(1.0)
+                    if obstacle not in self.hit_entities:
+                        self.hit_entities.append(obstacle)
                     continue
                 # ----------------------------------------
 
@@ -249,7 +239,7 @@ class Vehicle:
         
         if collision_x or collision_y:
             current_speed = self.current_speed_val
-            # Only trigger crash damage if hitting a solid wall (not a zombie)
+            # Only trigger crash damage if hitting a solid wall (not a zombie/npc)
             if current_speed > 2.0:
                 damage = current_speed * 0.5
                 print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
@@ -317,48 +307,32 @@ class Vehicle:
         if slot not in self.equipment: return False
 
         if slot == 'key':
-            # 2. Check if Vehicle requires a key
-            # If required_key_id is None, the vehicle is configured to NOT use a key.
             if not self.required_key_id:
-                # Get key ID from item (try 'key_id' or 'key')
                 item_key_id = getattr(item, 'key_id', getattr(item, 'key', None))
-                
-                # Check if Key ID matches Vehicle Name (e.g. "car_jeep" == "car_jeep")
                 if item_key_id and str(item_key_id).strip().lower() == self.name.lower():
                     print(f"[DEBUG] REPAIR: Auto-assigning key requirement '{item_key_id}' to legacy vehicle.")
                     self.required_key_id = str(item_key_id).strip()
-                    # Continue to allow the equip...
                 else:
-                    # Genuine failure: Vehicle is configured to not need a key
                     print(f"[DEBUG] Vehicle '{self.name}' has no key requirement (ID is None).")
                     return False
 
-            # 3. Validate Item Type
-            # Checks both modern 'item_type' and legacy 'type'
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
             if item_type != 'car_key':
                 print(f"[DEBUG] Item '{item.name}' rejected. Type is '{item_type}', expected 'car_key'.")
                 return False
 
-            # 4. Normalize Data for Comparison (Lower case + Strip whitespace)
-            # This fixes "Car Key Jeep" vs "car key jeep" issues
             required_val = str(self.required_key_id).strip().lower()
-            
             item_name = getattr(item, 'name', '').strip().lower()
-            
             item_key_id = getattr(item, 'key_id', '')
             if item_key_id:
                 item_key_id = str(item_key_id).strip().lower()
 
-            # 5. Robust Matching Logic
-            # Match if Item NAME matches Requirement OR Item internal ID matches Requirement
             matches_name = (item_name == required_val)
             matches_id = (item_key_id and item_key_id == required_val)
 
             if matches_name or matches_id:
                 return True
             else:
-                # 6. Detailed Failure Log
                 print(f"--- KEY MISMATCH DEBUG ---")
                 print(f"Vehicle Requires: '{required_val}'")
                 print(f"Item Name:        '{item_name}' (Match: {matches_name})")
