@@ -35,7 +35,7 @@ class Tabs:
                 tab['icon'] = None
                 tab['icon_loaded'] = False # Mark as failed
 
-    def draw(self):
+    def draw(self, game=None, mouse_pos=None):
         # Update base_modal's position to reflect the current modal's position
         self.base_modal.modal_x = self.modal['position'][0]
         self.base_modal.modal_y = self.modal['position'][1]
@@ -70,23 +70,37 @@ class Tabs:
         # 2. Draw Inactive Tabs
         for i, tab in enumerate(self.tabs_data):
             if tab['label'] != current_active_label:
-                self._draw_single_tab(tab, self.tab_rects[i], is_active=False)
+                # Check for drag highlight
+                is_drag_target = False
+                if game and game.dragged_item and mouse_pos and self.tab_rects[i].collidepoint(mouse_pos):
+                    is_drag_target = True
+                
+                self._draw_single_tab(tab, self.tab_rects[i], is_active=False, is_drag_target=is_drag_target)
 
         # 3. Draw Active Tab (Last, so it stays on top)
         for i, tab in enumerate(self.tabs_data):
             if tab['label'] == current_active_label:
-                self._draw_single_tab(tab, self.tab_rects[i], is_active=True)
+                # Check for drag highlight (even active tabs can be drop targets)
+                is_drag_target = False
+                if game and game.dragged_item and mouse_pos and self.tab_rects[i].collidepoint(mouse_pos):
+                    is_drag_target = True
+
+                self._draw_single_tab(tab, self.tab_rects[i], is_active=True, is_drag_target=is_drag_target)
 
         # Store calculated rects for click detection
         self.modal['tab_rects'] = self.tab_rects
 
-    def _draw_single_tab(self, tab, rect, is_active):
+    def _draw_single_tab(self, tab, rect, is_active, is_drag_target=False):
         if is_active: 
             pygame.draw.rect(self.surface, GRAY_60, rect) # Active color
         else:
             pygame.draw.rect(self.surface, DARK_GRAY, rect) # Inactive color
         
-        pygame.draw.rect(self.surface, WHITE, rect, 1) # Border
+        # Draw Border
+        if is_drag_target:
+             pygame.draw.rect(self.surface, YELLOW, rect, 2) # Highlight
+        else:
+             pygame.draw.rect(self.surface, WHITE, rect, 1) # Normal Border
 
         # Draw icon or fallback text
         if tab.get('icon'): 

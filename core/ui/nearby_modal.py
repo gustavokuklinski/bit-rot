@@ -142,7 +142,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     # print(f"--- Drawing Nearby Modal (Start): Active Tab is '{modal.get('active_tab')}' ---") # DEBUG
 
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw() # This draws the tabs and stores 'tab_rects' in the modal dict
+    tabs.draw(game, mouse_pos) # This draws the tabs and stores 'tab_rects' in the modal dict
 
     active_tab_label_to_draw = modal.get('active_tab')
     active_tab_data = None

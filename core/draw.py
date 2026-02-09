@@ -324,12 +324,32 @@ def draw_game(game):
         if screen_rect.colliderect(p.rect):
             p.draw(world_view_surface, offset_x, offset_y)
 
+    view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
+
     for zombie in game.zombies:
         if not screen_rect.colliderect(zombie.rect): continue
-        zombie.draw(world_view_surface, offset_x, offset_y, 255) 
+        
+        # [NEW] Vision Culling: Check if center of zombie is within view radius
+        dx = zombie.rect.centerx - game.player.rect.centerx
+        dy = zombie.rect.centery - game.player.rect.centery
+        dist_sq = dx*dx + dy*dy
+        
+        if dist_sq > view_radius_sq:
+            continue # Skip drawing if outside player vision
+
+        zombie.draw(world_view_surface, offset_x, offset_y, 255)
 
     for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
+
+        # [NEW] Vision Culling
+        dx = npc.rect.centerx - game.player.rect.centerx
+        dy = npc.rect.centery - game.player.rect.centery
+        dist_sq = dx*dx + dy*dy
+        
+        if dist_sq > view_radius_sq:
+            continue # Skip drawing if outside player vision
+
         npc.draw(world_view_surface, offset_x, offset_y, 255)
 
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)

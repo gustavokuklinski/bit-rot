@@ -411,10 +411,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if not collided_x:
                 for entity in entities_to_check:
                     if self.rect.colliderect(entity.rect):
-                        if self.dx > 0: self.rect.right = entity.rect.left
-                        elif self.dx < 0: self.rect.left = entity.rect.right
-                        self.x = self.rect.x
+                        self.x -= step_dx
+                        self.rect.x = int(self.x)
                         self.dx = 0
+                        collided_x = True
                         break
 
             # Move Y
@@ -435,10 +435,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if not collided_y:
                 for entity in entities_to_check:
                     if self.rect.colliderect(entity.rect):
-                        if self.dy > 0: self.rect.bottom = entity.rect.top
-                        elif self.dy < 0: self.rect.top = entity.rect.bottom
-                        self.y = self.rect.y
+                        self.y -= step_dy
+                        self.rect.y = int(self.y)
                         self.dy = 0
+                        collided_y = True
                         break
 
         self.rect.topleft = (int(self.x), int(self.y))

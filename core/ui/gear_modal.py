@@ -44,7 +44,7 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
 
     # 3. Draw Tabs
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw()
+    tabs.draw(game, mouse_pos)
 
     # 4. Draw Content based on active tab
     active_label = modal['active_tab']

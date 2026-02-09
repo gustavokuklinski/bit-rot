@@ -252,6 +252,9 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.is_sleeping = False
                 game.is_fast_forwarding = False 
                 display_message_player("You wake up refreshed.")
+        
+            elif game.is_fast_forwarding:
+                game.is_fast_forwarding = False
 
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]

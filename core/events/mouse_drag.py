@@ -133,6 +133,90 @@ def handle_mouse_up(game, event, mouse_pos):
 
                 # --- Drop on INVENTORY/MODALS ---
                 for modal in reversed(game.modals):
+                    tab_drop_handled = False
+                    if 'tab_rects' in modal and modal['tab_rects']:
+                        for i, tab_rect in enumerate(modal['tab_rects']):
+                            if tab_rect.collidepoint(mouse_pos):
+                                # Identified a drop on a tab
+                                target_container = None
+                                target_list = None
+                                label = modal['tabs_data'][i]['label']
+                                
+                                # Resolve Target
+                                if modal['type'] == 'inventory':
+                                    if label == 'Inventory':
+                                        target_list = game.player.inventory
+                                    elif label in modal.get('container_mapping', {}):
+                                        target_container = modal['container_mapping'][label]
+                                
+                                elif modal['type'] == 'nearby':
+                                    if i < len(modal['tabs_data']):
+                                        target_container = modal['tabs_data'][i]['container']
+                                        
+                                elif modal['type'] == 'gear':
+                                    if label == 'Gear':
+                                        # Special Case: Try to equip to slot
+                                        pass # Handled below in specific logic or just treat as switch
+                                    elif label in modal.get('container_mapping', {}):
+                                        target_container = modal['container_mapping'][label]
+
+                                # Switch tab visual
+                                modal['active_tab'] = label
+                                
+                                # Perform Logic
+                                if target_container:
+                                    # Prevent Recursion
+                                    if check_recursive_containment(game.dragged_item, target_container):
+                                        print("Recursion detected.")
+                                        dropped_successfully = False
+                                    elif getattr(target_container, 'allow_liquid', False) and not getattr(game.dragged_item, 'liquid', False):
+                                        print("Container only accepts liquids.")
+                                        dropped_successfully = False
+                                    elif getattr(game.dragged_item, 'liquid', False) and not getattr(target_container, 'allow_liquid', False):
+                                         print("Liquid spills.")
+                                         dropped_successfully = True
+                                    elif len(target_container.inventory) < (target_container.capacity or 0):
+                                         if is_external_source:
+                                             item_ref = game.dragged_item
+                                             def do_tab_loot():
+                                                 target_container.inventory.append(item_ref)
+                                             game.player.start_action("Looting", 1.0, do_tab_loot, xp_reward=0.5)
+                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                             return
+                                         else:
+                                             target_container.inventory.append(game.dragged_item)
+                                             dropped_successfully = True
+                                    else:
+                                        print(f"{target_container.name} is full.")
+                                        dropped_successfully = False
+                                        
+                                elif target_list is not None: # e.g. Main Inventory
+                                    if len(target_list) < game.player.get_total_inventory_slots():
+                                         if is_external_source:
+                                             item_ref = game.dragged_item
+                                             def do_tab_inv_loot():
+                                                 target_list.append(item_ref)
+                                             game.player.start_action("Looting", 1.0, do_tab_inv_loot, xp_reward=0.5)
+                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                             return
+                                         else:
+                                             target_list.append(game.dragged_item)
+                                             dropped_successfully = True
+                                    else:
+                                        print("Inventory is full.")
+                                        dropped_successfully = False
+                                
+                                tab_drop_handled = True
+                                break
+                    
+                    if tab_drop_handled:
+                         if dropped_successfully:
+                            break # Break modal loop
+                         else:
+                            # If drop failed but we hit a tab, we probably shouldn't check the body of the modal 
+                            # (unless we want to allow 'missed tab' drops, but that's confusing)
+                            pass
+                            
                     if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
                         
                         if modal.get('active_tab', 'Inventory') == 'Inventory':

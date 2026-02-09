@@ -209,16 +209,31 @@ def update_game_state(game):
     # Zombies outside this distance will be "dormant" (no AI/Physics)
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
     ACTIVE_RADIUS_SQ = (1500)**2 # 1500px radius
+    DESPAWN_RADIUS_SQ = (2500)**2
+
+    # zombies_to_remove is already defined above, but we can reuse or extend it
+    # ensure we don't clear it if it has content from projectiles loop (though usually handled immediately above)
+    # Re-initializing here to be safe for this specific loop context if needed, but 'zombies_to_remove' was cleared at end of projectile loop.
+    zombies_to_remove = [] 
 
     for zombie in zombies_alive:
         
         # Distance check
-        dist_sq = (zombie.rect.centerx - player_x)**2 + (zombie.rect.centery - player_y)**2
+        dx = zombie.rect.centerx - player_x
+        dy = zombie.rect.centery - player_y
+        dist_sq = dx*dx + dy*dy
         
-        # If far away, skip EVERYTHING
-        if dist_sq > ACTIVE_RADIUS_SQ:
+        # 1. Despawn Logic (Recycling)
+        if dist_sq > DESPAWN_RADIUS_SQ:
+            # Silently remove distant zombies to free up performance/slots
+            zombies_to_remove.append(zombie)
             continue
         
+        # 2. Dormant Logic (Optimization)
+        # Skip AI and physics if the zombie is too far to matter, but not far enough to despawn
+        if dist_sq > ACTIVE_RADIUS_SQ:
+            continue
+
         nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
         nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
 
@@ -281,6 +296,10 @@ def update_game_state(game):
             if current_time - zombie.last_attack_time > 500: 
                 zombie.attack(game.player, game) 
                 zombie.last_attack_time = current_time
+        
+    # [FIX] This is now OUTSIDE the loop
+    if zombies_to_remove:
+        game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
 
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):

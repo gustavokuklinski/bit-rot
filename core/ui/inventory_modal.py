@@ -367,7 +367,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
 
     # --- 2. RENDER TABS ---
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw()
+    tabs.draw(game, mouse_pos)
 
     # --- 3. RENDER CONTENT ---
     active_label = modal['active_tab']
