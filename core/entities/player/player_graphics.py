@@ -3,6 +3,9 @@ import math
 import random
 from core.data.config import TILE_SIZE, SPRITE_PATH, DARK_GRAY, YELLOW
 
+# Define ORANGE if not imported
+ORANGE = (255, 165, 0)
+
 class PlayerGraphics:
     def _load_sprite(self, sprite_path):
         if not sprite_path: return None
@@ -27,6 +30,37 @@ class PlayerGraphics:
             self.current_aim_factor = min(1.0, self.current_aim_factor + 0.05)
         else:
             self.current_aim_factor = max(0.0, self.current_aim_factor - shrink_speed)
+
+    def draw_highlight_stairs(self, surface, game, offset_x, offset_y):
+        """
+        Scans nearby tiles for stairs and highlights them in orange.
+        Called from core/draw.py.
+        """
+        # Define the radius for detection (1 tile around the player)
+        radius = 1 
+        
+        # Get player's grid position
+        p_grid_x = int(self.rect.centerx // TILE_SIZE)
+        p_grid_y = int(self.rect.centery // TILE_SIZE)
+
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                tx = p_grid_x + dx
+                ty = p_grid_y + dy
+
+                # Retrieve the tile definition from the map manager
+                tile_def = game.map_manager.get_tile_at(tx, ty)
+
+                if tile_def and tile_def.get('is_stair'):
+                    # Calculate screen position
+                    screen_x = tx * TILE_SIZE + offset_x
+                    screen_y = ty * TILE_SIZE + offset_y
+
+                    # Create the highlight rect
+                    highlight_rect = pygame.Rect(screen_x, screen_y, TILE_SIZE, TILE_SIZE)
+
+                    # Draw the orange highlight
+                    pygame.draw.rect(surface, ORANGE, highlight_rect, 2)
 
     def draw(self, surface, offset_x, offset_y, is_aiming=False):
         if self.vehicle:
@@ -78,12 +112,12 @@ class PlayerGraphics:
                 
                 rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
                 offset_dist = TILE_SIZE * 0.4
-                offset_x = math.cos(self.aim_angle) * offset_dist
-                offset_y = -math.sin(self.aim_angle) * offset_dist
+                offset_x_weapon = math.cos(self.aim_angle) * offset_dist
+                offset_y_weapon = -math.sin(self.aim_angle) * offset_dist
                 
                 rotated_rect = rotated_image.get_rect(center=draw_rect.center)
-                rotated_rect.centerx += offset_x
-                rotated_rect.centery += offset_y
+                rotated_rect.centerx += offset_x_weapon
+                rotated_rect.centery += offset_y_weapon
                 
                 surface.blit(rotated_image, rotated_rect)
 
@@ -98,12 +132,12 @@ class PlayerGraphics:
 
             rotated_image = pygame.transform.rotate(weapon_img, angle_degrees)
             offset_dist = TILE_SIZE * 0.8 
-            offset_x = math.cos(self.aim_angle) * offset_dist
-            offset_y = -math.sin(self.aim_angle) * offset_dist 
+            offset_x_weapon = math.cos(self.aim_angle) * offset_dist
+            offset_y_weapon = -math.sin(self.aim_angle) * offset_dist 
             
             rotated_rect = rotated_image.get_rect(center=draw_rect.center)
-            rotated_rect.centerx += offset_x
-            rotated_rect.centery += offset_y
+            rotated_rect.centerx += offset_x_weapon
+            rotated_rect.centery += offset_y_weapon
 
             surface.blit(rotated_image, rotated_rect)
 

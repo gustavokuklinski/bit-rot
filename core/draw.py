@@ -372,6 +372,9 @@ def draw_game(game):
 
         npc.draw(world_view_surface, offset_x, offset_y, 255)
 
+    # [NEW] Highlight nearby stairs
+    game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
+
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
     player_tile_x = game.player.rect.centerx // tile_size

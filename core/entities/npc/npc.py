@@ -72,6 +72,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.inventory = []
         id_card = Item.create_from_name("ID")
         self.inventory.append(id_card)
+        
+        # [ADDED] Spawn with Mobile (Off)
+        mobile = Item.create_from_name("Mobile off")
+        if mobile:
+            mobile.state = "off"
+            self.inventory.append(mobile)
 
         if not self.inventory:
              random_item = Item.generate_random()
@@ -103,7 +109,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.melee_swing_angle = 0
 
         self.is_dead = False
-        self.dead_image = self.load_sprite('zombie/dead.png')
+        #self.dead_image = self._load_sprite(self.visuals.get('dead_sprite', 'dead.png'))
         
         if not hasattr(self, 'angle'): self.angle = 0
         if not hasattr(self, 'dx'): self.dx = 0

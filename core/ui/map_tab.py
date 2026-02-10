@@ -105,6 +105,38 @@ def draw_map_tab(surface, game, modal, assets):
     map_area_rect = pygame.Rect(content_x_start, content_y_start, content_width, content_height - 40) 
     modal['map_area_rect'] = map_area_rect
 
+    # --- 2.5 Handle Mouse Dragging (Panning) ---
+    if 'is_dragging_map' not in modal:
+        modal['is_dragging_map'] = False
+        modal['last_drag_pos'] = (0, 0)
+
+    # Use game's scaled mouse position if available
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+    mouse_pressed = pygame.mouse.get_pressed()[0]
+    
+    if mouse_pressed:
+        if modal['is_dragging_map']:
+            # Calculate how much the mouse moved
+            dx = mouse_pos[0] - modal['last_drag_pos'][0]
+            dy = mouse_pos[1] - modal['last_drag_pos'][1]
+            
+            # Convert screen pixels to map tiles based on current zoom
+            # moving mouse right (+dx) should shift the offset right (+offset), 
+            # which effectively moves the 'camera' left relative to the map (panning)
+            zoom = modal['map_zoom']
+            modal['map_offset'] = (
+                modal['map_offset'][0] + (dx / zoom),
+                modal['map_offset'][1] + (dy / zoom)
+            )
+            modal['last_drag_pos'] = mouse_pos
+        elif map_area_rect.collidepoint(mouse_pos):
+             # Start dragging if clicked inside the map view
+             modal['is_dragging_map'] = True
+             modal['last_drag_pos'] = mouse_pos
+    else:
+        # Stop dragging when mouse is released
+        modal['is_dragging_map'] = False
+
     # --- 3. Draw Map Background ---
     pygame.draw.rect(surface, (20, 20, 20), map_area_rect)
     
@@ -133,7 +165,7 @@ def draw_map_tab(surface, game, modal, assets):
         
         off_x, off_y = modal['map_offset']
 
-        # [FIXED] Apply offset to the source coordinates
+        # Apply offset to the source coordinates
         src_x = (player_grid_x - (tiles_in_view_w / 2)) - off_x
         src_y = (player_grid_y - (tiles_in_view_h / 2)) - off_y
         src_w = tiles_in_view_w
@@ -161,6 +193,37 @@ def draw_map_tab(surface, game, modal, assets):
             
             surface.blit(scaled_surf, (map_area_rect.x + draw_offset_x, map_area_rect.y + draw_offset_y))
 
+        # --- Draw NPCs with Mobile Phones ---
+        if hasattr(game, 'npcs'):
+            for npc in game.npcs:
+                if npc.is_dead: continue
+                
+                # Check for "Mobile" in inventory
+                has_mobile = False
+                for item in npc.inventory:
+                    if item.name == "Mobile off":
+                        has_mobile = True
+                        break
+                
+                # Check equipped weapon just in case
+                if not has_mobile and npc.equipped_weapon and npc.equipped_weapon.name == "Mobile":
+                    has_mobile = True
+
+                if has_mobile:
+                    npc_grid_x = npc.rect.centerx // TILE_SIZE
+                    npc_grid_y = npc.rect.centery // TILE_SIZE
+                    
+                    # Project NPC position onto the map view
+                    # Using the same src_x/src_y reference frame as the map background
+                    screen_npc_x = map_area_rect.x + (npc_grid_x - src_x) * map_zoom
+                    screen_npc_y = map_area_rect.y + (npc_grid_y - src_y) * map_zoom
+                    
+                    # Only draw if inside the map tab view area
+                    if map_area_rect.collidepoint(screen_npc_x, screen_npc_y):
+                        # Draw a small Red signal dot
+                        dot_size = max(3, int(map_zoom / 2))
+                        pygame.draw.circle(surface, (255, 50, 50), (int(screen_npc_x), int(screen_npc_y)), dot_size)
+
         # --- Draw Player Icon ---
         # The map is now drawn relative to the player being roughly in center
         # We calculate player position relative to the drawn map surface
@@ -168,9 +231,17 @@ def draw_map_tab(surface, game, modal, assets):
         screen_player_x = map_area_rect.x + (player_grid_x - src_x) * map_zoom
         screen_player_y = map_area_rect.y + (player_grid_y - src_y) * map_zoom
         
-        player_rect = pygame.Rect(screen_player_x, screen_player_y, map_zoom, map_zoom)
+        # Calculate a marker size that is always larger than the zoom level
+        marker_size = max(8, int(map_zoom * 1.5))
         
-        # Only draw if inside the view (technically always true if centering, but good practice)
+        # Center the marker on the player's grid tile position
+        center_x = screen_player_x + (map_zoom / 2)
+        center_y = screen_player_y + (map_zoom / 2)
+        
+        player_rect = pygame.Rect(0, 0, marker_size, marker_size)
+        player_rect.center = (center_x, center_y)
+        
+        # Only draw if inside the view
         if map_area_rect.collidepoint(player_rect.center):
             pygame.draw.rect(surface, MINIMAP_PLAYER_COLOR, player_rect, 0)
             pygame.draw.rect(surface, (0, 0, 0), player_rect, 1)

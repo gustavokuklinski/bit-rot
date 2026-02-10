@@ -320,9 +320,13 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         if overweight_ratio > 1.0:
              # Health Reduction due to overweight
-             # Apply small damage over time
+             # Apply small damage over time to all body parts
              loss = 0.01 * (overweight_ratio - 1.0) 
-             self.health = max(0, self.health - loss)
+             
+             for part in self.body_parts.values():
+                 part['value'] = max(0.0, part['value'] - loss)
+             
+             self.update_global_health()
              
              # Gain Strength XP if running while overweight
              if self.is_running and is_moving:
