@@ -2,6 +2,7 @@
 
 import pygame
 import math
+import random 
 from core.data.config import *
 import core.data.config
 from core.messages import display_message
@@ -10,54 +11,40 @@ class WorldTime:
     def __init__(self, game):
         self.game = game
         
-        # State machine: DAY, TRANSITION_TO_NIGHT, NIGHT, TRANSITION_TO_DAY
         self.state = "DAY" 
+        self.day_length_ms = core.data.config.TIME_DAYLENGTH 
+        self.game_time_ms = 0 
         
-        # --- NEW CONFIGURATION ---
-        # Total length of a full 24h game day in real milliseconds
-        # 180000 ms = 3 minutes per day. Adjust as needed in config or here.
-        self.day_length_ms = core.data.config.TIME_DAYLENGTH # Example: 5 minutes per game day
+        self.sunrise_hour = core.data.config.TIME_SUNRISE_HR  
+        self.sunset_hour = core.data.config.TIME_SUNSET_HR  
+        self.transition_duration_hours = core.data.config.TIME_TRANSITION_HR 
         
-        self.game_time_ms = 0 # 0 to day_length_ms
-        
-        # Define key times (0.0 to 24.0)
-        self.sunrise_hour = core.data.config.TIME_SUNRISE_HR  # 5:30 AM
-        self.sunset_hour = core.data.config.TIME_SUNSET_HR  # 17:30 (5:30 PM)
-        self.transition_duration_hours = core.data.config.TIME_TRANSITION_HR # How long the fade lasts in game-hours
-        
-        # Calculate start time (6 AM = 6.0)
         start_hour = core.data.config.TIME_START_HR
         self.game_time_ms = (start_hour / 24.0) * self.day_length_ms
 
         self.last_update_time = pygame.time.get_ticks()
-        
-        self.day_count = 0 # Track full days survived
+        self.day_count = 0 
 
-        # Visual settings
         self.day_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 1.5
         self.night_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS * 1.0
         self.day_ambient = 255 
         self.night_ambient = 255 - core.data.config.MAX_DARKNESS_OPACITY 
 
-        # Set initial values
         self.game.player_view_radius = self.day_radius
         self.current_ambient_light = self.day_ambient 
         self.current_hour = int(start_hour)
         
-        # Helper to track state changes to avoid spamming messages
         self._last_state = self.state
 
+        self.weather = "CLEAR"
+        self.weather_timer = random.randint(60000, 180000)
 
     def update(self):
-        """Runs the day/night state machine based on specific clock times."""
-        
-        # [NEW] Force Eternal Night on Layer 2 (Caves)
         if self.game.current_layer_index == 2:
             self.state = "NIGHT"
             self.current_ambient_light = self.night_ambient
             self.game.player_view_radius = self.night_radius
             
-            # Still update time counter in background, but visuals are locked
             current_real_time = pygame.time.get_ticks()
             base_delta = current_real_time - self.last_update_time
             multiplier = self.game.fast_forward_speed if getattr(self.game, 'is_fast_forwarding', False) else 1.0
@@ -69,86 +56,76 @@ class WorldTime:
             return
 
         current_real_time = pygame.time.get_ticks()
-        
         base_delta = current_real_time - self.last_update_time
         multiplier = self.game.fast_forward_speed if getattr(self.game, 'is_fast_forwarding', False) else 1.0
         delta_time = base_delta * multiplier
         
         self.last_update_time = current_real_time
-        
-        # Advance game time
         self.game_time_ms += delta_time
         
-        # Check for day wrap
+        if self.game.current_layer_index != 2:
+            self.weather_timer -= delta_time
+            if self.weather_timer <= 0:
+                # [FIXED] Force weather state changes so the clock timer is always 100% accurate
+                if self.weather == 'CLEAR':
+                    self.weather = 'RAIN'
+                    display_message(self.game, "It started raining.")
+                    self.weather_timer = random.randint(30000, 90000) # Rain duration
+                else:
+                    self.weather = 'CLEAR'
+                    display_message(self.game, "The rain stopped.")
+                    self.weather_timer = random.randint(90000, 240000) # Clear duration
+
         if self.game_time_ms >= self.day_length_ms:
             self.game_time_ms %= self.day_length_ms
             self.day_count += 1
 
             z_mult = core.data.config.ZOMBIE_MULTIPLIER * self.day_count
             
-            # 1. Double/Triple Spawn Count
             core.data.config.ZOMBIES_PER_SPAWN *= z_mult
-            
-            # 2. Double/Triple Infection Chance
             core.data.config.ZOMBIE_INFECTION_CHANCE *= z_mult
             
-            # 3. Double/Triple Detection Radius
-            # Check if player is currently sleeping (radius is overridden)
             if hasattr(self.game.player, 'saved_detection_radius') and self.game.player.saved_detection_radius is not None:
-                # Multiply the saved base value so it applies when they wake up
                 self.game.player.saved_detection_radius *= z_mult
             else:
-                # Multiply the active value directly
                 core.data.config.ZOMBIE_DETECTION_RADIUS *= z_mult
             
             print(f"Day {self.day_count} Complete. Difficulty Increased (x{z_mult})!")
             display_message(self.game, f"The horde grows stronger... (Day {self.day_count})")
             
-        # Calculate current game hour (0.0 - 24.0)
         exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
         self.current_hour = int(exact_hour)
         
-        # Determine State and Fade Factor (0.0 = Night, 1.0 = Day)
-        # We want:
-        # Night: 18:30 to 05:30 (approx, after transition)
-        # Sunrise: 05:30 to 06:30
-        # Day: 06:30 to 17:30
-        # Sunset: 17:30 to 18:30
-        
-        fade = 0.0 # Default to full night
+        fade = 0.0 
         new_state = "NIGHT"
         
-        # Dawn Transition (5:30 to 6:30)
         if self.sunrise_hour <= exact_hour < (self.sunrise_hour + self.transition_duration_hours):
             new_state = "TRANSITION_TO_DAY"
-            # Progress 0.0 to 1.0
             progress = (exact_hour - self.sunrise_hour) / self.transition_duration_hours
             fade = self.ease_in_out(progress)
             
-        # Day (6:30 to 17:30)
         elif (self.sunrise_hour + self.transition_duration_hours) <= exact_hour < self.sunset_hour:
             new_state = "DAY"
             fade = 1.0
             
-        # Dusk Transition (17:30 to 18:30)
         elif self.sunset_hour <= exact_hour < (self.sunset_hour + self.transition_duration_hours):
             new_state = "TRANSITION_TO_NIGHT"
-            # Progress 0.0 to 1.0
             progress = (exact_hour - self.sunset_hour) / self.transition_duration_hours
-            fade = 1.0 - self.ease_in_out(progress) # Fade out
+            fade = 1.0 - self.ease_in_out(progress) 
             
-        # Night (18:30 to 5:30)
         else:
             new_state = "NIGHT"
             fade = 0.0
 
         self.state = new_state
         
-        # Apply Visuals based on 'fade' (0.0 = Night, 1.0 = Day)
         self.game.player_view_radius = self.lerp(self.night_radius, self.day_radius, fade)
         self.current_ambient_light = self.lerp(self.night_ambient, self.day_ambient, fade)
 
-        # Handle State Change Messages
+        if self.weather == 'RAIN':
+            self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.70)
+            self.game.player_view_radius *= 0.90 
+
         if self.state != self._last_state:
             if self.state == "TRANSITION_TO_NIGHT":
                 display_message(self.game, "Dusk falls...")
@@ -161,9 +138,7 @@ class WorldTime:
             self._last_state = self.state
 
     def lerp(self, a, b, t):
-        """Linearly interpolates between a and b by t."""
         return a + (b - a) * t
 
     def ease_in_out(self, t):
-        """A smooth sine-based easing function for 0.0 <= t <= 1.0."""
         return (math.sin((t * math.pi) - (math.pi / 2)) + 1) / 2

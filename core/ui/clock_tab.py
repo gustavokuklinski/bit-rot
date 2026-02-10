@@ -89,3 +89,27 @@ def draw_clock_tab(surface, game, modal, assets):
     alive_surf = font.render(alive_text, True, WHITE)
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
     surface.blit(alive_surf, alive_rect)
+
+    y_offset += 30
+
+    # --- 5. Weather Info ---
+    try:
+        current_weather = getattr(game.world_time, 'weather', 'CLEAR')
+        weather_timer_ms = getattr(game.world_time, 'weather_timer', 0)
+        
+        # Convert ms to in-game minutes remaining
+        timer_in_game_minutes = int((weather_timer_ms / game.world_time.day_length_ms) * 24 * 60)
+        
+        timer_hours = timer_in_game_minutes // 60
+        timer_minutes = timer_in_game_minutes % 60
+        
+        if current_weather == 'CLEAR':
+            weather_text = f"Weather: Clear (Rain in {timer_hours}h)"
+        else:
+            weather_text = f"Weather: Raining"
+    except Exception:
+        weather_text = "Weather: Unknown"
+        
+    weather_surf = font.render(weather_text, True, WHITE)
+    weather_rect = weather_surf.get_rect(center=(center_x, y_offset))
+    surface.blit(weather_surf, weather_rect)

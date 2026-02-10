@@ -1,3 +1,5 @@
+# core/entities/player/player_stats.py
+
 import random
 from core.messages import display_message
 
@@ -86,7 +88,11 @@ class PlayerStats:
         health_bonus_perc = self.progression.get_health_bonus(self)
         infection_bonus_perc = self.progression.get_infection_bonus(self)
         
-        total_reduction_perc = health_bonus_perc + total_defence
+        # [CHANGED] 5 pieces at 1.0 each = 5.0 total defense
+        # We divide by 5.0 to scale it so that 5.0 raw defense = 100% reduction
+        clothes_reduction_perc = (total_defence / 5.0) * 100.0
+        
+        total_reduction_perc = health_bonus_perc + clothes_reduction_perc
         
         damage_modifier = 1.0 - (total_reduction_perc / 100.0)
         damage_modifier = max(0.0, damage_modifier)

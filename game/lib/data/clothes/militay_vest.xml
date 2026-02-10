@@ -1,6 +1,6 @@
 <cloth name="Military Vest" type="cloth" id="util">
     <properties>
-        <defence value="5" />
+        <defence value="0.05" />
         <capacity value="4" />
         <durability min="1" max="100" />
         <sprite file="military_vest.png" />

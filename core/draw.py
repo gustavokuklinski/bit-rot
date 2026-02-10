@@ -543,6 +543,51 @@ def draw_game(game):
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
     game.game_screen.blit(scaled_world, game_rect)
 
+
+    if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' or len(getattr(game, 'rain_particles', [])) > 0:
+        if not hasattr(game, 'rain_particles'):
+            game.rain_particles = []
+            
+        # [NEW] Check if player is currently under a roof
+        is_under_roof = False
+        if getattr(game, 'roof_data', None) and game.player:
+            px = int(game.player.rect.centerx // TILE_SIZE)
+            py = int(game.player.rect.centery // TILE_SIZE)
+            if 0 <= py < len(game.roof_data) and 0 <= px < len(game.roof_data[py]):
+                r_key = game.roof_data[py][px]
+                if r_key and r_key != ' ':
+                    is_under_roof = True
+            
+        # Spawn new rain if raining, player is outside, not under a roof, and not sleeping
+        if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and getattr(game, 'current_layer_index', 1) != 2 and not (game.player and game.player.is_sleeping) and not is_under_roof:
+            for _ in range(10): # Intensity
+                game.rain_particles.append({
+                    'x': random.randint(0, GAME_WIDTH + 200),
+                    'y': random.randint(-50, 0),
+                    'speed': random.randint(25, 35),
+                    'length': random.randint(15, 30)
+                })
+        
+        active_rain = []
+        rain_color = (130, 150, 180) # Light overcast blue
+        for p in game.rain_particles:
+            p['y'] += p['speed']
+            p['x'] -= p['speed'] * 0.15 # Slight diagonal wind angle
+            
+            start_pos = (int(p['x']), int(p['y']))
+            end_pos = (int(p['x'] + p['speed'] * 0.15), int(p['y'] - p['length']))
+            
+            # [CHANGED] Only draw the rain particles if the player is NOT under a roof
+            if not is_under_roof:
+                pygame.draw.line(game.game_screen, rain_color, start_pos, end_pos, 1)
+            
+            # Cull particles that fall off screen
+            if p['y'] < GAME_HEIGHT:
+                active_rain.append(p)
+        
+        game.rain_particles = active_rain
+
+
     if game.player and game.player.is_sleeping:
         # Cover the whole virtual screen with black
         game.game_screen.fill((0, 0, 0))

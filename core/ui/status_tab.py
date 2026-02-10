@@ -1,3 +1,5 @@
+# core/ui/status_tab.py
+
 import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
@@ -63,7 +65,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "TIR": "Tiredness",
         "WTR": "Water",
         "FOD": "Food",
-        "INF": "Infection",
+        "INF": "Sickness or Infection",
         "ANX": "Anxiety",
         "DEF": "Defence",
         "WGT": "Weight"
@@ -84,7 +86,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),
         ("ANX", player.anxiety, 100, GRAY),
-        ("DEF", player.get_total_defence(), 100, GRAY),
+        ("DEF", player.get_total_defence(), 5.0, GRAY), 
         ("WGT", player.current_weight, player.max_carry_weight, GRAY)
     ]
     
@@ -121,7 +123,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
              if name == "WGT":
                  val_str = f"{value:.1f} / {max_value:.1f}"
              elif name == "DEF":
-                 val_str = f"{value:.1f}"
+                 # [CHANGED] Multiply (value/5.0) by 100 to show correct percentage (e.g. 5.0 = 100%)
+                 val_str = f"{(value / 5.0) * 100:.0f}%"
              else:
                  val_str = f"{int(value)}%"
                  

@@ -1,3 +1,5 @@
+# core/entities/player/player.py
+
 import time
 import pygame
 import random
@@ -219,16 +221,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         # Entering sleep state
         if is_sleeping_or_resting and self.saved_detection_radius is None:
-            # Save the current 'real' radius
             self.saved_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
-            # Set to ZOMBIE_MULTIPLIER * 2 (very small/stealthy)
             core.data.config.ZOMBIE_DETECTION_RADIUS = core.data.config.ZOMBIE_DETECTION_RADIUS * core.data.config.ZOMBIE_MULTIPLIER
-            # Optional: Log for debugging
             print(f"Stealth Mode: Radius set to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
         # Exiting sleep state
         elif not is_sleeping_or_resting and self.saved_detection_radius is not None:
-            # Restore the 'real' radius (which might have increased if day passed)
             core.data.config.ZOMBIE_DETECTION_RADIUS = self.saved_detection_radius
             self.saved_detection_radius = None
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
@@ -319,16 +317,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
              overweight_ratio = self.current_weight / self.max_carry_weight
         
         if overweight_ratio > 1.0:
-             # Health Reduction due to overweight
-             # Apply small damage over time to all body parts
              loss = 0.01 * (overweight_ratio - 1.0) 
-             
              for part in self.body_parts.values():
                  part['value'] = max(0.0, part['value'] - loss)
              
              self.update_global_health()
              
-             # Gain Strength XP if running while overweight
              if self.is_running and is_moving:
                   self.progression.add_xp(self, 'strength', 0.001)
 
@@ -344,7 +338,45 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                         if item.durability <= 0:
                             item.durability = 0
                             self.toggle_utility_item(item, None, None, None) 
+
+        # --- NEW: Weather & Barefoot Mechanics ---
+        # 1. Determine if under a roof
+        is_under_roof = False
+        if getattr(game, 'roof_data', None) and getattr(game, 'current_layer_index', 1) != 2:
+            px = int(self.rect.centerx // TILE_SIZE)
+            py = int(self.rect.centery // TILE_SIZE)
+            if 0 <= py < len(game.roof_data) and 0 <= px < len(game.roof_data[py]):
+                r_key = game.roof_data[py][px]
+                if r_key and r_key != ' ':
+                    is_under_roof = True
+
+        is_outside = getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof
         
+        # [CHANGED] 2. Rain Sickness Infection (Uses Defense instead of weather_protection)
+        if is_outside and getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
+            # Uses the same calculation for damage, 5.0 defense = 100% protection against elements
+            total_defence = self.get_total_defence()
+            total_weather_protection = min(1.0, total_defence / 5.0)
+            
+            # Base infection increase per tick while standing in rain
+            base_rain_infection = 0.005 
+            actual_rain_infection = base_rain_infection * (1.0 - total_weather_protection)
+            
+            if actual_rain_infection > 0:
+                self.infection = min(100.0, self.infection + actual_rain_infection)
+
+        # 3. Barefoot Damage
+        if is_moving and self.vehicle is None:
+            # Check if player is not wearing anything on feet
+            if not self.clothes.get('feet'):
+                foot_dmg = 0.02 if self.is_running else 0.005
+                self.take_damage_to_part('feet', foot_dmg)
+                
+                # Show message rarely
+                if random.random() < 0.002:
+                    display_message_player("Your bare feet are bleeding!")
+
+
         def msg(text):
             display_message_player(text)
 
