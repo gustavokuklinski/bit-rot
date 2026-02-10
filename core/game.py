@@ -327,13 +327,12 @@ class Game:
         btn_quit     = pygame.Rect(center_x - btn_w//2, center_y + btn_h + spacing, btn_w, btn_h)
 
         mouse_pos = self._get_scaled_mouse_pos()
-        large_font = pygame.font.Font(None, 40) # Ensure font is available or imported
 
         def draw_btn(rect, text, color_base, color_hover):
             color = color_hover if rect.collidepoint(mouse_pos) else color_base
             pygame.draw.rect(self.game_screen, color, rect, border_radius=5)
             pygame.draw.rect(self.game_screen, WHITE, rect, 1, border_radius=5)
-            txt_surf = large_font.render(text, True, WHITE)
+            txt_surf = font_notification.render(text, True, WHITE)
             self.game_screen.blit(txt_surf, txt_surf.get_rect(center=rect.center))
 
         draw_btn(btn_continue, "Continue", (80, 80, 80), (60, 60, 60))

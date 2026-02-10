@@ -113,6 +113,7 @@ WATER_DECAY_AMOUNT = 0.0
 AUTO_DRINK = False
 AUTO_DRINK_THRESHOLD = 0
 BASE_PLAYER_VIEW_RADIUS = 0
+BLUR_UNSEEN = True
 ZOMBIE_SPEED = 0.0
 MAX_ZOMBIES_GLOBAL = 0
 ZOMBIE_MAX_CHUNK = 0
@@ -172,7 +173,7 @@ def load_settings(preset="default"):
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
     global DECAY_RATE_SECONDS, FOOD_WATER_MULTIPLIER_DECAY, FOOD_DECAY_AMOUNT, WATER_DECAY_AMOUNT
-    global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
+    global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS, BLUR_UNSEEN
     global ZOMBIE_SPEED, MAX_ZOMBIES_GLOBAL, ZOMBIE_DROP, ZOMBIE_DETECTION_RADIUS
     global ZOMBIE_WANDER_ENABLED, ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
     global ZOMBIES_PER_SPAWN, ZOMBIE_RESPAWN_TIMER_MS, ZOMBIE_INFECTION_CHANCE, ZOMBIE_MULTIPLIER
@@ -211,8 +212,6 @@ def load_settings(preset="default"):
         TIME_TRANSITION_HR = float(game_config.find('time_transition_hr').get('value'))
         TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
         MAX_DARKNESS_OPACITY = int(game_config.find('day_night_cycle_darkness').get('value'))
-
-
         START_ZOOM = float(game_config.find('zoom_start').get('value'))
         FAR_ZOOM = float(game_config.find('zoom_far').get('value'))
         NEAR_ZOOM = float(game_config.find('zoom_near').get('value'))
@@ -223,7 +222,8 @@ def load_settings(preset="default"):
         
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file
-
+        val_blur_unseen = player_config.find('blur_unseen').get('value')
+        BLUR_UNSEEN = str(val_blur_unseen).lower() == 'true'
         DECAY_RATE_SECONDS = float(player_config.find('food_water_decay_seconds').get('value'))
         FOOD_WATER_MULTIPLIER_DECAY = float(player_config.find('food_water_multiplier_decay').get('value'))
         FOOD_DECAY_AMOUNT = float(player_config.find('food_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY

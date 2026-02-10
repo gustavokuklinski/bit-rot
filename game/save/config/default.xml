@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
     <ui>
-        <ui_background_music value="true"/>
+        <ui_background_music value="true" name="ui_background_music"/>
     </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 900000)"/>
@@ -19,7 +19,8 @@
         <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
-        <view_radius value="8" name="View radius tiles (Default: 8)"/>
+        <view_radius value="10" name="View radius tiles (Default: 10)"/>
+        <blur_unseen value="true"/>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>
         <food_decay value="0.2" name="Food decay % (Default: 0.2)"/>
         <water_decay value="0.3" name="Water decay % (Default: 0.3)"/>

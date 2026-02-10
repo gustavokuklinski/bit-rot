@@ -170,7 +170,7 @@ def draw_game(game):
             del game.map_manager.shaking_tiles[k]
 
 
-    # --- [MOVED] Draw Persistent Blood Stains (Decals) ---
+    # --- Draw Persistent Blood Stains (Decals) ---
     if hasattr(game, 'blood_stains'):
         min_view_x = -offset_x - 100
         max_view_x = -offset_x + view_w + 100
@@ -186,6 +186,7 @@ def draw_game(game):
             stain_y = int(stain_wy + offset_y)
             pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
+    
     # [OPTIMIZATION] Low-Resolution Lighting
     low_res_w = view_w // 2
     low_res_h = view_h // 2
@@ -348,7 +349,7 @@ def draw_game(game):
     for zombie in game.zombies:
         if not screen_rect.colliderect(zombie.rect): continue
         
-        # [NEW] Vision Culling: Check if center of zombie is within view radius
+        # Vision Culling: Check if center of zombie is within view radius
         dx = zombie.rect.centerx - game.player.rect.centerx
         dy = zombie.rect.centery - game.player.rect.centery
         dist_sq = dx*dx + dy*dy
@@ -361,7 +362,7 @@ def draw_game(game):
     for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
 
-        # [NEW] Vision Culling
+        # Vision Culling
         dx = npc.rect.centerx - game.player.rect.centerx
         dy = npc.rect.centery - game.player.rect.centery
         dist_sq = dx*dx + dy*dy
@@ -426,11 +427,79 @@ def draw_game(game):
             pygame.draw.circle(scratch, trail_color, (p_radius, p_radius), p_radius)
             world_view_surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
+    # ---------------------------------------------------------
+    # BLUR FILTER (OUTSIDE PLAYER VISION)
+    # ---------------------------------------------------------
+    if core.data.config.BLUR_UNSEEN:
+        try:
+            # 1. Create a blurred version of the world
+            blur_factor = 0.12 # Adjust for blur strength
+            small_w = max(1, int(view_w * blur_factor))
+            small_h = max(1, int(view_h * blur_factor))
+            
+            # [FIX] Ensure the blurred surface has an Alpha Channel
+            small_surf = pygame.transform.smoothscale(world_view_surface, (small_w, small_h))
+            blurred_surf = pygame.transform.smoothscale(small_surf, (view_w, view_h)).convert_alpha()
+            
+            # 2. Create the Mask: White = Apply Blur, Transparent = Keep Sharp
+            blur_mask = pygame.Surface((view_w, view_h), pygame.SRCALPHA)
+            blur_mask.fill((255, 255, 255, 255)) # Start fully blurred
+
+            light_tex = game.assets.get('light_texture')
+            
+            px_view = int(game.player.rect.centerx + offset_x)
+            py_view = int(game.player.rect.centery + offset_y)
+            p_radius = getattr(game, 'player_view_radius', 400)
+            
+            # 3. Create the "Clear Hole"
+            # We prefer a generated gradient circle for robustness. 
+            # Only use light_tex if we are absolutely sure about it, but a procedural gradient is safer for "Vision".
+            
+            hole_size = int(p_radius * 2.5) if p_radius > 0 else 10
+            hole_surf = pygame.Surface((hole_size, hole_size), pygame.SRCALPHA)
+            hole_surf.fill((0,0,0,0))
+            
+            # Draw a white gradient circle (opaque center, fading out)
+            # For the blur mask, "White" in the hole means "Remove Blur" (via SUBtraction).
+            # So we want Opaque White in the center.
+            center = hole_size // 2
+            
+            if light_tex:
+                # Try using the texture
+                scaled_tex = pygame.transform.scale(light_tex, (hole_size, hole_size))
+                # Force Pure White (255,255,255) preserving Alpha
+                scaled_tex.fill((255, 255, 255, 255), special_flags=pygame.BLEND_RGBA_MULT)
+                hole_surf.blit(scaled_tex, (0,0))
+            else:
+                # Fallback procedural circle
+                pygame.draw.circle(hole_surf, (255, 255, 255, 255), (center, center), int(p_radius))
+
+            # 4. Apply the Hole to the Mask
+            # Mask (White) - Hole (White) = Transparent Hole
+            hole_rect = hole_surf.get_rect(center=(px_view, py_view))
+            blur_mask.blit(hole_surf, hole_rect, special_flags=pygame.BLEND_RGBA_SUB)
+
+            # 5. Composite
+            # Mask now has a transparent hole in the center.
+            # Blit mask onto blurred_surf (keep blur only where mask is Opaque)
+            blurred_surf.blit(blur_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            
+            # 6. Overlay blurred_surf on top of world
+            world_view_surface.blit(blurred_surf, (0, 0))
+
+        except Exception as e:
+            pass
+
     # Roof rendering is now integrated into the main grid loop for better performance
 
     if game.hovered_container:
-        hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
-        pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
+        # Vision Culling for Hover Highlight
+        dx = game.hovered_container.rect.centerx - game.player.rect.centerx
+        dy = game.hovered_container.rect.centery - game.player.rect.centery
+        
+        if (dx*dx + dy*dy) <= view_radius_sq:
+            hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
+            pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
     world_mouse_pos = game.screen_to_world(mouse_pos)
     for npc in game.npcs:
