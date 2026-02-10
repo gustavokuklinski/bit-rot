@@ -1,3 +1,5 @@
+# core/map/procedural/generator_spawning.py
+
 import random
 from core.data.config import *
 
@@ -161,3 +163,48 @@ class ProceduralGeneratorSpawning:
                 spawn[ny][nx] = spawn_types[i]
                 
         print(f"  > NPC Scatter L2: Placed {count_to_spawn} NPCs ({num_static} Static).")
+
+    def _scatter_vehicles(self, layers, mask, w, h):
+        """
+        [NEW] Scatter vehicles on road/asphalt AND drunkard (dirty_01) tiles.
+        """
+        street_tiles = []
+        for y in range(h):
+            for x in range(w):
+                if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
+                # Must be empty space (no walls, no existing spawn)
+                if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
+                
+                ground = layers['ground'][y][x]
+                # Check for road keywords or SPECIFICALLY dirty_01 (Drunkard Paths)
+                if 'asphalt' in ground or 'road' in ground or 'dirty_01' in ground:
+                    street_tiles.append((x, y))
+
+        if not street_tiles: 
+            return
+
+        # Determine limit (Global Limit calculated from Chunk config)
+        if CHUNK_SIZE > 0:
+            # W and H are in tiles.
+            num_chunks_w = w // CHUNK_SIZE
+            num_chunks_h = h // CHUNK_SIZE
+            total_chunks = num_chunks_w * num_chunks_h
+            
+            # If map size is weird, at least assume 1 chunk
+            total_chunks = max(1, total_chunks)
+            
+            max_vehicles_global = MAX_VEH_CHUNK * total_chunks
+        else:
+            max_vehicles_global = 40 # Fallback default
+        
+        print(f"  > Vehicle Scatter: Global Limit {max_vehicles_global} (Chunks: {total_chunks} x {MAX_VEH_CHUNK})")
+
+        count_to_spawn = min(len(street_tiles), max_vehicles_global)
+        if count_to_spawn <= 0: return
+
+        chosen = random.sample(street_tiles, count_to_spawn)
+        
+        for (vx, vy) in chosen:
+            layers['spawn'][vy][vx] = 'VEH'
+            
+        print(f"  > Vehicle Scatter: Placed {count_to_spawn} vehicles on Roads/Paths.")

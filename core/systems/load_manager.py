@@ -13,7 +13,7 @@ from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
 from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
 from core.map.map_loader import parse_layered_map_layout
-from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population
+from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
@@ -211,6 +211,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                         px, py = x * TILE_SIZE, y * TILE_SIZE
                         npc = NPC(px, py, game, is_static=True)
                         game.npcs.add(npc)
+
+        if game.current_layer_index == 1:
+            game.logger.info("Spawning random vehicles...")
+            spawn_random_vehicles(game, count=8)
 
         if game.current_layer_index == 2:
             game.logger.info("Initializing L2 (Cave) Population...")

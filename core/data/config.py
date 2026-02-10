@@ -152,6 +152,7 @@ NPC_HEALTH_MULTIPLIER = 1.0
 NPC_DAMAGE_MULTIPLIER = 1.0
 NPC_SPEED_MULTIPLIER = 1.0
 NPC_DETECTION_RADIUS = 0
+MAX_VEH_CHUNK = 0
 VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
 VEH_HAS_MOTOR = 1.0
@@ -189,7 +190,7 @@ def load_settings(preset="default"):
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
-    global VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
+    global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC
@@ -292,6 +293,7 @@ def load_settings(preset="default"):
         NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
 
         vehicle_config = root.find('vehicle')
+        MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value'))
         VEH_HAS_FUEL = float(vehicle_config.find('has_fuel_chance').get('value'))
         VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value'))
         VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value'))

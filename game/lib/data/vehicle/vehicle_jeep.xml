@@ -1,4 +1,4 @@
-<map name="car_jeep" type="maptile_car" char="car_jeep" is_obstacle="true">
+<vehicle name="car_jeep" type="car" is_obstacle="true">
     <capacity value="10" />
     <car>
         <max_speed value="8" />
@@ -21,4 +21,4 @@
     <visuals>
         <sprite file="car_jeep.png" />
     </visuals>
-</map>
+</vehicle>

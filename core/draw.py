@@ -303,8 +303,19 @@ def draw_game(game):
                 light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception: pass
     
+    view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
+
     for container in game.containers:
         if not screen_rect.colliderect(container.rect): continue
+        
+        # Vision Culling for Containers/Corpses
+        dx = container.rect.centerx - game.player.rect.centerx
+        dy = container.rect.centery - game.player.rect.centery
+        dist_sq = dx*dx + dy*dy
+        
+        if dist_sq > view_radius_sq:
+            continue
+
         draw_pos = container.rect.move(offset_x, offset_y)
         if getattr(container, 'image', None):
              world_view_surface.blit(container.image, draw_pos)
@@ -314,6 +325,15 @@ def draw_game(game):
 
     for item in game.items_on_ground:
         if not screen_rect.colliderect(item.rect): continue
+
+        # Vision Culling for Items
+        dx = item.rect.centerx - game.player.rect.centerx
+        dy = item.rect.centery - game.player.rect.centery
+        dist_sq = dx*dx + dy*dy
+        
+        if dist_sq > view_radius_sq:
+            continue
+
         draw_pos = item.rect.move(offset_x, offset_y)
         if getattr(item, 'image', None):
             world_view_surface.blit(item.image, draw_pos)
@@ -324,7 +344,6 @@ def draw_game(game):
         if screen_rect.colliderect(p.rect):
             p.draw(world_view_surface, offset_x, offset_y)
 
-    view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
 
     for zombie in game.zombies:
         if not screen_rect.colliderect(zombie.rect): continue

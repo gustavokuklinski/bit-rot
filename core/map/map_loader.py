@@ -161,6 +161,9 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 elif char.strip() == 'S':
                     pass
+                elif char == 'VEH':
+                    # [FIXED] Explicitly ignore VEH markers here so they aren't parsed as missing items/tiles.
+                    pass
                 else:
                     # Check for Specific Item Code
                     test_item = Item.create_from_name(char)
@@ -172,7 +175,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
 
                 # Check if the character is a renderable tile (e.g. specialized spawn markers)
-                if char in tile_manager.definitions:
+                # [FIXED] Do not look up 'VEH' in definitions to avoid 'No template' errors
+                if char != 'VEH' and char in tile_manager.definitions:
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     tile_def = tile_manager.definitions[char]

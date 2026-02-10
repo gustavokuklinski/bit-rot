@@ -15,7 +15,10 @@ class Vehicle:
         self.y = y
         self.width = width
         self.height = height
-        self.image = image
+        
+        # [UPDATED] Store image in private variable to allow property auto-reload
+        self._image = image 
+        
         self.rect = pygame.Rect(x, y, width, height)
         self.color = (0, 0, 255)
         
@@ -58,12 +61,37 @@ class Vehicle:
         self.seat_count = int(stats.get('seats', 4))
         self.seats = [None] * self.seat_count
 
-        # [NEW] Track entities hit during movement for processing in update.py
+        # Track entities hit during movement for processing in update.py
         self.hit_entities = []
 
         self._spawn_random_equipment()
         self.generate_trunk_loot(loot_table)
         self.update_stats_from_equipment()
+
+    @property
+    def image(self):
+        """
+        Auto-restores the image if it is missing (e.g., after loading a save).
+        """
+        img = getattr(self, '_image', None)
+        if img is None:
+            # Attempt to reload from VehicleLoader
+            from core.entities.vehicle.vehicle_loader import VehicleLoader
+            loader = VehicleLoader() # Singleton access
+            definition = loader.get_definition_by_name(self.name)
+            if definition and definition['image']:
+                self._image = definition['image']
+                # Optionally update dimensions if they were lost/defaulted
+                if self.width <= TILE_SIZE * 2: # Heuristic check if using default size
+                     self.width = self._image.get_width()
+                     self.height = self._image.get_height()
+                     self.rect.size = (self.width, self.height)
+                return self._image
+        return img
+
+    @image.setter
+    def image(self, value):
+        self._image = value
 
     @property
     def current_speed_val(self):
@@ -169,8 +197,6 @@ class Vehicle:
     def move(self, dx, dy, obstacles):
         if not self.active: return
 
-        
-
         self.x += dx
         self.rect.x = int(self.x)
         collision_x = False
@@ -180,27 +206,22 @@ class Vehicle:
                 # --- ROBUST ENTITY DETECTION (X-AXIS) ---
                 is_entity = False
                 
-                # 1. Strict Type Check (Best for Sprites passed in obstacles)
+                # 1. Strict Type Check
                 if isinstance(obstacle, (Zombie, NPC)):
                     is_entity = True
                 
-                # 2. Duck Typing (Works for any entity with health/damage)
+                # 2. Duck Typing
                 elif hasattr(obstacle, 'take_damage') or hasattr(obstacle, 'health'):
                     is_entity = True
                 
-                # 3. String Check (Fallback for weird imports)
+                # 3. String Check
                 elif type(obstacle).__name__ in ['Zombie', 'NPC', 'Player']:
                     is_entity = True
 
                 if is_entity:
                     self.damage_motor(1.0)
-                    # Add to hit list for update.py to handle damage logic
                     if obstacle not in self.hit_entities:
                         self.hit_entities.append(obstacle)
-                    
-                    # IMPORTANT: Continue skips setting collision_x=True
-                    # This allows the vehicle to physically pass through the NPC/Zombie
-                    # instead of treating it like a concrete wall.
                     continue 
                 # -------------------------------
 
@@ -461,6 +482,8 @@ class Vehicle:
         return self.capacity * 10
         
     def draw(self, surface, offset_x, offset_y):
+        # NOTE: self.image is now a property that auto-restores. 
+        # Accessing it here triggers the restore if needed.
         if self.image:
             surface.blit(self.image, (self.rect.x + offset_x, self.rect.y + offset_y))
         else:

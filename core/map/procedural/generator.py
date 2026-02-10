@@ -1,3 +1,5 @@
+# core/map/procedural/generator.py
+
 import os
 import random
 import pygame
@@ -329,6 +331,14 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 # Render L1 (Chunk by chunk is fine for L1)
                 self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
         # -----------------------------
+        
+        # --- SCATTER VEHICLES (L1 Global) ---
+        print("Scattering Vehicles (L1)...")
+        self._scatter_vehicles(global_layers, None, global_tiles_w, global_tiles_h)
+        
+        # Re-render L1 heat map to show vehicles
+        self._render_full_map_to_surface(full_map_surface, heat_map_surface, global_layers)
+        # ------------------------------------
 
         # SAVE L1
         print("Saving global world map L1...")

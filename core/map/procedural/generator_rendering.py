@@ -1,3 +1,5 @@
+# core/map/procedural/generator_rendering.py
+
 import os
 import csv
 import pygame
@@ -52,13 +54,14 @@ class ProceduralGeneratorRendering:
                 
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S']:
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
                         elif s_char == 'I': color = (0, 0, 255)
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255) 
+                        elif s_char == 'VEH': color = (255, 165, 0) # Orange
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
 
     def _render_full_map_to_surface(self, bg_surf, heat_surf, layers):
@@ -109,11 +112,12 @@ class ProceduralGeneratorRendering:
                 # Heatmap (Spawns)
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S']:
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
                         elif s_char == 'I': color = (0, 0, 255)
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255)
+                        elif s_char == 'VEH': color = (255, 165, 0) # Orange
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

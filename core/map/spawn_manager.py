@@ -8,6 +8,8 @@ from core.data.config import *
 from core.entities.item.item import Item
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
+from core.entities.vehicle.vehicle_loader import VehicleLoader
+from core.entities.vehicle.vehicle import Vehicle
 
 # --- Configuration for Dynamic Spawning ---
 MAX_ACTIVE_NPCS = 2
@@ -192,6 +194,120 @@ def spawn_l2_population(game, count=10):
             zombie = Zombie.create_random(px, py)
             game.zombies.append(zombie)
             zombie_count += 1
+
+
+def spawn_random_vehicles(game, count=10):
+    loader = VehicleLoader()
+    if not loader.definitions:
+        print("No vehicle definitions found. Skipping vehicle generation.")
+        return
+
+    valid_tiles = []
+    layer_idx = game.current_layer_index
+    
+    # ---------------------------------------------------------
+    # 1. Try to find 'VEH' markers in the Spawn Map first
+    # ---------------------------------------------------------
+    spawn_found = False
+    
+    # Assuming game.map_manager has access to raw layers or spawn map
+    spawn_layer = None
+    if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'spawn_layer'):
+         spawn_layer = game.map_manager.spawn_layer
+    
+    if spawn_layer:
+        h = len(spawn_layer)
+        w = len(spawn_layer[0]) if h > 0 else 0
+        for y in range(h):
+            for x in range(w):
+                if spawn_layer[y][x] == 'VEH':
+                    valid_tiles.append((x, y))
+                    spawn_found = True
+        
+        if spawn_found:
+            print(f"Found {len(valid_tiles)} 'VEH' markers in spawn map.")
+    
+    # ---------------------------------------------------------
+    # 2. Fallback: Scan map for valid tiles (Roads or Dirty_01)
+    # ---------------------------------------------------------
+    if not spawn_found:
+        if layer_idx not in game.all_ground_layers:
+            return
+
+        map_data = game.all_ground_layers[layer_idx]
+        height = len(map_data)
+        width = len(map_data[0]) if height > 0 else 0
+
+        for y in range(height):
+            for x in range(width):
+                char = map_data[y][x]
+                tile_def = game.tile_manager.definitions.get(char)
+                if tile_def:
+                    t_name = tile_def.get('name', '').lower()
+                    if 'road' in t_name or 'dirty_01' in t_name:
+                         # Just add candidate, collision check later
+                        valid_tiles.append((x, y))
+
+        if not valid_tiles:
+            print("No valid road/dirty tiles found for vehicle spawning.")
+            return
+
+        random.shuffle(valid_tiles)
+
+    # ---------------------------------------------------------
+    # 3. Spawn Vehicles
+    # ---------------------------------------------------------
+    spawned_count = 0
+    # If using markers, we try to spawn at all markers (up to limit or count)
+    limit = count if not spawn_found else len(valid_tiles) 
+
+    for tx, ty in valid_tiles:
+        if spawned_count >= limit: break
+        
+        definition = loader.get_random_definition()
+        if not definition: break
+
+        image = definition['image']
+        w = image.get_width() if image else TILE_SIZE * 2
+        h = image.get_height() if image else TILE_SIZE * 3
+        
+        px, py = tx * TILE_SIZE, ty * TILE_SIZE
+        
+        # Create a rect for the potential vehicle
+        veh_rect = pygame.Rect(px, py, w, h)
+        
+        # Check for collisions with existing obstacles or other vehicles
+        collision = False
+        for ob in game.obstacles:
+            if veh_rect.colliderect(ob):
+                collision = True
+                break
+        
+        if collision:
+            continue
+
+        # Instantiate Vehicle
+        vehicle = Vehicle(
+            name=definition['name'],
+            x=px, y=py,
+            width=w, height=h,
+            image=image,
+            stats=definition['stats'],
+            capacity=definition['capacity'],
+            loot_table=definition['loot_table']
+        )
+        
+        # Register in Game
+        if not hasattr(game, 'vehicles'):
+            game.vehicles = []
+            
+        game.vehicles.append(vehicle)
+        game.containers.append(vehicle)
+        game.obstacles.append(vehicle.rect)
+        
+        spawned_count += 1
+        print(f"Spawned {vehicle.name} at ({px}, {py})")
+
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
     zombies = []
