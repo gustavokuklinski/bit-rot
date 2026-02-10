@@ -129,6 +129,8 @@ class ProceduralGeneratorChunk:
                 val += random.uniform(-2.0, 2.0)
                 return int(val)
 
+            tree_chance = 0.05 # 5% chance to spawn a tree on the beach
+
             if gx == 0: # Left
                 for y in range(h):
                     global_y = gy * h + y
@@ -144,7 +146,7 @@ class ProceduralGeneratorChunk:
                         elif x < sand_lim:
                             if layers['ground'][y][x] != self.water_tile:
                                 layers['ground'][y][x] = self.sand_tile
-                                layers['base'][y][x] = ' '
+                                layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
             if gx == self.grid_w - 1: # Right
@@ -164,7 +166,7 @@ class ProceduralGeneratorChunk:
                         elif dist < sand_lim:
                             if layers['ground'][y][x] != self.water_tile:
                                 layers['ground'][y][x] = self.sand_tile
-                                layers['base'][y][x] = ' '
+                                layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
             if gy == 0: # Top
@@ -182,7 +184,7 @@ class ProceduralGeneratorChunk:
                         elif y < sand_lim:
                             if layers['ground'][y][x] != self.water_tile:
                                 layers['ground'][y][x] = self.sand_tile
-                                layers['base'][y][x] = ' '
+                                layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
             if gy == self.grid_h - 1: # Bottom
@@ -202,7 +204,7 @@ class ProceduralGeneratorChunk:
                         elif dist < sand_lim:
                             if layers['ground'][y][x] != self.water_tile:
                                 layers['ground'][y][x] = self.sand_tile
-                                layers['base'][y][x] = ' '
+                                layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
         # 5. Organic Trade Routes
