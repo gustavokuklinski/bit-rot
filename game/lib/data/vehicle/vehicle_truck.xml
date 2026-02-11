@@ -1,5 +1,5 @@
-<vehicle name="car_pickup" type="car" is_obstacle="true">
-    <capacity value="10" />
+<vehicle name="car_truck" type="car" is_obstacle="true">
+    <capacity value="20" />
     <car>
         <max_speed value="8" />
         <key value="Car Key Pickup" />
@@ -15,7 +15,9 @@
     </car>
     <loot>
         <item item="Car Key Pickup" chance="0.1" />
-        <item item="Fuel Canister" chance="0.1" />
+        <item item="Fuel Canister" chance="0.6" />
+        <item item="Fuel Canister" chance="0.6" />
+        <item item="Fuel Canister" chance="0.6" />
         <item item="Powerbank" chance="0.1" />
         <item item="Motor Repair Kit" chance="0.1" />
         <item item="Toolkit" chance="0.3" />
@@ -24,6 +26,6 @@
         <item item="Car Tire" chance="0.3" />
     </loot>
     <visuals>
-        <sprite file="car_pickup.png" />
+        <sprite file="car_truck.png" />
     </visuals>
 </vehicle>

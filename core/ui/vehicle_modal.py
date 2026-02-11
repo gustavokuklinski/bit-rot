@@ -205,13 +205,16 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     y += 20 + STYLE["TITLE_SPACING"] 
 
     # 2. Equipment Slots
-    slots = ['motor','key', 'fuel', 'battery']
+    slots_row_1 = ['motor','key', 'fuel', 'battery']
+    slots_row_2 = ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']
     slot_size = STYLE["SLOT_SIZE"]
     slot_gap = STYLE["SLOT_GAP"]
     current_x = x
     modal['equipment_rects'] = {}
     
-    for slot_name in slots:
+    # Draw Row 1
+    current_x = x
+    for slot_name in slots_row_1:
         slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
         
         pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
@@ -227,6 +230,32 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
              if hasattr(item, 'load') and item.load is not None and item.load > 0:
                  draw_text_shadow(surface, font_small, str(int(item.load)), STYLE["TEXT_MAIN"], 
+                                (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
+
+        modal['equipment_rects'][slot_name] = slot_rect
+        current_x += slot_size + slot_gap
+
+    # Draw Row 2 (Tires)
+    current_x = x
+    y += slot_size + 35 # Move down for the next row
+    for slot_name in slots_row_2:
+        slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
+        
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        
+        # Format "tire_fl" -> "FL TIRE", etc.
+        lbl_text = slot_name.split('_')[1].upper() + " TIRE"
+        lbl = font_notification.render(lbl_text, True, STYLE["TEXT_DIM"])
+        surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
+        
+        item = vehicle.equipment.get(slot_name)
+        if item:
+             if getattr(item, 'image', None):
+                 icon = pygame.transform.scale(item.image, (32, 32))
+                 surface.blit(icon, icon.get_rect(center=slot_rect.center))
+             if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
+                 draw_text_shadow(surface, font_small, str(int(item.durability)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['equipment_rects'][slot_name] = slot_rect

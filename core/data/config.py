@@ -59,7 +59,7 @@ TEXT_MODAL_HEIGHT = 300
 
 # Vehicle Options modal
 VEHICLE_MODAL_WIDTH = 400
-VEHICLE_MODAL_HEIGHT = 410
+VEHICLE_MODAL_HEIGHT = 465
 
 # Mobile modal
 MOBILE_MODAL_WIDTH = 250
@@ -158,6 +158,7 @@ VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
 VEH_HAS_MOTOR = 1.0
 VEH_HAS_BATTERY = 1.0
+VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
 
@@ -191,7 +192,7 @@ def load_settings(preset="default"):
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
-    global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY
+    global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC
@@ -298,7 +299,8 @@ def load_settings(preset="default"):
         VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value'))
         VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value'))
         VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value'))
-        
+        VEH_HAS_TIRES = float(vehicle_config.find('has_tires_chance').get('value'))
+
         ui_config = root.find('ui')
         val_music = ui_config.find('ui_background_music').get('value')
         UI_BACKGROUND_MUSIC = str(val_music).lower() == 'true'

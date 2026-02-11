@@ -50,7 +50,11 @@ class Vehicle:
             'motor': None,
             'key': None,
             'fuel': None,
-            'battery': None 
+            'battery': None,
+            'tire_fl': None,
+            'tire_fr': None,
+            'tire_bl': None,
+            'tire_br': None
         }
         
         self.velocity = [0, 0]
@@ -136,6 +140,14 @@ class Vehicle:
                         batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
                 self.equipment['battery'] = batt_item
 
+        for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+            if random.random() < VEH_HAS_TIRES: # 85% chance to have each tire initially
+                tire_item = Item.create_from_name("Car Tire")
+                if tire_item:
+                    if hasattr(tire_item, 'durability') and hasattr(tire_item, 'max_durability'):
+                        tire_item.durability = random.uniform(20.0, float(tire_item.max_durability))
+                    self.equipment[tire_slot] = tire_item
+
     def generate_trunk_loot(self, loot_table=None):
         if not loot_table: return
             
@@ -196,6 +208,25 @@ class Vehicle:
 
     def move(self, dx, dy, obstacles):
         if not self.active: return
+
+        dist = math.hypot(dx, dy)
+        if dist > 0:
+            tire_degradation = dist * 0.005 # Adjust degradation rate as needed
+            broken_tire = False
+            for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+                tire = self.equipment.get(tire_slot)
+                if tire and hasattr(tire, 'durability'):
+                    tire.durability -= tire_degradation
+                    if tire.durability <= 0:
+                        tire.durability = 0
+                        broken_tire = True
+            
+            if broken_tire:
+                print("A tire has broken!")
+                self.velocity = [0, 0]
+                self.active = False
+                self.car_state = "Off"
+                return # Stop the car immediately
 
         self.x += dx
         self.rect.x = int(self.x)
@@ -313,6 +344,13 @@ class Vehicle:
             fuel_item = self.equipment.get('fuel')
             has_fuel = fuel_item and (not hasattr(fuel_item, 'load') or fuel_item.load > 0)
             
+            missing_tires = []
+            for t_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+                tire = self.equipment.get(t_slot)
+                if not tire or getattr(tire, 'durability', 0) <= 0:
+                    missing_tires.append(t_slot)
+            has_all_tires = len(missing_tires) == 0
+
             if has_key and has_power and has_fuel:
                 self.active = True
                 self.car_state = "On"
@@ -370,7 +408,11 @@ class Vehicle:
         elif slot == 'motor':
             is_motor = getattr(item, 'item_type', None) == 'car_motor' or getattr(item, 'type', None) == 'car_motor'
             return is_motor or getattr(item, 'status', None) == 'motor'
-            
+        
+        elif slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+            item_type = getattr(item, 'item_type', getattr(item, 'type', None))
+            return item_type == 'car_tire'
+
         return False
 
     def add_equipment(self, item, slot):

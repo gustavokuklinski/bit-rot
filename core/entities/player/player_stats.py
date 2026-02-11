@@ -80,8 +80,13 @@ class PlayerStats:
                 display_message(f"Your {item_hit.name} broke!")
 
     def take_damage(self, game, base_damage, base_infection):
-        if self.vehicle: return 0, 0
         
+        if getattr(self, 'vehicle', None):
+            if hasattr(self.vehicle, 'damage_motor'):
+                self.vehicle.damage_motor(base_damage)
+            return 0, 0
+
+
         self.take_durability_damage(base_damage, game)
 
         total_defence = self.get_total_defence()

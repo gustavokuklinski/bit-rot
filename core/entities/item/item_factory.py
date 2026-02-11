@@ -101,7 +101,11 @@ def create_item_from_name(cls, item_name, randomize_durability=False):
         min_dur *= multiplier
         max_dur *= multiplier
 
-        durability = random.uniform(min_dur, max_dur)
+        if randomize_durability:
+            durability = random.uniform(min_dur, max_dur)
+        else:
+            durability = max_dur
+
 
     load = None
     if 'load' in props:

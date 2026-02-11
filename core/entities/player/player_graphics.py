@@ -66,6 +66,23 @@ class PlayerGraphics:
         if self.vehicle:
             veh_draw_pos = (self.vehicle.x + offset_x, self.vehicle.y + offset_y)
             surface.blit(self.vehicle.image, veh_draw_pos)
+            
+            if self.action_timer > 0 and self.action_total_time > 0:
+                progress = 1.0 - (self.action_timer / self.action_total_time)
+                
+                bar_total_width = TILE_SIZE * 2
+                veh_w = self.vehicle.image.get_width()
+                
+                bar_x = veh_draw_pos[0] + (veh_w / 2) - (bar_total_width / 2)
+                bar_y = veh_draw_pos[1] - 15 
+                
+                bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
+                pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+                
+                bar_progress_width = int(bar_total_width * progress)
+                bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
+                pygame.draw.rect(surface, (50, 200, 50), bar_rect)
+
             return
 
         draw_rect = self.rect.move(offset_x, offset_y)

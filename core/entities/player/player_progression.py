@@ -429,7 +429,7 @@ class PlayerProgression:
         _, minor_save = self.get_derived_bonus('durability_save_chance_minor')
         if random.uniform(0, 100) < minor_save:
              return 0.5
-        return 2.0
+        return 1.0
 
     def get_ranged_durability_loss(self, player):
         _, save_chance = self.get_derived_bonus('durability_save_chance')

@@ -177,7 +177,7 @@ def handle_attack(game, mouse_pos):
                                  if weapon is None:
                                      hand_part = game.player.body_parts.get('hand')
                                      if hand_part:
-                                         if hand_part['value'] <= 0:
+                                         if hand_part['value'] <= 10:
                                              display_message(game, "Your hands are too injured to hit this!")
                                              hit_something = True 
                                              break

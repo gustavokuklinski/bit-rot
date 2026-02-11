@@ -38,7 +38,7 @@ def handle_mouse_up(game, event, mouse_pos):
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
                 
-                is_raw_external = type_orig in ['nearby', 'nearby_stack_split']
+                is_raw_external = type_orig in ['nearby', 'nearby_stack_split', 'container', 'container_stack_split', 'vehicle_equipment']
                 
                 is_source_backpack = (container_obj == game.player.backpack and container_obj is not None)
                 is_external_source = is_raw_external and not is_source_backpack
@@ -52,12 +52,21 @@ def handle_mouse_up(game, event, mouse_pos):
                                     vehicle = modal['vehicle']
                                     valid_drop = vehicle.can_equip(game.dragged_item, slot_name)
                                     if valid_drop:
-                                        old_item = vehicle.add_equipment(game.dragged_item, slot_name)
-                                        if old_item:
-                                            game.dragged_item = old_item
-                                            dropped_successfully = False 
-                                        else:
-                                            dropped_successfully = True
+                                        item_ref = game.dragged_item
+                                        def do_equip_vehicle():
+                                            old_item = vehicle.add_equipment(item_ref, slot_name)
+                                            if old_item:
+                                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                                    game.player.inventory.append(old_item)
+                                                else:
+                                                    game.items_on_ground.append(old_item)
+                                                    old_item.rect.center = game.player.rect.center
+                                        
+                                        action_name = "Equipping" if not is_external_source else "Transferring"
+                                        game.player.start_action(action_name, 1.0, do_equip_vehicle, xp_reward=0.5)
+                                        
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
                                     else:
                                         print(f"Cannot place {game.dragged_item.name} in {slot_name} slot.")
                                     break

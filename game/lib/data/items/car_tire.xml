@@ -1,0 +1,8 @@
+<item name="Car Tire" type="car_tire">
+    <properties>
+        <durability min="1" max="100" />
+        <sprite file="car_tire.png" />
+        <weight weight="10" />
+    </properties>
+    <spawn chance="1" />
+</item>

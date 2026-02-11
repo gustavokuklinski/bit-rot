@@ -59,6 +59,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.is_following = False
         self.state = 'wandering' if not is_static else 'idle'
 
+        self.start_x = x
+        self.start_y = y
+        self.patrol_target = None
+        self.patrol_wait = 0
+        self.shelter_target = None
+
         self.idle_timer = 0
         
         self.stuck_timer = 0
@@ -149,6 +155,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         current_time = pygame.time.get_ticks()
         
+        is_raining = getattr(game, 'is_raining', False)
+        if hasattr(game, 'weather'):
+            is_raining = is_raining or getattr(game.weather, 'is_raining', False)
+        if hasattr(game, 'world_time') and hasattr(game.world_time, 'state'):
+            is_raining = is_raining or ('RAIN' in getattr(game.world_time, 'state', ''))
+
         if self.knockback_timer > 0:
             kb_x, kb_y = self.knockback_velocity
             self.x += kb_x
@@ -359,17 +371,100 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                             if is_dead and target_entity != game.player:
                                 if hasattr(target_entity, 'die'):
                                     target_entity.die(game)
-                            
+            
+                         
             else:
-                self.state = 'wandering'
-                if not self.is_static:
-                    if random.random() < 0.02:
-                        self.angle += random.randint(-45, 45)
+                is_avoiding = False
+                if self.stuck_timer > 0:
+                    self.stuck_timer -= 1
+                    is_avoiding = True
+
+                if is_avoiding:
+                    self.angle = self.stuck_angle
                     rad = math.radians(self.angle)
-                    self.dx = math.cos(rad) * effective_speed * 0.5 
-                    self.dy = -math.sin(rad) * effective_speed * 0.5
+                    self.dx = math.cos(rad) * effective_speed * 0.8
+                    self.dy = -math.sin(rad) * effective_speed * 0.8
                 else:
-                    self.dx, self.dy = 0, 0
+                    if self.is_static:
+                        if is_raining:
+                            # 1. Seek Shelter during Rain
+                            current_grid_x = int(self.rect.centerx // TILE_SIZE)
+                            current_grid_y = int(self.rect.centery // TILE_SIZE)
+                            current_tile = game.map_manager.get_tile_at(current_grid_x, current_grid_y)
+                            
+                            is_indoor = current_tile and (current_tile.get('is_indoor', False) or current_tile.get('has_roof', False))
+                            if is_indoor:
+                                self.dx, self.dy = 0, 0
+                                self.state = 'idle'
+                                self.shelter_target = None 
+                            else:
+                                if not self.shelter_target:
+                                    found = False
+                                    for r in range(1, 20):
+                                        for d_x in range(-r, r+1):
+                                            for d_y in range(-r, r+1):
+                                                tx, ty = current_grid_x + d_x, current_grid_y + d_y
+                                                t_def = game.map_manager.get_tile_at(tx, ty)
+                                                if t_def and (t_def.get('is_indoor', False) or t_def.get('has_roof', False)):
+                                                    self.shelter_target = (tx * TILE_SIZE + TILE_SIZE//2, ty * TILE_SIZE + TILE_SIZE//2)
+                                                    found = True
+                                                    break
+                                            if found: break
+                                        if found: break
+                                    
+                                    if not found:
+                                        self.shelter_target = (self.start_x, self.start_y)
+                                
+                                if self.shelter_target:
+                                    self.state = 'seeking_shelter'
+                                    dx_s = self.shelter_target[0] - self.rect.centerx
+                                    dy_s = self.shelter_target[1] - self.rect.centery
+                                    dist_s = math.hypot(dx_s, dy_s)
+                                    if dist_s > TILE_SIZE / 2:
+                                        self.angle = math.degrees(math.atan2(-dy_s, dx_s))
+                                        scale = effective_speed / max(1, dist_s)
+                                        self.dx = dx_s * scale
+                                        self.dy = dy_s * scale
+                                    else:
+                                        self.dx, self.dy = 0, 0
+                                        self.state = 'idle'
+                        else:
+                            # 2. Patrol Logic (10 tiles around start position)
+                            self.shelter_target = None
+                            
+                            if self.patrol_wait > 0:
+                                self.patrol_wait -= 1 * multiplier
+                                self.dx, self.dy = 0, 0
+                                self.state = 'idle'
+                            else:
+                                if not self.patrol_target:
+                                    angle_p = math.radians(random.uniform(0, 360))
+                                    dist_p = random.uniform(0, TILE_SIZE * 10) # 10 Tiles radius
+                                    self.patrol_target = (self.start_x + math.cos(angle_p) * dist_p, self.start_y + math.sin(angle_p) * dist_p)
+                                    self.state = 'wandering'
+                                
+                                if self.patrol_target:
+                                    dx_p = self.patrol_target[0] - self.rect.centerx
+                                    dy_p = self.patrol_target[1] - self.rect.centery
+                                    dist_p = math.hypot(dx_p, dy_p)
+                                    if dist_p > TILE_SIZE / 2:
+                                        self.angle = math.degrees(math.atan2(-dy_p, dx_p))
+                                        scale = (effective_speed * 0.5) / max(1, dist_p) 
+                                        self.dx = dx_p * scale
+                                        self.dy = dy_p * scale
+                                    else:
+                                        self.patrol_target = None
+                                        self.patrol_wait = random.randint(100, 300)
+                                        self.dx, self.dy = 0, 0
+                                        self.state = 'idle'
+                    else:
+                        # 3. Non-Static Wandering
+                        self.state = 'wandering'
+                        if random.random() < 0.02:
+                            self.angle += random.randint(-45, 45)
+                        rad = math.radians(self.angle)
+                        self.dx = math.cos(rad) * effective_speed * 0.5 
+                        self.dy = -math.sin(rad) * effective_speed * 0.5
 
         is_moving = self.dx != 0 or self.dy != 0
 
@@ -406,6 +501,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             collided_x = False
             for obstacle in obstacles:
                 if self.rect.colliderect(obstacle):
+                    # --- DOOR LOGIC X ---
+                    obs_grid_x = obstacle.x // TILE_SIZE
+                    obs_grid_y = obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(obs_grid_x, obs_grid_y)
+                    if tile_def and tile_def.get('is_statable'):
+                        char = game.map_data[obs_grid_y][obs_grid_x]
+                        if 'close' in char or tile_def.get('state') == 'close':
+                            game.map_manager.toggle_door_state(obs_grid_x, obs_grid_y)
+                    # --------------------
                     if self.dx > 0: self.rect.right = obstacle.left
                     elif self.dx < 0: self.rect.left = obstacle.right
                     self.x = self.rect.x
@@ -429,6 +533,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             collided_y = False
             for obstacle in obstacles:
                 if self.rect.colliderect(obstacle):
+                    # --- DOOR LOGIC Y ---
+                    obs_grid_x = obstacle.x // TILE_SIZE
+                    obs_grid_y = obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(obs_grid_x, obs_grid_y)
+                    if tile_def and tile_def.get('is_statable'):
+                        char = game.map_data[obs_grid_y][obs_grid_x]
+                        if 'close' in char or tile_def.get('state') == 'close':
+                            game.map_manager.toggle_door_state(obs_grid_x, obs_grid_y)
+                    # --------------------
                     if self.dy > 0: self.rect.bottom = obstacle.top
                     elif self.dy < 0: self.rect.top = obstacle.bottom
                     self.y = self.rect.y
