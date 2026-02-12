@@ -211,7 +211,7 @@ class Vehicle:
 
         dist = math.hypot(dx, dy)
         if dist > 0:
-            tire_degradation = dist * 0.005 # Adjust degradation rate as needed
+            tire_degradation = dist * 0.0005 # Adjust degradation rate as needed
             broken_tire = False
             for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
                 tire = self.equipment.get(tire_slot)
