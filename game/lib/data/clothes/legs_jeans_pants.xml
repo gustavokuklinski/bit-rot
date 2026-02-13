@@ -3,7 +3,7 @@
         <defence value="0.2" />
         <capacity value="2" />
         <durability min="1" max="100" />
-        <sprite file="jeans_pants.png" />
+        <sprite file="legs_jeans_pants.png" />
         <weight weight="0.2" reduction="2%" />
     </properties>
     <spawn chance="1" />

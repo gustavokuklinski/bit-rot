@@ -14,15 +14,15 @@
         <attributes level="[strength:2, fitness:2, agility: 4, lucky: 3, intelligence: 5]" />
         <recipe magazine="Medicine Vol.1" />
     </trait>
-    <trait id="Profession_Mechanic" name="Profession Mechanic" cost="1" tooltip="Knows how vehicles works" disable="[Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
+    <trait id="Profession_Mechanic" name="Profession Mechanic" cost="1" tooltip="Knows how vehicles works" disable="[Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:5, fitness:5, agility: 5, intelligence: 2]" />
         <recipe magazine="Vehicle Engineering Vol.1" />
         <recipe magazine="Vehicle Engineering Vol.2" />
     </trait>
-    <trait id="Profession_Spy" name="Profession Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+    <trait id="Profession_Spy" name="Profession Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:4, fitness:4, agility: 5, lucky: 5, intelligence: 3]" />
     </trait>
-    <trait id="Profession_CEO_assistant" name="Profession CEO Assistant" cost="1" tooltip="SEO assistant" disable="[Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+    <trait id="Profession_CEO_assistant" name="Profession CEO Assistant" cost="1" tooltip="SEO assistant" disable="[Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:2, fitness:2, agility: 3, lucky: 3, intelligence: 4]" />
     </trait>
 

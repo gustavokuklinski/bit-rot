@@ -1,9 +1,8 @@
-<cloth name="Yellow Sneakers" type="cloth" id="feet" builder="true">
+<cloth name="Balaclava" type="cloth" id="head" builder="true">
     <properties>
         <defence value="0.01" />
-        <speed value="0" />
         <durability min="1" max="100" />
-        <sprite file="yellow_sneakers.png" />
+        <sprite file="head_balaclava.png" />
         <weight weight="0.1" />
     </properties>
     <spawn chance="1" />

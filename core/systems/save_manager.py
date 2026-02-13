@@ -135,9 +135,14 @@ def save_game(game):
         with open(os.path.join(save_path, "npc.rot"), "w") as f:
             json.dump(npc_data, f, indent=4)
 
-        # --- Zombie Save (zombies.rot) ---
+        # --- SEPARATE ZOMBIES AND ANIMALS ---
         zombie_data = []
+        animal_data = []
+        
         for z in game.zombies:
+            # Check if this is an Animal (using type attribute)
+            is_animal = getattr(z, 'type', 'zombie') == 'animal'
+            
             # Serialize Clothes
             safe_clothes = {}
             if hasattr(z, 'clothes') and z.clothes:
@@ -146,7 +151,6 @@ def save_game(game):
                         if hasattr(item, 'to_dict'):
                             safe_clothes[slot] = item.to_dict()
                         else:
-                            # If it's a dict (common in Zombies) or string
                             safe_clothes[slot] = item
                     else:
                         safe_clothes[slot] = None
@@ -160,7 +164,7 @@ def save_game(game):
                     else:
                         safe_inventory.append(i)
 
-            z_entry = {
+            entity_entry = {
                 "id": getattr(z, 'id', None),
                 "x": z.x,
                 "y": z.y,
@@ -175,10 +179,21 @@ def save_game(game):
                 "clothes": safe_clothes,
                 "sprites": getattr(z, 'sprites_data', {})
             }
-            zombie_data.append(z_entry)
 
+            if is_animal:
+                # Add type field for clarity, though file separation handles it
+                entity_entry['type'] = 'animal'
+                animal_data.append(entity_entry)
+            else:
+                zombie_data.append(entity_entry)
+
+        # Save Zombies
         with open(os.path.join(save_path, "zombies.rot"), "w") as f:
             json.dump(zombie_data, f, indent=4)
+
+        # Save Animals (New File)
+        with open(os.path.join(save_path, "animal.rot"), "w") as f:
+            json.dump(animal_data, f, indent=4)
 
         # --- Vehicle Save ---
         vehicle_data = []
@@ -255,7 +270,6 @@ def save_game(game):
             "items": safe_ground_items,
             "containers": container_data,
             "modal_positions": game.last_modal_positions,
-            # Zombies are now in zombies.rot
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)

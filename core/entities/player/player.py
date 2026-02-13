@@ -353,7 +353,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         is_outside = getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof
         
         # [CHANGED] 2. Rain Sickness Infection (Uses Defense instead of weather_protection)
-        if is_outside and getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
+        if is_outside and getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and self.vehicle is None:
             # Uses the same calculation for damage, 5.0 defense = 100% protection against elements
             total_defence = self.get_total_defence()
             total_weather_protection = min(1.0, total_defence / 5.0)

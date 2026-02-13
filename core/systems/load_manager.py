@@ -1,5 +1,3 @@
-# core/systems/load_manager.py
-
 import os
 import json
 import re
@@ -10,6 +8,7 @@ from core.data.config import *
 import core.data.config
 from core.entities.player.player import Player
 from core.entities.zombie.zombie import Zombie
+from core.entities.animal.animal import Animal
 from core.entities.item.item import Item
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
@@ -450,7 +449,6 @@ def load_game(game, save_folder_name):
              
              for z_data in zombie_list:
                 # Reconstruct via Template to support Zombie(x, y, template) structure
-                # We use the saved data as a 'template' to ensure the exact entity is recreated
                 template = {
                     'name': z_data.get('name', 'Zombie'),
                     'sex': z_data.get('sex', 'Male'),
@@ -478,7 +476,7 @@ def load_game(game, save_folder_name):
                 
                 # Restore Inventory
                 if 'inventory' in z_data:
-                    z.inventory = [] # Clear default items (like fresh ID card)
+                    z.inventory = [] 
                     for i_data in z_data['inventory']:
                         if isinstance(i_data, dict):
                             item = Item.from_dict(i_data)
@@ -496,6 +494,37 @@ def load_game(game, save_folder_name):
                 if z:
                     z.health = z_data['health']
                     game.zombies.append(z)
+
+        # --- ANIMALS LOADING (FROM animal.rot) ---
+        animal_path = os.path.join(save_path, "animal.rot")
+        if os.path.exists(animal_path):
+             game.logger.info("Loading animals from animal.rot...")
+             with open(animal_path, "r") as f:
+                 animal_list = json.load(f)
+             
+             for a_data in animal_list:
+                # Name in saved data corresponds to animal_type (e.g., 'Rat')
+                animal_type = a_data.get('name', 'Rat')
+                a = Animal(a_data['x'], a_data['y'], animal_type)
+                
+                a.health = a_data.get('health', a.max_health)
+                a.max_health = a_data.get('max_health', a.health)
+                
+                if 'id' in a_data and a_data['id']:
+                    a.id = a_data['id']
+                
+                # Restore runtime inventory if any (rare for animals)
+                if 'inventory' in a_data:
+                    a.inventory = []
+                    for i_data in a_data['inventory']:
+                         if isinstance(i_data, dict):
+                            item = Item.from_dict(i_data)
+                         else:
+                            item = Item.create_from_name(i_data)
+                         if item: a.inventory.append(item)
+                
+                game.zombies.append(a)
+
         
         if 'modal_positions' in world_data:
             saved_positions = world_data['modal_positions']

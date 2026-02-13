@@ -1,9 +1,9 @@
-<cloth name="Military Vest" type="cloth" id="util">
+<cloth name="Leather Black Jacket" type="cloth" id="arms">
     <properties>
-        <defence value="0.05" />
+        <defence value="0.6" />
         <capacity value="4" />
         <durability min="1" max="100" />
-        <sprite file="military_vest.png" />
+        <sprite file="arms_leather_black_jacket.png" />
         <weight weight="0.2" reduction="5%" />
     </properties>
     <spawn chance="1" />
