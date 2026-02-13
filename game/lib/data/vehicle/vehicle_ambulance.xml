@@ -22,6 +22,7 @@
         <item item="Medical Kit" chance="0.5" />
         <item item="Medical Kit" chance="0.5" />
         <item item="Car Tire" chance="0.3" />
+        <item item="Car Key Ambulance" chance="0.1" />
     </loot>
     <visuals>
         <sprite file="car_ambulance.png" />

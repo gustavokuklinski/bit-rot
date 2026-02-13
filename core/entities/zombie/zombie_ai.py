@@ -294,6 +294,45 @@ class ZombieAI:
                 move_x = (dx / dist) * effective_speed
                 move_y = (dy / dist) * effective_speed
 
+        # --- SEPARATION LOGIC (Fix for stacking) ---
+        # Look for other zombies close by and apply a repulsive force
+        sep_x, sep_y = 0, 0
+        separation_radius = TILE_SIZE * 0.9 # Slightly smaller than 1 tile
+        neighbor_count = 0
+        
+        for z in other_zombies:
+            if z is self: continue
+            
+            # Simple distance check
+            dx = self.rect.centerx - z.rect.centerx
+            dy = self.rect.centery - z.rect.centery
+            
+            # Quick bounds check optimization
+            if abs(dx) > separation_radius or abs(dy) > separation_radius:
+                continue
+
+            dist_sq = dx*dx + dy*dy
+            if dist_sq < separation_radius * separation_radius:
+                dist = math.sqrt(dist_sq)
+                if dist < 0.1: 
+                    # If strictly overlapping (dist ~ 0), push in random direction
+                    angle = random.uniform(0, 6.28)
+                    sep_x += math.cos(angle)
+                    sep_y += math.sin(angle)
+                else:
+                    # The closer they are, the stronger the push
+                    force = (separation_radius - dist) / separation_radius
+                    sep_x += (dx / dist) * force
+                    sep_y += (dy / dist) * force
+                neighbor_count += 1
+        
+        if neighbor_count > 0:
+            # Apply the separation force to the movement
+            separation_strength = effective_speed * 1.5 
+            move_x += sep_x * separation_strength
+            move_y += sep_y * separation_strength
+
+
         # --- STUCK / AVOIDANCE LOGIC ---
         if self.stuck_timer > 0:
             self.stuck_timer -= 1
@@ -332,9 +371,9 @@ class ZombieAI:
             collided = False
             for obs in obstacles:
                 if self.rect.colliderect(obs): collided = True; break
-            if not collided:
-                for z in other_zombies:
-                    if z is not self and self.rect.colliderect(z.rect): collided = True; break
+            
+            # Removed strict zombie-zombie collision check here to allow separation to work
+            # If we kept it, they would freeze when touching.
             
             if collided:
                 self.x -= step_x
@@ -350,9 +389,6 @@ class ZombieAI:
             collided = False
             for obs in obstacles:
                 if self.rect.colliderect(obs): collided = True; break
-            if not collided:
-                for z in other_zombies:
-                    if z is not self and self.rect.colliderect(z.rect): collided = True; break
 
             if collided:
                 self.y -= step_y

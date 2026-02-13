@@ -7,7 +7,7 @@
         <item item="Fuel Canister" chance="0.3" />
         <item item="Car Engine" chance="0.3" />
         <item item="Duck Tape" chance="0.3" />
-        <item item="Toolbox" chance="0.3" />
+        <item item="Toolkit" chance="0.3" />
         <item item="Motor Repair Kit" chance="0.3" />
         <item item="Screws" chance="0.3" />
         <item item="Engine Parts" chance="0.3" />
@@ -15,6 +15,8 @@
         <item item="Ragged Cloth" chance="0.3" />
         <item item="Car Key Jeep" chance="0.1" />
         <item item="Car Key Pickup" chance="0.1" />
+        <item item="Car Key Truck" chance="0.1" />
+        <item item="Car Key Ambulance" chance="0.1" />
         <item item="Screwdriver" chance="0.3" />
         <item item="Wrench" chance="0.3" />
         <item item="Lug Wrench" chance="0.3" />
