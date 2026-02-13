@@ -63,6 +63,9 @@
         <has_battery_chance value="0.2" name="Car Battery chance (Default: 0.2)"/>
         <has_tires_chance value="1.0" name="Car Tires chance (Default: 0.8)" />
     </vehicle>
+    <animal>
+        <animal_spawn_per_chunk value="5" name="Max Animal spawn on chunk (Default: 5)"/>
+    </animal>
     <npc>
         <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
         <static_spawn_chance value="0.1" name="Max Static NPC (Default: 0.1)"/>

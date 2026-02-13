@@ -11,6 +11,10 @@ from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle_loader import VehicleLoader
 from core.entities.vehicle.vehicle import Vehicle
 
+# Import Animal classes
+from core.entities.animal.animal import Animal
+from core.entities.animal.animal_loader import AnimalLoader
+
 # --- Configuration for Dynamic Spawning ---
 MAX_ACTIVE_NPCS = 2
 NPC_SPAWN_RADIUS = 70 * TILE_SIZE
@@ -33,7 +37,6 @@ def spawn_initial_items(obstacles, item_spawns):
                 item.x = x
                 item.y = y
                 item_tile = (x // TILE_SIZE, y // TILE_SIZE)
-                # We allow specific map items to spawn even if "occupied" (e.g. on top of a rug)
                 items_on_ground.append(item)
                 occupied_tiles.add(item_tile)
         else:
@@ -150,29 +153,55 @@ def spawn_static_npcs(game, building_tiles):
                 npc = NPC(px, py, game, is_static=True)
                 game.npcs.add(npc)
 
-def spawn_l2_population(game, count=10):
-    if not game.map_data: return
+def spawn_l2_population(game, count=10, target_layer=None):
+    """
+    Populates L2 (or target_layer) with standard Zombies and NPCs.
+    Can populate a non-active layer if target_layer is provided.
+    """
+    if target_layer is None:
+        target_layer = game.current_layer_index
+
+    # Use data from the specific layer
+    if target_layer not in game.all_ground_layers:
+        return
+
+    map_data = game.all_ground_layers[target_layer]
+    map_h = len(map_data)
+    map_w = len(map_data[0]) if map_h > 0 else 0
     
-    map_h = len(game.map_data)
-    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    # Select storage list
+    target_zombies = []
+    is_active_layer = (target_layer == game.current_layer_index)
     
+    if is_active_layer:
+        # We append directly to game.zombies later
+        pass 
+    else:
+        if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
+        if target_layer not in game.layer_zombies: game.layer_zombies[target_layer] = []
+        target_zombies = game.layer_zombies[target_layer]
+
     npc_count = 0
     zombie_count = 0
-    target_npcs = 3
-    target_zombies = count
+    desired_npcs = 3
+    desired_zombies = count
     
     attempts = 0
     max_attempts = 1000
     
-    while (npc_count < target_npcs or zombie_count < target_zombies) and attempts < max_attempts:
+    defs = game.tile_manager.definitions
+
+    while (npc_count < desired_npcs or zombie_count < desired_zombies) and attempts < max_attempts:
         attempts += 1
         rx = random.randint(0, map_w - 1)
         ry = random.randint(0, map_h - 1)
         
-        tile = game.map_manager.get_tile_at(rx, ry)
-        if not tile: continue
+        # Check tile using the specific layer data
+        t_char = map_data[ry][rx]
+        t_def = defs.get(t_char)
+        if not t_def: continue
         
-        t_name = tile.get('name', '').lower()
+        t_name = t_def.get('name', '').lower()
         is_path = 'path' in t_name or 'cave_l2' in t_name or 'dirty' in t_name or 'asphalt' in t_name
         is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
 
@@ -180,21 +209,129 @@ def spawn_l2_population(game, count=10):
             continue
             
         px, py = rx * TILE_SIZE, ry * TILE_SIZE
-        rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
         
-        if any(ob.colliderect(rect) for ob in game.obstacles): continue
+        # Simple obstacle check (Only valid if we are on active layer, otherwise skip strict collision)
+        # For offline generation, we trust the tile type mostly.
         
-        if npc_count < target_npcs and is_building:
-            npc = NPC(px, py, game, is_static=False) 
-            game.npcs.add(npc)
+        if npc_count < desired_npcs and is_building:
+            if is_active_layer:
+                npc = NPC(px, py, game, is_static=False) 
+                game.npcs.add(npc)
+            # Note: We don't store off-layer NPCs currently in a list, 
+            # they are usually static or handled via spawn points.
             npc_count += 1
             continue
             
-        if zombie_count < target_zombies and is_path:
+        if zombie_count < desired_zombies and is_path:
             zombie = Zombie.create_random(px, py)
-            game.zombies.append(zombie)
+            if is_active_layer:
+                game.zombies.append(zombie)
+            else:
+                target_zombies.append(zombie)
             zombie_count += 1
 
+def spawn_animals(game, count=5, target_layer=None):
+    """
+    Spawns animals based on 'ANM' markers or random distribution.
+    Rules:
+      - Rat: Spawns in Layer 1 and 2.
+      - Bat: Spawns only in Layer 2.
+    """
+    if target_layer is None:
+        target_layer = game.current_layer_index
+
+    # Ensure storage exists
+    if not hasattr(game, 'layer_zombies'):
+        game.layer_zombies = {}
+    if target_layer not in game.layer_zombies:
+        game.layer_zombies[target_layer] = []
+
+    # Decide where to add the entities
+    if target_layer == game.current_layer_index:
+        if not hasattr(game, 'zombies'): game.zombies = []
+        target_list = game.zombies
+    else:
+        target_list = game.layer_zombies[target_layer]
+    
+    AnimalLoader.load_animals()
+    
+    valid_animal_types = []
+    
+    # Layer Logic
+    if target_layer >= 1:
+        valid_animal_types.append("Rat")
+    
+    if target_layer == 2:
+        valid_animal_types.append("Bat")
+        
+    if not valid_animal_types:
+        return
+
+    spawned_count = 0
+    
+    # 1. Scan for 'ANM' markers in the specific layer
+    spawn_markers = []
+    spawn_layer = None
+    
+    if hasattr(game, 'all_spawn_layers') and target_layer in game.all_spawn_layers:
+         spawn_layer = game.all_spawn_layers[target_layer]
+    
+    if spawn_layer:
+         h = len(spawn_layer)
+         w = len(spawn_layer[0]) if h > 0 else 0
+         for y in range(h):
+             for x in range(w):
+                 if spawn_layer[y][x] == 'ANM':
+                     spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
+    
+    if spawn_markers:
+        print(f"  > Found {len(spawn_markers)} 'ANM' markers on layer {target_layer}")
+
+    # 2. Spawn at Markers
+    for px, py in spawn_markers:
+        a_type = random.choice(valid_animal_types)
+        animal = Animal(px, py, a_type)
+        target_list.append(animal)
+        spawned_count += 1
+        
+    # 3. Random Spawn (Ambient) - only if few markers or to reach count
+    if spawned_count < count:
+        # Only try random spawning if we have map data for this layer
+        if hasattr(game, 'all_ground_layers') and target_layer in game.all_ground_layers:
+            map_data = game.all_ground_layers[target_layer]
+            map_h = len(map_data)
+            map_w = len(map_data[0]) if map_h > 0 else 0
+            
+            attempts = 0
+            max_attempts = 100
+            
+            defs = game.tile_manager.definitions
+
+            while spawned_count < count and attempts < max_attempts:
+                attempts += 1
+                rx = random.randint(0, map_w - 1)
+                ry = random.randint(0, map_h - 1)
+                
+                # Check for obstacle logic if on active layer
+                if target_layer == game.current_layer_index:
+                    px, py = rx * TILE_SIZE, ry * TILE_SIZE
+                    rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+                    if any(ob.colliderect(rect) for ob in game.obstacles): continue
+                
+                # Check tile validity
+                t_char = map_data[ry][rx]
+                t_def = defs.get(t_char)
+                if not t_def or t_def.get('is_obstacle', False): continue
+
+                # Only Rats spawn randomly ambiently in most layers
+                chosen_type = "Rat" if "Rat" in valid_animal_types else random.choice(valid_animal_types)
+                
+                px, py = rx * TILE_SIZE, ry * TILE_SIZE
+                animal = Animal(px, py, chosen_type)
+                target_list.append(animal)
+                spawned_count += 1
+    
+    print(f"  > Spawned {spawned_count} animals on Layer {target_layer} (Markers: {len(spawn_markers)}).")
 
 def spawn_random_vehicles(game, count=10):
     loader = VehicleLoader()
@@ -210,10 +347,9 @@ def spawn_random_vehicles(game, count=10):
     # ---------------------------------------------------------
     spawn_found = False
     
-    # Assuming game.map_manager has access to raw layers or spawn map
     spawn_layer = None
-    if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'spawn_layer'):
-         spawn_layer = game.map_manager.spawn_layer
+    if hasattr(game, 'all_spawn_layers') and layer_idx in game.all_spawn_layers:
+         spawn_layer = game.all_spawn_layers[layer_idx]
     
     if spawn_layer:
         h = len(spawn_layer)
@@ -245,7 +381,6 @@ def spawn_random_vehicles(game, count=10):
                 if tile_def:
                     t_name = tile_def.get('name', '').lower()
                     if 'road' in t_name or 'dirty_01' in t_name:
-                         # Just add candidate, collision check later
                         valid_tiles.append((x, y))
 
         if not valid_tiles:
@@ -258,7 +393,6 @@ def spawn_random_vehicles(game, count=10):
     # 3. Spawn Vehicles
     # ---------------------------------------------------------
     spawned_count = 0
-    # If using markers, we try to spawn at all markers (up to limit or count)
     limit = count if not spawn_found else len(valid_tiles) 
 
     for tx, ty in valid_tiles:
@@ -273,10 +407,8 @@ def spawn_random_vehicles(game, count=10):
         
         px, py = tx * TILE_SIZE, ty * TILE_SIZE
         
-        # Create a rect for the potential vehicle
         veh_rect = pygame.Rect(px, py, w, h)
         
-        # Check for collisions with existing obstacles or other vehicles
         collision = False
         for ob in game.obstacles:
             if veh_rect.colliderect(ob):
@@ -286,7 +418,6 @@ def spawn_random_vehicles(game, count=10):
         if collision:
             continue
 
-        # Instantiate Vehicle
         vehicle = Vehicle(
             name=definition['name'],
             x=px, y=py,
@@ -297,7 +428,6 @@ def spawn_random_vehicles(game, count=10):
             loot_table=definition['loot_table']
         )
         
-        # Register in Game
         if not hasattr(game, 'vehicles'):
             game.vehicles = []
             
@@ -307,7 +437,6 @@ def spawn_random_vehicles(game, count=10):
         
         spawned_count += 1
         print(f"Spawned {vehicle.name} at ({px}, {py})")
-
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
     zombies = []

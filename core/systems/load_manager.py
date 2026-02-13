@@ -1,3 +1,5 @@
+# core/systems/load_manager.py
+
 import os
 import json
 import re
@@ -13,7 +15,7 @@ from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
 from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
 from core.map.map_loader import parse_layered_map_layout
-from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles
+from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles, spawn_animals
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
@@ -198,8 +200,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     load_giant_map(game)
     
     # --- Entity Spawning Logic ---
-    # Only execute spawning if spawn_entities is True.
     if spawn_entities:
+        # 1. Global Static NPCs
         game.npc_spawn_points = []
         if game.current_layer_index in game.all_spawn_layers:
             spawn_layer = game.all_spawn_layers[game.current_layer_index]
@@ -212,15 +214,21 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                         npc = NPC(px, py, game, is_static=True)
                         game.npcs.add(npc)
 
-        if game.current_layer_index == 1:
-            game.logger.info("Spawning random vehicles...")
+        # 2. Spawn Layer 1 Entities
+        if 1 in game.all_map_layers:
+            game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
             spawn_random_vehicles(game, count=8)
+            spawn_animals(game, target_layer=1) # Default L1
 
-        if game.current_layer_index == 2:
-            game.logger.info("Initializing L2 (Cave) Population...")
-            spawn_l2_population(game, count=20)
+        # 3. Spawn Layer 2 Entities (Caves/Basements)
+        if 2 in game.all_map_layers:
+            game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
+            # Populate L2 with basic zombies/NPCs even if not active
+            spawn_l2_population(game, count=20, target_layer=2)
+            # Spawn L2 Animals (Bats)
+            spawn_animals(game, target_layer=2)
+            
     else:
-        # Even if not spawning, we might need to know potential points for dynamic logic later
         pass
 
     if game.player_spawn:

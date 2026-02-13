@@ -1,0 +1,16 @@
+<animal name="Rat" type="animal">
+    <stats>
+        <health min="10" max="20" />
+        <speed min="1" max="1" />
+        <attack min="1" max="5" />
+        <infection min="10" max="25" />
+    </stats>
+    <capacity value="3" />
+    <visuals>
+        <sprite file="rat.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Meat" chance="0.3" />
+    </loot>
+</animal>

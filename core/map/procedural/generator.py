@@ -59,8 +59,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'Bunker': MAP_CHUNKS * 2,
             'Dungeon': MAP_CHUNKS * 3,
         }
-        # ------------------------------------------------
-
+        
         # Forest settings
         self.forest_border_width = 1
         self.cluster_min_count = 20
@@ -72,13 +71,10 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         self.water_tile = 'water_01'
         self.sand_tile = 'beach_sand_01'
         self.coast_width = 15
-        # -----------------------------
 
-        # Initialize Templates via 
         self._init_templates()
 
     def generate_world(self, seed_pattern=None, regenerate=False):
-        # [FIX] Force refresh size settings from config to ensure consistency
         self.chunk_size = core.data.config.CHUNK_SIZE
         self.tile_size = core.data.config.TILE_SIZE
 
@@ -164,7 +160,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         random.shuffle(global_deck)
 
-        # 2b. Build Global L2 Deck (Controlled)
+        # 2b. Build Global L2 Deck
         global_l2_deck = []
         print("Building Global L2 Deck...")
         for category, limit in self.global_l2_limits.items():
@@ -208,13 +204,10 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         # 5. Distribute Deck (L1)
         chunk_priority_map = {coord: [] for coord in all_coords}
         
-        # MANDATORY: 1 Cave Per Chunk
         cave_temps = self.categorized_templates.get('Cave', [])
         if cave_temps:
             for c_coord in all_coords:
                 chunk_priority_map[c_coord].append(random.choice(cave_temps))
-        else:
-            print("WARNING: No L1 Cave templates found to place in chunks.")
 
         urban_list = list(urban_coords)
         
@@ -284,7 +277,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
         
-        # L2 Occupied Mask (Tracks Template Interiors)
         occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
 
         # --- CHUNK GENERATION LOOP ---
@@ -328,51 +320,50 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                                 global_layers[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
                         render_data_l1[layer_key] = layer_grid
 
-                # Render L1 (Chunk by chunk is fine for L1)
+                # Render L1
                 self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
-        # -----------------------------
         
         # --- SCATTER VEHICLES (L1 Global) ---
         print("Scattering Vehicles (L1)...")
         self._scatter_vehicles(global_layers, None, global_tiles_w, global_tiles_h)
         
-        # Re-render L1 heat map to show vehicles
+        # --- SCATTER ANIMALS (L1 Global) ---
+        print("Scattering Animals (L1)...")
+        self._scatter_animals(global_layers, None, global_tiles_w, global_tiles_h)
+        
+        # Re-render L1 heat map to show vehicles AND animals
         self._render_full_map_to_surface(full_map_surface, heat_map_surface, global_layers)
-        # ------------------------------------
-
+        
         # SAVE L1
         print("Saving global world map L1...")
         self._save_chunk("map_L1_world", global_layers)
         
         # --- RE-SCAN FOR L2 TEMPLATE MASKS ---
-        # Build mask based on roof/base presence to prevent vegetation inside templates
         print("Building L2 Occupancy Mask...")
         for y in range(global_tiles_h):
             for x in range(global_tiles_w):
-                # If there is a roof or a wall, it is a template.
                 if global_layers_l2['roof'][y][x] != ' ' or global_layers_l2['base'][y][x] != ' ':
                     occupied_mask_L2[y][x] = 1
 
-        # --- POST-PROCESSING: Connect Isolated L2 Buildings (Pathways) ---
+        # --- POST-PROCESSING: Connect Isolated L2 Buildings ---
         self._connect_l2_drunkards(global_layers_l2)
-        # -----------------------------------------------------------------
 
-        # --- DECORATE PATHWAYS (VEGETATION) ---
-        # [UPDATED] Now accepts the mask to avoid decorating inside templates
+        # --- DECORATE PATHWAYS ---
         self._decorate_l2_pathways(global_layers_l2, occupied_mask_L2)
-        # --------------------------------------
 
         # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
         print("Populating L2 Spawns (Zombies on Paths)...")
         self._populate_l2_spawns(global_layers_l2)
-        # -------------------------------------------
+        
+        # [NEW] SCATTER ANIMALS (L2 Global)
+        # We do this after path generation so they appear on paths and caves, but respecting the mask
+        print("Scattering Animals (L2)...")
+        self._scatter_animals(global_layers_l2, occupied_mask_L2, global_tiles_w, global_tiles_h)
 
         # --- RENDER COMPLETE L2 MAP ---
-        # Now that pathways are generated, we render the FULL L2 map
         print("Rendering global world map L2 with pathways...")
         self._render_full_map_to_surface(full_map_surface_l2, heat_map_surface_l2, global_layers_l2)
-        # ------------------------------
-
+        
         # SAVE L2
         print("Saving global world map L2...")
         self._save_chunk("map_L2_world", global_layers_l2)

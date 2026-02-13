@@ -54,7 +54,7 @@ class ProceduralGeneratorRendering:
                 
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH']:
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH', 'ANM']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
@@ -62,6 +62,7 @@ class ProceduralGeneratorRendering:
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255) 
                         elif s_char == 'VEH': color = (255, 165, 0) # Orange
+                        elif s_char == 'ANM': color = (255, 0, 255) # Animal Fuchsia
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
 
     def _render_full_map_to_surface(self, bg_surf, heat_surf, layers):
@@ -112,7 +113,7 @@ class ProceduralGeneratorRendering:
                 # Heatmap (Spawns)
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH']:
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH', 'ANM']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
@@ -120,4 +121,5 @@ class ProceduralGeneratorRendering:
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255)
                         elif s_char == 'VEH': color = (255, 165, 0) # Orange
+                        elif s_char == 'ANM': color = (255, 0, 255) # Animal Fuchsia
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))

@@ -208,3 +208,47 @@ class ProceduralGeneratorSpawning:
             layers['spawn'][vy][vx] = 'VEH'
             
         print(f"  > Vehicle Scatter: Placed {count_to_spawn} vehicles on Roads/Paths.")
+    
+    def _scatter_animals(self, layers, mask, w, h):
+        """
+        [NEW] Scatter Animals ('ANM') based on ANIMAL_SPAWN_COUNT.
+        Prefers natural tiles (Grass, Woods) but can spawn on Floor/Dirt.
+        
+        Calculates total limit based on map size to ensure 'Per Chunk' setting works globally.
+        """
+        if ANIMAL_SPAWN_COUNT <= 0: return
+
+        valid_tiles = []
+        for y in range(h):
+            for x in range(w):
+                if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
+                # Must be empty space (no walls, no existing spawn)
+                if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
+                
+                ground = layers['ground'][y][x]
+                if ground == self.water_tile: continue
+                
+                # Check for natural or valid walking tiles
+                # Grass, Dirty, Floor, Asphalt are all valid for animals generally (Rat can go anywhere)
+                if 'grass' in ground or 'wood' in ground or 'dirty' in ground or 'floor' in ground or 'asphalt' in ground:
+                    valid_tiles.append((x, y))
+
+        if not valid_tiles: return
+
+        # Calculate Global Limit from Per Chunk Config
+        if CHUNK_SIZE > 0:
+            num_chunks_w = w // CHUNK_SIZE
+            num_chunks_h = h // CHUNK_SIZE
+            total_chunks = max(1, num_chunks_w * num_chunks_h)
+            global_limit = ANIMAL_SPAWN_COUNT * total_chunks
+        else:
+            global_limit = ANIMAL_SPAWN_COUNT
+
+        count_to_spawn = min(len(valid_tiles), global_limit)
+        
+        chosen = random.sample(valid_tiles, count_to_spawn)
+        
+        for (ax, ay) in chosen:
+            layers['spawn'][ay][ax] = 'ANM'
+            
+        print(f"  > Animal Scatter: Placed {count_to_spawn} animals (Target: {global_limit}).")
