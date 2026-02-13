@@ -1,8 +1,8 @@
-<vehicle name="car_truck" type="car" is_obstacle="true">
+<vehicle name="car_ambulance" type="car" is_obstacle="true">
     <capacity value="20" />
     <car>
         <max_speed value="8" />
-        <key value="Car Key Truck" />
+        <key value="Car Key Ambulance" />
         <fuel value="1.0" />
         <motor value="1.0" />
         <battery value="1.0" />
@@ -14,18 +14,16 @@
         <seats value="2" /> 
     </car>
     <loot>
-        <item item="Car Key Pickup" chance="0.1" />
-        <item item="Fuel Canister" chance="0.6" />
-        <item item="Fuel Canister" chance="0.6" />
-        <item item="Fuel Canister" chance="0.6" />
         <item item="Powerbank" chance="0.1" />
         <item item="Motor Repair Kit" chance="0.1" />
         <item item="Toolkit" chance="0.3" />
         <item item="Survivor Kit" chance="0.2" />
-        <item item="Medical Kit" chance="0.2" />
+        <item item="Medical Kit" chance="0.5" />
+        <item item="Medical Kit" chance="0.5" />
+        <item item="Medical Kit" chance="0.5" />
         <item item="Car Tire" chance="0.3" />
     </loot>
     <visuals>
-        <sprite file="car_truck.png" />
+        <sprite file="car_ambulance.png" />
     </visuals>
 </vehicle>

@@ -7,6 +7,7 @@
         <item item="Fuel Canister" chance="0.3" />
         <item item="Car Engine" chance="0.3" />
         <item item="Duck Tape" chance="0.3" />
+        <item item="Toolbox" chance="0.3" />
         <item item="Motor Repair Kit" chance="0.3" />
         <item item="Screws" chance="0.3" />
         <item item="Engine Parts" chance="0.3" />
@@ -17,5 +18,9 @@
         <item item="Screwdriver" chance="0.3" />
         <item item="Wrench" chance="0.3" />
         <item item="Lug Wrench" chance="0.3" />
+        <item item="Car Tire Rubber" chance="0.3" />
+        <item item="Car Tire Rim" chance="0.3" />
+        <item item="Slice Rubber" chance="0.3" />
+        
     </loot>
 </map>

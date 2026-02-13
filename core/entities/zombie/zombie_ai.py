@@ -2,10 +2,20 @@ import math
 import random
 import time
 import pygame
+import heapq
 from core.data.config import TILE_SIZE
 import core.data.config
 
 class ZombieAI:
+    def __init__(self):
+        # [FIX] Initialize the next class in the MRO chain (eventually pygame.sprite.Sprite)
+        super().__init__()
+        
+        self.path = []
+        self.path_step = 0
+        self.last_path_calc_time = 0
+        self.path_recalc_cooldown = 0
+        
     def has_line_of_sight(self, target_rect, obstacles):
         """Checks if there is an uninterrupted line between zombie and target."""
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
@@ -14,23 +24,124 @@ class ZombieAI:
         start_pos = self.rect.center
         end_pos = target_rect.center
 
-        # Simple line segment-rectangle intersection check using pygame's clipline
-        # clipline returns the clipped points if it intersects, or empty tuple if not
+        # Simple line segment-rectangle intersection check
         for obs in obstacles:
             if obs.clipline(start_pos, end_pos):
                 return False # Line of sight is blocked
 
         return True # Line of sight is clear
 
+    def _get_path_astar(self, start_pos, target_pos, game):
+        """
+        Calculates a path from start_pos to target_pos using A* algorithm on the tile grid.
+        Returns a list of (x, y) tuples in pixel coordinates (center of tiles).
+        """
+        start_grid = (int(start_pos[0] // TILE_SIZE), int(start_pos[1] // TILE_SIZE))
+        target_grid = (int(target_pos[0] // TILE_SIZE), int(target_pos[1] // TILE_SIZE))
+        
+        # If start and target are the same tile, return simple path
+        if start_grid == target_grid:
+            return [target_pos]
+            
+        # Limits to prevent freezing on long paths
+        MAX_ITERATIONS = 400 
+        
+        # Priority Queue: (f_score, h_score, current_node, path_so_far)
+        # We include h_score in tuple for tie-breaking preference
+        open_set = []
+        heapq.heappush(open_set, (0, 0, start_grid, []))
+        
+        g_score = {start_grid: 0}
+        visited = set()
+        
+        best_path = []
+        closest_node = start_grid
+        closest_dist = float('inf')
+
+        iterations = 0
+        
+        while open_set and iterations < MAX_ITERATIONS:
+            iterations += 1
+            _, _, current, path = heapq.heappop(open_set)
+            
+            if current in visited:
+                continue
+            visited.add(current)
+            
+            # Update closest node fallback
+            dist_to_target = abs(current[0] - target_grid[0]) + abs(current[1] - target_grid[1])
+            if dist_to_target < closest_dist:
+                closest_dist = dist_to_target
+                closest_node = current
+
+            # Check if reached target (or adjacent if target is obstacle)
+            if current == target_grid:
+                # Reconstruct path in pixels
+                pixel_path = []
+                for node in path + [current]:
+                    pixel_path.append((node[0] * TILE_SIZE + TILE_SIZE // 2, 
+                                       node[1] * TILE_SIZE + TILE_SIZE // 2))
+                return pixel_path
+
+            # Neighbors (Up, Down, Left, Right)
+            neighbors = [
+                (current[0], current[1] - 1),
+                (current[0], current[1] + 1),
+                (current[0] - 1, current[1]),
+                (current[0] + 1, current[1]),
+                # Diagonals (optional, costs more)
+                (current[0] - 1, current[1] - 1),
+                (current[0] + 1, current[1] - 1),
+                (current[0] - 1, current[1] + 1),
+                (current[0] + 1, current[1] + 1)
+            ]
+            
+            for next_node in neighbors:
+                if next_node in visited:
+                    continue
+                
+                # Check bounds
+                if not (0 <= next_node[1] < len(game.map_data) and 0 <= next_node[0] < len(game.map_data[0])):
+                    continue
+                
+                # Check Walkability
+                # We check the static map data. Dynamic obstacles are handled by physics/steering.
+                tile_def = game.map_manager.get_tile_at(next_node[0], next_node[1])
+                is_obstacle = tile_def and tile_def.get('is_obstacle', False)
+                
+                # Allow target tile to be an obstacle (e.g. attacking a door or player standing on an item)
+                if is_obstacle and next_node != target_grid:
+                    continue
+                
+                # Cost calculation
+                is_diagonal = next_node[0] != current[0] and next_node[1] != current[1]
+                move_cost = 1.4 if is_diagonal else 1.0
+                
+                new_g = g_score[current] + move_cost
+                
+                if next_node not in g_score or new_g < g_score[next_node]:
+                    g_score[next_node] = new_g
+                    h = abs(next_node[0] - target_grid[0]) + abs(next_node[1] - target_grid[1]) # Manhattan
+                    heapq.heappush(open_set, (new_g + h, h, next_node, path + [current]))
+
+        # Fallback: return path to closest reachable node
+        pixel_path = []
+        # Trace path? Simplified: just go to closest node found
+        if closest_node != start_grid:
+             return [(closest_node[0] * TILE_SIZE + TILE_SIZE//2, closest_node[1] * TILE_SIZE + TILE_SIZE//2)]
+        
+        return None
+
     def update_ai(self, player_rect, obstacles, other_zombies, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
-        
-        # [CHANGED] Get Time Multiplier for cooldown scaling
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
 
+        # Lazy Init Path
+        if not hasattr(self, 'path'): self.path = []
+
         target_rect = player_rect
-        target_entity = game.player  # Default target
+        target_entity = game.player
         
         dist_to_player = math.hypot(player_rect.centerx - self.rect.centerx,
                                     player_rect.centery - self.rect.centery)
@@ -38,22 +149,17 @@ class ZombieAI:
         nearest_npc = None
         min_npc_dist = 9999
         
-        # Access NPCs from game instance
         if hasattr(game, 'npcs'):
             for npc in game.npcs:
-                # [FIX] Skip targeting NPCs that are already dead (issue #1)
-                if npc.is_dead:
-                    continue
-
+                if npc.is_dead: continue
                 d = math.hypot(npc.rect.centerx - self.rect.centerx, npc.rect.centery - self.rect.centery)
                 if d < min_npc_dist:
                     min_npc_dist = d
                     nearest_npc = npc
         
-        # Switch target to NPC if it is closer than player
         if nearest_npc and (min_npc_dist < dist_to_player):
             target_rect = nearest_npc.rect
-            target_entity = nearest_npc # Set specific entity target
+            target_entity = nearest_npc
             dist_to_target = min_npc_dist
         else:
             dist_to_target = dist_to_player
@@ -61,18 +167,19 @@ class ZombieAI:
         can_see_target = self.has_line_of_sight(target_rect, obstacles)
         target_pos = None
 
-        # Decide state: Chasing or Wandering
-        if dist_to_target < core.data.config.ZOMBIE_DETECTION_RADIUS and can_see_target:
+        if dist_to_target < core.data.config.ZOMBIE_DETECTION_RADIUS and (can_see_target or self.state == 'chasing'):
             self.state = 'chasing'
             target_pos = target_rect.center 
             
-            # Check attack range
+            # Logic: If we can't see the target, we should pathfind to it
+            # If we CAN see it, we move directly, UNLESS we are stuck.
+            
             if dist_to_target < self.attack_range:
-                # [CHANGED] Scale the cooldown logic
-                # 1000ms real time cooldown. If FF is 50x, we wait 1000/50 = 20ms real time.
                 if current_time - self.last_attack_time > (1000.0 / multiplier): 
-                    self.attack(target_entity, game) # Attack the specific entity
+                    self.attack(target_entity, game)
                     self.last_attack_time = current_time
+                    self.vx, self.vy = 0, 0 # Stop while attacking
+                    return
 
         else:
             self.state = 'wandering'
@@ -92,17 +199,26 @@ class ZombieAI:
             if core.data.config.ZOMBIE_WANDER_ENABLED:
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
                 
-                # [CHANGED] Scale wander change interval too
                 wander_interval = core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL / multiplier
                 
                 if (current_time - self.last_wander_change > wander_interval) or \
                    (self.wander_target is None) or target_reached:
 
-                    wander_radius = 5 * TILE_SIZE
-                    new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
-                    new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
-
-                    self.wander_target = (new_target_x, new_target_y)
+                    # Find a valid wander target (not in a wall)
+                    for _ in range(5):
+                        wander_radius = 5 * TILE_SIZE
+                        new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
+                        new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
+                        
+                        grid_x = int(new_target_x // TILE_SIZE)
+                        grid_y = int(new_target_y // TILE_SIZE)
+                        
+                        if 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
+                             tile = game.map_manager.get_tile_at(grid_x, grid_y)
+                             if not tile or not tile.get('is_obstacle', False):
+                                 self.wander_target = (new_target_x, new_target_y)
+                                 break
+                    
                     self.last_wander_change = current_time
 
                 target_pos = self.wander_target 
@@ -110,120 +226,139 @@ class ZombieAI:
                 target_pos = None
 
         if target_pos:
-            self.move_towards(target_pos, obstacles, other_zombies, game)
+            self.move_towards(target_pos, obstacles, other_zombies, game, can_see_target=(can_see_target and self.state == 'chasing'))
 
-    def move_towards(self, target_pos, obstacles, other_zombies, game):
-        """Calculates movement vector towards a target_pos and handles collisions."""
-        
-        # [CHANGED] 1. Get Multiplier
+    def move_towards(self, target_pos, obstacles, other_zombies, game, can_see_target=True):
+        """
+        Calculates movement vector. Uses Pathfinding if target is not visible or complex.
+        """
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-        
-        # [CHANGED] 2. Scale Speed
         effective_speed = self.speed * multiplier
+        current_time = pygame.time.get_ticks()
 
-        # [NEW] Check stuck timer
-        if self.stuck_timer > 0:
-            self.stuck_timer -= 1
-            # Move in random stuck angle
-            rad = math.radians(self.stuck_angle)
-            move_x = math.cos(rad) * effective_speed
-            move_y = -math.sin(rad) * effective_speed
+        move_x, move_y = 0, 0
+        
+        # --- PATHFINDING LOGIC ---
+        use_pathfinding = not can_see_target
+        
+        # If we have been stuck recently, force pathfinding to get out of corner
+        if self.stuck_timer > 0 and self.stuck_timer % 10 == 0:
+             use_pathfinding = True
+
+        if use_pathfinding:
+            # Recalculate path periodically
+            if current_time - self.last_path_calc_time > 1000 or not self.path:
+                new_path = self._get_path_astar(self.rect.center, target_pos, game)
+                if new_path:
+                    self.path = new_path
+                    self.last_path_calc_time = current_time
+            
+            # Follow Path
+            if self.path:
+                next_node = self.path[0]
+                dx = next_node[0] - self.rect.centerx
+                dy = next_node[1] - self.rect.centery
+                dist = math.hypot(dx, dy)
+                
+                if dist < TILE_SIZE / 2:
+                    self.path.pop(0) # Reached node, go to next
+                    if self.path:
+                        next_node = self.path[0]
+                        dx = next_node[0] - self.rect.centerx
+                        dy = next_node[1] - self.rect.centery
+                        dist = math.hypot(dx, dy)
+                
+                if dist > 0:
+                    move_x = (dx / dist) * effective_speed
+                    move_y = (dy / dist) * effective_speed
+            else:
+                # Fallback if no path found (go direct)
+                dx = target_pos[0] - self.rect.centerx
+                dy = target_pos[1] - self.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist > 0:
+                    move_x = (dx / dist) * effective_speed
+                    move_y = (dy / dist) * effective_speed
         else:
-            # Normal movement
+            # Direct Movement (Visible Target)
+            self.path = [] # Clear path if we can see target
             dx = target_pos[0] - self.rect.centerx
             dy = target_pos[1] - self.rect.centery
             dist = math.hypot(dx, dy)
-
-            stop_distance = TILE_SIZE / 2 
+            
+            stop_distance = TILE_SIZE / 2
             if self.state == 'chasing':
-                stop_distance = self.attack_range * 1
-
+                 stop_distance = self.attack_range * 0.8
+            
             if dist > stop_distance:
                 move_x = (dx / dist) * effective_speed
                 move_y = (dy / dist) * effective_speed
-            else:
-                move_x, move_y = 0, 0
-        
+
+        # --- STUCK / AVOIDANCE LOGIC ---
+        if self.stuck_timer > 0:
+            self.stuck_timer -= 1
+            # If pathfinding fails, we might still be physically stuck on a dynamic object
+            # Apply a small random force to wiggle out
+            rad = math.radians(self.stuck_angle)
+            move_x += math.cos(rad) * effective_speed * 0.5
+            move_y += -math.sin(rad) * effective_speed * 0.5
+
         self.vx = move_x 
         self.vy = move_y 
         
         is_moving = move_x != 0 or move_y != 0
-
         if is_moving:
             self.walk_anim_angle = math.sin(time.time() * 15) * 2
         else:
             self.walk_anim_angle = 0
-
+            
+        # Footstep sounds (omitted for brevity, same as before)
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
-            current_time = pygame.time.get_ticks()
-            if current_time > self.last_step_sound_time:
-                game.sound_manager.play_sound(
-                    self.sound_steps,
-                    subdir='zombie', 
-                    game=game,
-                    source_pos=self.rect.center,
-                    base_volume=random.uniform(0.02, 0.06)
-                )
+             if current_time > self.last_step_sound_time:
+                game.sound_manager.play_sound(self.sound_steps, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.02, 0.06))
+                self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))
 
-                if self.state == 'chasing':
-                    next_delay = random.randint(280, 380)
-                else:
-                    next_delay = random.randint(420, 520)
-                
-                # Scale sound delay roughly
-                self.last_step_sound_time = current_time + (next_delay / max(1, multiplier * 0.1))
-
-        # [CHANGED] 3. Physics Sub-Stepping Loop to prevent tunneling
-        # Determine number of steps needed. Safest is roughly half a tile size.
+        # --- PHYSICS SUB-STEPPING ---
         safe_step_size = TILE_SIZE * 0.45
-        total_dist_x = abs(move_x)
-        total_dist_y = abs(move_y)
-        
+        total_dist_x, total_dist_y = abs(move_x), abs(move_y)
         steps = int(math.ceil(max(total_dist_x, total_dist_y) / safe_step_size))
         steps = max(1, steps)
+        step_x, step_y = move_x / steps, move_y / steps
         
-        step_x = move_x / steps
-        step_y = move_y / steps
-        
-        old_x, old_y = self.x, self.y
-
         for _ in range(steps):
-            # --- Move X ---
+            # X Axis
             self.x += step_x
             self.rect.x = int(self.x)
-            collided_x = False
+            collided = False
             for obs in obstacles:
-                if self.rect.colliderect(obs): collided_x = True; break
-            if not collided_x:
+                if self.rect.colliderect(obs): collided = True; break
+            if not collided:
                 for z in other_zombies:
-                    if z is not self and self.rect.colliderect(z.rect): collided_x = True; break
-
-            if collided_x:
-                self.x -= step_x # Revert step
+                    if z is not self and self.rect.colliderect(z.rect): collided = True; break
+            
+            if collided:
+                self.x -= step_x
                 self.rect.x = int(self.x)
-                if self.state == 'chasing':
-                    self.stuck_timer = 20
+                # Only trigger stuck timer if we were trying to move significantly
+                if abs(step_x) > 0.1:
+                    self.stuck_timer = 10
                     self.stuck_angle = random.randint(0, 360)
             
-            # --- Move Y ---
+            # Y Axis
             self.y += step_y
             self.rect.y = int(self.y)
-            collided_y = False
+            collided = False
             for obs in obstacles:
-                if self.rect.colliderect(obs): collided_y = True; break
-            if not collided_y:
+                if self.rect.colliderect(obs): collided = True; break
+            if not collided:
                 for z in other_zombies:
-                     if z is not self and self.rect.colliderect(z.rect): collided_y = True; break
+                    if z is not self and self.rect.colliderect(z.rect): collided = True; break
 
-            if collided_y:
-                self.y -= step_y # Revert step
+            if collided:
+                self.y -= step_y
                 self.rect.y = int(self.y)
-                if self.state == 'chasing':
-                    self.stuck_timer = 20
+                if abs(step_y) > 0.1:
+                    self.stuck_timer = 10
                     self.stuck_angle = random.randint(0, 360)
-            
-            # Optimization: If blocked on both axes, break loop (unlikely to unblock in same frame)
-            if collided_x and collided_y:
-                break
 
         self.rect.topleft = (int(self.x), int(self.y))
