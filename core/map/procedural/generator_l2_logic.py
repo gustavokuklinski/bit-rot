@@ -136,12 +136,17 @@ class ProceduralGeneratorL2:
                         best_dist = dist
                         best_link = (c_pos, i)
             
-            if best_link:
+            # FIXED: Explicit check for None to avoid unpacking errors and infinite loops
+            if best_link is not None:
                 start_pos, u_index = best_link
                 target_pos = unconnected_set[u_index]
                 self._carve_drunkard_path(layers, start_pos, target_pos)
                 connected_set.append(target_pos)
                 unconnected_set.pop(u_index)
+            else:
+                # Safety break if no link is found to prevent infinite loop
+                print("Warning: Could not connect remaining L2 structures. Aborting connection phase.")
+                break
 
     def _carve_drunkard_path(self, layers, start, end):
         cx, cy = start
