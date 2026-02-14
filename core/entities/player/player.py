@@ -1,5 +1,3 @@
-# core/entities/player/player.py
-
 import time
 import pygame
 import random
@@ -87,7 +85,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
-        self.base_inventory_slots = 5
+        # [CHANGED] Increased base inventory slots from 5 to 10
+        self.base_inventory_slots = 10
         
         self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
         self.clothes = {slot: None for slot in self.clothes_slots}
@@ -251,8 +250,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 game.is_fast_forwarding = False 
                 display_message_player("You wake up refreshed.")
         
-            elif game.is_fast_forwarding:
-                game.is_fast_forwarding = False
+        elif game.is_fast_forwarding:
+            game.is_fast_forwarding = False
 
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]

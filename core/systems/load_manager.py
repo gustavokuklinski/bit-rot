@@ -420,6 +420,29 @@ def load_game(game, save_folder_name):
         for i_data in saved_items:
             try:
                 item = None
+                data = i_data.get('data', {})
+                
+                # [CHANGED] Check if item is a Corpse and handle it explicitly
+                if data.get('is_corpse') or (isinstance(data.get('name'), str) and data['name'].startswith('Corpse')):
+                     from core.entities.zombie.corpse import Corpse
+                     
+                     name = data.get('name', 'Dead corpse')
+                     image_path = data.get('image_path') 
+                     
+                     item = Corpse(name=name, image_path=image_path)
+                     
+                     # Restore inventory
+                     if 'inventory' in data and data['inventory']:
+                         item.inventory = [Item.from_dict(x) for x in data['inventory'] if x]
+                     
+                     # Restore position
+                     item.x = int(i_data.get('x', 0))
+                     item.y = int(i_data.get('y', 0))
+                     item.rect.topleft = (item.x, item.y)
+                     
+                     game.items_on_ground.append(item)
+                     continue # Skip the standard Item loading fallback
+
                 if 'data' in i_data:
                     if isinstance(i_data['data'], dict):
                         item = Item.from_dict(i_data['data'])

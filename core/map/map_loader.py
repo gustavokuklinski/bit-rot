@@ -162,7 +162,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                 elif char.strip() == 'S':
                     pass
                 elif char == 'VEH':
-                    # [FIXED] Explicitly ignore VEH markers here so they aren't parsed as missing items/tiles.
+                    pass
+                elif char == 'ANM':
                     pass
                 else:
                     # Check for Specific Item Code

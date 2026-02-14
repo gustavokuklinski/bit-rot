@@ -11,6 +11,6 @@
     </visuals>
     
     <loot>
-        <item item="Meat" chance="0.3" />
+        <item item="Rat Meat" chance="1" />
     </loot>
 </animal>

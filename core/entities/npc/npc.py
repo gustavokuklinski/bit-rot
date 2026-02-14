@@ -522,7 +522,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                       # Melee logic
                       self.melee_swing_timer = 15
                       self.melee_swing_angle = attack_angle
-                      target_entity.take_damage(damage_to_deal, game, attacker=self)
+                      
+                      # [FIX] Handle different damage signatures for Player vs Entity
+                      if target_entity == game.player:
+                           # Player uses (game, damage, infection)
+                           target_entity.take_damage(game, damage_to_deal, 0)
+                      else:
+                           # Zombies/NPCs use (damage, game, attacker=...)
+                           target_entity.take_damage(damage_to_deal, game, attacker=self)
 
     def stop_moving(self):
         """Forces the NPC to stop moving and enter idle state."""

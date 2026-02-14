@@ -8,10 +8,11 @@ import core.data.config
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.zombie.zombie import Zombie
+from core.entities.animal.animal import Animal # [NEW] Added import
 from core.entities.player.player import Player
 from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
-from core.map.spawn_manager import spawn_initial_zombies
+from core.map.spawn_manager import spawn_initial_zombies, spawn_animals # [NEW] Added spawn_animals import
 from core.messages import display_message_zombie, display_message_player
 
 
@@ -146,6 +147,7 @@ def update_game_state(game):
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
     check_zombie_respawn(game)
+    check_animal_respawn(game) # [NEW] Added check
     check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):
@@ -623,3 +625,22 @@ def check_zombie_respawn(game):
     if current_time - last_respawn > core.data.config.ZOMBIE_RESPAWN_TIMER_MS:
         print(f"Respawn timer expired for {current_map}. Respawning zombies.")
         game.map_states[current_map]['last_respawn_time'] = current_time
+
+def check_animal_respawn(game):
+    current_time = pygame.time.get_ticks()
+    current_map = game.map_manager.current_map_filename
+    
+    if current_map not in game.map_states:
+        return
+
+    if core.data.config.ANIMAL_RESPAWN_TIMER_MS <= 0: return
+    
+    if 'last_animal_respawn_time' not in game.map_states[current_map]:
+        game.map_states[current_map]['last_animal_respawn_time'] = current_time
+
+    last_respawn = game.map_states[current_map]['last_animal_respawn_time']
+
+    if current_time - last_respawn > core.data.config.ANIMAL_RESPAWN_TIMER_MS:
+        print(f"Respawn timer expired for animals on {current_map}.")
+        game.map_states[current_map]['last_animal_respawn_time'] = current_time
+        spawn_animals(game, count=core.data.config.ANIMAL_SPAWN_COUNT)

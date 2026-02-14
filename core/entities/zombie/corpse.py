@@ -7,7 +7,10 @@ class Corpse(Item):
     """Lootable corpse container with automatic decay."""
 
     def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000):
+        # Store image_path before super().__init__ or pass it; Item uses it for loading but doesn't store the string.
         super().__init__(name, 'container', capacity=capacity, sprite_file=image_path)
+        
+        self.image_path = image_path
         self.rect.center = pos
         
         # [FIX] Initialize x and y so the save system can read them
@@ -17,6 +20,13 @@ class Corpse(Item):
         self.spawn_time = pygame.time.get_ticks()
         self.decay_ms = decay_ms
         self.color = DARK_GRAY
+
+    def to_dict(self):
+        """Serialize corpse data, including the critical image_path and explicit type flag."""
+        data = super().to_dict()
+        data['image_path'] = self.image_path
+        data['is_corpse'] = True
+        return data
 
     def is_expired(self, now_ms=None):
         """Return True if corpse lifetime exceeded decay_ms."""
@@ -42,4 +52,3 @@ class Corpse(Item):
                 pass
             items_on_ground.append(it)
         self.inventory.clear()
-        

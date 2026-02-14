@@ -1,7 +1,7 @@
 <item name="Small Backpack" type="backpack">
     <properties>
         <capacity value="10" />
-        <weight weight="1.5" reduction="50%" />
+        <weight weight="1.0" reduction="50%" />
         <sprite file="backpack_small_backpack.png" />
     </properties>
     <loot>

@@ -9,7 +9,7 @@ def _get_friendly_value_display(key, value):
         return ""
 
     # Milliseconds -> Minutes/Seconds (Day length, timers)
-    if key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms']: 
+    if key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']: 
         seconds = val_float / 1000.0
         if seconds >= 60:
             return f"({seconds/60:.1f} min)"

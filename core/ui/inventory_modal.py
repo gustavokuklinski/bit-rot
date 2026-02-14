@@ -96,7 +96,8 @@ def draw_belt_hud(surface, game, player, mouse_pos):
 
 
 def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
-    INVENTORY_SLOTS = 5
+    # [CHANGED] Set slot count to 10
+    INVENTORY_SLOTS = 10 
 
     # 1. Draw Inventory Slots (Pockets)
     for i in range(INVENTORY_SLOTS):
@@ -146,6 +147,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
                 )
 
     # 2. Draw Backpack Slot
+    # Moved backpack slot further down to accommodate two rows of inventory
     backpack_slot_rect = get_backpack_slot_rect(modal['position'])
     pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
     
@@ -232,37 +234,11 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
                 )
 
     # 5. Draw Active Weapon Status
+    # Adjusted start_y to be relative to the shifted belt position
     start_x = base_modal.modal_x + 10
     start_y = belt_y_start + 80
     
-    if player.active_weapon:
-        name_str = f"{player.active_weapon.name.split('(')[0]}"
-        draw_text_shadow(surface, font_notification, name_str, YELLOW, (start_x, start_y))
-        
-        # Calculate width of name for positioning bar
-        name_w = font_notification.size(name_str)[0]
-        current_x = start_x + name_w + 10
-        
-        if player.active_weapon.durability is not None:
-             max_dur = player.active_weapon.max_durability
-             if max_dur > 0:
-                 cur_dur = max(0, player.active_weapon.durability)
-                 pct = cur_dur / max_dur
-                 bar_w, bar_h = 100, 10
-                 bar_y_offset = 3
-                 col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
-                 pygame.draw.rect(surface, (60, 60, 60), (current_x, start_y + bar_y_offset, bar_w, bar_h))
-                 fill_w = int(bar_w * pct)
-                 if fill_w > 0: pygame.draw.rect(surface, col, (current_x, start_y + bar_y_offset, fill_w, bar_h))
-                 pygame.draw.rect(surface, (150, 150, 150), (current_x, start_y + bar_y_offset, bar_w, bar_h), 1)
-                 current_x += bar_w + 10
-        
-        if player.active_weapon.item_type in ['weapon', 'weapon_ranged'] and player.active_weapon.load is not None:
-             ammo_str = f"| Ammo: {int(player.active_weapon.load)}/{int(player.active_weapon.capacity)}"
-             draw_text_shadow(surface, font_notification, ammo_str, YELLOW, (current_x, start_y))
-             
-    else:
-        draw_text_shadow(surface, font_notification, "None (Hands)", YELLOW, (start_x, start_y))
+
 
 def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
     if not player.backpack:
@@ -291,9 +267,16 @@ def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     slot_h = 48
     gap = 8
     start_x = modal_x + 10
+    
+    # [CHANGED] Logic for 5 items per row
+    row = i // 5
+    col = i % 5
+    
     start_y = modal_y + 80 
-    x = start_x + i * (slot_w + gap)
-    return pygame.Rect(x, start_y, slot_w, slot_h)
+    
+    x = start_x + col * (slot_w + gap)
+    y = start_y + row * (slot_h + gap)
+    return pygame.Rect(x, y, slot_w, slot_h)
 
 def get_belt_slot_rect_in_modal(i, modal_position):
     modal_x, modal_y = modal_position
@@ -301,7 +284,12 @@ def get_belt_slot_rect_in_modal(i, modal_position):
     slot_h = 48
     gap = 8
     start_x = modal_x + 10
-    start_y = modal_y + 230
+    
+    # [CHANGED] Shifted belt down to make room for second row of inventory
+    # Original y was + 230. Added 48 (slot height) + 8 (gap) ~ 56px shift. 
+    # New Y around 286
+    start_y = modal_y + 286 
+    
     x = start_x + i * (slot_w + gap)
     return pygame.Rect(x, start_y, slot_w, slot_h)
 
@@ -310,7 +298,11 @@ def get_backpack_slot_rect(modal_position=(GAME_WIDTH, 0)):
     slot_w = 272
     slot_h = 48
     x = modal_x + 10
-    y = modal_y + 155
+    
+    # [CHANGED] Shifted backpack slot down to make room for second row of inventory
+    # Original y was + 155. Added 56px shift.
+    y = modal_y + 211
+    
     return pygame.Rect(x, y, slot_w, slot_h)
 
 

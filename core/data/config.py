@@ -35,7 +35,7 @@ GRAY_80 = (80, 80, 80)
 
 # Inventory Modal
 INVENTORY_MODAL_WIDTH = 300
-INVENTORY_MODAL_HEIGHT = 330
+INVENTORY_MODAL_HEIGHT = 345
 
 # Status Modal
 STATUS_MODAL_WIDTH = 380 # 250
@@ -162,6 +162,7 @@ VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
 ANIMAL_SPAWN_COUNT = 0
+ANIMAL_RESPAWN_TIMER_MS = 0
 
 def generate_random_seed(chunks=None):
     """Generates a formatted seed string: 'CHUNKS-HASH'."""
@@ -197,7 +198,7 @@ def load_settings(preset="default"):
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC
-    global ANIMAL_SPAWN_COUNT
+    global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -309,7 +310,7 @@ def load_settings(preset="default"):
 
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))
-
+        ANIMAL_RESPAWN_TIMER_MS = int(animal_config.find('animal_respawn_ms_timer').get('value'))
         print(f"Configuration loaded from {filepath}")
 
     except Exception as e:

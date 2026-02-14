@@ -32,6 +32,7 @@
     </visuals>
     
     <loot>
+        <item item="Zombie Meat" chance="1" />
     </loot>
 
     <sound>

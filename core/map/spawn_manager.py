@@ -287,15 +287,26 @@ def spawn_animals(game, count=5, target_layer=None):
     if spawn_markers:
         print(f"  > Found {len(spawn_markers)} 'ANM' markers on layer {target_layer}")
 
-    # 2. Spawn at Markers
+    # [CHANGED] Filter existing animals to check overlaps
+    existing_animals = [x for x in target_list if isinstance(x, Animal)]
+    
+    # 2. Spawn at Markers (only if needed and empty)
+    random.shuffle(spawn_markers)
     for px, py in spawn_markers:
+        if len(existing_animals) + spawned_count >= count: break 
+        
+        # Check if occupied by another animal
+        rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+        if any(isinstance(a, Animal) and a.rect.colliderect(rect) for a in existing_animals):
+             continue
+
         a_type = random.choice(valid_animal_types)
         animal = Animal(px, py, a_type)
         target_list.append(animal)
         spawned_count += 1
         
     # 3. Random Spawn (Ambient) - only if few markers or to reach count
-    if spawned_count < count:
+    if spawned_count + len(existing_animals) < count:
         # Only try random spawning if we have map data for this layer
         if hasattr(game, 'all_ground_layers') and target_layer in game.all_ground_layers:
             map_data = game.all_ground_layers[target_layer]
@@ -307,7 +318,7 @@ def spawn_animals(game, count=5, target_layer=None):
             
             defs = game.tile_manager.definitions
 
-            while spawned_count < count and attempts < max_attempts:
+            while spawned_count + len(existing_animals) < count and attempts < max_attempts:
                 attempts += 1
                 rx = random.randint(0, map_w - 1)
                 ry = random.randint(0, map_h - 1)
@@ -331,7 +342,8 @@ def spawn_animals(game, count=5, target_layer=None):
                 target_list.append(animal)
                 spawned_count += 1
     
-    print(f"  > Spawned {spawned_count} animals on Layer {target_layer} (Markers: {len(spawn_markers)}).")
+    if spawned_count > 0:
+        print(f"  > Spawned {spawned_count} animals on Layer {target_layer} (Markers: {len(spawn_markers)}).")
 
 def spawn_random_vehicles(game, count=10):
     loader = VehicleLoader()

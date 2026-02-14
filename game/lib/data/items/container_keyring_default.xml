@@ -1,0 +1,14 @@
+<item name="Keyring Default" type="container">
+    <properties>
+        <capacity value="10" />
+        <sprite file="container_keyring_default.png" />
+        <weight weight="0.01" reduction="15%" />
+    </properties>
+    <loot>
+        <item name="Car Key Jeep" chance="0.1" />
+        <item name="Car Key Pickup" chance="0.1" />
+        <item name="Car Key Truck" chance="0.1" />
+    </loot>
+    <spawn chance="1" />
+</item>
+
