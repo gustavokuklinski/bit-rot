@@ -171,3 +171,292 @@
 - [x] Fix: Game performace on large game chunks
 - [x] Fix: Player View Radius as the same Fog of War
 - [x] Add: Player spawn at a random map chunk
+- [x] Fix: Save the last modal positioning and restore.
+- [x] Fix: Increased the default aim reticle.
+- [x] Fix: Map is not loading the items on the ground.
+- [x] Add: Auto start with modals open.
+- [x] Fix: Loading screen not appearing when load a game.
+- [x] Add: Added the last modal position to world.rot and retrieve this position.
+- [x] Add: New vehicle: Pickup
+- [x] Fix: Zoom in/out via keyboard crash
+- [x] Fix/Check: Verify how the load game works, some places were being build again on map
+- [x] Fix: Grab item timer and loader
+- [x] Add: Hover item show how many items exists inside it
+- [x] Add: Ground option to nearby container
+- [x] Fix: Nearby duplicating items
+- [x] Fix: Vehicle key is not allowing to place
+- [x] Fix: Vehicle key allow mismatch vehicle
+- [x] Add: Vehicle hover tooltips
+- [x] Fix: Game map balance chunk and Spawn
+- [x] Add: Rest option context menu anywhere to recover stamina and tireness
+- [x] Add: Ranged Weapon firing max distance
+- [x] Fix: NPC Kill count as player kill
+- [x] Fix: When the player die clicking the cursor disapear
+- [x] Rem: Removed RIGHT-Click aim
+- [x] Add: Zombie attack the player, reduce the cloth durability.
+- [x] Add: Show the durability bar and the defence value based on it's durability.
+- [x] Fix: Reduce the minimap image to best performance generating the world
+- [x] Add: Updated the Mobile minimap to use the reduced image of the minimap
+- [x] Fix: 'Rest' restore Stamina and Tireness.
+- [x] Fix: Items on ground that are not backpack, containers or clothes displaying the option open
+- [x] Add: NPC blood decay
+- [x] Fix: Smaller zombie blood decay
+- [x] Add: Make 5 points to be spread when start the game
+- [x] Fix: Show a negative points when start the character build
+- [x] Fix: Resting only restore stamina, sleep restore tireness
+- [x] Add: Outlines: RED for Hostile NPC, GREEN for Friendly NPC and PURPLE for Zombie
+- [x] Add: Only display Contents tooltip for containers, backpacks and clothes
+- [x] Fix: Messages modal is reducing game FPS resulting in game lag
+- [x] Fix: When player is far away from vehicle game crash
+- [x] Fix: When the vehicle is off and I press WASD increase speed and consume gas and battery.
+- [x] Fix: Interactible tiles like: bed `dist` error
+- [x] Fix: Game size resolution
+- [x] Add: New items categories: `type=resource` and `type=reciple`
+- [x] Add: Simple craft system
+- [x] Fix: Close and Minimize buttons on Craft Modal not working
+- [x] Fix: Sometimes when press 'C' to open Craft Modal game crashes
+- [x] Fix: Craft Modal with better and simplier UI
+- [x] Fix: Craft Modal Minimize
+- [x] Add: Tooltips for player traits
+- [x] Fix: Save the player know reciples on save game
+- [x] Add: Display scrollbar on Craft Modal
+- [x] Add: List all crafts at Craft menu and show needed reciple to do it
+- [x] Add: Hightlight crafts with ingredients on inventory
+- [x] Add: Player can chop trees in the world
+- [x] Fix: When player is performing an action lock drag drops
+- [x] Fix: Manage game maptiles loot tables
+- [x] Add: `type="recipe"` and `type="resource"` as stackable
+- [x] Add: Items now are repairable on Craft Menu
+- [x] Add: Craft modal now have Tabs separating: All, Crafts and Repais with a search
+- [x] Fix: Craft modal crashes when try to drag window
+- [x] Fix: Craft modal search not working
+- [x] Fix: Craft modal Hover crash the game
+- [x] Add: Create a search for Craft Modal
+- [x] Add: Craft Modal display craft timer and loading while crafting
+- [x] Add: Allow crafting from Nearby items
+- [x] Add: Water is treated as Units inside a container
+- [x] Add: `disposable="true"` containers. When empty the container is destroyed
+- [x] Add: Make liquid management with: `allow_liquid="true"` and `liquid="true"` for some containers like water
+- [x] Add: New item `<require type="[Item 1, Item 2]" />` for special requirements and game immersion
+- [x] Fix: Minimap now display the game roads
+- [x] Fix: When the player tries to Read/Open the ID `type="text"` nothing opens.
+- [x] Fix: Place an Debug for different type loot names
+- [x] Add: NPC dialogue interactions (Phase 1 to tradable items with NPCs)
+- [x] Fix: Vehicle Keys was not working on load games
+- [x] Fix: Mobile modal lost HEIGHT when minimized
+- [x] Add: Mobile modal clock on title bar
+- [x] Add: Tabs to inventory listing all available containers
+- [x] Fix: Send Cloth to inventory timer
+- [x] Fix: Do not allow to use Craft if container/cloth has items inside (Check for capacity)
+- [x] Fix: Remove the invcontainer
+- [x] Fix: Close and Minimize on NPC Dialog modal
+- [x] Fix: On Nearby Ground tab do not display map tiles as items.
+- [x] Fix: Nearby Container duplicating items
+- [x] Fix: Improve the Settings UI to be more friendly
+- [x] Fix: Game is not loading the config changes from Settings
+- [x] Add: Tooltips for the player top alert notification
+- [x] Add: Player full Game balance is customized by XML file: `game/lib/data/player/progression.xml`
+- [x] Add: Random Zombie and NPC player hit in body parts
+- [x] Add: New player Status design tabs - Status and Record
+- [x] Add: Updated some items category to `type="consumable_drugs`
+- [x] Add: Player now have body parts. Zombie and NPC randomly hit player body part
+- [x] Fix: Balanced the game XP based on traits making harder to make some achievements (+2% is less XP to next level, -2% is more XP to next level)
+- [x] Fix: Game Clothes: Torso to Body, Body to Arms (more friendly knowloadge)
+- [x] Add: consumable_drugs, utility, recipe, resource, map to config spawn XML
+- [x] Fix: Auto healing by body parts and rate.
+- [x] Add: New intelligence skill gained with crafting.
+- [x] Fix: Set the drop items to the world position instead of tile position
+- [x] Fix: Dropped items duplicating in the game world
+- [x] Add: Player need some required level to Craft or Read the Magazines
+- [x] Add: New HUD pause and fast forward buttons
+- [x] Add: Inside the file world.rot, store all map containers loot table. Update the file when save and restore from load game the same.
+- [x] Fix: When the player Drag an item from Nearby ground and drop on Nearby ground the item disapear
+- [x] Add: When Reload weapon allow the player to search from Gear Modal (Clothes) and containers in inventory and backpack
+- [x] Fix: Camera pan to 80% of the current screen edge
+- [x] Fix: When player stamina reach 0 stop gaining Fitness XP
+- [x] Fix: Set game max level attributes to 10
+- [x] Add: New traits now make level up and disable related traits
+- [x] Add: Player sleeps when tiredness reach 0 and black screen when sleep
+- [x] Add: Rest option restore tiredness (slow rate them sleep)
+- [x] Add: Game generate only one big Map file
+- [x] Fix: Improved performace for larger maps
+- [x] Add: Press 'E' on stair to change level
+- [x] Add: Gear modal tabs for Clothes
+- [x] Fix: Alert tooltips beneath the modals
+- [x] Add: When player interact with NPCs gains Lucky experience
+- [x] Fix: NPC shoot player hit only body
+- [x] Add: TAB keybind to show/hide all modals
+- [x] Fix: Gear modal is not allowing stack items
+- [x] Fix: Gear modal first TAB display like on top of other tabs in Gear modal
+- [x] Fix: When player place something from Inventory modal to Gear modal disable the loader display. The loader modal must be trigged only when transfer from Nearby modal (tabs and containers) to Inventory and/or Gear.
+- [x] Add: Destroyable stones with Picaxe
+- [x] Add: Allow the map editor to place items on buildings
+- [x] Fix: Set a default resolution: 1240x720
+- [x] Fix: Performace: Removed the Virtual Screen (doubleling game load)
+- [x] Add: F11 Toggle full screen
+- [x] Add: Player can hit destructible tiles with hand
+- [x] Fix: Vehicle being duplicated (Some statically stayed at the map)
+- [x] Fix: Spawn maps with maptile templates
+- [x] Fix: More light source durability
+- [x] Fix: Player view radius fixed
+- [x] Fix: Do not destroy items with ZERO durability
+- [x] Fix: Reload the lamp and the consumable cigarrete get the needed item to work
+- [x] Fix: Default player start loot from player.xml
+- [x] REM: Profession status from Player, Zombies and NPCs (Had no game effect at all)
+- [x] Fix: Balance player Stamina when running
+- [x] Add: Weapon aim size depends on fire distance
+- [x] Fix: Zombies and NPCs spawning with liquids
+- [x] Fix: Renamed items to match XML files
+- [x] Add: On ```recipes.xml``` add multiple item disassemble
+- [x] Fix: Make separated recipes XML
+- [x] Add: Weight item system
+- [x] Fix: Replace ```speed``` with ```agility```
+- [x] Fix: Zombies load as red squares fallback on loadgame
+- [x] Fix: Items weight
+- [x] Add: Clothes weight 
+- [x] Add: Tooltips for the player status
+- [x] Add: The player action agility for tasks depends on agility level
+- [x] Add: Traits modify the main config file by rewriting the game play
+- [x] Add: Music control to turn on/off
+- [x] Add: New progression system by Day increase dificult
+- [x] Fix: Zombies now hit all body parts
+- [x] Add: When player sleep/rest increase the detection radius
+- [x] Fix: The player can "push" the NPCs over the game world.
+- [x] Add: Allow the user to drag-drop only clicking and dragging item to it's tab
+- [x] Add: Player now can only see zombies and NPCs based on View Radius
+- [x] Fix: Vehicle hit zombies, npcs and count kill
+- [x] Add: Vehicles now spawn randomly at the map (They have a special setting to spawn)
+- [x] Fix: Player view only allows the map items
+- [x] Add: Blurred screen for unseen parts, giving something more atmospheric in gamaplay
+- [x] Fix: Pause button font correct rendered
+- [x] Fix: Overweight hurt body parts
+- [x] Fix: Highlight stairs in orange
+- [x] Add: Game rain can affect the player
+- [x] Add: Walk/Run on bare foot affect the player
+- [x] Fix: Fixed the Defense percentage of the game
+- [x] Add: New coconuts on the shore
+- [x] Add: Tires to vehicle
+- [x] Add: Zombie hit vehicle motor dammage
+- [x] Add: New A* algorithm for Zombie and NPC AI
+- [x] Fix: Timers for Actions
+- [x] Add: New Vehicles: Truck and Ambulance
+- [x] Fix: Map templates wont rendering
+- [x] Add: New vehicles keys (Truck and Ambulance)
+- [x] Add: Animals (Bat and Rats)
+- [x] Fix: When player inside vehicle, rain do not infect player
+- [x] Add: If the player change the map, when save, store the new map changes (Choped trees, Cracked stones and Picked items)
+- [X] Add: 10 slots to inventory
+- [x] REF: Refactor events/mouse.py for smaller files
+- [x] REF: Refactor entities/player/player.py for smaller files
+- [x] REF: Refactor entities/item/item.py for smaller files
+- [x] REF: Refactor map/procedural/generator.py for smaller files
+- [x] REF: Refactor entities/npc/npc.py for smaller files
+- [x] REF: Refactor entities/zombies/zombie.py for smaller files
+- [x] REF: Refactor game.py for smaller files
+- [x] Add: Create a new: ```builder=true``` attribute to show simple clothes on player builder
+- [x] Fix: Balance Zombie by config
+- [x] Fix: Some zombies dead body do not spawn after dead
+- [x] Add: NPC Hostile can kill the player (60% of the NPCs are hostile)
+- [x] Add: When player click on NPC, make it stop as interaction
+- [x] Add: Generate some static game NPCs inside buildings
+- [x] Add: Make NPC send some random item to the player
+- [x] Add: Recipe: Medkit reciple
+- [x] Add: Recipe: Line Twine
+- [x] Add: Recipe: Ragged Cloth
+- [x] Add: Recipe: Denim Stripes
+- [x] Add: Recipe: Leather Piece
+- [x] Add: Recipe: Bag
+- [x] Add: Recipe: Sleeping Bag
+- [x] Add: Recipe: Camp Tent
+- [x] Add: Recipe: Motor Repair Kit
+- [x] Add: Recipe: Engine Parts
+- [x] Add: Recipe: Car Engine
+- [x] Add: Recipe: Medical Bandage
+- [x] Fix: Recipe: Leather Black Gloves, Leather Black Pants, Leather Black Jacket
+- [x] Add: Recipe: Stick, Half Stick, Stone Blade, Baseball Bat with Nails, Plank, Primitive Knife/Spear/Hammer/Axe, Improvised, Spear
+- [x] Add: Recipe: Campfire
+- [x] Add: Recipe: Picaxe
+- [x] Add: Dismantle: Primitive Hammer
+- [x] Add: Dismantle: Tire
+- [x] Add: Recipe: Slingshot
+- [x] Add: Recipe: Slingshot Rock
+- [x] Add: Container: Keyring
+- [x] Add: Consumable Food: Rat Meat
+- [x] Add: Vehicle: Tire
+- [x] Add: Dismantle: Tire
+- [x] Add: Weapon Melee: Picaxe
+- [x] Add: Hair, Facials and Util
+- [x] Add: Utility: Campfire
+- [x] Fix: Item: Reduce infection using medication_vaccine
+- [x] Add: Weapon: Machine gun: MAC-10
+- [x] Add: Camp: Added Camp Tent (Allow player to sleep)
+- [x] Add: Camp: Added Sleeping Bag (Allow player to sleep)
+- [x] Add: Weapon: Double Barrel Shotgun
+- [x] Add: Weapon: M4A1
+- [x] Add: Melee Weapon: Baseball Bat
+- [x] Fix: Weapon Consumable: Ammo Sprites (Shells, 9mm and .38)
+- [x] Fix: Consumable: Magazine sprite
+- [x] Add: Clothes have "pockets"
+- [x] Add: Resource: Medical Magazine Vol.1
+- [x] Add: Container: Survivor Kit
+- [x] Add: Reciple: Survivor Guide
+- [x] Add: Reciple: Vehicle Engineering Vol.1
+- [x] Add: Reciple: Vehicle Engineering Vol.2
+- [x] Add: Resource: Car Oil
+- [x] Add: Resource: Denim Stripes
+- [x] Add: Resource: Engine Parts
+- [x] Add: Resource: Leather Piece
+- [x] Add: Resource: Line Twine
+- [x] Add: Resource: Needle
+- [x] Add: Resource: Ragged Cloth
+- [x] Add: Resource: Screws
+- [x] Add: Resource: Log
+- [x] Add: Resource: Plank
+- [x] Add: Resource: Stick
+- [x] Add: Resource: Portable Hand Saw
+- [x] Add: Weapon Melee: Hammer
+- [x] Add: Weapon Melee: Lug Wrench
+- [x] Add: Weapon Melee: Wrench
+- [x] Add: Weapon Melee: Scissor
+- [x] Add: Weapon Melee: Screwdriver
+- [x] Add: Container: Sewing Kit
+- [x] Add: Container: Medical Kit
+- [x] Add: Container: Toolkit
+- [x] Add: Utility: Lighter on/off
+- [x] Add: Utility: Lighter on/off
+- [x] Add: Utility: Lighter Fluid
+- [x] Fix: Resource: Cover Medical Magazine Vol.1
+- [x] Add: Map: Full island map (you can also use the mobile as minimap),
+- [x] Add: Weapon Melee: Primitive Axe
+- [x] Add: Resource: Improvised Spear
+- [x] Add: Resource: Primitive Hammer
+- [x] Add: Resource: Primitive Axe
+- [x] Add: Resource: Primitive Spear
+- [x] Add: Resource: Stone Blade
+- [x] Add: Resource: Stone
+- [x] Add: Resource: Tree Branch
+- [x] Add: Resource: Half Stick
+- [x] Add: Resource: Stick
+- [x] Add: Container: Trunk (Wrap Logs and Tree Branches)
+- [x] Add: Resource: Tire Rim
+- [x] Add: Resource: Tire Rubber
+- [x] Add: Resource: Slice Rubber
+- [x] Add: Weapon Ranged: Slingshot
+- [x] Add: Weapon Amoo: Slingshot Rock
+- [x] Add: Removed the map options (as now they are procedural generated)
+- [x] Fix: Special chunk dense forest fix, background fix
+- [x] Add: New building spawn Military mandatory
+- [x] Add: Tile: New tiles and updated buildings for Store
+- [x] Add: Second layer caves and Dungeon and Bunkers
+- [x] Add: Set specified _L2 maps
+- [x] Add: Bunker template and dungeon
+- [x] Add: Breakable scenarios (Trees and Stones)
+- [x] Add: Fix the layer layout UI
+- [x] Add: Items tab beside Tiles
+- [x] Add: Tile: Camp: Added Camp Tent (Allow player to sleep and pickup)
+- [x] Add: Tile: Camp: Added Sleeping Bag (Allow player to sleep and pickup)
+- [x] Fix: Fixed the maximize screen of Editor
+- [x] Add: Window states to open and close
+- [x] Rem: Removed unused tiles
+- [x] Fix: Map building Forest_10 added an small camp
+- [x] Add: Game background music loop
