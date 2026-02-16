@@ -25,10 +25,10 @@ from core.ui.map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 
 def draw_game(game):
-    # Clear the main screen that holds the game and UI panels
+    # Clear the main screen
     game.game_screen.fill(PANEL_COLOR)
 
-    # World Rendering with Pixelated Zoom ---
+    # World Rendering with Pixelated Zoom
     zoom = game.zoom_level
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
@@ -37,21 +37,15 @@ def draw_game(game):
        game.cached_view_surface.get_width() != view_w or \
        game.cached_view_surface.get_height() != view_h:
         game.cached_view_surface = pygame.Surface((view_w, view_h))
-        # Also create a scratch surface for particles to avoid allocs in loops
         game.particle_scratch = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
     
     world_view_surface = game.cached_view_surface
     world_view_surface.fill((20, 20, 20)) 
 
-    # ---------------------------------------------------------
     # 1. CALCULATE CAMERA PANNING
-    # ---------------------------------------------------------
     mouse_pos = game._get_scaled_mouse_pos()
 
-    # Check if mouse is over any UI modal
     is_over_modal = False
-    
-    # [CHECK] Respect hidden UI state for interaction checks
     if not getattr(game, 'hide_modals', False):
         for modal in game.modals:
             if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
@@ -60,16 +54,13 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    #right_click_aim = mouse_buttons[2] and not is_over_modal
     is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
 
-    # Panning Camera Target Calculation
     target_pan_x = 0
     target_pan_y = 0
 
     if is_aiming and game.player:
-        edge_margin = 80 # Pixels from the edge to trigger pan
-        
+        edge_margin = 80 
         at_left_edge = mouse_pos[0] < edge_margin
         at_right_edge = mouse_pos[0] > GAME_WIDTH - edge_margin
         at_top_edge = mouse_pos[1] < edge_margin
@@ -89,27 +80,18 @@ def draw_game(game):
 
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
-    # ---------------------------------------------------------
-    # 2. OPTIMIZED GRID RENDERING (VIEWPORT CULLING)
-    # ---------------------------------------------------------
-    # Instead of blitting a giant cached surface, we iterate only the visible tiles.
-    
+    # 2. OPTIMIZED GRID RENDERING
     tile_size = TILE_SIZE
     
-    # Calculate visible grid bounds
-    # We want visible WorldX from 0 to view_w (relative to screen)
-    # WorldCoord = ScreenCoord - offset
     min_world_x = -offset_x
     min_world_y = -offset_y
     max_world_x = -offset_x + view_w
     max_world_y = -offset_y + view_h
     
-    # Add buffer of 2 tiles to avoid popping at edges
     buffer_tiles = 2
     min_grid_x = max(0, int(min_world_x // tile_size) - buffer_tiles)
     min_grid_y = max(0, int(min_world_y // tile_size) - buffer_tiles)
     
-    # Map Dimensions
     map_h = len(game.map_data) if game.map_data else 0
     map_w = len(game.map_data[0]) if map_h > 0 else 0
     
@@ -126,17 +108,11 @@ def draw_game(game):
     current_time = time.time()
     tiles_to_remove = []
 
-    player_tile_x = game.player.rect.centerx // tile_size
-    player_tile_y = game.player.rect.centery // tile_size
-    roof_hide_radius = 3
-
-    # Main Render Loop
     for gy in range(min_grid_y, max_grid_y):
         for gx in range(min_grid_x, max_grid_x):
             screen_px = int(gx * tile_size + offset_x)
             screen_py = int(gy * tile_size + offset_y)
             
-            # --- Ground Layer ---
             if ground_layer:
                 g_key = ground_layer[gy][gx]
                 if g_key and g_key != ' ':
@@ -144,13 +120,11 @@ def draw_game(game):
                     if g_def:
                         world_view_surface.blit(g_def['image'], (screen_px, screen_py))
 
-            # --- Base Layer (Walls, Trees, Objects) ---
             if base_layer:
                 b_key = base_layer[gy][gx]
                 if b_key and b_key != ' ':
                      b_def = tm.definitions.get(b_key)
                      if b_def:
-                         # Handle Shaking
                          draw_x, draw_y = screen_px, screen_py
                          if (gx, gy) in shaking_tiles:
                              if current_time - shaking_tiles[(gx, gy)] > 0.2:
@@ -161,16 +135,10 @@ def draw_game(game):
                          
                          world_view_surface.blit(b_def['image'], (draw_x, draw_y))
             
-            # --- Roof Layer ---
-            
-
-    # Clean up shaking tiles
     for k in tiles_to_remove:
         if k in game.map_manager.shaking_tiles:
             del game.map_manager.shaking_tiles[k]
 
-
-    # --- Draw Persistent Blood Stains (Decals) ---
     if hasattr(game, 'blood_stains'):
         min_view_x = -offset_x - 100
         max_view_x = -offset_x + view_w + 100
@@ -187,7 +155,7 @@ def draw_game(game):
             pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
     
-    # [OPTIMIZATION] Low-Resolution Lighting
+    # [OPTIMIZATION] Low-Resolution Lighting with Caching
     low_res_w = view_w // 2
     low_res_h = view_h // 2
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
@@ -197,17 +165,20 @@ def draw_game(game):
 
     light_texture = game.assets.get('light_texture')
     light_sources = []
+    
+    # [OPTIMIZATION] Cache scaled light textures for this frame to avoid repeated scaling
+    # Dictionary key: radius_int
+    frame_light_cache = {} 
 
-    # 1. Player Vision
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
-            # radius_view_pixels = int(radius_world_pixels / zoom)
             radius_view_pixels = int(radius_world_pixels)
             
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
                 
+                # Player vision uses blend mult, handled separately
                 player_vision_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 ambient_color = (ambient, ambient, ambient)
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
@@ -222,11 +193,10 @@ def draw_game(game):
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
-    # 2. Collect Light Sources
+    # Collect Light Sources
     all_player_inventories = [game.player.belt, game.player.inventory]
     if game.player.backpack: all_player_inventories.append(game.player.backpack.inventory)
     
-
     for inv in all_player_inventories:
         for item in inv:
             if getattr(item, 'state', 'off') == 'on':
@@ -247,7 +217,7 @@ def draw_game(game):
                  if getattr(container, 'lights', 'off') == 'on' and container.battery > 0:
                      light_sources.append({'item': container, 'owner': 'vehicle'})
 
-    # 3. Draw Lights (Low Res)
+    # Draw Lights
     if light_texture:
         for light_info in light_sources:
             light = light_info['item']
@@ -259,16 +229,18 @@ def draw_game(game):
             else:
                  lx, ly = light.rect.centerx, light.rect.centery
             
-            # Culling Check
             if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly):
                 continue
             
-            # radius_low = int((radius_world / zoom) / 2)
             radius_low = int(radius_world / 2)
             if radius_low <= 0: continue
 
             try:
-                scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                # [OPTIMIZATION] Use Cache
+                if radius_low not in frame_light_cache:
+                    frame_light_cache[radius_low] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                
+                scaled_light_tex = frame_light_cache[radius_low]
                 light_rect = scaled_light_tex.get_rect()
                 
                 if light_info['owner'] == 'player':
@@ -293,6 +265,9 @@ def draw_game(game):
             if radius_low <= 0: continue
 
             try:
+                # For map lights we often tint them, so we can't share the raw cached one easily if colors differ
+                # But we can cache the base scale if needed. 
+                # For safety, let's just do standard scaling here unless we implement a complex key (radius, color)
                 scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 light_opacity = 80 
                 scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
@@ -306,16 +281,12 @@ def draw_game(game):
     
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
 
+    # Draw Containers, Items, Projectiles, Zombies, NPCs with Culling
     for container in game.containers:
         if not screen_rect.colliderect(container.rect): continue
-        
-        # Vision Culling for Containers/Corpses
         dx = container.rect.centerx - game.player.rect.centerx
         dy = container.rect.centery - game.player.rect.centery
-        dist_sq = dx*dx + dy*dy
-        
-        if dist_sq > view_radius_sq:
-            continue
+        if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = container.rect.move(offset_x, offset_y)
         if getattr(container, 'image', None):
@@ -326,14 +297,9 @@ def draw_game(game):
 
     for item in game.items_on_ground:
         if not screen_rect.colliderect(item.rect): continue
-
-        # Vision Culling for Items
         dx = item.rect.centerx - game.player.rect.centerx
         dy = item.rect.centery - game.player.rect.centery
-        dist_sq = dx*dx + dy*dy
-        
-        if dist_sq > view_radius_sq:
-            continue
+        if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
         if getattr(item, 'image', None):
@@ -345,36 +311,23 @@ def draw_game(game):
         if screen_rect.colliderect(p.rect):
             p.draw(world_view_surface, offset_x, offset_y)
 
-
     for zombie in game.zombies:
         if not screen_rect.colliderect(zombie.rect): continue
-        
-        # Vision Culling: Check if center of zombie is within view radius
         dx = zombie.rect.centerx - game.player.rect.centerx
         dy = zombie.rect.centery - game.player.rect.centery
-        dist_sq = dx*dx + dy*dy
-        
-        if dist_sq > view_radius_sq:
-            continue # Skip drawing if outside player vision
+        if (dx*dx + dy*dy) > view_radius_sq: continue
 
         zombie.draw(world_view_surface, offset_x, offset_y, 255)
 
     for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
-
-        # Vision Culling
         dx = npc.rect.centerx - game.player.rect.centerx
         dy = npc.rect.centery - game.player.rect.centery
-        dist_sq = dx*dx + dy*dy
-        
-        if dist_sq > view_radius_sq:
-            continue # Skip drawing if outside player vision
+        if (dx*dx + dy*dy) > view_radius_sq: continue
 
         npc.draw(world_view_surface, offset_x, offset_y, 255)
 
-    # [NEW] Highlight nearby stairs
     game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
-
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
     player_tile_x = game.player.rect.centerx // tile_size
@@ -386,7 +339,6 @@ def draw_game(game):
             for gx in range(min_grid_x, max_grid_x):
                 r_key = roof_layer[gy][gx]
                 if r_key and r_key != ' ':
-                    # Hide Roof Logic
                     dx = abs(gx - player_tile_x)
                     dy = abs(gy - player_tile_y)
                     if not (dx <= roof_hide_radius and dy <= roof_hide_radius):
@@ -398,8 +350,6 @@ def draw_game(game):
 
     SPLASH_COLOR = (139, 0, 0)
     current_time_ms = pygame.time.get_ticks()
-    
-    # Pre-configure scratch surface
     scratch = game.particle_scratch 
     
     for splash in game.splashes:
@@ -430,23 +380,18 @@ def draw_game(game):
             pygame.draw.circle(scratch, trail_color, (p_radius, p_radius), p_radius)
             world_view_surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
-    # ---------------------------------------------------------
-    # BLUR FILTER (OUTSIDE PLAYER VISION)
-    # ---------------------------------------------------------
+    # BLUR FILTER (PRESERVED)
     if core.data.config.BLUR_UNSEEN:
         try:
-            # 1. Create a blurred version of the world
-            blur_factor = 0.12 # Adjust for blur strength
+            blur_factor = 0.12
             small_w = max(1, int(view_w * blur_factor))
             small_h = max(1, int(view_h * blur_factor))
             
-            # [FIX] Ensure the blurred surface has an Alpha Channel
             small_surf = pygame.transform.smoothscale(world_view_surface, (small_w, small_h))
             blurred_surf = pygame.transform.smoothscale(small_surf, (view_w, view_h)).convert_alpha()
             
-            # 2. Create the Mask: White = Apply Blur, Transparent = Keep Sharp
             blur_mask = pygame.Surface((view_w, view_h), pygame.SRCALPHA)
-            blur_mask.fill((255, 255, 255, 255)) # Start fully blurred
+            blur_mask.fill((255, 255, 255, 255)) 
 
             light_tex = game.assets.get('light_texture')
             
@@ -454,80 +399,49 @@ def draw_game(game):
             py_view = int(game.player.rect.centery + offset_y)
             p_radius = getattr(game, 'player_view_radius', 400)
             
-            # 3. Create the "Clear Hole"
-            # We prefer a generated gradient circle for robustness. 
-            # Only use light_tex if we are absolutely sure about it, but a procedural gradient is safer for "Vision".
-            
             hole_size = int(p_radius * 2.5) if p_radius > 0 else 10
             hole_surf = pygame.Surface((hole_size, hole_size), pygame.SRCALPHA)
             hole_surf.fill((0,0,0,0))
             
-            # Draw a white gradient circle (opaque center, fading out)
-            # For the blur mask, "White" in the hole means "Remove Blur" (via SUBtraction).
-            # So we want Opaque White in the center.
             center = hole_size // 2
             
             if light_tex:
-                # Try using the texture
                 scaled_tex = pygame.transform.scale(light_tex, (hole_size, hole_size))
-                # Force Pure White (255,255,255) preserving Alpha
                 scaled_tex.fill((255, 255, 255, 255), special_flags=pygame.BLEND_RGBA_MULT)
                 hole_surf.blit(scaled_tex, (0,0))
             else:
-                # Fallback procedural circle
                 pygame.draw.circle(hole_surf, (255, 255, 255, 255), (center, center), int(p_radius))
 
-            # 4. Apply the Hole to the Mask
-            # Mask (White) - Hole (White) = Transparent Hole
             hole_rect = hole_surf.get_rect(center=(px_view, py_view))
             blur_mask.blit(hole_surf, hole_rect, special_flags=pygame.BLEND_RGBA_SUB)
 
-            # 5. Composite
-            # Mask now has a transparent hole in the center.
-            # Blit mask onto blurred_surf (keep blur only where mask is Opaque)
             blurred_surf.blit(blur_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            
-            # 6. Overlay blurred_surf on top of world
             world_view_surface.blit(blurred_surf, (0, 0))
 
         except Exception as e:
             pass
 
-    # Roof rendering is now integrated into the main grid loop for better performance
-
     if game.hovered_container:
-        # Vision Culling for Hover Highlight
         dx = game.hovered_container.rect.centerx - game.player.rect.centerx
         dy = game.hovered_container.rect.centery - game.player.rect.centery
-        
         if (dx*dx + dy*dy) <= view_radius_sq:
             hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
     world_mouse_pos = game.screen_to_world(mouse_pos)
     for npc in game.npcs:
-        # Optimization: Only check NPCs currently within the view
-        if not screen_rect.colliderect(npc.rect): 
-            continue
-            
+        if not screen_rect.colliderect(npc.rect): continue
         if npc.rect.collidepoint(world_mouse_pos):
-            # Check friendliness: Green if friendly, Red if hostile
             is_friendly = getattr(npc, 'is_friendly', True)
             color = (0, 255, 0) if is_friendly else (255, 0, 0)
-            
             hover_rect = npc.rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, color, hover_rect, 2)
-            break # Only highlight one at a time
+            break 
     
-
     for zombie in game.zombies:
-        # Optimization: Only check zombies currently within the view
-        if not screen_rect.colliderect(zombie.rect): 
-            continue
-        
+        if not screen_rect.colliderect(zombie.rect): continue
         if zombie.rect.collidepoint(world_mouse_pos):
             hover_rect = zombie.rect.move(offset_x, offset_y)
-            # Draw Purple outline for Zombies
             pygame.draw.rect(world_view_surface, (128, 0, 128), hover_rect, 2)
             break
 
@@ -538,17 +452,19 @@ def draw_game(game):
     light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
     world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # Final Scale to Screen
-    scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
+    # [OPTIMIZATION] Final Scale to Screen - Skip if 1:1
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
-    game.game_screen.blit(scaled_world, game_rect)
+    if view_w == GAME_WIDTH and view_h == GAME_HEIGHT:
+        game.game_screen.blit(world_view_surface, game_rect)
+    else:
+        scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
+        game.game_screen.blit(scaled_world, game_rect)
 
 
     if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' or len(getattr(game, 'rain_particles', [])) > 0:
         if not hasattr(game, 'rain_particles'):
             game.rain_particles = []
             
-        # [NEW] Check if player is currently under a roof
         is_under_roof = False
         if getattr(game, 'roof_data', None) and game.player:
             px = int(game.player.rect.centerx // TILE_SIZE)
@@ -558,9 +474,8 @@ def draw_game(game):
                 if r_key and r_key != ' ':
                     is_under_roof = True
             
-        # Spawn new rain if raining, player is outside, not under a roof, and not sleeping
         if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and getattr(game, 'current_layer_index', 1) != 2 and not (game.player and game.player.is_sleeping) and not is_under_roof:
-            for _ in range(10): # Intensity
+            for _ in range(10): 
                 game.rain_particles.append({
                     'x': random.randint(0, GAME_WIDTH + 200),
                     'y': random.randint(-50, 0),
@@ -569,41 +484,29 @@ def draw_game(game):
                 })
         
         active_rain = []
-        rain_color = (130, 150, 180) # Light overcast blue
+        rain_color = (130, 150, 180)
         for p in game.rain_particles:
             p['y'] += p['speed']
-            p['x'] -= p['speed'] * 0.15 # Slight diagonal wind angle
+            p['x'] -= p['speed'] * 0.15 
             
             start_pos = (int(p['x']), int(p['y']))
             end_pos = (int(p['x'] + p['speed'] * 0.15), int(p['y'] - p['length']))
             
-            # [CHANGED] Only draw the rain particles if the player is NOT under a roof
             if not is_under_roof:
                 pygame.draw.line(game.game_screen, rain_color, start_pos, end_pos, 1)
             
-            # Cull particles that fall off screen
             if p['y'] < GAME_HEIGHT:
                 active_rain.append(p)
         
         game.rain_particles = active_rain
 
-
     if game.player and game.player.is_sleeping:
-        # Cover the whole virtual screen with black
         game.game_screen.fill((0, 0, 0))
-        
         font = game.assets.get('font') or pygame.font.Font(None, 30)
         text_surf = font.render("Sweet Dreams. Press Space to Wake up.", True, (255, 255, 255))
-        
-        text_rect = text_surf.get_rect(center=(GAME_WIDTH // 2 + GAME_OFFSET_X // 2, GAME_HEIGHT // 2))
-        
-        # Adjust for the sidebar offset if necessary, usually centering on the whole screen is fine
-        # creating a true center:
-        text_rect.center = (game.game_screen.get_width() // 2, game.game_screen.get_height() // 2)
-        
+        text_rect = text_surf.get_rect(center=(game.game_screen.get_width() // 2, game.game_screen.get_height() // 2))
         game.game_screen.blit(text_surf, text_rect)
 
-    # --- UI & Effects Rendering (Unaffected by Zoom) ---
     if game.player.gun_flash_timer > 0:
         center_x = GAME_OFFSET_X + GAME_WIDTH // 2
         center_y = GAME_HEIGHT // 2
@@ -615,7 +518,6 @@ def draw_game(game):
         flash_radius = (TILE_SIZE // 5) * zoom 
         pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
         game.player.gun_flash_timer -= 1
-
 
     if game.player and game.player.chat_text and game.player.chat_timer > 0:
         player_view_x = game.player.rect.centerx + offset_x
@@ -648,10 +550,8 @@ def draw_game(game):
         text_rect = text_surf.get_rect(center=bubble_rect.center)
         game.game_screen.blit(text_surf, text_rect)
 
-
     if game.game_state == 'PLAYING':
         draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
-        # [CHANGED] Capture alert tooltip proxy instead of drawing immediately
         alert_tooltip = draw_player_alerts(game.game_screen, game.player)
         if alert_tooltip:
              game.hovered_item = alert_tooltip
@@ -661,8 +561,6 @@ def draw_game(game):
     mouse_pos = game._get_scaled_mouse_pos()
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
-    # [CHANGE START] Only draw modals if they are not hidden
-    # [REVERTED] Removed hide_modals check to rely on list clearing instead
     for modal in game.modals:
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
@@ -709,15 +607,11 @@ def draw_game(game):
             buttons = draw_npc_dialog_modal(game.game_screen, modal, game)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'crafting':
-            # Instantiate Logic on the fly (or you could store instance in modal dict)
             if 'instance' not in modal:
                 modal['instance'] = CraftingModal(game.game_screen, modal, game.assets, game)
-            
-            # Ensure surface is up to date
             modal['instance'].surface = game.game_screen
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
-    # [CHANGE END]
 
     game.pause_button_rect = draw_pause_button(game.game_screen)
     game.forward_button_rect = draw_forward_button(game.game_screen)
@@ -733,8 +627,6 @@ def draw_game(game):
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
         
-        # [CHANGE START] Only highlight modal slots if they are not hidden
-        # [REVERTED] Removed hide_modals check
         for modal in reversed(game.modals):
             if modal['type'] == 'inventory':
                 if modal.get('active_tab', 'Inventory') == 'Inventory':
@@ -779,7 +671,6 @@ def draw_game(game):
                 if highlighted_rect: break
             elif modal['type'] == 'messages':
                 pass
-        # [CHANGE END]
 
         if not highlighted_rect:
             for i in range(5):
@@ -833,9 +724,6 @@ def draw_game(game):
         pygame.draw.rect(game.game_screen, bar_color, (bar_x, bar_y, fill_w, bar_h))
         pygame.draw.rect(game.game_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
 
-    #if game.hovered_item and not game.context_menu['active']:
-    #    draw_tooltip(game.game_screen, game.hovered_item, game._get_scaled_mouse_pos())
-
     elif not game.context_menu['active']:
         ui_buttons = [
             (game.pause_button_rect, "Pause and Save (F2)"),
@@ -852,16 +740,13 @@ def draw_game(game):
         
         for rect, label in ui_buttons:
             if rect and rect.collidepoint(mouse_pos):
-                # Use standard notification font or fallback to asset font
                 font_tip = globals().get('font_notification', game.assets.get('font'))
-                
                 if font_tip:
                     text_surf = font_tip.render(label, True, WHITE)
                     padding = 8
                     width = text_surf.get_width() + padding * 2
                     height = text_surf.get_height() + padding * 2
                     
-                    # Position tooltip near mouse but keep on screen
                     tip_x = mouse_pos[0] + 10
                     tip_y = mouse_pos[1] + 10
                     
@@ -872,14 +757,10 @@ def draw_game(game):
                     
                     tooltip_rect = pygame.Rect(tip_x, tip_y, width, height)
                     
-                    # Draw consistent tooltip style (Dark background, White border)
                     pygame.draw.rect(game.game_screen, (0, 0, 0, 220), tooltip_rect)
                     pygame.draw.rect(game.game_screen, WHITE, tooltip_rect, 1)
                     game.game_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
                 break
-
-    #if game.context_menu['active']:
-    #    draw_context_menu(game.game_screen, game.context_menu, game._get_scaled_mouse_pos())
 
     if game.player.is_aiming:
         pygame.mouse.set_visible(False) 
@@ -911,7 +792,6 @@ def draw_game(game):
         fps_text = f"FPS: {fps}"
         font = game.assets.get('font')
         if font:
-            fps_surface = font.render(fps_text, True, (0, 255, 0)) # Green color
-            # Position 5 pixels from right and bottom edges
+            fps_surface = font.render(fps_text, True, (0, 255, 0))
             fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
             game.game_screen.blit(fps_surface, fps_rect)
