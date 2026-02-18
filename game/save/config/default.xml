@@ -11,8 +11,8 @@
         <time_start_hr value="6.0" name="Start hour (Default: 6.0)"/>
         <day_night_cycle_darkness value="255" name="Darkness color (Default: 255)"/>
         <zoom_start value="3.0" name="Zoom start (Default: 3.0)"/>
-        <zoom_far value="1.5" name="Zoom max far (Default: 1.5)"/>
-        <zoom_near value="6.0" name="Zoom max near (Default: 6.0)"/>
+        <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
+        <zoom_near value="4.0" name="Zoom max near (Default: 4.0)"/>
     </game>
     <map>
         <map_chunks value="2" name="Max map chunks (Default: 2)"/>

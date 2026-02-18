@@ -16,6 +16,14 @@ class MapManager:
         self.current_map_filename = 'map_L1_world_map.csv' 
         self.map_files = self._discover_maps()
         self.shaking_tiles = {}
+        
+        # [NEW] Chunk Caching System
+        self.chunk_surfaces = {} 
+        self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 32
+
+        # [NEW] Performance: Chunk Generation Throttling
+        self.chunks_generated_this_frame = 0
+        self.MAX_CHUNKS_PER_FRAME = 1  # Adjustable: Higher = faster load but more lag. 4 is balanced.
 
         if not hasattr(self.game, 'vehicles'):
             self.game.vehicles = []
@@ -25,7 +33,6 @@ class MapManager:
         print("Refreshing map file list...")
         self.map_files = self._discover_maps()
         print(f"Found {len(self.map_files)} map files.")
-
 
     def _discover_maps(self):
         maps = {}
@@ -56,18 +63,127 @@ class MapManager:
     def transition(self, direction):
         return None
 
+    # [NEW] Chunk Caching Methods
+    def clear_cache(self):
+        """Clears all cached chunk surfaces."""
+        self.chunk_surfaces.clear()
+
+    def reset_frame_metrics(self):
+        """Called by Game loop every frame to reset generation limits."""
+        self.chunks_generated_this_frame = 0
+
+    def invalidate_chunk(self, grid_x, grid_y, layer_idx=None):
+        """Removes the cached surface for the chunk containing (grid_x, grid_y) so it redraws next frame."""
+        if layer_idx is None: 
+            layer_idx = self.game.current_layer_index
+            
+        cx = grid_x // self.CHUNK_SIZE
+        cy = grid_y // self.CHUNK_SIZE
+        
+        # Identify keys to remove (matching layer and chunk coordinates)
+        keys_to_remove = [k for k in self.chunk_surfaces if k[0] == layer_idx and k[1] == cx and k[2] == cy]
+        
+        for k in keys_to_remove:
+            del self.chunk_surfaces[k]
+
+    def get_chunk_surface(self, cx, cy, layer_idx, layer_type='world'):
+        """
+        Returns a cached surface for a specific chunk. 
+        layer_type: 'world' (Ground + Base objects) or 'roof'
+        """
+        key = (layer_idx, cx, cy, layer_type)
+        if key in self.chunk_surfaces:
+            return self.chunk_surfaces[key]
+
+        # [NEW] Throttling: If we generated too many chunks this frame, postpone this one.
+        if self.chunks_generated_this_frame >= self.MAX_CHUNKS_PER_FRAME:
+            return None
+
+        self.chunks_generated_this_frame += 1
+
+        # Calculate dimensions
+        pixel_size = self.CHUNK_SIZE * TILE_SIZE
+        surface = pygame.Surface((pixel_size, pixel_size), pygame.SRCALPHA)
+        
+        min_x = cx * self.CHUNK_SIZE
+        min_y = cy * self.CHUNK_SIZE
+        max_x = min_x + self.CHUNK_SIZE
+        max_y = min_y + self.CHUNK_SIZE
+
+        # Determine data sources
+        ground_data = None
+        base_data = None
+        roof_data = None
+
+        # If requesting the currently active layer, use the direct references for speed
+        if layer_idx == self.game.current_layer_index:
+            ground_data = getattr(self.game, 'ground_data', None)
+            base_data = getattr(self.game, 'map_data', None)
+            roof_data = getattr(self.game, 'roof_data', None)
+        else:
+            # Otherwise fetch from storage
+            if hasattr(self.game, 'all_ground_layers'):
+                ground_data = self.game.all_ground_layers.get(layer_idx)
+            if hasattr(self.game, 'all_map_layers'):
+                base_data = self.game.all_map_layers.get(layer_idx)
+            if hasattr(self.game, 'all_roof_layers'):
+                roof_data = self.game.all_roof_layers.get(layer_idx)
+
+        tm = self.game.tile_manager
+
+        # Render Tiles to Surface
+        if layer_type == 'world':
+            # 1. Ground Layer
+            if ground_data:
+                # Clamp ranges to map bounds
+                y_range = range(min_y, min(max_y, len(ground_data)))
+                if y_range:
+                    row_len = len(ground_data[0])
+                    for y in y_range:
+                        for x in range(min_x, min(max_x, row_len)):
+                            char = ground_data[y][x]
+                            if char and char != ' ':
+                                defn = tm.definitions.get(char)
+                                if defn:
+                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+            
+            # 2. Base Layer (Walls, Objects)
+            if base_data:
+                y_range = range(min_y, min(max_y, len(base_data)))
+                if y_range:
+                    row_len = len(base_data[0])
+                    for y in y_range:
+                        for x in range(min_x, min(max_x, row_len)):
+                            char = base_data[y][x]
+                            if char and char != ' ':
+                                defn = tm.definitions.get(char)
+                                if defn:
+                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+
+        elif layer_type == 'roof':
+            if roof_data:
+                y_range = range(min_y, min(max_y, len(roof_data)))
+                if y_range:
+                    row_len = len(roof_data[0])
+                    for y in y_range:
+                        for x in range(min_x, min(max_x, row_len)):
+                            char = roof_data[y][x]
+                            if char and char != ' ':
+                                defn = tm.definitions.get(char)
+                                if defn:
+                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+
+        self.chunk_surfaces[key] = surface
+        return surface
+
     def get_vehicle_at(self, grid_x, grid_y):
         """
         Finds a dynamic vehicle object located at the given grid coordinates.
         Used by handle_right_click in mouse.py.
         """
         for vehicle in self.game.vehicles:
-            # Convert vehicle pixel position to grid coordinates
             veh_grid_x = int(vehicle.x // TILE_SIZE)
             veh_grid_y = int(vehicle.y // TILE_SIZE)
-            
-            # Check if the click is within the vehicle's grid footprint
-            # Vehicles might be larger than 1 tile, so we check the rect
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             if vehicle.rect.colliderect(tile_rect):
                 return vehicle
@@ -96,13 +212,11 @@ class MapManager:
             except Exception as e:
                 print(f"Error saving map layer {filename}: {e}")
 
-        # [FIX] Iterate through ALL loaded layers in memory and save them
         if hasattr(self.game, 'all_map_layers'):
             for layer_idx, layout in self.game.all_map_layers.items():
                 filename = f'map_L{layer_idx}_world_map.csv'
                 write_layer(layout, filename)
         
-        # Also save spawn layers if they were modified (e.g. items picked up)
         if hasattr(self.game, 'all_spawn_layers'):
             for layer_idx, layout in self.game.all_spawn_layers.items():
                 filename = f'map_L{layer_idx}_world_spawn.csv'
@@ -148,6 +262,9 @@ class MapManager:
                     source_pos=tile_rect.center,
                     base_volume=random.uniform(0.2, 0.7)
                 )
+            
+            # [NEW] Invalidate chunk so it redraws with the new door state
+            self.invalidate_chunk(grid_x, grid_y)
 
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
@@ -170,7 +287,6 @@ class MapManager:
                     has_axe = True
                     break
         
-        # [UPDATED] Allow hands (weapon=None) to hit, but block invalid weapons
         if weapon and not has_axe:
              display_message_player("You need an axe to chop this.")
              return True
@@ -191,7 +307,6 @@ class MapManager:
                 display_message_player(f"{weapon.name} is broken and unequipped.")
                 return True
         
-        # [NOTE] Shaking logic is reached now that we don't return early for hands
         if definition.get('sound_src'):
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             self.game.sound_manager.play_sound(
@@ -228,7 +343,6 @@ class MapManager:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
             try:
-                # Fallback to ground layer beneath it
                 ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
             except (KeyError, IndexError, AttributeError):
                 ground_char = "." 
@@ -262,13 +376,14 @@ class MapManager:
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-        # 1. Update Map Data (This changes the in-memory layout which save_map_to_file will read)
         self.game.map_data[grid_y][grid_x] = new_char
         
-        # 2. Update Obstacles
         self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
         if new_def['is_obstacle']:
             self.game.obstacles.append(tile_rect)
+            
+        # [NEW] Invalidate chunk to redraw with new tile
+        self.invalidate_chunk(grid_x, grid_y)
     
     def remove_vehicle_tile(self, grid_x, grid_y):
         """

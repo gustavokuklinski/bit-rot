@@ -63,6 +63,8 @@ class Game:
         self.assets = load_assets()
         self.game_state = 'MENU'
         self.running = True
+        
+        self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 32
 
         self.map_manager = MapManager(self)
         self.tile_manager = TileManager()
@@ -209,7 +211,11 @@ class Game:
         return start_new_game(self, player_data, save_dir_name)
 
     def load_map(self, map_filename):
-        return load_map(self, map_filename)
+        result = load_map(self, map_filename)
+        # [NEW] Clear chunk cache when map loads to avoid showing old map data
+        if self.map_manager:
+            self.map_manager.clear_cache()
+        return result
 
     def capture_pause_screen(self):
         capture_pause_screen(self)
@@ -567,6 +573,10 @@ class Game:
             npc.update(self)
 
         self._cleanup_modals()
+        
+        # [NEW] Reset chunk generation budget for this frame
+        self.map_manager.reset_frame_metrics()
+        
         draw_game(self)
 
         if self.hovered_item:

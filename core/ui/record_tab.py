@@ -34,8 +34,9 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     level_text = font_notification.render(f"Level", True, WHITE)
     surface.blit(level_text, (start_x + 140, start_y - 25))
 
-    experience_text = font_notification.render(f"Experience", True, WHITE)
-    surface.blit(experience_text, (start_x + 240, start_y - 25))
+    # [REMOVED] Experience column header
+    # experience_text = font_notification.render(f"Experience", True, WHITE)
+    # surface.blit(experience_text, (start_x + 240, start_y - 25))
 
     pending_tooltip = None
     # 4. Loop and Draw Text
@@ -86,44 +87,24 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             bonus_surf = font_notification.render(f"[{int(bonus_perc):+}%]", True, bonus_color)
             surface.blit(bonus_surf, (text_x + label_surf.get_width() + 5, current_y + 2))
 
-        # --- Draw Value (e.g., "5") ---
+        # --- Draw Value (e.g., "5/10") ---
         value_x = text_x + 160
         value_surf = font_notification.render(f"{str(level)}/10", True, WHITE)
-        surface.blit(value_surf, (value_x - 40, current_y + 2))
+        value_pos = (value_x - 40, current_y + 2)
+        surface.blit(value_surf, value_pos)
 
-        # --- Draw XP Progress Bar ---
+        # Create Rect for collision detection on the level text
+        value_rect = pygame.Rect(value_pos[0], value_pos[1], value_surf.get_width(), value_surf.get_height())
+
+        # --- Logic for Tooltip (XP info) ---
         if hasattr(player.progression, "attributes"):
             attr_data = player.progression.attributes.get(attr_id)
             if attr_data:
                 curr_xp = float(attr_data.get('xp', 0))
                 req_xp = int(attr_data.get('xp_to_next_level', 100))
                 
-                # Bar Dimensions
-                bar_width = 120
-                bar_height = 10
-                bar_x = value_x + 20
-                bar_y = current_y + 5 # Center relative to text
-                
-                bar_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
-
-                # Calculate fill ratio
-                ratio = 0.0
-                if req_xp > 0:
-                    ratio = min(1.0, max(0.0, curr_xp / req_xp))
-                
-                # Draw Background (Dark Gray)
-                pygame.draw.rect(surface, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
-                
-                # Draw Fill (Green)
-                fill_width = int(bar_width * ratio)
-                if fill_width > 0:
-                    pygame.draw.rect(surface, GRAY, (bar_x, bar_y, fill_width, bar_height))
-                
-                # Draw Border (Light Gray)
-                pygame.draw.rect(surface, WHITE, (bar_x, bar_y, bar_width, bar_height), 1)
-
-                # Optional: Tooltip or text on hover could be added here later
-                if bar_rect.collidepoint(mouse_pos):
+                # Check collision with the level text to show XP tooltip
+                if value_rect.collidepoint(mouse_pos):
                     pending_tooltip = {
                         "label": label,
                         "curr_xp": int(curr_xp),

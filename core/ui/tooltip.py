@@ -81,16 +81,16 @@ def draw_tooltip(surface, item, pos):
     # --- Weight Info (Updated) ---
     if hasattr(item, 'get_total_weight'):
         total_weight = item.get_total_weight()
-        weight_str = f"Weight: {total_weight:.1f}"
+        weight_str = f"Weight: {total_weight:.2f}"
         
         # Only show unit weight if the item is stackable
         if item.is_stackable() and hasattr(item, 'weight'):
-             weight_str += f" (unit: {item.weight:.1f})"
+             weight_str += f" (unit: {item.weight:.2f})"
         
         lines.append(weight_str)
     elif hasattr(item, 'weight'):
         # Fallback if get_total_weight doesn't exist for some reason
-        lines.append(f"Weight: {item.weight:.1f}")
+        lines.append(f"Weight: {item.weight:.2f}")
 
     if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
         lines.append(f"Reduction: {int(item.weight_reduction * 100)}%")

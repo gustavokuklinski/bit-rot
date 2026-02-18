@@ -158,7 +158,7 @@ def handle_attack(game, mouse_pos):
                             dy_kb = zombie.rect.centery - game.player.rect.centery # Screen Y increases down
                             kb_angle = math.atan2(dy_kb, dx_kb)
                             
-                            force = 15 # Knockback strength
+                            force = 7 # Knockback strength
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                             zombie.knockback_timer = 200 # Duration
 
@@ -190,7 +190,7 @@ def handle_attack(game, mouse_pos):
                                     kb_angle = math.atan2(dy_kb, dx_kb)
 
                                     if dist > 0:
-                                        force = 15
+                                        force = 7
                                         npc.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                                         npc.knockback_timer = 200
 

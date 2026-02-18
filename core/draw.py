@@ -80,61 +80,83 @@ def draw_game(game):
 
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
-    # 2. OPTIMIZED GRID RENDERING
+    # 2. OPTIMIZED CHUNK RENDERING
+    # Instead of iterating tiles, we iterate chunks based on view
+    chunk_size = core.data.config.CHUNK_SIZE
     tile_size = TILE_SIZE
     
+    # Calculate visible area in World Coordinates
     min_world_x = -offset_x
     min_world_y = -offset_y
     max_world_x = -offset_x + view_w
     max_world_y = -offset_y + view_h
     
-    buffer_tiles = 2
-    min_grid_x = max(0, int(min_world_x // tile_size) - buffer_tiles)
-    min_grid_y = max(0, int(min_world_y // tile_size) - buffer_tiles)
-    
+    # Calculate visible Chunk Coordinates (with padding)
+    min_chunk_x = int(min_world_x // (chunk_size * tile_size))
+    min_chunk_y = int(min_world_y // (chunk_size * tile_size))
+    max_chunk_x = int(max_world_x // (chunk_size * tile_size)) + 1
+    max_chunk_y = int(max_world_y // (chunk_size * tile_size)) + 1
+
+    # Ensure bounds
     map_h = len(game.map_data) if game.map_data else 0
     map_w = len(game.map_data[0]) if map_h > 0 else 0
-    
-    max_grid_x = min(map_w, int(max_world_x // tile_size) + 1 + buffer_tiles)
-    max_grid_y = min(map_h, int(max_world_y // tile_size) + 1 + buffer_tiles)
-    
-    ground_layer = getattr(game, 'ground_data', None)
-    base_layer = getattr(game, 'map_data', None)
-    roof_layer = getattr(game, 'roof_data', None)
+    map_chunk_w = (map_w // chunk_size) + 1
+    map_chunk_h = (map_h // chunk_size) + 1
+
+    min_chunk_x = max(0, min_chunk_x)
+    min_chunk_y = max(0, min_chunk_y)
+    max_chunk_x = min(map_chunk_w, max_chunk_x + 1)
+    max_chunk_y = min(map_chunk_h, max_chunk_y + 1)
     
     tm = game.tile_manager
     shaking_tiles = game.map_manager.shaking_tiles
-    
     current_time = time.time()
     tiles_to_remove = []
 
-    for gy in range(min_grid_y, max_grid_y):
-        for gx in range(min_grid_x, max_grid_x):
-            screen_px = int(gx * tile_size + offset_x)
-            screen_py = int(gy * tile_size + offset_y)
-            
-            if ground_layer:
-                g_key = ground_layer[gy][gx]
-                if g_key and g_key != ' ':
-                    g_def = tm.definitions.get(g_key)
-                    if g_def:
-                        world_view_surface.blit(g_def['image'], (screen_px, screen_py))
+    # [NEW] Prioritize chunks closer to the center of the view
+    # This prevents the "black void" appearing in the middle of the screen when moving fast
+    visible_chunks = []
+    for cy in range(min_chunk_y, max_chunk_y):
+        for cx in range(min_chunk_x, max_chunk_x):
+            visible_chunks.append((cx, cy))
+    
+    center_cx = (min_chunk_x + max_chunk_x) / 2
+    center_cy = (min_chunk_y + max_chunk_y) / 2
+    
+    # Sort by distance to center
+    visible_chunks.sort(key=lambda p: (p[0] - center_cx)**2 + (p[1] - center_cy)**2)
 
-            if base_layer:
-                b_key = base_layer[gy][gx]
-                if b_key and b_key != ' ':
-                     b_def = tm.definitions.get(b_key)
-                     if b_def:
-                         draw_x, draw_y = screen_px, screen_py
-                         if (gx, gy) in shaking_tiles:
-                             if current_time - shaking_tiles[(gx, gy)] > 0.2:
-                                 tiles_to_remove.append((gx, gy))
-                             else:
-                                 draw_x += random.randint(-2, 2)
-                                 draw_y += random.randint(-2, 2)
-                         
-                         world_view_surface.blit(b_def['image'], (draw_x, draw_y))
-            
+    # Draw Cached Chunks (Ground + Base)
+    for cx, cy in visible_chunks:
+        chunk_surf = game.map_manager.get_chunk_surface(cx, cy, game.current_layer_index, 'world')
+        if chunk_surf:
+            dest_x = cx * chunk_size * tile_size + offset_x
+            dest_y = cy * chunk_size * tile_size + offset_y
+            world_view_surface.blit(chunk_surf, (dest_x, dest_y))
+
+    # Draw Shaking Tiles (Overlay)
+    # Since cached chunks are static, we draw animating tiles on top.
+    # We also check if we need to remove the shaking state.
+    for pos, start_t in shaking_tiles.items():
+        gx, gy = pos
+        # Check if visible
+        screen_px = int(gx * tile_size + offset_x)
+        screen_py = int(gy * tile_size + offset_y)
+        
+        # Simple culling for shaking tiles
+        if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
+            b_key = game.map_data[gy][gx]
+            if b_key and b_key != ' ':
+                b_def = tm.definitions.get(b_key)
+                if b_def:
+                    draw_x, draw_y = screen_px, screen_py
+                    if current_time - start_t > 0.2:
+                        tiles_to_remove.append(pos)
+                    else:
+                        draw_x += random.randint(-2, 2)
+                        draw_y += random.randint(-2, 2)
+                    world_view_surface.blit(b_def['image'], (draw_x, draw_y))
+    
     for k in tiles_to_remove:
         if k in game.map_manager.shaking_tiles:
             del game.map_manager.shaking_tiles[k]
@@ -167,7 +189,6 @@ def draw_game(game):
     light_sources = []
     
     # [OPTIMIZATION] Cache scaled light textures for this frame to avoid repeated scaling
-    # Dictionary key: radius_int
     frame_light_cache = {} 
 
     if light_texture:
@@ -265,9 +286,6 @@ def draw_game(game):
             if radius_low <= 0: continue
 
             try:
-                # For map lights we often tint them, so we can't share the raw cached one easily if colors differ
-                # But we can cache the base scale if needed. 
-                # For safety, let's just do standard scaling here unless we implement a complex key (radius, color)
                 scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 light_opacity = 80 
                 scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
@@ -334,19 +352,58 @@ def draw_game(game):
     player_tile_y = game.player.rect.centery // tile_size
     roof_hide_radius = 3
 
-    if roof_layer:
+    # Draw Roof Chunks
+    if getattr(game, 'roof_data', None):
+        # We also use chunk rendering for roofs
+        for cy in range(min_chunk_y, max_chunk_y):
+            for cx in range(min_chunk_x, max_chunk_x):
+                # Calculate if this chunk is near player to hide it?
+                # Roof hiding is per-tile in original logic. 
+                # Optimization: If player is NOT in this chunk, draw full chunk.
+                # If player IS in this chunk (or neighbor), we might need to use tile-based drawing 
+                # or just accept we don't hide roofs perfectly per tile with chunking.
+                # BETTER: We draw the chunk, but if the player is under it, we don't draw it?
+                # Original logic: hide within radius 3. 
+                # If we use chunks, we can't easily punch a hole of 3 tiles radius without complex masking.
+                # Fallback: For roofs, we iterate tiles ONLY near player, but use chunks for far roofs?
+                # Actually, standard behavior: Draw roof chunk. If player is under it, don't draw THAT chunk? 
+                # That reveals too much (32x32 tiles).
+                
+                # Compromise for performance: Revert to tile loop for roofs if near player, 
+                # or just iterate tiles for roofs always since they are sparse?
+                # Or use chunk but mask it? Masking is expensive.
+                # Let's stick to tile loop for Roofs for now as they are sparse and require dynamic hiding.
+                # Wait, "Make the game better performance". Roofs are a whole layer.
+                # If I use chunks for roofs, I can't hide them around player easily.
+                # Let's keep tile loop for Roofs but only visible range.
+                pass
+
+        # Optimized Roof Loop (Tile-based for precision hiding)
+        # Bounding box of hiding area
+        hide_min_tx = player_tile_x - roof_hide_radius
+        hide_max_tx = player_tile_x + roof_hide_radius
+        hide_min_ty = player_tile_y - roof_hide_radius
+        hide_max_ty = player_tile_y + roof_hide_radius
+        
+        # Calculate grid bounds for view (reusing min_chunk logic for tile range)
+        min_grid_x = max(0, min_chunk_x * chunk_size)
+        min_grid_y = max(0, min_chunk_y * chunk_size)
+        max_grid_x = min(map_w, max_chunk_x * chunk_size)
+        max_grid_y = min(map_h, max_chunk_y * chunk_size)
+
         for gy in range(min_grid_y, max_grid_y):
             for gx in range(min_grid_x, max_grid_x):
-                r_key = roof_layer[gy][gx]
+                # Optimization: Skip empty tiles before lookup? roof_data is array.
+                r_key = game.roof_data[gy][gx]
                 if r_key and r_key != ' ':
-                    dx = abs(gx - player_tile_x)
-                    dy = abs(gy - player_tile_y)
-                    if not (dx <= roof_hide_radius and dy <= roof_hide_radius):
-                         r_def = tm.definitions.get(r_key)
-                         if r_def:
+                    # Check hide radius
+                    if not (hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty):
+                        r_def = tm.definitions.get(r_key)
+                        if r_def:
                              screen_px = int(gx * tile_size + offset_x)
                              screen_py = int(gy * tile_size + offset_y)
                              world_view_surface.blit(r_def['image'], (screen_px, screen_py))
+
 
     SPLASH_COLOR = (139, 0, 0)
     current_time_ms = pygame.time.get_ticks()
