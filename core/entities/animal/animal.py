@@ -8,7 +8,7 @@ from core.entities.animal.animal_loader import AnimalLoader
 class Animal(Zombie):
     SPRITE_PATH = "game/lib/sprites/animals"
 
-    def __init__(self, x, y, animal_type):
+    def __init__(self, x, y, animal_type, game=None, layer=None):
         if not AnimalLoader.definitions:
             AnimalLoader.load_animals()
             
@@ -36,6 +36,14 @@ class Animal(Zombie):
 
         super().__init__(x, y, zombie_template)
         
+        # [FIX] Track the layer this Animal belongs to
+        if layer is not None:
+            self.layer = layer
+        elif game:
+            self.layer = game.current_layer_index if hasattr(game, 'current_layer_index') else 1
+        else:
+            self.layer = 1
+
         # [FIX] Clear inventory to prevent ID Cards or default Zombie items from appearing
         self.inventory = []
         

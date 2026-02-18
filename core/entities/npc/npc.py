@@ -14,7 +14,7 @@ from core.entities.npc.npc_dialog import NPCDialog
 from core.entities.npc.npc_combat import NPCCombat
 
 class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
-    def __init__(self, x, y, game, is_static=False):
+    def __init__(self, x, y, game, is_static=False, layer=None):
         if not NPCData.NPC_TEMPLATES:
             NPCData.load_templates()
 
@@ -39,6 +39,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         Zombie.__init__(self, x, y, template)
         
         self.game = game
+        
+        # [FIX] Track the layer this NPC belongs to
+        if layer is not None:
+            self.layer = layer
+        else:
+            self.layer = game.current_layer_index if hasattr(game, 'current_layer_index') else 1
 
         self.max_health = int(self.max_health * NPC_HEALTH_MULTIPLIER)
         self.health = int(self.health * NPC_HEALTH_MULTIPLIER)

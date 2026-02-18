@@ -1,5 +1,3 @@
-# core/map/spawn_manager.py
-
 import pygame
 import random
 import math
@@ -88,12 +86,50 @@ def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_heig
 def manage_dynamic_npcs(game):
     if not game.player: return
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
+    
+    # Initialize off-layer storage if needed
+    if not hasattr(game, 'layer_npcs'):
+        game.layer_npcs = {}
 
+    # [FIX] Clean up NPCs from incorrect layers and move them to storage
     for npc in list(game.npcs):
+        # 1. Default to layer 1 if attribute is missing
+        if not hasattr(npc, 'layer'):
+            npc.layer = 1
+        
+        if npc.layer != game.current_layer_index:
+            # If it's a follower, bring it to the current layer
+            if hasattr(npc, 'is_following') and npc.is_following:
+                npc.layer = game.current_layer_index
+            else:
+                # Store NPC in layer_npcs before removing
+                if npc.layer not in game.layer_npcs:
+                    game.layer_npcs[npc.layer] = []
+                
+                # Check if already stored to avoid duplicates
+                if npc not in game.layer_npcs[npc.layer]:
+                    game.layer_npcs[npc.layer].append(npc)
+                
+                game.npcs.remove(npc)
+                continue
+
+        # 2. Distance Despawn Logic (skip followers)
         if hasattr(npc, 'is_following') and npc.is_following: continue
+        
         dist_sq = (npc.rect.centerx - player_x)**2 + (npc.rect.centery - player_y)**2
         if dist_sq > NPC_DESPAWN_RADIUS**2:
             game.npcs.remove(npc)
+
+    # [FIX] Restore NPCs for the current layer
+    current_layer = game.current_layer_index
+    if current_layer in game.layer_npcs:
+        stored_npcs = game.layer_npcs[current_layer]
+        # Move all stored NPCs back to game.npcs
+        for npc in stored_npcs:
+            if npc not in game.npcs:
+                game.npcs.add(npc)
+        # Clear storage for this layer so they are now "active"
+        game.layer_npcs[current_layer] = []
 
     current_count = len(game.npcs)
     if current_count >= MAX_ACTIVE_NPCS: return
@@ -140,7 +176,13 @@ def manage_dynamic_npcs(game):
                     if not is_building:
                         continue
 
-                npc = NPC(px, py, game)
+                # Create NPC with current layer
+                npc = NPC(px, py, game, layer=game.current_layer_index)
+                
+                # [FIX] Ensure NPCs spawned on L2 are friendly
+                if game.current_layer_index == 2:
+                    npc.is_friendly = True
+
                 game.npcs.add(npc)
                 current_count += 1
                 spawned_this_frame += 1
@@ -150,7 +192,7 @@ def spawn_static_npcs(game, building_tiles):
         if random.random() < NPC_STATIC_SPAWN:
             px, py = tx * TILE_SIZE, ty * TILE_SIZE
             if not any(ob.collidepoint(px, py) for ob in game.obstacles):
-                npc = NPC(px, py, game, is_static=True)
+                npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
                 game.npcs.add(npc)
 
 def spawn_l2_population(game, count=10, target_layer=None):
@@ -191,6 +233,13 @@ def spawn_l2_population(game, count=10, target_layer=None):
     
     defs = game.tile_manager.definitions
 
+    # [FIX] Respect Global Zombie Configuration
+    # If zombies are disabled in config OR per_chunk limit is 0, force desired_zombies to 0
+    if (core.data.config.MAX_ZOMBIES_GLOBAL <= 0 or 
+        core.data.config.ZOMBIES_PER_SPAWN <= 0 or 
+        core.data.config.ZOMBIE_MAX_CHUNK <= 0):
+        desired_zombies = 0
+
     while (npc_count < desired_npcs or zombie_count < desired_zombies) and attempts < max_attempts:
         attempts += 1
         rx = random.randint(0, map_w - 1)
@@ -214,11 +263,23 @@ def spawn_l2_population(game, count=10, target_layer=None):
         # For offline generation, we trust the tile type mostly.
         
         if npc_count < desired_npcs and is_building:
+            # [FIX] Initialize NPC with correct layer
+            npc = NPC(px, py, game, is_static=False, layer=target_layer) 
+            
+            # [FIX] Force friendly if populating L2 (Safe Zone)
+            if target_layer == 2:
+                npc.is_friendly = True
+
             if is_active_layer:
-                npc = NPC(px, py, game, is_static=False) 
                 game.npcs.add(npc)
-            # Note: We don't store off-layer NPCs currently in a list, 
-            # they are usually static or handled via spawn points.
+            else:
+                # [FIX] Store in layer_npcs if not active layer
+                if not hasattr(game, 'layer_npcs'):
+                     game.layer_npcs = {}
+                if target_layer not in game.layer_npcs:
+                     game.layer_npcs[target_layer] = []
+                game.layer_npcs[target_layer].append(npc)
+                
             npc_count += 1
             continue
             
@@ -237,6 +298,11 @@ def spawn_animals(game, count=5, target_layer=None):
       - Rat: Spawns in Layer 1 and 2.
       - Bat: Spawns only in Layer 2.
     """
+    # [FIX] Respect Global Animal Configuration
+    # If animal spawn count is 0 or less, do not spawn any animals
+    if core.data.config.ANIMAL_SPAWN_COUNT <= 0:
+        return
+
     if target_layer is None:
         target_layer = game.current_layer_index
 
@@ -301,7 +367,8 @@ def spawn_animals(game, count=5, target_layer=None):
              continue
 
         a_type = random.choice(valid_animal_types)
-        animal = Animal(px, py, a_type)
+        # [FIX] Pass game instance and target_layer to Animal
+        animal = Animal(px, py, a_type, game=game, layer=target_layer)
         target_list.append(animal)
         spawned_count += 1
         
@@ -338,7 +405,8 @@ def spawn_animals(game, count=5, target_layer=None):
                 chosen_type = "Rat" if "Rat" in valid_animal_types else random.choice(valid_animal_types)
                 
                 px, py = rx * TILE_SIZE, ry * TILE_SIZE
-                animal = Animal(px, py, chosen_type)
+                # [FIX] Pass game instance and target_layer to Animal
+                animal = Animal(px, py, chosen_type, game=game, layer=target_layer)
                 target_list.append(animal)
                 spawned_count += 1
     
@@ -451,6 +519,10 @@ def spawn_random_vehicles(game, count=10):
         print(f"Spawned {vehicle.name} at ({px}, {py})")
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
+    # [FIX] Respect Global Zombie Config - Stop spawning if global cap is 0
+    if core.data.config.MAX_ZOMBIES_GLOBAL <= 0:
+        return []
+
     zombies = []
     SAFE_RADIUS_TILES = 1 
     safe_dist_px = SAFE_RADIUS_TILES * TILE_SIZE
