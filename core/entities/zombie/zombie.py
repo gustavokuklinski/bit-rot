@@ -81,6 +81,11 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
 
         # Set a default image (self.image is no longer the main one, but good to have)
         self.image = self.images.get('center')
+        # [NEW] Create collision mask from the zombie's image
+        if self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+        else:
+            self.mask = None
 
         self.clothes = template.get('clothes', {})
         self.color = RED
@@ -123,6 +128,10 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         # [NEW] Pathfinding stuck logic
         self.stuck_timer = 0
         self.stuck_angle = 0
+        
+        # [NEW] Knockback variables
+        self.knockback_velocity = [0, 0]
+        self.knockback_timer = 0
 
         self.inventory = []
         try:
@@ -145,6 +154,46 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 self.inventory.append(id_item)
         except Exception as e:
             print(f"Warning: Could not generate ID for zombie: {e}")
+
+    def update(self, game):
+        """
+        Update logic for Zombie. Handles knockback if active, otherwise delegates
+        to the standard ZombieAI update loop via super().
+        """
+        # --- KNOCKBACK HANDLING ---
+        if self.knockback_timer > 0:
+            obstacles = game.obstacles
+            multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+            
+            kb_x, kb_y = self.knockback_velocity
+            
+            # Move X with collision
+            self.x += kb_x
+            self.rect.x = int(self.x)
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    self.x -= kb_x
+                    self.rect.x = int(self.x)
+                    break
+            
+            # Move Y with collision
+            self.y += kb_y
+            self.rect.y = int(self.y)
+            for obstacle in obstacles:
+                if self.rect.colliderect(obstacle):
+                    self.y -= kb_y
+                    self.rect.y = int(self.y)
+                    break
+            
+            # Decay
+            dt = 16 * multiplier 
+            self.knockback_timer -= dt
+            self.knockback_velocity[0] *= 0.9
+            self.knockback_velocity[1] *= 0.9
+            return
+
+        # If not knocked back, perform standard AI/Update
+        super().update(game)
 
     @staticmethod
     def create_random(x, y):

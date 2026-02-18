@@ -105,6 +105,7 @@ def handle_attack(game, mouse_pos):
             else: print(f"**CLUNK!** {weapon.name} is broken.")
 
         else:
+            # --- MELEE ATTACK LOGIC ---
             if game.player.progression.handle_melee_attack(game.player):
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
@@ -120,42 +121,83 @@ def handle_attack(game, mouse_pos):
                 
                 dx_swing = mouse_pos[0] - player_screen_x
                 dy_swing = mouse_pos[1] - player_screen_y
+                
+                # Angle for Swing Animation (Inverted Y for Cartesian logic)
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
           
                 hit_something = False
                 world_pos = game.screen_to_world(mouse_pos)
 
-                for zombie in game.zombies:
-                    if game.player.rect.colliderect(zombie.rect.inflate(20, 20)):
-                        if player_hit_zombie(game.player, zombie, game):
-                            handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                            game.zombies_killed += 1
-                        hit_something = True
-                        break
+                # Determine Attack Range
+                attack_range = TILE_SIZE * 2.0 # Default melee reach
+                if weapon and hasattr(weapon, 'reach'):
+                     attack_range = weapon.reach * TILE_SIZE
 
+                # --- ZOMBIE COLLISION ---
+                for zombie in game.zombies:
+                    # [FIX] Use Distance + Cone check instead of strict colliderect
+                    dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+                    
+                    if dist <= attack_range:
+                        # 1. Calculate angle to zombie (Inverted Y to match swing angle)
+                        dx = zombie.rect.centerx - game.player.rect.centerx
+                        dy_inv = game.player.rect.centery - zombie.rect.centery
+                        z_angle = math.atan2(dy_inv, dx)
+                        
+                        angle_diff = abs(game.player.melee_swing_angle - z_angle)
+                        if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
+                        
+                        # 2. Hit if clicked directly OR within cone
+                        if zombie.rect.collidepoint(world_pos) or angle_diff < 1.0:
+                            if player_hit_zombie(game.player, zombie, game):
+                                handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
+                                game.zombies_killed += 1
+                            
+                            # [FIX] Apply Knockback to Zombie (Use Screen Coords)
+                            dx_kb = zombie.rect.centerx - game.player.rect.centerx
+                            dy_kb = zombie.rect.centery - game.player.rect.centery # Screen Y increases down
+                            kb_angle = math.atan2(dy_kb, dx_kb)
+                            
+                            force = 15 # Knockback strength
+                            zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                            zombie.knockback_timer = 200 # Duration
+
+                            hit_something = True
+                            break
+
+                # --- NPC COLLISION ---
                 if not hit_something: 
                     for npc in game.npcs:
                         if not npc.is_dead:
                             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
-                            attack_range = TILE_SIZE * 2
                             
                             if dist <= attack_range:
-                                clicked_on_it = npc.rect.collidepoint(world_pos)
-                                
                                 dx = npc.rect.centerx - game.player.rect.centerx
-                                dy = game.player.rect.centery - npc.rect.centery 
-                                npc_angle = math.atan2(dy, dx)
-                                swing_angle = game.player.melee_swing_angle
-                                angle_diff = abs(swing_angle - npc_angle)
+                                dy_inv = game.player.rect.centery - npc.rect.centery 
+                                npc_angle = math.atan2(dy_inv, dx)
+                                
+                                angle_diff = abs(game.player.melee_swing_angle - npc_angle)
                                 if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
                                 
-                                if clicked_on_it or angle_diff < 0.8:
+                                if npc.rect.collidepoint(world_pos) or angle_diff < 1.0:
                                     damage = game.player.get_attack_damage()
                                     npc.take_damage(damage, game, attacker=game.player)
                                     display_message(game, f"You attacked {npc.name} for {damage} damage!")
+                                    
+                                    # [FIX] Apply Knockback to NPC (Use Screen Coords)
+                                    dx_kb = npc.rect.centerx - game.player.rect.centerx
+                                    dy_kb = npc.rect.centery - game.player.rect.centery
+                                    kb_angle = math.atan2(dy_kb, dx_kb)
+
+                                    if dist > 0:
+                                        force = 15
+                                        npc.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                                        npc.knockback_timer = 200
+
                                     hit_something = True
                                     break 
 
+                # --- TILE/OBJECT COLLISION ---
                 if not hit_something:
                      clicked_grid_x = int(world_pos[0] // TILE_SIZE)
                      clicked_grid_y = int(world_pos[1] // TILE_SIZE)

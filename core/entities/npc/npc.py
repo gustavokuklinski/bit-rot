@@ -152,6 +152,13 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 clean_clothes[slot] = Item.create_from_name(item_data['name'])
         
         self.clothes = clean_clothes
+        
+        # [NEW] Generate mask for pixel-perfect collision
+        if self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+        else:
+            self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
+            self.mask.fill()
 
     def update(self, game):
         obstacles = game.obstacles
@@ -382,55 +389,70 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         step_dx = self.dx / steps
         step_dy = self.dy / steps
         
+        def check_mask_collision(rect_check):
+            # Check tiles
+            for obstacle in obstacles:
+                if rect_check.colliderect(obstacle):
+                    gx = obstacle.x // TILE_SIZE
+                    gy = obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and 'mask' in tile_def:
+                        offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                        if self.mask.overlap(tile_def['mask'], offset):
+                            return True, obstacle
+                    else:
+                         # Fallback for tiles without masks (shouldn't happen with updated tile loader)
+                         return True, obstacle
+            
+            # Check entities
+            for entity in entities_to_check:
+                if rect_check.colliderect(entity.rect):
+                    if hasattr(entity, 'mask') and entity.mask:
+                        offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)
+                        if self.mask.overlap(entity.mask, offset):
+                            return True, entity
+                    else:
+                        return True, entity
+            return False, None
+
         for _ in range(steps):
             # Move X
             self.x += step_dx
             self.rect.x = int(self.x)
-            collided_x = False
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    self._handle_door_interaction(obstacle, game) # Open doors
-                    if self.dx > 0: self.rect.right = obstacle.left
-                    elif self.dx < 0: self.rect.left = obstacle.right
-                    self.x = self.rect.x
-                    self.dx = 0
-                    collided_x = True
-                    break
-            if not collided_x:
-                for entity in entities_to_check:
-                    if self.rect.colliderect(entity.rect):
-                        self.x -= step_dx
-                        self.rect.x = int(self.x)
-                        self.dx = 0
-                        collided_x = True
-                        break
-
+            
+            collision, collider = check_mask_collision(self.rect)
+            
+            if collision:
+                # Handle interaction if it's a door
+                if collider in obstacles:
+                    self._handle_door_interaction(collider, game)
+                
+                # Revert X
+                self.x -= step_dx
+                self.rect.x = int(self.x)
+                self.dx = 0
+                
+                # If stuck timer isn't active, activate it
+                if self.stuck_timer <= 0:
+                     self.stuck_timer = 20
+                     self.stuck_angle = random.randint(0, 360)
+            
             # Move Y
             self.y += step_dy
             self.rect.y = int(self.y)
-            collided_y = False
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    self._handle_door_interaction(obstacle, game) # Open doors
-                    if self.dy > 0: self.rect.bottom = obstacle.top
-                    elif self.dy < 0: self.rect.top = obstacle.bottom
-                    self.y = self.rect.y
-                    self.dy = 0
-                    collided_y = True
-                    break
             
-            if not collided_y:
-                for entity in entities_to_check:
-                    if self.rect.colliderect(entity.rect):
-                        self.y -= step_dy
-                        self.rect.y = int(self.y)
-                        self.dy = 0
-                        collided_y = True
-                        break
+            collision, collider = check_mask_collision(self.rect)
+            
+            if collision:
+                if collider in obstacles:
+                    self._handle_door_interaction(collider, game)
+                
+                # Revert Y
+                self.y -= step_dy
+                self.rect.y = int(self.y)
+                self.dy = 0
 
-            if collided_x or collided_y:
-                 # Only set stuck timer if effectively blocked (small movement check could go here)
-                 if self.stuck_timer <= 0:
+                if self.stuck_timer <= 0:
                      self.stuck_timer = 20
                      self.stuck_angle = random.randint(0, 360)
 

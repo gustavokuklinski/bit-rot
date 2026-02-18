@@ -5,7 +5,7 @@
         <damage min="2" max="4" />
         <skill type="melee" />
         <sprite file="weapon_melee_wrench.png" />
-        <knockback value="0" />
+        <knockback value="1" />
     </properties>
     <spawn chance="1" />
 </item>

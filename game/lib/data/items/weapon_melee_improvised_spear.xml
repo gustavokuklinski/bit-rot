@@ -5,7 +5,7 @@
         <damage min="6" max="19" />
         <skill type="melee" />
         <sprite file="weapon_melee_improvised_spear.png" />
-        <knockback value="5" />
+        <knockback value="2" />
     </properties>
     <spawn chance="1" />
 </item>

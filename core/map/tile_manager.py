@@ -42,12 +42,16 @@ class TileManager:
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
+                                # [NEW] Create collision mask from the tile image
+                                mask = pygame.mask.from_surface(image)
+
                                 definition = {
                                     'name': root.get('name', 'Unknown'),
                                     'is_obstacle': is_obstacle,
                                     'destructible': is_destructible, 
                                     'allow_liquid': allow_liquid, # [ADDED] Store the flag
                                     'image': image,
+                                    'mask': mask, # [ADDED] Store the mask in the definition
                                     'type': root.get('type'),
                                     'state': root.get('state'),
                                     'is_statable': root.get('state') is not None,

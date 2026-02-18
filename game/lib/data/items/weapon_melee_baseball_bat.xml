@@ -5,7 +5,7 @@
         <damage min="15" max="20" />
         <skill type="melee" />
         <sprite file="weapon_melee_baseball_bat.png" />
-        <knockback value="6" />
+        <knockback value="1" />
     </properties>
     <spawn chance="1" />
     <sound>

@@ -1,4 +1,5 @@
 import math
+import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message_player
 
@@ -88,7 +89,8 @@ class PlayerMovement:
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
 
             # Move the vehicle (handles wall collisions)
-            self.vehicle.move(move_x, move_y, obstacles)
+            # [UPDATED] Pass game instance for mask checks against tiles
+            self.vehicle.move(move_x, move_y, obstacles, game=game)
             
             vehicle_rect = self.vehicle.rect
             
@@ -142,20 +144,58 @@ class PlayerMovement:
             
         else:
             # Standard Player Walking Movement (when not in vehicle)
+            # [NEW] PIXEL PERFECT COLLISION LOGIC with "Push/Slow" mechanic
+            
+            def check_collision(rect_check):
+                # 1. Check Tile Obstacles -> Returns 'tile' on hit
+                for obstacle in obstacles:
+                    if rect_check.colliderect(obstacle):
+                        gx = obstacle.x // TILE_SIZE
+                        gy = obstacle.y // TILE_SIZE
+                        tile_def = game.map_manager.get_tile_at(gx, gy)
+                        if tile_def and 'mask' in tile_def:
+                            offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                            if self.mask.overlap(tile_def['mask'], offset):
+                                return 'tile'
+                        else:
+                            return 'tile'
+                
+                # 2. Check Zombies and NPCs -> Returns 'entity' on hit
+                entities = zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else [])
+                for entity in entities:
+                    if rect_check.colliderect(entity.rect):
+                        if hasattr(entity, 'mask') and entity.mask:
+                            offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)
+                            if self.mask.overlap(entity.mask, offset):
+                                return 'entity'
+                        else:
+                            return 'entity'
+                return None
+
+            # Move X
             self.x += self.vx
             self.rect.x = round(self.x)
+            
+            col_type = check_collision(self.rect)
+            if col_type == 'tile':
+                 # Hard block for walls
+                 self.x -= self.vx
+                 self.rect.x = round(self.x)
+            elif col_type == 'entity':
+                 # Push/Slow effect: Revert 80% of movement to simulate moving slowly through crowd
+                 self.x -= self.vx * 0.8
+                 self.rect.x = round(self.x)
 
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    if self.vx > 0: self.rect.right = obstacle.left
-                    elif self.vx < 0: self.rect.left = obstacle.right
-                    self.x = self.rect.x
-
+            # Move Y
             self.y += self.vy
             self.rect.y = round(self.y)
 
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    if self.vy > 0: self.rect.bottom = obstacle.top
-                    elif self.vy < 0: self.rect.top = obstacle.bottom
-                    self.y = self.rect.y
+            col_type = check_collision(self.rect)
+            if col_type == 'tile':
+                 # Hard block for walls
+                 self.y -= self.vy
+                 self.rect.y = round(self.y)
+            elif col_type == 'entity':
+                 # Push/Slow effect: Revert 80% of movement
+                 self.y -= self.vy * 0.8
+                 self.rect.y = round(self.y)

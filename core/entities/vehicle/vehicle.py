@@ -71,6 +71,13 @@ class Vehicle:
         self._spawn_random_equipment()
         self.generate_trunk_loot(loot_table)
         self.update_stats_from_equipment()
+        
+        # [NEW] Generate mask
+        if self.image:
+             self.mask = pygame.mask.from_surface(self.image)
+        else:
+             self.mask = pygame.mask.Mask((width, height))
+             self.mask.fill()
 
     @property
     def image(self):
@@ -90,12 +97,17 @@ class Vehicle:
                      self.width = self._image.get_width()
                      self.height = self._image.get_height()
                      self.rect.size = (self.width, self.height)
+                
+                # Regenerate mask
+                self.mask = pygame.mask.from_surface(self._image)
                 return self._image
         return img
 
     @image.setter
     def image(self, value):
         self._image = value
+        if value:
+            self.mask = pygame.mask.from_surface(value)
 
     @property
     def current_speed_val(self):
@@ -206,7 +218,7 @@ class Vehicle:
             self.car_state = "Off"
             print("Motor failed! Engine stopped.")
 
-    def move(self, dx, dy, obstacles):
+    def move(self, dx, dy, obstacles, game=None):
         if not self.active: return
 
         dist = math.hypot(dx, dy)
@@ -227,76 +239,93 @@ class Vehicle:
                 self.active = False
                 self.car_state = "Off"
                 return # Stop the car immediately
+        
+        # --- COLLISION HELPER ---
+        def check_collision(rect_check):
+            # Check Tiles (Obstacles)
+            for obstacle in obstacles:
+                if rect_check.colliderect(obstacle):
+                    # Pixel Perfect Check
+                    if game:
+                        gx = obstacle.x // TILE_SIZE
+                        gy = obstacle.y // TILE_SIZE
+                        tile_def = game.map_manager.get_tile_at(gx, gy)
+                        if tile_def and 'mask' in tile_def:
+                            offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                            if self.mask.overlap(tile_def['mask'], offset):
+                                return True, obstacle
+                        else:
+                            # Fallback for tiles without masks
+                            return True, obstacle
+                    else:
+                        # Fallback if game ref is missing
+                        return True, obstacle
 
+            # Check Entities (if game ref available)
+            if game:
+                entities = game.zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else []) + [game.player]
+                for entity in entities:
+                    if entity == self: continue # Should not happen, but safe
+                    if rect_check.colliderect(entity.rect):
+                        if hasattr(entity, 'mask') and entity.mask:
+                             offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)
+                             if self.mask.overlap(entity.mask, offset):
+                                 return True, entity
+                        else:
+                             return True, entity
+            return False, None
+
+        # Move X
         self.x += dx
         self.rect.x = int(self.x)
-        collision_x = False
+        collision, collider = check_collision(self.rect)
         
-        for obstacle in obstacles:
-            if obstacle is not self.rect and self.rect.colliderect(obstacle):
-                # --- ROBUST ENTITY DETECTION (X-AXIS) ---
-                is_entity = False
-                
-                # 1. Strict Type Check
-                if isinstance(obstacle, (Zombie, NPC)):
-                    is_entity = True
-                
-                # 2. Duck Typing
-                elif hasattr(obstacle, 'take_damage') or hasattr(obstacle, 'health'):
-                    is_entity = True
-                
-                # 3. String Check
-                elif type(obstacle).__name__ in ['Zombie', 'NPC', 'Player']:
-                    is_entity = True
-
-                if is_entity:
-                    self.damage_motor(1.0)
-                    if obstacle not in self.hit_entities:
-                        self.hit_entities.append(obstacle)
-                    continue 
-                # -------------------------------
-
-                if dx > 0: self.rect.right = obstacle.left
-                elif dx < 0: self.rect.left = obstacle.right
+        if collision:
+            # Handle Entity Hit
+            is_entity = False
+            if hasattr(collider, 'take_damage') or hasattr(collider, 'health') or type(collider).__name__ in ['Zombie', 'NPC', 'Player']:
+                is_entity = True
+            
+            if is_entity:
+                self.damage_motor(1.0)
+                if collider not in self.hit_entities:
+                    self.hit_entities.append(collider)
+            else:
+                # Wall/Tile Hit
+                if dx > 0: self.rect.right = collider.left
+                elif dx < 0: self.rect.left = collider.right
                 self.x = self.rect.x
-                collision_x = True
 
+        # Move Y
         self.y += dy
         self.rect.y = int(self.y)
-        collision_y = False
+        collision, collider = check_collision(self.rect)
         
-        for obstacle in obstacles:
-            if obstacle is not self.rect and self.rect.colliderect(obstacle):
-                # --- ROBUST ENTITY DETECTION (Y-AXIS) ---
-                is_entity = False
-                
-                if isinstance(obstacle, (Zombie, NPC)):
-                    is_entity = True
-                elif hasattr(obstacle, 'take_damage') or hasattr(obstacle, 'health'):
-                    is_entity = True
-                elif type(obstacle).__name__ in ['Zombie', 'NPC', 'Player']:
-                    is_entity = True
-                
-                if is_entity:
-                    self.damage_motor(1.0)
-                    if obstacle not in self.hit_entities:
-                        self.hit_entities.append(obstacle)
-                    continue
-                # ----------------------------------------
+        if collision:
+            # Handle Entity Hit
+            is_entity = False
+            if hasattr(collider, 'take_damage') or hasattr(collider, 'health') or type(collider).__name__ in ['Zombie', 'NPC', 'Player']:
+                is_entity = True
 
-                if dy > 0: self.rect.bottom = obstacle.top
-                elif dy < 0: self.rect.top = obstacle.bottom
+            if is_entity:
+                self.damage_motor(1.0)
+                if collider not in self.hit_entities:
+                     if collider not in self.hit_entities: # Double check to avoid dupes from x-axis hit
+                        self.hit_entities.append(collider)
+            else:
+                # Wall/Tile Hit
+                if dy > 0: self.rect.bottom = collider.top
+                elif dy < 0: self.rect.top = collider.bottom
                 self.y = self.rect.y
-                collision_y = True
         
-        if collision_x or collision_y:
-            current_speed = self.current_speed_val
-            # Only trigger crash damage if hitting a solid wall (not a zombie/npc)
-            if current_speed > 2.0:
-                damage = current_speed * 0.5
-                print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
-                self.damage_motor(damage)
-                self.velocity = [0, 0]
+        # Hard Stop logic for high speed wall impacts
+        if collision and not is_entity:
+             current_speed = self.current_speed_val
+             if current_speed > 2.0:
+                 damage = current_speed * 0.5
+                 print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
+                 self.damage_motor(damage)
+                 self.velocity = [0, 0]
 
     @property
     def current_light_radius(self):

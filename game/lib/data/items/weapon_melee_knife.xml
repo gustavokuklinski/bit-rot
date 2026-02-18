@@ -5,7 +5,7 @@
         <damage min="5" max="10" />
         <skill type="melee" />
         <sprite file="weapon_melee_knife.png" />
-        <knockback value="5" />
+        <knockback value="0" />
     </properties>
     <spawn chance="1" />
     <sound>

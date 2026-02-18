@@ -130,6 +130,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.images['right'] = old_sprite
 
         self.image = self.images.get('center')
+        # [NEW] Create collision mask from the player's image
+        if self.image:
+            self.mask = pygame.mask.from_surface(self.image)
+        else:
+            self.mask = None
+
         self.layer_switch_cooldown = 0
         self.aim_angle = 0
         self.facing_direction = (0, 1)
