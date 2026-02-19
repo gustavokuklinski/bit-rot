@@ -23,6 +23,8 @@ from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
 from core.ui.map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
+from core.entities.zombie.zombie import Zombie
+from core.entities.npc.npc import NPC
 
 def draw_game(game):
     # Clear the main screen
@@ -81,23 +83,19 @@ def draw_game(game):
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
     # 2. OPTIMIZED CHUNK RENDERING
-    # Instead of iterating tiles, we iterate chunks based on view
     chunk_size = core.data.config.CHUNK_SIZE
     tile_size = TILE_SIZE
     
-    # Calculate visible area in World Coordinates
     min_world_x = -offset_x
     min_world_y = -offset_y
     max_world_x = -offset_x + view_w
     max_world_y = -offset_y + view_h
     
-    # Calculate visible Chunk Coordinates (with padding)
     min_chunk_x = int(min_world_x // (chunk_size * tile_size))
     min_chunk_y = int(min_world_y // (chunk_size * tile_size))
     max_chunk_x = int(max_world_x // (chunk_size * tile_size)) + 1
     max_chunk_y = int(max_world_y // (chunk_size * tile_size)) + 1
 
-    # Ensure bounds
     map_h = len(game.map_data) if game.map_data else 0
     map_w = len(game.map_data[0]) if map_h > 0 else 0
     map_chunk_w = (map_w // chunk_size) + 1
@@ -113,8 +111,6 @@ def draw_game(game):
     current_time = time.time()
     tiles_to_remove = []
 
-    # [NEW] Prioritize chunks closer to the center of the view
-    # This prevents the "black void" appearing in the middle of the screen when moving fast
     visible_chunks = []
     for cy in range(min_chunk_y, max_chunk_y):
         for cx in range(min_chunk_x, max_chunk_x):
@@ -123,10 +119,8 @@ def draw_game(game):
     center_cx = (min_chunk_x + max_chunk_x) / 2
     center_cy = (min_chunk_y + max_chunk_y) / 2
     
-    # Sort by distance to center
     visible_chunks.sort(key=lambda p: (p[0] - center_cx)**2 + (p[1] - center_cy)**2)
 
-    # Draw Cached Chunks (Ground + Base)
     for cx, cy in visible_chunks:
         chunk_surf = game.map_manager.get_chunk_surface(cx, cy, game.current_layer_index, 'world')
         if chunk_surf:
@@ -134,16 +128,11 @@ def draw_game(game):
             dest_y = cy * chunk_size * tile_size + offset_y
             world_view_surface.blit(chunk_surf, (dest_x, dest_y))
 
-    # Draw Shaking Tiles (Overlay)
-    # Since cached chunks are static, we draw animating tiles on top.
-    # We also check if we need to remove the shaking state.
     for pos, start_t in shaking_tiles.items():
         gx, gy = pos
-        # Check if visible
         screen_px = int(gx * tile_size + offset_x)
         screen_py = int(gy * tile_size + offset_y)
         
-        # Simple culling for shaking tiles
         if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
             b_key = game.map_data[gy][gx]
             if b_key and b_key != ' ':
@@ -176,8 +165,6 @@ def draw_game(game):
             stain_y = int(stain_wy + offset_y)
             pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
-    
-    # [OPTIMIZATION] Low-Resolution Lighting with Caching
     low_res_w = view_w // 2
     low_res_h = view_h // 2
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
@@ -188,7 +175,6 @@ def draw_game(game):
     light_texture = game.assets.get('light_texture')
     light_sources = []
     
-    # [OPTIMIZATION] Cache scaled light textures for this frame to avoid repeated scaling
     frame_light_cache = {} 
 
     if light_texture:
@@ -199,7 +185,6 @@ def draw_game(game):
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
                 
-                # Player vision uses blend mult, handled separately
                 player_vision_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 ambient_color = (ambient, ambient, ambient)
                 player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
@@ -214,7 +199,6 @@ def draw_game(game):
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
-    # Collect Light Sources
     all_player_inventories = [game.player.belt, game.player.inventory]
     if game.player.backpack: all_player_inventories.append(game.player.backpack.inventory)
     
@@ -223,7 +207,7 @@ def draw_game(game):
             if getattr(item, 'state', 'off') == 'on':
                 light_sources.append({'item': item, 'owner': 'player'})
 
-    for item in game.items_on_ground:
+    for item in game.visible_items:
          if getattr(item, 'state', 'off') == 'on':
             light_sources.append({'item': item, 'owner': 'ground'})
     
@@ -232,13 +216,12 @@ def draw_game(game):
             if getattr(vehicle, 'lights', 'off') == 'on' and vehicle.battery > 0:
                 light_sources.append({'item': vehicle, 'owner': 'vehicle'})
 
-    for container in game.containers:
+    for container in game.visible_containers:
         if getattr(container, 'item_type', '') == 'vehicle':
              if not any(ls['item'] == container for ls in light_sources):
                  if getattr(container, 'lights', 'off') == 'on' and container.battery > 0:
                      light_sources.append({'item': container, 'owner': 'vehicle'})
 
-    # Draw Lights
     if light_texture:
         for light_info in light_sources:
             light = light_info['item']
@@ -257,7 +240,6 @@ def draw_game(game):
             if radius_low <= 0: continue
 
             try:
-                # [OPTIMIZATION] Use Cache
                 if radius_low not in frame_light_cache:
                     frame_light_cache[radius_low] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
                 
@@ -297,11 +279,14 @@ def draw_game(game):
                 light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception: pass
     
+    # [OPTIMIZATION] strict view radius squared
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
 
-    # Draw Containers, Items, Projectiles, Zombies, NPCs with Culling
-    for container in game.containers:
+    # Draw Containers
+    for container in game.visible_containers:
         if not screen_rect.colliderect(container.rect): continue
+        
+        # Strict Radius Check
         dx = container.rect.centerx - game.player.rect.centerx
         dy = container.rect.centery - game.player.rect.centery
         if (dx*dx + dy*dy) > view_radius_sq: continue
@@ -313,8 +298,11 @@ def draw_game(game):
              color = getattr(container, 'color', WHITE)
              pygame.draw.rect(world_view_surface, color, draw_pos)
 
-    for item in game.items_on_ground:
+    # Draw Items
+    for item in game.visible_items:
         if not screen_rect.colliderect(item.rect): continue
+        
+        # Strict Radius Check
         dx = item.rect.centerx - game.player.rect.centerx
         dy = item.rect.centery - game.player.rect.centery
         if (dx*dx + dy*dy) > view_radius_sq: continue
@@ -325,25 +313,23 @@ def draw_game(game):
         else:
             pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
 
+    # Draw Projectiles
     for p in game.projectiles:
         if screen_rect.colliderect(p.rect):
             p.draw(world_view_surface, offset_x, offset_y)
 
-    for zombie in game.zombies:
-        if not screen_rect.colliderect(zombie.rect): continue
-        dx = zombie.rect.centerx - game.player.rect.centerx
-        dy = zombie.rect.centery - game.player.rect.centery
-        if (dx*dx + dy*dy) > view_radius_sq: continue
-
-        zombie.draw(world_view_surface, offset_x, offset_y, 255)
-
-    for npc in game.npcs:
-        if not screen_rect.colliderect(npc.rect): continue
-        dx = npc.rect.centerx - game.player.rect.centerx
-        dy = npc.rect.centery - game.player.rect.centery
-        if (dx*dx + dy*dy) > view_radius_sq: continue
-
-        npc.draw(world_view_surface, offset_x, offset_y, 255)
+    # Draw Zombies, Animals, NPCs (via Quadtree)
+    visible_entities = game.quadtree.query(screen_rect.inflate(100, 100))
+    for entity in visible_entities:
+        if isinstance(entity, (Zombie, NPC)):
+             # Strict Radius Check
+             dx = entity.rect.centerx - game.player.rect.centerx
+             dy = entity.rect.centery - game.player.rect.centery
+             if (dx*dx + dy*dy) > view_radius_sq: continue
+             
+             # Re-check collision to be safe
+             if screen_rect.colliderect(entity.rect):
+                 entity.draw(world_view_surface, offset_x, offset_y, 255)
 
     game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
@@ -352,40 +338,12 @@ def draw_game(game):
     player_tile_y = game.player.rect.centery // tile_size
     roof_hide_radius = 3
 
-    # Draw Roof Chunks
     if getattr(game, 'roof_data', None):
-        # We also use chunk rendering for roofs
-        for cy in range(min_chunk_y, max_chunk_y):
-            for cx in range(min_chunk_x, max_chunk_x):
-                # Calculate if this chunk is near player to hide it?
-                # Roof hiding is per-tile in original logic. 
-                # Optimization: If player is NOT in this chunk, draw full chunk.
-                # If player IS in this chunk (or neighbor), we might need to use tile-based drawing 
-                # or just accept we don't hide roofs perfectly per tile with chunking.
-                # BETTER: We draw the chunk, but if the player is under it, we don't draw it?
-                # Original logic: hide within radius 3. 
-                # If we use chunks, we can't easily punch a hole of 3 tiles radius without complex masking.
-                # Fallback: For roofs, we iterate tiles ONLY near player, but use chunks for far roofs?
-                # Actually, standard behavior: Draw roof chunk. If player is under it, don't draw THAT chunk? 
-                # That reveals too much (32x32 tiles).
-                
-                # Compromise for performance: Revert to tile loop for roofs if near player, 
-                # or just iterate tiles for roofs always since they are sparse?
-                # Or use chunk but mask it? Masking is expensive.
-                # Let's stick to tile loop for Roofs for now as they are sparse and require dynamic hiding.
-                # Wait, "Make the game better performance". Roofs are a whole layer.
-                # If I use chunks for roofs, I can't hide them around player easily.
-                # Let's keep tile loop for Roofs but only visible range.
-                pass
-
-        # Optimized Roof Loop (Tile-based for precision hiding)
-        # Bounding box of hiding area
         hide_min_tx = player_tile_x - roof_hide_radius
         hide_max_tx = player_tile_x + roof_hide_radius
         hide_min_ty = player_tile_y - roof_hide_radius
         hide_max_ty = player_tile_y + roof_hide_radius
         
-        # Calculate grid bounds for view (reusing min_chunk logic for tile range)
         min_grid_x = max(0, min_chunk_x * chunk_size)
         min_grid_y = max(0, min_chunk_y * chunk_size)
         max_grid_x = min(map_w, max_chunk_x * chunk_size)
@@ -393,10 +351,8 @@ def draw_game(game):
 
         for gy in range(min_grid_y, max_grid_y):
             for gx in range(min_grid_x, max_grid_x):
-                # Optimization: Skip empty tiles before lookup? roof_data is array.
                 r_key = game.roof_data[gy][gx]
                 if r_key and r_key != ' ':
-                    # Check hide radius
                     if not (hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty):
                         r_def = tm.definitions.get(r_key)
                         if r_def:
@@ -437,47 +393,6 @@ def draw_game(game):
             pygame.draw.circle(scratch, trail_color, (p_radius, p_radius), p_radius)
             world_view_surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
-    # BLUR FILTER (PRESERVED)
-    if core.data.config.BLUR_UNSEEN:
-        try:
-            blur_factor = 0.12
-            small_w = max(1, int(view_w * blur_factor))
-            small_h = max(1, int(view_h * blur_factor))
-            
-            small_surf = pygame.transform.smoothscale(world_view_surface, (small_w, small_h))
-            blurred_surf = pygame.transform.smoothscale(small_surf, (view_w, view_h)).convert_alpha()
-            
-            blur_mask = pygame.Surface((view_w, view_h), pygame.SRCALPHA)
-            blur_mask.fill((255, 255, 255, 255)) 
-
-            light_tex = game.assets.get('light_texture')
-            
-            px_view = int(game.player.rect.centerx + offset_x)
-            py_view = int(game.player.rect.centery + offset_y)
-            p_radius = getattr(game, 'player_view_radius', 400)
-            
-            hole_size = int(p_radius * 2.5) if p_radius > 0 else 10
-            hole_surf = pygame.Surface((hole_size, hole_size), pygame.SRCALPHA)
-            hole_surf.fill((0,0,0,0))
-            
-            center = hole_size // 2
-            
-            if light_tex:
-                scaled_tex = pygame.transform.scale(light_tex, (hole_size, hole_size))
-                scaled_tex.fill((255, 255, 255, 255), special_flags=pygame.BLEND_RGBA_MULT)
-                hole_surf.blit(scaled_tex, (0,0))
-            else:
-                pygame.draw.circle(hole_surf, (255, 255, 255, 255), (center, center), int(p_radius))
-
-            hole_rect = hole_surf.get_rect(center=(px_view, py_view))
-            blur_mask.blit(hole_surf, hole_rect, special_flags=pygame.BLEND_RGBA_SUB)
-
-            blurred_surf.blit(blur_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            world_view_surface.blit(blurred_surf, (0, 0))
-
-        except Exception as e:
-            pass
-
     if game.hovered_container:
         dx = game.hovered_container.rect.centerx - game.player.rect.centerx
         dy = game.hovered_container.rect.centery - game.player.rect.centery
@@ -486,7 +401,8 @@ def draw_game(game):
             pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
     world_mouse_pos = game.screen_to_world(mouse_pos)
-    for npc in game.npcs:
+    
+    for npc in game.active_npcs:
         if not screen_rect.colliderect(npc.rect): continue
         if npc.rect.collidepoint(world_mouse_pos):
             is_friendly = getattr(npc, 'is_friendly', True)
@@ -495,7 +411,7 @@ def draw_game(game):
             pygame.draw.rect(world_view_surface, color, hover_rect, 2)
             break 
     
-    for zombie in game.zombies:
+    for zombie in game.active_zombies:
         if not screen_rect.colliderect(zombie.rect): continue
         if zombie.rect.collidepoint(world_mouse_pos):
             hover_rect = zombie.rect.move(offset_x, offset_y)
@@ -509,7 +425,6 @@ def draw_game(game):
     light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
     world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # [OPTIMIZATION] Final Scale to Screen - Skip if 1:1
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
     if view_w == GAME_WIDTH and view_h == GAME_HEIGHT:
         game.game_screen.blit(world_view_surface, game_rect)

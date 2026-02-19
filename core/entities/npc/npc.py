@@ -119,6 +119,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.melee_swing_angle = 0
 
         self.is_dead = False
+        self.dead_image = False
         
         if not hasattr(self, 'angle'): self.angle = 0
         if not hasattr(self, 'dx'): self.dx = 0

@@ -18,6 +18,8 @@ from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, s
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
+# [FIX] Import Quadtree to re-initialize it
+from core.systems.quadtree import Quadtree
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -76,8 +78,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         game._tile_cache_surface = None
     game.tiles_dirty = True
     
+    # [FIX] Explicitly clear the Chunk Cache to remove ghost images from previous games
     if hasattr(game, 'map_manager'):
         game.map_manager.map_files = {}
+        game.map_manager.clear_cache() 
 
     if save_dir_name:
         save_name = save_dir_name
@@ -197,6 +201,11 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     
     load_map(game, game.map_manager.current_map_filename)
     load_giant_map(game)
+    
+    # [FIX] Re-initialize Quadtree with correct dimensions after map load
+    # This prevents the quadtree from retaining old bounds or data
+    if hasattr(game, 'map_width_pixels') and hasattr(game, 'map_height_pixels'):
+        game.quadtree = Quadtree(pygame.Rect(0, 0, game.map_width_pixels, game.map_height_pixels))
     
     # --- Entity Spawning Logic ---
     if spawn_entities:

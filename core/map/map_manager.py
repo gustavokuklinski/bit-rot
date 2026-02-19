@@ -23,7 +23,7 @@ class MapManager:
 
         # [NEW] Performance: Chunk Generation Throttling
         self.chunks_generated_this_frame = 0
-        self.MAX_CHUNKS_PER_FRAME = 1  # Adjustable: Higher = faster load but more lag. 4 is balanced.
+        self.MAX_CHUNKS_PER_FRAME = 2  # Throttling limit per frame
 
         if not hasattr(self.game, 'vehicles'):
             self.game.vehicles = []
@@ -71,6 +71,71 @@ class MapManager:
     def reset_frame_metrics(self):
         """Called by Game loop every frame to reset generation limits."""
         self.chunks_generated_this_frame = 0
+
+    def update_chunks(self, player_center_pos):
+        """
+        Proactively manages chunk generation around the player.
+        Generates next chunks BEFORE they are fully visible to avoid stutter.
+        """
+        if self.chunks_generated_this_frame >= self.MAX_CHUNKS_PER_FRAME:
+            return
+
+        px, py = player_center_pos
+        
+        # Current chunk coords
+        curr_cx = int(px // (self.CHUNK_SIZE * TILE_SIZE))
+        curr_cy = int(py // (self.CHUNK_SIZE * TILE_SIZE))
+        
+        # Radius to pre-load (slightly larger than view)
+        LOAD_RADIUS = 4 
+        
+        # Spiral out or check nearby chunks
+        chunks_to_check = []
+        for dy in range(-LOAD_RADIUS, LOAD_RADIUS + 1):
+            for dx in range(-LOAD_RADIUS, LOAD_RADIUS + 1):
+                chunks_to_check.append((curr_cx + dx, curr_cy + dy))
+        
+        # Sort by distance to center to load closest first
+        chunks_to_check.sort(key=lambda p: (p[0] - curr_cx)**2 + (p[1] - curr_cy)**2)
+        
+        layer_idx = self.game.current_layer_index
+        
+        for cx, cy in chunks_to_check:
+            # [FIX] Do not process negative chunk coordinates
+            if cx < 0 or cy < 0:
+                continue
+
+            # Check World Layer
+            key = (layer_idx, cx, cy, 'world')
+            if key not in self.chunk_surfaces:
+                # Generate it now if we have budget
+                if self.chunks_generated_this_frame < self.MAX_CHUNKS_PER_FRAME:
+                     # get_chunk_surface handles generation and caching
+                     self.get_chunk_surface(cx, cy, layer_idx, 'world')
+                else:
+                    break
+            
+            # Check Roof Layer (if applicable)
+            key_roof = (layer_idx, cx, cy, 'roof')
+            if key_roof not in self.chunk_surfaces:
+                 if self.chunks_generated_this_frame < self.MAX_CHUNKS_PER_FRAME:
+                      self.get_chunk_surface(cx, cy, layer_idx, 'roof')
+                 else:
+                     break
+                     
+        # Optional: Unload very far chunks
+        self.unload_far_chunks(curr_cx, curr_cy, LOAD_RADIUS + 4)
+
+    def unload_far_chunks(self, center_cx, center_cy, keep_radius):
+        """Unloads chunks outside the keep_radius to free memory."""
+        keys_to_remove = []
+        for key in self.chunk_surfaces:
+            l, cx, cy, mode = key
+            if abs(cx - center_cx) > keep_radius or abs(cy - center_cy) > keep_radius:
+                keys_to_remove.append(key)
+        
+        for k in keys_to_remove:
+            del self.chunk_surfaces[k]
 
     def invalidate_chunk(self, grid_x, grid_y, layer_idx=None):
         """Removes the cached surface for the chunk containing (grid_x, grid_y) so it redraws next frame."""
@@ -135,43 +200,62 @@ class MapManager:
         if layer_type == 'world':
             # 1. Ground Layer
             if ground_data:
-                # Clamp ranges to map bounds
-                y_range = range(min_y, min(max_y, len(ground_data)))
-                if y_range:
-                    row_len = len(ground_data[0])
-                    for y in y_range:
-                        for x in range(min_x, min(max_x, row_len)):
-                            char = ground_data[y][x]
-                            if char and char != ' ':
-                                defn = tm.definitions.get(char)
-                                if defn:
-                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+                # [FIX] Safer bounds checking (ragged array support + negative index prevention)
+                y_start = max(0, min_y)
+                y_end = min(max_y, len(ground_data))
+                
+                for y in range(y_start, y_end):
+                    row_data = ground_data[y]
+                    # Calculate row length per row to prevent IndexError on ragged maps
+                    row_len = len(row_data) 
+                    
+                    x_start = max(0, min_x)
+                    x_end = min(max_x, row_len)
+                    
+                    for x in range(x_start, x_end):
+                        char = row_data[x]
+                        if char and char != ' ':
+                            defn = tm.definitions.get(char)
+                            if defn:
+                                surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
             
             # 2. Base Layer (Walls, Objects)
             if base_data:
-                y_range = range(min_y, min(max_y, len(base_data)))
-                if y_range:
-                    row_len = len(base_data[0])
-                    for y in y_range:
-                        for x in range(min_x, min(max_x, row_len)):
-                            char = base_data[y][x]
-                            if char and char != ' ':
-                                defn = tm.definitions.get(char)
-                                if defn:
-                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+                y_start = max(0, min_y)
+                y_end = min(max_y, len(base_data))
+                
+                for y in range(y_start, y_end):
+                    row_data = base_data[y]
+                    row_len = len(row_data)
+
+                    x_start = max(0, min_x)
+                    x_end = min(max_x, row_len)
+
+                    for x in range(x_start, x_end):
+                        char = row_data[x]
+                        if char and char != ' ':
+                            defn = tm.definitions.get(char)
+                            if defn:
+                                surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
 
         elif layer_type == 'roof':
             if roof_data:
-                y_range = range(min_y, min(max_y, len(roof_data)))
-                if y_range:
-                    row_len = len(roof_data[0])
-                    for y in y_range:
-                        for x in range(min_x, min(max_x, row_len)):
-                            char = roof_data[y][x]
-                            if char and char != ' ':
-                                defn = tm.definitions.get(char)
-                                if defn:
-                                    surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+                y_start = max(0, min_y)
+                y_end = min(max_y, len(roof_data))
+                
+                for y in range(y_start, y_end):
+                    row_data = roof_data[y]
+                    row_len = len(row_data)
+
+                    x_start = max(0, min_x)
+                    x_end = min(max_x, row_len)
+
+                    for x in range(x_start, x_end):
+                        char = row_data[x]
+                        if char and char != ' ':
+                            defn = tm.definitions.get(char)
+                            if defn:
+                                surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
 
         self.chunk_surfaces[key] = surface
         return surface

@@ -8,18 +8,17 @@ import core.data.config
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.entities.zombie.zombie import Zombie
-from core.entities.animal.animal import Animal # [NEW] Added import
+from core.entities.animal.animal import Animal 
 from core.entities.player.player import Player
 from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
-from core.map.spawn_manager import spawn_initial_zombies, spawn_animals # [NEW] Added spawn_animals import
+from core.map.spawn_manager import spawn_initial_zombies, spawn_animals
 from core.messages import display_message_zombie, display_message_player
 
 
 def build_obstacle_grid(obstacles, grid_size):
     """
-    Builds a static spatial grid for obstacles.
-    This allows us to check only nearby walls instead of ALL walls.
+    Builds a static spatial grid for STATIC obstacles (Walls).
     """
     grid = {}
     for ob in obstacles:
@@ -45,33 +44,7 @@ def get_nearby_obstacles(entity_rect, grid, grid_size):
                 nearby.extend(grid[cell])
     return nearby
 
-def build_zombie_grid(zombies, grid_size):
-    grid = {}
-    for z in zombies:
-        grid_x = int(z.rect.centerx // grid_size)
-        grid_y = int(z.rect.centery // grid_size)
-        cell = (grid_x, grid_y)
-        if cell not in grid:
-            grid[cell] = [z]
-        else:
-            grid[cell].append(z)
-    return grid
-
-def get_nearby_zombies(entity, grid, grid_size):
-    nearby_zombies = []
-    grid_x = int(entity.rect.centerx // grid_size)
-    grid_y = int(entity.rect.centery // grid_size)
-    for i in range(-1, 2):
-        for j in range(-1, 2):
-            cell = (grid_x + i, grid_y + j)
-            if cell in grid:
-                nearby_zombies.extend(grid[cell])
-    return nearby_zombies
-
 def create_blood_splatter(game, target_rect, damage, direction_vector=None):
-    """
-    Generates blood stain particles on the ground.
-    """
     if not hasattr(game, 'blood_stains'):
         return
 
@@ -89,7 +62,10 @@ def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
     
     base_x, base_y = target_rect.centerx, target_rect.bottom
-    stain_size = 4 + int(damage / 6)
+    
+    # [FIX] Cap damage for visual size calculation to prevent massive stains
+    visual_damage = min(damage, 150)
+    stain_size = 4 + int(visual_damage / 6)
     
     for i in range(1, 7): 
         offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
@@ -131,11 +107,15 @@ def update_game_state(game):
     
     GRID_SIZE = 128
     
+    # Static Obstacle Grid (Walls)
     current_obstacle_count = len(game.obstacles)
+    # [OPTIMIZATION NOTE] On huge maps, game.obstacles is HUGE. Rebuilding this every time a door opens 
+    # causes a lag spike. Ideally, this should be segmented, but for now we rely on the caching check.
     if not hasattr(game, 'cached_obstacle_grid') or getattr(game, 'cached_obstacle_count', -1) != current_obstacle_count:
         game.cached_obstacle_grid = build_obstacle_grid(game.obstacles, GRID_SIZE)
         game.cached_obstacle_count = current_obstacle_count
 
+    # Player Movement Update
     nearby_player_obstacles = get_nearby_obstacles(game.player.rect, game.cached_obstacle_grid, GRID_SIZE)
     game.player.update_position(nearby_player_obstacles, game.zombies, game)
 
@@ -147,17 +127,16 @@ def update_game_state(game):
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
     check_zombie_respawn(game)
-    check_animal_respawn(game) # [NEW] Added check
+    check_animal_respawn(game) 
     check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):
         game.game_state = 'GAME_OVER'
 
-    zombie_grid = build_zombie_grid(game.zombies, GRID_SIZE)
-    
     projectiles_to_remove = []
     zombies_to_remove = []
     
+    # --- Projectile Update Loop ---
     for p in game.projectiles:
         world_max_x = game.world_min_x + game.map_width_pixels
         world_max_y = game.world_min_y + game.map_height_pixels
@@ -182,9 +161,11 @@ def update_game_state(game):
                 })
                 projectiles_to_remove.append(p)
                 continue
-
-        potential_hits = [z for z in get_nearby_zombies(p, zombie_grid, GRID_SIZE) if z not in zombies_to_remove]
-        hit_zombie = next((z for z in potential_hits if p.rect.colliderect(z.rect)), None)
+        
+        search_rect = p.rect.inflate(10, 10)
+        potential_hits = game.quadtree.query(search_rect)
+        
+        hit_zombie = next((z for z in potential_hits if isinstance(z, Zombie) and z not in zombies_to_remove and p.rect.colliderect(z.rect)), None)
 
         if hit_zombie:
             owner = getattr(p, 'owner', None)
@@ -216,8 +197,10 @@ def update_game_state(game):
                     })
 
             projectiles_to_remove.append(p)
+            continue 
         
-        hit_npc = next((n for n in game.npcs if not n.is_dead and p.rect.colliderect(n.rect)), None)
+        hit_npc = next((n for n in potential_hits if n in game.npcs and not n.is_dead and p.rect.colliderect(n.rect)), None)
+        
         if hit_npc:
              damage = getattr(p, 'damage', game.player.get_attack_damage())
              
@@ -243,43 +226,25 @@ def update_game_state(game):
              display_message_player(f"You shot {hit_npc.name}")
              if is_dead:
                 display_message_player(f"You killed {hit_npc.name}!")
-                # NPC death cleanup happens in the main cleanup block below
              projectiles_to_remove.append(p)
              continue
 
     game.projectiles = [p for p in game.projectiles if p not in projectiles_to_remove]
-    game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
     
-
-    Item.cleanup_disposables(
-        game.items_on_ground, 
-        game.modals, 
-        lambda t: display_message_player(t) if game.player else None
-    )
-
-    # --- Zombie AI Update (OPTIMIZED) ---
-    zombies_alive = game.zombies[:] 
+    # [OPTIMIZATION] Only process ACTIVE zombies (those near the player)
+    # The active list is pre-calculated in game.py
+    zombies_alive = getattr(game, 'active_zombies', game.zombies[:])
     
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
-    ACTIVE_RADIUS_SQ = (1500)**2 
-    DESPAWN_RADIUS_SQ = (2500)**2
-
-    zombies_to_remove = [] 
-
+    
     for zombie in zombies_alive:
         
-        dx = zombie.rect.centerx - player_x
-        dy = zombie.rect.centery - player_y
-        dist_sq = dx*dx + dy*dy
-        
-        if dist_sq > DESPAWN_RADIUS_SQ:
-            zombies_to_remove.append(zombie)
-            continue
-        
-        if dist_sq > ACTIVE_RADIUS_SQ:
-            continue
+        # Use Quadtree for nearby zombies
+        search_area = zombie.rect.inflate(GRID_SIZE*2, GRID_SIZE*2)
+        nearby_zombies = game.quadtree.query(search_area)
+        # Filter for just zombies
+        nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
 
-        nearby_zombies = get_nearby_zombies(zombie, zombie_grid, GRID_SIZE)
         nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
@@ -334,11 +299,11 @@ def update_game_state(game):
     if zombies_to_remove:
         game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
     
-    # [NEW] NPC Update Loop
     if hasattr(game, 'npcs'):
         for npc in game.npcs:
             if not npc.is_dead:
-                npc.update(game)
+                # Active NPCs are updated in game.py now
+                pass
 
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):
@@ -366,29 +331,25 @@ def update_game_state(game):
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
         roadkill_zombies = []
         
+        # [OPTIMIZATION] Only update vehicles near player?
+        # For now we assume active_zombies logic covers the expensive parts.
         for vehicle in game.map_manager.vehicles:
             vehicle.update()
             
-            # Detected entities logic
             detected_entities = []
             
-            # 1. Grab any hits detected by move() (Useful for non-player driven vehicles or edge cases)
             if hasattr(vehicle, 'hit_entities') and vehicle.hit_entities:
                 detected_entities.extend(vehicle.hit_entities)
                 vehicle.hit_entities = []
 
-            # 2. Manual Check vs Zombies
-            nearby_zombies = get_nearby_zombies(vehicle, zombie_grid, GRID_SIZE)
-            for z in nearby_zombies:
-                if z not in detected_entities and vehicle.rect.colliderect(z.rect):
-                    detected_entities.append(z)
+            search_rect = vehicle.rect.inflate(10, 10)
+            potential = game.quadtree.query(search_rect)
             
-            # 3. Manual Check vs NPCs
-            if hasattr(game, 'npcs'):
-                for npc in game.npcs:
-                    if not npc.is_dead and npc not in detected_entities and vehicle.rect.colliderect(npc.rect):
-                        detected_entities.append(npc)
-
+            for entity in potential:
+                if entity not in detected_entities and vehicle.rect.colliderect(entity.rect):
+                     if entity == vehicle: continue
+                     detected_entities.append(entity)
+            
             if detected_entities:
                 speed = math.hypot(vehicle.velocity[0], vehicle.velocity[1])
                 
@@ -408,7 +369,9 @@ def update_game_state(game):
                         velocity_dir = None
                         if speed > 0:
                              velocity_dir = [vehicle.velocity[0]/speed, vehicle.velocity[1]/speed]
-                        create_blood_splatter(game, entity.rect, impact_damage, velocity_dir)
+                        
+                        # [FIX] Pass a smaller damage value (100) for visual splatter so it doesn't cover the whole map
+                        create_blood_splatter(game, entity.rect, 20, velocity_dir)
 
                         if entity in game.zombies:
                              if entity.take_damage(impact_damage, game):
@@ -437,15 +400,12 @@ def update_game_state(game):
         if roadkill_zombies:
             game.zombies = [z for z in game.zombies if z not in roadkill_zombies and z not in zombies_to_remove]
         
-        # [FIX] Robust cleanup for ALL dead NPCs (from vehicle or player)
         if hasattr(game, 'npcs'):
             if hasattr(game.npcs, 'sprites'):
-                # It's a SpriteGroup
                 for n in list(game.npcs):
                     if n.is_dead:
-                        n.kill() # Correct way to remove from Group
+                        n.kill() 
             else:
-                # It's a List
                 game.npcs = [n for n in game.npcs if not n.is_dead]
 
     game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
@@ -516,7 +476,6 @@ def player_hit_zombie(player, zombie, game):
     display_message_player(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False
 
-# ... [Keep handle_zombie_death, check_dynamic_zombie_spawns, check_zombie_respawn functions] ...
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     zombie.die(game)
     if weapon:

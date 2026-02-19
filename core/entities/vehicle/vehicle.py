@@ -266,6 +266,8 @@ class Vehicle:
                 entities = game.zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else []) + [game.player]
                 for entity in entities:
                     if entity == self: continue # Should not happen, but safe
+                    if entity in self.seats: continue # Ignore passengers in the vehicle
+                    
                     if rect_check.colliderect(entity.rect):
                         if hasattr(entity, 'mask') and entity.mask:
                              offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)

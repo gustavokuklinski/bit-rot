@@ -47,7 +47,7 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
         screen.blit(title_text, title_rect)
 
     # --- 2. Stats ---
-    score_text = large_font.render(f"Zombies Killed: {zombies_killed}", True, WHITE)
+    score_text = large_font.render(f"You Killed: {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.45))
     screen.blit(score_text, score_rect)
 

@@ -23,10 +23,8 @@ from core.ui.helpers.start_loading import draw_loading_screen
 from core.logger import GameLogger
 from core.ui.tooltip import draw_tooltip
 from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population
-# [NEW] Import traits definitions
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
-
-# Imported Systems
+from core.systems.quadtree import Quadtree
 from core.systems.save_manager import save_game
 from core.systems.load_manager import load_game, start_new_game, load_map
 from core.systems.utils import (
@@ -34,9 +32,7 @@ from core.systems.utils import (
     find_nearby_containers, screen_to_world, get_player_facing_tile
 )
 
-# ... (Game class definition remains the same until run_playing) ...
 class Game:
-    # ... (init and other methods unchanged) ...
     def __init__(self):
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
@@ -68,10 +64,30 @@ class Game:
 
         self.map_manager = MapManager(self)
         self.tile_manager = TileManager()
+        
+        c_size = getattr(core.data.config, 'CHUNK_SIZE', 32)
+        m_chunks = getattr(core.data.config, 'MAP_CHUNKS', 64) 
+        t_size = getattr(core.data.config, 'TILE_SIZE', 32)
+        
+        total_world_size = m_chunks * c_size * t_size
+        self.quadtree = Quadtree(pygame.Rect(0, 0, total_world_size, total_world_size))
 
         self.player = None
-        self.zombies = []
+        self.zombies = [] 
         self.items_on_ground = []
+        
+        # [OPTIMIZATION] Spatial Grids & Active Lists
+        self.active_zombies = []
+        self.active_npcs = []
+        self.visible_items = []
+        self.visible_containers = []
+        
+        self.zombie_grid = {}
+        self.item_grid = {}
+        self.container_grid = {}
+        self.GRID_CELL_SIZE = 512 # Size of spatial buckets
+        
+        self.frame_count = 0
 
         self.npcs = pygame.sprite.Group()
         self.npc_spawn_timer = 0 
@@ -200,7 +216,6 @@ class Game:
         self.is_fast_forwarding = False
         self.fast_forward_speed = 50.0
 
-    # --- Delegated Methods ---
     def save_game(self):
         return save_game(self)
 
@@ -212,9 +227,18 @@ class Game:
 
     def load_map(self, map_filename):
         result = load_map(self, map_filename)
-        # [NEW] Clear chunk cache when map loads to avoid showing old map data
         if self.map_manager:
             self.map_manager.clear_cache()
+            if hasattr(self, 'map_width_pixels') and hasattr(self, 'map_height_pixels'):
+                 self.quadtree = Quadtree(pygame.Rect(0, 0, self.map_width_pixels, self.map_height_pixels))
+        
+        # Reset spatial grids on map load
+        self.zombie_grid = {}
+        self.item_grid = {}
+        self.container_grid = {}
+        self.rebuild_zombie_grid()
+        self.rebuild_item_grid()
+        self.rebuild_container_grid()
         return result
 
     def capture_pause_screen(self):
@@ -235,8 +259,6 @@ class Game:
     def screen_to_world(self, screen_pos):
         return screen_to_world(self, screen_pos)
 
-    # --- Game Loop Methods ---
-    
     def _cleanup_modals(self):
         modals_to_remove = []
         if not self.player: return
@@ -544,17 +566,87 @@ class Game:
                     return
         self._update_screen()
 
+    # [NEW] Grid Rebuild Methods
+    def rebuild_zombie_grid(self):
+        self.zombie_grid.clear()
+        for z in self.zombies:
+            key = (int(z.rect.centerx // self.GRID_CELL_SIZE), int(z.rect.centery // self.GRID_CELL_SIZE))
+            if key not in self.zombie_grid: self.zombie_grid[key] = []
+            self.zombie_grid[key].append(z)
+
+    def rebuild_item_grid(self):
+        self.item_grid.clear()
+        for i in self.items_on_ground:
+            key = (int(i.rect.centerx // self.GRID_CELL_SIZE), int(i.rect.centery // self.GRID_CELL_SIZE))
+            if key not in self.item_grid: self.item_grid[key] = []
+            self.item_grid[key].append(i)
+
+    def rebuild_container_grid(self):
+        self.container_grid.clear()
+        for c in self.containers:
+            key = (int(c.rect.centerx // self.GRID_CELL_SIZE), int(c.rect.centery // self.GRID_CELL_SIZE))
+            if key not in self.container_grid: self.container_grid[key] = []
+            self.container_grid[key].append(c)
+
     def run_playing(self):
         self.world_time.update()
         handle_input(self)
+        self.frame_count += 1
+        
+        # [OPTIMIZATION] Throttled Grid Updates
+        # Update Zombie grid every 30 frames (0.5s) as they move
+        if self.frame_count % 30 == 0:
+            self.rebuild_zombie_grid()
+        
+        # Update Static grids less frequently (e.g. 60 frames) to catch drops
+        if self.frame_count % 60 == 0:
+            self.rebuild_item_grid()
+            self.rebuild_container_grid()
+
+        # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
+        # Instead of iterating 10,000 entities, we query the grid cells around the player
+        SIMULATION_DISTANCE = 1600 
+        px, py = self.player.rect.center
+        
+        start_grid_x = int((px - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
+        end_grid_x = int((px + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
+        start_grid_y = int((py - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
+        end_grid_y = int((py + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
+        
+        self.active_zombies = []
+        self.visible_items = []
+        self.visible_containers = []
+        
+        for gy in range(start_grid_y, end_grid_y):
+            for gx in range(start_grid_x, end_grid_x):
+                key = (gx, gy)
+                if key in self.zombie_grid:
+                    self.active_zombies.extend(self.zombie_grid[key])
+                if key in self.item_grid:
+                    self.visible_items.extend(self.item_grid[key])
+                if key in self.container_grid:
+                    self.visible_containers.extend(self.container_grid[key])
+
+        # Active NPCs (small count, can iterate)
+        self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
+
+        # Populate Quadtree with ONLY active entities
+        self.quadtree.clear()
+        for z in self.active_zombies: self.quadtree.insert(z)
+        for n in self.active_npcs: self.quadtree.insert(n)
+        for p in self.projectiles: self.quadtree.insert(p)
+        
+        if self.map_manager and hasattr(self.map_manager, 'vehicles'):
+             for v in self.map_manager.vehicles: 
+                 if abs(v.rect.centerx - px) < SIMULATION_DISTANCE and abs(v.rect.centery - py) < SIMULATION_DISTANCE:
+                    self.quadtree.insert(v)
+
         update_game_state(self)
         
-        # [NEW] Dynamic Attribute Updates via XML Config
         if self.player:
             base_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS
             radius_mult = 1.0
 
-            # Iterate over traits and apply 'BASE_PLAYER_VIEW_RADIUS' modifiers
             for trait_id in self.player.traits:
                 t_def = TRAIT_DEFINITIONS.get(trait_id)
                 if t_def and 'config_modifiers' in t_def:
@@ -569,13 +661,14 @@ class Game:
             manage_dynamic_npcs(self)
             self.npc_spawn_timer = 0
 
-        for npc in self.npcs:
+        for npc in self.active_npcs:
             npc.update(self)
 
         self._cleanup_modals()
         
-        # [NEW] Reset chunk generation budget for this frame
         self.map_manager.reset_frame_metrics()
+        if self.player:
+             self.map_manager.update_chunks(self.player.rect.center)
         
         draw_game(self)
 
