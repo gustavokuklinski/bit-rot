@@ -301,10 +301,13 @@ def spawn_animals(game, count=5, target_layer=None):
     # [FIX] Respect Global Animal Configuration
     # If animal spawn count is 0 or less, do not spawn any animals
     if core.data.config.ANIMAL_SPAWN_COUNT <= 0:
+        print(f"[ANIMAL] Spawn skipped: ANIMAL_SPAWN_COUNT={core.data.config.ANIMAL_SPAWN_COUNT}")
         return
 
     if target_layer is None:
         target_layer = game.current_layer_index
+    
+    print(f"[ANIMAL] Spawning {count} animals on layer {target_layer}")
 
     # Ensure storage exists
     if not hasattr(game, 'layer_zombies'):
@@ -314,8 +317,8 @@ def spawn_animals(game, count=5, target_layer=None):
 
     # Decide where to add the entities
     if target_layer == game.current_layer_index:
-        if not hasattr(game, 'zombies'): game.zombies = []
-        target_list = game.zombies
+        if not hasattr(game, 'items_on_ground'): game.items_on_ground = []
+        target_list = game.items_on_ground
     else:
         target_list = game.layer_zombies[target_layer]
     

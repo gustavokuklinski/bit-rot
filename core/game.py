@@ -616,7 +616,8 @@ class Game:
         self.active_zombies = []
         self.visible_items = []
         self.visible_containers = []
-        
+        self.active_animals = []
+
         for gy in range(start_grid_y, end_grid_y):
             for gx in range(start_grid_x, end_grid_x):
                 key = (gx, gy)
@@ -627,12 +628,25 @@ class Game:
                 if key in self.container_grid:
                     self.visible_containers.extend(self.container_grid[key])
 
+        # Filter out animals from active_zombies and collect them separately
+        from core.entities.animal.animal import Animal
+        self.active_animals = [z for z in self.active_zombies if isinstance(z, Animal)]
+        self.active_zombies = [z for z in self.active_zombies if not isinstance(z, Animal)]
+        
+        # Also get animals from visible_items (for loaded games)
+        for item in self.visible_items:
+            if isinstance(item, Animal) and item not in self.active_animals:
+                self.active_animals.append(item)
+
         # Active NPCs (small count, can iterate)
         self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
 
         # Populate Quadtree with ONLY active entities
         self.quadtree.clear()
         for z in self.active_zombies: self.quadtree.insert(z)
+        # Add animals to quadtree
+        for a in self.active_animals:
+            self.quadtree.insert(a)
         for n in self.active_npcs: self.quadtree.insert(n)
         for p in self.projectiles: self.quadtree.insert(p)
         

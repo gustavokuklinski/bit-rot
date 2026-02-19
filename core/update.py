@@ -135,11 +135,18 @@ def update_game_state(game):
 
     projectiles_to_remove = []
     zombies_to_remove = []
-    
+
     # --- Projectile Update Loop ---
+    multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+    
     for p in game.projectiles:
         world_max_x = game.world_min_x + game.map_width_pixels
         world_max_y = game.world_min_y + game.map_height_pixels
+
+        # Apply fast forward to projectile speed
+        if multiplier > 1.0:
+            p.vx *= multiplier
+            p.vy *= multiplier
 
         local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
 
@@ -234,10 +241,13 @@ def update_game_state(game):
     # [OPTIMIZATION] Only process ACTIVE zombies (those near the player)
     # The active list is pre-calculated in game.py
     zombies_alive = getattr(game, 'active_zombies', game.zombies[:])
-    
+
+    # Also update animals (they're stored in items_on_ground but tracked in active_animals)
+    animals_alive = getattr(game, 'active_animals', [])
+
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
-    
-    for zombie in zombies_alive:
+
+    for zombie in list(zombies_alive) + animals_alive:
         
         # Use Quadtree for nearby zombies
         search_area = zombie.rect.inflate(GRID_SIZE*2, GRID_SIZE*2)
@@ -330,11 +340,15 @@ def update_game_state(game):
     # --- Vehicle Update ---
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):
         roadkill_zombies = []
-        
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+
         # [OPTIMIZATION] Only update vehicles near player?
         # For now we assume active_zombies logic covers the expensive parts.
         for vehicle in game.map_manager.vehicles:
             vehicle.update()
+            # Apply fast forward to vehicle physics
+            if multiplier > 1.0:
+                vehicle.velocity = (vehicle.velocity[0] * multiplier, vehicle.velocity[1] * multiplier)
             
             detected_entities = []
             

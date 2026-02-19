@@ -25,6 +25,7 @@ from core.ui.map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
+from core.entities.animal.animal import Animal
 
 def draw_game(game):
     # Clear the main screen
@@ -321,12 +322,12 @@ def draw_game(game):
     # Draw Zombies, Animals, NPCs (via Quadtree)
     visible_entities = game.quadtree.query(screen_rect.inflate(100, 100))
     for entity in visible_entities:
-        if isinstance(entity, (Zombie, NPC)):
+        if isinstance(entity, (Zombie, NPC, Animal)):
              # Strict Radius Check
              dx = entity.rect.centerx - game.player.rect.centerx
              dy = entity.rect.centery - game.player.rect.centery
              if (dx*dx + dy*dy) > view_radius_sq: continue
-             
+
              # Re-check collision to be safe
              if screen_rect.colliderect(entity.rect):
                  entity.draw(world_view_surface, offset_x, offset_y, 255)

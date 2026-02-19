@@ -7,12 +7,13 @@ class ZombieGraphics:
     def load_sprite(self, sprite_file):
         """Robustly loads a sprite, checking multiple paths."""
         if not sprite_file: return None
-        
-        # Paths to check: 1. zombie/folder, 2. root sprite folder, 3. player folder (common for NPCs)
+
+        # Paths to check: 1. zombie/folder, 2. root sprite folder, 3. player folder, 4. animals folder
         candidates = [
             os.path.join(SPRITE_PATH, "zombie", sprite_file),
             os.path.join(SPRITE_PATH, sprite_file),
-            os.path.join(SPRITE_PATH, "player", sprite_file)
+            os.path.join(SPRITE_PATH, "player", sprite_file),
+            os.path.join(SPRITE_PATH, "animals", sprite_file)
         ]
 
         for path in candidates:
@@ -22,7 +23,7 @@ class ZombieGraphics:
                     return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
                 except Exception as e:
                     print(f"Error loading sprite at {path}: {e}")
-        
+
         print(f"Warning: Could not find sprite '{sprite_file}' in common paths.")
         return None
 

@@ -3,6 +3,7 @@ import shutil
 import json
 from datetime import datetime
 from core.entities.vehicle.vehicle import Vehicle
+from core.entities.animal.animal import Animal
 from core.data.config import MAP_DIR
 
 def save_game(game):
@@ -138,10 +139,12 @@ def save_game(game):
         # --- SEPARATE ZOMBIES AND ANIMALS ---
         zombie_data = []
         animal_data = []
-        
+
+        # Save zombies from game.zombies
         for z in game.zombies:
-            # Check if this is an Animal (using type attribute)
-            is_animal = getattr(z, 'type', 'zombie') == 'animal'
+            # Skip animals (they're saved separately from items_on_ground)
+            if getattr(z, 'type', 'zombie') == 'animal':
+                continue
             
             # Serialize Clothes
             safe_clothes = {}
@@ -180,18 +183,52 @@ def save_game(game):
                 "sprites": getattr(z, 'sprites_data', {})
             }
 
-            if is_animal:
-                # Add type field for clarity, though file separation handles it
-                entity_entry['type'] = 'animal'
-                animal_data.append(entity_entry)
-            else:
-                zombie_data.append(entity_entry)
+            zombie_data.append(entity_entry)
 
         # Save Zombies
         with open(os.path.join(save_path, "zombies.rot"), "w") as f:
             json.dump(zombie_data, f, indent=4)
 
-        # Save Animals (New File)
+        # Save Animals from items_on_ground
+        for item in game.items_on_ground:
+            if isinstance(item, Animal):
+                # Serialize Clothes
+                safe_clothes = {}
+                if hasattr(item, 'clothes') and item.clothes:
+                    for slot, it in item.clothes.items():
+                        if it:
+                            if hasattr(it, 'to_dict'):
+                                safe_clothes[slot] = it.to_dict()
+                            else:
+                                safe_clothes[slot] = it
+                        else:
+                            safe_clothes[slot] = None
+
+                # Serialize Inventory
+                safe_inventory = []
+                if hasattr(item, 'inventory'):
+                    for i in item.inventory:
+                        if hasattr(i, 'to_dict'):
+                            safe_inventory.append(i.to_dict())
+                        else:
+                            safe_inventory.append(i)
+
+                animal_entry = {
+                    "id": getattr(item, 'id', None),
+                    "x": item.x,
+                    "y": item.y,
+                    "health": item.health,
+                    "max_health": getattr(item, 'max_health', 10),
+                    "name": getattr(item, 'name', 'Animal'),
+                    "type": "animal",
+                    "speed": getattr(item, 'speed', 1.0),
+                    "loot_table": getattr(item, 'loot_table', []),
+                    "inventory": safe_inventory,
+                    "clothes": safe_clothes,
+                    "sprites": getattr(item, 'sprites_data', {})
+                }
+                animal_data.append(animal_entry)
+
         with open(os.path.join(save_path, "animal.rot"), "w") as f:
             json.dump(animal_data, f, indent=4)
 

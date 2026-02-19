@@ -6,7 +6,6 @@ from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
 
 class Animal(Zombie):
-    SPRITE_PATH = "game/lib/sprites/animals"
 
     def __init__(self, x, y, animal_type, game=None, layer=None):
         if not AnimalLoader.definitions:
@@ -58,14 +57,5 @@ class Animal(Zombie):
         min_spd = template['stats']['speed']['min']
         max_spd = template['stats']['speed']['max']
         self.speed = random.uniform(min_spd, max_spd)
-
-    def load_sprite(self, filename):
-        """Overrides Zombie.load_sprite to use the specific animal sprite path."""
-        full_path = os.path.join(self.SPRITE_PATH, filename)
-        try:
-            # We assume a global pygame display is initialized
-            image = pygame.image.load(full_path).convert_alpha()
-            return image
-        except Exception as e:
-            print(f"Error loading animal sprite {filename} at {full_path}: {e}")
-            return None
+        
+        print(f"[ANIMAL] Created {self.name} at ({self.x}, {self.y}) with sprite: {self.image is not None}")

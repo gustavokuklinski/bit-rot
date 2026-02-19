@@ -190,7 +190,9 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         current_time = time.time()
 
         if self.action_timer > 0:
-            self.action_timer -= 1
+            # Apply fast forward to action timer
+            multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+            self.action_timer -= multiplier
             self.vx = 0
             self.vy = 0
             self.is_running = False
@@ -247,17 +249,14 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
-            restore_amount = 0.5 
+            restore_amount = 0.5
             self.tireness = max(0.0, self.tireness + restore_amount)
-            
+
             if self.tireness >= self.max_tireness:
                 self.tireness = self.max_tireness
                 self.is_sleeping = False
-                game.is_fast_forwarding = False 
+                game.is_fast_forwarding = False
                 display_message_player("You wake up refreshed.")
-        
-        elif game.is_fast_forwarding:
-            game.is_fast_forwarding = False
 
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]

@@ -210,6 +210,10 @@ def handle_keyboard_events(game, event):
         if event.key == pygame.K_F11:
             pygame.display.toggle_fullscreen()
 
+        if event.key == pygame.K_F3:
+            game.is_fast_forwarding = not game.is_fast_forwarding
+            return
+
         # --- 1. ACTIVE CHAT HANDLING ---
         if game.chat_active:
             if event.key == pygame.K_RETURN:

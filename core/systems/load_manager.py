@@ -554,8 +554,8 @@ def load_game(game, save_folder_name):
                          else:
                             item = Item.create_from_name(i_data)
                          if item: a.inventory.append(item)
-                
-                game.zombies.append(a)
+
+                game.items_on_ground.append(a)
 
         
         if 'modal_positions' in world_data:
