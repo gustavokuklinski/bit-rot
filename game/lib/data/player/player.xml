@@ -37,8 +37,6 @@
     <initial_loot>
         <item name="Wallet" chance="1" />
         <item name="Keyring Default" chance="1" />
-        <item name="Powerbank" chance="1" />
-        <item name="Fuel Canister" chance="1" />
     </initial_loot>
 
     <visuals>
