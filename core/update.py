@@ -337,11 +337,20 @@ def update_game_state(game):
 
     now_ms = pygame.time.get_ticks()
     for ground_item in list(game.items_on_ground):
-        if isinstance(ground_item, Corpse): 
+        if isinstance(ground_item, Corpse):
             if ground_item.is_expired(now_ms):
                 display_message_zombie(f"{getattr(ground_item,'name','Corpse')} decayed.")
                 try: game.items_on_ground.remove(ground_item)
                 except ValueError: pass
+
+    # Cleanup empty disposable containers on ground
+    def ground_msg(text):
+        display_message_player(text)
+    Item.cleanup_disposables(game.items_on_ground, game.modals, ground_msg)
+
+    # Cleanup empty disposable containers in game.containers (vehicles, etc.)
+    if hasattr(game, 'containers') and game.containers:
+        Item.cleanup_disposables(game.containers, game.modals, ground_msg)
 
     for modal in list(game.modals):
         if modal['type'] == 'container':
