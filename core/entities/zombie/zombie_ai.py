@@ -9,7 +9,7 @@ import core.data.config
 class ZombieAI:
     def __init__(self):
         super().__init__()
-        
+
         self.path = []
         self.path_step = 0
         # [OPTIMIZATION] Randomize initial time to stagger pathfinding updates across frames
@@ -17,27 +17,35 @@ class ZombieAI:
         self.path_recalc_cooldown = 0
         self.stuck_timer = 0
         self.stuck_angle = 0
-        # Initialize other necessary attributes if not present
-        if not hasattr(self, 'wander_target'): self.wander_target = None
-        if not hasattr(self, 'state'): self.state = 'wandering'
-        if not hasattr(self, 'last_wander_change'): self.last_wander_change = 0
-        if not hasattr(self, 'last_wander_sound_time'): self.last_wander_sound_time = 0
-        if not hasattr(self, 'wander_sound_cooldown'): self.wander_sound_cooldown = 0
-        if not hasattr(self, 'last_attack_time'): self.last_attack_time = 0
         
-    def has_line_of_sight(self, target_rect, obstacles):
+    def has_line_of_sight(self, target_rect, obstacles, current_time):
         """Checks if there is an uninterrupted line between zombie and target."""
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
-            return True 
-
+            return True
+        
+        # Use cached result if recently checked
+        if not hasattr(self, 'last_los_check_time'):
+            self.last_los_check_time = 0
+            self.los_check_interval = 500
+            self.cached_los_result = True
+        
+        if current_time - self.last_los_check_time < self.los_check_interval:
+            return self.cached_los_result
+        
         start_pos = self.rect.center
         end_pos = target_rect.center
-
+        
+        los_result = True
         for obs in obstacles:
             if obs.clipline(start_pos, end_pos):
-                return False 
-
-        return True 
+                los_result = False
+                break
+        
+        # Cache the result
+        self.last_los_check_time = current_time
+        self.cached_los_result = los_result
+        
+        return los_result
 
     def _get_path_astar(self, start_pos, target_pos, game):
         """
@@ -119,6 +127,73 @@ class ZombieAI:
         
         return None
 
+    def _check_chase_triggers(self, player, game, dist_to_player, current_time):
+        """
+        Check if the zombie should enter chasing state based on player actions.
+        Returns True if the zombie should chase, False otherwise.
+        """
+        # Initialize cache attributes if not present
+        if not hasattr(self, 'last_trigger_check_time'):
+            self.last_trigger_check_time = 0
+            self.trigger_check_interval = 300
+            self.cached_trigger_result = False
+        
+        # Use cached result if recently checked (but always check if already chasing)
+        if self.state != 'chasing' and current_time - self.last_trigger_check_time < self.trigger_check_interval:
+            return self.cached_trigger_result
+        
+        detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
+        trigger_result = False
+        
+        # Early exit: zombie too far from player to detect anything
+        dist_sq = dist_to_player * dist_to_player
+        if dist_sq > detection_radius_sq and self.state != 'chasing':
+            return False
+        
+        # If zombie can see player within detection radius, always chase
+        if dist_sq <= detection_radius_sq:
+            if core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
+                if self.has_line_of_sight(player.rect, game.obstacles, current_time):
+                    trigger_result = True
+            else:
+                trigger_result = True
+        
+        if not trigger_result:
+            # Check if player is running (makes noise, attracts zombies)
+            if getattr(player, 'is_running', False):
+                if dist_sq <= detection_radius_sq:
+                    trigger_result = True
+            
+            # Check if player is shooting ranged weapon (loud noise)
+            if not trigger_result and getattr(player, 'gun_flash_timer', 0) > 0:
+                if dist_sq <= detection_radius_sq:
+                    trigger_result = True
+            
+            # Check if player is using melee weapon (quieter, only very close zombies hear)
+            if not trigger_result and getattr(player, 'melee_swing_timer', 0) > 0:
+                melee_noise_radius_sq = (TILE_SIZE * 3) ** 2
+                if dist_sq < melee_noise_radius_sq:
+                    trigger_result = True
+            
+            # Check for moving vehicles (loud noise, attracts zombies)
+            # Only check if zombie is close to player area (optimization)
+            if not trigger_result and dist_sq <= detection_radius_sq:
+                if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'vehicles'):
+                    for vehicle in game.map_manager.vehicles:
+                        if getattr(vehicle, 'active', False) or vehicle.current_speed_val > 0.5:
+                            dx = vehicle.rect.centerx - self.rect.centerx
+                            dy = vehicle.rect.centery - self.rect.centery
+                            veh_dist_sq = dx*dx + dy*dy
+                            if veh_dist_sq < detection_radius_sq:
+                                trigger_result = True
+                                break
+        
+        # Cache the result
+        self.last_trigger_check_time = current_time
+        self.cached_trigger_result = trigger_result
+        
+        return trigger_result
+
     def update_ai(self, player_rect, obstacles, other_zombies, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
@@ -128,40 +203,52 @@ class ZombieAI:
 
         target_rect = player_rect
         target_entity = game.player
-        
-        dist_to_player = math.hypot(player_rect.centerx - self.rect.centerx,
-                                    player_rect.centery - self.rect.centery)
+
+        # Use squared distance for efficiency (avoid sqrt when possible)
+        dx = player_rect.centerx - self.rect.centerx
+        dy = player_rect.centery - self.rect.centery
+        dist_to_player_sq = dx*dx + dy*dy
+        dist_to_player = math.sqrt(dist_to_player_sq)
 
         nearest_npc = None
-        min_npc_dist = 9999
-        
+        min_npc_dist_sq = 9999**2
+
         if hasattr(game, 'npcs'):
             for npc in game.npcs:
                 if npc.is_dead: continue
-                d = math.hypot(npc.rect.centerx - self.rect.centerx, npc.rect.centery - self.rect.centery)
-                if d < min_npc_dist:
-                    min_npc_dist = d
+                ndx = npc.rect.centerx - self.rect.centerx
+                ndy = npc.rect.centery - self.rect.centery
+                npc_dist_sq = ndx*ndx + ndy*ndy
+                if npc_dist_sq < min_npc_dist_sq:
+                    min_npc_dist_sq = npc_dist_sq
                     nearest_npc = npc
-        
-        if nearest_npc and (min_npc_dist < dist_to_player):
+
+        if nearest_npc and min_npc_dist_sq < dist_to_player_sq:
             target_rect = nearest_npc.rect
             target_entity = nearest_npc
-            dist_to_target = min_npc_dist
+            dist_to_target = math.sqrt(min_npc_dist_sq)
+            dist_to_target_sq = min_npc_dist_sq
         else:
             dist_to_target = dist_to_player
+            dist_to_target_sq = dist_to_player_sq
 
-        can_see_target = self.has_line_of_sight(target_rect, obstacles)
+        can_see_target = self.has_line_of_sight(target_rect, obstacles, current_time)
         target_pos = None
 
-        if dist_to_target < core.data.config.ZOMBIE_DETECTION_RADIUS and (can_see_target or self.state == 'chasing'):
+        # Check chase triggers to determine state
+        should_chase = self._check_chase_triggers(game.player, game, dist_to_target, current_time)
+
+        detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
+        if should_chase or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
             self.state = 'chasing'
-            target_pos = target_rect.center 
-            
-            if dist_to_target < self.attack_range:
-                if current_time - self.last_attack_time > (1000.0 / multiplier): 
+            target_pos = target_rect.center
+
+            attack_range_sq = self.attack_range ** 2
+            if dist_to_target_sq < attack_range_sq:
+                if current_time - self.last_attack_time > (1000.0 / multiplier):
                     self.attack(target_entity, game)
                     self.last_attack_time = current_time
-                    self.vx, self.vy = 0, 0 
+                    self.vx, self.vy = 0, 0
                     return
 
         else:

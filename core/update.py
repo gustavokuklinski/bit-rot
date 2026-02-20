@@ -265,10 +265,23 @@ def update_game_state(game):
     animals_alive = getattr(game, 'active_animals', [])
 
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
+    
+    # [OPTIMIZATION] Only update zombies within a reasonable distance
+    UPDATE_RADIUS_SQ = (core.data.config.ZOMBIE_DETECTION_RADIUS + 200) ** 2
+    current_time = pygame.time.get_ticks()
 
     for zombie in list(zombies_alive) + animals_alive:
+        # [OPTIMIZATION] Skip zombies too far from player
+        dx = player_x - zombie.rect.centerx
+        dy = player_y - zombie.rect.centery
+        dist_sq = dx*dx + dy*dy
         
-        # Use Quadtree for nearby zombies
+        # Only fully update zombies within range or already chasing
+        if dist_sq > UPDATE_RADIUS_SQ and zombie.state != 'chasing':
+            # Skip this zombie entirely - too far to matter
+            continue
+
+        # Use Quadtree for nearby zombies (only for zombies in range)
         search_area = zombie.rect.inflate(GRID_SIZE*2, GRID_SIZE*2)
         nearby_zombies = game.quadtree.query(search_area)
         # Filter for just zombies
@@ -278,54 +291,45 @@ def update_game_state(game):
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]
-        
+
         if getattr(zombie, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
             dx = kb_vel_x * VELOCITY_MULTIPLIER
             dy = kb_vel_y * VELOCITY_MULTIPLIER
-            
+
             original_x = zombie.x
             zombie.x += dx
             zombie.rect.x = int(zombie.x)
-            
+
             collision_x = False
             for obs in nearby_obstacles:
                 if zombie.rect.colliderect(obs):
                     collision_x = True; break
-            
+
             if collision_x:
                 zombie.x = original_x; zombie.rect.x = int(zombie.x); zombie.knockback_velocity[0] = 0
-            
+
             original_y = zombie.y
             zombie.y += dy
             zombie.rect.y = int(zombie.y)
-            
+
             collision_y = False
             for obs in nearby_obstacles:
                 if zombie.rect.colliderect(obs):
                     collision_y = True; break
-            
+
             if collision_y:
                 zombie.y = original_y; zombie.rect.y = int(zombie.y); zombie.knockback_velocity[1] = 0
 
             zombie.rect.topleft = (int(zombie.x), int(zombie.y))
 
-            zombie.knockback_velocity[0] *= 0.9 
+            zombie.knockback_velocity[0] *= 0.9
             zombie.knockback_velocity[1] *= 0.9
             zombie.knockback_timer -= game.clock.get_time()
-        
+
         zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
-        dx = game.player.rect.centerx - zombie.rect.centerx
-        dy = game.player.rect.centery - zombie.rect.centery
-        distance_to_player_sq = dx*dx + dy*dy
-        attack_range_sq = zombie.attack_range ** 2
-
-        if distance_to_player_sq < attack_range_sq:
-            current_time = pygame.time.get_ticks()
-            if current_time - zombie.last_attack_time > 500:
-                zombie.attack(game.player, game)
-                zombie.last_attack_time = current_time
+        # [OPTIMIZATION] Removed redundant attack check - handled in update_ai
         
     if zombies_to_remove:
         game.zombies = [z for z in game.zombies if z not in zombies_to_remove]

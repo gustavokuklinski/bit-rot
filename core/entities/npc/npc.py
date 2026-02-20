@@ -304,7 +304,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.state != 'chasing': # Always pathfind for patrol/shelter to avoid sticking to walls
                      has_los = False 
                 else:
-                    has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), obstacles)
+                    has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), obstacles, current_time)
 
                 # Use pathfinding if no LOS or if we are stuck
                 if not has_los or (self.stuck_timer > 0 and self.stuck_timer % 20 == 0):

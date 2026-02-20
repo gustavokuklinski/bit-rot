@@ -84,10 +84,10 @@
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="100" name="Player detection tiles (Default: 100)"/>
+        <zombie_detection_radius value="10" name="Player detection (Default: 10)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
-        <sight_check value="false" name="Sight player (Every zombie goes to player) (Default: false)"/>
+        <sight_check value="true" name="Sight player (Default: true)"/>
         <respawn_timer value="600000" name="Respawn (Default: 600000)"/>
         <max_zombies value="10000" name="World max zombies (Default: 10000)"/>
         <infection_chance value="0.10" name="Zombie infection chance (Default: 0.10)"/>
