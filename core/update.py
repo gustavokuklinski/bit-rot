@@ -62,12 +62,11 @@ def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     perp_dir_x, perp_dir_y = -trail_dir_y, trail_dir_x
     
     base_x, base_y = target_rect.centerx, target_rect.bottom
-    
-    # [FIX] Cap damage for visual size calculation to prevent massive stains
-    visual_damage = min(damage, 150)
-    stain_size = 4 + int(visual_damage / 6)
-    
-    for i in range(1, 7): 
+
+    # Fixed size for blood splatters (same as melee weapons)
+    stain_size = 5
+
+    for i in range(1, 7):
         offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
         lateral_scatter = random.uniform(-8, 8) 
         
