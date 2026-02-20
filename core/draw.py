@@ -166,35 +166,42 @@ def draw_game(game):
             stain_y = int(stain_wy + offset_y)
             pygame.draw.circle(world_view_surface, stain.get('color', (139, 0, 0)), (stain_x, stain_y), stain['size'] // 2)
 
+    # Light Mask Caching - Cache at zoom levels to avoid expensive transform.scale every frame
+    if not hasattr(game, 'light_mask_cache'):
+        game.light_mask_cache = {}
+    
     low_res_w = view_w // 2
     low_res_h = view_h // 2
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
-    
+
     light_mask_low.fill((30, 30, 30))
     ambient = int(game.world_time.current_ambient_light)
 
     light_texture = game.assets.get('light_texture')
     light_sources = []
-    
-    frame_light_cache = {} 
 
     if light_texture:
         try:
             radius_world_pixels = game.player_view_radius
             radius_view_pixels = int(radius_world_pixels)
-            
+
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
                 
-                player_vision_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                # Cache player vision texture at this radius
+                cache_key = ('vision', radius_low)
+                if cache_key not in game.light_mask_cache:
+                    game.light_mask_cache[cache_key] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                player_vision_tex = game.light_mask_cache[cache_key].copy()
+                
                 ambient_color = (ambient, ambient, ambient)
-                player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT) 
-                
+                player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT)
+
                 light_rect = player_vision_tex.get_rect()
-                
+
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
-                
+
                 light_rect.center = (p_screen_x, p_screen_y)
                 light_mask_low.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
         except Exception as e:
@@ -228,49 +235,54 @@ def draw_game(game):
             light = light_info['item']
             radius_world = getattr(light, 'current_light_radius', 0)
             if radius_world <= 0: continue
-            
+
             if light_info['owner'] == 'player':
                  lx, ly = game.player.rect.centerx, game.player.rect.centery
             else:
                  lx, ly = light.rect.centerx, light.rect.centery
-            
+
             if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly):
                 continue
-            
+
             radius_low = int(radius_world / 2)
             if radius_low <= 0: continue
 
             try:
-                if radius_low not in frame_light_cache:
-                    frame_light_cache[radius_low] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                
-                scaled_light_tex = frame_light_cache[radius_low]
+                # Cache light source texture at this radius
+                cache_key = ('light', radius_low)
+                if cache_key not in game.light_mask_cache:
+                    game.light_mask_cache[cache_key] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                scaled_light_tex = game.light_mask_cache[cache_key]
                 light_rect = scaled_light_tex.get_rect()
-                
+
                 if light_info['owner'] == 'player':
                     px_view = (game.player.rect.centerx + offset_x) / 2
                     py_view = (game.player.rect.centery + offset_y) / 2
-                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375 
+                    offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375
                     offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.375
                     light_rect.center = (px_view + offset_lx, py_view + offset_ly)
                 else:
                     pos_x_view = (light.rect.centerx + offset_x) / 2
                     pos_y_view = (light.rect.centery + offset_y) / 2
                     light_rect.center = (pos_x_view, pos_y_view)
-                
+
                 light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception: pass
 
         for light in game.map_lights:
             if not light.get('active', True): continue
             if 'rect' in light and not screen_rect.colliderect(light['rect']): continue
-            
+
             radius_low = int(light['radius'] / 2)
             if radius_low <= 0: continue
 
             try:
-                scaled_light_tex = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                light_opacity = 80 
+                # Cache map light texture at this radius
+                cache_key = ('map_light', radius_low)
+                if cache_key not in game.light_mask_cache:
+                    game.light_mask_cache[cache_key] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                scaled_light_tex = game.light_mask_cache[cache_key].copy()
+                light_opacity = 80
                 scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
                 light_rect = scaled_light_tex.get_rect()
                 

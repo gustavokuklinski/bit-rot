@@ -597,11 +597,14 @@ def handle_right_click(game, mouse_pos):
 
     if not clicked_item and not is_over_any_modal:
         world_pos = game.screen_to_world(mouse_pos)
-        
+
+        max_interact_dist_sq = (TILE_SIZE * 2) ** 2
         for i, ground_item in enumerate(game.items_on_ground):
             if ground_item.rect.collidepoint(world_pos):
-                dist = math.hypot(game.player.rect.centerx - ground_item.rect.centerx, game.player.rect.centery - ground_item.rect.centery)
-                if dist < TILE_SIZE * 2:
+                dx = game.player.rect.centerx - ground_item.rect.centerx
+                dy = game.player.rect.centery - ground_item.rect.centery
+                dist_sq = dx*dx + dy*dy
+                if dist_sq < max_interact_dist_sq:
                     clicked_item = ground_item
                     click_source = 'ground'
                     click_index = i
@@ -609,12 +612,14 @@ def handle_right_click(game, mouse_pos):
                     break
                 else:
                     display_message("Item is too far away to interact with.")
-        
+
         if not clicked_item:
             for i, container in enumerate(game.containers):
                 if container.rect.collidepoint(world_pos):
-                    dist = math.hypot(game.player.rect.centerx - container.rect.centerx, game.player.rect.centery - container.rect.centery)
-                    if dist < TILE_SIZE * 2:
+                    dx = game.player.rect.centerx - container.rect.centerx
+                    dy = game.player.rect.centery - container.rect.centery
+                    dist_sq = dx*dx + dy*dy
+                    if dist_sq < max_interact_dist_sq:
                         clicked_item = container
                         click_source = 'container_map'
                         click_index = i
@@ -643,10 +648,13 @@ def handle_right_click(game, mouse_pos):
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
-            dist = math.hypot(game.player.rect.centerx - world_pos[0], game.player.rect.centery - world_pos[1])
+            dx = game.player.rect.centerx - world_pos[0]
+            dy = game.player.rect.centery - world_pos[1]
+            dist_sq = dx*dx + dy*dy
+            max_dist_sq = (TILE_SIZE * 2) ** 2
 
             if tile and tile.get('type') == "maptile_car":
-                if dist <= TILE_SIZE * 2:
+                if dist_sq <= max_dist_sq:
                     vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                     if vehicle:
                         clicked_item = vehicle
@@ -655,8 +663,8 @@ def handle_right_click(game, mouse_pos):
             else:
                 display_message(game, "Too far away to interact.")
 
-            if tile and tile.get('sleep') and dist < TILE_SIZE * 2:
-                clicked_item = {'name': 'Bed', 'type': 'map_tile'} 
+            if tile and tile.get('sleep') and dist_sq < max_dist_sq:
+                clicked_item = {'name': 'Bed', 'type': 'map_tile'}
                 click_source = 'map_tile'
 
     if not clicked_item:
@@ -693,12 +701,15 @@ def handle_right_click(game, mouse_pos):
         options = ['']
 
         if click_source == 'npc':
-            dist = math.hypot(game.player.rect.centerx - clicked_item.rect.centerx, 
-                              game.player.rect.centery - clicked_item.rect.centery)
-            max_dist_px = TILE_SIZE * 3  
+            dx = game.player.rect.centerx - clicked_item.rect.centerx
+            dy = game.player.rect.centery - clicked_item.rect.centery
+            dist_sq = dx*dx + dy*dy
+            max_dist_px = TILE_SIZE * 3
+            max_dist_px_sq = max_dist_px ** 2
+            dist = dist_sq ** 0.5  # Only compute sqrt for debug display
             print(f"DEBUG: NPC Interact - Name: {clicked_item.name}, Friendly: {clicked_item.is_friendly}, Dist: {dist:.1f}/{max_dist_px}")
 
-            if dist <= max_dist_px:
+            if dist_sq <= max_dist_px_sq:
                 options.append('Talk')
                 if hasattr(clicked_item, 'stop_moving'):
                     clicked_item.stop_moving()

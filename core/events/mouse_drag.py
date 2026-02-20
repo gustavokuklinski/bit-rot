@@ -825,16 +825,17 @@ def handle_mouse_up(game, event, mouse_pos):
                             
                             else:
                                 game.items_on_ground.append(game.dragged_item)
-                                
-                                dist_chk = math.hypot(game.dragged_item.rect.centerx - game.player.rect.centerx,
-                                                    game.dragged_item.rect.centery - game.player.rect.centery)
-                                if dist_chk > TILE_SIZE * 5: 
+
+                                dx = game.dragged_item.rect.centerx - game.player.rect.centerx
+                                dy = game.dragged_item.rect.centery - game.player.rect.centery
+                                dist_chk_sq = dx*dx + dy*dy
+                                if dist_chk_sq > (TILE_SIZE * 5) ** 2:
                                     off_x = random.randint(-16, 16)
                                     off_y = random.randint(-16, 16)
                                     game.dragged_item.rect.center = (game.player.rect.centerx + off_x, game.player.rect.centery + off_y)
                                     game.dragged_item.x = game.dragged_item.rect.x
                                     game.dragged_item.y = game.dragged_item.rect.y
-                                
+
                                 dropped_successfully = True
                             
                             if dropped_successfully: break 

@@ -592,12 +592,12 @@ class Game:
         self.world_time.update()
         handle_input(self)
         self.frame_count += 1
-        
+
         # [OPTIMIZATION] Throttled Grid Updates
         # Update Zombie grid every 30 frames (0.5s) as they move
         if self.frame_count % 30 == 0:
             self.rebuild_zombie_grid()
-        
+
         # Update Static grids less frequently (e.g. 60 frames) to catch drops
         if self.frame_count % 60 == 0:
             self.rebuild_item_grid()
@@ -605,14 +605,14 @@ class Game:
 
         # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
         # Instead of iterating 10,000 entities, we query the grid cells around the player
-        SIMULATION_DISTANCE = 1600 
+        SIMULATION_DISTANCE = 1600
         px, py = self.player.rect.center
-        
+
         start_grid_x = int((px - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
         end_grid_x = int((px + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
         start_grid_y = int((py - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
         end_grid_y = int((py + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
-        
+
         self.active_zombies = []
         self.visible_items = []
         self.visible_containers = []
@@ -632,7 +632,7 @@ class Game:
         from core.entities.animal.animal import Animal
         self.active_animals = [z for z in self.active_zombies if isinstance(z, Animal)]
         self.active_zombies = [z for z in self.active_zombies if not isinstance(z, Animal)]
-        
+
         # Also get animals from visible_items (for loaded games)
         for item in self.visible_items:
             if isinstance(item, Animal) and item not in self.active_animals:
@@ -641,19 +641,47 @@ class Game:
         # Active NPCs (small count, can iterate)
         self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
 
-        # Populate Quadtree with ONLY active entities
-        self.quadtree.clear()
-        for z in self.active_zombies: self.quadtree.insert(z)
-        # Add animals to quadtree
-        for a in self.active_animals:
-            self.quadtree.insert(a)
-        for n in self.active_npcs: self.quadtree.insert(n)
-        for p in self.projectiles: self.quadtree.insert(p)
+        # [OPTIMIZATION] Quadtree Dirty Flag - Only rebuild if entities moved significantly
+        quadtree_needs_rebuild = False
         
-        if self.map_manager and hasattr(self.map_manager, 'vehicles'):
-             for v in self.map_manager.vehicles: 
-                 if abs(v.rect.centerx - px) < SIMULATION_DISTANCE and abs(v.rect.centery - py) < SIMULATION_DISTANCE:
-                    self.quadtree.insert(v)
+        # Check if player moved significantly (more than 16 pixels)
+        if hasattr(self, 'last_quadtree_player_pos'):
+            dx = px - self.last_quadtree_player_pos[0]
+            dy = py - self.last_quadtree_player_pos[1]
+            if dx*dx + dy*dy > 256:  # 16^2
+                quadtree_needs_rebuild = True
+        else:
+            quadtree_needs_rebuild = True
+        
+        # Check if projectiles changed
+        if hasattr(self, 'last_quadtree_projectile_count'):
+            if len(self.projectiles) != self.last_quadtree_projectile_count:
+                quadtree_needs_rebuild = True
+        else:
+            quadtree_needs_rebuild = True
+        
+        # Check frame count for periodic rebuild (every 10 frames)
+        if self.frame_count % 10 == 0:
+            quadtree_needs_rebuild = True
+        
+        if quadtree_needs_rebuild:
+            # Store state for next frame comparison
+            self.last_quadtree_player_pos = (px, py)
+            self.last_quadtree_projectile_count = len(self.projectiles)
+            
+            # Populate Quadtree with ONLY active entities
+            self.quadtree.clear()
+            for z in self.active_zombies: self.quadtree.insert(z)
+            # Add animals to quadtree
+            for a in self.active_animals:
+                self.quadtree.insert(a)
+            for n in self.active_npcs: self.quadtree.insert(n)
+            for p in self.projectiles: self.quadtree.insert(p)
+
+            if self.map_manager and hasattr(self.map_manager, 'vehicles'):
+                 for v in self.map_manager.vehicles:
+                     if abs(v.rect.centerx - px) < SIMULATION_DISTANCE and abs(v.rect.centery - py) < SIMULATION_DISTANCE:
+                        self.quadtree.insert(v)
 
         update_game_state(self)
         

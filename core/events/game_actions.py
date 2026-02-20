@@ -1,20 +1,21 @@
-import math
 import pygame
 from core.data.config import *
 from core.entities.zombie.corpse import Corpse
 
 def try_grab_item(game):
     closest_item = None
-    closest_dist = float('inf')
+    closest_dist_sq = float('inf')
     for item in game.items_on_ground:
         if isinstance(item, Corpse):
             continue
-        dist = math.hypot(item.rect.centerx - game.player.rect.centerx, item.rect.centery - game.player.rect.centery)
-        if dist < closest_dist:
-            closest_dist = dist
+        dx = item.rect.centerx - game.player.rect.centerx
+        dy = item.rect.centery - game.player.rect.centery
+        dist_sq = dx*dx + dy*dy
+        if dist_sq < closest_dist_sq:
+            closest_dist_sq = dist_sq
             closest_item = item
 
-    if closest_item and closest_dist < TILE_SIZE * 2:
+    if closest_item and closest_dist_sq < (TILE_SIZE * 2) ** 2:
         # Convert "Campfire on" to "Campfire off" when picking up
         item_to_grab = closest_item
         if closest_item.name == "Campfire on":

@@ -283,9 +283,12 @@ class PlayerProgression:
         # 1. Calculate Zombies nearby
         nearby_zombies = 0
         det_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
+        det_radius_sq = det_radius ** 2
         for zombie in game.zombies:
-            dist = math.hypot(player.rect.centerx - zombie.rect.centerx, player.rect.centery - zombie.rect.centery)
-            if dist < det_radius:
+            dx = player.rect.centerx - zombie.rect.centerx
+            dy = player.rect.centery - zombie.rect.centery
+            dist_sq = dx*dx + dy*dy
+            if dist_sq < det_radius_sq:
                 nearby_zombies += 1
         
         # 2. Get XML Constants

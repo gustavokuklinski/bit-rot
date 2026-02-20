@@ -291,10 +291,13 @@ def save_game(game):
         # --- World Data Save ---
         safe_ground_items = []
         for i in game.items_on_ground:
+            # Skip Animals - they are saved separately in animal.rot
+            if isinstance(i, Animal):
+                continue
             item_data = i.to_dict() if hasattr(i, 'to_dict') else i
             safe_ground_items.append({
-                "data": item_data, 
-                "x": i.rect.x if hasattr(i, 'rect') else i.x, 
+                "data": item_data,
+                "x": i.rect.x if hasattr(i, 'rect') else i.x,
                 "y": i.rect.y if hasattr(i, 'rect') else i.y
             })
 

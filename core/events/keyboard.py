@@ -143,18 +143,20 @@ def toggle_crafting_modal(game):
 
 def find_closest_vehicle(game):
     closest_vehicle = None
-    closest_dist = float('inf')
-    
+    closest_dist_sq = float('inf')
+
     if not game.player: return None
-    
-    for entity in game.containers: 
+
+    for entity in game.containers:
         if hasattr(entity, 'item_type') and entity.item_type == 'vehicle':
-            dist = math.hypot(game.player.rect.centerx - entity.rect.centerx, game.player.rect.centery - entity.rect.centery)
-            if dist < closest_dist:
-                closest_dist = dist
+            dx = game.player.rect.centerx - entity.rect.centerx
+            dy = game.player.rect.centery - entity.rect.centery
+            dist_sq = dx*dx + dy*dy
+            if dist_sq < closest_dist_sq:
+                closest_dist_sq = dist_sq
                 closest_vehicle = entity
-                
-    if closest_vehicle and closest_dist <= TILE_SIZE * 1.5: 
+
+    if closest_vehicle and closest_dist_sq <= (TILE_SIZE * 1.5) ** 2:
         return closest_vehicle
     return None
 

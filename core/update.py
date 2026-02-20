@@ -64,10 +64,10 @@ def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     base_x, base_y = target_rect.centerx, target_rect.bottom
 
     # Fixed size for blood splatters (same as melee weapons)
-    stain_size = 5
+    stain_size = 4
 
     for i in range(1, 7):
-        offset_pixels = (i / 6.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
+        offset_pixels = (i / 3.0) * (TILE_SIZE * 0.75) + random.uniform(-2, 5)
         lateral_scatter = random.uniform(-8, 8) 
         
         stain_pos_x = base_x - (trail_dir_x * offset_pixels) 
@@ -314,15 +314,17 @@ def update_game_state(game):
             zombie.knockback_velocity[1] *= 0.9
             zombie.knockback_timer -= game.clock.get_time()
         
-        zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game) 
+        zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
-        distance_to_player = math.hypot(game.player.rect.centerx - zombie.rect.centerx, 
-                                        game.player.rect.centery - zombie.rect.centery)
+        dx = game.player.rect.centerx - zombie.rect.centerx
+        dy = game.player.rect.centery - zombie.rect.centery
+        distance_to_player_sq = dx*dx + dy*dy
+        attack_range_sq = zombie.attack_range ** 2
 
-        if distance_to_player < zombie.attack_range: 
-            current_time = pygame.time.get_ticks() 
-            if current_time - zombie.last_attack_time > 500: 
-                zombie.attack(game.player, game) 
+        if distance_to_player_sq < attack_range_sq:
+            current_time = pygame.time.get_ticks()
+            if current_time - zombie.last_attack_time > 500:
+                zombie.attack(game.player, game)
                 zombie.last_attack_time = current_time
         
     if zombies_to_remove:
@@ -355,8 +357,10 @@ def update_game_state(game):
         if modal['type'] == 'container':
             container_item = modal['item']
             if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
-                distance = math.hypot(game.player.rect.centerx - container_item.rect.centerx, game.player.rect.centery - container_item.rect.centery)
-                if distance > TILE_SIZE * 1.5:
+                dx = game.player.rect.centerx - container_item.rect.centerx
+                dy = game.player.rect.centery - container_item.rect.centery
+                dist_sq = dx*dx + dy*dy
+                if dist_sq > (TILE_SIZE * 1.5) ** 2:
                     game.modals.remove(modal)
     
     current_time = pygame.time.get_ticks()
