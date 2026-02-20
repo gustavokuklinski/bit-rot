@@ -8,6 +8,6 @@ Update your context with the new updated code
 
 ---
 
-This is my updated code. Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
+This is my updated code located at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core. Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
 
 ---

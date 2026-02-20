@@ -115,6 +115,8 @@ class NPCCombat:
                      corpse.inventory.append(Item.create_from_name(cloth_data))
 
         game.items_on_ground.append(corpse)
-        
+
         if self in game.npcs:
             game.npcs.remove(self)
+        if self in game.active_npcs:
+            game.active_npcs.remove(self)

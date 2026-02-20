@@ -106,7 +106,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.hit_sound_cooldown = 300 # 300ms cooldown for hit sound
         self.last_wander_sound_time = 0
         self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
-        
+
         self.is_ambiently_noisy = random.random() < 0.4 # 60% of zombies noisy
 
         # Load sound filenames from template
@@ -115,13 +115,14 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.sound_wander = sounds.get('wander', None)
         self.sound_dead = sounds.get('dead', None)
         self.sound_attack = sounds.get('attack', None)
-        self.sound_steps = sounds.get('steps', None) 
+        self.sound_steps = sounds.get('steps', None)
         self.last_step_sound_time = 0
 
         self.vx = 0 # Track velocity for drawing
         self.vy = 0 # Track velocity for drawing
 
         self.state = 'wandering'  # Can be 'wandering' or 'chasing'
+        self.is_dead = False
         self.wander_target = None # (x, y) coordinate
         self.last_wander_change = 0 # Timestamp for changing wander direction
 

@@ -79,7 +79,7 @@
         <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk - Fixed value (Default: 10)"/>
+        <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk - Fixed value (Default: 10)"/>
         <zombie_multiplier value="1" name="Multiplier by day (Default: 1)"/>
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>

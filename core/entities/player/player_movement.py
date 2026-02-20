@@ -96,22 +96,44 @@ class PlayerMovement:
             
             # --- ZOMBIE ROADKILL LOGIC ---
             # Explicitly check collision with zombies and KILL them if hit
-            for zombie in zombies[:]: 
+            for zombie in zombies[:]:
                 if vehicle_rect.colliderect(zombie.rect):
                     self.vehicle.damage_motor(1.5)
                     # Massive damage to ensure instant kill
                     damage_to_zombie = 2
-                    
+
                     # Apply damage. take_damage returns True if health <= 0
                     if zombie.take_damage(damage_to_zombie, game):
                         # IMPORTANT: Must call die() to spawn corpse and remove from list
                         zombie.die(game)
                         display_message_player(f"Roadkill! Zombie splattered.")
-                        
+
                         # Add kill count if not handled inside die
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
-                    
+
+                    # Slow down vehicle on impact
+                    self.vehicle.velocity[0] *= 0.5
+                    self.vehicle.velocity[1] *= 0.5
+
+            # --- ANIMAL ROADKILL LOGIC ---
+            # Check collision with animals and KILL them
+            animals_to_check = getattr(game, 'active_animals', [])
+            for animal in list(animals_to_check):
+                if vehicle_rect.colliderect(animal.rect):
+                    self.vehicle.damage_motor(1.5)
+                    damage_to_animal = 2
+
+                    # Apply damage. take_damage returns True if health <= 0
+                    if animal.take_damage(damage_to_animal, game):
+                        # IMPORTANT: Must call die() to spawn corpse and remove from lists
+                        animal.die(game)
+                        if animal in game.items_on_ground:
+                            game.items_on_ground.remove(animal)
+                        if animal in game.active_animals:
+                            game.active_animals.remove(animal)
+                        display_message_player(f"Roadkill! Animal splattered.")
+
                     # Slow down vehicle on impact
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5

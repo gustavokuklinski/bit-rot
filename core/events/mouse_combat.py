@@ -4,9 +4,9 @@ import time
 import pygame
 from core.data.config import *
 from core.entities.item.item import Projectile
-from core.update import player_hit_zombie, handle_zombie_death
+from core.update import player_hit_zombie, handle_zombie_death, create_blood_splatter
 from core.ui.inventory_modal import get_belt_hud_slot_rect
-from core.messages import display_message
+from core.messages import display_message, display_message_player
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):
@@ -137,27 +137,27 @@ def handle_attack(game, mouse_pos):
                 for zombie in game.zombies:
                     # [FIX] Use Distance + Cone check instead of strict colliderect
                     dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-                    
+
                     if dist <= attack_range:
                         # 1. Calculate angle to zombie (Inverted Y to match swing angle)
                         dx = zombie.rect.centerx - game.player.rect.centerx
                         dy_inv = game.player.rect.centery - zombie.rect.centery
                         z_angle = math.atan2(dy_inv, dx)
-                        
+
                         angle_diff = abs(game.player.melee_swing_angle - z_angle)
                         if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
-                        
+
                         # 2. Hit if clicked directly OR within cone
                         if zombie.rect.collidepoint(world_pos) or angle_diff < 1.0:
                             if player_hit_zombie(game.player, zombie, game):
                                 handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
                                 game.zombies_killed += 1
-                            
+
                             # [FIX] Apply Knockback to Zombie (Use Screen Coords)
                             dx_kb = zombie.rect.centerx - game.player.rect.centerx
                             dy_kb = zombie.rect.centery - game.player.rect.centery # Screen Y increases down
                             kb_angle = math.atan2(dy_kb, dx_kb)
-                            
+
                             force = 7 # Knockback strength
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                             zombie.knockback_timer = 200 # Duration
@@ -165,37 +165,86 @@ def handle_attack(game, mouse_pos):
                             hit_something = True
                             break
 
+                # --- ANIMAL COLLISION ---
+                if not hit_something:
+                    for animal in game.active_animals:
+                        dist = math.hypot(animal.rect.centerx - game.player.rect.centerx, animal.rect.centery - game.player.rect.centery)
+
+                        if dist <= attack_range:
+                            dx = animal.rect.centerx - game.player.rect.centerx
+                            dy_inv = game.player.rect.centery - animal.rect.centery
+                            animal_angle = math.atan2(dy_inv, dx)
+
+                            angle_diff = abs(game.player.melee_swing_angle - animal_angle)
+                            if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
+
+                            if animal.rect.collidepoint(world_pos) or angle_diff < 1.0:
+                                damage = game.player.get_attack_damage()
+                                is_dead = animal.take_damage(damage, game, attacker=game.player)
+                                display_message_player(f"You attacked the animal for {damage} damage!")
+
+                                # Calculate direction for blood splatter and knockback
+                                dx_kb = animal.rect.centerx - game.player.rect.centerx
+                                dy_kb = animal.rect.centery - game.player.rect.centery
+                                kb_angle = math.atan2(dy_kb, dx_kb)
+                                direction = [math.cos(kb_angle), math.sin(kb_angle)]
+
+                                # Create blood splatter
+                                create_blood_splatter(game, animal.rect, damage, direction)
+
+                                # Apply Knockback
+                                if dist > 0:
+                                    force = 7
+                                    animal.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                                    animal.knockback_timer = 200
+
+                                if is_dead:
+                                    animal.die(game)
+                                    if animal in game.items_on_ground:
+                                        game.items_on_ground.remove(animal)
+                                    if animal in game.active_animals:
+                                        game.active_animals.remove(animal)
+                                    display_message_player(f"You killed the animal!")
+
+                                hit_something = True
+                                break
+
                 # --- NPC COLLISION ---
-                if not hit_something: 
+                if not hit_something:
                     for npc in game.npcs:
                         if not npc.is_dead:
                             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
-                            
+
                             if dist <= attack_range:
                                 dx = npc.rect.centerx - game.player.rect.centerx
-                                dy_inv = game.player.rect.centery - npc.rect.centery 
+                                dy_inv = game.player.rect.centery - npc.rect.centery
                                 npc_angle = math.atan2(dy_inv, dx)
-                                
+
                                 angle_diff = abs(game.player.melee_swing_angle - npc_angle)
                                 if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
-                                
+
                                 if npc.rect.collidepoint(world_pos) or angle_diff < 1.0:
                                     damage = game.player.get_attack_damage()
-                                    npc.take_damage(damage, game, attacker=game.player)
+                                    is_dead = npc.take_damage(damage, game, attacker=game.player)
                                     display_message(game, f"You attacked {npc.name} for {damage} damage!")
-                                    
-                                    # [FIX] Apply Knockback to NPC (Use Screen Coords)
+
+                                    # Calculate direction for blood splatter and knockback
                                     dx_kb = npc.rect.centerx - game.player.rect.centerx
                                     dy_kb = npc.rect.centery - game.player.rect.centery
                                     kb_angle = math.atan2(dy_kb, dx_kb)
+                                    direction = [math.cos(kb_angle), math.sin(kb_angle)]
 
+                                    # Create blood splatter
+                                    create_blood_splatter(game, npc.rect, damage, direction)
+
+                                    # [FIX] Apply Knockback to NPC (Use Screen Coords)
                                     if dist > 0:
                                         force = 7
                                         npc.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                                         npc.knockback_timer = 200
 
                                     hit_something = True
-                                    break 
+                                    break
 
                 # --- TILE/OBJECT COLLISION ---
                 if not hit_something:

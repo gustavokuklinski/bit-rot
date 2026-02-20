@@ -175,18 +175,29 @@ def update_game_state(game):
         hit_zombie = next((z for z in potential_hits if isinstance(z, Zombie) and z not in zombies_to_remove and p.rect.colliderect(z.rect)), None)
 
         if hit_zombie:
+            # Check if it's an animal
+            is_animal = getattr(hit_zombie, 'type', 'zombie') == 'animal'
             owner = getattr(p, 'owner', None)
 
             if owner is None or owner == game.player:
                 if player_hit_zombie(game.player, hit_zombie, game):
-                    zombies_to_remove.append(hit_zombie)
-                    handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
-                    game.zombies_killed += 1
-            
+                    if is_animal:
+                        # Handle animal death
+                        hit_zombie.die(game)
+                        if hit_zombie in game.items_on_ground:
+                            game.items_on_ground.remove(hit_zombie)
+                        if hit_zombie in game.active_animals:
+                            game.active_animals.remove(hit_zombie)
+                    else:
+                        # Handle zombie death
+                        zombies_to_remove.append(hit_zombie)
+                        handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
+                        game.zombies_killed += 1
+
             else:
                 damage = getattr(p, 'damage', 5)
                 is_dead = hit_zombie.take_damage(damage, game, attacker=owner)
-                
+
                 game.splashes.append({
                     'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom),
                     'time': pygame.time.get_ticks(),
@@ -194,17 +205,26 @@ def update_game_state(game):
                 })
 
                 if is_dead:
-                    zombies_to_remove.append(hit_zombie)
-                    handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, None)
-                    
-                    game.splashes.append({
-                        'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom), 
-                        'time': pygame.time.get_ticks(),
-                        'duration': 600, 'radius': 5, 'type': 'death_burst'
-                    })
+                    if is_animal:
+                        # Handle animal death
+                        hit_zombie.die(game)
+                        if hit_zombie in game.items_on_ground:
+                            game.items_on_ground.remove(hit_zombie)
+                        if hit_zombie in game.active_animals:
+                            game.active_animals.remove(hit_zombie)
+                    else:
+                        # Handle zombie death
+                        zombies_to_remove.append(hit_zombie)
+                        handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, None)
+
+                        game.splashes.append({
+                            'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom),
+                            'time': pygame.time.get_ticks(),
+                            'duration': 600, 'radius': 5, 'type': 'death_burst'
+                        })
 
             projectiles_to_remove.append(p)
-            continue 
+            continue
         
         hit_npc = next((n for n in potential_hits if n in game.npcs and not n.is_dead and p.rect.colliderect(n.rect)), None)
         
@@ -394,11 +414,27 @@ def update_game_state(game):
                                 game.zombies_killed += 1
                              else:
                                  if speed > 0:
-                                     push_x = (vehicle.velocity[0] / speed) * 15 
+                                     push_x = (vehicle.velocity[0] / speed) * 15
                                      push_y = (vehicle.velocity[1] / speed) * 15
                                      entity.knockback_velocity = [push_x, push_y]
                                      entity.knockback_timer = 200
-                        
+
+                        elif getattr(entity, 'type', 'zombie') == 'animal':
+                             # Handle animal roadkill
+                             if entity.take_damage(impact_damage, game):
+                                 entity.die(game)
+                                 if entity in game.items_on_ground:
+                                     game.items_on_ground.remove(entity)
+                                 if entity in game.active_animals:
+                                     game.active_animals.remove(entity)
+                                 display_message_player(f"You ran over an animal!")
+                             else:
+                                 if speed > 0:
+                                     push_x = (vehicle.velocity[0] / speed) * 15
+                                     push_y = (vehicle.velocity[1] / speed) * 15
+                                     entity.knockback_velocity = [push_x, push_y]
+                                     entity.knockback_timer = 200
+
                         elif hasattr(game, 'npcs') and entity in game.npcs:
                              is_dead = entity.take_damage(impact_damage, game, attacker=game.player)
                              if is_dead:
@@ -462,11 +498,19 @@ def player_hit_zombie(player, zombie, game):
 
     final_damage = base_damage * damage_multiplier
 
+    # Calculate hit direction for blood splatter and knockback
+    dx = zombie.rect.centerx - player.rect.centerx
+    dy = zombie.rect.centery - player.rect.centery
+    magnitude = math.hypot(dx, dy)
+    if magnitude > 0:
+        projectile_dir = [dx / magnitude, dy / magnitude]
+
     if is_ranged and knockback_force > 0:
         zombie.knockback_velocity = [projectile_dir[0] * knockback_force, projectile_dir[1] * knockback_force]
-        zombie.knockback_timer = 400 
-        
-        create_blood_splatter(game, zombie.rect, final_damage, projectile_dir)
+        zombie.knockback_timer = 400
+
+    # Create blood splatter for both ranged and melee attacks
+    create_blood_splatter(game, zombie.rect, final_damage, projectile_dir)
 
     game.splashes.append({
         'pos': (zombie.rect.centerx, zombie.rect.bottom),

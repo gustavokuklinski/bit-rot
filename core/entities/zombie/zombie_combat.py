@@ -72,10 +72,13 @@ class ZombieCombat:
 
     def die(self, game):
         """Handles zombie death: plays sound, creates corpse, generates loot."""
+        if self.is_dead: return
+        self.is_dead = True
+        
         # 1. Play sound
         if self.sound_dead:
              game.sound_manager.play_sound(self.sound_dead, subdir='zombie', game=game, source_pos=self.rect.center)
-        
+
         # 2. Create Corpse
         corpse = Corpse(
             name=f"Corpse of {self.name}",
@@ -109,7 +112,11 @@ class ZombieCombat:
         #                 corpse.inventory.append(cloth_item)
 
         game.items_on_ground.append(corpse)
-        
+
         # Remove self from game
         if self in game.zombies:
             game.zombies.remove(self)
+        if self in game.active_zombies:
+            game.active_zombies.remove(self)
+        if self in game.active_animals:
+            game.active_animals.remove(self)

@@ -419,6 +419,13 @@ def draw_game(game):
             pygame.draw.rect(world_view_surface, (128, 0, 128), hover_rect, 2)
             break
 
+    for animal in game.active_animals:
+        if not screen_rect.colliderect(animal.rect): continue
+        if animal.rect.collidepoint(world_mouse_pos):
+            hover_rect = animal.rect.move(offset_x, offset_y)
+            pygame.draw.rect(world_view_surface, (128, 0, 128), hover_rect, 2)
+            break
+
     if game.hovered_interactable_tile_rect:
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
