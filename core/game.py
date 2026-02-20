@@ -594,18 +594,17 @@ class Game:
         self.frame_count += 1
 
         # [OPTIMIZATION] Throttled Grid Updates
-        # Update Zombie grid every 60 frames (1s) as they move
-        if self.frame_count % 60 == 0:
+        # Update Zombie grid every 120 frames (2s) as they move
+        if self.frame_count % 120 == 0:
             self.rebuild_zombie_grid()
 
-        # Update Static grids less frequently (e.g. 120 frames) to catch drops
-        if self.frame_count % 120 == 0:
+        # Update Static grids less frequently (e.g. 240 frames) to catch drops
+        if self.frame_count % 240 == 0:
             self.rebuild_item_grid()
             self.rebuild_container_grid()
 
         # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
-        # Instead of iterating 10,000 entities, we query the grid cells around the player
-        SIMULATION_DISTANCE = 1200  # Reduced from 1600 for better performance
+        SIMULATION_DISTANCE = 900  # Reduced for better performance
         px, py = self.player.rect.center
 
         start_grid_x = int((px - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
@@ -644,11 +643,11 @@ class Game:
         # [OPTIMIZATION] Quadtree Dirty Flag - Only rebuild if entities moved significantly
         quadtree_needs_rebuild = False
 
-        # Check if player moved significantly (more than 32 pixels)
+        # Check if player moved significantly (more than 64 pixels)
         if hasattr(self, 'last_quadtree_player_pos'):
             dx = px - self.last_quadtree_player_pos[0]
             dy = py - self.last_quadtree_player_pos[1]
-            if dx*dx + dy*dy > 1024:  # 32^2 (increased from 256)
+            if dx*dx + dy*dy > 4096:  # 64^2 (increased threshold)
                 quadtree_needs_rebuild = True
         else:
             quadtree_needs_rebuild = True
@@ -660,8 +659,8 @@ class Game:
         else:
             quadtree_needs_rebuild = True
 
-        # Check frame count for periodic rebuild (every 15 frames - reduced frequency)
-        if self.frame_count % 15 == 0:
+        # Check frame count for periodic rebuild (every 30 frames - reduced frequency)
+        if self.frame_count % 30 == 0:
             quadtree_needs_rebuild = True
         
         if quadtree_needs_rebuild:
@@ -703,7 +702,27 @@ class Game:
             manage_dynamic_npcs(self)
             self.npc_spawn_timer = 0
 
+        # [OPTIMIZATION] Only update NPCs within reasonable distance
+        player_pos = self.player.rect.center if self.player else None
+        NPC_UPDATE_RADIUS_SQ = (NPC_DETECTION_RADIUS + 200) ** 2
+        npcs_updated = 0
+        MAX_NPCS_PER_FRAME = 5
+        
         for npc in self.active_npcs:
+            if player_pos:
+                dx = npc.rect.centerx - player_pos[0]
+                dy = npc.rect.centery - player_pos[1]
+                dist_sq = dx*dx + dy*dy
+                
+                # Skip distant NPCs unless they're chasing
+                if dist_sq > NPC_UPDATE_RADIUS_SQ and npc.state != 'chasing':
+                    continue
+            
+            # [OPTIMIZATION] Limit NPCs updated per frame
+            npcs_updated += 1
+            if npcs_updated > MAX_NPCS_PER_FRAME:
+                break
+                
             npc.update(self)
 
         self._cleanup_modals()

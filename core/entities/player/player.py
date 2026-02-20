@@ -423,8 +423,19 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         if self.drop_cooldown > 0:
             self.drop_cooldown -= 1
-        
+
         if self.layer_switch_cooldown > 0:
             self.layer_switch_cooldown -= 1
 
         return False
+
+    def has_line_of_sight(self, target_rect, obstacles):
+        """Checks if there is an uninterrupted line between player and target."""
+        start_pos = self.rect.center
+        end_pos = target_rect.center
+
+        for obs in obstacles:
+            if obs.clipline(start_pos, end_pos):
+                return False
+
+        return True

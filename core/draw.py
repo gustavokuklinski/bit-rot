@@ -332,17 +332,36 @@ def draw_game(game):
             p.draw(world_view_surface, offset_x, offset_y)
 
     # Draw Zombies, Animals, NPCs (via Quadtree)
+    # [OPTIMIZATION] Distance-based with cached LOS checks
     visible_entities = game.quadtree.query(screen_rect.inflate(100, 100))
+    
+    view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
+    current_time = pygame.time.get_ticks()
+    
     for entity in visible_entities:
         if isinstance(entity, (Zombie, NPC, Animal)):
-             # Strict Radius Check
-             dx = entity.rect.centerx - game.player.rect.centerx
-             dy = entity.rect.centery - game.player.rect.centery
-             if (dx*dx + dy*dy) > view_radius_sq: continue
+            # Strict Radius Check
+            dx = entity.rect.centerx - game.player.rect.centerx
+            dy = entity.rect.centery - game.player.rect.centery
+            dist_sq = dx*dx + dy*dy
+            if dist_sq > view_radius_sq: continue
 
-             # Re-check collision to be safe
-             if screen_rect.colliderect(entity.rect):
-                 entity.draw(world_view_surface, offset_x, offset_y, 255)
+            if screen_rect.colliderect(entity.rect):
+                # [OPTIMIZATION] Cached LOS check every 500ms
+                opacity = 255
+                
+                if not hasattr(entity, 'last_los_draw_check'):
+                    entity.last_los_draw_check = 0
+                    entity.cached_los_draw_result = True
+                
+                if current_time - entity.last_los_draw_check > 500:
+                    entity.last_los_draw_check = current_time
+                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.obstacles)
+                
+                if not entity.cached_los_draw_result:
+                    opacity = 80  # Dark/silhouette for entities not in line of sight
+                
+                entity.draw(world_view_surface, offset_x, offset_y, opacity)
 
     game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)

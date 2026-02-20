@@ -48,14 +48,20 @@ class ZombieGraphics:
             current_image = self.images.get('left')
         elif self.vx > 0.1: # Moving right
             current_image = self.images.get('right')
-        
+
         # Default to 'center' if moving vertically or standing still
         if current_image is None:
             current_image = self.images.get('center')
 
         if current_image:
             temp_image = current_image.copy()
-            temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            
+            # If opacity is low (not visible), draw as black silhouette
+            if opacity < 150:
+                temp_image.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MULT)
+            else:
+                temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+            
             if self.walk_anim_angle != 0:
                 rotated_img = pygame.transform.rotate(temp_image, self.walk_anim_angle)
                 rot_rect = rotated_img.get_rect(center=draw_rect.center)
@@ -63,29 +69,35 @@ class ZombieGraphics:
             else:
                 surface.blit(temp_image, draw_rect)
 
-            # Draw clothes
-            for slot, clothe in self.clothes.items():
-                if clothe:
-                    clothe_sprite = None
-                    # [FIX] Handle both Item objects (NPCs) and Dicts (Zombies)
-                    if isinstance(clothe, Item):
-                        if clothe.image:
-                            clothe_sprite = clothe.image.copy()
-                    elif isinstance(clothe, dict):
-                        clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
+            # Draw clothes (only if visible)
+            if opacity >= 150:
+                for slot, clothe in self.clothes.items():
+                    if clothe:
+                        clothe_sprite = None
+                        # [FIX] Handle both Item objects (NPCs) and Dicts (Zombies)
+                        if isinstance(clothe, Item):
+                            if clothe.image:
+                                clothe_sprite = clothe.image.copy()
+                        elif isinstance(clothe, dict):
+                            clothe_sprite = self.load_clothe_sprite(clothe.get('sprite'))
 
-                    if clothe_sprite:
-                        clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-                        if self.walk_anim_angle != 0:
-                            rotated_cloth = pygame.transform.rotate(clothe_sprite, self.walk_anim_angle)
-                            rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
-                            surface.blit(rotated_cloth, rot_cloth_rect)
-                        else:
-                            surface.blit(clothe_sprite, draw_rect)
+                        if clothe_sprite:
+                            clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
+                            if self.walk_anim_angle != 0:
+                                rotated_cloth = pygame.transform.rotate(clothe_sprite, self.walk_anim_angle)
+                                rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
+                                surface.blit(rotated_cloth, rot_cloth_rect)
+                            else:
+                                surface.blit(clothe_sprite, draw_rect)
         else:
             # Fallback for zombies without an image
             temp_surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
-            temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
+            
+            # If opacity is low (not visible), draw as black silhouette
+            if opacity < 150:
+                temp_surface.fill((0, 0, 0, 255))
+            else:
+                temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
 
             if self.walk_anim_angle != 0:
                 rotated_surf = pygame.transform.rotate(temp_surface, self.walk_anim_angle)

@@ -261,33 +261,56 @@ def update_game_state(game):
     # The active list is pre-calculated in game.py
     zombies_alive = getattr(game, 'active_zombies', game.zombies[:])
 
+    # [OPTIMIZATION] Limit zombies processed per frame to prevent spikes
+    MAX_ZOMBIES_PER_FRAME = 20
+    
     # Also update animals (they're stored in items_on_ground but tracked in active_animals)
     animals_alive = getattr(game, 'active_animals', [])
 
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
-    
+
     # [OPTIMIZATION] Only update zombies within a reasonable distance
-    UPDATE_RADIUS_SQ = (core.data.config.ZOMBIE_DETECTION_RADIUS + 200) ** 2
+    UPDATE_RADIUS_SQ = (core.data.config.ZOMBIE_DETECTION_RADIUS + 100) ** 2
+    CHASING_UPDATE_RADIUS_SQ = (core.data.config.ZOMBIE_DETECTION_RADIUS + 300) ** 2
     current_time = pygame.time.get_ticks()
+    
+    zombies_processed = 0
 
     for zombie in list(zombies_alive) + animals_alive:
         # [OPTIMIZATION] Skip zombies too far from player
         dx = player_x - zombie.rect.centerx
         dy = player_y - zombie.rect.centery
         dist_sq = dx*dx + dy*dy
-        
+
         # Only fully update zombies within range or already chasing
-        if dist_sq > UPDATE_RADIUS_SQ and zombie.state != 'chasing':
+        if dist_sq > CHASING_UPDATE_RADIUS_SQ:
             # Skip this zombie entirely - too far to matter
             continue
+        
+        # [OPTIMIZATION] Simplified update for distant zombies
+        if dist_sq > UPDATE_RADIUS_SQ and zombie.state != 'chasing':
+            # Just do basic movement, skip expensive calculations
+            if hasattr(zombie, 'knockback_timer') and zombie.knockback_timer > 0:
+                zombie.knockback_timer -= 16
+            continue
+        
+        # [OPTIMIZATION] Limit zombies processed per frame
+        zombies_processed += 1
+        if zombies_processed > MAX_ZOMBIES_PER_FRAME:
+            # Skip remaining zombies this frame, will be processed next frame
+            break
 
         # Use Quadtree for nearby zombies (only for zombies in range)
-        search_area = zombie.rect.inflate(GRID_SIZE*2, GRID_SIZE*2)
+        search_area = zombie.rect.inflate(GRID_SIZE, GRID_SIZE)  # Reduced from 2x
         nearby_zombies = game.quadtree.query(search_area)
         # Filter for just zombies
         nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
 
-        nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
+        # [OPTIMIZATION] Skip obstacle lookup for distant chasing zombies
+        if dist_sq > UPDATE_RADIUS_SQ:
+            nearby_obstacles = []
+        else:
+            nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]

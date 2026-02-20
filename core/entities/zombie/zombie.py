@@ -136,10 +136,10 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
 
         # [OPTIMIZATION] Cache for line of sight and chase triggers
         self.last_los_check_time = 0
-        self.los_check_interval = 1000  # Check LOS every 1000ms (reduced frequency)
+        self.los_check_interval = 2000  # Check LOS every 2000ms (reduced frequency)
         self.cached_los_result = True
         self.last_trigger_check_time = 0
-        self.trigger_check_interval = 500  # Check triggers every 500ms (reduced frequency)
+        self.trigger_check_interval = 1000  # Check triggers every 1000ms (reduced frequency)
         self.cached_trigger_result = False
 
         self.inventory = []
