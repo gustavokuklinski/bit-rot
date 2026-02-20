@@ -220,6 +220,11 @@ class PlayerActions:
         if not hasattr(item, 'state'):
             return
 
+        # Prevent turning on campfires in inventory (they can only be on when placed on ground)
+        if item.state == "off" and "Campfire" in item.name and source not in ['ground', 'nearby']:
+            display_message_player("Campfires can only be lit when placed on the ground.")
+            return
+
         new_name = ""
         if item.state == "on":
             new_name = item.name.replace(" on", " off")
@@ -227,21 +232,21 @@ class PlayerActions:
             if item.durability is not None and item.durability <= 0:
                 display_message_player(f"Cannot turn on {item.name}, it's out of power.")
                 return
-            
+
             if item.fuel_type == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
                     display_message_player("No matches to light the lantern.")
                     return
-                
+
                 matches.load -= 1
                 if matches.load <= 0:
                     m_inv = self._get_source_inventory(m_source, m_container)
                     if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
                         m_inv.pop(m_index)
-            
+
             new_name = item.name.replace(" off", " on")
-        
+
         if not new_name:
             return
 
@@ -252,11 +257,30 @@ class PlayerActions:
 
         new_item.durability = item.durability
         new_item.load = item.load
+        # Copy position and rect for ground items
+        new_item.rect.center = item.rect.center
+        new_item.x = item.x
+        new_item.y = item.y
 
-        if source and index is not None:
+        # Handle ground and nearby sources (items on ground or in VirtualGroundContainer)
+        if source == 'ground':
+            # Item is in game.items_on_ground, but we don't have game reference here
+            # The replacement will be handled by the caller in mouse_context.py
+            return new_item
+        elif source == 'nearby' and container_item:
+            # Check if it's a VirtualGroundContainer (ground items in nearby modal)
+            if getattr(container_item, 'item_type', '') == 'ground':
+                # Return new_item for caller to handle replacement in game.items_on_ground
+                return new_item
+            # For other containers (corpse, backpack on ground, etc.), modify directly
+            if index is not None and 0 <= index < len(container_item.inventory):
+                container_item.inventory[index] = new_item
+                return
+        elif source and index is not None:
             source_inventory = self._get_source_inventory(source, container_item)
             if source_inventory and index < len(source_inventory) and source_inventory[index] == item:
                 source_inventory[index] = new_item
+                return
             else:
                 print(f"Error: Could not find item {item.name} in {source} to toggle.")
         elif item in self.belt:
@@ -358,8 +382,13 @@ class PlayerActions:
             options.append('Equip')
         elif item.item_type in ['utility', 'mobile']:
             if item.state == 'on': options.append('Turn off')
-            elif item.state == 'off': options.append('Turn on')
-            if item.fuel_type: options.append('Reload') 
+            elif item.state == 'off':
+                # Campfires can only be turned on when on the ground
+                if "Campfire" in item.name and source not in ['ground', 'nearby']:
+                    pass  # Don't add "Turn on" for campfires in inventory
+                else:
+                    options.append('Turn on')
+            if item.fuel_type: options.append('Reload')
             if item.item_type == 'mobile': options.append('Open')
             options.append('Equip')
         elif item.item_type == 'backpack':

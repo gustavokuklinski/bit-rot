@@ -15,23 +15,37 @@ def try_grab_item(game):
             closest_item = item
 
     if closest_item and closest_dist < TILE_SIZE * 2:
+        # Convert "Campfire on" to "Campfire off" when picking up
+        item_to_grab = closest_item
+        if closest_item.name == "Campfire on":
+            from core.entities.item.item import Item
+            new_item = Item.create_from_name("Campfire off")
+            if new_item:
+                new_item.durability = closest_item.durability
+                new_item.load = closest_item.load
+                new_item.rect.center = closest_item.rect.center
+                new_item.x = closest_item.x
+                new_item.y = closest_item.y
+                item_to_grab = new_item
+                print("Campfire extinguished when picked up.")
+
         target_inventory = game.player.inventory
         target_capacity = game.player.base_inventory_slots
         if game.player.backpack and any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals):
             target_inventory = game.player.backpack.inventory
             target_capacity = game.player.backpack.capacity or 0
-        
+
         success = False
         if len(target_inventory) < target_capacity:
-            target_inventory.append(closest_item)
+            target_inventory.append(item_to_grab)
             game.items_on_ground.remove(closest_item)
             success = True
-            print(f"Grabbed {closest_item.name}.")
+            print(f"Grabbed {item_to_grab.name}.")
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
-            game.player.inventory.append(closest_item)
+            game.player.inventory.append(item_to_grab)
             game.items_on_ground.remove(closest_item)
             success = True
-            print(f"Grabbed {closest_item.name} into inventory.")
+            print(f"Grabbed {item_to_grab.name} into inventory.")
         else:
             print("No space to grab the item.")
 

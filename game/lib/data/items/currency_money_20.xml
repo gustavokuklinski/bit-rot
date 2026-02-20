@@ -1,9 +1,0 @@
-<item name="Money 20" type="currency">
-    <properties>
-        <sprite file="currency_money_20.png" />
-        <weight weight="0.01"/>
-        <load min="20" max="20" /> 
-        <capacity value="1000" />
-    </properties>
-    <spawn chance="0" />
-</item>

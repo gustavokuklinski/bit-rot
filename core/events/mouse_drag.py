@@ -102,6 +102,15 @@ def handle_mouse_up(game, event, mouse_pos):
                         if is_external_source:
                             if item_in_slot is None or item_in_slot.can_stack_with(game.dragged_item):
                                 item_ref = game.dragged_item
+                                # Convert "Campfire on" to "Campfire off" when looting
+                                if item_ref.name == "Campfire on":
+                                    from core.entities.item.item import Item
+                                    new_item = Item.create_from_name("Campfire off")
+                                    if new_item:
+                                        new_item.durability = item_ref.durability
+                                        new_item.load = item_ref.load
+                                        item_ref = new_item
+                                        print("Campfire extinguished when picked up.")
                                 def do_belt_loot():
                                     if game.player.belt[i_target] is None:
                                         game.player.belt[i_target] = item_ref
@@ -110,7 +119,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         trans = min(avail, item_ref.load)
                                         game.player.belt[i_target].load += trans
                                         item_ref.load -= trans
-                                
+
                                 game.player.start_action("Looting", 1.0, do_belt_loot, xp_reward=0.5)
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
@@ -187,6 +196,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     elif len(target_container.inventory) < (target_container.capacity or 0):
                                          if is_external_source:
                                              item_ref = game.dragged_item
+                                             # Convert "Campfire on" to "Campfire off" when looting
+                                             if item_ref.name == "Campfire on":
+                                                 from core.entities.item.item import Item
+                                                 new_item = Item.create_from_name("Campfire off")
+                                                 if new_item:
+                                                     new_item.durability = item_ref.durability
+                                                     new_item.load = item_ref.load
+                                                     item_ref = new_item
+                                                     print("Campfire extinguished when picked up.")
                                              def do_tab_loot():
                                                  target_container.inventory.append(item_ref)
                                              game.player.start_action("Looting", 1.0, do_tab_loot, xp_reward=0.5)
@@ -203,6 +221,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if len(target_list) < game.player.get_total_inventory_slots():
                                          if is_external_source:
                                              item_ref = game.dragged_item
+                                             # Convert "Campfire on" to "Campfire off" when looting
+                                             if item_ref.name == "Campfire on":
+                                                 from core.entities.item.item import Item
+                                                 new_item = Item.create_from_name("Campfire off")
+                                                 if new_item:
+                                                     new_item.durability = item_ref.durability
+                                                     new_item.load = item_ref.load
+                                                     item_ref = new_item
+                                                     print("Campfire extinguished when picked up.")
                                              def do_tab_inv_loot():
                                                  target_list.append(item_ref)
                                              game.player.start_action("Looting", 1.0, do_tab_inv_loot, xp_reward=0.5)
@@ -243,6 +270,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if is_external_source:
                                         if game.player.backpack is None:
                                             item_ref = game.dragged_item
+                                            # Convert "Campfire on" to "Campfire off" when looting
+                                            if item_ref.name == "Campfire on":
+                                                from core.entities.item.item import Item
+                                                new_item = Item.create_from_name("Campfire off")
+                                                if new_item:
+                                                    new_item.durability = item_ref.durability
+                                                    new_item.load = item_ref.load
+                                                    item_ref = new_item
+                                                    print("Campfire extinguished when picked up.")
                                             def do_bp_loot():
                                                 game.player.backpack = item_ref
                                             game.player.start_action("Equipping", 1.5, do_bp_loot, xp_reward=0.5)
@@ -389,6 +425,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     
                                     if can_loot:
                                         item_ref = game.dragged_item
+                                        # Convert "Campfire on" to "Campfire off" when looting
+                                        if item_ref.name == "Campfire on":
+                                            from core.entities.item.item import Item
+                                            new_item = Item.create_from_name("Campfire off")
+                                            if new_item:
+                                                new_item.durability = item_ref.durability
+                                                new_item.load = item_ref.load
+                                                item_ref = new_item
+                                                print("Campfire extinguished when picked up.")
                                         def do_container_loot():
                                             if is_stack:
                                                 item_in_dst = container.inventory[target_index]
@@ -583,11 +628,20 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     print("Cannot swap items while equipping from external source.")
                                                     dropped_successfully = False
                                                     break
-                                                
+
                                                 item_ref = dragged_item
+                                                # Convert "Campfire on" to "Campfire off" when looting
+                                                if item_ref.name == "Campfire on":
+                                                    from core.entities.item.item import Item
+                                                    new_item = Item.create_from_name("Campfire off")
+                                                    if new_item:
+                                                        new_item.durability = item_ref.durability
+                                                        new_item.load = item_ref.load
+                                                        item_ref = new_item
+                                                        print("Campfire extinguished when picked up.")
                                                 def do_gear_equip():
                                                     game.player.clothes[slot_name] = item_ref
-                                                
+
                                                 game.player.start_action("Equipping", 1.0, do_gear_equip, xp_reward=0.5)
                                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                 return
@@ -1167,6 +1221,18 @@ def handle_mouse_motion(game, event, mouse_pos):
                     if getattr(container_obj, 'item_type', '') == 'ground':
                         if item_to_drag in game.items_on_ground:
                             game.items_on_ground.remove(item_to_drag)
+                        # Convert "Campfire on" to "Campfire off" when dragging from ground
+                        if item_to_drag.name == "Campfire on":
+                            from core.entities.item.item import Item
+                            new_item = Item.create_from_name("Campfire off")
+                            if new_item:
+                                new_item.durability = item_to_drag.durability
+                                new_item.load = item_to_drag.load
+                                new_item.rect.center = item_to_drag.rect.center
+                                new_item.x = item_to_drag.x
+                                new_item.y = item_to_drag.y
+                                game.dragged_item = new_item
+                                print("Campfire extinguished when picked up (drag).")
                 elif type_orig == 'vehicle_equipment':
                     vehicle = container_info[0]
                     slot_name = i_orig

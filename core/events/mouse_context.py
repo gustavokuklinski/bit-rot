@@ -164,7 +164,21 @@ def handle_context_menu_click(game, mouse_pos):
                     game.player.reload_active_weapon(game=game)
 
             elif option == 'Get bullets': game.player.unload_weapon(game, item)
-            elif option == 'Turn on' or option == 'Turn off': game.player.toggle_utility_item(item, source, index, container_item)
+            elif option == 'Turn on' or option == 'Turn off':
+                result = game.player.toggle_utility_item(item, source, index, container_item)
+                # Handle ground source - replace item in game.items_on_ground
+                if source == 'ground' and result and hasattr(result, 'name'):
+                    if index is not None and 0 <= index < len(game.items_on_ground):
+                        game.items_on_ground[index] = result
+                elif source == 'nearby' and container_item and result and hasattr(result, 'name'):
+                    # Check if it's a VirtualGroundContainer (ground items in nearby modal)
+                    if getattr(container_item, 'item_type', '') == 'ground':
+                        # Find and replace the item in game.items_on_ground using identity comparison
+                        for i, ground_item in enumerate(game.items_on_ground):
+                            if ground_item is item:
+                                game.items_on_ground[i] = result
+                                break
+                    # For other containers, the replacement is already done in toggle_utility_item
             
             elif option == 'Equip':
                 if getattr(item, 'item_type', None) == 'backpack':
@@ -406,14 +420,29 @@ def handle_context_menu_click(game, mouse_pos):
                 
 
             elif (source == 'ground' or source == 'nearby') and option == 'Grab':
-                
+
                 target_inventory = game.player.inventory
                 target_capacity = game.player.get_total_inventory_slots()
-                
+
                 if len(target_inventory) < target_capacity:
-                    
+
                     def do_grab():
                         grabbed = False
+                        item_to_grab = item
+                        
+                        # Convert "Campfire on" to "Campfire off" when picking up
+                        if item.name == "Campfire on":
+                            from core.entities.item.item import Item
+                            new_item = Item.create_from_name("Campfire off")
+                            if new_item:
+                                new_item.durability = item.durability
+                                new_item.load = item.load
+                                new_item.rect.center = item.rect.center
+                                new_item.x = item.x
+                                new_item.y = item.y
+                                item_to_grab = new_item
+                                print("Campfire extinguished when picked up.")
+
                         if source == 'ground' and item in game.items_on_ground:
                             game.items_on_ground.remove(item)
                             grabbed = True
@@ -422,10 +451,10 @@ def handle_context_menu_click(game, mouse_pos):
                             if getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
                             grabbed = True
-                        
+
                         if grabbed:
-                            target_inventory.append(item)
-                            game.player.stack_item_in_inventory(item)
+                            target_inventory.append(item_to_grab)
+                            game.player.stack_item_in_inventory(item_to_grab)
 
                     if source == 'nearby':
                         game.player.start_action("Looting", 1.0, do_grab, xp_reward=0.5)
@@ -440,8 +469,20 @@ def handle_context_menu_click(game, mouse_pos):
                     ground_idx = index
                     if 0 <= ground_idx < len(game.items_on_ground):
                         ground_item = game.items_on_ground[ground_idx]
+                        item_to_place = ground_item
+                        
+                        # Convert "Campfire on" to "Campfire off" when placing in backpack
+                        if ground_item.name == "Campfire on":
+                            from core.entities.item.item import Item
+                            new_item = Item.create_from_name("Campfire off")
+                            if new_item:
+                                new_item.durability = ground_item.durability
+                                new_item.load = ground_item.load
+                                item_to_place = new_item
+                                print("Campfire extinguished when placed in backpack.")
+                        
                         if len(game.player.backpack.inventory) < (game.player.backpack.capacity or 0):
-                            game.player.backpack.inventory.append(ground_item)
+                            game.player.backpack.inventory.append(item_to_place)
                             game.items_on_ground.pop(ground_idx)
 
             clicked_on_menu = True
