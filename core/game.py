@@ -73,20 +73,21 @@ class Game:
         self.quadtree = Quadtree(pygame.Rect(0, 0, total_world_size, total_world_size))
 
         self.player = None
-        self.zombies = [] 
+        self.zombies = []
         self.items_on_ground = []
-        
+
         # [OPTIMIZATION] Spatial Grids & Active Lists
         self.active_zombies = []
         self.active_npcs = []
         self.visible_items = []
         self.visible_containers = []
-        
+
         self.zombie_grid = {}
         self.item_grid = {}
         self.container_grid = {}
-        self.GRID_CELL_SIZE = 512 # Size of spatial buckets
-        
+        # [OPTIMIZATION] Larger grid cells for bigger maps (fewer buckets to iterate)
+        self.GRID_CELL_SIZE = 768 # Size of spatial buckets (increased from 512)
+
         self.frame_count = 0
 
         self.npcs = pygame.sprite.Group()
@@ -603,10 +604,26 @@ class Game:
             self.rebuild_item_grid()
             self.rebuild_container_grid()
 
-        # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
-        SIMULATION_DISTANCE = 900  # Reduced for better performance
+        # [OPTIMIZATION] Dynamic simulation distance based on performance
+        # Scale distance down if too many entities, up if few
         px, py = self.player.rect.center
-
+        
+        # Base simulation distances (in pixels)
+        BASE_SIMULATION_DISTANCE = 800
+        MAX_ACTIVE_ENTITIES_TARGET = 150
+        
+        # Count current entities to adjust simulation distance dynamically
+        total_nearby_entities = len(getattr(self, 'active_zombies', []))
+        
+        # Adjust simulation distance based on entity count
+        if total_nearby_entities > MAX_ACTIVE_ENTITIES_TARGET:
+            SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 0.75  # Reduce by 25%
+        elif total_nearby_entities < MAX_ACTIVE_ENTITIES_TARGET * 0.5:
+            SIMULATION_DISTANCE = min(1200, BASE_SIMULATION_DISTANCE * 1.25)  # Increase by 25%, max 1200
+        else:
+            SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE
+        
+        # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
         start_grid_x = int((px - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
         end_grid_x = int((px + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
         start_grid_y = int((py - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
@@ -637,8 +654,27 @@ class Game:
             if isinstance(item, Animal) and item not in self.active_animals:
                 self.active_animals.append(item)
 
+        # [OPTIMIZATION] Hard caps on active entities to maintain FPS on large maps
+        MAX_ACTIVE_ZOMBIES = 100
+        MAX_ACTIVE_ANIMALS = 30
+        
+        if len(self.active_zombies) > MAX_ACTIVE_ZOMBIES:
+            # Sort by distance and keep closest
+            self.active_zombies.sort(key=lambda z: (z.rect.centerx - px)**2 + (z.rect.centery - py)**2)
+            self.active_zombies = self.active_zombies[:MAX_ACTIVE_ZOMBIES]
+        
+        if len(self.active_animals) > MAX_ACTIVE_ANIMALS:
+            self.active_animals.sort(key=lambda a: (a.rect.centerx - px)**2 + (a.rect.centery - py)**2)
+            self.active_animals = self.active_animals[:MAX_ACTIVE_ANIMALS]
+
         # Active NPCs (small count, can iterate)
         self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
+        
+        # [OPTIMIZATION] Cap active NPCs
+        MAX_ACTIVE_NPCS = 10
+        if len(self.active_npcs) > MAX_ACTIVE_NPCS:
+            self.active_npcs.sort(key=lambda n: (n.rect.centerx - px)**2 + (n.rect.centery - py)**2)
+            self.active_npcs = self.active_npcs[:MAX_ACTIVE_NPCS]
 
         # [OPTIMIZATION] Quadtree Dirty Flag - Only rebuild if entities moved significantly
         quadtree_needs_rebuild = False
@@ -702,11 +738,11 @@ class Game:
             manage_dynamic_npcs(self)
             self.npc_spawn_timer = 0
 
-        # [OPTIMIZATION] Only update NPCs within reasonable distance
+        # [OPTIMIZATION] Only update NPCs within reasonable distance with LOD
         player_pos = self.player.rect.center if self.player else None
-        NPC_UPDATE_RADIUS_SQ = (NPC_DETECTION_RADIUS + 200) ** 2
+        NPC_UPDATE_RADIUS_SQ = (NPC_DETECTION_RADIUS + 300) ** 2
         npcs_updated = 0
-        MAX_NPCS_PER_FRAME = 5
+        MAX_NPCS_PER_FRAME = 8
         
         for npc in self.active_npcs:
             if player_pos:
@@ -717,6 +753,15 @@ class Game:
                 # Skip distant NPCs unless they're chasing
                 if dist_sq > NPC_UPDATE_RADIUS_SQ and npc.state != 'chasing':
                     continue
+                
+                # [OPTIMIZATION] LOD-based update frequency for NPCs
+                if dist_sq > 400**2 and npc.state != 'chasing':
+                    # Update every 2nd frame for medium distance
+                    if dist_sq <= 800**2 and self.frame_count % 2 != 0:
+                        continue
+                    # Update every 4th frame for far distance
+                    elif dist_sq > 800**2 and self.frame_count % 4 != 0:
+                        continue
             
             # [OPTIMIZATION] Limit NPCs updated per frame
             npcs_updated += 1
