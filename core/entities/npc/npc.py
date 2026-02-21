@@ -75,11 +75,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         
         self.stuck_timer = 0
         self.stuck_angle = 0
-        
+
         self.dialog_flags = set()
 
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
+
+        # [NEW] Aggro timer - keeps NPC chasing after being damaged
+        self.aggro_timer = 0
 
         self.inventory = []
         id_card = Item.create_from_name("ID")
@@ -177,23 +180,28 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         # --- KNOCKBACK HANDLING ---
         if self.knockback_timer > 0:
+            VELOCITY_MULTIPLIER = 0.25
             kb_x, kb_y = self.knockback_velocity
-            self.x += kb_x
+            self.x += kb_x * VELOCITY_MULTIPLIER
             self.rect.x = int(self.x)
             for obstacle in obstacles:
                 if self.rect.colliderect(obstacle):
-                    self.x -= kb_x; self.rect.x = int(self.x); break
-            self.y += kb_y
+                    self.x -= kb_x * VELOCITY_MULTIPLIER; self.rect.x = int(self.x); break
+            self.y += kb_y * VELOCITY_MULTIPLIER
             self.rect.y = int(self.y)
             for obstacle in obstacles:
                 if self.rect.colliderect(obstacle):
-                    self.y -= kb_y; self.rect.y = int(self.y); break
+                    self.y -= kb_y * VELOCITY_MULTIPLIER; self.rect.y = int(self.y); break
             self.rect.topleft = (int(self.x), int(self.y))
-            dt = 16 * multiplier 
+            dt = 16 * multiplier
             self.knockback_timer -= dt
             self.knockback_velocity[0] *= 0.9
             self.knockback_velocity[1] *= 0.9
             return
+
+        # --- AGGRO TIMER DECAY ---
+        if self.aggro_timer > 0:
+            self.aggro_timer -= 16
 
         # --- ENTITY SCANNING ---
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
@@ -203,11 +211,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         target_entity = None
         target_pos = None
         
-        FOLLOW_PRIORITY_RANGE = TILE_SIZE * 20 
+        FOLLOW_PRIORITY_RANGE = TILE_SIZE * 20
         player_is_far_and_following = False
+        is_aggroed = self.aggro_timer > 0
         if game.player:
             player_dist = math.hypot(game.player.rect.centerx - self.rect.centerx, game.player.rect.centery - self.rect.centery)
             if self.is_following and player_dist > FOLLOW_PRIORITY_RANGE:
+                player_is_far_and_following = True
+            if is_aggroed and player_dist > FOLLOW_PRIORITY_RANGE:
                 player_is_far_and_following = True
 
         weapon = getattr(self, 'equipped_weapon', None)
@@ -227,7 +238,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     potential_targets.append(npc)
 
         min_dist_to_target = float('inf')
-        
+
         if not player_is_far_and_following:
             for entity in potential_targets:
                 dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
@@ -235,6 +246,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     min_dist_to_target = dist
                     target_entity = entity
                     self.state = 'chasing'
+
+        # [FIX] Aggroed NPCs always chase player
+        if is_aggroed and game.player and not game.player.is_dead:
+            target_entity = game.player
+            self.state = 'chasing'
 
         if not target_entity and self.is_following and game.player or player_is_far_and_following:
             if player_dist > TILE_SIZE * 2 or player_is_far_and_following:

@@ -134,6 +134,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
 
+        # [NEW] Aggro timer - keeps zombie chasing after being damaged
+        self.aggro_timer = 0
+
         # [OPTIMIZATION] Cache for line of sight and chase triggers
         self.last_los_check_time = 0
         self.los_check_interval = 2000  # Check LOS every 2000ms (reduced frequency)
@@ -173,9 +176,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         if self.knockback_timer > 0:
             obstacles = game.obstacles
             multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-            
+
             kb_x, kb_y = self.knockback_velocity
-            
+
             # Move X with collision
             self.x += kb_x
             self.rect.x = int(self.x)
@@ -184,7 +187,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                     self.x -= kb_x
                     self.rect.x = int(self.x)
                     break
-            
+
             # Move Y with collision
             self.y += kb_y
             self.rect.y = int(self.y)
@@ -193,9 +196,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                     self.y -= kb_y
                     self.rect.y = int(self.y)
                     break
-            
+
             # Decay
-            dt = 16 * multiplier 
+            dt = 16 * multiplier
             self.knockback_timer -= dt
             self.knockback_velocity[0] *= 0.9
             self.knockback_velocity[1] *= 0.9

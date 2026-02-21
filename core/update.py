@@ -193,9 +193,43 @@ def update_game_state(game):
                         handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
                         game.zombies_killed += 1
 
+                # [NEW] Trigger chase when hit by projectile - set aggro timer (also alert nearby)
+                if not hit_zombie.is_dead:
+                    hit_zombie.aggro_timer = 10000  # 10 seconds aggro
+                    hit_zombie.state = 'chasing'
+                    
+                    # [NEW] Alert nearby zombies/animals - they hear the gunshot/hit
+                    ALARM_RADIUS = TILE_SIZE * 15
+                    for other_zombie in game.zombies:
+                        if other_zombie != hit_zombie and not other_zombie.is_dead:
+                            dx = other_zombie.rect.centerx - hit_zombie.rect.centerx
+                            dy = other_zombie.rect.centery - hit_zombie.rect.centery
+                            dist_sq = dx*dx + dy*dy
+                            if dist_sq < ALARM_RADIUS ** 2:
+                                # Nearby zombie/animal hears the commotion and starts chasing
+                                other_zombie.aggro_timer = max(other_zombie.aggro_timer, 8000)
+                                other_zombie.state = 'chasing'
+
             else:
                 damage = getattr(p, 'damage', 5)
                 is_dead = hit_zombie.take_damage(damage, game, attacker=owner)
+
+                # [NEW] Trigger chase when hit by projectile - set aggro timer
+                if not is_dead:
+                    hit_zombie.aggro_timer = 10000  # 10 seconds aggro
+                    hit_zombie.state = 'chasing'
+
+                    # [NEW] Alert nearby zombies/animals - they hear the gunshot/hit
+                    ALARM_RADIUS = TILE_SIZE * 15
+                    for other_zombie in game.zombies:
+                        if other_zombie != hit_zombie and not other_zombie.is_dead:
+                            dx = other_zombie.rect.centerx - hit_zombie.rect.centerx
+                            dy = other_zombie.rect.centery - hit_zombie.rect.centery
+                            dist_sq = dx*dx + dy*dy
+                            if dist_sq < ALARM_RADIUS ** 2:
+                                # Nearby zombie/animal hears the commotion and starts chasing
+                                other_zombie.aggro_timer = max(other_zombie.aggro_timer, 8000)
+                                other_zombie.state = 'chasing'
 
                 game.splashes.append({
                     'pos': (hit_zombie.rect.centerx, hit_zombie.rect.bottom),
@@ -239,7 +273,7 @@ def update_game_state(game):
 
              if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
                   knockback_force = getattr(game.player.active_weapon, 'knockback', 0)
-                  
+
                   dx = hit_npc.rect.centerx - game.player.rect.centerx
                   dy = hit_npc.rect.centery - game.player.rect.centery
                   dist = math.hypot(dx, dy)
@@ -247,7 +281,26 @@ def update_game_state(game):
                       ndx, ndy = dx/dist, dy/dist
                       hit_npc.knockback_velocity = [ndx * knockback_force, ndy * knockback_force]
                       hit_npc.knockback_timer = 200
-             
+
+             # [NEW] Trigger chase when hit by projectile - set aggro timer
+             if not hit_npc.is_dead:
+                 hit_npc.aggro_timer = 10000  # 10 seconds aggro
+                 hit_npc.is_following = True
+                 hit_npc.state = 'chasing'
+                 
+                 # [NEW] Alert nearby NPCs - they hear the gunshot/hit
+                 ALARM_RADIUS = TILE_SIZE * 15
+                 for other_npc in game.npcs:
+                     if other_npc != hit_npc and not other_npc.is_dead:
+                         dx = other_npc.rect.centerx - hit_npc.rect.centerx
+                         dy = other_npc.rect.centery - hit_npc.rect.centery
+                         dist_sq = dx*dx + dy*dy
+                         if dist_sq < ALARM_RADIUS ** 2:
+                             # Nearby NPC hears the commotion and becomes hostile
+                             other_npc.aggro_timer = max(other_npc.aggro_timer, 8000)
+                             other_npc.is_following = True
+                             other_npc.state = 'chasing'
+
              is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
              display_message_player(f"You shot {hit_npc.name}")
              if is_dead:
@@ -300,9 +353,10 @@ def update_game_state(game):
         dy = player_y - zombie.rect.centery
         dist_sq = dx*dx + dy*dy
 
-        # Absolute maximum range - skip entirely (unless actively chasing)
+        # Absolute maximum range - skip entirely (unless actively chasing or aggroed)
         is_chasing = getattr(zombie, 'state', None) == 'chasing'
-        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing:
+        is_aggroed = getattr(zombie, 'aggro_timer', 0) > 0
+        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing and not is_aggroed:
             continue
 
         # [OPTIMIZATION] More aggressive LOD-based update frequency
@@ -312,8 +366,8 @@ def update_game_state(game):
             lod_skip = 3 if dist_sq <= LOD_BASE_RADIUS_SQ * 2 else 6
             frame_mod = current_time % (lod_skip * 16)
 
-            # Skip full update but still process knockback
-            if frame_mod > 16:
+            # Skip full update but still process knockback (unless aggroed)
+            if frame_mod > 16 and not is_aggroed:
                 if hasattr(zombie, 'knockback_timer') and zombie.knockback_timer > 0:
                     zombie.knockback_timer -= 16
                 continue
@@ -346,6 +400,10 @@ def update_game_state(game):
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]
+
+        # --- AGGRO TIMER DECAY ---
+        if getattr(zombie, 'aggro_timer', 0) > 0:
+            zombie.aggro_timer -= 16
 
         if getattr(zombie, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
@@ -399,9 +457,10 @@ def update_game_state(game):
         dy = player_y - animal.rect.centery
         dist_sq = dx*dx + dy*dy
 
-        # Absolute maximum range - skip entirely (unless actively chasing)
+        # Absolute maximum range - skip entirely (unless actively chasing or aggroed)
         is_chasing = getattr(animal, 'state', None) == 'chasing'
-        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing:
+        is_aggroed = getattr(animal, 'aggro_timer', 0) > 0
+        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing and not is_aggroed:
             continue
 
         # [OPTIMIZATION] More aggressive LOD-based update frequency
@@ -409,8 +468,8 @@ def update_game_state(game):
             lod_skip = 3 if dist_sq <= LOD_BASE_RADIUS_SQ * 2 else 6
             frame_mod = current_time % (lod_skip * 16)
 
-            # Skip full update but still process knockback
-            if frame_mod > 16:
+            # Skip full update but still process knockback (unless aggroed)
+            if frame_mod > 16 and not is_aggroed:
                 if hasattr(animal, 'knockback_timer') and animal.knockback_timer > 0:
                     animal.knockback_timer -= 16
                 continue
@@ -440,6 +499,10 @@ def update_game_state(game):
 
         kb_vel_x = getattr(animal, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(animal, 'knockback_velocity', [0, 0])[1]
+
+        # --- AGGRO TIMER DECAY ---
+        if getattr(animal, 'aggro_timer', 0) > 0:
+            animal.aggro_timer -= 16
 
         if getattr(animal, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25

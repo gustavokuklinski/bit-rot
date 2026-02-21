@@ -137,19 +137,32 @@ class ZombieAI:
             self.last_trigger_check_time = 0
             self.trigger_check_interval = 300
             self.cached_trigger_result = False
-        
+
         # Use cached result if recently checked (but always check if already chasing)
         if self.state != 'chasing' and current_time - self.last_trigger_check_time < self.trigger_check_interval:
             return self.cached_trigger_result
+
+        base_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
+        # [NEW] Increase detection radius by 3x when player shoots ranged weapon (gunshot noise)
+        if getattr(player, 'gun_flash_timer', 0) > 0:
+            detection_radius = base_detection_radius * 3
+        else:
+            detection_radius = base_detection_radius
         
-        detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
+        detection_radius_sq = detection_radius ** 2
         trigger_result = False
-        
-        # Early exit: zombie too far from player to detect anything
+
+        # [FIX] Early exit: zombie too far from player to detect anything
+        # But allow chase if zombie was recently damaged/aggroed
         dist_sq = dist_to_player * dist_to_player
-        if dist_sq > detection_radius_sq and self.state != 'chasing':
+        is_aggroed = getattr(self, 'aggro_timer', 0) > 0
+        if dist_sq > detection_radius_sq and self.state != 'chasing' and not is_aggroed:
             return False
-        
+
+        # [FIX] Aggroed zombies always chase
+        if is_aggroed:
+            trigger_result = True
+
         # If zombie can see player within detection radius, always chase
         if dist_sq <= detection_radius_sq:
             if core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
@@ -157,24 +170,24 @@ class ZombieAI:
                     trigger_result = True
             else:
                 trigger_result = True
-        
+
         if not trigger_result:
             # Check if player is running (makes noise, attracts zombies)
             if getattr(player, 'is_running', False):
                 if dist_sq <= detection_radius_sq:
                     trigger_result = True
-            
+
             # Check if player is shooting ranged weapon (loud noise)
             if not trigger_result and getattr(player, 'gun_flash_timer', 0) > 0:
                 if dist_sq <= detection_radius_sq:
                     trigger_result = True
-            
+
             # Check if player is using melee weapon (quieter, only very close zombies hear)
             if not trigger_result and getattr(player, 'melee_swing_timer', 0) > 0:
                 melee_noise_radius_sq = (TILE_SIZE * 3) ** 2
                 if dist_sq < melee_noise_radius_sq:
                     trigger_result = True
-            
+
             # Check for moving vehicles (loud noise, attracts zombies)
             # Only check if zombie is close to player area (optimization)
             if not trigger_result and dist_sq <= detection_radius_sq:
@@ -187,11 +200,11 @@ class ZombieAI:
                             if veh_dist_sq < detection_radius_sq:
                                 trigger_result = True
                                 break
-        
+
         # Cache the result
         self.last_trigger_check_time = current_time
         self.cached_trigger_result = trigger_result
-        
+
         return trigger_result
 
     def update_ai(self, player_rect, obstacles, other_zombies, game):
@@ -238,8 +251,11 @@ class ZombieAI:
         # Check chase triggers to determine state
         should_chase = self._check_chase_triggers(game.player, game, dist_to_target, current_time)
 
+        # [FIX] Aggroed zombies always chase player regardless of distance
+        is_aggroed = getattr(self, 'aggro_timer', 0) > 0
+        
         detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
-        if should_chase or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
+        if should_chase or is_aggroed or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
             self.state = 'chasing'
             target_pos = target_rect.center
 
