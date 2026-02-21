@@ -253,11 +253,25 @@ class ZombieAI:
 
         # [FIX] Aggroed zombies always chase player regardless of distance
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
-        
+
         detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
         if should_chase or is_aggroed or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
             self.state = 'chasing'
             target_pos = target_rect.center
+
+            attack_range_sq = self.attack_range ** 2
+            if dist_to_target_sq < attack_range_sq:
+                if current_time - self.last_attack_time > (1000.0 / multiplier):
+                    self.attack(target_entity, game)
+                    self.last_attack_time = current_time
+                    self.vx, self.vy = 0, 0
+                    return
+
+        # [FIX] Once zombie enters chase state, keep chasing (don't go back to wandering)
+        elif self.state == 'chasing':
+            # Keep chasing player even if triggers are not met
+            target_pos = target_rect.center
+            self.state = 'chasing'
 
             attack_range_sq = self.attack_range ** 2
             if dist_to_target_sq < attack_range_sq:

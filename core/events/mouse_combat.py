@@ -107,9 +107,17 @@ def handle_attack(game, mouse_pos):
         else:
             # --- MELEE ATTACK LOGIC ---
             if game.player.progression.handle_melee_attack(game.player):
+                # Consume stamina for melee attack
+                if game.player.stamina > 0:
+                    game.player.stamina = max(0, game.player.stamina - 0.3)
+                
+                # Increase tiredness
+                if game.player.tireness > 0:
+                    game.player.tireness = max(0.0, game.player.tireness - 0.5)
+
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
-                        weapon.sounds['swing'], 
+                        weapon.sounds['swing'],
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center
@@ -118,13 +126,13 @@ def handle_attack(game, mouse_pos):
                 game.player.melee_swing_timer = 10
                 player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
                 player_screen_y = GAME_HEIGHT / 2
-                
+
                 dx_swing = mouse_pos[0] - player_screen_x
                 dy_swing = mouse_pos[1] - player_screen_y
-                
+
                 # Angle for Swing Animation (Inverted Y for Cartesian logic)
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
-          
+
                 hit_something = False
                 world_pos = game.screen_to_world(mouse_pos)
 
@@ -132,6 +140,16 @@ def handle_attack(game, mouse_pos):
                 attack_range = TILE_SIZE * 2.0 # Default melee reach
                 if weapon and hasattr(weapon, 'reach'):
                      attack_range = weapon.reach * TILE_SIZE
+
+                # --- UNARMED COMBAT: Check if player can deal damage ---
+                can_deal_damage = True
+                hand_part = game.player.body_parts.get('hand')
+                feet_part = game.player.body_parts.get('feet')
+                
+                if weapon is None:
+                    # Both hands and feet at 0 - can only push
+                    if hand_part and hand_part['value'] <= 0 and feet_part and feet_part['value'] <= 0:
+                        can_deal_damage = False
 
                 # --- ZOMBIE COLLISION ---
                 for zombie in game.zombies:
@@ -149,9 +167,10 @@ def handle_attack(game, mouse_pos):
 
                         # 2. Hit if clicked directly OR within cone
                         if zombie.rect.collidepoint(world_pos) or angle_diff < 1.0:
-                            if player_hit_zombie(game.player, zombie, game):
-                                handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                                game.zombies_killed += 1
+                            if can_deal_damage:
+                                if player_hit_zombie(game.player, zombie, game):
+                                    handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
+                                    game.zombies_killed += 1
 
                             # [FIX] Apply Knockback to Zombie (Use Screen Coords)
                             dx_kb = zombie.rect.centerx - game.player.rect.centerx
@@ -161,6 +180,26 @@ def handle_attack(game, mouse_pos):
                             force = 7 # Knockback strength
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                             zombie.knockback_timer = 200 # Duration
+
+                            # Unarmed self-damage logic
+                            if weapon is None and can_deal_damage:
+                                # Determine which part to hurt
+                                hurt_part = None
+                                if hand_part and hand_part['value'] > 0:
+                                    # Check if feet has clothing
+                                    feet_cloth = game.player.clothes.get('feet')
+                                    if feet_cloth is None and random.random() < 0.3:
+                                        hurt_part = 'feet'
+                                    else:
+                                        hurt_part = 'hand'
+                                elif feet_part and feet_part['value'] > 0:
+                                    hurt_part = 'feet'
+                                elif hand_part and hand_part['value'] > 0:
+                                    hurt_part = 'hand'
+                                
+                                if hurt_part:
+                                    self_damage = random.randint(1, 3)
+                                    game.player.take_damage_to_part(hurt_part, self_damage)
 
                             hit_something = True
                             break
@@ -179,18 +218,29 @@ def handle_attack(game, mouse_pos):
                             if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
                             if animal.rect.collidepoint(world_pos) or angle_diff < 1.0:
-                                damage = game.player.get_attack_damage()
-                                is_dead = animal.take_damage(damage, game, attacker=game.player)
-                                display_message_player(f"You attacked the animal for {damage} damage!")
+                                if can_deal_damage:
+                                    damage = game.player.get_attack_damage()
+                                    is_dead = animal.take_damage(damage, game, attacker=game.player)
+                                    display_message_player(f"You attacked the animal for {damage} damage!")
 
-                                # Calculate direction for blood splatter and knockback
-                                dx_kb = animal.rect.centerx - game.player.rect.centerx
-                                dy_kb = animal.rect.centery - game.player.rect.centery
-                                kb_angle = math.atan2(dy_kb, dx_kb)
-                                direction = [math.cos(kb_angle), math.sin(kb_angle)]
+                                    # Calculate direction for blood splatter and knockback
+                                    dx_kb = animal.rect.centerx - game.player.rect.centerx
+                                    dy_kb = animal.rect.centery - game.player.rect.centery
+                                    kb_angle = math.atan2(dy_kb, dx_kb)
+                                    direction = [math.cos(kb_angle), math.sin(kb_angle)]
 
-                                # Create blood splatter
-                                create_blood_splatter(game, animal.rect, damage, direction)
+                                    # Create blood splatter
+                                    create_blood_splatter(game, animal.rect, damage, direction)
+
+                                    if is_dead:
+                                        animal.die(game)
+                                        if animal in game.items_on_ground:
+                                            game.items_on_ground.remove(animal)
+                                        if animal in game.active_animals:
+                                            game.active_animals.remove(animal)
+                                        display_message_player(f"You killed the animal!")
+                                else:
+                                    is_dead = False
 
                                 # Apply Knockback
                                 if dist > 0:
@@ -198,13 +248,23 @@ def handle_attack(game, mouse_pos):
                                     animal.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                                     animal.knockback_timer = 200
 
-                                if is_dead:
-                                    animal.die(game)
-                                    if animal in game.items_on_ground:
-                                        game.items_on_ground.remove(animal)
-                                    if animal in game.active_animals:
-                                        game.active_animals.remove(animal)
-                                    display_message_player(f"You killed the animal!")
+                                # Unarmed self-damage logic
+                                if weapon is None and can_deal_damage:
+                                    hurt_part = None
+                                    if hand_part and hand_part['value'] > 0:
+                                        feet_cloth = game.player.clothes.get('feet')
+                                        if feet_cloth is None and random.random() < 0.3:
+                                            hurt_part = 'feet'
+                                        else:
+                                            hurt_part = 'hand'
+                                    elif feet_part and feet_part['value'] > 0:
+                                        hurt_part = 'feet'
+                                    elif hand_part and hand_part['value'] > 0:
+                                        hurt_part = 'hand'
+                                    
+                                    if hurt_part:
+                                        self_damage = random.randint(1, 3)
+                                        game.player.take_damage_to_part(hurt_part, self_damage)
 
                                 hit_something = True
                                 break
@@ -224,24 +284,45 @@ def handle_attack(game, mouse_pos):
                                 if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
                                 if npc.rect.collidepoint(world_pos) or angle_diff < 1.0:
-                                    damage = game.player.get_attack_damage()
-                                    is_dead = npc.take_damage(damage, game, attacker=game.player)
-                                    display_message(game, f"You attacked {npc.name} for {damage} damage!")
+                                    if can_deal_damage:
+                                        damage = game.player.get_attack_damage()
+                                        is_dead = npc.take_damage(damage, game, attacker=game.player)
+                                        display_message(game, f"You attacked {npc.name} for {damage} damage!")
 
-                                    # Calculate direction for blood splatter and knockback
-                                    dx_kb = npc.rect.centerx - game.player.rect.centerx
-                                    dy_kb = npc.rect.centery - game.player.rect.centery
-                                    kb_angle = math.atan2(dy_kb, dx_kb)
-                                    direction = [math.cos(kb_angle), math.sin(kb_angle)]
+                                        # Calculate direction for blood splatter and knockback
+                                        dx_kb = npc.rect.centerx - game.player.rect.centerx
+                                        dy_kb = npc.rect.centery - game.player.rect.centery
+                                        kb_angle = math.atan2(dy_kb, dx_kb)
+                                        direction = [math.cos(kb_angle), math.sin(kb_angle)]
 
-                                    # Create blood splatter
-                                    create_blood_splatter(game, npc.rect, damage, direction)
+                                        # Create blood splatter
+                                        create_blood_splatter(game, npc.rect, damage, direction)
+                                    else:
+                                        is_dead = False
 
                                     # [FIX] Apply Knockback to NPC (Use Screen Coords)
                                     if dist > 0:
                                         force = 7
                                         npc.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
                                         npc.knockback_timer = 200
+
+                                    # Unarmed self-damage logic
+                                    if weapon is None and can_deal_damage:
+                                        hurt_part = None
+                                        if hand_part and hand_part['value'] > 0:
+                                            feet_cloth = game.player.clothes.get('feet')
+                                            if feet_cloth is None and random.random() < 0.3:
+                                                hurt_part = 'feet'
+                                            else:
+                                                hurt_part = 'hand'
+                                        elif feet_part and feet_part['value'] > 0:
+                                            hurt_part = 'feet'
+                                        elif hand_part and hand_part['value'] > 0:
+                                            hurt_part = 'hand'
+                                        
+                                        if hurt_part:
+                                            self_damage = random.randint(1, 3)
+                                            game.player.take_damage_to_part(hurt_part, self_damage)
 
                                     hit_something = True
                                     break
@@ -250,37 +331,41 @@ def handle_attack(game, mouse_pos):
                 if not hit_something:
                      clicked_grid_x = int(world_pos[0] // TILE_SIZE)
                      clicked_grid_y = int(world_pos[1] // TILE_SIZE)
-                     
+
                      target_found = False
-                     
-                     for offset_y in range(4): 
+
+                     for offset_y in range(4):
                          target_y = clicked_grid_y + offset_y
-                         
+
                          tile_def = game.map_manager.get_tile_at(clicked_grid_x, target_y)
-                         
+
                          if tile_def and tile_def.get('destructible'):
-                             
+
                              tile_center_x = clicked_grid_x * TILE_SIZE + TILE_SIZE / 2
                              tile_center_y = target_y * TILE_SIZE + TILE_SIZE / 2
                              dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
-                             
+
                              if dist <= TILE_SIZE * 2:
                                  if weapon is None:
+                                     # Check if player can hit tiles
+                                     if not can_deal_damage:
+                                         display_message(game, "Your hands and feet are too injured to hit this!")
+                                         hit_something = True
+                                         break
                                      hand_part = game.player.body_parts.get('hand')
-                                     if hand_part:
-                                         if hand_part['value'] <= 10:
-                                             display_message(game, "Your hands are too injured to hit this!")
-                                             hit_something = True 
-                                             break
-                                         else:
-                                             self_damage = random.randint(1, 2)
-                                             game.player.take_damage_to_part('hand', self_damage)
+                                     if hand_part and hand_part['value'] <= 10:
+                                         display_message(game, "Your hands are too injured to hit this!")
+                                         hit_something = True
+                                         break
+                                     else:
+                                         self_damage = random.randint(1, 2)
+                                         game.player.take_damage_to_part('hand', self_damage)
 
                                  damage = game.player.get_attack_damage()
                                  result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
                                  if result:
                                      hit_something = True
                                      target_found = True
-                                     break 
+                                     break
 
                 if not hit_something: print("Swung and missed!")
