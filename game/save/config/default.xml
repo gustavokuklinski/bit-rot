@@ -12,11 +12,10 @@
         <day_night_cycle_darkness value="255" name="Darkness color (Default: 255)"/>
         <zoom_start value="3.0" name="Zoom start (Default: 3.0)"/>
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
-        <zoom_near value="4.0" name="Zoom max near (Default: 4.0)"/>
+        <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
     </game>
     <map>
         <map_chunks value="2" name="Max map chunks (Default: 2)"/>
-        <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>
@@ -84,7 +83,7 @@
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="15" name="Player detection (Default: 15)"/>
+        <zombie_detection_radius value="5" name="Player detection sight (Default: 5)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>

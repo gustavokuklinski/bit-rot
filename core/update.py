@@ -261,21 +261,23 @@ def update_game_state(game):
     # The active list is pre-calculated in game.py
     zombies_alive = getattr(game, 'active_zombies', game.zombies[:])
 
-    # [OPTIMIZATION] Limit zombies processed per frame to prevent spikes
-    MAX_ZOMBIES_PER_FRAME = 25
+    # [OPTIMIZATION] Dynamic MAX_ZOMBIES_PER_FRAME based on map size
+    # Larger maps = fewer zombies processed per frame to maintain FPS
+    map_chunks = getattr(core.data.config, 'MAP_CHUNKS', 2)
+    MAX_ZOMBIES_PER_FRAME = max(12, 25 - (map_chunks * 2))
 
     # Also update animals (they're stored in items_on_ground but tracked in active_animals)
     animals_alive = getattr(game, 'active_animals', [])
 
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
 
-    # [OPTIMIZATION] Level of Detail (LOD) tiers for large maps
-    # LOD 1: Full update (0-400px) - every frame
-    # LOD 2: Simplified update (400-800px) - every 2nd frame  
-    # LOD 3: Minimal update (800px+) - every 4th frame or chasing
-    LOD_1_RADIUS_SQ = 400 ** 2
-    LOD_2_RADIUS_SQ = 800 ** 2
-    LOD_3_RADIUS_SQ = 1200 ** 2
+    # [OPTIMIZATION] Dynamic LOD tiers based on map chunks
+    # Larger maps = more aggressive LOD to maintain 60 FPS
+    # LOD 1: Full update - every frame (AI, pathfinding, collisions)
+    # LOD 2: Simplified update - every 3rd frame (reduced queries)
+    # LOD 3: Minimal update - every 6th frame (only chasing zombies)
+    lod_scale = 1.0 + (map_chunks * 0.15)  # Scale distances up for larger maps
+    LOD_BASE_RADIUS_SQ = int(CHUNK_SIZE * 22 * lod_scale) ** 2
     
     current_time = pygame.time.get_ticks()
     zombies_processed = 0
@@ -286,16 +288,20 @@ def update_game_state(game):
         dy = player_y - zombie.rect.centery
         dist_sq = dx*dx + dy*dy
 
-        # Absolute maximum range - skip entirely
-        if dist_sq > LOD_3_RADIUS_SQ and zombie.state != 'chasing':
+        # Absolute maximum range - skip entirely (unless actively chasing)
+        is_chasing = getattr(zombie, 'state', None) == 'chasing'
+        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing:
             continue
 
-        # [OPTIMIZATION] LOD-based update frequency
-        if dist_sq > LOD_1_RADIUS_SQ:
-            # LOD 2/3: Update every 2nd or 4th frame based on distance
-            lod_skip = 2 if dist_sq <= LOD_2_RADIUS_SQ else 4
-            if current_time % (lod_skip * 16) > 16:  # Approximate frame-based check
-                # Still update knockback
+        # [OPTIMIZATION] More aggressive LOD-based update frequency
+        # LOD 2: Update every 3rd frame (reduced AI queries)
+        # LOD 3: Update every 6th frame (only movement, no queries)
+        if dist_sq > LOD_BASE_RADIUS_SQ:
+            lod_skip = 3 if dist_sq <= LOD_BASE_RADIUS_SQ * 2 else 6
+            frame_mod = current_time % (lod_skip * 16)
+
+            # Skip full update but still process knockback
+            if frame_mod > 16:
                 if hasattr(zombie, 'knockback_timer') and zombie.knockback_timer > 0:
                     zombie.knockback_timer -= 16
                 continue
@@ -305,17 +311,26 @@ def update_game_state(game):
         if zombies_processed > MAX_ZOMBIES_PER_FRAME:
             break
 
-        # [OPTIMIZATION] Reduce quadtree query size for distant zombies
-        query_inflate = GRID_SIZE if dist_sq > LOD_1_RADIUS_SQ else GRID_SIZE
-        search_area = zombie.rect.inflate(query_inflate, query_inflate)
-        nearby_zombies = game.quadtree.query(search_area)
-        nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
-
-        # [OPTIMIZATION] Skip obstacle lookup for distant zombies
-        if dist_sq > LOD_1_RADIUS_SQ:
+        # [OPTIMIZATION] Adaptive quadtree query and obstacle lookup based on LOD
+        # LOD 1: Full queries (AI needs accurate data)
+        # LOD 2: Smaller query radius, skip obstacles
+        # LOD 3: Skip all queries (zombies far away)
+        if dist_sq <= LOD_BASE_RADIUS_SQ:
+            # LOD 1: Full queries
+            search_area = zombie.rect.inflate(GRID_SIZE, GRID_SIZE)
+            nearby_zombies = game.quadtree.query(search_area)
+            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
+            nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
+        elif dist_sq <= LOD_BASE_RADIUS_SQ * 2:
+            # LOD 2: Reduced queries, no obstacle lookup
+            search_area = zombie.rect.inflate(GRID_SIZE // 2, GRID_SIZE // 2)
+            nearby_zombies = game.quadtree.query(search_area)
+            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
             nearby_obstacles = []
         else:
-            nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
+            # LOD 3: Skip all spatial queries
+            nearby_zombies = []
+            nearby_obstacles = []
 
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]

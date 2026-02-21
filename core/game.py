@@ -85,8 +85,16 @@ class Game:
         self.zombie_grid = {}
         self.item_grid = {}
         self.container_grid = {}
-        # [OPTIMIZATION] Larger grid cells for bigger maps (fewer buckets to iterate)
-        self.GRID_CELL_SIZE = 768 # Size of spatial buckets (increased from 512)
+        # [OPTIMIZATION] Dynamic grid cell size based on chunk size
+        # Larger chunks = larger grid cells to reduce bucket count
+        # Formula: 3x chunk tile size (in pixels), clamped between 512-2048
+        self.GRID_CELL_SIZE = max(512, min(2048, c_size * t_size * 3))
+
+        # [OPTIMIZATION] Movement-based grid rebuild tracking
+        self.last_zombie_grid_positions = {}  # Track zombie positions for movement detection
+        self.last_item_grid_positions = {}
+        self.last_container_grid_positions = {}
+        self.GRID_REBUILD_THRESHOLD = self.GRID_CELL_SIZE // 4  # Rebuild if entity moves 1/4 cell
 
         self.frame_count = 0
 
@@ -567,15 +575,64 @@ class Game:
                     return
         self._update_screen()
 
-    # [NEW] Grid Rebuild Methods
+    # [NEW] Grid Rebuild Methods with Movement Detection
+    def _check_significant_movement(self, entity, tracked_dict, entity_id):
+        """Check if an entity has moved significantly since last grid rebuild."""
+        current_pos = (entity.rect.centerx, entity.rect.centery)
+        if entity_id not in tracked_dict:
+            tracked_dict[entity_id] = current_pos
+            return True
+        
+        last_pos = tracked_dict[entity_id]
+        dx = current_pos[0] - last_pos[0]
+        dy = current_pos[1] - last_pos[1]
+        dist_sq = dx*dx + dy*dy
+        
+        if dist_sq > self.GRID_REBUILD_THRESHOLD ** 2:
+            tracked_dict[entity_id] = current_pos
+            return True
+        return False
+
     def rebuild_zombie_grid(self):
+        """Rebuild zombie grid only if significant movement detected."""
+        needs_rebuild = False
+        
+        # Check if any zombie moved significantly
+        for z in self.zombies:
+            z_id = id(z)
+            if self._check_significant_movement(z, self.last_zombie_grid_positions, z_id):
+                needs_rebuild = True
+                break
+        
+        if not needs_rebuild and len(self.zombies) == len(self.last_zombie_grid_positions):
+            return  # Skip rebuild - no significant movement
+        
+        # Cleanup removed zombies from tracking
+        zombie_ids = {id(z) for z in self.zombies}
+        for z_id in list(self.last_zombie_grid_positions.keys()):
+            if z_id not in zombie_ids:
+                del self.last_zombie_grid_positions[z_id]
+        
         self.zombie_grid.clear()
         for z in self.zombies:
             key = (int(z.rect.centerx // self.GRID_CELL_SIZE), int(z.rect.centery // self.GRID_CELL_SIZE))
             if key not in self.zombie_grid: self.zombie_grid[key] = []
             self.zombie_grid[key].append(z)
 
-    def rebuild_item_grid(self):
+    def rebuild_item_grid(self, force=False):
+        """Rebuild item grid only if items changed or moved significantly."""
+        # Items on ground are mostly static, rebuild only on count change or periodic check
+        if not hasattr(self, '_last_item_count'):
+            self._last_item_count = 0
+        
+        # Force rebuild if count changed or every 60 frames
+        if len(self.items_on_ground) != self._last_item_count:
+            self._last_item_count = len(self.items_on_ground)
+            force = True
+        
+        if not force and self.frame_count % 60 != 0:
+            return  # Skip rebuild - no new items
+        
         self.item_grid.clear()
         for i in self.items_on_ground:
             key = (int(i.rect.centerx // self.GRID_CELL_SIZE), int(i.rect.centery // self.GRID_CELL_SIZE))
@@ -583,6 +640,14 @@ class Game:
             self.item_grid[key].append(i)
 
     def rebuild_container_grid(self):
+        """Rebuild container grid only if containers changed or moved significantly."""
+        if not hasattr(self, '_last_container_count'):
+            self._last_container_count = 0
+        
+        if len(self.containers) == self._last_container_count and self.frame_count % 60 != 0:
+            return  # Skip rebuild
+        
+        self._last_container_count = len(self.containers)
         self.container_grid.clear()
         for c in self.containers:
             key = (int(c.rect.centerx // self.GRID_CELL_SIZE), int(c.rect.centery // self.GRID_CELL_SIZE))
@@ -594,13 +659,12 @@ class Game:
         handle_input(self)
         self.frame_count += 1
 
-        # [OPTIMIZATION] Throttled Grid Updates
-        # Update Zombie grid every 120 frames (2s) as they move
-        if self.frame_count % 120 == 0:
-            self.rebuild_zombie_grid()
-
-        # Update Static grids less frequently (e.g. 240 frames) to catch drops
-        if self.frame_count % 240 == 0:
+        # [OPTIMIZATION] Movement-based Grid Updates (no fixed intervals)
+        # Grids rebuild only when entities move significantly
+        self.rebuild_zombie_grid()
+        
+        # Static grids rebuild less frequently (items/containers are mostly static)
+        if self.frame_count % 60 == 0:
             self.rebuild_item_grid()
             self.rebuild_container_grid()
 

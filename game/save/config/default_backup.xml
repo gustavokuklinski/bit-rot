@@ -12,11 +12,10 @@
         <day_night_cycle_darkness value="255" name="Darkness color (Default: 255)"/>
         <zoom_start value="3.0" name="Zoom start (Default: 3.0)"/>
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
-        <zoom_near value="4.0" name="Zoom max near (Default: 4.0)"/>
+        <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
     </game>
     <map>
         <map_chunks value="2" name="Max map chunks (Default: 2)"/>
-        <map_chunk_size value="128" name="Single chunk size (Default: 128)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>
@@ -70,7 +69,7 @@
     <npc>
         <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
         <static_spawn_chance value="0.2" name="Max Static NPC (Default: 0.2)"/>
-        <hostile_spawn_chance value="0.3" name="Max Hostile NPC (Default: 0.3)"/>
+        <hostile_spawn_chance value="0.5" name="Max Hostile NPC (Default: 0.5)"/>
         <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
         <spawn_chance value="1.0" name="Spawn Chance (Default: 1.0)"/>
         <health_multiplier value="1.0" name="Health Multiplier (Default: 1.0)"/>
@@ -79,12 +78,12 @@
         <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk - Fixed value (Default: 10)"/>
+        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
         <zombie_multiplier value="1" name="Multiplier by day (Default: 1)"/>
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>
         <drop value="1" name="Drop (Default: 1)"/>
-        <zombie_detection_radius value="100" name="Player detection tiles (Default: 100)"/>
+        <zombie_detection_radius value="5" name="Player detection sight (Default: 5)"/>
         <wander value="true" name="Zombie wandering"/>
         <wander_interval value="2000" name="Wandering timing (Default: 2000)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>

@@ -169,7 +169,16 @@ def draw_game(game):
     # Light Mask Caching - Cache at zoom levels to avoid expensive transform.scale every frame
     if not hasattr(game, 'light_mask_cache'):
         game.light_mask_cache = {}
-    
+
+    # [OPTIMIZATION] Cleanup light_mask_cache to prevent memory bloat
+    # Keep only the most recently used entries (max 20)
+    MAX_LIGHT_CACHE_ENTRIES = 20
+    if len(game.light_mask_cache) > MAX_LIGHT_CACHE_ENTRIES:
+        # Remove oldest entries (keep last N)
+        keys = list(game.light_mask_cache.keys())
+        for key in keys[:-MAX_LIGHT_CACHE_ENTRIES]:
+            del game.light_mask_cache[key]
+
     low_res_w = view_w // 2
     low_res_h = view_h // 2
     light_mask_low = pygame.Surface((low_res_w, low_res_h))

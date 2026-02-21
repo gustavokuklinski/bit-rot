@@ -113,6 +113,10 @@ class ZombieCombat:
 
         game.items_on_ground.append(corpse)
 
+        # [FIX] Force immediate item grid rebuild so corpse displays instantly
+        if hasattr(game, 'rebuild_item_grid'):
+            game.rebuild_item_grid(force=True)
+
         # Remove self from game
         if self in game.zombies:
             game.zombies.remove(self)

@@ -221,7 +221,7 @@ def load_settings(preset="default"):
 
         map_config = root.find('map')
         MAP_CHUNKS = int(map_config.find('map_chunks').get('value'))
-        CHUNK_SIZE = int(map_config.find('map_chunk_size').get('value'))
+        CHUNK_SIZE = 128
         
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file

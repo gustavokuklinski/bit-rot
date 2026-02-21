@@ -179,12 +179,14 @@ class MapManager:
         ground_data = None
         base_data = None
         roof_data = None
+        light_data = None
 
         # If requesting the currently active layer, use the direct references for speed
         if layer_idx == self.game.current_layer_index:
             ground_data = getattr(self.game, 'ground_data', None)
             base_data = getattr(self.game, 'map_data', None)
             roof_data = getattr(self.game, 'roof_data', None)
+            light_data = getattr(self.game, 'light_data', None)
         else:
             # Otherwise fetch from storage
             if hasattr(self.game, 'all_ground_layers'):
@@ -193,6 +195,8 @@ class MapManager:
                 base_data = self.game.all_map_layers.get(layer_idx)
             if hasattr(self.game, 'all_roof_layers'):
                 roof_data = self.game.all_roof_layers.get(layer_idx)
+            if hasattr(self.game, 'all_light_layers'):
+                light_data = self.game.all_light_layers.get(layer_idx)
 
         tm = self.game.tile_manager
 
@@ -223,9 +227,28 @@ class MapManager:
             if base_data:
                 y_start = max(0, min_y)
                 y_end = min(max_y, len(base_data))
-                
+
                 for y in range(y_start, y_end):
                     row_data = base_data[y]
+                    row_len = len(row_data)
+
+                    x_start = max(0, min_x)
+                    x_end = min(max_x, row_len)
+
+                    for x in range(x_start, x_end):
+                        char = row_data[x]
+                        if char and char != ' ':
+                            defn = tm.definitions.get(char)
+                            if defn:
+                                surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+
+            # 3. Light Layer (Light source tiles)
+            if light_data:
+                y_start = max(0, min_y)
+                y_end = min(max_y, len(light_data))
+
+                for y in range(y_start, y_end):
+                    row_data = light_data[y]
                     row_len = len(row_data)
 
                     x_start = max(0, min_x)

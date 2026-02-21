@@ -116,6 +116,10 @@ class NPCCombat:
 
         game.items_on_ground.append(corpse)
 
+        # [FIX] Force immediate item grid rebuild so corpse displays instantly
+        if hasattr(game, 'rebuild_item_grid'):
+            game.rebuild_item_grid(force=True)
+
         if self in game.npcs:
             game.npcs.remove(self)
         if self in game.active_npcs:
