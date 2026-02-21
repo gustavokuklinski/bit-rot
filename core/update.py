@@ -269,6 +269,9 @@ def update_game_state(game):
     # Also update animals (they're stored in items_on_ground but tracked in active_animals)
     animals_alive = getattr(game, 'active_animals', [])
 
+    # [OPTIMIZATION] Separate limit for animals to ensure they get processed
+    MAX_ANIMALS_PER_FRAME = max(6, MAX_ZOMBIES_PER_FRAME // 2)
+
     player_x, player_y = game.player.rect.centerx, game.player.rect.centery
 
     # [OPTIMIZATION] Dynamic LOD tiers based on map chunks
@@ -278,11 +281,20 @@ def update_game_state(game):
     # LOD 3: Minimal update - every 6th frame (only chasing zombies)
     lod_scale = 1.0 + (map_chunks * 0.15)  # Scale distances up for larger maps
     LOD_BASE_RADIUS_SQ = int(CHUNK_SIZE * 22 * lod_scale) ** 2
-    
+
     current_time = pygame.time.get_ticks()
     zombies_processed = 0
+    animals_processed = 0
 
-    for zombie in list(zombies_alive) + animals_alive:
+    # [FIX] Sort zombies by distance to player - closest ones must be processed first
+    # This ensures zombies near the player always get updated, even if we hit the frame limit
+    zombies_by_distance = sorted(
+        zombies_alive,
+        key=lambda z: (z.rect.centerx - player_x)**2 + (z.rect.centery - player_y)**2
+    )
+
+    # Update zombies first (closest first)
+    for zombie in zombies_by_distance:
         # [OPTIMIZATION] Skip zombies way too far from player
         dx = player_x - zombie.rect.centerx
         dy = player_y - zombie.rect.centery
@@ -373,7 +385,99 @@ def update_game_state(game):
         zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
         # [OPTIMIZATION] Removed redundant attack check - handled in update_ai
-        
+
+    # [FIX] Sort animals by distance to player - closest ones must be processed first
+    animals_by_distance = sorted(
+        animals_alive,
+        key=lambda a: (a.rect.centerx - player_x)**2 + (a.rect.centery - player_y)**2
+    )
+
+    # Update animals separately (they use Zombie AI but need their own processing limit)
+    for animal in animals_by_distance:
+        # [OPTIMIZATION] Skip animals way too far from player
+        dx = player_x - animal.rect.centerx
+        dy = player_y - animal.rect.centery
+        dist_sq = dx*dx + dy*dy
+
+        # Absolute maximum range - skip entirely (unless actively chasing)
+        is_chasing = getattr(animal, 'state', None) == 'chasing'
+        if dist_sq > LOD_BASE_RADIUS_SQ * 4 and not is_chasing:
+            continue
+
+        # [OPTIMIZATION] More aggressive LOD-based update frequency
+        if dist_sq > LOD_BASE_RADIUS_SQ:
+            lod_skip = 3 if dist_sq <= LOD_BASE_RADIUS_SQ * 2 else 6
+            frame_mod = current_time % (lod_skip * 16)
+
+            # Skip full update but still process knockback
+            if frame_mod > 16:
+                if hasattr(animal, 'knockback_timer') and animal.knockback_timer > 0:
+                    animal.knockback_timer -= 16
+                continue
+
+        # [OPTIMIZATION] Limit animals processed per frame
+        animals_processed += 1
+        if animals_processed > MAX_ANIMALS_PER_FRAME:
+            break
+
+        # [OPTIMIZATION] Adaptive quadtree query and obstacle lookup based on LOD
+        if dist_sq <= LOD_BASE_RADIUS_SQ:
+            # LOD 1: Full queries
+            search_area = animal.rect.inflate(GRID_SIZE, GRID_SIZE)
+            nearby_zombies = game.quadtree.query(search_area)
+            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != animal]
+            nearby_obstacles = get_nearby_obstacles(animal.rect, game.cached_obstacle_grid, GRID_SIZE)
+        elif dist_sq <= LOD_BASE_RADIUS_SQ * 2:
+            # LOD 2: Reduced queries, no obstacle lookup
+            search_area = animal.rect.inflate(GRID_SIZE // 2, GRID_SIZE // 2)
+            nearby_zombies = game.quadtree.query(search_area)
+            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != animal]
+            nearby_obstacles = []
+        else:
+            # LOD 3: Skip all spatial queries
+            nearby_zombies = []
+            nearby_obstacles = []
+
+        kb_vel_x = getattr(animal, 'knockback_velocity', [0, 0])[0]
+        kb_vel_y = getattr(animal, 'knockback_velocity', [0, 0])[1]
+
+        if getattr(animal, 'knockback_timer', 0) > 0:
+            VELOCITY_MULTIPLIER = 0.25
+            dx = kb_vel_x * VELOCITY_MULTIPLIER
+            dy = kb_vel_y * VELOCITY_MULTIPLIER
+
+            original_x = animal.x
+            animal.x += dx
+            animal.rect.x = int(animal.x)
+
+            collision_x = False
+            for obs in nearby_obstacles:
+                if animal.rect.colliderect(obs):
+                    collision_x = True; break
+
+            if collision_x:
+                animal.x = original_x; animal.rect.x = int(animal.x); animal.knockback_velocity[0] = 0
+
+            original_y = animal.y
+            animal.y += dy
+            animal.rect.y = int(animal.y)
+
+            collision_y = False
+            for obs in nearby_obstacles:
+                if animal.rect.colliderect(obs):
+                    collision_y = True; break
+
+            if collision_y:
+                animal.y = original_y; animal.rect.y = int(animal.y); animal.knockback_velocity[1] = 0
+
+            animal.rect.topleft = (int(animal.x), int(animal.y))
+
+            animal.knockback_velocity[0] *= 0.9
+            animal.knockback_velocity[1] *= 0.9
+            animal.knockback_timer -= game.clock.get_time()
+
+        animal.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
+
     if zombies_to_remove:
         game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
     

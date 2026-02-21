@@ -595,29 +595,62 @@ class Game:
 
     def rebuild_zombie_grid(self):
         """Rebuild zombie grid only if significant movement detected."""
-        needs_rebuild = False
-        
-        # Check if any zombie moved significantly
-        for z in self.zombies:
-            z_id = id(z)
-            if self._check_significant_movement(z, self.last_zombie_grid_positions, z_id):
-                needs_rebuild = True
-                break
-        
-        if not needs_rebuild and len(self.zombies) == len(self.last_zombie_grid_positions):
-            return  # Skip rebuild - no significant movement
-        
-        # Cleanup removed zombies from tracking
+        from core.entities.animal.animal import Animal
+
+        # Count current zombies and animals
+        current_zombie_count = len(self.zombies)
+        current_animal_count = sum(1 for item in self.items_on_ground if isinstance(item, Animal))
+        current_total = current_zombie_count + current_animal_count
+
+        # Check if count changed (new spawns or deaths)
+        tracked_total = len(self.last_zombie_grid_positions)
+        if current_total != tracked_total:
+            # Count changed - force rebuild
+            pass
+        else:
+            # Count same - check for significant movement
+            needs_rebuild = False
+
+            # Check if any zombie moved significantly
+            for z in self.zombies:
+                z_id = id(z)
+                if self._check_significant_movement(z, self.last_zombie_grid_positions, z_id):
+                    needs_rebuild = True
+                    break
+
+            # Also check animals (they're in items_on_ground but tracked as zombies for AI)
+            if not needs_rebuild:
+                for item in self.items_on_ground:
+                    if isinstance(item, Animal):
+                        a_id = id(item)
+                        if self._check_significant_movement(item, self.last_zombie_grid_positions, a_id):
+                            needs_rebuild = True
+                            break
+
+            if not needs_rebuild:
+                return  # Skip rebuild - no significant movement
+
+        # Cleanup removed zombies and animals from tracking
         zombie_ids = {id(z) for z in self.zombies}
+        animal_ids = {id(item) for item in self.items_on_ground if isinstance(item, Animal)}
+        valid_ids = zombie_ids | animal_ids
         for z_id in list(self.last_zombie_grid_positions.keys()):
-            if z_id not in zombie_ids:
+            if z_id not in valid_ids:
                 del self.last_zombie_grid_positions[z_id]
-        
+
         self.zombie_grid.clear()
+        # Add zombies
         for z in self.zombies:
             key = (int(z.rect.centerx // self.GRID_CELL_SIZE), int(z.rect.centery // self.GRID_CELL_SIZE))
             if key not in self.zombie_grid: self.zombie_grid[key] = []
             self.zombie_grid[key].append(z)
+
+        # Add animals (they use zombie AI for wandering)
+        for item in self.items_on_ground:
+            if isinstance(item, Animal):
+                key = (int(item.rect.centerx // self.GRID_CELL_SIZE), int(item.rect.centery // self.GRID_CELL_SIZE))
+                if key not in self.zombie_grid: self.zombie_grid[key] = []
+                self.zombie_grid[key].append(item)
 
     def rebuild_item_grid(self, force=False):
         """Rebuild item grid only if items changed or moved significantly."""
