@@ -442,15 +442,15 @@ def draw_game(game):
             pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
     world_mouse_pos = game.screen_to_world(mouse_pos)
-    
-    for npc in game.active_npcs:
+
+    # Draw hover border on NPCs (Light Blue for all NPCs)
+    for npc in game.npcs:
         if not screen_rect.colliderect(npc.rect): continue
         if npc.rect.collidepoint(world_mouse_pos):
-            is_friendly = getattr(npc, 'is_friendly', True)
-            color = (0, 255, 0) if is_friendly else (255, 0, 0)
+            color = GRAY # Gray
             hover_rect = npc.rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, color, hover_rect, 2)
-            break 
+            break
     
     for zombie in game.active_zombies:
         if not screen_rect.colliderect(zombie.rect): continue

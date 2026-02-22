@@ -260,16 +260,21 @@ def update_game_state(game):
             continue
         
         hit_npc = next((n for n in potential_hits if n in game.npcs and not n.is_dead and p.rect.colliderect(n.rect)), None)
-        
+
         if hit_npc:
              damage = getattr(p, 'damage', game.player.get_attack_damage())
-             
+
              dx = hit_npc.rect.centerx - p.rect.centerx
              dy = hit_npc.rect.centery - p.rect.centery
              mag = math.hypot(dx, dy)
              direction = [dx/mag, dy/mag] if mag > 0 else None
-             
+
              create_blood_splatter(game, hit_npc.rect, damage, direction)
+
+             # Determine who fired the projectile
+             attacker = getattr(p, 'owner', game.player)
+             if attacker is None:
+                 attacker = game.player
 
              if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
                   knockback_force = getattr(game.player.active_weapon, 'knockback', 0)
@@ -285,9 +290,10 @@ def update_game_state(game):
              # [NEW] Trigger chase when hit by projectile - set aggro timer
              if not hit_npc.is_dead:
                  hit_npc.aggro_timer = 10000  # 10 seconds aggro
+                 hit_npc.current_attacker = attacker
                  hit_npc.is_following = True
                  hit_npc.state = 'chasing'
-                 
+
                  # [NEW] Alert nearby NPCs - they hear the gunshot/hit
                  ALARM_RADIUS = TILE_SIZE * 15
                  for other_npc in game.npcs:
@@ -301,10 +307,11 @@ def update_game_state(game):
                              other_npc.is_following = True
                              other_npc.state = 'chasing'
 
-             is_dead = hit_npc.take_damage(damage, game, attacker=game.player)
-             display_message_player(f"You shot {hit_npc.name}")
-             if is_dead:
-                display_message_player(f"You killed {hit_npc.name}!")
+             is_dead = hit_npc.take_damage(damage, game, attacker=attacker)
+             if attacker == game.player:
+                 display_message_player(f"You shot {hit_npc.name}")
+                 if is_dead:
+                    display_message_player(f"You killed {hit_npc.name}!")
              projectiles_to_remove.append(p)
              continue
 

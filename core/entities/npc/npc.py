@@ -83,6 +83,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         # [NEW] Aggro timer - keeps NPC chasing after being damaged
         self.aggro_timer = 0
+        self.current_attacker = None
 
         self.inventory = []
         id_card = Item.create_from_name("ID")
@@ -202,6 +203,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         # --- AGGRO TIMER DECAY ---
         if self.aggro_timer > 0:
             self.aggro_timer -= 16
+            # Clear attacker when aggro expires
+            if self.aggro_timer <= 0:
+                self.current_attacker = None
 
         # --- ENTITY SCANNING ---
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
@@ -229,8 +233,20 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         # --- TARGET ACQUISITION ---
         potential_targets = []
         potential_targets.extend(game.zombies)
-        
-        if not self.is_friendly:
+
+        # Track who attacked this NPC (for retaliation)
+        attacker = getattr(self, 'current_attacker', None)
+
+        if self.is_friendly:
+            # Friendly NPCs target hostile NPCs and zombies
+            for npc in game.npcs:
+                if npc != self and not npc.is_dead and not npc.is_friendly:
+                    potential_targets.append(npc)
+            # Also target player if player attacked this NPC
+            if attacker == game.player and game.player and not game.player.is_dead:
+                potential_targets.append(game.player)
+        else:
+            # Hostile NPCs target friendly NPCs and player
             if game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
             for npc in game.npcs:
@@ -247,10 +263,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     target_entity = entity
                     self.state = 'chasing'
 
-        # [FIX] Aggroed NPCs always chase player
-        if is_aggroed and game.player and not game.player.is_dead:
-            target_entity = game.player
-            self.state = 'chasing'
+        # [FIX] Aggroed NPCs chase their attacker
+        if is_aggroed:
+            if attacker and not attacker.is_dead:
+                target_entity = attacker
+                self.state = 'chasing'
+            elif game.player and not game.player.is_dead:
+                target_entity = game.player
+                self.state = 'chasing'
 
         if not target_entity and self.is_following and game.player or player_is_far_and_following:
             if player_dist > TILE_SIZE * 2 or player_is_far_and_following:

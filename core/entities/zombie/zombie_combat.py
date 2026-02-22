@@ -62,7 +62,7 @@ class ZombieCombat:
 
         # Handle NPC specific damage logic (NPC inherits Zombie)
         else:
-            is_dead = target_entity.take_damage(damage, game) 
+            is_dead = target_entity.take_damage(damage, game, attacker=self)
             if is_dead and target_entity in game.npcs:
                 target_entity.die(game)
                 display_message("A survivor has been killed by a zombie.")

@@ -193,37 +193,7 @@ def draw_map_tab(surface, game, modal, assets):
             
             surface.blit(scaled_surf, (map_area_rect.x + draw_offset_x, map_area_rect.y + draw_offset_y))
 
-        # --- Draw NPCs with Mobile Phones ---
-        if hasattr(game, 'npcs'):
-            for npc in game.npcs:
-                if npc.is_dead: continue
-                
-                # Check for "Mobile" in inventory
-                has_mobile = False
-                for item in npc.inventory:
-                    if item.name == "Mobile off":
-                        has_mobile = True
-                        break
-                
-                # Check equipped weapon just in case
-                if not has_mobile and npc.equipped_weapon and npc.equipped_weapon.name == "Mobile":
-                    has_mobile = True
-
-                if has_mobile:
-                    npc_grid_x = npc.rect.centerx // TILE_SIZE
-                    npc_grid_y = npc.rect.centery // TILE_SIZE
-                    
-                    # Project NPC position onto the map view
-                    # Using the same src_x/src_y reference frame as the map background
-                    screen_npc_x = map_area_rect.x + (npc_grid_x - src_x) * map_zoom
-                    screen_npc_y = map_area_rect.y + (npc_grid_y - src_y) * map_zoom
-                    
-                    # Only draw if inside the map tab view area
-                    if map_area_rect.collidepoint(screen_npc_x, screen_npc_y):
-                        # Draw a small Red signal dot
-                        dot_size = max(3, int(map_zoom / 2))
-                        pygame.draw.circle(surface, (255, 50, 50), (int(screen_npc_x), int(screen_npc_y)), dot_size)
-
+        
         # --- Draw Player Icon ---
         # The map is now drawn relative to the player being roughly in center
         # We calculate player position relative to the drawn map surface

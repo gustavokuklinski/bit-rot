@@ -57,9 +57,9 @@ class NPCGraphics:
             draw_rect = self.rect.move(offset_x, offset_y)
             surface.blit(self.dead_image, draw_rect)
             return
-        
+
         super().draw(surface, offset_x, offset_y, opacity)
-        
+
         max_h = self.template.get('max_health', 100) if hasattr(self, 'template') else 100
         
         if self.health < max_h and self.health_bar_timer > 0:

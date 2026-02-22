@@ -60,9 +60,18 @@ class NPCCombat:
         if self.is_dead: return True
         self.health -= damage
         self.health_bar_timer = 180
-        if attacker == game.player:
+        
+       
+        # Track who attacked this NPC
+        if attacker:
+            self.current_attacker = attacker
+            self.aggro_timer = 10000  # 10 seconds aggro
+        
+        # If attacked by player, become hostile
+        if attacker is not None and attacker == game.player:
             self.is_friendly = False
             self.state = 'chasing'
+
         if hasattr(game, 'blood_stains') and damage > 0:
              count = random.randint(1, 2)
              for _ in range(count):
@@ -79,7 +88,7 @@ class NPCCombat:
                 'time': pygame.time.get_ticks(),
                 'duration': 350,
                 'radius': 3,
-                'type': 'hit_puff' 
+                'type': 'hit_puff'
              })
         if self.health <= 0:
             self.die(game)
