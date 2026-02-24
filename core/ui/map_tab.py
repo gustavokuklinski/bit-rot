@@ -1,8 +1,12 @@
+# core/ui/map_tab.py
+
 import pygame
 import math
 import os
+import re
 from core.data.config import *
 from core.ui.modals import BaseModal
+from core.map.map_loader import load_map_from_file
 
 # Define colors for the minimap
 MINIMAP_COLORS = {
@@ -16,80 +20,156 @@ MINIMAP_COLORS = {
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255) # Bright cyan for player
 
-def generate_minimap_cache(game):
+def generate_minimap_cache(game, full_map=False):
     """
-    Generates a 1:1 pixel representation of the current map layer.
-    This is run ONCE when the tab opens or layer changes.
+    Generates a 1:1 pixel representation of the map.
+    If full_map is True, stitches all chunks. Otherwise, uses current chunk.
     """
-    base_layer = getattr(game, 'map_data', [])
-    if not base_layer:
-        return None
-
-    map_height = len(base_layer)
-    map_width = len(base_layer[0]) if map_height > 0 else 0
-    
-    # Create a surface where 1 pixel = 1 tile
-    cache_surf = pygame.Surface((map_width, map_height))
-    cache_surf.fill(MINIMAP_COLORS[' '])
-    
-    # Use PixelArray for fast direct pixel access
-    pixels = pygame.PixelArray(cache_surf)
-    
-    ground_layer = game.all_ground_layers.get(game.current_layer_index, [])
-    roof_layer = game.all_roof_layers.get(game.current_layer_index, [])
+    current_layer = getattr(game, 'current_layer_index', 1)
     tile_defs = game.tile_manager.definitions
 
-    # Iterate over the entire map once
-    for y in range(map_height):
-        for x in range(map_width):
-            final_char = ' '
-            
-            # --- 1. Ground Layer (Grass, Water) ---
-            if y < len(ground_layer) and x < len(ground_layer[y]):
-                g_tile = ground_layer[y][x]
-                if g_tile and g_tile != ' ':
-                    g_def = tile_defs.get(g_tile)
-                    g_name = g_def.get('name', '').lower() if g_def else ''
-                    
-                    if 'water' in g_name or g_tile.upper().startswith('W'):
-                        final_char = 'W'
-                    elif 'grass' in g_name or g_tile.upper().startswith('G'):
-                        final_char = 'G'
-                    elif 'forest' in g_name:
-                        final_char = 'F'
-            
-            # --- 2. Base Layer (Roads, Walls, Indoor Floors) ---
-            if y < len(base_layer) and x < len(base_layer[y]):
-                b_tile = base_layer[y][x]
-                if b_tile and b_tile != ' ':
-                    b_def = tile_defs.get(b_tile)
-                    if b_def:
-                        b_name = b_def.get('name', '').lower()
-                        # Road Detection
-                        if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
+    if full_map and not getattr(game, 'is_giant_map', False):
+        # --- BUILD FULL STITCHED MAP ---
+        map_files = game.map_manager.map_files
+        max_gx = 0
+        max_gy = 0
+        pattern = re.compile(rf'map_L{current_layer}_(\d+)_(\d+)_map\.csv')
+        
+        for filename in map_files:
+            match = pattern.match(filename)
+            if match:
+                max_gx = max(max_gx, int(match.group(1)))
+                max_gy = max(max_gy, int(match.group(2)))
+
+        chunk_size = getattr(game, 'CHUNK_SIZE', 32)
+        map_width = (max_gx + 1) * chunk_size
+        map_height = (max_gy + 1) * chunk_size
+
+        cache_surf = pygame.Surface((map_width, map_height))
+        cache_surf.fill(MINIMAP_COLORS[' '])
+        pixels = pygame.PixelArray(cache_surf)
+
+        map_folder = game.map_manager.map_folder
+        
+        for gy in range(max_gy + 1):
+            for gx in range(max_gx + 1):
+                prefix = f"map_L{current_layer}_{gx}_{gy}"
+                b_file = os.path.join(map_folder, f"{prefix}_map.csv")
+                g_file = os.path.join(map_folder, f"{prefix}_ground.csv")
+                r_file = os.path.join(map_folder, f"{prefix}_roof.csv")
+
+                b_data = load_map_from_file(b_file) if os.path.exists(b_file) else []
+                g_data = load_map_from_file(g_file) if os.path.exists(g_file) else []
+                r_data = load_map_from_file(r_file) if os.path.exists(r_file) else []
+
+                offset_x = gx * chunk_size
+                offset_y = gy * chunk_size
+
+                for y in range(chunk_size):
+                    for x in range(chunk_size):
+                        final_char = ' '
+                        
+                        # Ground
+                        if y < len(g_data) and x < len(g_data[y]):
+                            g_tile = g_data[y][x]
+                            if g_tile and g_tile != ' ':
+                                g_def = tile_defs.get(g_tile)
+                                g_name = g_def.get('name', '').lower() if g_def else ''
+                                if 'water' in g_name or g_tile.upper().startswith('W'):
+                                    final_char = 'W'
+                                elif 'grass' in g_name or g_tile.upper().startswith('G'):
+                                    final_char = 'G'
+                                elif 'forest' in g_name:
+                                    final_char = 'F'
+                        
+                        # Base
+                        if y < len(b_data) and x < len(b_data[y]):
+                            b_tile = b_data[y][x]
+                            if b_tile and b_tile != ' ':
+                                b_def = tile_defs.get(b_tile)
+                                if b_def:
+                                    b_name = b_def.get('name', '').lower()
+                                    if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
+                                        final_char = 'R'
+                                    elif b_def.get('is_obstacle') or 'wall' in b_name or ('floor' in b_name and 'grass' not in b_name):
+                                        final_char = 'C'
+                                elif b_tile.upper().startswith('R'):
+                                    final_char = 'R'
+
+                        # Roof
+                        if y < len(r_data) and x < len(r_data[y]):
+                            r_tile = r_data[y][x]
+                            if r_tile and r_tile != ' ':
+                                final_char = 'C'
+
+                        if final_char != ' ':
+                            try:
+                                pixels[offset_x + x, offset_y + y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
+                            except IndexError:
+                                pass
+        pixels.close()
+        return cache_surf
+
+    else:
+        # --- BUILD SINGLE CHUNK MAP (Mobile Default) ---
+        base_layer = getattr(game, 'map_data', [])
+        if not base_layer:
+            return None
+
+        map_height = len(base_layer)
+        map_width = len(base_layer[0]) if map_height > 0 else 0
+        
+        cache_surf = pygame.Surface((map_width, map_height))
+        cache_surf.fill(MINIMAP_COLORS[' '])
+        pixels = pygame.PixelArray(cache_surf)
+        
+        ground_layer = game.all_ground_layers.get(current_layer, [])
+        roof_layer = game.all_roof_layers.get(current_layer, [])
+
+        for y in range(map_height):
+            for x in range(map_width):
+                final_char = ' '
+                
+                # Ground
+                if y < len(ground_layer) and x < len(ground_layer[y]):
+                    g_tile = ground_layer[y][x]
+                    if g_tile and g_tile != ' ':
+                        g_def = tile_defs.get(g_tile)
+                        g_name = g_def.get('name', '').lower() if g_def else ''
+                        if 'water' in g_name or g_tile.upper().startswith('W'):
+                            final_char = 'W'
+                        elif 'grass' in g_name or g_tile.upper().startswith('G'):
+                            final_char = 'G'
+                        elif 'forest' in g_name:
+                            final_char = 'F'
+                
+                # Base
+                if y < len(base_layer) and x < len(base_layer[y]):
+                    b_tile = base_layer[y][x]
+                    if b_tile and b_tile != ' ':
+                        b_def = tile_defs.get(b_tile)
+                        if b_def:
+                            b_name = b_def.get('name', '').lower()
+                            if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
+                                final_char = 'R'
+                            elif b_def.get('is_obstacle') or 'wall' in b_name or ('floor' in b_name and 'grass' not in b_name):
+                                final_char = 'C'
+                        elif b_tile.upper().startswith('R'):
                             final_char = 'R'
-                        # Construction Detection (Walls OR Indoor Floors)
-                        elif b_def.get('is_obstacle') or 'wall' in b_name or ('floor' in b_name and 'grass' not in b_name):
-                            final_char = 'C'
-                    # Fallback (Legacy)
-                    elif b_tile.upper().startswith('R'):
-                        final_char = 'R'
 
-            # --- 3. Roof Layer (Forces construction blocks) ---
-            if y < len(roof_layer) and x < len(roof_layer[y]):
-                r_tile = roof_layer[y][x]
-                if r_tile and r_tile != ' ':
-                    final_char = 'C'
+                # Roof
+                if y < len(roof_layer) and x < len(roof_layer[y]):
+                    r_tile = roof_layer[y][x]
+                    if r_tile and r_tile != ' ':
+                        final_char = 'C'
 
-            if final_char != ' ':
-                # Map the char to the actual RGB color
-                color = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
-                pixels[x, y] = color # PixelArray uses [x, y]
+                if final_char != ' ':
+                    pixels[x, y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
 
-    pixels.close() # Unlock the surface
-    return cache_surf
+        pixels.close()
+        return cache_surf
 
-def draw_map_tab(surface, game, modal, assets):
+def draw_map_tab(surface, game, modal, assets, full_map=False):
     # --- 1. Get/Initialize Map State ---
     if 'map_zoom' not in modal:
         modal['map_zoom'] = 6
@@ -106,23 +186,17 @@ def draw_map_tab(surface, game, modal, assets):
     modal['map_area_rect'] = map_area_rect
 
     # --- 2.5 Handle Mouse Dragging (Panning) ---
-    if 'is_dragging_map' not in modal:
+    if 'is_dragging_map' not in modal or 'last_drag_pos' not in modal:
         modal['is_dragging_map'] = False
         modal['last_drag_pos'] = (0, 0)
 
-    # Use game's scaled mouse position if available
     mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
     mouse_pressed = pygame.mouse.get_pressed()[0]
     
     if mouse_pressed:
         if modal['is_dragging_map']:
-            # Calculate how much the mouse moved
             dx = mouse_pos[0] - modal['last_drag_pos'][0]
             dy = mouse_pos[1] - modal['last_drag_pos'][1]
-            
-            # Convert screen pixels to map tiles based on current zoom
-            # moving mouse right (+dx) should shift the offset right (+offset), 
-            # which effectively moves the 'camera' left relative to the map (panning)
             zoom = modal['map_zoom']
             modal['map_offset'] = (
                 modal['map_offset'][0] + (dx / zoom),
@@ -130,11 +204,9 @@ def draw_map_tab(surface, game, modal, assets):
             )
             modal['last_drag_pos'] = mouse_pos
         elif map_area_rect.collidepoint(mouse_pos):
-             # Start dragging if clicked inside the map view
              modal['is_dragging_map'] = True
              modal['last_drag_pos'] = mouse_pos
     else:
-        # Stop dragging when mouse is released
         modal['is_dragging_map'] = False
 
     # --- 3. Draw Map Background ---
@@ -144,13 +216,29 @@ def draw_map_tab(surface, game, modal, assets):
         return
 
     # --- 4. Render Map (Cached) ---
-    # Check if we need to regenerate the cache (First load OR layer switch)
     current_layer = getattr(game, 'current_layer_index', 1)
-    if 'cached_minimap' not in modal or modal.get('cached_layer') != current_layer:
-        modal['cached_minimap'] = generate_minimap_cache(game)
-        modal['cached_layer'] = current_layer
+    current_map_file = getattr(game.map_manager, 'current_map_filename', '')
+    
+    # Distinct cache keys prevent overwriting between Map Item and Mobile tabs
+    cache_key = 'cached_minimap_full' if full_map else 'cached_minimap_chunk'
+    
+    # [NEW] Check for layer changes AND chunk map file changes
+    needs_update = False
+    if cache_key not in modal:
+        needs_update = True
+    elif modal.get('cached_layer') != current_layer:
+        needs_update = True
+    elif not full_map and modal.get('cached_map_file') != current_map_file:
+        needs_update = True
 
-    cached_surf = modal.get('cached_minimap')
+    if needs_update:
+        modal[cache_key] = generate_minimap_cache(game, full_map)
+        modal['cached_layer'] = current_layer
+        modal['cached_map_file'] = current_map_file
+
+    cached_surf = modal.get(cache_key)
+
+    cached_surf = modal.get(cache_key)
     
     if cached_surf:
         map_zoom = int(modal['map_zoom'])
@@ -159,59 +247,52 @@ def draw_map_tab(surface, game, modal, assets):
         player_grid_x = game.player.rect.centerx // TILE_SIZE
         player_grid_y = game.player.rect.centery // TILE_SIZE
 
-        # Determine how many tiles fit in the view at current zoom
+        # Offset the player's grid tile if we are on the full map stitched grid
+        if full_map and not getattr(game, 'is_giant_map', False):
+            current_map = game.map_manager.current_map_filename
+            match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map)
+            if match:
+                gx, gy = int(match.group(1)), int(match.group(2))
+                chunk_size = getattr(game, 'CHUNK_SIZE', 32)
+                player_grid_x += (gx * chunk_size)
+                player_grid_y += (gy * chunk_size)
+
         tiles_in_view_w = map_area_rect.width / map_zoom
         tiles_in_view_h = map_area_rect.height / map_zoom
         
         off_x, off_y = modal['map_offset']
 
-        # Apply offset to the source coordinates
         src_x = (player_grid_x - (tiles_in_view_w / 2)) - off_x
         src_y = (player_grid_y - (tiles_in_view_h / 2)) - off_y
         src_w = tiles_in_view_w
         src_h = tiles_in_view_h
 
         src_rect = pygame.Rect(src_x, src_y, src_w, src_h)
-        
-        # Get the intersection with the actual map bounds
         map_rect = cached_surf.get_rect()
         clipped_src = src_rect.clip(map_rect)
         
         if clipped_src.width > 0 and clipped_src.height > 0:
-            # 1. Cut out the visible chunk from cache (1px = 1tile)
             sub_surf = cached_surf.subsurface(clipped_src)
-            
-            # 2. Scale it up to screen size (zoom factor)
             dest_w = int(clipped_src.width * map_zoom)
             dest_h = int(clipped_src.height * map_zoom)
             scaled_surf = pygame.transform.scale(sub_surf, (dest_w, dest_h))
             
-            # 3. Calculate where to place it on screen
-            # (Adjust for the clipping if we were near an edge)
             draw_offset_x = (clipped_src.x - src_x) * map_zoom
             draw_offset_y = (clipped_src.y - src_y) * map_zoom
             
             surface.blit(scaled_surf, (map_area_rect.x + draw_offset_x, map_area_rect.y + draw_offset_y))
-
         
         # --- Draw Player Icon ---
-        # The map is now drawn relative to the player being roughly in center
-        # We calculate player position relative to the drawn map surface
-        
         screen_player_x = map_area_rect.x + (player_grid_x - src_x) * map_zoom
         screen_player_y = map_area_rect.y + (player_grid_y - src_y) * map_zoom
         
-        # Calculate a marker size that is always larger than the zoom level
         marker_size = max(8, int(map_zoom * 1.5))
-        
-        # Center the marker on the player's grid tile position
         center_x = screen_player_x + (map_zoom / 2)
         center_y = screen_player_y + (map_zoom / 2)
         
         player_rect = pygame.Rect(0, 0, marker_size, marker_size)
         player_rect.center = (center_x, center_y)
         
-        # Only draw if inside the view
         if map_area_rect.collidepoint(player_rect.center):
             pygame.draw.rect(surface, MINIMAP_PLAYER_COLOR, player_rect, 0)
             pygame.draw.rect(surface, (0, 0, 0), player_rect, 1)
@@ -221,14 +302,12 @@ def draw_map_tab(surface, game, modal, assets):
     zoom_in_rect = pygame.Rect(map_area_rect.centerx - 35, button_y, 30, 30)
     zoom_out_rect = pygame.Rect(map_area_rect.centerx + 5, button_y, 30, 30)
 
-    # Draw Zoom In (+)
     pygame.draw.rect(surface, GRAY_60, zoom_in_rect, 0, 3)
     pygame.draw.rect(surface, WHITE, zoom_in_rect, 1, 3)
     plus_surf = large_font.render("+", True, WHITE)
     plus_rect = plus_surf.get_rect(center=zoom_in_rect.center)
     surface.blit(plus_surf, plus_rect)
 
-    # Draw Zoom Out (-)
     pygame.draw.rect(surface, GRAY_60, zoom_out_rect, 0, 3)
     pygame.draw.rect(surface, WHITE, zoom_out_rect, 1, 3)
     minus_surf = large_font.render("-", True, WHITE)
@@ -244,6 +323,7 @@ def draw_map_tab(surface, game, modal, assets):
         'id': modal['id'], 'type': 'map_zoom_out', 'rect': zoom_out_rect
     }
 
+
 def draw_big_map_modal(surface, game, modal, assets):
     # Create the window frame
     base_modal = BaseModal(surface, modal, assets, f"{modal['item'].name}")
@@ -255,7 +335,7 @@ def draw_big_map_modal(surface, game, modal, assets):
     if base_modal.minimized:
         return [close_button, minimize_button]
 
-    # Draw the map content inside
-    zoom_in, zoom_out = draw_map_tab(surface, game, modal, assets)
+    # Draw the map content inside, requesting the full world map
+    zoom_in, zoom_out = draw_map_tab(surface, game, modal, assets, full_map=True)
     
     return [close_button, minimize_button, zoom_in, zoom_out]

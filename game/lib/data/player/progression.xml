@@ -67,13 +67,4 @@
             <param name="death_threshold" value="100.0" />
         </stat>
     </stats>
-
-    <healing_rates>
-        <part name="hand" rate="0.02" />
-        <part name="arms" rate="0.02" />
-        <part name="legs" rate="0.01" />
-        <part name="feet" rate="0.005" />
-        <part name="head" rate="0.005" />
-        <part name="body" rate="0.005" />
-    </healing_rates>
 </progression>

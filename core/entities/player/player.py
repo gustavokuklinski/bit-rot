@@ -298,10 +298,23 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
             self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier))
             
-        is_starving = self.food <= 0
-        is_dehydrated = self.water <= 0
+        is_starving = self.food <= 50.0
+        is_dehydrated = self.water <= 70.0
         is_infected = self.infection > 0
         
+        damage_this_frame = 0.0
+        if is_starving:
+            damage_this_frame += 0.005 * multiplier
+        if is_dehydrated:
+            damage_this_frame += 0.003 * multiplier
+        if is_infected:
+            damage_this_frame += 0.005 * (self.infection / 100.0) * multiplier
+            
+        if damage_this_frame > 0:
+            for part in self.body_parts.values():
+                part['value'] = max(0.0, part['value'] - damage_this_frame)
+            self.update_global_health()
+            
         # Do not regenerate body damage if starving, dehydrated, or infected!
         # can_regen = not (is_starving or is_dehydrated or is_infected)
         
@@ -332,21 +345,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
             self.last_decay_time = current_time
             
-            # --- Health Decay from Negative States ---
-            damage_to_take = 0.0
-            if self.water <= 0:
-                damage_to_take += 5.0
-            if self.food <= 0:
-                damage_to_take += 5.0
-            if self.infection > 0:
-                damage_to_take += 5.0 * (self.infection / 100.0)  # Infection damage scales with severity
-                
-            if damage_to_take > 0:
-                # Apply damage to ALL body parts. This accurately mimics a systemic failure
-                # and forces global health (which is an average) to decay by exactly 'damage_to_take'%.
-                for p in self.body_parts.keys():
-                    self.body_parts[p]['value'] = max(0.0, self.body_parts[p]['value'] - damage_to_take)
-                self.update_global_health()
+            
 
             if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:
                 water_item, source, index, container = self.find_water_to_auto_drink()

@@ -57,7 +57,7 @@ def draw_player_alerts(surface, player):
         active_alerts.append(("ui/stamina.png", GRAY, "You are tired, take a Rest"))
 
     # Water (Low) - Thirsty
-    if player.water <= 50:
+    if player.water <= 70:
         active_alerts.append(("ui/water.png", BLUE, "You are thirsty"))
 
     # Food (Low) - Hungry
@@ -73,7 +73,7 @@ def draw_player_alerts(surface, player):
         active_alerts.append(("ui/axiety.png", (150, 0, 150), "You are anxious"))
         
     # Infection (High) - Sick
-    if player.infection >= 5: 
+    if player.infection >= 15: 
         active_alerts.append(("ui/infection.png", YELLOW, "Are you feeling sick or infected?"))
 
     # Overweight

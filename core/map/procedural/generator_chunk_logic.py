@@ -451,9 +451,9 @@ class ProceduralGeneratorChunk:
         # 9. Spawns
         if is_start: 
             layers['spawn'][cy][cx] = 'P'
-        else: 
-            if hasattr(self, '_scatter_zombies'):
-                self._scatter_zombies(layers, occupied_mask, w, h)
+        # else: 
+        if hasattr(self, '_scatter_zombies'):
+            self._scatter_zombies(layers, occupied_mask, w, h)
         
         if hasattr(self, '_scatter_npcs'):
             self._scatter_npcs(layers, occupied_mask, w, h)
@@ -499,14 +499,15 @@ class ProceduralGeneratorChunk:
         
         if not is_cave:
             lot_m = 2
+            # 1. Draw the asphalt padding (lot) around the building
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
-                    # [FIX] Forbid sand lot from rewriting the extreme chunk border
                     if 1 <= rx < w-1 and 1 <= ry < h-1 and layers['ground'][ry][rx] == 'bg_grass':
-                        layers['ground'][ry][rx] = sand_tile
+                        layers['ground'][ry][rx] = road_tile
                         occupied_mask[ry][rx] = 1
             
             bx, by = tx + tw // 2, ty + th // 2
+            
             def draw_secondary_road(start_x, start_y, target_x, target_y):
                 cur_x, cur_y = start_x, start_y
                 while cur_x != target_x or cur_y != target_y:
@@ -515,10 +516,13 @@ class ProceduralGeneratorChunk:
                     elif cur_y < target_y: cur_y += 1
                     elif cur_y > target_y: cur_y -= 1
                     if 0<=cur_x<w and 0<=cur_y<h:
-                        if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != getattr(self, 'water_tile', 'water_01'):
-                            layers['ground'][cur_y][cur_x] = sand_tile
-                            occupied_mask[cur_y][cur_x] = 1
+                        # [FIX] Prevent road from overwriting any previously placed building
+                        if occupied_mask[cur_y][cur_x] == 0:
+                            if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != getattr(self, 'water_tile', 'water_01'):
+                                layers['ground'][cur_y][cur_x] = road_tile
+                                occupied_mask[cur_y][cur_x] = 1
 
+            # 2. Draw the asphalt connector to the center crossroad
             if (tw > 30 or th > 30) and not is_building2:
                 draw_secondary_road(bx, by, cx, cy)
             else:
@@ -526,16 +530,25 @@ class ProceduralGeneratorChunk:
                 for rx in range(x_s, x_e + 1): 
                     for off in range(2): 
                         yy = cy + off
-                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=getattr(self, 'water_tile', 'water_01'): 
-                            layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
+                        if 0<=rx<w and 0<=yy<h:
+                            # [FIX] Prevent road from overwriting any previously placed building
+                            if occupied_mask[yy][rx] == 0 and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=getattr(self, 'water_tile', 'water_01'): 
+                                layers['ground'][yy][rx] = road_tile
+                                occupied_mask[yy][rx] = 1
+                                
                 y_s, y_e = min(cy, by), max(cy, by)
                 for ry in range(y_s, y_e + 1):
                     for off in range(2): 
                         xx = bx + off
-                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=getattr(self, 'water_tile', 'water_01'): 
-                            layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
+                        if 0<=ry<h and 0<=xx<w:
+                            # [FIX] Prevent road from overwriting any previously placed building
+                            if occupied_mask[ry][xx] == 0 and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=getattr(self, 'water_tile', 'water_01'): 
+                                layers['ground'][ry][xx] = road_tile
+                                occupied_mask[ry][xx] = 1
         
+        # 3. Blit the actual building on top
         self._blit_template(layers, tmpl, tx, ty, w, h)
         placed_rects.append(pygame.Rect(tx, ty, tw, th))
         for ry in range(ty, ty + th):
-            for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
+            for rx in range(tx, tx + tw): 
+                occupied_mask[ry][rx] = 1

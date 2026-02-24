@@ -238,46 +238,7 @@ class PlayerProgression:
             player.stamina = min(stamina_cap, player.stamina + regeneration)
 
     def update_hp(self, player):
-        # 1. Calculate Healing Speed Modifier
-        bonus_perc = self.get_health_bonus(player)
-        trait_speed_mult = 1.0 + (bonus_perc / 100.0)
-        trait_speed_mult = max(0.0, trait_speed_mult)
-
-        # 2. Load Base Healing Rates from Config
-        part_rates = self.config.healing_rates
-        
-        # 3. Calculate Infection Penalty
-        div = self.config.get_stat('health', 'infection_regen_divisor', 25.0)
-        infection_penalty = 1.0
-        if player.infection > 0:
-            infection_penalty = 1.0 / (1.0 + player.infection / div)
-
-        # 4. Heal Body Parts
-        if hasattr(player, 'body_parts'):
-            damage_healed = False
-            
-            for part_name, part_data in player.body_parts.items():
-                current_val = part_data['value']
-                
-                if current_val < 100.0:
-                    # Get rate from loaded config (default to slow 0.005 if part name missing)
-                    base_rate = part_rates.get(part_name, 0.005)
-                    
-                    # Final Heal
-                    final_heal = base_rate * trait_speed_mult * infection_penalty
-                    
-                    part_data['value'] = min(100.0, current_val + final_heal)
-                    damage_healed = True
-
-            if damage_healed:
-                player.update_global_health()
-                
-        else:
-            # Fallback
-            health_cap = player.max_health * (1 - player.infection / 100)
-            if player.health < health_cap:
-                rate = 0.01 * trait_speed_mult * infection_penalty
-                player.health = min(health_cap, player.health + rate)
+        pass
 
     def update_anxiety(self, player, game):
         # 1. Calculate Zombies nearby
