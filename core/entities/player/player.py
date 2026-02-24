@@ -10,6 +10,7 @@ from core.entities.player.player_progression import PlayerProgression
 from core.messages import display_message_player
 from core.data.recipe_manager import RecipeManager
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
+from core.data.progression_loader import PROGRESSION_CONFIG
 
 # Import Mixins
 from core.entities.player.player_stats import PlayerStats
@@ -290,6 +291,30 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         self.progression.update(self, is_moving, game)
         
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+        
+        # Increase infection over time if infected
+        if self.infection > 0:
+            passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
+            self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier))
+            
+        is_starving = self.food <= 0
+        is_dehydrated = self.water <= 0
+        is_infected = self.infection > 0
+        
+        # Do not regenerate body damage if starving, dehydrated, or infected!
+        # can_regen = not (is_starving or is_dehydrated or is_infected)
+        
+        #if can_regen:
+        #    healed_any = False
+        #    for part, data in self.body_parts.items():
+        #        if data['value'] < 100.0:
+        #            rate = PROGRESSION_CONFIG.healing_rates.get(part, 0.005) * multiplier
+        #            data['value'] = min(100.0, data['value'] + rate)
+        #            healed_any = True
+        #    if healed_any:
+        #        self.update_global_health()
+
         if getattr(game, 'is_fast_forwarding', False):
              dt = 1.0 / 60.0
              decay_boost = dt * (game.fast_forward_speed - 1.0)
@@ -306,9 +331,22 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.food = max(0, self.food - food_decay)
 
             self.last_decay_time = current_time
-            if self.water <= 0 or self.food <= 0:
-                self.health -= 5.0 * (1 if self.water <= 0 else 0) + 5.0 * (1 if self.food <= 0 else 0)
-                self.health = max(0, self.health)
+            
+            # --- Health Decay from Negative States ---
+            damage_to_take = 0.0
+            if self.water <= 0:
+                damage_to_take += 5.0
+            if self.food <= 0:
+                damage_to_take += 5.0
+            if self.infection > 0:
+                damage_to_take += 5.0 * (self.infection / 100.0)  # Infection damage scales with severity
+                
+            if damage_to_take > 0:
+                # Apply damage to ALL body parts. This accurately mimics a systemic failure
+                # and forces global health (which is an average) to decay by exactly 'damage_to_take'%.
+                for p in self.body_parts.keys():
+                    self.body_parts[p]['value'] = max(0.0, self.body_parts[p]['value'] - damage_to_take)
+                self.update_global_health()
 
             if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:
                 water_item, source, index, container = self.find_water_to_auto_drink()
