@@ -321,6 +321,9 @@ def set_active_layer(game, layer_index):
 
     item_spawns, zombie_spawns = _rebuild_world_from_data(game)
 
+    game.cached_obstacle_grid = {}
+    game.cached_obstacle_count = -1
+
     game.current_zombie_spawns = zombie_spawns
     game.layer_spawn_triggers.setdefault(layer_index, set())
 

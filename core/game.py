@@ -248,6 +248,10 @@ class Game:
         self.rebuild_zombie_grid()
         self.rebuild_item_grid()
         self.rebuild_container_grid()
+
+        self.cached_obstacle_grid = {}
+        self.cached_obstacle_count = -1
+
         return result
 
     def capture_pause_screen(self):

@@ -86,42 +86,11 @@ def draw_game(game):
     game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
     game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
 
-    # --- [NEW] CAMERA DEADZONE (FREE-ROAM) LOGIC ---
-    if not hasattr(game, 'true_camera_x'):
-        game.true_camera_x = game.player.rect.centerx - view_w / 2
-        game.true_camera_y = game.player.rect.centery - view_h / 2
-    else:
-        # Check for sudden massive teleportation (e.g. crossing a chunk boundary)
-        dist = math.hypot(game.player.rect.centerx - (game.true_camera_x + view_w/2), 
-                          game.player.rect.centery - (game.true_camera_y + view_h/2))
-        if dist > 800: # Instantly snap camera if player jumped more than 800 pixels
-            game.true_camera_x = game.player.rect.centerx - view_w / 2
-            game.true_camera_y = game.player.rect.centery - view_h / 2
+    if game.player:
+        game.true_camera_x = game.player.rect.centerx - (view_w / 2)
+        game.true_camera_y = game.player.rect.centery - (view_h / 2)
 
-    # Calculate inner free-roam bounding box (30% of screen size)
-    box_w = view_w * 0.30
-    box_h = view_h * 0.30
-    
-    # 35% margins on each side
-    margin_x = (view_w - box_w) / 2 
-    margin_y = (view_h - box_h) / 2
-
-    # Calculate player's coordinates relative to the screen
-    screen_px = game.player.rect.centerx - game.true_camera_x
-    screen_py = game.player.rect.centery - game.true_camera_y
-
-    # If player walks past margins, push the camera tracking coordinate
-    if screen_px < margin_x:
-        game.true_camera_x -= (margin_x - screen_px)
-    elif screen_px > view_w - margin_x:
-        game.true_camera_x += (screen_px - (view_w - margin_x))
-
-    if screen_py < margin_y:
-        game.true_camera_y -= (margin_y - screen_py)
-    elif screen_py > view_h - margin_y:
-        game.true_camera_y += (screen_py - (view_h - margin_y))
-
-    # Calculate the targeted view offset
+    # Calculate the targeted view offset (invert for drawing math)
     target_offset_x = -game.true_camera_x - game.camera_pan_x
     target_offset_y = -game.true_camera_y - game.camera_pan_y
 

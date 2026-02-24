@@ -245,11 +245,18 @@ class PlayerMovement:
                         
                         # --- CACHE DEPARTING CHUNK STATE ---
                         game.map_states.setdefault(current_map, {})
-                        game.map_states[current_map]['items_on_ground'] = game.items_on_ground[:]
-                        game.map_states[current_map]['zombies'] = game.zombies[:]
                         
+                        # [FIX] Filter out chasing entities so they travel with the player
+                        chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
+                        game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]
+                        
+                        chasing_animals = []
                         if hasattr(game, 'active_animals'):
-                            game.map_states[current_map]['active_animals'] = game.active_animals[:]
+                            chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+                            game.map_states[current_map]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
+                        
+                        # Animals are also kept in items_on_ground for rendering purposes, remove chasing ones from cache
+                        game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
                             
                         # Keep followers with the player so they don't get cached away
                         followers = []
@@ -284,13 +291,14 @@ class PlayerMovement:
                             self.y = self.vehicle.y
                             self.rect.topleft = (int(self.x), int(self.y))
                             
-                        # Teleport following NPCs
-                        for f_npc in followers:
-                            if new_gx < gx: f_npc.x += chunk_width_px
-                            elif new_gx > gx: f_npc.x -= chunk_width_px
-                            if new_gy < gy: f_npc.y += chunk_height_px
-                            elif new_gy > gy: f_npc.y -= chunk_height_px
-                            f_npc.rect.topleft = (int(f_npc.x), int(f_npc.y))
+                        # [FIX] Teleport following NPCs AND chasing entities across the chunk boundary
+                        entities_to_teleport = followers + chasing_zombies + chasing_animals
+                        for ent in entities_to_teleport:
+                            if new_gx < gx: ent.x += chunk_width_px
+                            elif new_gx > gx: ent.x -= chunk_width_px
+                            if new_gy < gy: ent.y += chunk_height_px
+                            elif new_gy > gy: ent.y -= chunk_height_px
+                            ent.rect.topleft = (int(ent.x), int(ent.y))
                             
                         # Load the new chunk
                         game.load_map(new_map)
@@ -379,6 +387,13 @@ class PlayerMovement:
                         if hasattr(game, 'npcs'):
                             for f_npc in followers:
                                 game.npcs.add(f_npc)
+
+                        # [FIX] Re-attach chasing entities to the new active chunk
+                        game.zombies.extend(chasing_zombies)
+                        if hasattr(game, 'active_animals'):
+                            game.active_animals.extend(chasing_animals)
+                            # Re-add animals to ground rendering list
+                            game.items_on_ground.extend(chasing_animals)
 
                         # Re-attach driving vehicle to the new chunk
                         if self.vehicle:
