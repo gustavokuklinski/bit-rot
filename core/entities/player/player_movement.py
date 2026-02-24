@@ -1,9 +1,12 @@
+# core/entities/player/player_movement.py
+
 import math
 import re
 import random
 import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message_player
+from core.placement import find_free_tile # [NEW] Import robust spatial checker
 
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):
@@ -336,23 +339,41 @@ class PlayerMovement:
                                 for szx, szy in game.current_zombie_spawns:
                                     for _ in range(random.randint(1, 2)):
                                         z = Zombie.create_random(szx, szy)
-                                        if z: game.zombies.append(z)
+                                        if z:
+                                            # [FIX] Robust Spatial Spawn - Automatically shifts entity until it's not inside a wall
+                                            free_pos = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
+                                            if free_pos:
+                                                z.rect.topleft = free_pos
+                                                z.x, z.y = free_pos
+                                                game.zombies.append(z)
                                         
                             if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
                                 from core.entities.npc.npc import NPC
                                 for nx, ny in game.npc_spawn_points:
                                     npc = NPC(nx, ny, game, is_static=False)
-                                    game.npcs.add(npc)
+                                    # [FIX] Robust Spatial Spawn 
+                                    free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                                    if free_pos:
+                                        npc.rect.topleft = free_pos
+                                        npc.x, npc.y = free_pos
+                                        game.npcs.add(npc)
                                     
                             if hasattr(game, 'active_animals'):
                                 from core.entities.animal.animal import Animal
-                                for _ in range(random.randint(2, 6)):
-                                    ax = random.randint(50, max(51, getattr(game, 'map_width_pixels', chunk_width_px) - 50))
-                                    ay = random.randint(50, max(51, getattr(game, 'map_height_pixels', chunk_height_px) - 50))
+                                num_to_spawn = random.randint(2, 6)
+                                for _ in range(num_to_spawn):
+                                    ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
+                                    ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
                                     animal_type = random.choice(['Rat', 'Pig', 'Dog', 'Chicken'])
                                     animal_obj = Animal(ax, ay, animal_type)
-                                    game.active_animals.append(animal_obj)
-                                    game.items_on_ground.append(animal_obj)
+                                    
+                                    # [FIX] Robust Spatial Spawn
+                                    free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
+                                    if free_pos:
+                                        animal_obj.rect.topleft = free_pos
+                                        animal_obj.x, animal_obj.y = free_pos
+                                        game.active_animals.append(animal_obj)
+                                        game.items_on_ground.append(animal_obj)
                                     
                         # Make sure followers aren't lost
                         if hasattr(game, 'npcs'):

@@ -32,7 +32,7 @@ def draw_game(game):
     game.game_screen.fill(PANEL_COLOR)
 
     # World Rendering with Pixelated Zoom
-    zoom = game.zoom_level
+    zoom = getattr(game, 'zoom_level', 1.0)
     view_w = int(GAME_WIDTH / zoom)
     view_h = int(GAME_HEIGHT / zoom)
 
@@ -62,6 +62,12 @@ def draw_game(game):
     target_pan_x = 0
     target_pan_y = 0
 
+    if game.player:
+        world_mouse_pos = game.screen_to_world(mouse_pos)
+        dx = world_mouse_pos[0] - game.player.rect.centerx
+        dy = world_mouse_pos[1] - game.player.rect.centery
+        game.player.aim_angle = math.atan2(-dy, dx)
+
     if is_aiming and game.player:
         edge_margin = 80 
         at_left_edge = mouse_pos[0] < edge_margin
@@ -75,13 +81,51 @@ def draw_game(game):
             target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
 
     lerp_speed = 0.1
+    if not hasattr(game, 'camera_pan_x'): game.camera_pan_x = 0
+    if not hasattr(game, 'camera_pan_y'): game.camera_pan_y = 0
     game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
     game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
 
-    target_offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
-    target_offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
+    # --- [NEW] CAMERA DEADZONE (FREE-ROAM) LOGIC ---
+    if not hasattr(game, 'true_camera_x'):
+        game.true_camera_x = game.player.rect.centerx - view_w / 2
+        game.true_camera_y = game.player.rect.centery - view_h / 2
+    else:
+        # Check for sudden massive teleportation (e.g. crossing a chunk boundary)
+        dist = math.hypot(game.player.rect.centerx - (game.true_camera_x + view_w/2), 
+                          game.player.rect.centery - (game.true_camera_y + view_h/2))
+        if dist > 800: # Instantly snap camera if player jumped more than 800 pixels
+            game.true_camera_x = game.player.rect.centerx - view_w / 2
+            game.true_camera_y = game.player.rect.centery - view_h / 2
 
-    # --- [NEW] CLAMP CAMERA TO MAP BOUNDS ---
+    # Calculate inner free-roam bounding box (30% of screen size)
+    box_w = view_w * 0.30
+    box_h = view_h * 0.30
+    
+    # 35% margins on each side
+    margin_x = (view_w - box_w) / 2 
+    margin_y = (view_h - box_h) / 2
+
+    # Calculate player's coordinates relative to the screen
+    screen_px = game.player.rect.centerx - game.true_camera_x
+    screen_py = game.player.rect.centery - game.true_camera_y
+
+    # If player walks past margins, push the camera tracking coordinate
+    if screen_px < margin_x:
+        game.true_camera_x -= (margin_x - screen_px)
+    elif screen_px > view_w - margin_x:
+        game.true_camera_x += (screen_px - (view_w - margin_x))
+
+    if screen_py < margin_y:
+        game.true_camera_y -= (margin_y - screen_py)
+    elif screen_py > view_h - margin_y:
+        game.true_camera_y += (screen_py - (view_h - margin_y))
+
+    # Calculate the targeted view offset
+    target_offset_x = -game.true_camera_x - game.camera_pan_x
+    target_offset_y = -game.true_camera_y - game.camera_pan_y
+
+    # --- CLAMP CAMERA TO MAP BOUNDS ---
     map_h = len(game.map_data) if hasattr(game, 'map_data') and game.map_data else 0
     map_w = len(game.map_data[0]) if map_h > 0 else 0
     
@@ -93,7 +137,7 @@ def draw_game(game):
     if map_pixel_w > 0 and map_pixel_h > 0:
         # X Axis Clamp
         if map_pixel_w < view_w:
-            offset_x = (view_w - map_pixel_w) / 2 # Center if map is smaller than screen
+            offset_x = (view_w - map_pixel_w) / 2 
         else:
             offset_x = max(view_w - map_pixel_w, min(0, target_offset_x))
             
@@ -107,7 +151,16 @@ def draw_game(game):
         offset_x = target_offset_x
         offset_y = target_offset_y
 
+    # Force sync the tracked camera if it hit a clamp, preventing the deadzone from drifting!
+    if map_pixel_w >= view_w:
+        game.true_camera_x = -offset_x - game.camera_pan_x
+    if map_pixel_h >= view_h:
+        game.true_camera_y = -offset_y - game.camera_pan_y
+
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
+
+    game.offset_x = offset_x
+    game.offset_y = offset_y
 
     # 2. OPTIMIZED CHUNK RENDERING
     chunk_size = core.data.config.CHUNK_SIZE
@@ -551,12 +604,17 @@ def draw_game(game):
         game.game_screen.blit(text_surf, text_rect)
 
     if game.player.gun_flash_timer > 0:
-        center_x = GAME_OFFSET_X + GAME_WIDTH // 2
-        center_y = GAME_HEIGHT // 2
+        # [FIX] Calculate based on actual player world position + camera offset
+        player_view_x = game.player.rect.centerx + offset_x
+        player_view_y = game.player.rect.centery + offset_y
+        
+        screen_x = (player_view_x * zoom) + GAME_OFFSET_X
+        screen_y = (player_view_y * zoom)
+
         flash_distance = (TILE_SIZE * 1.4) * zoom 
         
-        flash_x = center_x + math.cos(game.player.aim_angle) * flash_distance
-        flash_y = center_y - math.sin(game.player.aim_angle) * flash_distance
+        flash_x = screen_x + math.cos(game.player.aim_angle) * flash_distance
+        flash_y = screen_y - math.sin(game.player.aim_angle) * flash_distance
         
         flash_radius = (TILE_SIZE // 5) * zoom 
         pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))

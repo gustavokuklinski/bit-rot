@@ -80,8 +80,15 @@ def find_nearby_containers(game):
 def screen_to_world(game, screen_pos):
     screen_x, screen_y = screen_pos
     screen_x -= GAME_OFFSET_X
-    relative_screen_x = screen_x - (GAME_WIDTH / 2)
-    relative_screen_y = screen_y - (GAME_HEIGHT / 2)
-
-    return (game.player.rect.centerx + game.camera_pan_x + relative_screen_x / game.zoom_level,
-            game.player.rect.centery + game.camera_pan_y + relative_screen_y / game.zoom_level)
+    
+    zoom = getattr(game, 'zoom_level', 1.0)
+    
+    # Scale screen coordinates down to the view's internal resolution
+    view_x = screen_x / zoom
+    view_y = screen_y / zoom
+    
+    # Subtract the camera offset to get the true world coordinates
+    offset_x = getattr(game, 'offset_x', 0)
+    offset_y = getattr(game, 'offset_y', 0)
+    
+    return (view_x - offset_x, view_y - offset_y)

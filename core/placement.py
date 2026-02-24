@@ -5,6 +5,7 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
     """
     Finds a free tile for the given rect, avoiding obstacles.
     If items_on_ground is provided, avoids them too. If None or [], allows stacking.
+    Returns the (x, y) coordinates of the free tile, or None if no free tile is found.
     """
     if items_on_ground is None:
         items_on_ground = []
@@ -31,7 +32,8 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                 collision = True
                 break
     if not collision:
-        return True
+        # [FIX] Return coordinates instead of True
+        return (rect.x, rect.y)
 
     # If not, and we have an initial position, search outwards
     if initial_pos:
@@ -59,10 +61,11 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                                 break
                     
                     if not collision:
-                        return True # Found a free tile
+                        # [FIX] Return coordinates instead of True
+                        return (rect.x, rect.y) 
 
-    # If no free tile was found within the radius, return False
-    return False
+    # If no free tile was found within the radius, return None instead of False
+    return None
 
 def find_random_free_tile(rect, obstacles, items_on_ground):
     rect.x = random.randint(0, (GAME_WIDTH // TILE_SIZE) - 1) * TILE_SIZE
@@ -84,7 +87,8 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
                     break
         
         if not collision:
-            return True
+            # [FIX] Return coordinates instead of True
+            return (rect.x, rect.y)
 
         rect.x += TILE_SIZE
         if rect.x >= GAME_WIDTH:
@@ -95,4 +99,5 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
         
         attempts += 1
 
-    return False
+    # [FIX] Return None instead of False
+    return None
