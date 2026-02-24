@@ -1,4 +1,6 @@
 import math
+import re
+import random
 import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message_player
@@ -89,44 +91,34 @@ class PlayerMovement:
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
 
             # Move the vehicle (handles wall collisions)
-            # [UPDATED] Pass game instance for mask checks against tiles
             self.vehicle.move(move_x, move_y, obstacles, game=game)
             
             vehicle_rect = self.vehicle.rect
             
             # --- ZOMBIE ROADKILL LOGIC ---
-            # Explicitly check collision with zombies and KILL them if hit
             for zombie in zombies[:]:
                 if vehicle_rect.colliderect(zombie.rect):
                     self.vehicle.damage_motor(1.5)
-                    # Massive damage to ensure instant kill
                     damage_to_zombie = 2
 
-                    # Apply damage. take_damage returns True if health <= 0
                     if zombie.take_damage(damage_to_zombie, game):
-                        # IMPORTANT: Must call die() to spawn corpse and remove from list
                         zombie.die(game)
                         display_message_player(f"Roadkill! Zombie splattered.")
 
-                        # Add kill count if not handled inside die
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
 
-                    # Slow down vehicle on impact
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 
             # --- ANIMAL ROADKILL LOGIC ---
-            # Check collision with animals and KILL them
             animals_to_check = getattr(game, 'active_animals', [])
             for animal in list(animals_to_check):
                 if vehicle_rect.colliderect(animal.rect):
                     self.vehicle.damage_motor(1.5)
                     damage_to_animal = 2
 
-                    # Apply damage. take_damage returns True if health <= 0
                     if animal.take_damage(damage_to_animal, game):
-                        # IMPORTANT: Must call die() to spawn corpse and remove from lists
                         animal.die(game)
                         if animal in game.items_on_ground:
                             game.items_on_ground.remove(animal)
@@ -134,28 +126,23 @@ class PlayerMovement:
                             game.active_animals.remove(animal)
                         display_message_player(f"Roadkill! Animal splattered.")
 
-                    # Slow down vehicle on impact
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 
             # --- NPC ROADKILL LOGIC ---
             if hasattr(game, 'npcs'):
-                # Handle both List and SpriteGroup safely
                 npcs_to_check = game.npcs.sprites() if hasattr(game.npcs, 'sprites') else game.npcs
                 
                 for npc in list(npcs_to_check):
                     if not npc.is_dead and vehicle_rect.colliderect(npc.rect):
                         self.vehicle.damage_motor(1.5)
                         damage_to_npc = 2
-                        # Apply damage (attacker=self works because PlayerMovement is a Player mixin)
                         is_dead = npc.take_damage(damage_to_npc, game, attacker=self)
                         
-                        # Slow down vehicle
                         self.vehicle.velocity[0] *= 0.5
                         self.vehicle.velocity[1] *= 0.5
                         
                         if is_dead:
-                            # IMPORTANT: Must call die() for NPCs too
                             npc.die(game)
                             display_message_player(f"You ran over {npc.name}!")
 
@@ -166,10 +153,7 @@ class PlayerMovement:
             
         else:
             # Standard Player Walking Movement (when not in vehicle)
-            # [NEW] PIXEL PERFECT COLLISION LOGIC with "Push/Slow" mechanic
-            
             def check_collision(rect_check):
-                # 1. Check Tile Obstacles -> Returns 'tile' on hit
                 for obstacle in obstacles:
                     if rect_check.colliderect(obstacle):
                         gx = obstacle.x // TILE_SIZE
@@ -182,7 +166,6 @@ class PlayerMovement:
                         else:
                             return 'tile'
                 
-                # 2. Check Zombies and NPCs -> Returns 'entity' on hit
                 entities = zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else [])
                 for entity in entities:
                     if rect_check.colliderect(entity.rect):
@@ -200,11 +183,9 @@ class PlayerMovement:
             
             col_type = check_collision(self.rect)
             if col_type == 'tile':
-                 # Hard block for walls
                  self.x -= self.vx
                  self.rect.x = round(self.x)
             elif col_type == 'entity':
-                 # Push/Slow effect: Revert 80% of movement to simulate moving slowly through crowd
                  self.x -= self.vx * 0.8
                  self.rect.x = round(self.x)
 
@@ -214,10 +195,190 @@ class PlayerMovement:
 
             col_type = check_collision(self.rect)
             if col_type == 'tile':
-                 # Hard block for walls
                  self.y -= self.vy
                  self.rect.y = round(self.y)
             elif col_type == 'entity':
-                 # Push/Slow effect: Revert 80% of movement
                  self.y -= self.vy * 0.8
                  self.rect.y = round(self.y)
+
+        # --- CHUNK TRANSITION LOGIC ---
+        if not getattr(game, 'is_giant_map', False):
+            chunk_width_px = game.CHUNK_SIZE * TILE_SIZE
+            chunk_height_px = game.CHUNK_SIZE * TILE_SIZE
+
+            current_map = game.map_manager.current_map_filename
+            match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', current_map)
+            
+            if match:
+                layer = int(match.group(1))
+                gx = int(match.group(2))
+                gy = int(match.group(3))
+                
+                new_gx, new_gy = gx, gy
+                transition = False
+                
+                # We check the center of the player/vehicle to see if they crossed the boundary
+                target = self.vehicle if self.vehicle else self
+                
+                if target.rect.centerx < 0:
+                    new_gx -= 1
+                    transition = True
+                elif target.rect.centerx >= chunk_width_px:
+                    new_gx += 1
+                    transition = True
+                    
+                if target.rect.centery < 0:
+                    new_gy -= 1
+                    transition = True
+                elif target.rect.centery >= chunk_height_px:
+                    new_gy += 1
+                    transition = True
+                    
+                if transition:
+                    new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
+                    # Check if the map file exists in the manager
+                    if new_map in game.map_manager.map_files:
+                        print(f"Transitioning to chunk: {new_map}")
+                        
+                        # --- CACHE DEPARTING CHUNK STATE ---
+                        game.map_states.setdefault(current_map, {})
+                        game.map_states[current_map]['items_on_ground'] = game.items_on_ground[:]
+                        game.map_states[current_map]['zombies'] = game.zombies[:]
+                        
+                        if hasattr(game, 'active_animals'):
+                            game.map_states[current_map]['active_animals'] = game.active_animals[:]
+                            
+                        # Keep followers with the player so they don't get cached away
+                        followers = []
+                        chunk_npcs = []
+                        if hasattr(game, 'npcs'):
+                            for npc in game.npcs:
+                                if getattr(npc, 'is_following', False):
+                                    followers.append(npc)
+                                else:
+                                    chunk_npcs.append(npc)
+                            game.map_states[current_map]['npcs'] = chunk_npcs
+                            
+                        # Cache vehicles & containers (excluding the one the player is currently driving to prevent clones)
+                        clean_containers = [c for c in game.containers if c != self.vehicle]
+                        game.map_states[current_map]['containers'] = clean_containers
+                        
+                        if hasattr(game.map_manager, 'vehicles'):
+                            clean_vehicles = [v for v in game.map_manager.vehicles if v != self.vehicle]
+                            game.map_states[current_map]['vehicles'] = clean_vehicles
+                        
+                        # Adjust coordinates for wrap-around
+                        if new_gx < gx: target.x += chunk_width_px
+                        elif new_gx > gx: target.x -= chunk_width_px
+                        
+                        if new_gy < gy: target.y += chunk_height_px
+                        elif new_gy > gy: target.y -= chunk_height_px
+                        
+                        target.rect.topleft = (int(target.x), int(target.y))
+                        
+                        if self.vehicle:
+                            self.x = self.vehicle.x
+                            self.y = self.vehicle.y
+                            self.rect.topleft = (int(self.x), int(self.y))
+                            
+                        # Teleport following NPCs
+                        for f_npc in followers:
+                            if new_gx < gx: f_npc.x += chunk_width_px
+                            elif new_gx > gx: f_npc.x -= chunk_width_px
+                            if new_gy < gy: f_npc.y += chunk_height_px
+                            elif new_gy > gy: f_npc.y -= chunk_height_px
+                            f_npc.rect.topleft = (int(f_npc.x), int(f_npc.y))
+                            
+                        # Load the new chunk
+                        game.load_map(new_map)
+                        
+                        # --- RESTORE NEW CHUNK STATE ---
+                        if new_map in game.map_states:
+                            # Re-populate from Memory
+                            game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
+                            game.zombies = game.map_states[new_map].get('zombies', [])
+                            if hasattr(game, 'active_animals'):
+                                game.active_animals = game.map_states[new_map].get('active_animals', [])
+                                
+                            if hasattr(game, 'npcs'):
+                                game.npcs.empty()
+                                for npc in game.map_states[new_map].get('npcs', []):
+                                    game.npcs.add(npc)
+                                    
+                            if 'containers' in game.map_states[new_map]:
+                                default_container_rects = [c.rect for c in game.containers]
+                                game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
+                                
+                                game.containers = game.map_states[new_map]['containers']
+                                for c in game.containers:
+                                    if c.rect not in game.obstacles:
+                                        game.obstacles.append(c.rect)
+                                        
+                            if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
+                                default_veh_rects = [v.rect for v in game.map_manager.vehicles]
+                                game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
+                                
+                                game.map_manager.vehicles = game.map_states[new_map]['vehicles']
+                                for v in game.map_manager.vehicles:
+                                    if v.rect not in game.obstacles:
+                                        game.obstacles.append(v.rect)
+                        else:
+                            # First time ever visiting this chunk! Convert the raw map points into dynamic entities.
+                            game.items_on_ground = []
+                            game.zombies = []
+                            if hasattr(game, 'active_animals'):
+                                game.active_animals = []
+                            if hasattr(game, 'npcs'):
+                                game.npcs.empty()
+                                
+                            if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns:
+                                from core.entities.zombie.zombie import Zombie
+                                for szx, szy in game.current_zombie_spawns:
+                                    for _ in range(random.randint(1, 2)):
+                                        z = Zombie.create_random(szx, szy)
+                                        if z: game.zombies.append(z)
+                                        
+                            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                                from core.entities.npc.npc import NPC
+                                for nx, ny in game.npc_spawn_points:
+                                    npc = NPC(nx, ny, game, is_static=False)
+                                    game.npcs.add(npc)
+                                    
+                            if hasattr(game, 'active_animals'):
+                                from core.entities.animal.animal import Animal
+                                for _ in range(random.randint(2, 6)):
+                                    ax = random.randint(50, max(51, getattr(game, 'map_width_pixels', chunk_width_px) - 50))
+                                    ay = random.randint(50, max(51, getattr(game, 'map_height_pixels', chunk_height_px) - 50))
+                                    animal_type = random.choice(['Rat', 'Pig', 'Dog', 'Chicken'])
+                                    animal_obj = Animal(ax, ay, animal_type)
+                                    game.active_animals.append(animal_obj)
+                                    game.items_on_ground.append(animal_obj)
+                                    
+                        # Make sure followers aren't lost
+                        if hasattr(game, 'npcs'):
+                            for f_npc in followers:
+                                game.npcs.add(f_npc)
+
+                        # Re-attach driving vehicle to the new chunk
+                        if self.vehicle:
+                            if self.vehicle not in game.containers:
+                                game.containers.append(self.vehicle)
+                            if hasattr(game.map_manager, 'vehicles') and self.vehicle not in game.map_manager.vehicles:
+                                game.map_manager.vehicles.append(self.vehicle)
+                            if self.vehicle.rect not in game.obstacles:
+                                game.obstacles.append(self.vehicle.rect)
+                                
+                        return
+                    else:
+                        # Revert movement if walking into map bounds where no chunk exists
+                        if target.rect.centerx < 0: target.x = 0
+                        elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
+                        if target.rect.centery < 0: target.y = 0
+                        elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
+                        
+                        target.rect.topleft = (int(target.x), int(target.y))
+                        if self.vehicle:
+                            self.vehicle.velocity = [0, 0]
+                            self.x = self.vehicle.x
+                            self.y = self.vehicle.y
+                            self.rect.topleft = (int(self.x), int(self.y))

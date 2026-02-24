@@ -165,13 +165,13 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     all_light_layers = {}
 
     # Regex for new single world map: map_L<layer>_world_map.csv
-    world_pattern = re.compile(r'map_L(\d+)_world_map\.csv')
+    world_pattern = re.compile(r'map_L(\d+)_(\d+)_(\d+)_map\.csv')
     world_match = world_pattern.match(base_map_filename)
 
     if not world_match:
         # Fallback check for exact filename matching if using custom names, 
         # or if caller passed full path, but strictly enforce no legacy chunk parsing here.
-        if "world_map" not in base_map_filename:
+        if "_map.csv" not in base_map_filename:
              print(f"Note: Base map filename '{base_map_filename}' does not match standard world pattern.")
     
     # Load dimensions from Layer 1 first to determine target width/height
@@ -194,8 +194,10 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
 
     # Load Layers 1 through 9
     for i in range(1, 9):
+        gx = world_match.group(2)
+        gy = world_match.group(3)
         # Construct filename based on the new standard
-        layer_prefix = f"map_L{i}_world"
+        layer_prefix = f"map_L{i}_{gx}_{gy}"
         
         # If the base filename provided was somehow different (e.g. custom save),
         # we might need to handle that, but for now we assume standard naming 

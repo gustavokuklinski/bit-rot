@@ -1,3 +1,5 @@
+# core/systems/load_manager.py
+
 import os
 import json
 import re
@@ -12,13 +14,12 @@ from core.entities.animal.animal import Animal
 from core.entities.item.item import Item
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
-from core.map.world_layers import load_all_map_layers, set_active_layer, load_giant_map
+from core.map.world_layers import load_all_map_layers, set_active_layer
 from core.map.map_loader import parse_layered_map_layout
 from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles, spawn_animals
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
-# [FIX] Import Quadtree to re-initialize it
 from core.systems.quadtree import Quadtree
 
 def load_map(game, map_filename):
@@ -40,13 +41,46 @@ def load_map(game, map_filename):
     layer_index = int(match.group(1)) if match else 1
     
     set_active_layer(game, layer_index)
+    
+    # [NEW] Fully parse the active chunk layer layout to extract physical barriers and containers
+    base_layout = game.all_map_layers.get(layer_index)
+    ground_layout = game.all_ground_layers.get(layer_index)
+    spawn_layout = game.all_spawn_layers.get(layer_index)
+    roof_layout = game.all_roof_layers.get(layer_index)
+    light_layout = game.all_light_layers.get(layer_index)
+
+    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
+        base_layout, ground_layout, spawn_layout, roof_layout, light_layout, game.tile_manager
+    )
+    
+    if base_layout:
+        game.map_width_pixels = len(base_layout[0]) * TILE_SIZE
+        game.map_height_pixels = len(base_layout) * TILE_SIZE
+
+    game.obstacles = obstacles
+    game.containers = containers
+    game.renderable_tiles = renderable_tiles
+    game.npc_spawn_points = npc_spawns
+    game.current_zombie_spawns = zombie_spawns
+    game.player_spawn = player_spawn
+
+    # Extract map specific vehicles
+    map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
+    for v in map_vehicles:
+        if v in containers:
+            containers.remove(v)
+        if v.rect in obstacles:
+            obstacles.remove(v.rect)
+    
+    if hasattr(game.map_manager, 'vehicles'):
+        game.map_manager.vehicles = map_vehicles
+
+    # [CRITICAL] Ensure chunked logic evaluates to true!
+    game.is_giant_map = False
+    
     return None
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
-    """
-    Initializes a game session.
-    :param spawn_entities: If False, skips spawning initial zombies/NPCs (used when loading a save).
-    """
     game.is_giant_map = False
     
     # 1. Clear Map & Layer Data
@@ -78,7 +112,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         game._tile_cache_surface = None
     game.tiles_dirty = True
     
-    # [FIX] Explicitly clear the Chunk Cache to remove ghost images from previous games
     if hasattr(game, 'map_manager'):
         game.map_manager.map_files = {}
         game.map_manager.clear_cache() 
@@ -199,17 +232,13 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     ]
     game.map_states = {}
     
+    # The load map handles everything now, bypass giant map logic
     load_map(game, game.map_manager.current_map_filename)
-    load_giant_map(game)
     
-    # [FIX] Re-initialize Quadtree with correct dimensions after map load
-    # This prevents the quadtree from retaining old bounds or data
     if hasattr(game, 'map_width_pixels') and hasattr(game, 'map_height_pixels'):
         game.quadtree = Quadtree(pygame.Rect(0, 0, game.map_width_pixels, game.map_height_pixels))
     
-    # --- Entity Spawning Logic ---
     if spawn_entities:
-        # 1. Global Static NPCs
         game.npc_spawn_points = []
         if game.current_layer_index in game.all_spawn_layers:
             spawn_layer = game.all_spawn_layers[game.current_layer_index]
@@ -222,22 +251,15 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                         npc = NPC(px, py, game, is_static=True)
                         game.npcs.add(npc)
 
-        # 2. Spawn Layer 1 Entities
         if 1 in game.all_map_layers:
             game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
             spawn_random_vehicles(game, count=8)
-            spawn_animals(game, target_layer=1) # Default L1
+            spawn_animals(game, target_layer=1)
 
-        # 3. Spawn Layer 2 Entities (Caves/Basements)
         if 2 in game.all_map_layers:
             game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
-            # Populate L2 with basic zombies/NPCs even if not active
             spawn_l2_population(game, count=20, target_layer=2)
-            # Spawn L2 Animals (Bats)
             spawn_animals(game, target_layer=2)
-            
-    else:
-        pass
 
     if game.player_spawn:
         game.logger.info(f"Player spawn point found at {game.player_spawn}. Setting player position.")
@@ -304,7 +326,6 @@ def load_game(game, save_folder_name):
         with open(os.path.join(save_path, "host.rot"), "r") as f:
             player_data = json.load(f)
 
-        # Skip spawning entities because we will load them from file
         start_new_game(game, player_data, save_dir_name=save_folder_name, spawn_entities=False)
         
         game.zombies_killed = player_data.get('zombies_killed', 0)
@@ -313,33 +334,9 @@ def load_game(game, save_folder_name):
         if target_map and target_map != game.map_manager.current_map_filename:
             game.logger.info(f"Switching to saved map: {target_map}")
             load_map(game, target_map)
-            load_giant_map(game)
         
         game.map_manager.map_folder = map_path
         game.map_manager.refresh_maps()
-
-        layer_idx = game.current_layer_index
-        base_layout = game.all_map_layers.get(layer_idx)
-        ground_layout = game.all_ground_layers.get(layer_idx)
-        spawn_layout = game.all_spawn_layers.get(layer_idx)
-        roof_layout = game.all_roof_layers.get(layer_idx)
-        light_layout = game.all_light_layers.get(layer_idx)
-
-        obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
-            base_layout, ground_layout, spawn_layout, roof_layout, light_layout, game.tile_manager
-        )
-
-        map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
-        for v in map_vehicles:
-            if v in containers:
-                containers.remove(v)
-            if v.rect in obstacles:
-                obstacles.remove(v.rect)
-        
-        game.obstacles = obstacles
-        game.containers = containers
-        game.renderable_tiles = renderable_tiles
-        game.npc_spawn_points = npc_spawns
 
         prog_data = player_data['progression']
         if hasattr(game.player.progression, 'attributes'):
@@ -431,7 +428,6 @@ def load_game(game, save_folder_name):
                 item = None
                 data = i_data.get('data', {})
                 
-                # [CHANGED] Check if item is a Corpse and handle it explicitly
                 if data.get('is_corpse') or (isinstance(data.get('name'), str) and data['name'].startswith('Corpse')):
                      from core.entities.zombie.corpse import Corpse
                      
@@ -440,17 +436,15 @@ def load_game(game, save_folder_name):
                      
                      item = Corpse(name=name, image_path=image_path)
                      
-                     # Restore inventory
                      if 'inventory' in data and data['inventory']:
                          item.inventory = [Item.from_dict(x) for x in data['inventory'] if x]
                      
-                     # Restore position
                      item.x = int(i_data.get('x', 0))
                      item.y = int(i_data.get('y', 0))
                      item.rect.topleft = (item.x, item.y)
                      
                      game.items_on_ground.append(item)
-                     continue # Skip the standard Item loading fallback
+                     continue 
 
                 if 'data' in i_data:
                     if isinstance(i_data['data'], dict):
@@ -470,7 +464,6 @@ def load_game(game, save_folder_name):
             except Exception as e:
                 game.logger.info(f"Error loading an item on ground: {e}")
         
-        # --- ZOMBIES LOADING (FROM zombies.rot) ---
         game.zombies = [] 
         zombies_path = os.path.join(save_path, "zombies.rot")
         
@@ -480,7 +473,6 @@ def load_game(game, save_folder_name):
                  zombie_list = json.load(f)
              
              for z_data in zombie_list:
-                # Reconstruct via Template to support Zombie(x, y, template) structure
                 template = {
                     'name': z_data.get('name', 'Zombie'),
                     'sex': z_data.get('sex', 'Male'),
@@ -500,13 +492,11 @@ def load_game(game, save_folder_name):
                 
                 z = Zombie(z_data['x'], z_data['y'], template)
                 
-                # Restore runtime stats
                 z.health = z_data.get('health', z.max_health)
                 z.max_health = z_data.get('max_health', z.health)
                 if 'id' in z_data and z_data['id']:
                     z.id = z_data['id']
                 
-                # Restore Inventory
                 if 'inventory' in z_data:
                     z.inventory = [] 
                     for i_data in z_data['inventory']:
@@ -527,7 +517,6 @@ def load_game(game, save_folder_name):
                     z.health = z_data['health']
                     game.zombies.append(z)
 
-        # --- ANIMALS LOADING (FROM animal.rot) ---
         animal_path = os.path.join(save_path, "animal.rot")
         if os.path.exists(animal_path):
              game.logger.info("Loading animals from animal.rot...")
@@ -535,7 +524,6 @@ def load_game(game, save_folder_name):
                  animal_list = json.load(f)
              
              for a_data in animal_list:
-                # Name in saved data corresponds to animal_type (e.g., 'Rat')
                 animal_type = a_data.get('name', 'Rat')
                 a = Animal(a_data['x'], a_data['y'], animal_type)
                 
@@ -545,7 +533,6 @@ def load_game(game, save_folder_name):
                 if 'id' in a_data and a_data['id']:
                     a.id = a_data['id']
                 
-                # Restore runtime inventory if any (rare for animals)
                 if 'inventory' in a_data:
                     a.inventory = []
                     for i_data in a_data['inventory']:
@@ -570,7 +557,6 @@ def load_game(game, save_folder_name):
                         modal['position'] = (int(pos[0]), int(pos[1]))
                         modal['rect'].topleft = modal['position']
 
-        # --- NPC LOADING (FROM npc.rot) ---
         if os.path.exists(os.path.join(save_path, "npc.rot")):
                 with open(os.path.join(save_path, "npc.rot"), "r") as f:
                     npc_list = json.load(f)
@@ -594,7 +580,6 @@ def load_game(game, save_folder_name):
                     if npc.is_following:
                         npc.state = 'following'
                     
-                    # Restore Inventory
                     npc.inventory = []
                     for i_data in n_data.get('inventory', []):
                         if isinstance(i_data, dict):
@@ -603,7 +588,6 @@ def load_game(game, save_folder_name):
                             item = Item.create_from_name(i_data)
                         if item: npc.inventory.append(item)
                     
-                    # Restore Weapon
                     w_data = n_data.get('equipped_weapon')
                     if w_data:
                         if isinstance(w_data, dict):
@@ -611,7 +595,6 @@ def load_game(game, save_folder_name):
                         else:
                             npc.equipped_weapon = Item.create_from_name(w_data)
 
-                    # Restore Clothes
                     clothes_data = n_data.get('clothes', {})
                     npc.clothes = {}
                     for slot, c_data in clothes_data.items():
@@ -621,7 +604,6 @@ def load_game(game, save_folder_name):
                             else:
                                 npc.clothes[slot] = Item.create_from_name(c_data)
                     
-                    # Restore Loot Table
                     if 'loot_table' in n_data:
                         npc.loot_table = n_data['loot_table']
                             
@@ -631,7 +613,10 @@ def load_game(game, save_folder_name):
             with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
                 v_list = json.load(f)
                 
-            game.map_manager.vehicles = [] 
+            # Remove any default vehicles parsed by map
+            if hasattr(game.map_manager, 'vehicles'):
+                game.map_manager.vehicles.clear() 
+            game.containers = [c for c in game.containers if not isinstance(c, Vehicle)]
             
             for v_data in v_list:
                 vehicle_def = game.tile_manager.definitions.get(v_data.get('name').lower().replace(" ", "_"), None)

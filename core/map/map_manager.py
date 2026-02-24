@@ -1,3 +1,5 @@
+# core/map/map_manager.py
+
 import os
 import re
 import csv
@@ -36,18 +38,34 @@ class MapManager:
 
     def _discover_maps(self):
         maps = {}
-        # Regex for single world map: map_L<layer>_world_map.csv
+        # Regex for single world map
         pattern_world = re.compile(r'map_L(\d+)_world_map\.csv')
+        # Regex for separated chunks
+        pattern_chunk = re.compile(r'map_L(\d+)_(\d+)_(\d+)_map\.csv')
 
         if not os.path.exists(self.map_folder):
             print(f"Warning: Map folder '{self.map_folder}' does not exist.")
             return maps
 
         for filename in os.listdir(self.map_folder):
-            match = pattern_world.match(filename)
-            if match:
+            match_world = pattern_world.match(filename)
+            match_chunk = pattern_chunk.match(filename)
+            
+            if match_chunk:
                 try:
-                    layer = int(match.group(1))
+                    layer = int(match_chunk.group(1))
+                    maps[filename] = {
+                        'filename': filename,
+                        'layer': layer,
+                        'gx': int(match_chunk.group(2)),
+                        'gy': int(match_chunk.group(3)),
+                        'position': 0,
+                    }
+                except ValueError:
+                    print(f"Warning: Could not parse chunk map filename {filename}")
+            elif match_world:
+                try:
+                    layer = int(match_world.group(1))
                     maps[filename] = {
                         'filename': filename,
                         'layer': layer,
@@ -319,14 +337,26 @@ class MapManager:
             except Exception as e:
                 print(f"Error saving map layer {filename}: {e}")
 
+        # Extract base prefix to save using chunk nomenclature
+        current_name = self.current_map_filename
+        chunk_match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_name)
+
         if hasattr(self.game, 'all_map_layers'):
             for layer_idx, layout in self.game.all_map_layers.items():
-                filename = f'map_L{layer_idx}_world_map.csv'
+                if chunk_match:
+                    gx, gy = chunk_match.groups()
+                    filename = f'map_L{layer_idx}_{gx}_{gy}_map.csv'
+                else:
+                    filename = f'map_L{layer_idx}_world_map.csv'
                 write_layer(layout, filename)
         
         if hasattr(self.game, 'all_spawn_layers'):
             for layer_idx, layout in self.game.all_spawn_layers.items():
-                filename = f'map_L{layer_idx}_world_spawn.csv'
+                if chunk_match:
+                    gx, gy = chunk_match.groups()
+                    filename = f'map_L{layer_idx}_{gx}_{gy}_spawn.csv'
+                else:
+                    filename = f'map_L{layer_idx}_world_spawn.csv'
                 write_layer(layout, filename)
 
     def toggle_door_state(self, grid_x, grid_y):

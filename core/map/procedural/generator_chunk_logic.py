@@ -1,3 +1,5 @@
+# core/map/procedural/generator_chunk_logic.py
+
 import math
 import random
 import pygame
@@ -23,7 +25,7 @@ class ProceduralGeneratorChunk:
             'light_L2': [[' ' for _ in range(w)] for _ in range(h)]
         }
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
-        occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)] # NEW: L2 Mask
+        occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)]
 
         road_tile = 'asphalt_01'
         dirt_tile = 'dirty_01'
@@ -49,7 +51,7 @@ class ProceduralGeneratorChunk:
                 steps += 1
                 if not (0 <= current_x < w and 0 <= current_y < h): break
                 if layers['ground'][current_y][current_x] == road_tile: break 
-                if layers['ground'][current_y][current_x] == self.water_tile: break 
+                if layers['ground'][current_y][current_x] == getattr(self, 'water_tile', 'water_01'): break 
 
                 if math.hypot(target_x - current_x, target_y - current_y) < 2: break
 
@@ -58,7 +60,7 @@ class ProceduralGeneratorChunk:
                 for dx, dy in moves:
                     nx, ny = current_x + dx, current_y + dy
                     if 0 <= nx < w and 0 <= ny < h:
-                        if layers['base'][ny][nx] == ' ' and layers['ground'][ny][nx] != self.water_tile:
+                        if layers['base'][ny][nx] == ' ' and layers['ground'][ny][nx] != getattr(self, 'water_tile', 'water_01'):
                             valid_moves.append((dx, dy))
                 
                 if not valid_moves: break 
@@ -82,7 +84,7 @@ class ProceduralGeneratorChunk:
                         gx_pos, gy_pos = px + ox, py + oy
                         if 0 <= gx_pos < w and 0 <= gy_pos < h:
                             if layers['base'][gy_pos][gx_pos] == ' ' and layers['ground'][gy_pos][gx_pos] != road_tile:
-                                if layers['ground'][gy_pos][gx_pos] != self.water_tile:
+                                if layers['ground'][gy_pos][gx_pos] != getattr(self, 'water_tile', 'water_01'):
                                     layers['ground'][gy_pos][gx_pos] = tile_type
                                     occupied_mask[gy_pos][gx_pos] = 1
 
@@ -111,25 +113,25 @@ class ProceduralGeneratorChunk:
             else: draw_secondary_maze_road(w-1, cy, cx, cy, dirt_tile)
 
         # 3. Border (Forest)
-        border_w = self.forest_border_width
+        border_w = getattr(self, 'forest_border_width', 2)
         for y in range(h):
             for x in range(w):
                 if x < border_w or x >= w - border_w or y < border_w or y >= h - border_w:
                     if occupied_mask[y][x] == 0:
-                        tile = random.choice(self.forest_tiles) if self.forest_tiles else 'wall_stone'
+                        tile = random.choice(getattr(self, 'forest_tiles', ['wall_stone']))
                         layers['base'][y][x] = tile
                         occupied_mask[y][x] = 1
 
         # 4. Organic Coastline
         if hasattr(self, 'grid_w') and hasattr(self, 'grid_h'):
-            cw = self.coast_width
+            cw = getattr(self, 'coast_width', 15)
             def get_coast_noise(idx, scale=0.1, amp=4.0):
                 val = math.sin(idx * scale) * amp 
                 val += math.sin(idx * scale * 2.1) * (amp * 0.5)
                 val += random.uniform(-2.0, 2.0)
                 return int(val)
 
-            tree_chance = 0.05 # 5% chance to spawn a tree on the beach
+            tree_chance = 0.05
 
             if gx == 0: # Left
                 for y in range(h):
@@ -140,12 +142,12 @@ class ProceduralGeneratorChunk:
                     for x in range(cw + 8):
                         if x >= w: break
                         if x < water_lim:
-                            layers['ground'][y][x] = self.water_tile
+                            layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
                             occupied_mask[y][x] = 1 
                         elif x < sand_lim:
-                            if layers['ground'][y][x] != self.water_tile:
-                                layers['ground'][y][x] = self.sand_tile
+                            if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
+                                layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
@@ -160,12 +162,12 @@ class ProceduralGeneratorChunk:
                         if x < 0: continue
                         dist = w - 1 - x
                         if dist < water_lim:
-                            layers['ground'][y][x] = self.water_tile
+                            layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
                             occupied_mask[y][x] = 1
                         elif dist < sand_lim:
-                            if layers['ground'][y][x] != self.water_tile:
-                                layers['ground'][y][x] = self.sand_tile
+                            if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
+                                layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
@@ -178,12 +180,12 @@ class ProceduralGeneratorChunk:
                     for y in range(cw + 8):
                         if y >= h: break
                         if y < water_lim:
-                            layers['ground'][y][x] = self.water_tile
+                            layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
                             occupied_mask[y][x] = 1
                         elif y < sand_lim:
-                            if layers['ground'][y][x] != self.water_tile:
-                                layers['ground'][y][x] = self.sand_tile
+                            if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
+                                layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
@@ -198,19 +200,19 @@ class ProceduralGeneratorChunk:
                         if y < 0: continue
                         dist = h - 1 - y
                         if dist < water_lim:
-                            layers['ground'][y][x] = self.water_tile
+                            layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
                             occupied_mask[y][x] = 1
                         elif dist < sand_lim:
-                            if layers['ground'][y][x] != self.water_tile:
-                                layers['ground'][y][x] = self.sand_tile
+                            if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
+                                layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
         # 5. Organic Trade Routes
         if allow_buildings and not force_forest:
             num_routes = 6
-            safe_margin = self.coast_width + 3 
+            safe_margin = getattr(self, 'coast_width', 15) + 3 
             for _ in range(num_routes):
                 rx1 = random.randint(safe_margin, w - safe_margin)
                 ry1 = random.randint(safe_margin, h - safe_margin)
@@ -221,11 +223,12 @@ class ProceduralGeneratorChunk:
         # 6. Place Buildings
         placed_rects = [] 
         
+        # [FIX] Added strict bounding box check (tx < 2 ... ) to avoid touching walls
         def is_area_free(tx, ty, tw, th, margin=0, ignore_mask=False):
             t_rect = pygame.Rect(tx, ty, tw, th)
             for pr in placed_rects:
                 if t_rect.inflate(margin*2, margin*2).colliderect(pr): return False
-            if tx < 0 or tx + tw > w or ty < 0 or ty + th > h: return False
+            if tx < 2 or tx + tw > w - 2 or ty < 2 or ty + th > h - 2: return False
             if not ignore_mask:
                 mx1, my1 = max(0, tx - margin), max(0, ty - margin)
                 mx2, my2 = min(w, tx + tw + margin), min(h, ty + th + margin)
@@ -240,14 +243,14 @@ class ProceduralGeneratorChunk:
                 for ry in range(my1, my2):
                     for rx in range(mx1, mx2):
                          if 0 <= ry < h and 0 <= rx < w:
-                             if layers['ground'][ry][rx] == self.water_tile:
+                             if layers['ground'][ry][rx] == getattr(self, 'water_tile', 'water_01'):
                                  return False
             return True
 
         if allow_buildings and assigned_templates:
             sorted_templates = []
             for t_name in assigned_templates:
-                if t_name in self.templates:
+                if hasattr(self, 'templates') and t_name in self.templates:
                     t = self.templates[t_name]
                     area = t['width'] * t['height']
                     sorted_templates.append((area, t_name))
@@ -269,14 +272,14 @@ class ProceduralGeneratorChunk:
                             side = random.choice([-1, 1])
                             if side == -1: tx = cx - road_radius - 1 - tw
                             else: tx = cx + road_radius + 1 + 1
-                            ty = random.randint(border_w + 2, h - border_w - th - 2)
+                            ty = random.randint(border_w + 3, h - border_w - th - 3)
                         else:
                             side = random.choice([-1, 1])
                             if side == -1: ty = cy - road_radius - 1 - th
                             else: ty = cy + road_radius + 1 + 1
-                            tx = random.randint(border_w + 2, w - border_w - tw - 2)
+                            tx = random.randint(border_w + 3, w - border_w - tw - 3)
                     else:
-                        safe_pad = 2
+                        safe_pad = 3 # Increased to keep buildings away from chunk transitions
                         if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
                         tx = random.randint(safe_pad, w - safe_pad - tw)
                         ty = random.randint(safe_pad, h - safe_pad - th)
@@ -287,18 +290,16 @@ class ProceduralGeneratorChunk:
                         break
                 
                 if not placed:
-                    print(f"Random placement failed for {tmpl_name}, trying scan...")
                     stride = 2 
-                    for sy in range(border_w + 2, h - border_w - th - 2, stride):
+                    for sy in range(border_w + 3, h - border_w - th - 3, stride):
                         if placed: break
-                        for sx in range(border_w + 2, w - border_w - tw - 2, stride):
+                        for sx in range(border_w + 3, w - border_w - tw - 3, stride):
                             if is_area_free(sx, sy, tw, th, margin=1):
                                 self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile)
                                 placed = True
                                 break
                 
                 if not placed:
-                    print(f"FORCE PLACING Mandatory Building: {tmpl_name}")
                     for _ in range(50):
                         tx = random.randint(5, w - 5 - tw)
                         ty = random.randint(5, h - 5 - th)
@@ -325,33 +326,24 @@ class ProceduralGeneratorChunk:
                                 found_l2_key = key
                                 break
                         if found_l2_key:
-                            print(f"  > LINKING: Spawning {found_l2_key} at ({tx}, {ty}) on Layer 2")
                             tmpl_l2 = self.templates[found_l2_key]
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                            if hasattr(self, '_apply_l2_border'):
+                                self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
                             
-                            # NEW: Apply border
-                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
-                            
-                            # UPDATE L2 MASK to prevent random spawn overlapping linked spawn
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
                                 for lx in range(tx, min(w, tx + l2_w)):
                                     occupied_mask_L2[ly][lx] = 1
-                        else:
-                            if 'cave' in tmpl_name.lower():
-                                print(f"  > WARNING: Linked map {tmpl_name} placed, but L2 counterpart not found!")
-
-                if not placed:
-                    print(f"CRITICAL FAILURE: Could not place {tmpl_name} even with force!")
 
         # 7. Forest / Nature
-        if self.forest_templates and not force_forest:
+        if hasattr(self, 'forest_templates') and self.forest_templates and not force_forest:
             for _ in range(20): 
                 tmpl_name = random.choice(self.forest_templates)
                 tmpl = self.templates[tmpl_name]
                 tw, th = tmpl['width'], tmpl['height']
-                tx = random.randint(1, w - tw - 1)
-                ty = random.randint(1, h - th - 1)
+                tx = random.randint(2, w - tw - 2)
+                ty = random.randint(2, h - th - 2)
                 if is_area_free(tx, ty, tw, th, margin=0):
                     self._blit_template(layers, tmpl, tx, ty, w, h)
                     if 'l1' in tmpl_name.lower():
@@ -360,9 +352,8 @@ class ProceduralGeneratorChunk:
                         if found_l2_key:
                             tmpl_l2 = self.templates[found_l2_key]
                             self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
-                            
-                            # NEW: Apply border
-                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
+                            if hasattr(self, '_apply_l2_border'):
+                                self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
                             
                             l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                             for ly in range(ty, min(h, ty + l2_h)):
@@ -379,49 +370,105 @@ class ProceduralGeneratorChunk:
             for y in range(h):
                 for x in range(w):
                     ground_tile = layers['ground'][y][x]
-                    if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile and ground_tile != self.water_tile:
+                    if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile and ground_tile != getattr(self, 'water_tile', 'water_01'):
                          layers['ground'][y][x] = 'bg_grass'
             cluster_count_range = random.randint(500, 1500)
             current_radius = 10
             current_density = 0.95
         else:
-            cluster_count_range = random.randint(self.cluster_min_count, self.cluster_max_count)
-            current_radius = self.cluster_radius
-            current_density = self.cluster_density
+            cluster_count_range = random.randint(getattr(self, 'cluster_min_count', 50), getattr(self, 'cluster_max_count', 100))
+            current_radius = getattr(self, 'cluster_radius', 4)
+            current_density = getattr(self, 'cluster_density', 0.5)
 
         for _ in range(cluster_count_range):
-            gx = random.randint(border_w, w - border_w)
-            gy = random.randint(border_w, h - border_w)
+            cgx = random.randint(border_w, w - border_w)
+            cgy = random.randint(border_w, h - border_w)
             search_r = current_radius + 1 
-            for y in range(gy - search_r, gy + search_r):
-                for x in range(gx - search_r, gx + search_r):
+            for y in range(cgy - search_r, cgy + search_r):
+                for x in range(cgx - search_r, cgx + search_r):
                     if 0 <= x < w and 0 <= y < h:
                         if occupied_mask[y][x] == 0 and layers['base'][y][x] == ' ':
-                            if math.hypot(x - gx, y - gy) <= current_radius: 
+                            if math.hypot(x - cgx, y - cgy) <= current_radius: 
                                 if random.random() < current_density: 
-                                    layers['base'][y][x] = random.choice(self.forest_tiles)
+                                    layers['base'][y][x] = random.choice(getattr(self, 'forest_tiles', ['wall_stone']))
+
+
+        # --- [NEW] HARD BORDER ENFORCEMENT ---
+        # Explicitly enforces the '@' wall. 
+        # [FIX] strictly ties the openings to chunk connection coordinates (cx, cy) 
+        # so false pathways from sand/buildings are totally ignored!
+        pathway_tiles = [road_tile, dirt_tile, sand_tile]
+        clear_radius = 2 
+        
+        def apply_border_wall(bx, by, is_horizontal):
+            ground = layers['ground'][by][bx]
+            
+            # Skip water tiles
+            if ground == getattr(self, 'water_tile', 'water_01'):
+                return
+                
+            # Skip global extreme map borders
+            is_left_extreme = (gx == 0 and bx == 0)
+            is_right_extreme = (hasattr(self, 'grid_w') and gx == self.grid_w - 1 and bx == w - 1)
+            is_top_extreme = (gy == 0 and by == 0)
+            is_bottom_extreme = (hasattr(self, 'grid_h') and gy == self.grid_h - 1 and by == h - 1)
+            
+            if is_left_extreme or is_right_extreme or is_top_extreme or is_bottom_extreme:
+                return
+
+            is_near_path = False
+            
+            # EXCLUSIVE CHECK: Only open gaps directly overlapping the expected maze connections
+            if is_horizontal:
+                if abs(bx - cx) <= clear_radius:
+                    if (by == 0 and conns['top']) or (by == h-1 and conns['bottom']):
+                        is_near_path = True
+            else:
+                if abs(by - cy) <= clear_radius:
+                    if (bx == 0 and conns['left']) or (bx == w-1 and conns['right']):
+                        is_near_path = True
+                        
+            if not is_near_path:
+                layers['base'][by][bx] = '@'
+            else:
+                layers['base'][by][bx] = ' ' # Clear gap
+                # Optionally enforce visual continuity if it got overridden
+                if layers['ground'][by][bx] not in pathway_tiles:
+                    layers['ground'][by][bx] = dirt_tile
+                
+        # Horizontal Borders (Top and Bottom)
+        for x in range(w):
+            apply_border_wall(x, 0, True)
+            apply_border_wall(x, h-1, True)
+            
+        # Vertical Borders (Left and Right)
+        for y in range(h):
+            apply_border_wall(0, y, False)
+            apply_border_wall(w-1, y, False)
+        # -------------------------------------
+
 
         # 9. Spawns
         if is_start: 
             layers['spawn'][cy][cx] = 'P'
         else: 
-            self._scatter_zombies(layers, occupied_mask, w, h)
+            if hasattr(self, '_scatter_zombies'):
+                self._scatter_zombies(layers, occupied_mask, w, h)
         
-        # [UPDATED] L1 NPC SCATTER
-        self._scatter_npcs(layers, occupied_mask, w, h)
+        if hasattr(self, '_scatter_npcs'):
+            self._scatter_npcs(layers, occupied_mask, w, h)
 
-        # 10. Assigned L2 Spawning (Controlled)
+        # 10. Assigned L2 Spawning
         if assigned_l2_templates:
             for l2_name in assigned_l2_templates:
                 l2_tmpl = self.templates[l2_name]
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
                 
                 placed_l2 = False
-                for _ in range(20): # Attempts
+                for _ in range(20): 
                     tx = random.randint(2, w - l2_w - 2)
                     ty = random.randint(2, h - l2_h - 2)
                     
-                    # Check collision on L2 mask
                     collision = False
                     for ly in range(ty, ty + l2_h):
                         for lx in range(tx, tx + l2_w):
@@ -431,22 +478,18 @@ class ProceduralGeneratorChunk:
                         if collision: break
                     
                     if not collision:
-                        # Place it
                         self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
-                        
-                        # NEW: Apply border
-                        self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
 
-                        # Mark mask
                         for ly in range(ty, ty + l2_h):
                             for lx in range(tx, tx + l2_w):
                                 occupied_mask_L2[ly][lx] = 1
                         placed_l2 = True
-                        print(f"Spawned Controlled L2 Template: {l2_name} at ({tx}, {ty})")
                         break
         
-        # [NEW] DISTRIBUTE L2 NPCS - Using strict scatter method instead of candidate lists
-        self._scatter_npcs_l2(layers, w, h)
+        if hasattr(self, '_scatter_npcs_l2'):
+            self._scatter_npcs_l2(layers, w, h)
 
         return layers
 
@@ -458,7 +501,8 @@ class ProceduralGeneratorChunk:
             lot_m = 2
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
-                    if 0<=rx<w and 0<=ry<h and layers['ground'][ry][rx] == 'bg_grass':
+                    # [FIX] Forbid sand lot from rewriting the extreme chunk border
+                    if 1 <= rx < w-1 and 1 <= ry < h-1 and layers['ground'][ry][rx] == 'bg_grass':
                         layers['ground'][ry][rx] = sand_tile
                         occupied_mask[ry][rx] = 1
             
@@ -471,7 +515,7 @@ class ProceduralGeneratorChunk:
                     elif cur_y < target_y: cur_y += 1
                     elif cur_y > target_y: cur_y -= 1
                     if 0<=cur_x<w and 0<=cur_y<h:
-                        if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != self.water_tile:
+                        if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != getattr(self, 'water_tile', 'water_01'):
                             layers['ground'][cur_y][cur_x] = sand_tile
                             occupied_mask[cur_y][cur_x] = 1
 
@@ -482,17 +526,16 @@ class ProceduralGeneratorChunk:
                 for rx in range(x_s, x_e + 1): 
                     for off in range(2): 
                         yy = cy + off
-                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=self.water_tile: 
+                        if 0<=rx<w and 0<=yy<h and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=getattr(self, 'water_tile', 'water_01'): 
                             layers['ground'][yy][rx]=sand_tile; occupied_mask[yy][rx]=1
                 y_s, y_e = min(cy, by), max(cy, by)
                 for ry in range(y_s, y_e + 1):
                     for off in range(2): 
                         xx = bx + off
-                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=self.water_tile: 
+                        if 0<=ry<h and 0<=xx<w and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=getattr(self, 'water_tile', 'water_01'): 
                             layers['ground'][ry][xx]=sand_tile; occupied_mask[ry][xx]=1
         
         self._blit_template(layers, tmpl, tx, ty, w, h)
         placed_rects.append(pygame.Rect(tx, ty, tw, th))
         for ry in range(ty, ty + th):
             for rx in range(tx, tx + tw): occupied_mask[ry][rx] = 1
-        print(f"PLACED: {tmpl_name} at ({tx},{ty})")

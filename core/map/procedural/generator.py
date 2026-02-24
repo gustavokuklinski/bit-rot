@@ -80,11 +80,11 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         if not regenerate and os.path.exists(self.output_folder):
             for f in os.listdir(self.output_folder):
-                if f.startswith("map_L1_world") and f.endswith("_map.csv"):
+                # Update check to scan for separated chunks
+                if f.startswith("map_L1_") and f.endswith("_map.csv"):
                     print(f"World already exists at {self.output_folder}. Skipping generation.")
                     return f
             
-
         current_chunks = core.data.config.MAP_CHUNKS
         
         if not seed_pattern or seed_pattern == "5-DEFAULT": 
@@ -334,9 +334,12 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         # Re-render L1 heat map to show vehicles AND animals
         self._render_full_map_to_surface(full_map_surface, heat_map_surface, global_layers)
         
-        # SAVE L1
-        print("Saving global world map L1...")
-        self._save_chunk("map_L1_world", global_layers)
+        # --- SAVE L1 CHUNKS (Separated) ---
+        print("Saving L1 separate chunk maps...")
+        for gy in range(self.grid_h):
+            for gx in range(self.grid_w):
+                chunk_layers = self._extract_chunk(global_layers, gx, gy)
+                self._save_chunk(f"map_L1_{gx}_{gy}", chunk_layers)
         
         # --- RE-SCAN FOR L2 TEMPLATE MASKS ---
         print("Building L2 Occupancy Mask...")
@@ -364,9 +367,12 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         print("Rendering global world map L2 with pathways...")
         self._render_full_map_to_surface(full_map_surface_l2, heat_map_surface_l2, global_layers_l2)
         
-        # SAVE L2
-        print("Saving global world map L2...")
-        self._save_chunk("map_L2_world", global_layers_l2)
+        # --- SAVE L2 CHUNKS (Separated) ---
+        print("Saving L2 separate chunk maps...")
+        for gy in range(self.grid_h):
+            for gx in range(self.grid_w):
+                chunk_layers_l2 = self._extract_chunk(global_layers_l2, gx, gy)
+                self._save_chunk(f"map_L2_{gx}_{gy}", chunk_layers_l2)
         
         # DEBUG images
         try:
@@ -391,4 +397,5 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         except Exception as e:
             print(f"Error saving map images: {e}")
 
-        return "map_L1_world_map.csv"
+        # Return the starting chunk filename so the map loader knows where to drop the player initially
+        return f"map_L1_{start_gx}_{start_gy}_map.csv"
