@@ -78,14 +78,39 @@ def draw_game(game):
     game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
     game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
 
-    offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
-    offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
+    target_offset_x = view_w / 2 - game.player.rect.centerx - game.camera_pan_x
+    target_offset_y = view_h / 2 - game.player.rect.centery - game.camera_pan_y
+
+    # --- [NEW] CLAMP CAMERA TO MAP BOUNDS ---
+    map_h = len(game.map_data) if hasattr(game, 'map_data') and game.map_data else 0
+    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    
+    tile_size = TILE_SIZE
+    map_pixel_w = map_w * tile_size
+    map_pixel_h = map_h * tile_size
+
+    # Only clamp if the map actually has bounds
+    if map_pixel_w > 0 and map_pixel_h > 0:
+        # X Axis Clamp
+        if map_pixel_w < view_w:
+            offset_x = (view_w - map_pixel_w) / 2 # Center if map is smaller than screen
+        else:
+            offset_x = max(view_w - map_pixel_w, min(0, target_offset_x))
+            
+        # Y Axis Clamp
+        if map_pixel_h < view_h:
+            offset_y = (view_h - map_pixel_h) / 2
+        else:
+            offset_y = max(view_h - map_pixel_h, min(0, target_offset_y))
+    else:
+        # Fallback if map layout isn't fully loaded
+        offset_x = target_offset_x
+        offset_y = target_offset_y
 
     screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
 
     # 2. OPTIMIZED CHUNK RENDERING
     chunk_size = core.data.config.CHUNK_SIZE
-    tile_size = TILE_SIZE
     
     min_world_x = -offset_x
     min_world_y = -offset_y
@@ -97,8 +122,6 @@ def draw_game(game):
     max_chunk_x = int(max_world_x // (chunk_size * tile_size)) + 1
     max_chunk_y = int(max_world_y // (chunk_size * tile_size)) + 1
 
-    map_h = len(game.map_data) if game.map_data else 0
-    map_w = len(game.map_data[0]) if map_h > 0 else 0
     map_chunk_w = (map_w // chunk_size) + 1
     map_chunk_h = (map_h // chunk_size) + 1
 
