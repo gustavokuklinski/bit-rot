@@ -393,7 +393,7 @@ class Game:
                     if self.save_game():
                         pass
                 elif btn_quit.collidepoint(mouse_pos):
-                    self.running = False
+                    self.game_state = 'MENU'
 
         self._update_screen()
 

@@ -48,7 +48,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build ${{ matrix.nuitka_flags }} main.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build ${{ matrix.nuitka_flags }} bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash

@@ -260,7 +260,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 display_message_player("You wake up refreshed.")
 
         mouse_buttons = pygame.mouse.get_pressed()
-        is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]
+        is_aiming = keys[pygame.K_LALT] or keys[pygame.K_LALT]
         is_firing = mouse_buttons[0]
 
         if not self.is_sleeping and is_aiming and is_firing:

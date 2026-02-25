@@ -1,11 +1,4 @@
-# /// script
-# dependencies = [
-#  "faker"
-# ]
-# ///
-
 import asyncio
-import pygame
 from core.game import Game
 
 async def main():

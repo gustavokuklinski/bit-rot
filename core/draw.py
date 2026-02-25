@@ -57,7 +57,7 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+    is_aiming = (keys[pygame.K_LALT] or keys[pygame.K_LALT])
 
     target_pan_x = 0
     target_pan_y = 0
@@ -852,7 +852,7 @@ def draw_game(game):
     else:
         pygame.mouse.set_visible(True)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+        if keys[pygame.K_LALT] or keys[pygame.K_LALT]:
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

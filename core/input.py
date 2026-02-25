@@ -64,7 +64,7 @@ def handle_movement(game):
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
     game.player.is_running = is_running
 
-    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+    game.player.is_aiming = (keys[pygame.K_LALT] or keys[pygame.K_LALT])
 
     if game.player.stamina <= 0:
         current_speed = final_base_speed / 3
