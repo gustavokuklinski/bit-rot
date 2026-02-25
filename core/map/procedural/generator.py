@@ -266,7 +266,8 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'ground': [['bg_grass' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'spawn': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
-            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
+            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'protected_mask': [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
 
         global_layers_l2 = {
@@ -274,7 +275,8 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'ground': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'spawn': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'roof': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
-            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
+            'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
+            'protected_mask': [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
         
         occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
@@ -323,6 +325,11 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 # Render L1
                 self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
         
+        print("Applying terrain smoothing (L1)...")
+        self._apply_terrain_smoothing(global_layers, global_tiles_w, global_tiles_h)
+        self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'sand_01')
+        self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'beach_sand_01')
+
         # --- SCATTER VEHICLES (L1 Global) ---
         print("Scattering Vehicles (L1)...")
         self._scatter_vehicles(global_layers, None, global_tiles_w, global_tiles_h)

@@ -169,6 +169,21 @@ class MapManager:
         for k in keys_to_remove:
             del self.chunk_surfaces[k]
 
+    def _get_adjacent_bg(self, grid, x, y):
+        """Helper to find the adjacent solid terrain to fill transparent gaps in live chunks."""
+        h = len(grid)
+        for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, 1), (-1, 1), (1, -1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= ny < h:
+                row = grid[ny]
+                if 0 <= nx < len(row):
+                    neighbor = row[nx]
+                    # Check if it's a solid tile (NOT dirt overlay, NOT sand overlay, NOT empty)
+                    is_transparent_overlay = neighbor and (neighbor.startswith('dirty_') or neighbor.startswith('beach_sand_') or neighbor.startswith('sand_'))
+                    if neighbor and not is_transparent_overlay and neighbor != ' ':
+                        return neighbor
+        return 'bg_grass'
+
     def get_chunk_surface(self, cx, cy, layer_idx, layer_type='world'):
         """
         Returns a cached surface for a specific chunk. 
@@ -237,6 +252,15 @@ class MapManager:
                     for x in range(x_start, x_end):
                         char = row_data[x]
                         if char and char != ' ':
+                            is_dirty_overlay = char.startswith('dirty_') and char != 'dirty_01'
+                            is_sand_overlay = char.startswith('sand_') and char != 'sand_01'
+                            is_beach_sand_overlay = char.startswith('beach_sand_') and char != 'beach_sand_01'
+                            
+                            if is_dirty_overlay or is_sand_overlay or is_beach_sand_overlay:
+                                bg_tile = self._get_adjacent_bg(ground_data, x, y) # NOTE: use 'ground' and passing w, h if inside generator_rendering.py!
+                                if bg_tile in tm.definitions:
+                                    surface.blit(tm.definitions[bg_tile]['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+
                             defn = tm.definitions.get(char)
                             if defn:
                                 surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))

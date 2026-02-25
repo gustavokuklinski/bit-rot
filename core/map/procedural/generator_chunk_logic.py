@@ -16,13 +16,15 @@ class ProceduralGeneratorChunk:
             'spawn': [[' ' for _ in range(w)] for _ in range(h)],
             'roof': [[' ' for _ in range(w)] for _ in range(h)],
             'light': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask': [[0 for _ in range(w)] for _ in range(h)],
             
             # L2 Layers
             'base_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'ground_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'spawn_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'roof_L2': [[' ' for _ in range(w)] for _ in range(h)],
-            'light_L2': [[' ' for _ in range(w)] for _ in range(h)]
+            'light_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask_L2': [[0 for _ in range(w)] for _ in range(h)]
         }
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
         occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)]
@@ -34,12 +36,20 @@ class ProceduralGeneratorChunk:
         def draw_straight_road(x1, y1, x2, y2, tile_type):
             sx, ex = min(x1, x2), max(x1, x2)
             sy, ey = min(y1, y2), max(y1, y2)
-            r = 2 if tile_type == road_tile else 1
-            for y in range(sy - r, ey + r + 1):
-                for x in range(sx - r, ex + r + 1):
-                    if 0 <= x < w and 0 <= y < h:
-                        layers['ground'][y][x] = tile_type
-                        occupied_mask[y][x] = 1
+            
+            # Asphalt is 5x5, Dirt/Sand is 4x4 minimum brush
+            if tile_type == road_tile:
+                for y in range(sy - 2, ey + 3):
+                    for x in range(sx - 2, ex + 3):
+                        if 0 <= x < w and 0 <= y < h:
+                            layers['ground'][y][x] = tile_type
+                            occupied_mask[y][x] = 1
+            else:
+                for y in range(sy - 1, ey + 3):
+                    for x in range(sx - 1, ex + 3):
+                        if 0 <= x < w and 0 <= y < h:
+                            layers['ground'][y][x] = tile_type
+                            occupied_mask[y][x] = 1
 
         def draw_secondary_maze_road(start_x, start_y, target_x, target_y, tile_type=dirt_tile):
             current_x, current_y = start_x, start_y
@@ -79,8 +89,9 @@ class ProceduralGeneratorChunk:
                 path.append((current_x, current_y))
 
             for px, py in path:
-                for oy in range(2):
-                    for ox in range(2):
+                # --- NEW LOGIC: Minimum 4x4 Brush for seamless auto-tiling ---
+                for oy in range(-1, 3):
+                    for ox in range(-1, 3):
                         gx_pos, gy_pos = px + ox, py + oy
                         if 0 <= gx_pos < w and 0 <= gy_pos < h:
                             if layers['base'][gy_pos][gx_pos] == ' ' and layers['ground'][gy_pos][gx_pos] != road_tile:
@@ -125,10 +136,17 @@ class ProceduralGeneratorChunk:
         # 4. Organic Coastline
         if hasattr(self, 'grid_w') and hasattr(self, 'grid_h'):
             cw = getattr(self, 'coast_width', 15)
+            
             def get_coast_noise(idx, scale=0.1, amp=4.0):
-                val = math.sin(idx * scale) * amp 
-                val += math.sin(idx * scale * 2.1) * (amp * 0.5)
-                val += random.uniform(-2.0, 2.0)
+                # --- NEW LOGIC: Quantize to 4-step increments to force seamless 4x4 minimum coast blocks ---
+                q_idx = (idx // 4) * 4
+                val = math.sin(q_idx * scale) * amp 
+                val += math.sin(q_idx * scale * 2.1) * (amp * 0.5)
+                
+                # Deterministic pseudo-random keeps the 4x4 blocks perfectly aligned
+                pseudo_random = (math.sin(q_idx * 12.9898) * 43758.5453) % 4.0 - 2.0
+                val += pseudo_random
+                
                 return int(val)
 
             tree_chance = 0.05
@@ -223,7 +241,6 @@ class ProceduralGeneratorChunk:
         # 6. Place Buildings
         placed_rects = [] 
         
-        # [FIX] Added strict bounding box check (tx < 2 ... ) to avoid touching walls
         def is_area_free(tx, ty, tw, th, margin=0, ignore_mask=False):
             t_rect = pygame.Rect(tx, ty, tw, th)
             for pr in placed_rects:
@@ -279,7 +296,7 @@ class ProceduralGeneratorChunk:
                             else: ty = cy + road_radius + 1 + 1
                             tx = random.randint(border_w + 3, w - border_w - tw - 3)
                     else:
-                        safe_pad = 3 # Increased to keep buildings away from chunk transitions
+                        safe_pad = 3 
                         if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
                         tx = random.randint(safe_pad, w - safe_pad - tw)
                         ty = random.randint(safe_pad, h - safe_pad - th)
@@ -392,11 +409,7 @@ class ProceduralGeneratorChunk:
                                 if random.random() < current_density: 
                                     layers['base'][y][x] = random.choice(getattr(self, 'forest_tiles', ['wall_stone']))
 
-
-        # --- [NEW] HARD BORDER ENFORCEMENT ---
-        # Explicitly enforces the '@' wall. 
-        # [FIX] strictly ties the openings to chunk connection coordinates (cx, cy) 
-        # so false pathways from sand/buildings are totally ignored!
+        # --- HARD BORDER ENFORCEMENT ---
         pathway_tiles = [road_tile, dirt_tile, sand_tile]
         clear_radius = 2 
         
@@ -418,7 +431,6 @@ class ProceduralGeneratorChunk:
 
             is_near_path = False
             
-            # EXCLUSIVE CHECK: Only open gaps directly overlapping the expected maze connections
             if is_horizontal:
                 if abs(bx - cx) <= clear_radius:
                     if (by == 0 and conns['top']) or (by == h-1 and conns['bottom']):
@@ -432,7 +444,6 @@ class ProceduralGeneratorChunk:
                 layers['base'][by][bx] = '@'
             else:
                 layers['base'][by][bx] = ' ' # Clear gap
-                # Optionally enforce visual continuity if it got overridden
                 if layers['ground'][by][bx] not in pathway_tiles:
                     layers['ground'][by][bx] = dirt_tile
                 
@@ -447,11 +458,9 @@ class ProceduralGeneratorChunk:
             apply_border_wall(w-1, y, False)
         # -------------------------------------
 
-
         # 9. Spawns
         if is_start: 
             layers['spawn'][cy][cx] = 'P'
-        # else: 
         if hasattr(self, '_scatter_zombies'):
             self._scatter_zombies(layers, occupied_mask, w, h)
         
@@ -491,6 +500,46 @@ class ProceduralGeneratorChunk:
         if hasattr(self, '_scatter_npcs_l2'):
             self._scatter_npcs_l2(layers, w, h)
 
+        # -------------------------------------------------------------
+        # 11. [NEW] Scatter Decorations (Vegetation, Pebbles, Shells)
+        # -------------------------------------------------------------
+        
+        # Build a safe mask so we don't accidentally spawn a rock inside a building's empty floor space
+        building_mask = [[False for _ in range(w)] for _ in range(h)]
+        for pr in placed_rects:
+            for ry in range(max(0, pr.y), min(h, pr.y + pr.height)):
+                for rx in range(max(0, pr.x), min(w, pr.x + pr.width)):
+                    building_mask[ry][rx] = True
+
+        # NOTE: Change these array names to perfectly match the asset names in your `tile_manager`!
+        # If your flowers are called 'garden_flower_01', place them here.
+        grass_decos = getattr(self, 'grass_decorations', ['garden_stone', 'garden_tree_8','garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
+        dirt_decos = getattr(self, 'dirt_decorations', ['garden_stone', 'garden_grass_1' , 'garden_grass_2','garden_tree_11', 'garden_grass_3'])
+        sand_decos = getattr(self, 'sand_decorations', ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
+        
+        # Spawning density settings (0.05 = 5% chance per tile)
+        grass_chance = 0.05
+        dirt_chance = 0.03
+        sand_chance = 0.02
+
+        for y in range(h):
+            for x in range(w):
+                # Ensure we are not inside a building and the base layer is completely empty
+                if not building_mask[y][x] and layers['base'][y][x] == ' ':
+                    ground_tile = layers['ground'][y][x]
+                    
+                    if ground_tile == 'bg_grass':
+                        if random.random() < grass_chance:
+                            layers['base'][y][x] = random.choice(grass_decos)
+                            
+                    elif ground_tile.startswith('dirty_'):
+                        if random.random() < dirt_chance:
+                            layers['base'][y][x] = random.choice(dirt_decos)
+                            
+                    elif ground_tile.startswith('sand_') or ground_tile.startswith('beach_sand_'):
+                        if random.random() < sand_chance:
+                            layers['base'][y][x] = random.choice(sand_decos)
+
         return layers
 
     def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
@@ -516,7 +565,6 @@ class ProceduralGeneratorChunk:
                     elif cur_y < target_y: cur_y += 1
                     elif cur_y > target_y: cur_y -= 1
                     if 0<=cur_x<w and 0<=cur_y<h:
-                        # [FIX] Prevent road from overwriting any previously placed building
                         if occupied_mask[cur_y][cur_x] == 0:
                             if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != getattr(self, 'water_tile', 'water_01'):
                                 layers['ground'][cur_y][cur_x] = road_tile
@@ -531,7 +579,6 @@ class ProceduralGeneratorChunk:
                     for off in range(2): 
                         yy = cy + off
                         if 0<=rx<w and 0<=yy<h:
-                            # [FIX] Prevent road from overwriting any previously placed building
                             if occupied_mask[yy][rx] == 0 and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=getattr(self, 'water_tile', 'water_01'): 
                                 layers['ground'][yy][rx] = road_tile
                                 occupied_mask[yy][rx] = 1
@@ -541,7 +588,6 @@ class ProceduralGeneratorChunk:
                     for off in range(2): 
                         xx = bx + off
                         if 0<=ry<h and 0<=xx<w:
-                            # [FIX] Prevent road from overwriting any previously placed building
                             if occupied_mask[ry][xx] == 0 and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=getattr(self, 'water_tile', 'water_01'): 
                                 layers['ground'][ry][xx] = road_tile
                                 occupied_mask[ry][xx] = 1

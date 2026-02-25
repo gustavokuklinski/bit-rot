@@ -37,9 +37,6 @@
     <initial_loot>
         <item name="Wallet" chance="1" />
         <item name="Keyring Default" chance="1" />
-        <item name="M4A1" chance="1" />
-        <item name="556 Ammo" chance="1" />
-        <item name="Island Map" chance="1" />
     </initial_loot>
 
     <visuals>

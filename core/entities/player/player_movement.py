@@ -6,7 +6,7 @@ import random
 import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message_player
-from core.placement import find_free_tile # [NEW] Import robust spatial checker
+from core.placement import find_free_tile
 
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):

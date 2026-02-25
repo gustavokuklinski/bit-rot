@@ -11,6 +11,18 @@ class ProceduralGeneratorRendering:
             with open(os.path.join(self.output_folder, fname + suffix), 'w', newline='') as f:
                 csv.writer(f).writerows(data)
 
+    def _get_adjacent_bg(self, grid, x, y, w, h):
+        """Helper to find the adjacent solid terrain (grass, sand, etc.) to fill transparent gaps."""
+        for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, 1), (-1, 1), (1, -1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < w and 0 <= ny < h:
+                neighbor = grid[ny][nx]
+                # Return the first neighbor that IS NOT a dirt overlay or empty space
+                is_transparent_overlay = neighbor and (neighbor.startswith('dirty_') or neighbor.startswith('beach_sand_') or neighbor.startswith('sand_'))
+                if neighbor and not is_transparent_overlay and neighbor != ' ':
+                    return neighbor
+        return 'bg_grass' # Fallback if totally isolated
+
     def _render_chunk_to_surface(self, bg_surf, heat_surf, gx, gy, data):
         if not hasattr(self.game, 'tile_manager'): return
         defs = self.game.tile_manager.definitions
@@ -34,6 +46,14 @@ class ProceduralGeneratorRendering:
                 
                 if ground:
                     g_char = ground[y][x]
+                    
+                    # --- NEW LOGIC: Smart Underlay for Transparent Borders ---
+                    if g_char.startswith('dirty_') and g_char != 'dirty_01':
+                        bg_tile = self._get_adjacent_bg(ground, x, y, w, h)
+                        if bg_tile in defs:
+                            bg_surf.blit(defs[bg_tile]['image'], (px, py))
+                    # ---------------------------------------------------------
+                    
                     if g_char in defs: 
                         bg_surf.blit(defs[g_char]['image'], (px, py))
                 
@@ -61,8 +81,8 @@ class ProceduralGeneratorRendering:
                         elif s_char == 'I': color = (0, 0, 255)
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255) 
-                        elif s_char == 'VEH': color = (255, 165, 0) # Orange
-                        elif s_char == 'ANM': color = (255, 0, 255) # Animal Fuchsia
+                        elif s_char == 'VEH': color = (255, 165, 0) 
+                        elif s_char == 'ANM': color = (255, 0, 255) 
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
 
     def _render_full_map_to_surface(self, bg_surf, heat_surf, layers):
@@ -89,6 +109,14 @@ class ProceduralGeneratorRendering:
                 # Ground
                 if ground:
                     g_char = ground[y][x]
+                    
+                    # --- NEW LOGIC: Smart Underlay for Transparent Borders ---
+                    if g_char.startswith('dirty_') and g_char != 'dirty_01':
+                        bg_tile = self._get_adjacent_bg(ground, x, y, w, h)
+                        if bg_tile in defs:
+                            bg_surf.blit(defs[bg_tile]['image'], (px, py))
+                    # ---------------------------------------------------------
+                            
                     if g_char in defs: 
                         bg_surf.blit(defs[g_char]['image'], (px, py))
                 
@@ -120,6 +148,6 @@ class ProceduralGeneratorRendering:
                         elif s_char == 'I': color = (0, 0, 255)
                         elif s_char == 'NPC': color = (255, 255, 0)
                         elif s_char == 'S': color = (0, 0, 255)
-                        elif s_char == 'VEH': color = (255, 165, 0) # Orange
-                        elif s_char == 'ANM': color = (255, 0, 255) # Animal Fuchsia
+                        elif s_char == 'VEH': color = (255, 165, 0) 
+                        elif s_char == 'ANM': color = (255, 0, 255) 
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
