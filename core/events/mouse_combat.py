@@ -71,6 +71,8 @@ def handle_attack(game, mouse_pos):
                     max_dist_pixels = distance_tiles * TILE_SIZE
                     calc_dist = max_dist_pixels
 
+                damage = game.player.get_attack_damage()
+
                 for _ in range(weapon.pellets):
                     spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
                     angle = base_angle + spread
@@ -83,7 +85,9 @@ def handle_attack(game, mouse_pos):
                         game.player.rect.centery, 
                         target_x, 
                         target_y,
-                        max_distance=max_dist_pixels 
+                        max_distance=max_dist_pixels,
+                        damage=damage,
+                        game=game
                     ))
 
                 weapon.load -= 1

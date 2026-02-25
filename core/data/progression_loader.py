@@ -60,11 +60,6 @@ def load_progression_xml():
                 except ValueError:
                     config.stats[sid][param.get('name')] = param.get('value')
         
-        # 3. Body parts
-        for part in root.findall('./healing_rates/part'):
-            name = part.get('name')
-            rate = float(part.get('rate', 0.005))
-            config.healing_rates[name] = rate
                     
     except Exception as e:
         print(f"Error loading progression.xml: {e}")

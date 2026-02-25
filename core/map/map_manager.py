@@ -406,7 +406,7 @@ class MapManager:
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
     
-    def hit_tile(self, grid_x, grid_y, damage, weapon=None):
+    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False):
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
 
@@ -415,34 +415,24 @@ class MapManager:
         
         if not definition or not definition.get('destructible'):
             return False
-
-        valid_axes = ["Axe", "Primitive Axe", 'Knife', 'Primitive Knife', 'Picaxe']
-        has_axe = False
-        if weapon:
-            for axe_name in valid_axes:
-                if axe_name in weapon.name:
-                    has_axe = True
-                    break
-        
-        if weapon and not has_axe:
-             display_message_player("You need an axe to chop this.")
-             return True
-             
-        STAMINA_COST = 0.5
-        if self.game.player.stamina < STAMINA_COST:
-            display_message_player("You are too exhausted to chop!")
-            return True
-
-        self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
-        self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
-
-        if weapon and weapon.durability is not None:
-            DURABILITY_COST = 0.7
-            weapon.durability = max(0, weapon.durability - DURABILITY_COST)
-            if weapon.durability <= 0:
-                self.game.player.active_weapon = None
-                display_message_player(f"{weapon.name} is broken and unequipped.")
+            
+        # Only drain stamina and durability if it's a manual melee hit (not a bullet)
+        if not is_projectile:
+            STAMINA_COST = 0.5
+            if self.game.player.stamina < STAMINA_COST:
+                display_message_player("You are too exhausted to chop!")
                 return True
+
+            self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
+            self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
+
+            if weapon and weapon.durability is not None:
+                DURABILITY_COST = 0.7
+                weapon.durability = max(0, weapon.durability - DURABILITY_COST)
+                if weapon.durability <= 0:
+                    self.game.player.active_weapon = None
+                    display_message_player(f"{weapon.name} is broken and unequipped.")
+                    return True
         
         if definition.get('sound_src'):
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)

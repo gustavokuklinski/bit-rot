@@ -213,7 +213,6 @@ class PlayerProgression:
 
     def update(self, player, is_moving, game):
         self.update_stamina(player, is_moving)
-        self.update_hp(player)
         self.update_infection(player)
         self.update_anxiety(player, game)
         self.update_tireness(player, game, is_moving)
@@ -237,8 +236,6 @@ class PlayerProgression:
             regeneration = self.get_stamina_regeneration(player)
             player.stamina = min(stamina_cap, player.stamina + regeneration)
 
-    def update_hp(self, player):
-        pass
 
     def update_anxiety(self, player, game):
         # 1. Calculate Zombies nearby

@@ -45,11 +45,6 @@
             <param name="run_cost_base" value="0.02" />
         </stat>
 
-        <stat id="health">
-            <param name="regen_base" value="0.005" />
-            <param name="infection_regen_divisor" value="50.0" />
-        </stat>
-
         <stat id="tireness">
             <param name="night_decay" value="-0.002" />
             <param name="day_recovery" value="0.001" />

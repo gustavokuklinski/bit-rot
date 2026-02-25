@@ -1,10 +1,10 @@
 import pygame
 import math
-from core.data.config import WHITE
+from core.data.config import WHITE, TILE_SIZE
 
 class Projectile:
     """Represents a bullet fired by the player."""
-    def __init__(self, start_x, start_y, target_x, target_y, speed=10, color=WHITE, max_distance=None):
+    def __init__(self, start_x, start_y, target_x, target_y, speed=10, color=WHITE, max_distance=None, damage=1, game=None):
         self.start_x = start_x 
         self.start_y = start_y 
         self.x = start_x
@@ -13,6 +13,8 @@ class Projectile:
         self.color = color
         self.speed = speed
         self.max_distance = max_distance 
+        self.damage = damage
+        self.game = game
         
         dx = target_x - start_x
         dy = target_y - start_y
@@ -31,6 +33,21 @@ class Projectile:
         self.x += self.vx
         self.y += self.vy
         self.rect.topleft = (int(self.x), int(self.y))
+
+        # Check tile collision
+        if self.game and hasattr(self.game, 'map_manager'):
+            grid_x = int(self.x // TILE_SIZE)
+            grid_y = int(self.y // TILE_SIZE)
+            tile_def = self.game.map_manager.get_tile_at(grid_x, grid_y)
+            
+            if tile_def:
+                # If bullet hits a destructible obstacle (tree/stone), hit it and destroy bullet
+                if tile_def.get('destructible') and tile_def.get('is_obstacle'):
+                    self.game.map_manager.hit_tile(grid_x, grid_y, self.damage, weapon=None, is_projectile=True)
+                    return True
+                # If bullet hits an indestructible wall, destroy bullet
+                elif tile_def.get('is_obstacle'):
+                    return True
 
         if self.max_distance is not None:
             dist_traveled = math.hypot(self.x - self.start_x, self.y - self.start_y)
