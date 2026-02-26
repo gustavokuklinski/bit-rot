@@ -3,8 +3,15 @@
 .bitrotenv
 .gemini
 __pycache__
+
 build
 game/save/game
 game/logs
 game/multiplayer/server
 game/lib/sfx/*/*-pygbag.ogg
+
+manual/*.html
+manual/clothes/*.html
+manual/items/*.html
+manual/vehicles/*.html
+manual/crafts/*.html

@@ -31,6 +31,11 @@ Running on web browser
 $ pygbag . # Open localhost:8000 (Uses the main.py default file)
 ```
 
+Generate documentation
+```shell
+$ python manual/manual_generate.py # Generate HTML files based on XML files as documentation
+```
+
 Build executable system target
 ```shell
 # Nuitka
