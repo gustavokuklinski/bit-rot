@@ -34,6 +34,7 @@ from core.systems.utils import (
 
 class Game:
     def __init__(self):
+        os.environ['SDL_RENDER_SCALE_QUALITY'] = '1'
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
         

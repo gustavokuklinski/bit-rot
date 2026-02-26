@@ -315,11 +315,14 @@ def load_settings(preset="default"):
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
 
-try:
-    # Get the short hash (e.g., "a1b2c3d")
-    GAME_VERSION =  "git+" + subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip() + "(main)"
-except Exception:
-    GAME_VERSION = "preview+Alpha(0.0.4)"
+
+# echo "git+$(git rev-parse --short HEAD)" > game/lib/VERSION
+version_file_path = "game/lib/VERSION"
+
+# Read version from the local file
+with open(version_file_path, "r") as f:
+    GAME_VERSION = f.read().strip()
+
 
 # Initial load
 load_settings()

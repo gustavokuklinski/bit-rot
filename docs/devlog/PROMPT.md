@@ -11,6 +11,9 @@ The code is in python. Show the file and the changed parts of the code to be fix
 ---
 This is my updated code Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
 
+Currently my game have the following resolution: 1280 x 720. I want to be able to maximize or make it full screen without "breaking" the game font. Making it seamless interesting.
+Show me how to achieve this.
+
 ---
 This is my updated code folder located at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core.
 
