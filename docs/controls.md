@@ -1,4 +1,4 @@
-### Controls
+# Controls
 
 ### System controls
 - **F11**: Toggle full screen (works in game)
@@ -8,7 +8,7 @@
 **Basic controls**:
 - **W/A/S/D**: Walk
 - **SHIFT + W/A/S/D**: Run
-- **CTRL + LMB**: Shoot + Aim / Attack
+- **ALT + LMB**: Shoot + Aim / Attack
 - **1/2/3/4/5**: Equip and use item from Belt
 - **MOUSE SCROLL / - or =**: Zoom in/Zoom out
 
@@ -28,7 +28,7 @@
 - **G**: Open Clothes
 - **C**: Open Craft
 - **M / ENTER**: Open Messages (enter enable chat mode)
-- **TAB**: Close/Open latest modals
+- **TAB**: Close/Open latest open modals
 
 **System**
 - **F2 / ESC**: Pause and save

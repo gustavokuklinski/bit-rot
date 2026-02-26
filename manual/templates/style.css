@@ -1,0 +1,711 @@
+/* Bit Rot Documentation Styles */
+/* Edit this file to customize the appearance */
+
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --accent: #e94560;
+    --text-primary: #e0e0e0;
+    --text-secondary: #888;
+    --text-muted: #666;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #60a5fa;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    padding: 30px 0;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 30px;
+}
+
+h1 {
+    font-size: 2.5em;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.back-link {
+    display: inline-block;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-bottom: 20px;
+    transition: color 0.3s;
+}
+
+.back-link:hover {
+    color: var(--accent);
+}
+
+/* Navigation Cards */
+.nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+.nav-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.nav-card:hover {
+    background: rgba(233, 69, 96, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-5px);
+}
+
+.nav-card h2 {
+    color: var(--accent);
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.nav-card p {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+.nav-card .count {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    margin-top: 15px;
+}
+
+/* Categories */
+.category {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+
+.category-header {
+    background: rgba(233, 69, 96, 0.2);
+    padding: 15px 25px;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-header h2 {
+    color: var(--accent);
+    font-size: 1.4em;
+}
+
+.recipe-count {
+    background: rgba(233, 69, 96, 0.3);
+    color: var(--accent);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.85em;
+}
+
+/* Grids */
+.items-grid, .recipes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    padding: 20px;
+}
+
+.recipes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+}
+
+/* Cards */
+.item-card, .recipe-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.item-card:hover, .recipe-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(233, 69, 96, 0.5);
+}
+
+/* Sprites */
+.item-sprite, .vehicle-sprite {
+    margin-bottom: 10px;
+}
+
+.item-sprite img {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+}
+
+.vehicle-sprite img {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+}
+
+.vehicle-sprite {
+    text-align: center;
+    margin: 15px 0;
+}
+
+/* Item Links */
+.item-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.item-link:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+/* Typography */
+.item-name {
+    color: #fff;
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.item-type, .recipe-type {
+    display: inline-block;
+    background: rgba(233, 69, 96, 0.3);
+    color: var(--accent);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-bottom: 10px;
+}
+
+.item-slot {
+    display: inline-block;
+    background: rgba(233, 69, 96, 0.3);
+    color: var(--accent);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-bottom: 10px;
+}
+
+.builder-tag {
+    display: inline-block;
+    background: rgba(74, 222, 128, 0.3);
+    color: var(--success);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    margin-left: 8px;
+}
+
+.item-stats {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.item-stats p {
+    margin: 4px 0;
+}
+
+.stat-label {
+    color: var(--text-muted);
+}
+
+/* Spawn Chance */
+.spawn-chance {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.85em;
+}
+
+.spawn-high { color: var(--success); }
+.spawn-medium { color: var(--warning); }
+.spawn-low { color: var(--danger); }
+.spawn-none { color: var(--text-muted); }
+
+/* Defence Colors */
+.defence-high { color: var(--success); }
+.defence-medium { color: var(--warning); }
+.defence-low { color: var(--danger); }
+
+/* Recipe Specific */
+.recipe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.craft-badge {
+    display: inline-block;
+    background: rgba(74, 222, 128, 0.2);
+    color: var(--success);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.craft-badge.dismantle {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--warning);
+}
+
+.craft-badge.repair {
+    background: rgba(96, 165, 250, 0.2);
+    color: var(--info);
+}
+
+.recipe-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    justify-content: center;
+}
+
+.magazine-req {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--warning);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.85em;
+    margin-bottom: 15px;
+}
+
+.skill-req {
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    color: var(--info);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.85em;
+    margin-bottom: 15px;
+}
+
+.ingredients, .results {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.ingredients h4, .results h4 {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.ingredient-item, .result-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.ingredient-item.destroy-true {
+    border-left: 3px solid var(--danger);
+}
+
+.ingredient-item.destroy-false {
+    border-left: 3px solid var(--success);
+}
+
+.item-amount {
+    color: #fff;
+    font-weight: 600;
+}
+
+.xp-gain {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: var(--success);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.85em;
+    margin-top: 15px;
+}
+
+/* Vehicle Specific */
+.vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+    padding: 20px 0;
+}
+
+.vehicle-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.vehicle-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(233, 69, 96, 0.5);
+    transform: translateY(-5px);
+}
+
+.vehicle-header {
+    background: rgba(233, 69, 96, 0.2);
+    padding: 20px;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+}
+
+.vehicle-name {
+    color: var(--accent);
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.vehicle-type {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.vehicle-body {
+    padding: 20px;
+}
+
+.specs {
+    margin-bottom: 20px;
+}
+
+.specs h3 {
+    color: var(--accent);
+    font-size: 1.1em;
+    margin-bottom: 12px;
+}
+
+.spec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.spec-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.spec-label {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.spec-value {
+    color: #fff;
+    font-size: 1em;
+}
+
+.loot-table {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.loot-table h3 {
+    color: var(--accent);
+    font-size: 1.1em;
+    margin-bottom: 12px;
+}
+
+.loot-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.loot-item:last-child {
+    border-bottom: none;
+}
+
+.loot-name {
+    color: var(--text-secondary);
+}
+
+.loot-chance {
+    font-weight: 600;
+}
+
+.loot-chance.high { color: var(--success); }
+.loot-chance.medium { color: var(--warning); }
+.loot-chance.low { color: var(--danger); }
+
+.key-requirement {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.key-requirement h3 {
+    color: var(--warning);
+    font-size: 1em;
+    margin-bottom: 8px;
+}
+
+.key-requirement p {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.comparison-table th {
+    background: rgba(233, 69, 96, 0.2);
+    color: var(--accent);
+    padding: 15px;
+    text-align: left;
+    font-size: 0.95em;
+}
+
+.comparison-table td {
+    padding: 12px 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}
+
+.comparison-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Item Detail Page */
+.detail-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    padding: 20px;
+}
+
+.detail-sprite {
+    text-align: center;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.detail-sprite img {
+    width: 256px;
+    height: 256px;
+    image-rendering: pixelated;
+}
+
+.detail-info h2 {
+    color: var(--accent);
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.detail-type {
+    display: inline-block;
+    background: rgba(233, 69, 96, 0.3);
+    color: var(--accent);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+}
+
+.detail-stats {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.detail-stats h3 {
+    color: var(--text-secondary);
+    font-size: 1em;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row .label {
+    color: var(--text-muted);
+}
+
+.stat-row .value {
+    color: #fff;
+    font-weight: 600;
+}
+
+.crafts-using, .used-in {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.crafts-using h3, .used-in h3 {
+    color: var(--accent);
+    font-size: 1.2em;
+    margin-bottom: 15px;
+}
+
+.craft-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.craft-item {
+    background: rgba(233, 69, 96, 0.2);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: 8px;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.craft-item:hover {
+    background: rgba(233, 69, 96, 0.3);
+    transform: translateY(-2px);
+}
+
+.craft-item img {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+}
+
+/* Legend */
+.legend {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.legend h3 {
+    color: var(--accent);
+    margin-bottom: 15px;
+}
+
+.legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.legend-color {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-color.destroy { background: var(--danger); }
+.legend-color.keep { background: var(--success); }
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 40px 0;
+    margin-top: 40px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+}
+
+.generated {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-top: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .detail-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .spec-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}
