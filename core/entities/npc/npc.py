@@ -170,7 +170,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if self.is_dead: return 
 
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-        effective_speed = self.speed * multiplier
+        effective_speed = self.speed * multiplier * game.dt_mult
         current_time = pygame.time.get_ticks()
         
         is_raining = getattr(game, 'is_raining', False)
@@ -194,15 +194,17 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.rect.colliderect(obstacle):
                     self.y -= kb_y * VELOCITY_MULTIPLIER; self.rect.y = int(self.y); break
             self.rect.topleft = (int(self.x), int(self.y))
-            dt = 16 * multiplier
+            dt = game.dt_ms * multiplier
             self.knockback_timer -= dt
-            self.knockback_velocity[0] *= 0.9
-            self.knockback_velocity[1] *= 0.9
+
+            decay_factor = math.pow(0.9, game.dt_mult * multiplier)
+            self.knockback_velocity[0] *= decay_factor
+            self.knockback_velocity[1] *= decay_factor
             return
 
         # --- AGGRO TIMER DECAY ---
         if self.aggro_timer > 0:
-            self.aggro_timer -= 16
+            self.aggro_timer -= game.dt_ms
             # Clear attacker when aggro expires
             if self.aggro_timer <= 0:
                 self.current_attacker = None
@@ -310,7 +312,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 else:
                     self.shelter_target = None
                     if self.patrol_wait > 0:
-                        self.patrol_wait -= 1 * multiplier
+                        self.patrol_wait -= game.dt_ms * multiplier
                         target_pos = None
                         self.state = 'idle'
                     else:
@@ -343,7 +345,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), obstacles, current_time)
 
                 # Use pathfinding if no LOS or if we are stuck
-                if not has_los or (self.stuck_timer > 0 and self.stuck_timer % 20 == 0):
+                if not has_los or self.stuck_timer > 0:
                     if current_time - self.last_path_calc_time > 1000 or not self.path or (self.state == 'chasing' and current_time - self.last_path_calc_time > 500):
                          # Note: _get_path_astar is inherited from ZombieAI
                          new_path = self._get_path_astar(self.rect.center, target_pos, game)
@@ -404,14 +406,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.walk_anim_angle = 0
             self.vx = 0
             
-        if self.melee_swing_timer > 0: self.melee_swing_timer -= 1
-        if self.health_bar_timer > 0: self.health_bar_timer -= 1
+        if self.melee_swing_timer > 0: self.melee_swing_timer -= game.dt_ms
+        if self.health_bar_timer > 0: self.health_bar_timer -= game.dt_ms
 
         if not is_moving: return
 
         # Stuck / Wiggle Logic
         if self.stuck_timer > 0:
-            self.stuck_timer -= 1
+            self.stuck_timer -= game.dt_ms
             rad = math.radians(self.stuck_angle)
             self.dx += math.cos(rad) * effective_speed * 0.5
             self.dy += -math.sin(rad) * effective_speed * 0.5
@@ -471,7 +473,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 
                 # If stuck timer isn't active, activate it
                 if self.stuck_timer <= 0:
-                     self.stuck_timer = 20
+                     self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
             
             # Move Y
@@ -490,7 +492,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 self.dy = 0
 
                 if self.stuck_timer <= 0:
-                     self.stuck_timer = 20
+                     self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
 
         self.rect.topleft = (int(self.x), int(self.y))
@@ -585,7 +587,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                       game.projectiles.append(projectile)
                  else:
                       # Melee logic
-                      self.melee_swing_timer = 15
+                      self.melee_swing_timer = 250
                       self.melee_swing_angle = attack_angle
                       
                       # [FIX] Handle different damage signatures for Player vs Entity

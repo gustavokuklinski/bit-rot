@@ -192,7 +192,7 @@ def handle_input(game):
             if event.type == pygame.KEYDOWN:
                 if not game.chat_active:
                     if game.player.vehicle and event.key == pygame.K_SPACE:
-                        game.player.vehicle.brake(brake_force=0.6)
+                        game.player.vehicle.brake(brake_force=0.6, game=game)
                         return
 
                     if event.key == pygame.K_e:

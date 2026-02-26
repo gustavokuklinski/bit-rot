@@ -40,7 +40,7 @@ class Game:
         initial_w = int(GAME_WIDTH)
         initial_h = int(GAME_HEIGHT)
         
-        self.game_screen = pygame.display.set_mode((initial_w, initial_h), pygame.SCALED | pygame.RESIZABLE)
+        self.game_screen = pygame.display.set_mode((initial_w, initial_h), pygame.SCALED | pygame.RESIZABLE | pygame.DOUBLEBUF, vsync=1)
         
         pygame.display.set_caption("Bit Rot")
         try:
@@ -56,6 +56,8 @@ class Game:
         init_messages(self)
 
         self.clock = pygame.time.Clock()
+        self.dt_ms = 16 # Default to 16ms for the very first frame
+        self.dt_mult = 1.0
         self.assets = load_assets()
         self.game_state = 'MENU'
         self.running = True
@@ -890,7 +892,14 @@ class Game:
 
     def _update_screen(self):
         pygame.display.flip()
-        self.clock.tick(60)
+        self.dt_ms = self.clock.tick(0) 
+        
+        # Calculate the multiplier based on your 60 FPS tuning
+        # Limits the multiplier to prevent huge physics jumps during lag spikes
+        if self.dt_ms > 100: 
+            self.dt_ms = 100 
+            
+        self.dt_mult = (self.dt_ms / 1000.0) * 60.0
 
     def update_messages(self):
         pass

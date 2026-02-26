@@ -30,8 +30,14 @@ class Projectile:
             print("Error: Projectile.update() called without game_width/game_height.")
             return True 
 
-        self.x += self.vx
-        self.y += self.vy
+        dt_mult = self.game.dt_mult if self.game else 1.0 
+
+        if self.game and getattr(self.game, 'is_fast_forwarding', False):
+            dt_mult *= self.game.fast_forward_speed
+
+        self.x += self.vx * dt_mult
+        self.y += self.vy * dt_mult
+
         self.rect.topleft = (int(self.x), int(self.y))
 
         # Check tile collision

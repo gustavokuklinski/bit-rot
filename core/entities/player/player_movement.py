@@ -67,12 +67,12 @@ class PlayerMovement:
                     input_y = (self.vy / input_magnitude)
 
             if input_x != 0 or input_y != 0:
-                self.vehicle.velocity[0] += input_x * self.vehicle.acceleration
-                self.vehicle.velocity[1] += input_y * self.vehicle.acceleration
+                self.vehicle.velocity[0] += input_x * self.vehicle.acceleration * game.dt_mult
+                self.vehicle.velocity[1] += input_y * self.vehicle.acceleration * game.dt_mult
             else:
                 speed = self.vehicle.current_speed_val
                 if speed > 0:
-                    friction_loss = min(speed, self.vehicle.friction)
+                    friction_loss = min(speed, self.vehicle.friction * game.dt_mult)
                     scale = (speed - friction_loss) / speed
                     self.vehicle.velocity[0] *= scale
                     self.vehicle.velocity[1] *= scale
@@ -89,9 +89,9 @@ class PlayerMovement:
             if self.vehicle.active and speed > 0.1:
                 fuel_item = self.vehicle.equipment.get('fuel')
                 if fuel_item:
-                    fuel_item.load = max(0, fuel_item.load - 0.005) 
+                    fuel_item.load = max(0, fuel_item.load - 0.005 * game.dt_mult) 
                 
-                self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005)
+                self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005 * game.dt_mult)
 
             # Move the vehicle (handles wall collisions)
             self.vehicle.move(move_x, move_y, obstacles, game=game)
@@ -181,27 +181,27 @@ class PlayerMovement:
                 return None
 
             # Move X
-            self.x += self.vx
+            self.x += self.vx * game.dt_mult
             self.rect.x = round(self.x)
             
             col_type = check_collision(self.rect)
             if col_type == 'tile':
-                 self.x -= self.vx
+                 self.x -= self.vx * game.dt_mult
                  self.rect.x = round(self.x)
             elif col_type == 'entity':
-                 self.x -= self.vx * 0.8
+                 self.x -= self.vx * 0.8 * game.dt_mult
                  self.rect.x = round(self.x)
 
             # Move Y
-            self.y += self.vy
+            self.y += self.vy * game.dt_mult
             self.rect.y = round(self.y)
 
             col_type = check_collision(self.rect)
             if col_type == 'tile':
-                 self.y -= self.vy
+                 self.y -= self.vy * game.dt_mult
                  self.rect.y = round(self.y)
             elif col_type == 'entity':
-                 self.y -= self.vy * 0.8
+                 self.y -= self.vy * 0.8 * game.dt_mult
                  self.rect.y = round(self.y)
 
         # --- CHUNK TRANSITION LOGIC ---

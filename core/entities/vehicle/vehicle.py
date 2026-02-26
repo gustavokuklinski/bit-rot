@@ -113,10 +113,18 @@ class Vehicle:
     def current_speed_val(self):
         return math.hypot(self.velocity[0], self.velocity[1])
 
-    def brake(self, brake_force=0.9): 
+    def brake(self, brake_force=0.9, game=None): 
         if not self.active: return
-        self.velocity[0] *= (1 - brake_force)
-        self.velocity[1] *= (1 - brake_force)
+        # [FIX] If you can pass 'game' into this function from input.py, use dt_mult.
+        # Otherwise, scale it down manually if you want a flat deceleration:
+        multiplier = game.dt_mult if game else 1.0
+        
+        # Convert exponential decay to be frame-independent
+        scale = math.pow(brake_force, multiplier)
+        
+        self.velocity[0] *= scale
+        self.velocity[1] *= scale
+        
         if self.current_speed_val < 0.1:
             self.velocity = [0, 0]
 
@@ -502,13 +510,13 @@ class Vehicle:
         else:
             self.motor = 0.0
 
-    def update(self, game_map=None):
+    def update(self, game_map=None, dt_mult=1.0):
         self.update_stats_from_equipment()
         battery_item = self.equipment.get('battery')
         fuel_item = self.equipment.get('fuel')
 
         if self.active:
-             fuel_drain = 0.0001 
+             fuel_drain = 0.0001 * dt_mult
              if self.fuel > 0:
                  self.fuel -= fuel_drain
                  if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
@@ -519,7 +527,7 @@ class Vehicle:
                  print("Engine died (No Fuel).")
 
         if self.lights == 'on':
-            drain_amount = 0.0005
+            drain_amount = 0.0005 * dt_mult
             if self.battery > 0:
                 self.battery -= drain_amount
                 if battery_item:

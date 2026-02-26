@@ -125,6 +125,15 @@ def update_game_state(game):
         tx, ty = target_tile
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
+    if getattr(game, 'is_fast_forwarding', False):
+        current_map = game.map_manager.current_map_filename
+        if current_map in game.map_states:
+            extra_time = game.dt_ms * (game.fast_forward_speed - 1.0)
+            if 'last_respawn_time' in game.map_states[current_map]:
+                game.map_states[current_map]['last_respawn_time'] -= extra_time
+            if 'last_animal_respawn_time' in game.map_states[current_map]:
+                game.map_states[current_map]['last_animal_respawn_time'] -= extra_time
+
     check_zombie_respawn(game)
     check_animal_respawn(game) 
     check_dynamic_zombie_spawns(game, GRID_SIZE)
@@ -143,9 +152,9 @@ def update_game_state(game):
         world_max_y = game.world_min_y + game.map_height_pixels
 
         # Apply fast forward to projectile speed
-        if multiplier > 1.0:
-            p.vx *= multiplier
-            p.vy *= multiplier
+        #if multiplier > 1.0:
+        #    p.vx *= multiplier
+        #    p.vy *= multiplier
 
         local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
 
@@ -376,7 +385,7 @@ def update_game_state(game):
             # Skip full update but still process knockback (unless aggroed)
             if frame_mod > 16 and not is_aggroed:
                 if hasattr(zombie, 'knockback_timer') and zombie.knockback_timer > 0:
-                    zombie.knockback_timer -= 16
+                    zombie.knockback_timer -= game.dt_ms
                 continue
 
         # [OPTIMIZATION] Limit zombies processed per frame
@@ -410,7 +419,7 @@ def update_game_state(game):
 
         # --- AGGRO TIMER DECAY ---
         if getattr(zombie, 'aggro_timer', 0) > 0:
-            zombie.aggro_timer -= 16
+            zombie.aggro_timer -= game.dt_ms
 
         if getattr(zombie, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
@@ -443,9 +452,10 @@ def update_game_state(game):
 
             zombie.rect.topleft = (int(zombie.x), int(zombie.y))
 
-            zombie.knockback_velocity[0] *= 0.9
-            zombie.knockback_velocity[1] *= 0.9
-            zombie.knockback_timer -= game.clock.get_time()
+            decay_factor = math.pow(0.9, game.dt_mult * multiplier)
+            zombie.knockback_velocity[0] *= decay_factor
+            zombie.knockback_velocity[1] *= decay_factor
+            zombie.knockback_timer -= game.dt_ms * multiplier
 
         zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
@@ -478,7 +488,7 @@ def update_game_state(game):
             # Skip full update but still process knockback (unless aggroed)
             if frame_mod > 16 and not is_aggroed:
                 if hasattr(animal, 'knockback_timer') and animal.knockback_timer > 0:
-                    animal.knockback_timer -= 16
+                    animal.knockback_timer -= game.dt_ms
                 continue
 
         # [OPTIMIZATION] Limit animals processed per frame
@@ -509,7 +519,7 @@ def update_game_state(game):
 
         # --- AGGRO TIMER DECAY ---
         if getattr(animal, 'aggro_timer', 0) > 0:
-            animal.aggro_timer -= 16
+            animal.aggro_timer -= game.dt_ms
 
         if getattr(animal, 'knockback_timer', 0) > 0:
             VELOCITY_MULTIPLIER = 0.25
@@ -542,9 +552,10 @@ def update_game_state(game):
 
             animal.rect.topleft = (int(animal.x), int(animal.y))
 
-            animal.knockback_velocity[0] *= 0.9
-            animal.knockback_velocity[1] *= 0.9
-            animal.knockback_timer -= game.clock.get_time()
+            decay_factor = math.pow(0.9, game.dt_mult * multiplier)
+            animal.knockback_velocity[0] *= decay_factor
+            animal.knockback_velocity[1] *= decay_factor
+            animal.knockback_timer -= game.dt_ms * multiplier
 
         animal.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
@@ -598,10 +609,11 @@ def update_game_state(game):
         # [OPTIMIZATION] Only update vehicles near player?
         # For now we assume active_zombies logic covers the expensive parts.
         for vehicle in game.map_manager.vehicles:
-            vehicle.update()
+            vehicle.update(dt_mult=game.dt_mult * multiplier)
+
             # Apply fast forward to vehicle physics
-            if multiplier > 1.0:
-                vehicle.velocity = (vehicle.velocity[0] * multiplier, vehicle.velocity[1] * multiplier)
+            #if multiplier > 1.0:
+            #    vehicle.velocity = (vehicle.velocity[0] * multiplier, vehicle.velocity[1] * multiplier)
             
             detected_entities = []
             

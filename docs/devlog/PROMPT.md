@@ -11,8 +11,6 @@ The code is in python. Show the file and the changed parts of the code to be fix
 ---
 This is my updated code Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
 
-Currently the game map generate one big map file. I want the game to render separated chunks connected by pathways via top, right, bottom, left.
-Give me the changed codes to achieve this.
 ---
 This is my updated code folder located at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core.
 

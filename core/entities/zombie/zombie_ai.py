@@ -329,13 +329,13 @@ class ZombieAI:
 
     def move_towards(self, target_pos, obstacles, other_zombies, game, can_see_target=True):
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-        effective_speed = self.speed * multiplier
+        effective_speed = self.speed * multiplier * game.dt_mult
         current_time = pygame.time.get_ticks()
 
         move_x, move_y = 0, 0
         use_pathfinding = not can_see_target
         
-        if self.stuck_timer > 0 and self.stuck_timer % 10 == 0:
+        if self.stuck_timer > 0:
              use_pathfinding = True
 
         if use_pathfinding:
@@ -419,7 +419,7 @@ class ZombieAI:
             move_y += sep_y * separation_strength
 
         if self.stuck_timer > 0:
-            self.stuck_timer -= 1
+            self.stuck_timer -= game.dt_ms
             rad = math.radians(self.stuck_angle)
             move_x += math.cos(rad) * effective_speed * 0.5
             move_y += -math.sin(rad) * effective_speed * 0.5
@@ -456,7 +456,7 @@ class ZombieAI:
                 self.x -= step_x
                 self.rect.x = int(self.x)
                 if abs(step_x) > 0.1:
-                    self.stuck_timer = 10
+                    self.stuck_timer = 200
                     self.stuck_angle = random.randint(0, 360)
             
             self.y += step_y
@@ -469,7 +469,7 @@ class ZombieAI:
                 self.y -= step_y
                 self.rect.y = int(self.y)
                 if abs(step_y) > 0.1:
-                    self.stuck_timer = 10
+                    self.stuck_timer = 200
                     self.stuck_angle = random.randint(0, 360)
 
         self.rect.topleft = (int(self.x), int(self.y))

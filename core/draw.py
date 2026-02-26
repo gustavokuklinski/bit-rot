@@ -80,11 +80,14 @@ def draw_game(game):
             target_pan_x = math.cos(game.player.aim_angle) * pan_distance
             target_pan_y = -math.sin(game.player.aim_angle) * pan_distance
 
-    lerp_speed = 0.1
+    dt_mult = getattr(game, 'dt_mult', 1.0)
     if not hasattr(game, 'camera_pan_x'): game.camera_pan_x = 0
     if not hasattr(game, 'camera_pan_y'): game.camera_pan_y = 0
-    game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_speed
-    game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_speed
+    
+    # 0.1 represents the original smoothing factor at exactly 60 FPS
+    lerp_factor = 1.0 - math.pow(1.0 - 0.1, dt_mult)
+    game.camera_pan_x += (target_pan_x - game.camera_pan_x) * lerp_factor
+    game.camera_pan_y += (target_pan_y - game.camera_pan_y) * lerp_factor
 
     if game.player:
         game.true_camera_x = game.player.rect.centerx - (view_w / 2)
@@ -550,9 +553,10 @@ def draw_game(game):
         
         active_rain = []
         rain_color = (130, 150, 180)
+        dt_mult = getattr(game, 'dt_mult', 1.0)
         for p in game.rain_particles:
-            p['y'] += p['speed']
-            p['x'] -= p['speed'] * 0.15 
+            p['y'] += p['speed'] * dt_mult
+            p['x'] -= (p['speed'] * 0.15) * dt_mult 
             
             start_pos = (int(p['x']), int(p['y']))
             end_pos = (int(p['x'] + p['speed'] * 0.15), int(p['y'] - p['length']))
@@ -587,7 +591,7 @@ def draw_game(game):
         
         flash_radius = (TILE_SIZE // 5) * zoom 
         pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), int(flash_radius))
-        game.player.gun_flash_timer -= 1
+        game.player.gun_flash_timer -= getattr(game, 'dt_mult', 1.0)
 
     if game.player and game.player.chat_text and game.player.chat_timer > 0:
         player_view_x = game.player.rect.centerx + offset_x

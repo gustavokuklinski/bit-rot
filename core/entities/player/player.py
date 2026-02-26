@@ -193,7 +193,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if self.action_timer > 0:
             # Apply fast forward to action timer
             multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-            self.action_timer -= multiplier
+            self.action_timer -= multiplier * game.dt_mult
             self.vx = 0
             self.vy = 0
             self.is_running = False
@@ -208,7 +208,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             return False
 
         if self.chat_timer > 0:
-            self.chat_timer -= 1
+            self.chat_timer -= game.dt_mult
             if self.chat_timer <= 0:
                 self.chat_text = None
 
@@ -240,17 +240,17 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
         if not self.is_sleeping and not is_active_resting:
-            self.tireness = min(self.max_tireness, self.tireness - 0.002)
+            self.tireness = min(self.max_tireness, self.tireness - 0.002 * game.dt_mult)
 
         if not self.is_sleeping and is_active_resting:
             if self.stamina < self.max_stamina:
-                self.stamina = min(self.max_stamina, self.stamina + 0.5)
+                self.stamina = min(self.max_stamina, self.stamina + 0.5 * game.dt_mult)
             if self.tireness < self.max_tireness:
-                self.tireness = min(self.max_tireness, self.tireness + 0.03)
+                self.tireness = min(self.max_tireness, self.tireness + 0.03 * game.dt_mult)
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
-            restore_amount = 0.5
+            restore_amount = 0.5 * game.dt_mult
             self.tireness = max(0.0, self.tireness + restore_amount)
 
             if self.tireness >= self.max_tireness:
@@ -296,7 +296,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         # Increase infection over time if infected
         if self.infection > 0:
             passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
-            self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier))
+            self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier * game.dt_mult))
             
         is_starving = self.food <= 50.0
         is_dehydrated = self.water <= 70.0
@@ -304,11 +304,11 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         damage_this_frame = 0.0
         if is_starving:
-            damage_this_frame += 0.005 * multiplier
+            damage_this_frame += 0.005 * multiplier * game.dt_mult
         if is_dehydrated:
-            damage_this_frame += 0.003 * multiplier
+            damage_this_frame += 0.003 * multiplier * game.dt_mult
         if is_infected:
-            damage_this_frame += 0.005 * (self.infection / 100.0) * multiplier
+            damage_this_frame += 0.005 * (self.infection / 100.0) * multiplier * game.dt_mult
             
         if damage_this_frame > 0:
             for part in self.body_parts.values():
@@ -375,7 +375,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             for item in inv:
                 if getattr(item, 'state', 'off') == 'on':
                     if item.durability is not None:
-                        item.durability -= 0.005 
+                        item.durability -= 0.005 * game.dt_mult
                         if item.durability <= 0:
                             item.durability = 0
                             self.toggle_utility_item(item, None, None, None) 
@@ -410,7 +410,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if is_moving and self.vehicle is None:
             # Check if player is not wearing anything on feet
             if not self.clothes.get('feet'):
-                foot_dmg = 0.02 if self.is_running else 0.005
+                foot_dmg = (0.02 if self.is_running else 0.005) * game.dt_mult
                 self.take_damage_to_part('feet', foot_dmg)
                 
                 # Show message rarely
@@ -447,7 +447,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 msg(f"Discarded empty backpack container.")
 
         if self.is_reloading:
-            self.reload_timer -= 1
+            self.reload_timer -= game.dt_mult
             if self.reload_timer <= 0:
                 self._finish_reload()
 
@@ -459,10 +459,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             return True
 
         if self.drop_cooldown > 0:
-            self.drop_cooldown -= 1
+            self.drop_cooldown -= game.dt_mult
 
         if self.layer_switch_cooldown > 0:
-            self.layer_switch_cooldown -= 1
+            self.layer_switch_cooldown -= game.dt_mult
 
         return False
 

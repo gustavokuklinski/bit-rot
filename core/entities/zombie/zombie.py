@@ -198,10 +198,12 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                     break
 
             # Decay
-            dt = 16 * multiplier
+            dt = game.dt_ms * multiplier
             self.knockback_timer -= dt
-            self.knockback_velocity[0] *= 0.9
-            self.knockback_velocity[1] *= 0.9
+
+            decay_factor = math.pow(0.9, game.dt_mult * multiplier)
+            self.knockback_velocity[0] *= decay_factor
+            self.knockback_velocity[1] *= decay_factor
             return
 
         # If not knocked back, perform standard AI/Update
