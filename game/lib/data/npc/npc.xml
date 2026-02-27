@@ -1,8 +1,6 @@
-<zombie>
+<npc>
     <name value="RANDOM" />
-    <profession value="RANDOM" />
     <sex value="RANDOM" />
-    <vaccine value="RANDOM" />
 
     <xp min="1" max="10" />
     
@@ -41,4 +39,4 @@
         <attack src="zombie_attack.ogg" />
         <steps src="zombie_steps.ogg" />
     </sound>
-</zombie>
+</npc>

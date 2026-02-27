@@ -1,4 +1,4 @@
-<recipe type="weapon_melee" craft="create" output="Primitive Knife" amount="1" time="2.0">
+<recipe type="weapon_melee" craft="create" output="Primitive Knife" gain_xp="[intelligence:0.2, maintenance:0.2]" amount="1" time="2.0">
     <ingredient name="Stone Blade" destroy="true" amount="1" />
     <ingredient name="Half Stick" destroy="true" amount="1" />
     <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />

@@ -1,4 +1,4 @@
-<recipe type="consumable_repair" craft="create" output="Motor Repair Kit" magazine="Vehicle Engineering Vol.1" amount="1" time="30.0">
+<recipe type="consumable_repair" craft="create" output="Motor Repair Kit" magazine="Vehicle Engineering Vol.1" gain_xp="[intelligence:0.5, maintenance:1.5]" req_level="[intelligence:2, maintenance:3]" amount="1" time="30.0">
     <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
     <ingredient name="Screwdriver" destroy="true" amount="1" />
     <ingredient name="Screws" destroy="true" amount="10" />

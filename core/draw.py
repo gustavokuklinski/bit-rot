@@ -5,6 +5,9 @@ import time
 from core.data.config import *
 import core.data.config
 from core.entities.item.item import Item
+from core.entities.zombie.zombie import Zombie
+from core.entities.npc.npc import NPC
+from core.entities.animal.animal import Animal
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
 from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, draw_belt_hud, get_belt_hud_slot_rect
@@ -23,9 +26,7 @@ from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
 from core.ui.map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
-from core.entities.zombie.zombie import Zombie
-from core.entities.npc.npc import NPC
-from core.entities.animal.animal import Animal
+from core.systems.utils import get_player_facing_tile
 
 def draw_game(game):
     # Clear the main screen
@@ -625,6 +626,93 @@ def draw_game(game):
         game.game_screen.blit(text_surf, text_rect)
 
     if game.game_state == 'PLAYING':
+        interactables = []
+        # 1. Check NPCs
+        for npc in game.npcs:
+            if not screen_rect.colliderect(npc.rect): continue
+            dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
+            if dist < TILE_SIZE * 1.5:
+                interactables.append({'rect': npc.rect, 'tip': 'Press E to Talk\nRMB For Talk option'})
+                
+        # 2. Check Vehicles
+        for obj in game.containers:
+            if getattr(obj, 'item_type', '') == 'vehicle':
+                if not screen_rect.colliderect(obj.rect): continue
+                dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
+                if dist < TILE_SIZE * 2.0:
+                    interactables.append({'rect': obj.rect, 'tip': 'Press E to enter/exit vehicle\nPress Q to turn on/off engine\nRMB for Vehicle Options'})
+                    
+        # 3. Check Tiles (Doors, Windows, Stairs)
+        fx, fy = get_player_facing_tile(game)
+        if fx is not None:
+            t = game.map_manager.get_tile_at(fx, fy)
+            if t:
+                is_stair = t.get('is_stair')
+                is_statable = t.get('is_statable')
+                if is_stair or is_statable:
+                    dist = math.hypot(game.player.rect.centerx - (fx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (fy*TILE_SIZE + TILE_SIZE/2))
+                    if dist < TILE_SIZE * 1.5:
+                        tile_rect = pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        if is_stair:
+                            interactables.append({'rect': tile_rect, 'tip': 'Press E to go Down/Up'})
+                        else:
+                            name = t.get('name', '').lower()
+                            if 'window' in name:
+                                interactables.append({'rect': tile_rect, 'tip': 'Press E to Open/Close'})
+                            else:
+                                interactables.append({'rect': tile_rect, 'tip': 'Press E to Open/Close'})
+                                
+        # Draw the '!' marks
+        mouse_pos = game._get_scaled_mouse_pos()
+        
+        tooltip_to_draw = None
+        
+        for item in interactables:
+            world_rect = item['rect']
+            
+            # Position '!' top middle of the entity/tile
+            screen_x = ((world_rect.centerx + offset_x) * zoom) + GAME_OFFSET_X
+            screen_y = ((world_rect.top + offset_y) * zoom) - 5
+            
+            box_rect = pygame.Rect(0, 0, 20, 20)
+            box_rect.center = (screen_x, screen_y)
+            
+            pygame.draw.rect(game.game_screen, (0, 0, 0), box_rect)
+            pygame.draw.rect(game.game_screen, (255, 255, 255), box_rect, 1)
+            
+            excl_surf = font_small.render("!", True, (255, 255, 255))
+            excl_rect = excl_surf.get_rect(center=box_rect.center)
+            game.game_screen.blit(excl_surf, excl_rect)
+            
+            if box_rect.collidepoint(mouse_pos):
+                tooltip_to_draw = item['tip']
+                
+        # Draw Hover Tooltip
+        if tooltip_to_draw:
+            lines = tooltip_to_draw.split('\n')
+            max_w = max((font_small.render(line, True, WHITE).get_width() for line in lines), default=0)
+            
+            tt_w = max_w + 10
+            tt_h = len(lines) * 20 + 10
+            tt_x, tt_y = mouse_pos[0], mouse_pos[1]
+            
+            if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
+            if tt_y + tt_h > GAME_HEIGHT: tt_y = mouse_pos[1] - tt_h - 5
+            
+            tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+            
+            # Temporary surface for transparent background
+            tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+            tip_bg.fill((0, 0, 0, 220))
+            game.game_screen.blit(tip_bg, (tt_x, tt_y))
+            pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
+            
+            curr_y = tt_y + 5
+            for line in lines:
+                ls = font_small.render(line, True, WHITE)
+                game.game_screen.blit(ls, (tt_x + 5, curr_y))
+                curr_y += 20
+
         draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
         alert_tooltip = draw_player_alerts(game.game_screen, game.player)
         if alert_tooltip:

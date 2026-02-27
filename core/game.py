@@ -31,6 +31,7 @@ from core.systems.utils import (
     capture_pause_screen, get_scaled_mouse_pos, find_interactable_tile, 
     find_nearby_containers, screen_to_world, get_player_facing_tile
 )
+from core.entities.animal.animal import Animal
 
 class Game:
     def __init__(self):
@@ -602,7 +603,7 @@ class Game:
 
     def rebuild_zombie_grid(self):
         """Rebuild zombie grid only if significant movement detected."""
-        from core.entities.animal.animal import Animal
+        
 
         # Count current zombies and animals
         current_zombie_count = len(self.zombies)
@@ -749,7 +750,7 @@ class Game:
                     self.visible_containers.extend(self.container_grid[key])
 
         # Filter out animals from active_zombies and collect them separately
-        from core.entities.animal.animal import Animal
+        
         self.active_animals = [z for z in self.active_zombies if isinstance(z, Animal)]
         self.active_zombies = [z for z in self.active_zombies if not isinstance(z, Animal)]
 

@@ -1,12 +1,13 @@
 import pygame
 import sys
 import math
+import uuid
 from core.data.config import *
 import core.data.config
+from core.systems.utils import get_player_facing_tile
 from core.events.keyboard import handle_keyboard_events
 from core.events.mouse import handle_mouse_down, handle_mouse_up, handle_mouse_motion
 from core.map.world_layers import set_active_layer
-# [NEW] Import the definitions to access dynamic config modifiers
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 keys_held = {}
@@ -199,49 +200,85 @@ def handle_input(game):
                         if game.player.vehicle:
                             game.player.exit_vehicle(game)
                         else:
-                            px = int(game.player.rect.centerx // TILE_SIZE)
-                            py = int(game.player.rect.centery // TILE_SIZE)
+                            # 1. Check for nearby NPC
+                            found_npc = None
+                            for npc in game.npcs:
+                                dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
+                                if dist < TILE_SIZE * 1.5:
+                                    found_npc = npc
+                                    break
                             
-                            #print(f"[DEBUG] Player at grid: {px}, {py}") # DEBUG 1
-
-                            if 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
-                                current_tile_char = game.map_data[py][px]
-                                current_tile_def = game.tile_manager.definitions.get(current_tile_char)
-                                
-                                # DEBUG 2: Check what the game thinks this tile is
-                                #if current_tile_def:
-                                #    print(f"[DEBUG] Tile Def: {current_tile_def.get('name')} | Stair: {current_tile_def.get('is_stair')} | Target: {current_tile_def.get('target_layer')}")
-                                #else:
-                                #    print(f"[DEBUG] No definition found for char: {current_tile_char}")
-
-                                if current_tile_def and current_tile_def.get('is_stair'):
-                                    target_layer = current_tile_def.get('target_layer')
-                                #    print(f"[DEBUG] Attempting switch to Layer {target_layer}") # DEBUG 3
-
-                                    if game.player.layer_switch_cooldown <= 0:
-                                        if set_active_layer(game, target_layer):
-                                            game.player.layer_switch_cooldown = 30
-                                #            print("[DEBUG] Switch SUCCESS")
-                                            return 
-                                
-
+                            if found_npc:
+                                if not any(m['type'] == 'npc_dialog' for m in game.modals):
+                                    pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
+                                    pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
+                                    game.modals.append({
+                                        'id': str(uuid.uuid4()),
+                                        'type': 'npc_dialog',
+                                        'npc': found_npc,
+                                        'dialogs': found_npc.get_dialog_options(), # Added dialog options
+                                        'active_dialog_index': -1,                 # Added active dialog index
+                                        'position': (pos_x, pos_y),
+                                        'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
+                                        'minimized': False,
+                                        'is_dragging': False,
+                                        'drag_offset': (0, 0)
+                                    })
+                                return
+                            
+                            # 2. Check for nearby Vehicle
                             found_vehicle = None
                             for obj in game.containers:
                                 if getattr(obj, 'item_type', '') == 'vehicle':
-                                    dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, 
-                                                      game.player.rect.centery - obj.rect.centery)
+                                    dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
                                     if dist < TILE_SIZE * 2.0:
                                         found_vehicle = obj
                                         break 
                             
                             if found_vehicle:
+                                # Enter vehicle
                                 game.player.enter_vehicle(found_vehicle, game)
-                            else:
-                                player_facing_grid_x, player_facing_grid_y = game.get_player_facing_tile()
-                                if player_facing_grid_x is not None and player_facing_grid_y is not None:
-                                    tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
-                                    if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
-                                        game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
+                                
+                                # Append vehicle options modal
+                                if not any(m['type'] == 'vehicle' for m in game.modals):
+                                    default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 - 200)
+                                    pos = game.last_modal_positions.get('vehicle', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
+                                    
+                                    new_modal = {
+                                        'id': str(uuid.uuid4()),
+                                        'type': 'vehicle',
+                                        'vehicle': found_vehicle,
+                                        'position': pos,
+                                        'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
+                                        'minimized': False,
+                                        'is_dragging': False, 
+                                        'drag_offset': (0, 0), 
+                                        'active_tab': 'Info'
+                                    }
+                                    game.modals.append(new_modal)
+                                return
+
+                            # 3. Check Stairs / Doors
+                            from core.systems.utils import get_player_facing_tile
+                            px, py = int(game.player.rect.centerx // TILE_SIZE), int(game.player.rect.centery // TILE_SIZE)
+
+                            if 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
+                                current_tile_char = game.map_data[py][px]
+                                current_tile_def = game.tile_manager.definitions.get(current_tile_char)
+
+                                if current_tile_def and current_tile_def.get('is_stair'):
+                                    target_layer = current_tile_def.get('target_layer')
+
+                                    if game.player.layer_switch_cooldown <= 0:
+                                        if set_active_layer(game, target_layer):
+                                            game.player.layer_switch_cooldown = 30
+                                            return 
+
+                            player_facing_grid_x, player_facing_grid_y = get_player_facing_tile(game)
+                            if player_facing_grid_x is not None and player_facing_grid_y is not None:
+                                tile = game.map_manager.get_tile_at(player_facing_grid_x, player_facing_grid_y)
+                                if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                                    game.map_manager.toggle_door_state(player_facing_grid_x, player_facing_grid_y)
 
             handle_movement(game)
             if event.type == pygame.MOUSEBUTTONDOWN:

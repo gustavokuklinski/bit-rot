@@ -44,13 +44,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         else:
             self.name = name_val # Use the hard-coded name (e.g., "John Doe")
 
-        # 4. Generate Vaccine Status
-        vacc_val = template.get('vaccine', 'False') # Get value from XML
-        if vacc_val.upper() == 'RANDOM':
-            self.vaccine = random.choice([True, False])
-        else:
-            # Convert the string "True" or "False" to a real boolean
-            self.vaccine = vacc_val.lower() == 'true'
+        
 
 
         self.max_health = template.get('health')
@@ -155,10 +149,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 
                 # Build the description text
                 info_text = f"Name: {self.name}\nSex: {self.sex}\n"
-                if self.vaccine:
-                    info_text += "\nVaccinated: Yes"
-                else:
-                    info_text += "\nVaccinated: No"
                 
                 id_item.text = info_text
                 
@@ -227,7 +217,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 'min_infection':0, 
                 'max_infection':1,
                 'sex': 'Male', 
-                'vaccine': 'False'
             }
             return Zombie(x, y, default_template)
 

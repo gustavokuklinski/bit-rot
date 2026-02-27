@@ -21,7 +21,7 @@ class NPCData:
                 try:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
-                    if root.tag == 'zombie':
+                    if root.tag == 'npc':
                         template = {}
                         name_node = root.find('name')
                         template['name'] = name_node.get('value') if name_node is not None else 'Survivor'

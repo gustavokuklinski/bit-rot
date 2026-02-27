@@ -1,4 +1,4 @@
-<recipe type="resource" craft="create" output="Stone Blade" amount="1" time="1.0">
+<recipe type="resource" craft="create" output="Stone Blade" gain_xp="[intelligence:0.1, maintenance:0.1]"  amount="1" time="1.0">
     <ingredient name="Stone" destroy="true" amount="1" />
     <ingredient name="Stone" destroy="false" amount="1" />
 </recipe>

@@ -1,4 +1,4 @@
-<recipe type="resource" craft="create" output="Plank" amount="5" time="4.0">
+<recipe type="resource" craft="create" output="Plank" gain_xp="[intelligence:0.1, maintenance:0.2]" amount="5" time="4.0">
     <ingredient name="[Log, Tree Trunk]" destroy="true" amount="1" />
     <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
 </recipe>

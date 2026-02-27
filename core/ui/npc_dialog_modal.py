@@ -74,7 +74,6 @@ def draw_npc_dialog_modal(surface, modal, game):
     stats = [
         f"Name: {npc.name}",
         f"HP: {npc.health}/{npc.max_health}",
-        f"Vaccinated: {'Yes' if getattr(npc, 'vaccinated', False) else 'No'}"
     ]
     
     for i, stat in enumerate(stats):

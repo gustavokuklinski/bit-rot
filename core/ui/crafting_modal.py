@@ -35,18 +35,19 @@ class CraftingModal(BaseModal):
         self.cached_recipe = None
         self.result_image = None
         self.ingredient_images = {}
+        self.yield_images = {}
+        self.yield_colors = {}
 
-        # [CHANGED] Added "Dismantle" tab
         self.tabs_data = [
-            {'label': "All"},
+            {'label': "Known Recipes"},
             {'label': "Craft"},
             {'label': "Repair"},
-            {'label': "Dismantle"} 
+            {'label': "Dismantle"}
         ]
         self.tabs_manager = Tabs(surface, self.modal, self.tabs_data, assets)
         
         if 'active_tab' not in self.modal:
-            self.modal['active_tab'] = "All"
+            self.modal['active_tab'] = "Known Recipes"
 
         # Search State
         self.search_text = ""
@@ -98,7 +99,8 @@ class CraftingModal(BaseModal):
             needed = req['amount']
             valid_names = req['names']
             
-            have = sum((item.load if item.load is not None else 1) 
+            # Use item.load only if the item is stackable; otherwise treat count as 1
+            have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in search_items 
                        if item.name in valid_names)
             
@@ -212,7 +214,7 @@ class CraftingModal(BaseModal):
         pygame.draw.rect(self.surface, GRAY, (list_x, list_y, self.list_width, list_h), 1)
 
         filtered_recipes = []
-        active_tab = self.modal.get('active_tab', 'All')
+        active_tab = self.modal.get('active_tab', 'Known Recipes')
 
         nearby_items = []
         nearby_containers = self.game.find_nearby_containers()
@@ -221,13 +223,37 @@ class CraftingModal(BaseModal):
                 if hasattr(cont, 'inventory') and cont.inventory:
                     nearby_items.extend(cont.inventory)
 
-        # [CHANGED] Tab Filtering Logic
         for r in self.recipes:
             craft_type = getattr(r, 'craft_type', 'create')
+            
+            # Restrict Repair and Dismantle only to their specific tabs
+            if craft_type == 'repair' and active_tab != "Repair": continue
+            if craft_type == 'dismantle' and active_tab != "Dismantle": continue
             
             if active_tab == "Craft" and (craft_type == 'repair' or craft_type == 'dismantle'): continue
             if active_tab == "Repair" and craft_type != 'repair': continue
             if active_tab == "Dismantle" and craft_type != 'dismantle': continue
+            
+            if active_tab == "Known Recipes":
+                knows_magazine = True
+                if r.magazine:
+                    knows_magazine = r.magazine in self.player.known_recipes
+                skills_met = self._check_skill_reqs(r)
+
+                is_unlocked = True
+                if r.magazine:
+                    if r.req_level:
+                        if not knows_magazine and not skills_met:
+                            is_unlocked = False
+                    else:
+                        if not knows_magazine:
+                            is_unlocked = False
+                elif r.req_level:
+                    if not skills_met:
+                        is_unlocked = False
+                
+                if not is_unlocked:
+                    continue
             
             if self.search_text:
                 if self.search_text.lower() not in r.output_name.lower(): continue
@@ -285,7 +311,6 @@ class CraftingModal(BaseModal):
             old_clip = self.surface.get_clip()
             self.surface.set_clip(row_rect)
             
-            # Display name is handled by recipe.output_name (calculated in RecipeManager)
             name_surf = font_small.render(recipe.output_name, True, text_color)
             self.surface.blit(name_surf, (row_rect.x + 8, row_rect.y + 6))
             
@@ -310,12 +335,7 @@ class CraftingModal(BaseModal):
         if self.selected_recipe:
             if self.selected_recipe != self.cached_recipe:
                 self.cached_recipe = self.selected_recipe
-                # For dismantle, output_name is "Dismantle X". 
-                # We might want to preview the first ingredient instead of the output "Dismantle X" which doesn't exist as an item.
-                # However, your request focused on logic. For now, it tries to fetch image for "Dismantle X" which fails gracefully.
-                # Use first ingredient image if dismantle?
                 if self.selected_recipe.craft_type == 'dismantle':
-                     # Try to get image of the first ingredient being destroyed
                      first_ing = self.selected_recipe.ingredients[0]['names'][0]
                      self.result_image = self.get_preview_image(first_ing)
                 else:
@@ -325,6 +345,20 @@ class CraftingModal(BaseModal):
                 for req in self.selected_recipe.ingredients:
                     primary_name = req['names'][0]
                     self.ingredient_images[primary_name] = self.get_preview_image(primary_name)
+                    
+                self.yield_images = {}
+                self.yield_colors = {}
+                if getattr(self.selected_recipe, 'craft_type', 'create') == 'dismantle' and getattr(self.selected_recipe, 'results', None):
+                    for res in self.selected_recipe.results:
+                        res_name = res['names'][0] if res['names'] else None
+                        if res_name:
+                            try:
+                                temp_item = Item.create_from_name(res_name)
+                                if temp_item:
+                                    self.yield_images[res_name] = temp_item.image
+                                    self.yield_colors[res_name] = temp_item.color
+                            except Exception:
+                                pass
 
             r = self.selected_recipe
             
@@ -350,12 +384,12 @@ class CraftingModal(BaseModal):
                 needed = req['amount']
                 valid_names = req['names'] 
                 
-                have = sum((item.load if item.load is not None else 1) 
+                have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                            for item in self.player.inventory 
                            if item.name in valid_names)
                 
                 if nearby_items:
-                    have += sum((item.load if item.load is not None else 1) 
+                    have += sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                            for item in nearby_items 
                            if item.name in valid_names)
                 
@@ -386,6 +420,32 @@ class CraftingModal(BaseModal):
                 self.surface.blit(ing_surf, (text_x, curr_y + 8))
                 curr_y += 35
                 
+            # SHOW RESULTS FOR DISMANTLE RECIPES
+            if getattr(r, 'craft_type', 'create') == 'dismantle' and getattr(r, 'results', None):
+                curr_y += 10
+                lbl_res = font_small.render("Yields:", True, GRAY)
+                self.surface.blit(lbl_res, (details_x, curr_y))
+                curr_y += 30
+                for res in r.results:
+                    res_name = res['names'][0] if res['names'] else "Unknown"
+                    res_amt = res['amount']
+                    res_chance = int(res.get('chance', 1.0) * 100)
+                    chance_str = f" ({res_chance}%)" if res_chance < 100 else ""
+                    
+                    img = self.yield_images.get(res_name)
+                    item_color = self.yield_colors.get(res_name, WHITE)
+                    
+                    text_x = details_x + 10
+                    if img:
+                        scaled_icon = pygame.transform.scale(img, (32, 32))
+                        self.surface.blit(scaled_icon, (text_x, curr_y))
+                        text_x += 35
+                        
+                    res_txt = f"{res_amt}x {res_name}{chance_str}"
+                    res_surf = font_small.render(res_txt, True, item_color)
+                    self.surface.blit(res_surf, (text_x, curr_y + 8))
+                    curr_y += 35
+                
             btn_h = 40
             bottom_y = details_y + list_h
             btn_rect = pygame.Rect(details_x, bottom_y - btn_h, details_w, btn_h)
@@ -409,8 +469,12 @@ class CraftingModal(BaseModal):
             skills_met = self._check_skill_reqs(r)
 
             if r.magazine:
-                if not knows_magazine and not skills_met:
-                    is_unlocked = False
+                if r.req_level:
+                    if not knows_magazine and not skills_met:
+                        is_unlocked = False
+                else:
+                    if not knows_magazine:
+                        is_unlocked = False
             elif r.req_level:
                 if not skills_met:
                     is_unlocked = False
@@ -418,7 +482,6 @@ class CraftingModal(BaseModal):
             if not is_unlocked:
                 can_craft = False
 
-            # Draw Skills / Mag info
             if r.req_level:
                 for attr, lvl in reversed(list(r.req_level.items())):
                     attr_name = attr.replace('_', ' ').capitalize()
@@ -459,7 +522,6 @@ class CraftingModal(BaseModal):
             pygame.draw.rect(self.surface, btn_color, btn_rect, border_radius=5)
             pygame.draw.rect(self.surface, border_color, btn_rect, 1, border_radius=5)
             
-            # [CHANGED] Button Text Logic for Dismantle
             if not is_unlocked:
                 if r.magazine and not knows_magazine and r.req_level:
                     btn_text = "LOCKED (MAG/SKILL)"
@@ -497,31 +559,59 @@ class CraftingModal(BaseModal):
         return None, close_btn, min_btn
 
     def _draw_ingredient_tooltip(self, names, pos):
-        line_height = 20
+        line_height = 24
         padding = 10
-        surfaces = []
+        items_data = []
         max_w = 0
+        
+        dash_s = font_small.render("- ", True, WHITE)
+        dash_w = dash_s.get_width()
+        
         for name in names:
-            s = font_small.render(f"- {name}", True, WHITE)
-            surfaces.append(s)
-            if s.get_width() > max_w:
-                max_w = s.get_width()
-        
+            img = self.get_preview_image(name)
+            if img:
+                img = pygame.transform.scale(img, (20, 20))
+                
+            s = font_small.render(name, True, WHITE)
+            
+            img_w = 20 if img else 0
+            gap = 5 if img else 0
+            
+            row_w = dash_w + img_w + gap + s.get_width()
+            if row_w > max_w:
+                max_w = row_w
+                
+            items_data.append((img, s))
+            
         tt_w = max_w + (padding * 2)
-        tt_h = (len(surfaces) * line_height) + (padding * 2)
+        tt_h = (len(items_data) * line_height) + (padding * 2)
         
-        x, y = pos[0] + 15, pos[1] + 15
+        x, y = pos[0], pos[1]
         if x + tt_w > GAME_WIDTH:
             x = pos[0] - tt_w - 5
         if y + tt_h > GAME_HEIGHT:
             y = pos[1] - tt_h - 5
             
         tt_rect = pygame.Rect(x, y, tt_w, tt_h)
-        pygame.draw.rect(self.surface, (20, 20, 25, 230), tt_rect)
-        pygame.draw.rect(self.surface, (100, 100, 100), tt_rect, 1)
+        pygame.draw.rect(self.surface, BLACK, tt_rect)
+        pygame.draw.rect(self.surface, WHITE, tt_rect, 1)
+        
         curr_y = y + padding
-        for s in surfaces:
-            self.surface.blit(s, (x + padding, curr_y))
+        for img, s in items_data:
+            cx = x + padding
+            
+            # Draw dash
+            self.surface.blit(dash_s, (cx, curr_y + (line_height - dash_s.get_height()) // 2))
+            cx += dash_w
+            
+            # Draw image
+            if img:
+                self.surface.blit(img, (cx, curr_y + (line_height - 20) // 2))
+                cx += 20 + 5
+                
+            # Draw text
+            self.surface.blit(s, (cx, curr_y + (line_height - s.get_height()) // 2))
+            
             curr_y += line_height
 
     def _validate_ingredients(self, recipe, nearby_containers=None):
@@ -552,7 +642,7 @@ class CraftingModal(BaseModal):
                         if hasattr(item, 'inventory') and item.inventory:
                              return f"Cannot use {item.name}: It contains items!"
 
-                        item_qty = item.load if item.load is not None else 1
+                        item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                         take = min(to_remove - removed_check, item_qty)
                         removed_check += take
                         
@@ -610,19 +700,19 @@ class CraftingModal(BaseModal):
                             item = inv[i]
                             
                             if item.name in valid_names:
-                                item_qty = item.load if item.load is not None else 1
+                                item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                                 take = min(to_remove - removed, item_qty)
                                 
                                 if item.min_restore is not None and item.max_restore is not None:
                                     restore_per_unit = random.randint(item.min_restore, item.max_restore)
                                     total_repair_amount += (restore_per_unit * take)
                                 
-                                if item.load is not None:
+                                if item.is_stackable() and item.load is not None:
                                     item.load -= take
                                 
                                 removed += take
                                 
-                                if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
+                                if (item.is_stackable() and item.load is not None and item.load <= 0) or (not item.is_stackable() and take > 0):
                                     inv.pop(i)
                                     
                                 if removed >= to_remove: break
@@ -639,7 +729,6 @@ class CraftingModal(BaseModal):
 
             # --- Create / Dismantle Logic ---
             else:
-                # 1. Remove Ingredients
                 for req in recipe.ingredients:
                     if not req['destroy']: continue
 
@@ -654,35 +743,31 @@ class CraftingModal(BaseModal):
                             item = inv[i]
                             
                             if item.name in valid_names:
-                                item_qty = item.load if item.load is not None else 1
+                                item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                                 take = min(to_remove - removed, item_qty)
                                 
-                                if item.load is not None:
+                                if item.is_stackable() and item.load is not None:
                                     item.load -= take
                                 
                                 removed += take
                                 
-                                if (item.load is not None and item.load <= 0) or (item.load is None and take > 0):
+                                if (item.is_stackable() and item.load is not None and item.load <= 0) or (not item.is_stackable() and take > 0):
                                     inv.pop(i)
                                     
                                 if removed >= to_remove: break
                 
-                # 2. Generate Results (Handling Multiple Outputs, Chance, and Random Choice)
                 created_items_log = []
                 
                 for res in recipe.results:
-                    # Check Chance
                     if res['chance'] < 1.0 and random.random() > res['chance']:
                         continue
                         
-                    # Choose Name (Handle [A, B] brackets)
                     final_name = random.choice(res['names'])
                     
                     result_item = Item.create_from_name(final_name)
                     if result_item:
                         result_item.load = res['amount']
                         
-                        # Add to inventory logic
                         added_to_inv = False
                         if len(self.player.inventory) < self.player.base_inventory_slots:
                             self.player.inventory.append(result_item)

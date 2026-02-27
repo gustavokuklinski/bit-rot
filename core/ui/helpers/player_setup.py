@@ -42,6 +42,7 @@ def _load_stat_icons():
         "ranged": SPRITE_PATH + "ui/range.png",
         "lucky": SPRITE_PATH + "ui/lucky.png",
         "agility": SPRITE_PATH + "ui/agility.png",
+        "intelligence": SPRITE_PATH + "ui/intelligence.png",
     }
     
     for key, path in icon_files.items():

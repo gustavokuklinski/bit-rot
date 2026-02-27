@@ -270,6 +270,19 @@ def _rebuild_world_from_data(game):
     game.map_lights = map_lights
     game.npc_spawn_points = npc_spawns
     
+    # --- FIX: Re-inject dynamic vehicles back into Layer 1 ---
+    if getattr(game, 'current_layer_index', 1) == 1:
+        vehicles_list = getattr(game, 'vehicles', [])
+        # Fallback to map_manager if game.vehicles is empty
+        if not vehicles_list and hasattr(game, 'map_manager'):
+            vehicles_list = getattr(game.map_manager, 'vehicles', [])
+            
+        for v in vehicles_list:
+            if v not in game.containers:
+                game.containers.append(v)
+            if hasattr(v, 'rect') and v.rect not in game.obstacles:
+                game.obstacles.append(v.rect)
+    
     # [MEMORY OPTIMIZATION]
     # Clear render lists if huge
     map_h = len(game.map_data)

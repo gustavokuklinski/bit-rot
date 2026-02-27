@@ -72,8 +72,8 @@ def load_map(game, map_filename):
         if v.rect in obstacles:
             obstacles.remove(v.rect)
     
-    if hasattr(game.map_manager, 'vehicles'):
-        game.map_manager.vehicles = map_vehicles
+    game.map_manager.vehicles = map_vehicles
+    game.vehicles = map_vehicles
 
     # [CRITICAL] Ensure chunked logic evaluates to true!
     game.is_giant_map = False
@@ -613,9 +613,17 @@ def load_game(game, save_folder_name):
             with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
                 v_list = json.load(f)
                 
-            # Remove any default vehicles parsed by map
-            if hasattr(game.map_manager, 'vehicles'):
-                game.map_manager.vehicles.clear() 
+            # Ensure proper initialization of vehicles lists
+            if not hasattr(game.map_manager, 'vehicles'):
+                game.map_manager.vehicles = []
+            else:
+                game.map_manager.vehicles.clear()
+                
+            if not hasattr(game, 'vehicles'):
+                game.vehicles = []
+            else:
+                game.vehicles.clear()
+
             game.containers = [c for c in game.containers if not isinstance(c, Vehicle)]
             
             for v_data in v_list:
@@ -663,6 +671,7 @@ def load_game(game, save_folder_name):
                     vehicle.lights = v_data['lights']
 
                 game.map_manager.vehicles.append(vehicle)
+                game.vehicles.append(vehicle)
                 game.containers.append(vehicle)
                 game.obstacles.append(vehicle.rect)
 
