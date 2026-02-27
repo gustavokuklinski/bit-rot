@@ -897,7 +897,7 @@ def run_player_setup(game):
         if 'current_tab' not in state:
              state['current_tab'] = 'Player'
 
-        state['settings_data'] = load_config_data("./game/save/config/default.xml")
+        state['settings_data'] = load_config_data("./game/save/config/config.xml")
         state['config_name'] = ""
         state['config_name_active'] = False
         state['settings_scroll_y'] = 0
@@ -908,8 +908,8 @@ def run_player_setup(game):
         state['config_dd_active'] = False
         
         # NEW: Initialize Game Config state
-        state['config_preset_list'] = ["default"] 
-        state['selected_config_preset'] = 'default'
+        state['config_preset_list'] = ["config"] 
+        state['selected_config_preset'] = 'config'
         state['game_config_dropdown_active'] = False
         _load_config_presets(state)
 
@@ -1056,33 +1056,10 @@ def run_player_setup(game):
                     continue
 
                 # Handle main buttons
-                if clickable_rects.get('config_name_input') and clickable_rects['config_name_input'].collidepoint(mouse_pos):
-                    state['config_name_active'] = True
-                    state['seed_input_active'] = False
-                    state['active_setting'] = None
-                elif clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
-                    state['seed_input_active'] = True
-                    state['config_name_active'] = False
-                    state['active_setting'] = None
-                elif clickable_rects.get('save_config') and clickable_rects['save_config'].collidepoint(mouse_pos):
-                    if state.get('config_name'):
-                        save_config_xml(state['settings_data'], f"./game/save/config/{state['config_name']}.xml")
-                        _load_config_presets(state)
-                elif clickable_rects.get('delete_config') and clickable_rects['delete_config'].collidepoint(mouse_pos):
-                     name = state.get('selected_config_preset')
-                     if name and name != 'default':
-                        try:
-                            os.remove(f"./game/save/config/{name}.xml")
-                            _load_config_presets(state)
-                            state['selected_config_preset'] = 'default'
-                            # Reload default data to UI
-                            state['settings_data'] = load_config_data("./game/save/config/default.xml")
-                            state['config_name'] = ""
-                        except: pass
+                
 
-
-                elif clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
-                    preset_name = state.get('selected_config_preset', 'default')
+                if clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
+                    preset_name = state.get('selected_config_preset', 'config')
                     save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
                     core.data.config.load_settings(preset_name)
                     

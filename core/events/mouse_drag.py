@@ -45,7 +45,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                 # --- Vehicle Equipment Logic ---
                 for modal in reversed(game.modals):
-                    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Info':
+                    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Mechanics':
                         if 'equipment_rects' in modal:
                             for slot_name, slot_rect in modal['equipment_rects'].items():
                                 if slot_rect.collidepoint(mouse_pos):
@@ -1272,7 +1272,7 @@ def handle_left_click_drag_candidate(game, mouse_pos):
         return 
 
     modal = topmost_modal
-    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Info':
+    if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Mechanics':
         if 'equipment_rects' in modal:
             for slot_name, slot_rect in modal['equipment_rects'].items():
                 if slot_rect.collidepoint(mouse_pos):

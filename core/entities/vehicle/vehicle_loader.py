@@ -60,7 +60,19 @@ class VehicleLoader:
                         stats['lights'] = 'off' 
                         stats['lights_radius'] = child.get('radius', '8')
                     else:
-                        stats[child.tag] = child.get('value')
+                        val = child.get('value')
+                        if val is not None:
+                            stats[child.tag] = val
+                        
+            # Look for seats either as a root attribute or a root child node to fix the 4 seats issue
+            # Check if it wasn't already loaded from within the <car> node
+            if 'seats' not in stats:
+                if 'seats' in root.attrib:
+                    stats['seats'] = root.get('seats')
+                else:
+                    seats_node = root.find('seats')
+                    if seats_node is not None:
+                        stats['seats'] = seats_node.get('value', '4')
 
             # Capacity
             capacity_node = root.find('capacity')

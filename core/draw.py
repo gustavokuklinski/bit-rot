@@ -58,7 +58,7 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    is_aiming = (keys[pygame.K_LALT] or keys[pygame.K_LALT])
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL])
 
     target_pan_x = 0
     target_pan_y = 0
@@ -640,7 +640,7 @@ def draw_game(game):
                 if not screen_rect.colliderect(obj.rect): continue
                 dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
                 if dist < TILE_SIZE * 2.0:
-                    interactables.append({'rect': obj.rect, 'tip': 'Press E to enter/exit vehicle\nPress Q to turn on/off engine\nRMB for Vehicle Options'})
+                    interactables.append({'rect': obj.rect, 'tip': 'Press E to enter/exit vehicle\nPress Q to turn on/off engine\nRMB for Vehicle Options and Trunk'})
                     
         # 3. Check Tiles (Doors, Windows, Stairs)
         fx, fy = get_player_facing_tile(game)
@@ -944,7 +944,7 @@ def draw_game(game):
     else:
         pygame.mouse.set_visible(True)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LALT] or keys[pygame.K_LALT]:
+        if keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL]:
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

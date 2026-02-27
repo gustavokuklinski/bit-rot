@@ -59,7 +59,7 @@ TEXT_MODAL_HEIGHT = 300
 
 # Vehicle Options modal
 VEHICLE_MODAL_WIDTH = 400
-VEHICLE_MODAL_HEIGHT = 465
+VEHICLE_MODAL_HEIGHT = 300
 
 # Mobile modal
 MOBILE_MODAL_WIDTH = 250
@@ -202,7 +202,7 @@ def load_settings(preset="default"):
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
         print(f"Config file not found: {filepath}. Loading default.")
-        filepath = './game/save/config/default.xml'
+        filepath = './game/save/config/config.xml'
 
     try:
         tree = ET.parse(filepath)

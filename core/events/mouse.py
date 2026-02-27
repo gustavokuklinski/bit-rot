@@ -215,6 +215,11 @@ def handle_mouse_down(game, event, mouse_pos):
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                         if tab_rect.collidepoint(mouse_pos):
                              tabs_data = topmost_modal.get('tabs_data', [])
+                             
+                             # Fix: Provide fallback tabs for Vehicle modal if 'tabs_data' isn't natively populated on the dictionary
+                             if not tabs_data and topmost_modal['type'] == 'vehicle':
+                                 tabs_data = [{'label': 'Info'}, {'label': 'Mechanics'}]
+                                 
                              if i < len(tabs_data):
                                  topmost_modal['active_tab'] = tabs_data[i]['label']
                                  return
@@ -222,13 +227,23 @@ def handle_mouse_down(game, event, mouse_pos):
                 if hasattr(topmost_modal, 'handle_event'):
                     if topmost_modal.handle_event(event): return
 
+                # Engine and Lights toggles specifically on the Info tab
                 if topmost_modal['type'] == 'vehicle' and topmost_modal.get('active_tab') == 'Info':
                     rects = topmost_modal.get('rects', {})
                     veh = topmost_modal['vehicle']
+                    
+                    if 'engine_on' in rects and rects['engine_on'].collidepoint(mouse_pos):
+                        if not veh.active: veh.toggle_engine()
+                        return
+                    if 'engine_off' in rects and rects['engine_off'].collidepoint(mouse_pos):
+                        if veh.active: veh.toggle_engine()
+                        return
                     if 'lights_on' in rects and rects['lights_on'].collidepoint(mouse_pos):
-                        veh.toggle_lights(); return
+                        if veh.lights != 'on': veh.toggle_lights()
+                        return
                     if 'lights_off' in rects and rects['lights_off'].collidepoint(mouse_pos):
-                        veh.toggle_lights(); return
+                        if veh.lights == 'on': veh.toggle_lights()
+                        return
 
                 if topmost_modal['type'] == 'inventory' and topmost_modal.get('active_tab', 'Inventory') == 'Inventory':
                      backpack_slot_rect = get_backpack_slot_rect(topmost_modal['position'])
@@ -305,7 +320,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                     return
             
-        if (pygame.key.get_pressed()[pygame.K_LALT] or pygame.key.get_pressed()[pygame.K_LALT]):
+        if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL] or pygame.mouse.get_pressed()[2]):
             handle_attack(game, mouse_pos)
             return
 

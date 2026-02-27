@@ -401,8 +401,17 @@ class PlayerMovement:
                                 game.containers.append(self.vehicle)
                             if hasattr(game.map_manager, 'vehicles') and self.vehicle not in game.map_manager.vehicles:
                                 game.map_manager.vehicles.append(self.vehicle)
-                            if self.vehicle.rect not in game.obstacles:
-                                game.obstacles.append(self.vehicle.rect)
+                                
+                            # Ensure the driven vehicle is NOT in obstacles so it doesn't collide with itself
+                            if self.vehicle.rect in game.obstacles:
+                                game.obstacles.remove(self.vehicle.rect)
+                                
+                        # Prevent physics explosions due to the chunk load time spike
+                        if hasattr(game, 'last_time'):
+                            game.last_time = pygame.time.get_ticks()
+                        if hasattr(game, 'dt_ms'):
+                            game.dt_ms = 16.0
+                            game.dt_mult = 1.0
                                 
                         return
                     else:

@@ -11,6 +11,18 @@ class Vehicle:
 
         self.item_type = 'vehicle'
         self.name = name
+
+        # Fetch stats directly from the definition if they are missing or empty (e.g., during load from save state)
+        if not stats or 'seats' not in stats:
+            from core.entities.vehicle.vehicle_loader import VehicleLoader
+            loader = VehicleLoader()
+            definition = loader.get_definition_by_name(name)
+            if definition and 'stats' in definition:
+                merged_stats = definition['stats'].copy()
+                if stats:
+                    merged_stats.update(stats)
+                stats = merged_stats
+
         self.x = x
         self.y = y
         self.width = width
@@ -62,7 +74,11 @@ class Vehicle:
         self.friction = 0.4
         self.active = False 
 
-        self.seat_count = int(stats.get('seats', 4))
+        try:
+            self.seat_count = int(stats.get('seats', 4))
+        except (ValueError, TypeError):
+            self.seat_count = 4
+            
         self.seats = [None] * self.seat_count
 
         # Track entities hit during movement for processing in update.py

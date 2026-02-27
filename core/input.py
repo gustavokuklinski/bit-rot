@@ -65,7 +65,8 @@ def handle_movement(game):
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
     game.player.is_running = is_running
 
-    game.player.is_aiming = (keys[pygame.K_LALT] or keys[pygame.K_LALT])
+    # Use Left CTRL, Right CTRL, or Right Mouse Button (index 2) to aim
+    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
 
     if game.player.stamina <= 0:
         current_speed = final_base_speed / 3
@@ -106,7 +107,6 @@ def handle_movement(game):
     game.player.vx = dx * current_speed
     game.player.vy = dy * current_speed
 
-# ... (rest of handle_input remains unchanged) ...
 def handle_input(game):
 
     mouse_pos = game._get_scaled_mouse_pos()

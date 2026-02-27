@@ -18,10 +18,8 @@ class GameLogger:
                 print(f"CRITICAL: Could not create log directory {self.log_dir}: {e}")
                 return
 
-        # 2. Generate Timestamped Filename
-        # Format: log_YYYYMMDD_HHMMSS.txt
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_filename = f"log_{timestamp}.txt"
+        # 2. Use Fixed Filename for appending
+        log_filename = "rot_debug.log"
         log_path = os.path.join(self.log_dir, log_filename)
 
         # 3. Configure the Logger
@@ -34,10 +32,11 @@ class GameLogger:
 
         # -- File Handler (Writes to disk) --
         try:
-            file_handler = logging.FileHandler(log_path)
+            # mode='a' ensures it appends to the file instead of overwriting
+            file_handler = logging.FileHandler(log_path, mode='a')
             file_handler.setLevel(logging.DEBUG)
-            # Format: [Time] [Level] Message
-            file_formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
+            # Format: [Time] [Level] Message (Added Date since the file spans multiple runs)
+            file_formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             file_handler.setFormatter(file_formatter)
             self.logger.addHandler(file_handler)
         except Exception as e:
@@ -50,6 +49,12 @@ class GameLogger:
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
 
+        # Add a visual separator so it's easy to see when a new run starts in the log
+        self.logger.info("")
+        self.logger.info("=" * 50)
+        self.logger.info(" NEW GAME SESSION STARTED ")
+        self.logger.info("=" * 50)
+        
         self.info(f"Logger initialized. Output file: {log_path}")
 
     def info(self, message):

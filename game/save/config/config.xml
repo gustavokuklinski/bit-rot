@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
     <ui>
-        <ui_background_music value="true" name="Background music (Default: True)"/>
+        <ui_background_music value="true"/>
     </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 900000)"/>

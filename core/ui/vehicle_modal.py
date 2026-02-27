@@ -3,6 +3,7 @@ from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.inventory_modal import draw_text_shadow
 from core.ui.tooltip import draw_tooltip
+from core.ui.tabs import Tabs
 
 # --- CONFIGURATION: LAYOUT & COLORS ---
 STYLE = {
@@ -33,18 +34,27 @@ STYLE = {
 
 def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
     """
-    Draws the content of the vehicle tab using the STYLE configuration.
+    Draws the content of the vehicle info tab (Condition, Stats, Seats).
     """
     x = start_x
     y = start_y
     
-    # --- 1. HEADER SECTION (State & Speed) ---
-    car_state = "ON" if vehicle.active else "OFF"
-    state_color = STYLE["ACTIVE"] if vehicle.active else STYLE["INACTIVE"]
+    # --- 1. HEADER SECTION (Engine, Lights, & Speed) ---
     
-    # Draw State
-    state_surf = font.render(f"Car (ON/OFF: Q): {car_state}", True, state_color)
-    surface.blit(state_surf, (x, y))
+    # Engine
+    surface.blit(font.render("Engine:", True, STYLE["TEXT_MAIN"]), (x, y))
+    is_engine_on = vehicle.active
+    e_on_color = STYLE["TEXT_MAIN"] if is_engine_on else STYLE["TEXT_DIM"]
+    e_off_color = STYLE["TEXT_DIM"] if is_engine_on else STYLE["TEXT_MAIN"]
+    
+    e_on_txt = font.render("[ON]", True, e_on_color)
+    e_off_txt = font.render("[OFF]", True, e_off_color)
+    
+    e_on_rect = e_on_txt.get_rect(topleft=(x + 70, y))
+    e_off_rect = e_off_txt.get_rect(topleft=(e_on_rect.right + 10, y))
+    
+    surface.blit(e_on_txt, e_on_rect)
+    surface.blit(e_off_txt, e_off_rect)
 
     # Draw Speed
     speed_kmh = int(vehicle.current_speed_val * 10)
@@ -52,10 +62,36 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     if speed_kmh > 50: speed_color = STYLE["WARN"]
     if speed_kmh > 90: speed_color = STYLE["INACTIVE"]
     
-    speed_surf = font.render(f"{speed_kmh} km/h", True, speed_color)
-    surface.blit(speed_surf, (x + 160, y))
+    speed_surf = font.render(f"Speed: {speed_kmh} km/h", True, speed_color)
+    surface.blit(speed_surf, (x + 180, y))
 
-    y += STYLE["SECTION_SPACING"]
+    y += 25 
+    
+    # Lights
+    surface.blit(font.render("Lights:", True, STYLE["TEXT_MAIN"]), (x, y))
+    is_lights_on = getattr(vehicle, 'lights', 'off') == 'on'
+    
+    l_on_color = STYLE["TEXT_MAIN"] if is_lights_on else STYLE["TEXT_DIM"]
+    l_off_color = STYLE["TEXT_DIM"] if is_lights_on else STYLE["TEXT_MAIN"]
+    
+    l_on_txt = font.render("[ON]", True, l_on_color)
+    l_off_txt = font.render("[OFF]", True, l_off_color)
+    
+    l_on_rect = l_on_txt.get_rect(topleft=(x + 70, y))
+    l_off_rect = l_off_txt.get_rect(topleft=(l_on_rect.right + 10, y))
+    
+    surface.blit(l_on_txt, l_on_rect)
+    surface.blit(l_off_txt, l_off_rect)
+    
+    # Store rects for click handling
+    modal['rects'] = {
+        'engine_on': e_on_rect,
+        'engine_off': e_off_rect,
+        'lights_on': l_on_rect,
+        'lights_off': l_off_rect
+    }
+
+    y += STYLE["SECTION_SPACING"] - 5
     
     # --- 2. COLUMNS SETUP ---
     col1_x = x
@@ -89,11 +125,8 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         
         return current_y + 20 
 
-    # Draw Stats
-    # Removed "Health" bar drawing here.
     stats_y = current_stat_y
     
-    # --- FIXED: Display corrected stats based on items ---
     # Fuel
     fuel_item = vehicle.equipment.get('fuel')
     fuel_val = 0.0
@@ -133,13 +166,11 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     trunk_cap = vehicle.capacity if hasattr(vehicle, 'capacity') else 20
     stats_y = draw_stat_bar("Trunk", trunk_val, trunk_cap, stats_y, STYLE["TRUNK_BAR"])
 
-
     # --- RIGHT COLUMN: SEATS ---
     surface.blit(font.render("Seats:", True, STYLE["TEXT_MAIN"]), (col2_x, y))
     
     seats_y = y + 20 + STYLE["TITLE_SPACING"]
     
-    modal['seat_rects'] = {} 
     seat_size = STYLE["SLOT_SIZE"]
     seat_gap = STYLE["SEAT_GAP"]
     
@@ -176,41 +207,18 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
 
         modal['seat_rects'][i] = slot_rect
 
-    rows_used = (len(vehicle.seats) + 1) // 2
-    seats_height = rows_used * (seat_size + seat_gap)
-    seats_end_y = seats_y + seats_height
+def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
+    """
+    Draws the content of the vehicle mechanics tab (Equipment Slots).
+    """
+    x = start_x + 45
+    y = start_y + 35
 
-
-    # --- BOTTOM SECTION: LIGHTS & EQUIPMENT ---
-    y = max(stats_y, seats_end_y) + STYLE["SECTION_SPACING"]
-
-    # 1. Lights Title & Controls
-    surface.blit(font.render("Lights:", True, STYLE["TEXT_MAIN"]), (x, y))
-    
-    is_on = getattr(vehicle, 'lights', 'off') == 'on'
-    
-    on_color = STYLE["TEXT_MAIN"] if is_on else STYLE["TEXT_DIM"]
-    off_color = STYLE["TEXT_DIM"] if is_on else STYLE["TEXT_MAIN"]
-    
-    on_txt = font.render("[ON]", True, on_color)
-    off_txt = font.render("[OFF]", True, off_color)
-    
-    on_rect = on_txt.get_rect(topleft=(x + 70, y))
-    off_rect = off_txt.get_rect(topleft=(on_rect.right + 10, y))
-    
-    surface.blit(on_txt, on_rect)
-    surface.blit(off_txt, off_rect)
-    modal['rects'] = {'lights_on': on_rect, 'lights_off': off_rect}
-    
-    y += 20 + STYLE["TITLE_SPACING"] 
-
-    # 2. Equipment Slots
+    # Equipment Slots
     slots_row_1 = ['motor','key', 'fuel', 'battery']
     slots_row_2 = ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']
     slot_size = STYLE["SLOT_SIZE"]
     slot_gap = STYLE["SLOT_GAP"]
-    current_x = x
-    modal['equipment_rects'] = {}
     
     # Draw Row 1
     current_x = x
@@ -261,6 +269,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         modal['equipment_rects'][slot_name] = slot_rect
         current_x += slot_size + slot_gap
 
+
 def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     vehicle = modal['vehicle']
     base_modal = BaseModal(surface, modal, assets, vehicle.name)
@@ -269,10 +278,34 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     close_btn, min_btn = base_modal.get_buttons()
     if base_modal.minimized: return [close_btn, min_btn]
 
-    content_y = base_modal.modal_y + STYLE["MARGIN_TOP"]
+    # Initialize tabs data if not already set
+    tabs_data = [
+        {'label': 'Info'},
+        {'label': 'Mechanics'}
+    ]
+    
+    if 'active_tab' not in modal:
+        modal['active_tab'] = 'Info'
+        
+    # Draw Tabs
+    tabs = Tabs(surface, modal, tabs_data, assets)
+    tabs.draw(game, mouse_pos)
+
+    # Shift content down to account for the tab bar height (roughly 30px)
+    content_y = base_modal.modal_y + STYLE["MARGIN_TOP"] + 30
     content_x = base_modal.modal_x + STYLE["MARGIN_LEFT"]
     
-    draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
+    # Clean up old rects to avoid ghost clicks/interactions across tabs
+    modal['seat_rects'] = {}
+    modal['equipment_rects'] = {}
+    modal.setdefault('rects', {})
+    
+    active_tab = modal.get('active_tab')
+    
+    if active_tab == 'Info':
+        draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
+    elif active_tab == 'Mechanics':
+        draw_vehicle_mechanics_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
     
     if 'equipment_rects' in modal:
         for slot_name, rect in modal['equipment_rects'].items():
