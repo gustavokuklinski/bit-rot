@@ -41,15 +41,19 @@ class VehicleLoader:
             
             # Visuals
             visuals = root.find('visuals')
-            sprite_file = visuals.find('sprite').get('file') if visuals is not None else None
+            images = {}
             
-            image = None
-            if sprite_file:
-                img_path = os.path.join(self.sprite_path, sprite_file)
-                if os.path.exists(img_path):
-                    image = pygame.image.load(img_path).convert_alpha()
-                else:
-                    print(f"Vehicle sprite not found: {img_path}")
+            if visuals is not None:
+                for sprite_node in visuals.findall('sprite'):
+                    sprite_id = sprite_node.get('id', 'right') # Default to bottom if ID missing
+                    sprite_file = sprite_node.get('file')
+                    
+                    if sprite_file:
+                        img_path = os.path.join(self.sprite_path, sprite_file)
+                        if os.path.exists(img_path):
+                            images[sprite_id] = pygame.image.load(img_path).convert_alpha()
+                        else:
+                            print(f"Vehicle sprite not found: {img_path}")
 
             # Stats
             car_node = root.find('car')
@@ -90,7 +94,7 @@ class VehicleLoader:
 
             self.definitions.append({
                 'name': name,
-                'image': image,
+                'images': images,
                 'stats': stats,
                 'capacity': capacity,
                 'loot_table': loot_table

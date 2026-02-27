@@ -26,6 +26,9 @@
         <item item="Car Key Truck" chance="0.1" />
     </loot>
     <visuals>
-        <sprite file="car_truck.png" />
+        <sprite id="top" file="car_truck_top.png" />
+        <sprite id="down" file="car_truck_down.png" />
+        <sprite id="left" file="car_truck_left.png" />
+        <sprite id="right" file="car_truck_right.png" />
     </visuals>
 </vehicle>

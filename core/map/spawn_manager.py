@@ -484,9 +484,16 @@ def spawn_random_vehicles(game, count=10):
         definition = loader.get_random_definition()
         if not definition: break
 
-        image = definition['image']
-        w = image.get_width() if image else TILE_SIZE * 2
-        h = image.get_height() if image else TILE_SIZE * 3
+        images = definition.get('images', {})
+        random_facing = random.choice(['top', 'down', 'left', 'right'])
+        
+        # Grab a fallback image to calculate width and height (prefer the chosen facing)
+        base_img = images.get(random_facing)
+        if not base_img and images:
+            base_img = next(iter(images.values()))
+            
+        w = base_img.get_width() if base_img else TILE_SIZE * 2
+        h = base_img.get_height() if base_img else TILE_SIZE * 3
         
         px, py = tx * TILE_SIZE, ty * TILE_SIZE
         
@@ -505,10 +512,11 @@ def spawn_random_vehicles(game, count=10):
             name=definition['name'],
             x=px, y=py,
             width=w, height=h,
-            image=image,
+            image=images,
             stats=definition['stats'],
             capacity=definition['capacity'],
-            loot_table=definition['loot_table']
+            loot_table=definition['loot_table'],
+            facing=random_facing
         )
         
         if not hasattr(game, 'vehicles'):

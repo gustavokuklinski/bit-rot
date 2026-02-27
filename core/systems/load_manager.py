@@ -639,7 +639,8 @@ def load_game(game, save_folder_name):
                     height=v_h,
                     image=v_img, 
                     stats={}, 
-                    capacity=20
+                    capacity=20,
+                    facing=v_data.get('facing', 'right')
                 )
                 
                 if hasattr(vehicle, 'inventory'):

@@ -5,9 +5,10 @@ from core.data.config import *
 from core.entities.item.item import Item
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
+from core.entities.vehicle.vehicle_loader import VehicleLoader
 
 class Vehicle:
-    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None):
+    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None, facing='right'):
 
         self.item_type = 'vehicle'
         self.name = name
@@ -28,8 +29,15 @@ class Vehicle:
         self.width = width
         self.height = height
         
-        # [UPDATED] Store image in private variable to allow property auto-reload
-        self._image = image 
+        self.images = {}
+        self.facing = facing # Default direction
+        
+        # 'image' param is now actually the dict of images from the loader
+        if isinstance(image, dict):
+            self.images = image
+        elif image:
+            # Fallback for save states that might have saved a single surface
+            self.images['right'] = image
         
         self.rect = pygame.Rect(x, y, width, height)
         self.color = (0, 0, 255)
@@ -98,32 +106,42 @@ class Vehicle:
     @property
     def image(self):
         """
-        Auto-restores the image if it is missing (e.g., after loading a save).
+        [UPDATED] Returns the sprite based on current facing direction.
+        Auto-restores the images dictionary if missing (e.g., after loading a save).
         """
-        img = getattr(self, '_image', None)
-        if img is None:
-            # Attempt to reload from VehicleLoader
-            from core.entities.vehicle.vehicle_loader import VehicleLoader
+        if not self.images:
             loader = VehicleLoader() # Singleton access
             definition = loader.get_definition_by_name(self.name)
-            if definition and definition['image']:
-                self._image = definition['image']
-                # Optionally update dimensions if they were lost/defaulted
-                if self.width <= TILE_SIZE * 2: # Heuristic check if using default size
-                     self.width = self._image.get_width()
-                     self.height = self._image.get_height()
-                     self.rect.size = (self.width, self.height)
-                
-                # Regenerate mask
-                self.mask = pygame.mask.from_surface(self._image)
-                return self._image
-        return img
+            if definition and definition.get('images'):
+                self.images = definition['images']
+        
+        img = self.images.get(self.facing)
+        
+        # Fallback to the first available image if 'facing' id is missing
+        if not img and self.images:
+            img = next(iter(self.images.values()))
+            
+        if img:
+            # Update dimensions and mask dynamically if orientation changed the dimensions
+            if self.width != img.get_width() or self.height != img.get_height():
+                 self.width = img.get_width()
+                 self.height = img.get_height()
+                 self.rect.size = (self.width, self.height)
+                 self.mask = pygame.mask.from_surface(img)
+            return img
+            
+        return None
 
     @image.setter
     def image(self, value):
-        self._image = value
-        if value:
-            self.mask = pygame.mask.from_surface(value)
+        # Allow setting a single image dynamically, replacing the dictionary
+        if isinstance(value, dict):
+            self.images = value
+        else:
+            self.images = {'right': value}
+            self.facing = 'right'
+            if value:
+                self.mask = pygame.mask.from_surface(value)
 
     @property
     def current_speed_val(self):
@@ -244,6 +262,13 @@ class Vehicle:
 
     def move(self, dx, dy, obstacles, game=None):
         if not self.active: return
+
+        if abs(dx) > abs(dy):
+            if dx > 0: self.facing = 'right'
+            elif dx < 0: self.facing = 'left'
+        elif abs(dy) > abs(dx):
+            if dy > 0: self.facing = 'down'
+            elif dy < 0: self.facing = 'top'
 
         dist = math.hypot(dx, dy)
         if dist > 0:

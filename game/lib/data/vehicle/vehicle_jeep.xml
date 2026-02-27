@@ -24,6 +24,9 @@
         <item item="Car Tire" chance="0.3" />
     </loot>
     <visuals>
-        <sprite file="car_jeep.png" />
+        <sprite id="top" file="car_jeep_top.png" />
+        <sprite id="down" file="car_jeep_down.png" />
+        <sprite id="left" file="car_jeep_left.png" />
+        <sprite id="right" file="car_jeep_right.png" />
     </visuals>
 </vehicle>

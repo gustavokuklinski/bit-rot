@@ -259,6 +259,7 @@ def save_game(game):
                 "x": v.rect.x,
                 "y": v.rect.y,
                 "name": v.name, 
+                "facing": getattr(v, 'facing', 'right'),
                 "inventory": safe_inv,
                 "equipment": safe_equipment, 
                 "lights": getattr(v, 'lights', 'off')
