@@ -318,11 +318,15 @@ class PlayerMovement:
                                     
                             if 'containers' in game.map_states[new_map]:
                                 default_container_rects = [c.rect for c in game.containers]
+                                # Identify which of the default containers were actually parsed as obstacles
+                                obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
+                                
                                 game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
                                 
                                 game.containers = game.map_states[new_map]['containers']
                                 for c in game.containers:
-                                    if c.rect not in game.obstacles:
+                                    # Only add back to obstacles if it was originally an obstacle
+                                    if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
                                         game.obstacles.append(c.rect)
                                         
                             if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
