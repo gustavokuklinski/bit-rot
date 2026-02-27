@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
     <ui>
-        <ui_background_music value="true"/>
+        <ui_background_music value="true" name="ui_background_music"/>
     </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 900000)"/>
@@ -15,7 +15,7 @@
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
     </game>
     <map>
-        <map_chunks value="2" name="Max map chunks (Default: 2)"/>
+        <map_chunks value="2" name="Max map chunks (Default: 3)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>

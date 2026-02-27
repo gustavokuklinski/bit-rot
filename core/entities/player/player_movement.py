@@ -206,8 +206,10 @@ class PlayerMovement:
 
         # --- CHUNK TRANSITION LOGIC ---
         if not getattr(game, 'is_giant_map', False):
-            chunk_width_px = game.CHUNK_SIZE * TILE_SIZE
-            chunk_height_px = game.CHUNK_SIZE * TILE_SIZE
+            #chunk_width_px = game.CHUNK_SIZE * TILE_SIZE
+            #chunk_height_px = game.CHUNK_SIZE * TILE_SIZE
+            chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+            chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
 
             current_map = game.map_manager.current_map_filename
             match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', current_map)
@@ -278,30 +280,31 @@ class PlayerMovement:
                             game.map_states[current_map]['vehicles'] = clean_vehicles
                         
                         # Adjust coordinates for wrap-around
-                        if new_gx < gx: target.x += chunk_width_px
-                        elif new_gx > gx: target.x -= chunk_width_px
+                        entities_to_teleport = [target] + followers + chasing_zombies + chasing_animals
                         
-                        if new_gy < gy: target.y += chunk_height_px
-                        elif new_gy > gy: target.y -= chunk_height_px
+                        old_width = chunk_width_px
+                        old_height = chunk_height_px
                         
-                        target.rect.topleft = (int(target.x), int(target.y))
+                        # Load the new chunk FIRST so its true dynamic dimensions exist in memory!
+                        game.load_map(new_map)
                         
+                        new_width = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+                        new_height = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
+                        
+                        # Adjust coordinates dynamically depending on which edge was crossed
+                        for ent in entities_to_teleport:
+                            if new_gx < gx: ent.x += new_width     # Walked left -> appear at right edge of NEW map
+                            elif new_gx > gx: ent.x -= old_width   # Walked right -> appear at left edge (subtracted old map width)
+                            
+                            if new_gy < gy: ent.y += new_height    # Walked up -> appear at bottom edge of NEW map
+                            elif new_gy > gy: ent.y -= old_height  # Walked down -> appear at top edge
+                            
+                            ent.rect.topleft = (int(ent.x), int(ent.y))
+                            
                         if self.vehicle:
                             self.x = self.vehicle.x
                             self.y = self.vehicle.y
                             self.rect.topleft = (int(self.x), int(self.y))
-                            
-                        # [FIX] Teleport following NPCs AND chasing entities across the chunk boundary
-                        entities_to_teleport = followers + chasing_zombies + chasing_animals
-                        for ent in entities_to_teleport:
-                            if new_gx < gx: ent.x += chunk_width_px
-                            elif new_gx > gx: ent.x -= chunk_width_px
-                            if new_gy < gy: ent.y += chunk_height_px
-                            elif new_gy > gy: ent.y -= chunk_height_px
-                            ent.rect.topleft = (int(ent.x), int(ent.y))
-                            
-                        # Load the new chunk
-                        game.load_map(new_map)
                         
                         # --- RESTORE NEW CHUNK STATE ---
                         if new_map in game.map_states:

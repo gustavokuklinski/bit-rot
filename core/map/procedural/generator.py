@@ -74,6 +74,19 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         self._init_templates()
 
+
+    def _extract_dynamic_chunk(self, global_layers, offset_x, offset_y, w, h):
+        """Extracts a dynamically sized chunk from the global map layer."""
+        chunk_layers = {}
+        for key, grid in global_layers.items():
+            chunk_layers[key] = []
+            for r in range(h):
+                row = []
+                for c in range(w):
+                    row.append(grid[offset_y + r][offset_x + c])
+                chunk_layers[key].append(row)
+        return chunk_layers
+
     def generate_world(self, seed_pattern=None, regenerate=False):
         self.chunk_size = core.data.config.CHUNK_SIZE
         self.tile_size = core.data.config.TILE_SIZE
@@ -192,14 +205,66 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         # 4. Assign Military/Urban
         urban_candidates = list(all_coords)
-        military_chunk_coord = None
+        military_chunk_coords = set()
+        island_groups = []
         
+        # Helper to randomly grow an island into an L-shape or Rectangle
+        def grow_group(start_coord, max_size, candidates):
+            group = {start_coord}
+            opts = [start_coord]
+            while len(group) < max_size and candidates:
+                cx, cy = random.choice(opts)
+                neighbors = [(cx+1, cy), (cx-1, cy), (cx, cy+1), (cx, cy-1)]
+                valid = [n for n in neighbors if n in candidates]
+                if valid:
+                    nxt = random.choice(valid)
+                    group.add(nxt)
+                    opts.append(nxt)
+                    candidates.remove(nxt)
+                else:
+                    opts.remove((cx, cy))
+                    if not opts: break
+            return group
+
+        max_island_size = 1 if total_chunks <= 9 else 3
+
         if self.chunk_settings.get('military_chunk_count', 0) > 0:
-            military_chunk_coord = random.choice(urban_candidates)
-            urban_candidates.remove(military_chunk_coord)
-            num_building_chunks = max(0, num_building_chunks - 1)
+            border_candidates = [(x, y) for x, y in urban_candidates if x == 0 or x == grid_w - 1 or y == 0 or y == grid_h - 1]
+            mil_start = random.choice(border_candidates) if border_candidates else random.choice(urban_candidates)
+                
+            urban_candidates.remove(mil_start)
+            mil_size = random.choice(range(1, max_island_size + 1))
+            military_chunk_coords = grow_group(mil_start, mil_size, urban_candidates)
+            num_building_chunks = max(0, num_building_chunks - len(military_chunk_coords))
+
+        # Prevent extra random islands on heavily constrained maps like 2x2
+        if grid_w <= 2:
+            num_random_islands = 0
+        elif grid_w <= 3:
+            num_random_islands = 1
+        else:
+            num_random_islands = max(1, (grid_w - 4) * 2 - 1)
+
+        for _ in range(num_random_islands):
+            border_candidates = [(x, y) for x, y in urban_candidates if x == 0 or x == grid_w - 1 or y == 0 or y == grid_h - 1]
+            if border_candidates:
+                isl_start = random.choice(border_candidates)
+                urban_candidates.remove(isl_start)
+                isl_size = random.choice(range(1, max_island_size + 1))
+                new_island = grow_group(isl_start, isl_size, urban_candidates)
+                island_groups.append(new_island)
+                num_building_chunks = max(0, num_building_chunks - len(new_island))
         
+        island_coords = set().union(*island_groups) if island_groups else set()
         urban_coords = set(random.sample(urban_candidates, min(len(urban_candidates), num_building_chunks)))
+
+        # [NEW Helper] Group Identification for smart coastlines
+        def get_group(cx, cy):
+            if cx < 0 or cx >= grid_w or cy < 0 or cy >= grid_h: return 'out'
+            if (cx, cy) in military_chunk_coords: return 'military'
+            for idx, ig in enumerate(island_groups):
+                if (cx, cy) in ig: return f'island_{idx}'
+            return 'mainland'
         
         # 5. Distribute Deck (L1)
         chunk_priority_map = {coord: [] for coord in all_coords}
@@ -220,14 +285,20 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                     chunk_priority_map[target_chunk].append(tmpl)
                     chunk_idx = (chunk_idx + 1) % len(urban_list)
 
-        if military_chunk_coord:
-            print(f"Populating Military Chunk at {military_chunk_coord}")
+        if military_chunk_coords:
+            mil_list = list(military_chunk_coords)
+            print(f"Populating Military Chunks at {mil_list}")
+            
+            # Spread the templates across the available grouped military chunks
+            m_idx = 0
             if self.heli_template:
-                chunk_priority_map[military_chunk_coord].append(self.heli_template)
+                chunk_priority_map[mil_list[m_idx]].append(self.heli_template)
+                m_idx = (m_idx + 1) % len(mil_list)
             if self.military_template:
-                chunk_priority_map[military_chunk_coord].append(self.military_template)
+                chunk_priority_map[mil_list[m_idx]].append(self.military_template)
+                m_idx = (m_idx + 1) % len(mil_list)
             if self.mil_petrol_template:
-                chunk_priority_map[military_chunk_coord].append(self.mil_petrol_template)
+                chunk_priority_map[mil_list[m_idx]].append(self.mil_petrol_template)
 
         # 5b. Distribute L2 Deck
         chunk_l2_priority_map = {coord: [] for coord in all_coords}
@@ -244,8 +315,117 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         start_gx = random.randint(0, grid_w - 1)
         start_gy = random.randint(0, grid_h - 1)
         
-        total_map_w = grid_w * self.chunk_size * self.tile_size
-        total_map_h = grid_h * self.chunk_size * self.tile_size
+        # Ensure the player NEVER spawns on the military island or any random island
+        while (start_gx, start_gy) in military_chunk_coords or (start_gx, start_gy) in island_coords:
+            start_gx = random.randint(0, grid_w - 1)
+            start_gy = random.randint(0, grid_h - 1)
+            
+        # Force bridges where paths cross DIFFERENT landmass groups (e.g., Mainland to Island)
+        for gy in range(grid_h):
+            for gx in range(grid_w):
+                my_g = get_group(gx, gy)
+                for direction, nx, ny in [('top', gx, gy-1), ('bottom', gx, gy+1), ('left', gx-1, gy), ('right', gx+1, gy)]:
+                    if connections_grid[gy][gx][direction]:
+                        n_g = get_group(nx, ny)
+                        if my_g != n_g and n_g != 'out':
+                            connections_grid[gy][gx][f'{direction}_type'] = 'asphalt'
+                            #connections_grid[gy][gx][direction] = False
+
+
+        # --- PASS 1: Generate all chunks dynamically to determine sizes ---
+        col_widths = [64] * grid_w
+        row_heights = [64] * grid_h
+        
+        for gy in range(grid_h):
+            for gx in range(grid_w):
+                assigned_buildings = chunk_priority_map.get((gx, gy), [])
+                is_center_chunk = (gx == start_gx and gy == start_gy)
+                is_military_chunk = (gx, gy) in military_chunk_coords
+                
+                my_g = get_group(gx, gy)
+                coast_left = (my_g != get_group(gx-1, gy))
+                coast_right = (my_g != get_group(gx+1, gy))
+                coast_top = (my_g != get_group(gx, gy-1))
+                coast_bottom = (my_g != get_group(gx, gy+1))
+
+                is_urban = (gx, gy) in urban_coords or is_military_chunk or len(assigned_buildings) > 0
+                
+                if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
+                    is_urban = True
+                    
+                base_size = 64
+                if assigned_buildings and is_urban:
+                    total_area = 0
+                    max_dim = 0
+                    for t_name in assigned_buildings:
+                        if hasattr(self, 'templates') and t_name in self.templates:
+                            tw = self.templates[t_name]['width']
+                            th = self.templates[t_name]['height']
+                            total_area += (tw * th)
+                            max_dim = max(max_dim, tw, th)
+                    
+                    area_based_size = int(math.ceil(math.sqrt(total_area * 4)))
+                    min_fit_size = max_dim + 30 
+                    base_size = max(base_size, area_based_size, min_fit_size)
+                    base_size += random.randint(0, 15)
+                
+                # Apply padding only to chunks that require a coastline cut
+                if coast_left or coast_right or coast_top or coast_bottom:
+                    base_size += 20
+
+                col_widths[gx] = max(col_widths[gx], base_size)
+                row_heights[gy] = max(row_heights[gy], base_size)
+
+        # --- PASS 2: Generate chunks using Uniform Cell Dimensions ---
+        generated_chunks = {}
+        chunk_dims = {}
+        
+        for gy in range(grid_h):
+            for gx in range(grid_w):
+                conns = connections_grid[gy][gx]
+                assigned_buildings = chunk_priority_map.get((gx, gy), [])
+                assigned_l2 = chunk_l2_priority_map.get((gx, gy), [])
+                
+                is_center_chunk = (gx == start_gx and gy == start_gy)
+                is_military_chunk = (gx, gy) in military_chunk_coords
+                
+                # --- NEW SMART COAST LOGIC ---
+                my_g = get_group(gx, gy)
+                coast_left = (my_g != get_group(gx-1, gy))
+                coast_right = (my_g != get_group(gx+1, gy))
+                coast_top = (my_g != get_group(gx, gy-1))
+                coast_bottom = (my_g != get_group(gx, gy+1))
+                # -----------------------------
+                
+                is_urban = (gx, gy) in urban_coords or is_military_chunk or len(assigned_buildings) > 0
+                
+                if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
+                    is_urban = True
+
+                c_w = col_widths[gx]
+                c_h = row_heights[gy]
+
+                chunk_data = self._generate_chunk_data(gx, gy, conns, 
+                                                       is_start=is_center_chunk, 
+                                                       assigned_templates=assigned_buildings, 
+                                                       assigned_l2_templates=assigned_l2,
+                                                       allow_buildings=is_urban,
+                                                       force_forest=False,
+                                                       cell_w=c_w, cell_h=c_h,
+                                                       coast_left=coast_left,
+                                                       coast_right=coast_right,
+                                                       coast_top=coast_top,
+                                                       coast_bottom=coast_bottom) 
+                
+                generated_chunks[(gx, gy)] = chunk_data
+                chunk_dims[(gx, gy)] = (c_w, c_h)
+
+        # --- ALLOCATE GLOBAL LAYERS DYNAMICALLY ---
+        global_tiles_w = sum(col_widths)
+        global_tiles_h = sum(row_heights)
+        
+        total_map_w = global_tiles_w * self.tile_size
+        total_map_h = global_tiles_h * self.tile_size
         
         # Surfaces
         full_map_surface = pygame.Surface((total_map_w, total_map_h))
@@ -258,9 +438,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         heat_map_surface_l2 = pygame.Surface((total_map_w, total_map_h))
         
         # Global Layers
-        global_tiles_w = grid_w * self.chunk_size
-        global_tiles_h = grid_h * self.chunk_size
-        
         global_layers = {
             'base': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'ground': [['bg_grass' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
@@ -281,50 +458,32 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         
         occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
 
-        # --- CHUNK GENERATION LOOP ---
+        # --- PASS 2: MERGE CHUNKS INTO GLOBAL LAYERS ---
+        chunk_offsets = {}
         for gy in range(grid_h):
             for gx in range(grid_w):
-                conns = connections_grid[gy][gx]
-                assigned_buildings = chunk_priority_map.get((gx, gy), [])
-                assigned_l2 = chunk_l2_priority_map.get((gx, gy), [])
+                chunk_data = generated_chunks[(gx, gy)]
+                c_w, c_h = chunk_dims[(gx, gy)]
                 
-                is_center_chunk = (gx == start_gx and gy == start_gy)
-                is_military_chunk = (gx, gy) == military_chunk_coord
-                is_urban = (gx, gy) in urban_coords or is_military_chunk or len(assigned_buildings) > 0
+                # Calculate absolute placement offsets in the dynamic global map
+                offset_x = sum(col_widths[:gx])
+                offset_y = sum(row_heights[:gy])
+                chunk_offsets[(gx, gy)] = (offset_x, offset_y)
                 
-                if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
-                    is_urban = True
-
-                chunk_data = self._generate_chunk_data(gx, gy, conns, 
-                                                       is_start=is_center_chunk, 
-                                                       assigned_templates=assigned_buildings, 
-                                                       assigned_l2_templates=assigned_l2,
-                                                       allow_buildings=is_urban,
-                                                       force_forest=False) 
-                
-                offset_x = gx * self.chunk_size
-                offset_y = gy * self.chunk_size
-                
-                render_data_l1 = {}
-
                 for layer_key, layer_grid in chunk_data.items():
                     # Merge L2
                     if layer_key.endswith('_L2'):
                         base_key = layer_key.replace('_L2', '')
                         if base_key in global_layers_l2:
-                            for r in range(self.chunk_size):
-                                for c in range(self.chunk_size):
+                            for r in range(c_h):
+                                for c in range(c_w):
                                     global_layers_l2[base_key][offset_y + r][offset_x + c] = layer_grid[r][c]
                     # Merge L1
                     elif layer_key in global_layers:
-                        for r in range(self.chunk_size):
-                            for c in range(self.chunk_size):
+                        for r in range(c_h):
+                            for c in range(c_w):
                                 global_layers[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
-                        render_data_l1[layer_key] = layer_grid
 
-                # Render L1
-                self._render_chunk_to_surface(full_map_surface, heat_map_surface, gx, gy, render_data_l1)
-        
         print("Applying terrain smoothing (L1)...")
         self._apply_terrain_smoothing(global_layers, global_tiles_w, global_tiles_h)
         self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'sand_01')
@@ -345,7 +504,11 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         print("Saving L1 separate chunk maps...")
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
-                chunk_layers = self._extract_chunk(global_layers, gx, gy)
+                # We extract the MAXIMUM allocated dimensions for this chunk cell to ensure padding/global traits are kept
+                c_w = col_widths[gx]
+                c_h = row_heights[gy]
+                offset_x, offset_y = chunk_offsets[(gx, gy)]
+                chunk_layers = self._extract_dynamic_chunk(global_layers, offset_x, offset_y, c_w, c_h)
                 self._save_chunk(f"map_L1_{gx}_{gy}", chunk_layers)
         
         # --- RE-SCAN FOR L2 TEMPLATE MASKS ---
@@ -365,8 +528,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         print("Populating L2 Spawns (Zombies on Paths)...")
         self._populate_l2_spawns(global_layers_l2)
         
-        # [NEW] SCATTER ANIMALS (L2 Global)
-        # We do this after path generation so they appear on paths and caves, but respecting the mask
         print("Scattering Animals (L2)...")
         self._scatter_animals(global_layers_l2, occupied_mask_L2, global_tiles_w, global_tiles_h)
 
@@ -378,7 +539,10 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         print("Saving L2 separate chunk maps...")
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
-                chunk_layers_l2 = self._extract_chunk(global_layers_l2, gx, gy)
+                c_w = col_widths[gx]
+                c_h = row_heights[gy]
+                offset_x, offset_y = chunk_offsets[(gx, gy)]
+                chunk_layers_l2 = self._extract_dynamic_chunk(global_layers_l2, offset_x, offset_y, c_w, c_h)
                 self._save_chunk(f"map_L2_{gx}_{gy}", chunk_layers_l2)
         
         # DEBUG images

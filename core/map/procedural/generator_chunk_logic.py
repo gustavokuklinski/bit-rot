@@ -6,8 +6,34 @@ import pygame
 from core.data.config import *
 
 class ProceduralGeneratorChunk:
-    def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, assigned_l2_templates=None, allow_buildings=True, force_forest=False):
-        w, h = self.chunk_size, self.chunk_size
+    def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, assigned_l2_templates=None, allow_buildings=True, force_forest=False, cell_w=None, cell_h=None, coast_left=False, coast_right=False, coast_top=False, coast_bottom=False):
+        if cell_w is not None and cell_h is not None:
+            w, h = cell_w, cell_h
+        else:
+            base_size = 64
+            if assigned_templates and allow_buildings and not force_forest:
+                total_area = 0
+                max_dim = 0
+                for t_name in assigned_templates:
+                    if hasattr(self, 'templates') and t_name in self.templates:
+                        tw = self.templates[t_name]['width']
+                        th = self.templates[t_name]['height']
+                        total_area += (tw * th)
+                        max_dim = max(max_dim, tw, th)
+                
+                area_based_size = int(math.ceil(math.sqrt(total_area * 4)))
+                min_fit_size = max_dim + 30 
+                base_size = max(base_size, area_based_size, min_fit_size)
+                base_size += random.randint(0, 15)
+                
+            elif force_forest:
+                base_size = random.randint(50, 100)
+                
+            if coast_left or coast_right or coast_top or coast_bottom:
+                base_size += 20
+                
+            w, h = base_size, base_size
+            
         cx, cy = w // 2, h // 2
         
         layers = {
@@ -55,7 +81,7 @@ class ProceduralGeneratorChunk:
             current_x, current_y = start_x, start_y
             path = [(current_x, current_y)]
             steps = 0
-            max_steps = self.chunk_size * 6
+            max_steps = w * 6
             
             while steps < max_steps:
                 steps += 1
@@ -138,20 +164,16 @@ class ProceduralGeneratorChunk:
             cw = getattr(self, 'coast_width', 15)
             
             def get_coast_noise(idx, scale=0.1, amp=4.0):
-                # --- NEW LOGIC: Quantize to 4-step increments to force seamless 4x4 minimum coast blocks ---
                 q_idx = (idx // 4) * 4
                 val = math.sin(q_idx * scale) * amp 
                 val += math.sin(q_idx * scale * 2.1) * (amp * 0.5)
-                
-                # Deterministic pseudo-random keeps the 4x4 blocks perfectly aligned
                 pseudo_random = (math.sin(q_idx * 12.9898) * 43758.5453) % 4.0 - 2.0
                 val += pseudo_random
-                
                 return int(val)
 
             tree_chance = 0.05
 
-            if gx == 0: # Left
+            if coast_left:
                 for y in range(h):
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
@@ -159,6 +181,7 @@ class ProceduralGeneratorChunk:
                     sand_lim = cw + offset
                     for x in range(cw + 8):
                         if x >= w: break
+                        if layers['ground'][y][x] == road_tile: continue
                         if x < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
@@ -169,7 +192,7 @@ class ProceduralGeneratorChunk:
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
-            if gx == self.grid_w - 1: # Right
+            if coast_right:
                 for y in range(h):
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
@@ -178,6 +201,7 @@ class ProceduralGeneratorChunk:
                     min_x = w - (cw + 8)
                     for x in range(min_x, w):
                         if x < 0: continue
+                        if layers['ground'][y][x] == road_tile: continue
                         dist = w - 1 - x
                         if dist < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
@@ -189,7 +213,7 @@ class ProceduralGeneratorChunk:
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
-            if gy == 0: # Top
+            if coast_top:
                 for x in range(w):
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
@@ -197,6 +221,7 @@ class ProceduralGeneratorChunk:
                     sand_lim = cw + offset
                     for y in range(cw + 8):
                         if y >= h: break
+                        if layers['ground'][y][x] == road_tile: continue
                         if y < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
                             layers['base'][y][x] = ' '
@@ -207,7 +232,7 @@ class ProceduralGeneratorChunk:
                                 layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                                 occupied_mask[y][x] = 1
 
-            if gy == self.grid_h - 1: # Bottom
+            if coast_bottom:
                 for x in range(w):
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
@@ -216,6 +241,7 @@ class ProceduralGeneratorChunk:
                     min_y = h - (cw + 8)
                     for y in range(min_y, h):
                         if y < 0: continue
+                        if layers['ground'][y][x] == road_tile: continue
                         dist = h - 1 - y
                         if dist < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
@@ -278,33 +304,49 @@ class ProceduralGeneratorChunk:
                 tmpl = self.templates[tmpl_name]
                 tw, th = tmpl['width'], tmpl['height']
                 is_building2 = "building2" in tmpl_name.lower()
+                is_military_base = "military_base" in tmpl_name.lower()
                 
                 placed = False
                 
-                for _ in range(100): 
-                    if is_building2:
-                        axis = random.choice(['vert', 'horz'])
-                        road_radius = 2 
-                        if axis == 'vert':
-                            side = random.choice([-1, 1])
-                            if side == -1: tx = cx - road_radius - 1 - tw
-                            else: tx = cx + road_radius + 1 + 1
-                            ty = random.randint(border_w + 3, h - border_w - th - 3)
-                        else:
-                            side = random.choice([-1, 1])
-                            if side == -1: ty = cy - road_radius - 1 - th
-                            else: ty = cy + road_radius + 1 + 1
-                            tx = random.randint(border_w + 3, w - border_w - tw - 3)
-                    else:
-                        safe_pad = 3 
-                        if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
-                        tx = random.randint(safe_pad, w - safe_pad - tw)
-                        ty = random.randint(safe_pad, h - safe_pad - th)
-                    
-                    if is_area_free(tx, ty, tw, th, margin=1):
-                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                # --- NEW LOGIC: Force Military Base to Center ---
+                if is_military_base:
+                    tx = cx - (tw // 2)
+                    ty = cy - (th // 2)
+                    # Use ignore_mask=True so we overwrite the central crossroad perfectly
+                    if is_area_free(tx, ty, tw, th, margin=0, ignore_mask=True):
+                        # Clear center crossroad mask so placement doesn't conflict
+                        for cy_clr in range(max(0, ty), min(h, ty + th)):
+                            for cx_clr in range(max(0, tx), min(w, tx + tw)):
+                                occupied_mask[cy_clr][cx_clr] = 0
+                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, False, sand_tile)
                         placed = True
-                        break
+                # ------------------------------------------------
+
+                if not placed:
+                    for _ in range(100): 
+                        if is_building2:
+                            axis = random.choice(['vert', 'horz'])
+                            road_radius = 2 
+                            if axis == 'vert':
+                                side = random.choice([-1, 1])
+                                if side == -1: tx = cx - road_radius - 1 - tw
+                                else: tx = cx + road_radius + 1 + 1
+                                ty = random.randint(border_w + 3, h - border_w - th - 3)
+                            else:
+                                side = random.choice([-1, 1])
+                                if side == -1: ty = cy - road_radius - 1 - th
+                                else: ty = cy + road_radius + 1 + 1
+                                tx = random.randint(border_w + 3, w - border_w - tw - 3)
+                        else:
+                            safe_pad = 3 
+                            if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
+                            tx = random.randint(safe_pad, w - safe_pad - tw)
+                            ty = random.randint(safe_pad, h - safe_pad - th)
+                        
+                        if is_area_free(tx, ty, tw, th, margin=1):
+                            self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                            placed = True
+                            break
                 
                 if not placed:
                     stride = 2 
@@ -511,20 +553,16 @@ class ProceduralGeneratorChunk:
                 for rx in range(max(0, pr.x), min(w, pr.x + pr.width)):
                     building_mask[ry][rx] = True
 
-        # NOTE: Change these array names to perfectly match the asset names in your `tile_manager`!
-        # If your flowers are called 'garden_flower_01', place them here.
         grass_decos = getattr(self, 'grass_decorations', ['garden_stone', 'garden_tree_8','garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
         dirt_decos = getattr(self, 'dirt_decorations', ['garden_stone', 'garden_grass_1' , 'garden_grass_2','garden_tree_11', 'garden_grass_3'])
         sand_decos = getattr(self, 'sand_decorations', ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
         
-        # Spawning density settings (0.05 = 5% chance per tile)
         grass_chance = 0.05
         dirt_chance = 0.03
         sand_chance = 0.02
 
         for y in range(h):
             for x in range(w):
-                # Ensure we are not inside a building and the base layer is completely empty
                 if not building_mask[y][x] and layers['base'][y][x] == ' ':
                     ground_tile = layers['ground'][y][x]
                     
