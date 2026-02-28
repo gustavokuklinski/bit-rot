@@ -14,14 +14,5 @@
             <param name="run_cost_base" value="0.08" />
         </stat>
     </stats>
-
-    <healing_rates>
-        <part name="hand" rate="0.05" />
-        <part name="arms" rate="0.05" />
-        <part name="legs" rate="0.02" />
-        <part name="feet" rate="0.005" />
-        <part name="head" rate="0.005" />
-        <part name="body" rate="0.005" />
-    </healing_rates>
 </progression>
 ```

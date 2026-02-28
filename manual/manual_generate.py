@@ -38,18 +38,14 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 def get_sprite_path(sprite_name, item_type):
     """Get the correct sprite subdirectory based on item type."""
-    # Determine sprite subdirectory based on item type first
     if item_type == "cloth":
         subdir = "clothes"
     elif item_type == "vehicle":
         subdir = "vehicle"
-    # Check sprite name patterns for clothes
     elif "body_" in sprite_name or "arms_" in sprite_name or "legs_" in sprite_name or "foot_" in sprite_name or "head_" in sprite_name or "hair_" in sprite_name or "facial_" in sprite_name or "hands_" in sprite_name or "util_" in sprite_name or "empty" in sprite_name:
         subdir = "clothes"
-    # Only specific vehicle sprites
     elif sprite_name in ["car_ambulance.png", "car_jeep.png", "car_pickup.png", "car_truck.png"]:
         subdir = "vehicle"
-    # Everything else is items
     else:
         subdir = "items"
 
@@ -90,7 +86,6 @@ def parse_item_xml(filepath):
         "sprite": None,
     }
     
-    # Parse properties
     props = root.find("properties")
     if props is not None:
         for child in props:
@@ -98,12 +93,10 @@ def parse_item_xml(filepath):
             if child.tag == "sprite":
                 data["sprite"] = child.get("file", "")
     
-    # Parse spawn chance
     spawn = root.find("spawn")
     if spawn is not None:
         data["spawn_chance"] = float(spawn.get("chance", 0))
     
-    # Parse loot
     loot = root.find("loot")
     if loot is not None:
         for item in loot.findall("item"):
@@ -112,19 +105,16 @@ def parse_item_xml(filepath):
                 "chance": float(item.get("chance", 0)),
             })
     
-    # Parse attributes
     attrs = root.find("attributes")
     if attrs is not None:
         for child in attrs:
             data["attributes"][child.tag] = child.get("value", 0)
     
-    # Parse sound
     sound = root.find("sound")
     if sound is not None:
         for child in sound:
             data["sound"][child.tag] = child.get("src", "")
     
-    # Special handling for cloth
     if root.tag == "cloth":
         data["slot"] = root.get("id", "unknown")
         data["builder"] = root.get("builder", "false") == "true"
@@ -133,7 +123,6 @@ def parse_item_xml(filepath):
             if sprite_elem is not None:
                 data["sprite"] = sprite_elem.get("file", "")
     
-    # Special handling for vehicle
     if root.tag == "vehicle":
         data["vehicle_type"] = root.get("type", "car")
         data["is_obstacle"] = root.get("is_obstacle", "false") == "true"
@@ -149,7 +138,6 @@ def parse_item_xml(filepath):
         if car is not None:
             data["car"] = {child.tag: child.attrib for child in car}
     
-    # Special handling for recipe
     if root.tag == "recipe":
         data["craft_type"] = root.get("craft", "unknown")
         data["output"] = root.get("output", "")
@@ -179,7 +167,6 @@ def parse_item_xml(filepath):
 
 
 def load_all_items():
-    """Load all items from the items directory."""
     items = []
     items_dir = DATA_DIR / "items"
     if items_dir.exists():
@@ -192,14 +179,12 @@ def load_all_items():
 
 
 def load_all_clothes():
-    """Load all clothes from the clothes directory."""
     clothes = []
     clothes_dir = DATA_DIR / "clothes"
     if clothes_dir.exists():
         for xml_file in sorted(clothes_dir.glob("*.xml")):
             try:
                 data = parse_item_xml(xml_file)
-                # Skip empty placeholder clothes
                 if data["name"].lower().startswith("empty"):
                     continue
                 clothes.append(data)
@@ -209,7 +194,6 @@ def load_all_clothes():
 
 
 def load_all_vehicles():
-    """Load all vehicles from the vehicle directory."""
     vehicles = []
     vehicles_dir = DATA_DIR / "vehicle"
     if vehicles_dir.exists():
@@ -222,7 +206,6 @@ def load_all_vehicles():
 
 
 def load_all_recipes():
-    """Load all recipes from the craft directory."""
     recipes = []
     craft_dir = DATA_DIR / "craft"
     if craft_dir.exists():
@@ -235,7 +218,6 @@ def load_all_recipes():
 
 
 def get_spawn_class(chance):
-    """Get CSS class for spawn chance."""
     if chance >= 1:
         return "spawn-high"
     elif chance > 0.5:
@@ -247,7 +229,6 @@ def get_spawn_class(chance):
 
 
 def get_spawn_text(chance):
-    """Get human-readable spawn text."""
     if chance >= 1:
         return "100%"
     elif chance > 0:
@@ -257,15 +238,18 @@ def get_spawn_text(chance):
 
 
 def name_to_id(name):
-    """Convert item name to URL-safe ID."""
     return name.lower().replace(" ", "-").replace("'", "")
 
 
 def group_items_by_category(items):
-    """Group items by their type/category."""
+    """Group items by their type/category, joining car_ prefixes."""
     categories = {}
     for item in items:
         cat = item.get("type", "unknown")
+        # Group all car-related items together
+        if cat.startswith("car_"):
+            cat = "car_parts"
+            
         if cat not in categories:
             categories[cat] = []
         categories[cat].append(item)
@@ -273,7 +257,6 @@ def group_items_by_category(items):
 
 
 def group_clothes_by_slot(clothes):
-    """Group clothes by their body slot."""
     slots = {}
     for cloth in clothes:
         slot = cloth.get("slot", "unknown")
@@ -284,7 +267,6 @@ def group_clothes_by_slot(clothes):
 
 
 def group_recipes_by_type(recipes):
-    """Group recipes by craft type."""
     types = {"create": [], "repair": [], "dismantle": []}
     for recipe in recipes:
         craft_type = recipe.get("craft_type", "unknown")
@@ -296,7 +278,6 @@ def group_recipes_by_type(recipes):
 
 
 def find_recipes_using_item(item_name, recipes):
-    """Find all recipes that use a specific item as ingredient."""
     using = []
     for recipe in recipes:
         for ing in recipe.get("ingredients", []):
@@ -308,10 +289,8 @@ def find_recipes_using_item(item_name, recipes):
 
 
 def get_recipe_page_id(recipe):
-    """Get the correct page ID for a recipe (handles dismantle recipes)."""
     output_name = recipe.get("output", "")
     if not output_name:
-        # For dismantle recipes, use first result
         results = recipe.get("results", [])
         if results:
             output_name = results[0].get("name", recipe.get("file", "recipe").replace(".xml", ""))
@@ -321,7 +300,6 @@ def get_recipe_page_id(recipe):
 
 
 def find_recipes_producing_item(item_name, recipes):
-    """Find all recipes that produce a specific item."""
     producing = []
     for recipe in recipes:
         output = recipe.get("output", "")
@@ -335,58 +313,7 @@ def find_recipes_producing_item(item_name, recipes):
 
 
 def generate_index_html(items, clothes, vehicles, recipes):
-    """Generate the main index.html file."""
     template = load_template("index.html")
-    if not template:
-        template = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Rot - Game Manual</title>
-    <link rel="stylesheet" href="templates/style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Bit Rot</h1>
-            <p class="subtitle">Game Documentation Manual</p>
-            <p class="generated">Generated on {{TIMESTAMP}}</p>
-        </header>
-
-        <nav class="nav-grid">
-            <a href="items.html" class="nav-card">
-                <h2>📦 Items</h2>
-                <p>All game items including weapons, consumables, resources, containers, and utilities</p>
-                <span class="count">{{ITEMS_COUNT}} Items</span>
-            </a>
-
-            <a href="clothes.html" class="nav-card">
-                <h2>👕 Clothes</h2>
-                <p>Wearable items including armor, clothing, and accessories for all body slots</p>
-                <span class="count">{{CLOTHES_COUNT}} Items</span>
-            </a>
-
-            <a href="vehicles.html" class="nav-card">
-                <h2>🚗 Vehicles</h2>
-                <p>All vehicles with their specifications, loot tables, and required keys</p>
-                <span class="count">{{VEHICLES_COUNT}} Vehicles</span>
-            </a>
-
-            <a href="crafts.html" class="nav-card">
-                <h2>🔨 Crafting</h2>
-                <p>Complete crafting recipes including creation, repair, and dismantling</p>
-                <span class="count">{{RECIPES_COUNT}} Recipes</span>
-            </a>
-        </nav>
-
-        <footer>
-            <p>Bit Rot Game Manual - Generated Documentation</p>
-        </footer>
-    </div>
-</body>
-</html>'''
-    
     replacements = {
         "TIMESTAMP": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ITEMS_COUNT": len(items),
@@ -394,21 +321,16 @@ def generate_index_html(items, clothes, vehicles, recipes):
         "VEHICLES_COUNT": len(vehicles),
         "RECIPES_COUNT": len(recipes),
     }
-    
     return render_template(template, replacements)
 
 
 def generate_items_list_html(items, recipes):
-    """Generate items.html listing all items."""
     categories = group_items_by_category(items)
     
     category_names = {
         "backpack": "🎒 Backpacks",
         "camp": "⛺ Camping",
-        "car_fuel": "🚗 Car Parts & Keys",
-        "car_key": "🚗 Car Parts & Keys",
-        "car_motor": "🚗 Car Parts & Keys",
-        "car_tire": "🚗 Car Parts & Keys",
+        "car_parts": "🚗 Car Parts & Keys",
         "charm": "🍀 Charms",
         "consumable_ammo": "🔫 Ammunition",
         "consumable_drink": "🥤 Drinks",
@@ -463,11 +385,10 @@ def generate_items_list_html(items, recipes):
         loot_html = ""
         if item.get("loot"):
             loot_names = [f"{l['name']} ({int(l['chance']*100)}%)" for l in item["loot"][:3]]
-            loot_html = f'<p style="color: #fbbf24; font-size: 0.85em;">🎁 Contains: {", ".join(loot_names)}</p>'
+            loot_html = f'<p style="color: var(--warning); font-size: 0.85em; margin-top: 10px;">🎁 Contains: {", ".join(loot_names)}</p>'
         
         spawn_class = get_spawn_class(item.get("spawn_chance", 0))
         spawn_text = get_spawn_text(item.get("spawn_chance", 0))
-        
         item_id = name_to_id(item["name"])
         
         return f'''
@@ -475,7 +396,7 @@ def generate_items_list_html(items, recipes):
         <div class="item-card">
             {sprite_html}
             <div class="item-name">{item["name"]}</div>
-            <div class="item-type">{item["type"]}</div>
+            <div class="item-type">{item.get("type", "unknown")}</div>
             <div class="item-stats">
                 {stats_html}
                 {loot_html}
@@ -501,28 +422,6 @@ def generate_items_list_html(items, recipes):
         '''
     
     template = load_template("page.html")
-    if not template:
-        template = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{TITLE}}</title>
-    <link rel="stylesheet" href="templates/style.css">
-</head>
-<body>
-    <div class="container">
-        <a href="index.html" class="back-link">← Back to Index</a>
-        <header>
-            <h1>{{HEADER_TITLE}}</h1>
-            <p style="color: #888; margin-top: 10px;">{{HEADER_SUBTITLE}}</p>
-            <p class="generated">Generated on {{TIMESTAMP}} from {{FILE_COUNT}} XML files</p>
-        </header>
-        {{CONTENT}}
-    </div>
-</body>
-</html>'''
-    
     replacements = {
         "TITLE": "Bit Rot - Items Manual",
         "HEADER_TITLE": "📦 Items Database",
@@ -535,11 +434,9 @@ def generate_items_list_html(items, recipes):
     return render_template(template, replacements)
 
 
-def generate_item_detail_html(item, recipes, all_items):
-    """Generate individual item detail page."""
+def generate_item_detail_html(item, recipes, all_items, vehicles):
     props = item.get("properties", {})
     
-    # Build stats rows
     stats_rows = ""
     stat_mappings = [
         ("capacity", "Capacity", lambda p: f"{p.get('value', 'N/A')} slots"),
@@ -563,7 +460,6 @@ def generate_item_detail_html(item, recipes, all_items):
             </div>
             '''
     
-    # Handle restore
     if "restore" in props:
         restore_data = props.get("restore", [])
         if isinstance(restore_data, dict):
@@ -577,7 +473,6 @@ def generate_item_detail_html(item, recipes, all_items):
                 </div>
                 '''
     
-    # Handle reduce
     if "reduce" in props:
         reduce_data = props.get("reduce", [])
         if isinstance(reduce_data, dict):
@@ -594,7 +489,26 @@ def generate_item_detail_html(item, recipes, all_items):
     spawn_class = get_spawn_class(item.get("spawn_chance", 0))
     spawn_text = get_spawn_text(item.get("spawn_chance", 0))
     
-    # Find recipes using this item
+    # Identify linked vehicles this key unlocks
+    unlocks_html = ""
+    vehicles_unlocked = [v for v in vehicles if v.get("car", {}).get("key", {}).get("value") == item["name"]]
+    if vehicles_unlocked:
+        v_links = []
+        for v in vehicles_unlocked:
+            v_name = v["name"]
+            v_id = name_to_id(v_name)
+            sprite = v.get("sprite", "empty.png")
+            v_links.append(f'<a href="../vehicles/{v_id}.html" class="craft-item"><img src="../../game/lib/sprites/vehicle/{sprite}" style="width: 32px; height: 32px; image-rendering: pixelated; margin-right: 8px;"> {v_name.replace("car_", "").title()}</a>')
+        
+        unlocks_html = f'''
+        <div class="used-in">
+            <h3>🚗 Unlocks Vehicles</h3>
+            <div class="craft-list">
+                {''.join(v_links)}
+            </div>
+        </div>
+        '''
+
     recipes_using = find_recipes_using_item(item["name"], recipes)
     crafts_using_html = ""
     if recipes_using:
@@ -602,7 +516,6 @@ def generate_item_detail_html(item, recipes, all_items):
         for r in recipes_using[:10]:
             output = r.get("output", "")
             if not output:
-                # For dismantle, use first result
                 results = r.get("results", [])
                 if results:
                     output = results[0].get("name", "")
@@ -620,7 +533,6 @@ def generate_item_detail_html(item, recipes, all_items):
         </div>
         '''
     
-    # Find recipes producing this item
     recipes_producing = find_recipes_producing_item(item["name"], recipes)
     used_in_html = ""
     if recipes_producing:
@@ -638,57 +550,7 @@ def generate_item_detail_html(item, recipes, all_items):
         '''
     
     sprite = item.get("sprite", "empty.png")
-    
     template = load_template("item-detail.html")
-    if not template:
-        template = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ITEM_NAME}} - Bit Rot Manual</title>
-    <link rel="stylesheet" href="../templates/style.css">
-</head>
-<body>
-    <div class="container">
-        <a href="javascript:history.back()" class="back-link">← Back</a>
-        <header>
-            <h1>Item Details</h1>
-            <p style="color: #888; margin-top: 10px;">{{ITEM_NAME}}</p>
-        </header>
-
-        <div class="detail-container">
-            <div class="detail-sprite">
-                <img src="{{SPRITE_PATH}}/{{SPRITE}}" alt="{{ITEM_NAME}}" onerror="this.style.display='none'">
-                <p style="margin-top: 15px; color: #888; font-size: 0.9em;">{{SPRITE}}</p>
-            </div>
-            
-            <div class="detail-info">
-                <h2>{{ITEM_NAME}}</h2>
-                <span class="detail-type">{{ITEM_TYPE}}</span>
-                
-                <div class="detail-stats">
-                    <h3>Properties</h3>
-                    {{STATS_ROWS}}
-                </div>
-                
-                <div class="detail-stats">
-                    <h3>Spawn Information</h3>
-                    <div class="stat-row">
-                        <span class="label">Spawn Chance</span>
-                        <span class="value {{SPAWN_CLASS}}">{{SPAWN_TEXT}}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{CRAFTS_USING}}
-        {{USED_IN_CRAFTS}}
-
-    </div>
-</body>
-</html>'''
-
     sprite_path = get_sprite_path(sprite, item.get("type", ""))
     
     replacements = {
@@ -700,14 +562,13 @@ def generate_item_detail_html(item, recipes, all_items):
         "SPAWN_CLASS": spawn_class,
         "SPAWN_TEXT": spawn_text,
         "CRAFTS_USING": crafts_using_html,
-        "USED_IN_CRAFTS": used_in_html,
+        "USED_IN_CRAFTS": used_in_html + unlocks_html,
     }
 
     return render_template(template, replacements)
 
 
 def generate_clothes_list_html(clothes):
-    """Generate clothes.html listing all clothes."""
     slots = group_clothes_by_slot(clothes)
     
     slot_names = {
@@ -749,7 +610,6 @@ def generate_clothes_list_html(clothes):
         builder_tag = '<span class="builder-tag">builder</span>' if cloth.get("builder", False) else ""
         spawn_class = get_spawn_class(cloth.get("spawn_chance", 0))
         spawn_text = get_spawn_text(cloth.get("spawn_chance", 0))
-        
         item_id = name_to_id(cloth["name"])
         
         return f'''
@@ -790,14 +650,11 @@ def generate_clothes_list_html(clothes):
         "FILE_COUNT": len(clothes),
         "CONTENT": slots_html,
     }
-    
     return render_template(template, replacements)
 
 
 def generate_clothes_detail_html(cloth, recipes):
-    """Generate individual clothes detail page."""
     props = cloth.get("properties", {})
-    
     stats_rows = ""
     stat_mappings = [
         ("defence", "Defence", lambda p: f"{p.get('value', 0)} ({int(float(p.get('value', 0)) * 100)}%)"),
@@ -833,12 +690,10 @@ def generate_clothes_detail_html(cloth, recipes):
         "CRAFTS_USING": "",
         "USED_IN_CRAFTS": "",
     }
-
     return render_template(template, replacements)
 
 
 def generate_vehicles_list_html(vehicles):
-    """Generate vehicles.html listing all vehicles."""
     def generate_vehicle_card(vehicle):
         car = vehicle.get("car", {})
         loot = vehicle.get("loot", [])
@@ -925,7 +780,6 @@ def generate_vehicles_list_html(vehicles):
         '''
     
     vehicles_html = "".join(generate_vehicle_card(v) for v in vehicles)
-    
     template = load_template("page.html")
     replacements = {
         "TITLE": "Bit Rot - Vehicles Manual",
@@ -935,16 +789,28 @@ def generate_vehicles_list_html(vehicles):
         "FILE_COUNT": len(vehicles),
         "CONTENT": f'<div class="vehicle-grid">{vehicles_html}</div>',
     }
-    
     return render_template(template, replacements)
 
 
-def generate_vehicles_detail_html(vehicle):
-    """Generate individual vehicle detail page."""
+def generate_vehicles_detail_html(vehicle, all_items):
     car = vehicle.get("car", {})
     loot = vehicle.get("loot", [])
-    key_name = car.get("key", {}).get("value", "Unknown Key")
     
+    # Pre-compute lookups
+    sprite_lookup = {e["name"]: e.get("sprite") for e in all_items}
+    type_lookup = {e["name"]: e.get("type", "") for e in all_items}
+
+    def get_item_sprite_html(item_name):
+        sprite = sprite_lookup.get(item_name)
+        if not sprite:
+            return ''
+        item_type = type_lookup.get(item_name, "")
+        if item_type == "cloth" or any(x in sprite for x in ["body_", "arms_", "legs_", "foot_", "head_", "hair_", "facial_", "hands_", "util_", "empty"]):
+            subdir = "clothes"
+        else:
+            subdir = "items"
+        return f'<img src="../../game/lib/sprites/{subdir}/{sprite}" alt="{item_name}" style="width: 32px; height: 32px; image-rendering: pixelated; vertical-align: middle; margin-right: 8px;">'
+
     capacity = vehicle.get("capacity", "N/A")
     capacity_val = capacity.get("value", "N/A") if isinstance(capacity, dict) else capacity
     
@@ -968,15 +834,45 @@ def generate_vehicles_detail_html(vehicle):
         </div>
         '''
     
+    key_name = car.get("key", {}).get("value", "Unknown Key")
+    if key_name != "Unknown Key":
+        key_id = name_to_id(key_name)
+        key_sprite_html = get_item_sprite_html(key_name)
+        key_html = f'''
+        <div class="used-in">
+            <h3>🔑 Required Key</h3>
+            <div class="craft-list">
+                <a href="../items/{key_id}.html" class="craft-item">{key_sprite_html} {key_name}</a>
+            </div>
+        </div>
+        '''
+    else:
+        key_html = ""
+
     loot_html = ""
     for item in loot:
         chance = float(item.get("chance", 0))
+        item_name = item["name"]
+        item_id = name_to_id(item_name)
+        sprite_html = get_item_sprite_html(item_name)
+        
         loot_html += f'''
-        <div class="stat-row">
-            <span class="label">{item["name"]}</span>
-            <span class="value">{int(chance * 100)}%</span>
+        <a href="../items/{item_id}.html" class="craft-item">
+            {sprite_html} {item_name} <span style="margin-left: 5px; color: var(--warning); font-size: 0.85em;">({int(chance * 100)}%)</span>
+        </a>
+        '''
+
+    if loot_html:
+        loot_section = f'''
+        <div class="used-in">
+            <h3>🎁 Loot Table</h3>
+            <div class="craft-list">
+                {loot_html}
+            </div>
         </div>
         '''
+    else:
+        loot_section = ""
     
     sprite = vehicle.get("sprite", "empty.png")
     name = vehicle["name"]
@@ -991,18 +887,7 @@ def generate_vehicles_detail_html(vehicle):
         "STATS_ROWS": specs,
         "SPAWN_CLASS": "spawn-high",
         "SPAWN_TEXT": "100%",
-        "CRAFTS_USING": f'''
-        <div class="used-in">
-            <h3>🔑 Required Key</h3>
-            <p>{key_name}</p>
-        </div>
-        <div class="used-in">
-            <h3>🎁 Loot Table</h3>
-            <div class="craft-list">
-                {loot_html}
-            </div>
-        </div>
-        ''',
+        "CRAFTS_USING": key_html + loot_section,
         "USED_IN_CRAFTS": "",
     }
     
@@ -1010,7 +895,6 @@ def generate_vehicles_detail_html(vehicle):
 
 
 def generate_crafts_list_html(recipes, items, clothes, vehicles):
-    """Generate crafts.html listing all recipes."""
     all_entities = items + clothes + vehicles
     sprite_lookup = {e["name"]: e.get("sprite") for e in all_entities}
     type_lookup = {e["name"]: e.get("type", "") for e in all_entities}
@@ -1019,13 +903,11 @@ def generate_crafts_list_html(recipes, items, clothes, vehicles):
         sprite = sprite_lookup.get(item_name)
         if not sprite:
             return ''
-        # Determine correct sprite subdirectory based on item type
         item_type = type_lookup.get(item_name, "")
         if item_type == "cloth":
             subdir = "clothes"
         elif item_type == "vehicle":
             subdir = "vehicle"
-        # Fallback to sprite name patterns for items without type lookup
         elif "body_" in sprite or "arms_" in sprite or "legs_" in sprite or "foot_" in sprite or "head_" in sprite or "hair_" in sprite or "facial_" in sprite or "hands_" in sprite or "util_" in sprite or "empty" in sprite:
             subdir = "clothes"
         elif sprite in ["car_ambulance.png", "car_jeep.png", "car_pickup.png", "car_truck.png"]:
@@ -1039,6 +921,20 @@ def generate_crafts_list_html(recipes, items, clothes, vehicles):
             content = name[1:name.index("]")]
             return [alt.strip() for alt in content.split(",")]
         return [name]
+        
+    def format_skills(skill_str):
+        """Cleans up raw string data like [intelligence:1, maintenance:2]"""
+        if not skill_str or skill_str == "[]": return ""
+        cleaned = skill_str.replace("[", "").replace("]", "")
+        parts = cleaned.split(",")
+        formatted = []
+        for p in parts:
+            if ":" in p:
+                k, v = p.split(":")
+                formatted.append(f"{k.strip().title()} {v.strip()}")
+            else:
+                formatted.append(p.strip().title())
+        return ", ".join(formatted)
     
     def generate_recipe_card(recipe):
         craft_type = recipe.get("craft_type", "unknown")
@@ -1080,18 +976,17 @@ def generate_crafts_list_html(recipes, items, clothes, vehicles):
             magazine_html = f'<div class="magazine-req">📚 Requires: {recipe["magazine"]}</div>'
         
         skill_html = ""
-        if recipe.get("req_level"):
-            skill_html = f'<div class="skill-req">⭐ Requires: {recipe["req_level"]}</div>'
+        if recipe.get("req_level") and recipe["req_level"] != "[]":
+            skill_html = f'<div class="skill-req">⭐ Requires: {format_skills(recipe["req_level"])}</div>'
         
         xp_html = ""
-        if recipe.get("gain_xp"):
-            xp_html = f'<div class="xp-gain">⭐ XP Gain: {recipe["gain_xp"]}</div>'
+        if recipe.get("gain_xp") and recipe["gain_xp"] != "[]":
+            xp_html = f'<div class="xp-gain">📈 XP Gain: {format_skills(recipe["gain_xp"])}</div>'
         
         meta_html = f'<span>⏱️ {recipe.get("time", 0)}s</span>'
         if recipe.get("amount"):
             meta_html += f' <span>📦 {recipe["amount"]}x output</span>'
         
-        # Handle dismantle recipes
         output_name = recipe.get("output", "")
         if not output_name:
             results = recipe.get("results", [])
@@ -1181,7 +1076,6 @@ def generate_crafts_list_html(recipes, items, clothes, vehicles):
 
 
 def generate_crafts_detail_html(recipe, items, clothes, vehicles):
-    """Generate individual craft detail page."""
     all_entities = items + clothes + vehicles
     sprite_lookup = {e["name"]: e.get("sprite") for e in all_entities}
     type_lookup = {e["name"]: e.get("type", "") for e in all_entities}
@@ -1190,13 +1084,11 @@ def generate_crafts_detail_html(recipe, items, clothes, vehicles):
         sprite = sprite_lookup.get(item_name)
         if not sprite:
             return ''
-        # Determine correct sprite subdirectory based on item type
         item_type = type_lookup.get(item_name, "")
         if item_type == "cloth":
             subdir = "clothes"
         elif item_type == "vehicle":
             subdir = "vehicle"
-        # Fallback to sprite name patterns for items without type lookup
         elif "body_" in sprite or "arms_" in sprite or "legs_" in sprite or "foot_" in sprite or "head_" in sprite or "hair_" in sprite or "facial_" in sprite or "hands_" in sprite or "util_" in sprite or "empty" in sprite:
             subdir = "clothes"
         elif sprite in ["car_ambulance.png", "car_jeep.png", "car_pickup.png", "car_truck.png"]:
@@ -1207,7 +1099,6 @@ def generate_crafts_detail_html(recipe, items, clothes, vehicles):
 
     craft_type = recipe.get("craft_type", "unknown")
     
-    # Handle dismantle recipes that don't have output
     output_name = recipe.get("output", "")
     if not output_name:
         results = recipe.get("results", [])
@@ -1238,7 +1129,6 @@ def generate_crafts_detail_html(recipe, items, clothes, vehicles):
         </div>
         '''
 
-    # For dismantle, show ingredients then results with clear separation
     if craft_type == "dismantle":
         stats_rows = f'''
         <div class="stat-row" style="background: rgba(248, 113, 113, 0.2); border-left: 3px solid #f87171;">
@@ -1295,11 +1185,9 @@ def generate_crafts_detail_html(recipe, items, clothes, vehicles):
 
 
 def main():
-    """Main function to generate all HTML files."""
     print("📖 Bit Rot Static Site Generator")
     print("=" * 40)
     
-    # Load all data
     print("📂 Loading items...")
     items = load_all_items()
     print(f"   Found {len(items)} items")
@@ -1316,7 +1204,6 @@ def main():
     recipes = load_all_recipes()
     print(f"   Found {len(recipes)} recipes")
     
-    # Generate main pages
     print("\n📝 Generating main pages...")
     
     print("   → index.html")
@@ -1339,16 +1226,14 @@ def main():
     with open(OUTPUT_DIR / "crafts.html", "w", encoding="utf-8") as f:
         f.write(generate_crafts_list_html(recipes, items, clothes, vehicles))
     
-    # Generate individual item pages
     print("\n📄 Generating individual item pages...")
     for item in items:
         item_id = name_to_id(item["name"])
-        html = generate_item_detail_html(item, recipes, items)
+        html = generate_item_detail_html(item, recipes, items, vehicles)
         with open(OUTPUT_DIR / "items" / f"{item_id}.html", "w", encoding="utf-8") as f:
             f.write(html)
     print(f"   Generated {len(items)} item pages in items/")
     
-    # Generate individual clothes pages
     print("   Generating individual clothes pages...")
     for cloth in clothes:
         cloth_id = name_to_id(cloth["name"])
@@ -1357,22 +1242,18 @@ def main():
             f.write(html)
     print(f"   Generated {len(clothes)} clothes pages in clothes/")
     
-    # Generate individual vehicle pages
     print("   Generating individual vehicle pages...")
     for vehicle in vehicles:
         vehicle_id = name_to_id(vehicle["name"])
-        html = generate_vehicles_detail_html(vehicle)
+        html = generate_vehicles_detail_html(vehicle, items + clothes)
         with open(OUTPUT_DIR / "vehicles" / f"{vehicle_id}.html", "w", encoding="utf-8") as f:
             f.write(html)
     print(f"   Generated {len(vehicles)} vehicle pages in vehicles/")
     
-    # Generate individual craft pages
     print("   Generating individual craft pages...")
     for recipe in recipes:
-        # Handle dismantle recipes that don't have output
         output_name = recipe.get("output", "")
         if not output_name:
-            # For dismantle recipes, use the first result or the recipe file name
             results = recipe.get("results", [])
             if results:
                 output_name = results[0].get("name", recipe.get("file", "recipe").replace(".xml", ""))

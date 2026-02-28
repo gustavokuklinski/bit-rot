@@ -1,17 +1,16 @@
 /* Bit Rot Documentation Styles */
-/* Edit this file to customize the appearance */
-
 :root {
-    --bg-primary: #1a1a2e;
-    --bg-secondary: #16213e;
-    --accent: #e94560;
+    --bg-primary: #1d1d1d; /* Lightened background */
+    --bg-secondary: #252525; /* Lightened background */
+    --accent: #d80000; /* Blood Red from "ROT" */
+    --accent-secondary: #d1a3a4; /* Fleshy tone from "BIT" */
     --text-primary: #e0e0e0;
-    --text-secondary: #888;
-    --text-muted: #666;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --info: #60a5fa;
+    --text-secondary: #a0a0a0;
+    --text-muted: #888;
+    --success: #688058; /* Zombie Green */
+    --warning: #d1a3a4;
+    --danger: #d80000;
+    --info: #4a6b8c;
 }
 
 * {
@@ -25,20 +24,133 @@ body {
     background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     color: var(--text-primary);
     min-height: 100vh;
-    padding: 20px;
 }
 
-.container {
+/* --- Homepage Layout --- */
+.index-container {
     max-width: 1400px;
     margin: 0 auto;
+    padding: 40px 20px;
 }
 
+.hero-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+/* --- Wiki Layout (for generated pages) --- */
+.wiki-container {
+    display: flex;
+    max-width: 1600px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+.wiki-sidebar {
+    width: 260px;
+    background: rgba(0, 0, 0, 0.2); /* Lightened sidebar */
+    border-right: 2px solid var(--accent);
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.wiki-content {
+    flex-grow: 1;
+    padding: 40px;
+    max-width: calc(100% - 260px);
+}
+
+.sidebar-logo img {
+    width: 100%;
+    margin-bottom: 30px;
+    /* Removed the red drop shadow */
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-link {
+    display: block;
+    padding: 12px 15px;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 4px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nav-link:hover {
+    background: rgba(216, 0, 0, 0.1);
+    color: var(--accent-secondary);
+    border-left-color: var(--accent);
+}
+
+/* --- Controls Section --- */
+.controls-section {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 30px;
+    border-radius: 10px;
+    border-left: 4px solid var(--success);
+}
+
+.controls-section h2 {
+    color: var(--accent);
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    text-transform: uppercase;
+}
+
+.controls-section h2:first-child { margin-top: 0; }
+
+.controls-section h3 {
+    color: var(--success);
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.controls-section ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 20px;
+}
+
+.controls-section li {
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.controls-section li strong {
+    color: var(--accent-secondary);
+    display: inline-block;
+}
+
+/* --- General Components --- */
 header {
     text-align: center;
-    padding: 30px 0;
+    padding-bottom: 20px;
     border-bottom: 2px solid var(--accent);
     margin-bottom: 30px;
 }
+
+header img { max-width: 300px; }
 
 h1 {
     font-size: 2.5em;
@@ -55,9 +167,7 @@ h1 {
     transition: color 0.3s;
 }
 
-.back-link:hover {
-    color: var(--accent);
-}
+.back-link:hover { color: var(--accent); }
 
 /* Navigation Cards */
 .nav-grid {
@@ -69,7 +179,7 @@ h1 {
 
 .nav-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(233, 69, 96, 0.3);
+    border: 1px solid rgba(216, 0, 0, 0.3);
     border-radius: 10px;
     padding: 30px;
     text-align: center;
@@ -79,7 +189,7 @@ h1 {
 }
 
 .nav-card:hover {
-    background: rgba(233, 69, 96, 0.1);
+    background: rgba(216, 0, 0, 0.1);
     border-color: var(--accent);
     transform: translateY(-5px);
 }
@@ -105,19 +215,19 @@ h1 {
     margin-top: 15px;
 }
 
-/* Categories */
+/* Categories & Grids */
 .category {
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 10px;
     margin-bottom: 30px;
     overflow: hidden;
 }
 
 .category-header {
-    background: rgba(233, 69, 96, 0.2);
+    background: rgba(216, 0, 0, 0.15);
     padding: 15px 25px;
-    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+    border-bottom: 1px solid rgba(216, 0, 0, 0.3);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -128,15 +238,6 @@ h1 {
     font-size: 1.4em;
 }
 
-.recipe-count {
-    background: rgba(233, 69, 96, 0.3);
-    color: var(--accent);
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.85em;
-}
-
-/* Grids */
 .items-grid, .recipes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -144,13 +245,8 @@ h1 {
     padding: 20px;
 }
 
-.recipes-grid {
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-}
-
-/* Cards */
 .item-card, .recipe-card {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03); /* Lightened slightly */
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     padding: 15px;
@@ -159,219 +255,47 @@ h1 {
 }
 
 .item-card:hover, .recipe-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(233, 69, 96, 0.5);
-}
-
-/* Sprites */
-.item-sprite, .vehicle-sprite {
-    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--accent-secondary);
 }
 
 .item-sprite img {
-    width: 128px;
-    height: 128px;
+    width: 96px;
+    height: 96px;
     image-rendering: pixelated;
 }
 
-.vehicle-sprite img {
-    width: 128px;
-    height: 128px;
-    image-rendering: pixelated;
-}
-
-.vehicle-sprite {
-    text-align: center;
-    margin: 15px 0;
-}
-
-/* Item Links */
 .item-link {
     color: var(--text-primary);
     text-decoration: none;
-    transition: color 0.3s;
 }
 
-.item-link:hover {
-    color: var(--accent);
-    text-decoration: none;
-}
-
-/* Typography */
 .item-name {
-    color: #fff;
+    color: var(--accent-secondary);
     font-size: 1.1em;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
-.item-type, .recipe-type {
+.item-type, .recipe-type, .item-slot {
     display: inline-block;
-    background: rgba(233, 69, 96, 0.3);
-    color: var(--accent);
+    background: rgba(216, 0, 0, 0.2);
+    color: var(--accent-secondary);
     padding: 2px 10px;
     border-radius: 4px;
     font-size: 0.8em;
     margin-bottom: 10px;
 }
 
-.item-slot {
-    display: inline-block;
-    background: rgba(233, 69, 96, 0.3);
-    color: var(--accent);
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin-bottom: 10px;
-}
+/* Spawn Chance & Stats */
+.item-stats { font-size: 0.9em; color: var(--text-secondary); }
+.spawn-chance { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.spawn-high, .defence-high, .legend-color.keep { color: var(--success); }
+.spawn-medium, .defence-medium { color: var(--warning); }
+.spawn-low, .defence-low, .legend-color.destroy { color: var(--danger); }
 
-.builder-tag {
-    display: inline-block;
-    background: rgba(74, 222, 128, 0.3);
-    color: var(--success);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75em;
-    margin-left: 8px;
-}
 
-.item-stats {
-    font-size: 0.9em;
-    color: var(--text-secondary);
-}
-
-.item-stats p {
-    margin: 4px 0;
-}
-
-.stat-label {
-    color: var(--text-muted);
-}
-
-/* Spawn Chance */
-.spawn-chance {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.85em;
-}
-
-.spawn-high { color: var(--success); }
-.spawn-medium { color: var(--warning); }
-.spawn-low { color: var(--danger); }
-.spawn-none { color: var(--text-muted); }
-
-/* Defence Colors */
-.defence-high { color: var(--success); }
-.defence-medium { color: var(--warning); }
-.defence-low { color: var(--danger); }
-
-/* Recipe Specific */
-.recipe-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.craft-badge {
-    display: inline-block;
-    background: rgba(74, 222, 128, 0.2);
-    color: var(--success);
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 0.75em;
-    margin-left: 8px;
-    text-transform: uppercase;
-}
-
-.craft-badge.dismantle {
-    background: rgba(251, 191, 36, 0.2);
-    color: var(--warning);
-}
-
-.craft-badge.repair {
-    background: rgba(96, 165, 250, 0.2);
-    color: var(--info);
-}
-
-.recipe-meta {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    font-size: 0.85em;
-    color: var(--text-secondary);
-    justify-content: center;
-}
-
-.magazine-req {
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    color: var(--warning);
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 0.85em;
-    margin-bottom: 15px;
-}
-
-.skill-req {
-    background: rgba(96, 165, 250, 0.1);
-    border: 1px solid rgba(96, 165, 250, 0.3);
-    color: var(--info);
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 0.85em;
-    margin-bottom: 15px;
-}
-
-.ingredients, .results {
-    margin-bottom: 15px;
-    text-align: left;
-}
-
-.ingredients h4, .results h4 {
-    color: var(--text-secondary);
-    font-size: 0.85em;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-}
-
-.ingredient-item, .result-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 4px;
-    margin-bottom: 5px;
-    font-size: 0.9em;
-}
-
-.ingredient-item.destroy-true {
-    border-left: 3px solid var(--danger);
-}
-
-.ingredient-item.destroy-false {
-    border-left: 3px solid var(--success);
-}
-
-.item-amount {
-    color: #fff;
-    font-weight: 600;
-}
-
-.xp-gain {
-    background: rgba(74, 222, 128, 0.1);
-    border: 1px solid rgba(74, 222, 128, 0.3);
-    color: var(--success);
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 0.85em;
-    margin-top: 15px;
-}
-
-/* Vehicle Specific */
+/* --- Vehicle Specific Layout --- */
 .vehicle-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -380,23 +304,26 @@ h1 {
 }
 
 .vehicle-card {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     overflow: hidden;
     transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
 }
 
 .vehicle-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(233, 69, 96, 0.5);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--accent);
     transform: translateY(-5px);
 }
 
 .vehicle-header {
-    background: rgba(233, 69, 96, 0.2);
+    background: rgba(216, 0, 0, 0.15);
     padding: 20px;
-    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+    border-bottom: 1px solid rgba(216, 0, 0, 0.3);
 }
 
 .vehicle-name {
@@ -413,6 +340,17 @@ h1 {
 
 .vehicle-body {
     padding: 20px;
+}
+
+.vehicle-sprite {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.vehicle-sprite img {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
 }
 
 .specs {
@@ -480,13 +418,9 @@ h1 {
     font-weight: 600;
 }
 
-.loot-chance.high { color: var(--success); }
-.loot-chance.medium { color: var(--warning); }
-.loot-chance.low { color: var(--danger); }
-
 .key-requirement {
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 20px;
@@ -503,82 +437,34 @@ h1 {
     font-size: 0.95em;
 }
 
-.comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 30px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.comparison-table th {
-    background: rgba(233, 69, 96, 0.2);
-    color: var(--accent);
-    padding: 15px;
-    text-align: left;
-    font-size: 0.95em;
-}
-
-.comparison-table td {
-    padding: 12px 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
-}
-
-.comparison-table tr:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* Item Detail Page */
+/* --- Details Page --- */
 .detail-container {
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 30px;
-    padding: 20px;
+    padding: 20px 0;
 }
 
 .detail-sprite {
     text-align: center;
     padding: 30px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
 }
 
 .detail-sprite img {
-    width: 256px;
-    height: 256px;
+    width: 192px;
+    height: 192px;
     image-rendering: pixelated;
 }
 
-.detail-info h2 {
-    color: var(--accent);
-    font-size: 2em;
-    margin-bottom: 10px;
-}
-
-.detail-type {
-    display: inline-block;
-    background: rgba(233, 69, 96, 0.3);
-    color: var(--accent);
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.9em;
-    margin-bottom: 20px;
-}
-
-.detail-stats {
-    background: rgba(255, 255, 255, 0.03);
+.detail-info h2 { color: var(--accent); font-size: 2em; margin-bottom: 10px; }
+.detail-stats, .crafts-using, .used-in {
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
-}
-
-.detail-stats h3 {
-    color: var(--text-secondary);
-    font-size: 1em;
-    margin-bottom: 15px;
-    text-transform: uppercase;
 }
 
 .stat-row {
@@ -587,125 +473,118 @@ h1 {
     padding: 10px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
+.stat-row:last-child { border-bottom: none; }
+.stat-row .label { color: var(--text-secondary); }
+.stat-row .value { color: #fff; font-weight: 600; }
 
-.stat-row:last-child {
-    border-bottom: none;
-}
-
-.stat-row .label {
-    color: var(--text-muted);
-}
-
-.stat-row .value {
-    color: #fff;
-    font-weight: 600;
-}
-
-.crafts-using, .used-in {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 20px;
-}
-
-.crafts-using h3, .used-in h3 {
-    color: var(--accent);
-    font-size: 1.2em;
-    margin-bottom: 15px;
-}
-
-.craft-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
+.craft-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .craft-item {
-    background: rgba(233, 69, 96, 0.2);
-    border: 1px solid rgba(233, 69, 96, 0.3);
+    background: rgba(216, 0, 0, 0.15);
+    border: 1px solid rgba(216, 0, 0, 0.3);
     border-radius: 8px;
     padding: 10px 15px;
-    text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.3s;
+    text-decoration: none;
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: all 0.2s;
+}
+.craft-item:hover { background: rgba(216, 0, 0, 0.3); transform: translateY(-2px); }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .wiki-container { flex-direction: column; }
+    .wiki-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 2px solid var(--accent);
+    }
+    .wiki-content { max-width: 100%; }
+    .detail-container { grid-template-columns: 1fr; }
 }
 
-.craft-item:hover {
-    background: rgba(233, 69, 96, 0.3);
-    transform: translateY(-2px);
+/* --- Recipe & Crafting Specifics --- */
+.recipe-card {
+    text-align: left; /* Overrides the center alignment */
+    display: flex;
+    flex-direction: column;
 }
 
-.craft-item img {
-    width: 32px;
-    height: 32px;
-    image-rendering: pixelated;
-}
-
-/* Legend */
-.legend {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 30px;
-}
-
-.legend h3 {
-    color: var(--accent);
+.recipe-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.legend-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.legend-item {
+.recipe-name {
+    font-size: 1.2em;
+    color: var(--accent-secondary);
+    font-weight: bold;
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 5px;
+}
+
+.recipe-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
     font-size: 0.9em;
     color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 5px;
+    justify-content: center;
 }
 
-.legend-color {
-    width: 20px;
-    height: 3px;
-    border-radius: 2px;
+.magazine-req, .skill-req, .xp-gain {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--info);
 }
 
-.legend-color.destroy { background: var(--danger); }
-.legend-color.keep { background: var(--success); }
+.magazine-req { border-left-color: var(--warning); }
+.xp-gain { border-left-color: var(--success); }
 
-/* Footer */
-footer {
-    text-align: center;
-    padding: 40px 0;
-    margin-top: 40px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-muted);
-}
-
-.generated {
-    font-size: 0.8em;
-    color: var(--text-muted);
+.ingredients, .results {
     margin-top: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 5px;
+    flex-grow: 1;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .detail-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .spec-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .vehicle-grid {
-        grid-template-columns: 1fr;
-    }
+.ingredients h4, .results h4 {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 5px;
 }
+
+.ingredient-item, .result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.ingredient-item.destroy-true { border-left: 3px solid var(--danger); }
+.ingredient-item.destroy-false { border-left: 3px solid var(--success); }
+.item-amount { color: #fff; font-weight: bold; }

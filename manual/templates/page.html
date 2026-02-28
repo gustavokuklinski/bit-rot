@@ -7,15 +7,28 @@
     <link rel="stylesheet" href="templates/style.css">
 </head>
 <body>
-    <div class="container">
-        <a href="index.html" class="back-link">← Back to Index</a>
-        <header>
-            <h1>{{HEADER_TITLE}}</h1>
-            <p style="color: #888; margin-top: 10px;">{{HEADER_SUBTITLE}}</p>
-        </header>
+    <div class="wiki-container">
+        <aside class="wiki-sidebar">
+            <div class="sidebar-logo">
+                <a href="index.html"><img src="templates/assets/logo.png" alt="Bit Rot" /></a>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="index.html" class="nav-link">🏠 Main Menu</a>
+                <a href="items.html" class="nav-link">📦 Items</a>
+                <a href="clothes.html" class="nav-link">👕 Clothes</a>
+                <a href="vehicles.html" class="nav-link">🚗 Vehicles</a>
+                <a href="crafts.html" class="nav-link">🔨 Crafting</a>
+            </nav>
+        </aside>
 
-        {{CONTENT}}
+        <main class="wiki-content">
+            <header>
+                <h1>{{HEADER_TITLE}}</h1>
+                <p style="color: var(--accent-secondary); margin-top: 10px;">{{HEADER_SUBTITLE}}</p>
+            </header>
 
+            {{CONTENT}}
+        </main>
     </div>
 </body>
 </html>
