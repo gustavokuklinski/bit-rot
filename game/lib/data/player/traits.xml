@@ -8,7 +8,7 @@
         <recipe magazine="Medicine Vol.1" />
     </trait>
     <trait id="Profession_Police_Officer" name="Profession Police Officer" cost="1" tooltip="The main security skills" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Nurse]">
-        <attributes level="[strength:5, fitness:5, agility: 3, maintenance: 1, ranged: 3, lucky: 2]" />
+        <attributes level="[strength:5, fitness:5, agility: 3, maintenance: 1, intelligence: 1, ranged: 3, lucky: 2]" />
     </trait>
     <trait id="Profession_Scientist" name="Profession Scientist" cost="1" tooltip="Higher intelligence skills" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:2, fitness:2, agility: 4, lucky: 3, maintenance: 2, intelligence: 5]" />
@@ -22,8 +22,10 @@
     </trait>
     <trait id="Profession_Spy" name="Profession Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:4, fitness:4, agility: 5, lucky: 5,maintenance: 1, intelligence: 3]" />
+        <recipe magazine="Medicine Vol.1" />
+        <recipe magazine="Vehicle Engineering Vol.1" />
     </trait>
-    <trait id="Profession_CEO_assistant" name="Profession CEO Assistant" cost="1" tooltip="SEO assistant" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+    <trait id="Profession_CEO_assistant" name="Profession CEO Assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
         <attributes level="[strength:2, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
     </trait>
 
