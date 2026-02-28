@@ -15,7 +15,7 @@
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
     </game>
     <map>
-        <map_chunks value="2" name="Max map chunks (Default: 3)"/>
+        <map_chunks value="3" name="Max map chunks (Default: 3)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>

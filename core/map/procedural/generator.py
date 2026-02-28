@@ -333,8 +333,8 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
 
         # --- PASS 1: Generate all chunks dynamically to determine sizes ---
-        col_widths = [64] * grid_w
-        row_heights = [64] * grid_h
+        col_widths = [self.chunk_size] * grid_w
+        row_heights = [self.chunk_size] * grid_h
         
         for gy in range(grid_h):
             for gx in range(grid_w):
@@ -353,7 +353,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 if is_center_chunk and self.chunk_settings.get('force_start_urban', True):
                     is_urban = True
                     
-                base_size = 64
+                base_size = self.chunk_size
                 if assigned_buildings and is_urban:
                     total_area = 0
                     max_dim = 0
@@ -366,12 +366,11 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                     
                     area_based_size = int(math.ceil(math.sqrt(total_area * 4)))
                     min_fit_size = max_dim + 30 
-                    base_size = max(base_size, area_based_size, min_fit_size)
-                    base_size += random.randint(0, 15)
-                
-                # Apply padding only to chunks that require a coastline cut
-                if coast_left or coast_right or coast_top or coast_bottom:
-                    base_size += 20
+                    
+                    # Only increase base_size if the buildings physically cannot fit inside 128
+                    required_size = max(area_based_size, min_fit_size)
+                    if required_size > base_size:
+                        base_size = required_size
 
                 col_widths[gx] = max(col_widths[gx], base_size)
                 row_heights[gy] = max(row_heights[gy], base_size)
