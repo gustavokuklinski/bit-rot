@@ -1,4 +1,4 @@
-<item name="Toolkit" type="container">
+<item name="Toolkit" type="container" allow_belt="false">
     <properties>
         <capacity value="10" />
         <sprite file="container_toolkit.png" />

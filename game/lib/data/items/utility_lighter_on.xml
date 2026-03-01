@@ -1,4 +1,4 @@
-<item name="Lighter on" type="utility" state="on">
+<item name="Lighter on" type="utility" state="on" allow_belt="false">
     <properties>
         <durability min="1" max="100" />
         <weight weight="0.1"/>

@@ -73,6 +73,16 @@ class ZombieCombat:
     def die(self, game):
         """Handles zombie death: plays sound, creates corpse, generates loot."""
         if self.is_dead: return
+
+        if not hasattr(self, 'inventory') or self.inventory is None:
+            self.inventory = []
+
+        if hasattr(self, 'clothes'):
+            for slot, cloth_item in self.clothes.items():
+                if cloth_item:
+                    self.inventory.append(cloth_item)
+            self.clothes = {} # Clear it out
+
         self.is_dead = True
         
         # 1. Play sound

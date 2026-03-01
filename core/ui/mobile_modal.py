@@ -2,8 +2,8 @@ import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
-from core.ui.clock_tab import draw_clock_tab
-from core.ui.map_tab import draw_map_tab
+from core.ui.mobile_clock_tab import draw_clock_tab
+from core.ui.mobile_map_tab import draw_map_tab
 
 def draw_mobile_modal(surface, game, modal, assets):
     try:

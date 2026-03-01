@@ -1,4 +1,4 @@
-<item name="Money WBRL" type="currency">
+<item name="Money WBRL" type="currency" allow_belt="false">
     <properties>
         <sprite file="currency_money.png" />
         <weight weight="0.001"/>

@@ -1,4 +1,4 @@
-<item name="Car Key Pickup" type="car_key">
+<item name="Car Key Pickup" type="car_key" allow_belt="false">
     <properties>
         <key value="car_pickup" />
         <sprite file="car_key_pickup.png" />

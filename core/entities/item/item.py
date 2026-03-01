@@ -1,3 +1,4 @@
+# core/entities/item/item.py
 import pygame
 import uuid
 import random
@@ -11,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -69,6 +70,9 @@ class Item:
         # Weight System
         self.weight = weight
         self.weight_reduction = weight_reduction
+        
+        self.allow_belt = allow_belt
+        self.in_belt = False
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
@@ -85,6 +89,9 @@ class Item:
             # Apply reduction (e.g., backpack reduces content weight by %)
             total += contents_weight * (1.0 - self.weight_reduction)
             
+        if getattr(self, 'in_belt', False):
+            total *= 0.90
+            
         return total
 
     def to_dict(self):
@@ -96,18 +103,39 @@ class Item:
             'state': self.state,
             'inventory': [i.to_dict() for i in self.inventory] if self.inventory else []
         }
+
+        if getattr(self, 'in_belt', False):
+            data['in_belt'] = self.in_belt
+
+        if self.text is not None:
+            data['text'] = self.text
+
+        if hasattr(self, 'color') and self.color != (255, 255, 255):
+            data['color'] = self.color
+
         return data
 
     @staticmethod
     def from_dict(data):
         if not data or 'name' not in data: return None
-        item = Item.create_from_name(data['name'])
+        saved_color = tuple(data['color']) if 'color' in data else None
+        item = Item.create_from_name(data['name'], force_color=saved_color)
         if not item: return None
         
         if 'durability' in data: item.durability = data['durability']
         if 'load' in data: item.load = data['load']
         if 'state' in data: item.state = data['state']
+        if 'in_belt' in data: item.in_belt = data['in_belt']
+
+        if 'text' in data: item.text = data['text']
         
+        if 'color' in data: 
+            item.color = tuple(data['color'])
+            if item.image and item.color != (255, 255, 255):
+                tinted = item.image.copy()
+                tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                item.image = tinted
+
         if 'inventory' in data and data['inventory']:
             item.inventory = [Item.from_dict(i_data) for i_data in data['inventory'] if i_data]
             
@@ -165,7 +193,7 @@ class Item:
 
     def is_stackable(self):
         return (self.capacity is not None and self.capacity > 1 and 
-                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_repair','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility'])
+                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility'])
 
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():
@@ -233,8 +261,8 @@ class Item:
         return generate_random_item(Item)
 
     @classmethod
-    def create_from_name(cls, item_name, randomize_durability=False):
-        return create_item_from_name(cls, item_name, randomize_durability)
+    def create_from_name(cls, item_name, randomize_durability=False, force_color=None):
+        return create_item_from_name(cls, item_name, randomize_durability, force_color)
 
     @staticmethod
     def cleanup_disposables(item_list, modals=None, message_func=None):

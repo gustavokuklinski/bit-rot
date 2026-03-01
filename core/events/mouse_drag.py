@@ -1,3 +1,4 @@
+# core/events/mouse_drag.py
 import pygame
 import math
 import random
@@ -87,6 +88,12 @@ def handle_mouse_up(game, event, mouse_pos):
                             print("Cannot place backpacks on the belt.")
                             break 
                         
+                        # --- NEW RESTRICTION ---
+                        if not getattr(game.dragged_item, 'allow_belt', False):
+                            print(f"Cannot place {game.dragged_item.name} on the belt. It is a container-only item.")
+                            dropped_successfully = False
+                            break
+                        
                         item_in_slot = game.player.belt[i_target]
                         
                         if item_in_slot and check_recursive_containment(game.dragged_item, item_in_slot):
@@ -94,7 +101,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             dropped_successfully = False
                             break
                         
-                        if game.dragged_item.liquid:
+                        if getattr(game.dragged_item, 'liquid', False):
                             print(f"The {game.dragged_item.name} spills and is lost (belt cannot hold liquid).")
                             dropped_successfully = True 
                             break
@@ -104,7 +111,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                 item_ref = game.dragged_item
                                 # Convert "Campfire on" to "Campfire off" when looting
                                 if item_ref.name == "Campfire on":
-                                    from core.entities.item.item import Item
                                     new_item = Item.create_from_name("Campfire off")
                                     if new_item:
                                         new_item.durability = item_ref.durability
@@ -114,6 +120,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 def do_belt_loot():
                                     if game.player.belt[i_target] is None:
                                         game.player.belt[i_target] = item_ref
+                                        item_ref.in_belt = True
                                     elif game.player.belt[i_target].can_stack_with(item_ref):
                                         avail = game.player.belt[i_target].capacity - game.player.belt[i_target].load
                                         trans = min(avail, item_ref.load)
@@ -130,6 +137,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                         if item_in_slot is None:
                             game.player.belt[i_target] = game.dragged_item
+                            game.dragged_item.in_belt = True
                             dropped_successfully = True
                         elif item_in_slot.can_stack_with(game.dragged_item):
                             available_space = item_in_slot.capacity - item_in_slot.load
@@ -141,7 +149,9 @@ def handle_mouse_up(game, event, mouse_pos):
                         else:
                             item_to_swap = item_in_slot
                             game.player.belt[i_target] = game.dragged_item
+                            game.dragged_item.in_belt = True
                             game.dragged_item = item_to_swap 
+                            game.dragged_item.in_belt = False
                             dropped_successfully = False
                         
                         if dropped_successfully: break
@@ -198,7 +208,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                              item_ref = game.dragged_item
                                              # Convert "Campfire on" to "Campfire off" when looting
                                              if item_ref.name == "Campfire on":
-                                                 from core.entities.item.item import Item
                                                  new_item = Item.create_from_name("Campfire off")
                                                  if new_item:
                                                      new_item.durability = item_ref.durability
@@ -223,7 +232,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                              item_ref = game.dragged_item
                                              # Convert "Campfire on" to "Campfire off" when looting
                                              if item_ref.name == "Campfire on":
-                                                 from core.entities.item.item import Item
                                                  new_item = Item.create_from_name("Campfire off")
                                                  if new_item:
                                                      new_item.durability = item_ref.durability
@@ -263,7 +271,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if game.player.backpack and check_recursive_containment(game.dragged_item, game.player.backpack):
                                         print("Cannot put a container inside itself."); break
                                     
-                                    if game.dragged_item.liquid:
+                                    if getattr(game.dragged_item, 'liquid', False):
                                         print(f"The {game.dragged_item.name} spills and is lost.")
                                         dropped_successfully = True; break
 
@@ -272,7 +280,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                             item_ref = game.dragged_item
                                             # Convert "Campfire on" to "Campfire off" when looting
                                             if item_ref.name == "Campfire on":
-                                                from core.entities.item.item import Item
                                                 new_item = Item.create_from_name("Campfire off")
                                                 if new_item:
                                                     new_item.durability = item_ref.durability
@@ -310,7 +317,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         target_index = i
                                         break
                                 
-                                if target_index != -1 and game.dragged_item.liquid:
+                                if target_index != -1 and getattr(game.dragged_item, 'liquid', False):
                                     print(f"The {game.dragged_item.name} spills and is lost (pockets cannot hold liquid).")
                                     dropped_successfully = True
                                 
@@ -366,7 +373,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 
                                 elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                                     
-                                    if game.dragged_item.liquid:
+                                    if getattr(game.dragged_item, 'liquid', False):
                                         print(f"The {game.dragged_item.name} spills and is lost.")
                                         dropped_successfully = True
                                     else:
@@ -427,7 +434,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                         item_ref = game.dragged_item
                                         # Convert "Campfire on" to "Campfire off" when looting
                                         if item_ref.name == "Campfire on":
-                                            from core.entities.item.item import Item
                                             new_item = Item.create_from_name("Campfire off")
                                             if new_item:
                                                 new_item.durability = item_ref.durability
@@ -489,7 +495,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         print(f"This {container.name} only accepts liquids.")
                                         dropped_successfully = False 
                                         break
-                                elif game.dragged_item.liquid:
+                                elif getattr(game.dragged_item, 'liquid', False):
                                     print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
                                     dropped_successfully = True # Destroy
                                     break
@@ -618,7 +624,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             
                                         if item_slot == slot_name:
                                             
-                                            if dragged_item.liquid:
+                                            if getattr(dragged_item, 'liquid', False):
                                                 print(f"The {dragged_item.name} spills and is lost.")
                                                 dropped_successfully = True; break
 
@@ -632,7 +638,6 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 item_ref = dragged_item
                                                 # Convert "Campfire on" to "Campfire off" when looting
                                                 if item_ref.name == "Campfire on":
-                                                    from core.entities.item.item import Item
                                                     new_item = Item.create_from_name("Campfire off")
                                                     if new_item:
                                                         new_item.durability = item_ref.durability
@@ -654,6 +659,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     game.player.inventory.insert(i_orig, item_in_slot)
                                                 elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
                                                     game.player.belt[i_orig] = item_in_slot
+                                                    item_in_slot.in_belt = True
                                                 elif type_orig == 'backpack':
                                                     game.player.backpack = item_in_slot
                                                 
@@ -778,7 +784,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 print(f"This {container.name} only accepts liquids.")
                                 dropped_successfully = False 
                                 break
-                        elif game.dragged_item.liquid:
+                        elif getattr(game.dragged_item, 'liquid', False):
                             print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
                             dropped_successfully = True 
                             break
@@ -941,7 +947,7 @@ def handle_mouse_up(game, event, mouse_pos):
                     if game_world_rect.collidepoint(mouse_pos) and not is_over_modal:
                         
                         is_safe_ground = False
-                        if game.dragged_item.liquid:
+                        if getattr(game.dragged_item, 'liquid', False):
                             grid_x = int(mouse_pos[0] // TILE_SIZE)
                             grid_y = int(mouse_pos[1] // TILE_SIZE)
                             tile_def = game.map_manager.get_tile_at(grid_x, grid_y)
@@ -952,7 +958,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 print(f"The {game.dragged_item.name} spills on the ground.")
                                 dropped_successfully = True 
                         
-                        if (not game.dragged_item.liquid) or is_safe_ground:
+                        if (not getattr(game.dragged_item, 'liquid', False)) or is_safe_ground:
                             offset_x = random.randint(-8, 8)
                             offset_y = random.randint(-8, 8)
                             
@@ -972,6 +978,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             game.player.inventory.insert(i_orig, game.dragged_item)
                         elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
                             game.player.belt[i_orig] = game.dragged_item
+                            game.dragged_item.in_belt = True
                         elif type_orig == 'backpack':
                             game.player.backpack = game.dragged_item
                         
@@ -1207,6 +1214,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                     if game.player.active_weapon == game.player.belt[i_orig]:
                         game.player.active_weapon = None
                     game.player.belt[i_orig] = None
+                    game.dragged_item.in_belt = False
                 elif type_orig == 'backpack':
                     game.player.backpack = None
                 
@@ -1224,7 +1232,6 @@ def handle_mouse_motion(game, event, mouse_pos):
                             game.items_on_ground.remove(item_to_drag)
                         # Convert "Campfire on" to "Campfire off" when dragging from ground
                         if item_to_drag.name == "Campfire on":
-                            from core.entities.item.item import Item
                             new_item = Item.create_from_name("Campfire off")
                             if new_item:
                                 new_item.durability = item_to_drag.durability

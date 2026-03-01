@@ -1,4 +1,4 @@
-<item name="556 Ammo" type="consumable_ammo">
+<item name="556 Ammo" type="consumable_ammo" allow_belt="false">
     <properties>
         <status value="ammo" />
         <weight weight="0.02"/>

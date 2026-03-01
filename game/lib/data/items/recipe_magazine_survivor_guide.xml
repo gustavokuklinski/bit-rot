@@ -1,4 +1,4 @@
-<item name="Survivor Guide Basic" type="recipe">
+<item name="Survivor Guide Basic" type="recipe" allow_belt="false">
     <properties>
         <load min="1" max="1" />
         <weight weight="0.01"/>

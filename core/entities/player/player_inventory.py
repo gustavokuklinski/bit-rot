@@ -1,3 +1,4 @@
+# core/entities/player/player_inventory.py
 import random
 from core.entities.item.item import Item
 from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
@@ -126,7 +127,11 @@ class PlayerInventory:
         for i, slot in enumerate(self.belt):
             if slot is None:
                 self.belt[i] = item
-                source_inventory.pop(item_index)
+                item.in_belt = True
+                if source_type == 'belt':
+                    source_inventory[item_index] = None
+                else:
+                    source_inventory.pop(item_index)
                 display_message_player(f"Equipped {item.name} to belt.")
                 return True
         return False
@@ -209,7 +214,11 @@ class PlayerInventory:
             if item.load <= 0:
                 if source == 'backpack': self.backpack = None
                 elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                    source_inventory.pop(index)
+                    if source == 'belt':
+                        self.belt[index] = None
+                        item.in_belt = False
+                    else:
+                        source_inventory.pop(index)
                     if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                         game.items_on_ground.remove(item)
                 dest_name = targets[0]['name'] if targets else "Inventory"
@@ -231,7 +240,11 @@ class PlayerInventory:
                         
                         if source == 'backpack': self.backpack = None
                         elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                            source_inventory.pop(index)
+                            if source == 'belt':
+                                self.belt[index] = None
+                                item.in_belt = False
+                            else:
+                                source_inventory.pop(index)
                             if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
 
@@ -271,6 +284,7 @@ class PlayerInventory:
         elif source == 'belt' and index < len(self.belt):
             item_to_drop = self.belt[index]
             self.belt[index] = None
+            if item_to_drop: item_to_drop.in_belt = False
             if self.active_weapon == item_to_drop: self.active_weapon = None
         elif source == 'backpack':
             item_to_drop = self.backpack

@@ -1,72 +1,67 @@
 import random
+import secrets
+import pygame
 import core.data.config
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 
+# Valid global colors for randomizing clothes
+CLOTHING_COLORS = [
+    (255, 255, 255), # White
+    (50, 50, 50),    # Black
+    (220, 50, 50),   # Red
+    (50, 200, 50),   # Green
+    (50, 50, 220),   # Blue
+    (220, 220, 50),  # Yellow
+    (255, 105, 180), # Pink
+    (255, 165, 0),   # Orange
+    (139, 69, 19),   # Brown
+    (128, 128, 128)  # Gray
+]
+
+COLORABLE_ITEMS = ["Jacket", "Tshirt", "TShirt", "Sneakers", "Pants"]
+
 def generate_random_item(cls):
+    """Picks a random item template and generates it based on its spawn_chance."""
     if not ITEM_TEMPLATES:
         load_item_templates_data()
-    spawnable = {n:d for n,d in ITEM_TEMPLATES.items() if 'spawn_chance' in d}
+        
+    spawnable = {n:d for n,d in ITEM_TEMPLATES.items() if 'spawn' in d and 'chance' in d['spawn']}
     if not spawnable:
         return None
+        
     names = list(spawnable.keys())
-
-    chances = []
-    for d in spawnable.values():
-        base_chance = d['spawn_chance']
-        multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
+    chances = [float(d['spawn']['chance']) for d in spawnable.values()]
+    
+    total_chance = sum(chances)
+    if total_chance == 0:
+        return None
         
-        t_type = d.get('type')
-        
-        if t_type == 'weapon_melee':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
-        elif t_type == 'weapon_ranged':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
-        elif t_type == 'mobile':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
-        elif t_type == 'container':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
-        elif t_type == 'backpack':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
-        elif t_type == 'currency':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
-        elif t_type == 'text':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
-        elif t_type == 'map':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
-        elif t_type == 'resource':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
-        elif t_type == 'recipe':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-        elif t_type == 'utility':
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY
-        
-        elif t_type and t_type.startswith('consumable'):
-            multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
-            
-            if t_type == 'consumable_food':
-                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
-            elif t_type == 'consumable_drink':
-                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
-            elif t_type == 'consumable_medication':
-                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
-            elif t_type == 'consumable_drugs':
-                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS
-            elif t_type == 'consumable_ammo':
-                multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
-        
-        chances.append(base_chance * multiplier)
+    normalized_chances = [c / total_chance for c in chances]
+    
+    chosen_name = random.choices(names, weights=normalized_chances, k=1)[0]
+    return create_item_from_name(cls, chosen_name, randomize_durability=True)
 
-
-    chosen_name = random.choices(names, weights=chances, k=1)[0]
-    return cls.create_from_name(chosen_name, randomize_durability=True)
-
-def create_item_from_name(cls, item_name, randomize_durability=False):
+# NEW: Added force_color parameter
+def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
-    if item_name not in ITEM_TEMPLATES:
+        
+    template_name = item_name
+    if item_name.startswith("ID: "):
+        if "ID" in ITEM_TEMPLATES:
+            template_name = "ID"
+        elif "ID Card" in ITEM_TEMPLATES:
+            template_name = "ID Card"
+
+    if template_name not in ITEM_TEMPLATES:
+        if item_name.startswith("ID: "):
+            item = cls(item_name, item_type='text', weight=0.001)
+            item.text = item_name
+            return item
         print(f"Error: No template for '{item_name}'")
         return None
-    template = ITEM_TEMPLATES[item_name]
+
+    template = ITEM_TEMPLATES[template_name]
 
     if template['type'] in ['weapon_melee', 'weapon_ranged', 'utility', 'cloth']:
         randomize_durability = True
@@ -105,7 +100,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False):
             durability = random.uniform(min_dur, max_dur)
         else:
             durability = max_dur
-
 
     load = None
     if 'load' in props:
@@ -187,32 +181,42 @@ def create_item_from_name(cls, item_name, randomize_durability=False):
     
     liquid = template.get('liquid', False)
     allow_liquid = template.get('allow_liquid', False)
+    
+    allow_belt = template.get('allow_belt', False)
 
     require = get_prop_val(props, 'require', 'type', None)
     if require and require.startswith('[') and require.endswith(']'):
         require = [t.strip() for t in require[1:-1].split(',')]
     
-    # Weight & Reduction
     weight = float(get_prop_val(props, 'weight', 'weight', '0.0'))
     reduction_str = get_prop_val(props, 'weight', 'reduction', '0%').replace('%', '')
     weight_reduction = float(reduction_str) / 100.0
 
-    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction)
+    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction, allow_belt=allow_belt)
+
+    if item_name in COLORABLE_ITEMS:
+        # NEW: Respect forced colors (e.g. from Player Builder or Saved Games)
+        if force_color is not None:
+            new_item.color = force_color
+        else:
+            new_item.color = secrets.choice(CLOTHING_COLORS)
+        
+        if hasattr(new_item, 'image') and new_item.image and new_item.color != (255, 255, 255):
+            tinted = new_item.image.copy()
+            tinted.fill((*new_item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+            new_item.image = tinted
 
     if 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
             if random.random() < loot_info['chance']:
                 loot_item = cls.create_from_name(loot_info['name'])
                 if loot_item:
-                    # Check 1: Slot Capacity (Standard check)
                     fits = True
                     max_cap = new_item.capacity or 0
                     
                     if len(new_item.inventory) >= max_cap:
                         fits = False
                     
-                    # Check 2: Weight Capacity (For containers/backpacks)
-                    # We treat 'capacity' as the Max Weight limit as well.
                     if fits and new_item.item_type in ['container', 'backpack']:
                          current_weight = sum(i.get_total_weight() for i in new_item.inventory)
                          item_weight = loot_item.get_total_weight()

@@ -1,9 +1,9 @@
-<cloth name="Green Sneakers" type="cloth" id="feet" builder="true">
+<cloth name="Sneakers" type="cloth" id="feet" builder="true">
     <properties>
         <defence value="0.01" />
         <speed value="0" />
         <durability min="1" max="100" />
-        <sprite file="foot_green_sneakers.png" />
+        <sprite file="foot_sneakers.png" />
         <weight weight="0.1" />
     </properties>
     <spawn chance="1" />

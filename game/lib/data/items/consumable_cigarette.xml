@@ -1,4 +1,4 @@
-<item name="Cigarette" type="consumable">
+<item name="Cigarette" type="consumable" allow_belt="false">
     <properties>
         <restore status="[tireness]" min="5" max="10" />
         <reduce status="[anxiety]" min="5" max="20" />

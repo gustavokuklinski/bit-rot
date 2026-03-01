@@ -1,4 +1,4 @@
-<item name="MAC10" type="weapon_ranged">
+<item name="MAC10" type="weapon_ranged" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <load min="10" max="35" />

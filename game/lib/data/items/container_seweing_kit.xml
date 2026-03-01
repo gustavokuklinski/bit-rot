@@ -1,4 +1,4 @@
-<item name="Sewing Kit" type="container">
+<item name="Sewing Kit" type="container" allow_belt="false">
     <properties>
         <capacity value="5" />
         <sprite file="container_seweing_kit.png" />

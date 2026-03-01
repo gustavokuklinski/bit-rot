@@ -1,4 +1,4 @@
-<cloth name="Medical Mask" type="cloth" id="head" builder="true">
+<cloth name="Medical Mask" type="cloth" id="head" builder="true" builder="false">
     <properties>
         <defence value="0.0" />
         <durability min="1" max="100" />

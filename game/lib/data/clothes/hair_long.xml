@@ -1,4 +1,4 @@
-<cloth name="Long Hair" type="cloth" id="hair" builder="true">
+<cloth name="Long" type="cloth" id="hair" builder="true">
     <properties>
         <defence value="0" />
         <sprite file="hair_long.png" />

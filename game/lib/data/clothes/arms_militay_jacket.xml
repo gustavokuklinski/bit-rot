@@ -1,4 +1,4 @@
-<cloth name="Military Jacket" type="cloth" id="arms">
+<cloth name="Military Jacket" type="cloth" id="arms" builder="false">
     <properties>
         <defence value="0.7" />
         <capacity value="5" />

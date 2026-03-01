@@ -93,12 +93,35 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
+        self.clothes = {slot: None for slot in self.clothes_slots}
+        
+        chosen_clothes_dict = data.get('clothes', {})
+        clothes_colors_dict = data.get('clothes_colors', {}) # Fetch colors from setup data
+        
         for slot, item_data in chosen_clothes_dict.items():
             if item_data and item_data != "None" and slot in self.clothes_slots:
                 if isinstance(item_data, dict):
+                    # It's loading from a save file, from_dict handles the color now!
                     self.clothes[slot] = Item.from_dict(item_data)
                 else:
-                    self.clothes[slot] = Item.create_from_name(item_data)
+                    # It's a fresh spawn from Player Builder
+                    setup_color = clothes_colors_dict.get(slot, (255, 255, 255))
+                    self.clothes[slot] = Item.create_from_name(item_data, force_color=setup_color)
+                    
+                # Apply the specific color to the player's instantiated item
+                if self.clothes[slot]:
+                    # Determine color: prioritize the loaded item's color, fallback to setup data
+                    assigned_color = getattr(self.clothes[slot], 'color', None)
+                    if not assigned_color or assigned_color == (255,255,255):
+                         assigned_color = clothes_colors_dict.get(slot, (255, 255, 255))
+                         
+                    self.clothes[slot].color = assigned_color
+                    
+                    # Pre-tint the item's ground/inventory image right now!
+                    if self.clothes[slot].image and assigned_color != (255, 255, 255):
+                        tinted = self.clothes[slot].image.copy()
+                        tinted.fill((*assigned_color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                        self.clothes[slot].image = tinted
 
         self.melee_swing_timer = 0
         self.gun_flash_timer = 0

@@ -1,11 +1,11 @@
-<item name="Duck Tape" type="consumable_repair">
+<item name="Duck Tape" type="resource" allow_belt="false">
     <properties>
         <status value="durability" />
         <load value="1" />
         <restore min="1" max="35" />
         <weight weight="0.1"/>
         <capacity value="60" />
-        <sprite file="consumable_repair_ducktape.png" />
+        <sprite file="resource_ducktape.png" />
     </properties>
     <spawn chance="1" />
 </item>

@@ -24,7 +24,7 @@ from core.ui.mobile_modal import draw_mobile_modal
 from core.ui.alerts import draw_player_alerts
 from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
-from core.ui.map_tab import draw_big_map_modal
+from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.systems.utils import get_player_facing_tile
 

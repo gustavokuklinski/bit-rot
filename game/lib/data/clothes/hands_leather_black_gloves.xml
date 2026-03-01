@@ -1,4 +1,4 @@
-<cloth name="Leather Black Gloves" type="cloth" id="hands">
+<cloth name="Leather Black Gloves" type="cloth" id="hands" builder="false">
     <properties>
         <defence value="1" />
         <durability min="1" max="100" />

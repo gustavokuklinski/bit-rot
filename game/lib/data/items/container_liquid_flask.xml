@@ -1,4 +1,4 @@
-<item name="Flask" type="container" allow_liquid="true">
+<item name="Flask" type="container" allow_liquid="true" allow_belt="true">
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_flask.png" />

@@ -1,4 +1,4 @@
-<item name="Large Backpack" type="backpack">
+<item name="Large Backpack" type="backpack" allow_belt="false">
     <properties>
         <capacity value="20" />
         <weight weight="1.5" reduction="80%" />

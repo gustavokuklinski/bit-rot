@@ -1,4 +1,4 @@
-<item name="Lantern off" type="utility" state="off">
+<item name="Lantern off" type="utility" state="off" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <weight weight="1.0"/>

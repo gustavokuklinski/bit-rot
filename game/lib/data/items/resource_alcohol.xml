@@ -1,4 +1,4 @@
-<item name="Alcohol Bottle" type="resource">
+<item name="Alcohol Bottle" type="resource" allow_belt="false">
     <properties>
         <load min="1" max="20" />
         <weight weight="1.0"/>

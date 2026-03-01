@@ -91,6 +91,9 @@ def draw_tooltip(surface, item, pos):
     elif hasattr(item, 'weight'):
         # Fallback if get_total_weight doesn't exist for some reason
         lines.append(f"Weight: {item.weight:.2f}")
+    
+    elif hasattr(item, 'allow_belt'):
+        lines.append(f"Allow belt: {item.allow_belt}")
 
     if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
         lines.append(f"Reduction: {int(item.weight_reduction * 100)}%")

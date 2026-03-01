@@ -1,4 +1,4 @@
-<item name="Vehicle Engineering Vol.1" type="recipe">
+<item name="Vehicle Engineering Vol.1" type="recipe" allow_belt="false">
     <properties>
         <load min="1" max="1" />
         <weight weight="0.01"/>

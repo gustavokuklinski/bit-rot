@@ -7,26 +7,14 @@
         <item item="Balaclava" chance="0.2" />
         <item item="Beret" chance="0.2" />
         <item item="Black Hat" chance="0.2" />
-        <item item="Black Tshirt" chance="0.2" />
-        <item item="Blue Sneakers" chance="0.2" />
-        <item item="Blue Tshirt" chance="0.2" />
-        <item item="Green Sneakers" chance="0.2" />
-        <item item="Grey Sneakers" chance="0.2" />
-        <item item="Grey Tshirt" chance="0.2" />
+        <item item="Tshirt" chance="0.2" />
+        <item item="Sneakers" chance="0.2" />
+        <item item="Jacket" chance="0.2" />
         <item item="Jeans Pants" chance="0.2" />
         <item item="Jeans Short" chance="0.2" />
         <item item="Leather Black Gloves" chance="0.2" />
         <item item="Leather Black Jacket" chance="0.2" />
         <item item="Leather Black Pants" chance="0.2" />
-        <item item="Leather Black Pants" chance="0.2" />
-        <item item="Pink Sneakers" chance="0.2" />
-        <item item="Pink Tshirt" chance="0.2" />
-        <item item="Red Sneakers" chance="0.2" />
-        <item item="Red Tshirt" chance="0.2" />
-        <item item="Yellow Jacket" chance="0.2" />
-        <item item="Yellow Pants" chance="0.2" />
-        <item item="Yellow Sneakers" chance="0.2" />
-        <item item="Yellow Tshirt" chance="0.2" />
         <item item="38 Revolver" chance="0.1" />
         <item item="38 Ammo" chance="0.1" />
         <item item="Powerbank" chance="0.3" />

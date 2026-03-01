@@ -1,4 +1,4 @@
-<item name="Shotgun" type="weapon_ranged">
+<item name="Shotgun" type="weapon_ranged" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <load min="2" max="8" />

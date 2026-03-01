@@ -19,5 +19,6 @@
         <item item="Survivor Guide Basic" chance="0.2" />
         <item item="Vehicle Engineering Vol.1" chance="0.2" />
         <item item="Vehicle Engineering Vol.2" chance="0.2" />
+        <item item="Vehicle Engineering Vol.3" chance="0.2" />
     </loot>
 </map>

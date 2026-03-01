@@ -36,10 +36,8 @@ class PlayerGraphics:
         Scans nearby tiles for stairs and highlights them in orange.
         Called from core/draw.py.
         """
-        # Define the radius for detection (1 tile around the player)
         radius = 1 
         
-        # Get player's grid position
         p_grid_x = int(self.rect.centerx // TILE_SIZE)
         p_grid_y = int(self.rect.centery // TILE_SIZE)
 
@@ -48,18 +46,13 @@ class PlayerGraphics:
                 tx = p_grid_x + dx
                 ty = p_grid_y + dy
 
-                # Retrieve the tile definition from the map manager
                 tile_def = game.map_manager.get_tile_at(tx, ty)
 
                 if tile_def and tile_def.get('is_stair'):
-                    # Calculate screen position
                     screen_x = tx * TILE_SIZE + offset_x
                     screen_y = ty * TILE_SIZE + offset_y
 
-                    # Create the highlight rect
                     highlight_rect = pygame.Rect(screen_x, screen_y, TILE_SIZE, TILE_SIZE)
-
-                    # Draw the orange highlight
                     pygame.draw.rect(surface, ORANGE, highlight_rect, 2)
 
     def draw(self, surface, offset_x, offset_y, is_aiming=False):
@@ -109,12 +102,23 @@ class PlayerGraphics:
         for slot in self.clothes_slots: 
             item = self.clothes.get(slot)
             if item and item.image:
+                img_to_draw = item.image
+                
+                # --- NEW: Dynamically Tint Rendered Clothing Surface ---
+                if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
+                    # Keep a cached tinted surface so we don't recalculate it every frame
+                    if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:
+                        item.tinted_image = item.image.copy()
+                        item.tinted_image.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                        item.last_color = item.color
+                    img_to_draw = item.tinted_image
+
                 if self.walk_anim_angle != 0:
-                    rotated_cloth = pygame.transform.rotate(item.image, self.walk_anim_angle)
+                    rotated_cloth = pygame.transform.rotate(img_to_draw, self.walk_anim_angle)
                     rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
                     surface.blit(rotated_cloth, rot_cloth_rect)
                 else:
-                    surface.blit(item.image, draw_rect)
+                    surface.blit(img_to_draw, draw_rect)
 
         if self.active_weapon and self.active_weapon.image:
             is_swinging = (self.melee_swing_timer > 0)

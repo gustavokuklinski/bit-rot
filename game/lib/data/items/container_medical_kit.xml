@@ -1,4 +1,4 @@
-<item name="Medical Kit" type="container">
+<item name="Medical Kit" type="container" allow_belt="false">
     <properties>
         <capacity value="5" />
         <sprite file="container_medical_kit.png" />

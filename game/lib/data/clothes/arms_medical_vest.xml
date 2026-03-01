@@ -1,4 +1,4 @@
-<cloth name="Medical Vest" type="cloth" id="arms" builder="true">
+<cloth name="Medical Vest" type="cloth" id="arms" builder="false">
     <properties>
         <defence value="0.01" />
         <capacity value="2" />

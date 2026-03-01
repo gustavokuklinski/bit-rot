@@ -1,4 +1,4 @@
-<item name="Car Engine" type="car_motor">
+<item name="Car Engine" type="car_motor" allow_belt="false">
     <properties>
         <status value="motor" />
         <durability min="1" max="100" />

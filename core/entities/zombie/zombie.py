@@ -16,54 +16,54 @@ from core.entities.zombie.zombie_combat import ZombieCombat
 
 fake = Faker()
 
-# 1. Inherit from pygame.sprite.Sprite and Mixins
+CLOTHING_COLORS = [
+    (255, 255, 255), (50, 50, 50), (220, 50, 50), (50, 200, 50), 
+    (50, 50, 220), (220, 220, 50), (255, 105, 180), (255, 165, 0), 
+    (139, 69, 19), (128, 128, 128)
+]
+
 class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.Sprite):
     def __init__(self, x, y, template):
-        # 2. Initialize the parent Sprite class
         super().__init__()
         
         self.x = x
         self.y = y
         self.id = str(uuid.uuid4())
 
-        # 1. Generate Sex (must be first, as Name depends on it)
-        sex_val = template.get('sex', 'Male') # Get value from XML
+        sex_val = template.get('sex', 'Male')
         if sex_val.upper() == 'RANDOM':
             self.sex = random.choice(['Male', 'Female'])
         else:
             self.sex = sex_val
 
-        # 2. Generate Name
-        name_val = template.get('name', 'Zombie') # Get value from XML
+        name_val = template.get('name', 'Zombie')
         if name_val.upper() == 'RANDOM':
-            # Use Faker to get a name matching the generated sex
             if self.sex == 'Male':
                 self.name = fake.name_male()
             else:
                 self.name = fake.name_female()
         else:
-            self.name = name_val # Use the hard-coded name (e.g., "John Doe")
-
-        
-
+            self.name = name_val 
 
         self.max_health = template.get('health')
         self.health = self.max_health
         self.speed = template.get('speed', core.data.config.ZOMBIE_SPEED)
+        
+        # --- FIX: Prevent default XML loot tables from dropping duplicate white clothes ---
         self.loot_table = template.get('loot', [])
+        self.loot_table = [loot for loot in self.loot_table if loot.get('item') not in ["Pants", "Jacket", "Tshirt", "TShirt", "Sneakers"]]
+
         self.xp_value = random.uniform(template.get('min_xp'), template.get('max_xp'))
 
-        self.images = {} # Use a dict to store multiple sprites
-        self.sprites_data = template.get('sprites', {}) # e.g., {'center': 'zombie.png', ...}
+        self.images = {} 
+        self.sprites_data = template.get('sprites', {}) 
         
         if self.sprites_data:
-            # Load all sprites defined in the new XML structure
             for sprite_id, sprite_file in self.sprites_data.items():
                 img = self.load_sprite(sprite_file)
                 if img:
                     self.images[sprite_id] = img
         else:
-            # Fallback for old templates that might still use the single 'sprite' key
             old_sprite_file = template.get('sprite')
             if old_sprite_file:
                 self.sprites_data = {'center': old_sprite_file, 'left': old_sprite_file, 'right': old_sprite_file}
@@ -73,9 +73,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 self.images['left'] = fallback_image
                 self.images['right'] = fallback_image
 
-        # Set a default image (self.image is no longer the main one, but good to have)
         self.image = self.images.get('center')
-        # [NEW] Create collision mask from the zombie's image
         if self.image:
             self.mask = pygame.mask.from_surface(self.image)
         else:
@@ -97,13 +95,12 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.walk_anim_angle = 0
 
         self.last_hit_sound_time = 0
-        self.hit_sound_cooldown = 300 # 300ms cooldown for hit sound
+        self.hit_sound_cooldown = 300 
         self.last_wander_sound_time = 0
-        self.wander_sound_cooldown = random.randint(4000, 12000) # 4-12 sec
+        self.wander_sound_cooldown = random.randint(4000, 12000)
 
-        self.is_ambiently_noisy = random.random() < 0.4 # 60% of zombies noisy
+        self.is_ambiently_noisy = random.random() < 0.4 
 
-        # Load sound filenames from template
         sounds = template.get('sounds', {})
         self.sound_hit = sounds.get('hit', None)
         self.sound_wander = sounds.get('wander', None)
@@ -112,64 +109,47 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.sound_steps = sounds.get('steps', None)
         self.last_step_sound_time = 0
 
-        self.vx = 0 # Track velocity for drawing
-        self.vy = 0 # Track velocity for drawing
+        self.vx = 0 
+        self.vy = 0 
 
-        self.state = 'wandering'  # Can be 'wandering' or 'chasing'
+        self.state = 'wandering' 
         self.is_dead = False
-        self.wander_target = None # (x, y) coordinate
-        self.last_wander_change = 0 # Timestamp for changing wander direction
+        self.wander_target = None 
+        self.last_wander_change = 0 
 
-        # [NEW] Pathfinding stuck logic
         self.stuck_timer = 0
         self.stuck_angle = 0
 
-        # [NEW] Knockback variables
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
 
-        # [NEW] Aggro timer - keeps zombie chasing after being damaged
         self.aggro_timer = 0
 
-        # [OPTIMIZATION] Cache for line of sight and chase triggers
         self.last_los_check_time = 0
-        self.los_check_interval = 2000  # Check LOS every 2000ms (reduced frequency)
+        self.los_check_interval = 2000  
         self.cached_los_result = True
         self.last_trigger_check_time = 0
-        self.trigger_check_interval = 1000  # Check triggers every 1000ms (reduced frequency)
+        self.trigger_check_interval = 1000  
         self.cached_trigger_result = False
 
         self.inventory = []
         try:
-            # Attempt to create the ID item (assumes an item with name="ID" exists in XML)
-            id_item = Item.create_from_name("ID")
+            id_name = f"ID: {self.name}"
+            id_item = Item.create_from_name(id_name)
             if id_item:
-                # Customize the ID card
-                id_item.name = f"ID: {self.name}"
-                
-                # Build the description text
                 info_text = f"Name: {self.name}\nSex: {self.sex}\n"
-                
                 id_item.text = info_text
-                
-                # Add to zombie's direct inventory
                 self.inventory.append(id_item)
         except Exception as e:
             print(f"Warning: Could not generate ID for zombie: {e}")
 
     def update(self, game):
-        """
-        Update logic for Zombie. Handles knockback if active, otherwise delegates
-        to the standard ZombieAI update loop via super().
-        """
-        # --- KNOCKBACK HANDLING ---
         if self.knockback_timer > 0:
             obstacles = game.obstacles
             multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
 
             kb_x, kb_y = self.knockback_velocity
 
-            # Move X with collision
             self.x += kb_x
             self.rect.x = int(self.x)
             for obstacle in obstacles:
@@ -178,7 +158,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                     self.rect.x = int(self.x)
                     break
 
-            # Move Y with collision
             self.y += kb_y
             self.rect.y = int(self.y)
             for obstacle in obstacles:
@@ -187,7 +166,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                     self.rect.y = int(self.y)
                     break
 
-            # Decay
             dt = game.dt_ms * multiplier
             self.knockback_timer -= dt
 
@@ -196,14 +174,11 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             self.knockback_velocity[1] *= decay_factor
             return
 
-        # If not knocked back, perform standard AI/Update
         super().update(game)
 
     @staticmethod
     def create_random(x, y):
-        """Creates a zombie instance from a random template."""
         if not ZombieData.ZOMBIE_TEMPLATES:
-            # Fallback if loading failed or no templates exist
             print("Error: No zombie templates loaded. Creating default zombie.")
             default_template = {
                 'name':'Jogn Doe',
@@ -222,64 +197,61 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
 
         template = random.choice(ZombieData.ZOMBIE_TEMPLATES)
         zombie = Zombie(x, y, template)
-        zombie.loot_table = list(template.get('loot', []))
+        
+        # FIX: Filter standard loot table assignment to prevent white clothes duplicates
+        base_loot = list(template.get('loot', []))
+        
+        zombie.loot_table = [loot for loot in base_loot if loot.get('item') not in ["Pants", "Jacket", "Tshirt", "TShirt", "Sneakers", "Bald", "Mowalk", "Cut", "Crew", "Long"]]
 
-        num_random_items = random.randint(0, 2) # Add 0, 1, or 2 extra items
-        if ZombieData.ALL_ITEM_TEMPLATES: # Make sure the list isn't empty
+        num_random_items = random.randint(0, 2)
+        if ZombieData.ALL_ITEM_TEMPLATES: 
             for _ in range(num_random_items):
                 item_name = random.choice(ZombieData.ALL_ITEM_TEMPLATES)
-                # Add to the zombie's loot table with a random chance
-                zombie.loot_table.append({
-                    'item': item_name,
-                    'chance': random.uniform(25.0, 75.0) # e.g., 25% to 75% chance
-                })
-
-
-        # Randomly assign clothes and calculate defense bonus
-        total_defense = 0
-        zombie.clothes = {} # Start with an empty clothes dict for this instance
-
-        # Check if the template has the 'clothes_slots' list (from <head></head>, etc.)
-        if 'clothes_slots' in template:
-            
-            # Iterate through each slot defined in the XML (e.g., 'head', 'torso', ...)
-            for slot_name in template['clothes_slots']:
-                
-                # Find the list of available clothes for this specific slot
-                # e.g., ZOMBIE_CLOTHES_POOL['head']
-                available_clothes_for_slot = ZombieData.ZOMBIE_CLOTHES_POOL.get(slot_name)
-                
-                # Check if we have any clothes for that slot
-                if available_clothes_for_slot:
-                    # Pick one random piece of clothing from the list
-                    chosen_clothe = random.choice(available_clothes_for_slot)
-                    
-                    # Assign it to the zombie instance
-                    zombie.clothes[slot_name] = chosen_clothe
-                    
-                    # Add its defense value
-                    total_defense += chosen_clothe.get('defence', 0)
-            
-        for slot_name, clothe_dict in zombie.clothes.items():
-            if clothe_dict:
-                item_name = clothe_dict.get('name')
-                if item_name and not item_name.startswith("Empty"):
-                    # Add the *specific* item this zombie is wearing to loot
+                # Don't add default clothes randomly either
+                if item_name not in ["Pants", "Tshirt", "TShirt", "Jacket", "Sneakers"]:
                     zombie.loot_table.append({
                         'item': item_name,
-                        'chance': 100.0 # Always drops the clothes it's wearing
+                        'chance': random.uniform(25.0, 75.0) 
                     })
+
+        zombie.clothes = {} 
+        total_defense = 0
+
+        # Enforce predefined clothes on Zombies and Pre-Tint them randomly
+        hair_options = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
+        selected_hair = random.choice(hair_options)
         
-        # Apply defense multiplier to health
+        # Order: Feet -> Legs -> Body -> Arms (Jacket on top) -> Hair
+        default_clothes = ["Sneakers", "Pants", "Tshirt", "Jacket", selected_hair]
+        
+        for cloth_name in default_clothes:
+            item = Item.create_from_name(cloth_name)
+            if item:
+                item.color = random.choice(CLOTHING_COLORS)
+                if item.image:
+                    tinted = item.image.copy()
+                    tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                    item.image = tinted
+                
+                slot = getattr(item, 'slot', None)
+                if not slot:
+                    if cloth_name == "Pants": slot = "legs"
+                    elif cloth_name == "Jacket": slot = "arms"
+                    elif cloth_name == "Tshirt": slot = "body"
+                    elif cloth_name == "Sneakers": slot = "feet"
+                    elif cloth_name in hair_options: slot = "hair"
+                
+                if slot:
+                    zombie.clothes[slot] = item
+                    total_defense += getattr(item, 'defence', 0)
+                    # --- FIX: Removed redundant zombie.loot_table.append(...) here ---
+        
         defense_multiplier = 1 + (total_defense / 100.0)
         zombie.max_health = random.randint(template['min_health'], template['max_health']) * defense_multiplier
         zombie.health = zombie.max_health
-
-        # Set other stats
         zombie.speed = random.uniform(template['min_speed'], template['max_speed'])
 
         return zombie
 
-# Load templates when the module is imported (ensure it only happens once)
 if not ZombieData.ZOMBIE_TEMPLATES:
     ZombieData.load_templates()

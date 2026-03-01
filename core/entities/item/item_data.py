@@ -26,9 +26,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
 
         allow_liquid_str = root.attrib.get('allow_liquid', 'false')
         allow_liquid = (allow_liquid_str.lower() == 'true')
+        
+        allow_belt_str = root.attrib.get('allow_belt', 'false')
+        allow_belt = (allow_belt_str.lower() == 'true')
 
         state = root.attrib.get('state')
-        template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid}
+        template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid, 'allow_belt': allow_belt}
 
         props_node = root.find('properties')
         if props_node is not None:

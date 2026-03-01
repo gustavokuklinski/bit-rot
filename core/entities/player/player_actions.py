@@ -308,8 +308,12 @@ class PlayerActions:
                     display_message_player(f"Learned how to craft: {r.output_name}")
             else:
                  display_message_player(f"You reviewed {item.name}.")
+            
+            # Add the intelligence XP here, right when the action successfully finishes
+            self.progression.add_xp(self, 'intelligence', 10)
 
-        self.start_action(f"Reading {item.name}", 3.0, finish_reading, xp_attr='intelligence')
+        # Call start_action without the xp_attr or xp_reward parameters
+        self.start_action(f"Reading {item.name}", 3.0, finish_reading)
 
     def find_repair_kit(self, target_item):
         if not target_item: return None, None, None, None
@@ -373,13 +377,17 @@ class PlayerActions:
 
         if item.item_type.startswith('consumable'):
             if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
-                options.append('Reload') 
+                pass
             elif item.item_type == 'consumable_medication' or 'Medkit' in item.name or 'Bandage' in item.name:
                 options.append('Use')
                 for part, data in self.body_parts.items():
                     if data['value'] < 100.0: options.append(f"Bandage {part.capitalize()}")
             else: options.append('Use')
-            options.append('Equip')
+            
+            # CHECK ALLOW BELT FOR CONSUMABLES
+            if getattr(item, 'allow_belt', False):
+                options.append('Equip')
+                
         elif item.item_type in ['utility', 'mobile']:
             if item.state == 'on': options.append('Turn off')
             elif item.state == 'off':
@@ -390,7 +398,11 @@ class PlayerActions:
                     options.append('Turn on')
             if item.fuel_type: options.append('Reload')
             if item.item_type == 'mobile': options.append('Open')
-            options.append('Equip')
+            
+            # CHECK ALLOW BELT FOR UTILITIES
+            if getattr(item, 'allow_belt', False):
+                options.append('Equip')
+                
         elif item.item_type == 'backpack':
             options.append('Open')
             if not self.backpack: options.append('Equip')
@@ -400,12 +412,52 @@ class PlayerActions:
             options.append('Equip')
             if item.item_type == 'weapon_ranged': options.append('Reload')
             if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0: options.append('Get bullets')
-        elif item.item_type == 'container': options.append('Open')
+        elif item.item_type == 'container':
+            options.append('Open')
+            if getattr(item, 'allow_belt', False):
+                options.append('Equip')
+                
+        is_liquid = getattr(item, 'liquid', False)
+        
+        if is_liquid:
+            found_names = set()
+            
+            def can_accept_liquid(container):
+                if not container or not getattr(container, 'allow_liquid', False):
+                    return False
+                if len(container.inventory) < (container.capacity or 0):
+                    return True
+                for inv_item in container.inventory:
+                    if hasattr(inv_item, 'can_stack_with') and inv_item.can_stack_with(item):
+                        if getattr(inv_item, 'load', 0) < getattr(inv_item, 'capacity', 1):
+                            return True
+                return False
+
+            for b_item in self.belt:
+                if can_accept_liquid(b_item):
+                    found_names.add(b_item.name)
+            for i_item in self.inventory:
+                if can_accept_liquid(i_item):
+                    found_names.add(i_item.name)
+            if can_accept_liquid(self.backpack):
+                found_names.add(self.backpack.name)
+            for c_item in self.clothes.values():
+                if can_accept_liquid(c_item):
+                    found_names.add(c_item.name)
+            
+            for name in sorted(found_names):
+                options.append(f"Add to {name}")
 
         if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None:
             options.append('Drop one')
             if item.load > 1: options.append('Drop all')
-            if self.backpack and container_item is not self.backpack: options.append('Send all to Backpack')
-            if source != 'inventory': options.append('Send all to Inventory')
+            
+            if self.backpack and container_item is not self.backpack:
+                if not is_liquid or getattr(self.backpack, 'allow_liquid', False):
+                    options.append('Send all to Backpack')
+            
+            if source != 'inventory':
+                if not is_liquid:
+                    options.append('Send all to Inventory')
         else: options.append('Drop')
         return options

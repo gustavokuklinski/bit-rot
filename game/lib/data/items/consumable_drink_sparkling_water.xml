@@ -1,4 +1,4 @@
-<item name="Sparkling Water" type="consumable_drink">
+<item name="Sparkling Water" type="consumable_drink" allow_belt="false">
     <properties>
         <restore status="[water]" min="5" max="25" />
         <restore status="[stamina]" min="3" max="8" />

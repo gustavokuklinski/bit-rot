@@ -1,4 +1,4 @@
-<item name="Mobile off" type="mobile" state="off">
+<item name="Mobile off" type="mobile" state="off" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <weight weight="0.08"/>

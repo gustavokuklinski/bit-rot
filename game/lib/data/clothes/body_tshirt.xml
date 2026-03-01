@@ -1,9 +1,8 @@
-<cloth name="Pink Sneakers" type="cloth" id="feet" builder="true">
+<cloth name="Tshirt" type="cloth" id="body" builder="true">
     <properties>
         <defence value="0.01" />
-        <speed value="0" />
         <durability min="1" max="100" />
-        <sprite file="foot_pink_sneakers.png" />
+        <sprite file="body_tshirt.png" />
         <weight weight="0.1" />
     </properties>
     <spawn chance="1" />

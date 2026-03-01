@@ -1,4 +1,4 @@
-<cloth name="Medical Tshirt" type="cloth" id="body" builder="true">
+<cloth name="Medical Tshirt" type="cloth" id="body" builder="false">
     <properties>
         <defence value="0.01" />
         <durability min="1" max="100" />

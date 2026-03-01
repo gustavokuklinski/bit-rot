@@ -1,4 +1,4 @@
-<item name="Cigarette Pack" type="container" disposable="true">
+<item name="Cigarette Pack" type="container" disposable="true" allow_belt="false">
     <properties>
         <capacity value="1" />
         <sprite file="container_disposable_cigarrete_pack.png" />
