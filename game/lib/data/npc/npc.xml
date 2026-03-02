@@ -1,8 +1,6 @@
 <npc>
     <name value="RANDOM" />
     <sex value="RANDOM" />
-
-    <xp min="1" max="10" />
     
     <stats>
         <health min="100" max="100" />

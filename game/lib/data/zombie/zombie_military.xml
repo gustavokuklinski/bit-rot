@@ -1,4 +1,4 @@
-<zombie type="common">
+<zombie type="military">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
@@ -12,15 +12,15 @@
     </stats>
     
     <clothes>
-        <head></head>
+        <head><cloth name="Beret" /></head>
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet></feet>
-        <hand></hand>
-        <body></body>
-        <arms></arms>
-        <legs></legs>
+        <feet><cloth name="Military Boots" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Military Tshirt" /></body>
+        <arms><cloth name="Military Jacket" /></arms>
+        <legs><cloth name="Military Pants" /></legs>
     </clothes>
 
     <visuals>
@@ -31,6 +31,10 @@
     
     <loot>
         <item item="Zombie Meat" chance="1.0" />
+        <item item="Knife" chance="1.0" />
+        <item item="MPK5" chance="1.0" />
+        <item item="MAC10" chance="1.0" />
+        <item item="Pistol 9mm" chance="1.0" />
     </loot>
 
     <sound>

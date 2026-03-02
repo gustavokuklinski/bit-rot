@@ -1,14 +1,14 @@
-<zombie type="common">
+<zombie type="worker">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
     <xp min="1" max="15" />
     
     <stats>
-        <health min="10" max="100" />
+        <health min="20" max="100" />
         <speed min="1" max="2" />
-        <attack min="1" max="15" />
-        <infection min="1" max="5" />
+        <attack min="5" max="15" />
+        <infection min="2" max="5" />
     </stats>
     
     <clothes>
@@ -16,8 +16,8 @@
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet></feet>
-        <hand></hand>
+        <feet><cloth name="Military Boots" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
         <body></body>
         <arms></arms>
         <legs></legs>
@@ -31,6 +31,9 @@
     
     <loot>
         <item item="Zombie Meat" chance="1.0" />
+        <item item="Screwdriver" chance="1.0" />
+        <item item="Toolkit" chance="1.0" />
+        <item item="38 Revolver" chance="1.0" />
     </loot>
 
     <sound>

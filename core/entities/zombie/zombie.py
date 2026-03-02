@@ -195,7 +195,17 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             }
             return Zombie(x, y, default_template)
 
-        template = random.choice(ZombieData.ZOMBIE_TEMPLATES)
+        type_weights = {
+            'common': 55,
+            'worker': 20,
+            'doctor': 10,
+            'military': 20,
+            'special_force': 5
+        }
+        
+        template_weights = [type_weights.get(t.get('type', 'common'), 10) for t in ZombieData.ZOMBIE_TEMPLATES]
+        template = random.choices(ZombieData.ZOMBIE_TEMPLATES, weights=template_weights, k=1)[0]
+        
         zombie = Zombie(x, y, template)
         
         # FIX: Filter standard loot table assignment to prevent white clothes duplicates
@@ -218,31 +228,53 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         total_defense = 0
 
         # Enforce predefined clothes on Zombies and Pre-Tint them randomly
+        # Enforce predefined clothes on Zombies and Pre-Tint them randomly
         hair_options = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
-        selected_hair = random.choice(hair_options)
+        predefined_clothes = template.get('predefined_clothes', {})
+        selected_hair = predefined_clothes.get('hair', random.choice(hair_options))
         
-        # Order: Feet -> Legs -> Body -> Arms (Jacket on top) -> Hair
-        default_clothes = ["Sneakers", "Pants", "Tshirt", "Jacket", selected_hair]
+        # Base fallback logic combined with XML predefined rules
+        clothes_to_equip = {
+            "feet": predefined_clothes.get("feet", "Sneakers" if random.random() < 0.8 else None), # 80% chance of Sneakers
+            "legs": predefined_clothes.get("legs", "Pants" if random.random() < 0.9 else None),    # 90% chance of Pants
+            "body": predefined_clothes.get("body", "Tshirt" if random.random() < 0.8 else None),   # 80% chance of Tshirt
+            "arms": predefined_clothes.get("arms", "Jacket" if random.random() < 0.2 else None),   # 30% chance of Jacket
+            "hair": selected_hair
+        }
         
-        for cloth_name in default_clothes:
+        # Inject other predefined specific clothing slots (like hand, head, util)
+        for slot_name, cloth_name in predefined_clothes.items():
+            if slot_name not in clothes_to_equip:
+                clothes_to_equip[slot_name] = cloth_name
+        
+        for slot_name, cloth_name in clothes_to_equip.items():
+            if not cloth_name:
+                continue
             item = Item.create_from_name(cloth_name)
             if item:
-                item.color = random.choice(CLOTHING_COLORS)
-                if item.image:
-                    tinted = item.image.copy()
-                    tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                    item.image = tinted
+                # Check if this specific item was explicitly defined in the XML for this slot
+                is_explicitly_defined = (slot_name in predefined_clothes and predefined_clothes[slot_name] == cloth_name)
+
+                # Only apply random tint to fallback/randomized clothing
+                if not is_explicitly_defined:
+                    item.color = random.choice(CLOTHING_COLORS)
+                    if item.image:
+                        tinted = item.image.copy()
+                        tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                        item.image = tinted
                 
-                slot = getattr(item, 'slot', None)
-                if not slot:
-                    if cloth_name == "Pants": slot = "legs"
-                    elif cloth_name == "Jacket": slot = "arms"
-                    elif cloth_name == "Tshirt": slot = "body"
-                    elif cloth_name == "Sneakers": slot = "feet"
-                    elif cloth_name in hair_options: slot = "hair"
+                actual_slot = getattr(item, 'slot', slot_name)
                 
-                if slot:
-                    zombie.clothes[slot] = item
+                # Apply fallback slot overrides just in case item doesn't have it explicitly defined
+                if not getattr(item, 'slot', None):
+                    if cloth_name == "Pants": actual_slot = "legs"
+                    elif cloth_name == "Jacket": actual_slot = "arms"
+                    elif cloth_name == "Tshirt": actual_slot = "body"
+                    elif cloth_name == "Sneakers": actual_slot = "feet"
+                    elif cloth_name in hair_options: actual_slot = "hair"
+
+                if actual_slot not in zombie.clothes:
+                    zombie.clothes[actual_slot] = item
                     total_defense += getattr(item, 'defence', 0)
                     # --- FIX: Removed redundant zombie.loot_table.append(...) here ---
         

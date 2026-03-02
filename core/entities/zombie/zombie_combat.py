@@ -105,7 +105,14 @@ class ZombieCombat:
         # 4. Add Random Loot Table Items
         if self.loot_table:
             for loot_entry in self.loot_table:
-                if random.random() * 100 < float(loot_entry.get('chance', 0)):
+                chance_val = float(loot_entry.get('chance', 0))
+                
+                # Normalize chance: if the code occasionally passes whole numbers (like 50.0 for 50%),
+                # convert it to the 0.0 - 1.0 scale. Since you use 1.0 as 100%, this covers both bases.
+                if chance_val > 1.0:
+                    chance_val /= 100.0
+                    
+                if random.random() <= chance_val:
                     item_name = loot_entry.get('item')
                     new_item = Item.create_from_name(item_name)
                     if new_item:

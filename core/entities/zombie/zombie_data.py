@@ -98,6 +98,7 @@ class ZombieData:
                             root = tree.getroot()
                             if root.tag == 'zombie':
                                 template = {}
+                                template['type'] = root.get('type', 'common').lower()
                                 name_node = root.find('name')
                                 stats_node = root.find('stats')
                                 visuals_node = root.find('visuals')
@@ -143,17 +144,24 @@ class ZombieData:
                                 template['loot'] = []
                                 if loot_node is not None:
                                     for item_node in loot_node.findall('item'):
+                                        # Use .get('item') based on your XML structure, fallback to 'name'
+                                        item_name = item_node.get('item') or item_node.get('name')
                                         template['loot'].append({
-                                            'item': item_node.get('name'),
-                                            'chance': float(item_node.get('chance'))
+                                            'item': item_name,
+                                            'chance': float(item_node.get('chance', 1.0))
                                         })
 
                                 # Instead of loading item lists, just get the tag names
                                 template['clothes_slots'] = []
+                                template['predefined_clothes'] = {}
                                 if clothes_node is not None:
                                     for slot_node in clothes_node:
-                                        # slot_node.tag will be "head", "torso", etc.
                                         template['clothes_slots'].append(slot_node.tag)
+                                        cloth_node = slot_node.find('cloth')
+                                        if cloth_node is not None:
+                                            cloth_name = cloth_node.get('name')
+                                            if cloth_name:
+                                                template['predefined_clothes'][slot_node.tag] = cloth_name
 
 
                                 template['sounds'] = {}

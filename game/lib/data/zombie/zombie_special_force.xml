@@ -1,26 +1,26 @@
-<zombie type="common">
+<zombie type="special_force">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
     <xp min="1" max="15" />
     
     <stats>
-        <health min="10" max="100" />
+        <health min="20" max="100" />
         <speed min="1" max="2" />
-        <attack min="1" max="15" />
-        <infection min="1" max="5" />
+        <attack min="5" max="15" />
+        <infection min="2" max="5" />
     </stats>
     
     <clothes>
-        <head></head>
-        <util></util>
+        <head><cloth name="Balaclava" /></head>
+        <util><cloth name="Military Vest" /></util>
         <hair></hair>
         <facial></facial>
-        <feet></feet>
-        <hand></hand>
-        <body></body>
-        <arms></arms>
-        <legs></legs>
+        <feet><cloth name="Military Boots" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Military Tshirt" /></body>
+        <arms><cloth name="Military Jacket" /></arms>
+        <legs><cloth name="Military Pants" /></legs>
     </clothes>
 
     <visuals>
@@ -31,6 +31,10 @@
     
     <loot>
         <item item="Zombie Meat" chance="1.0" />
+        <item item="M4A1" chance="1.0" />
+        <item item="Large Backpack" chance="1.0" />
+        <item item="Knife" chance="1.0" />
+        <item item="Pistol 9mm" chance="1.0" />
     </loot>
 
     <sound>
