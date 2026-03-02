@@ -60,7 +60,7 @@
         <has_key_chance value="0.2" name="Car Key chance (Default: 0.2)"/>
         <has_motor_chance value="0.2" name="Car Motor chance (Default: 0.2)"/>
         <has_battery_chance value="0.2" name="Car Battery chance (Default: 0.2)"/>
-        <has_tires_chance value="1.0" name="Car Tires chance (Default: 0.8)"/>
+        <has_tires_chance value="0.9" name="Car Tires chance (Default: 0.9)"/>
     </vehicle>
     <animal>
         <animal_spawn_per_chunk value="5" name="Max Animal spawn on chunk (Default: 5)"/>

@@ -7,6 +7,8 @@
             Sex: [PLAYER SEX]
             Traits:
                 - [LIST TO TRAITS]
+            Recipes:
+                - [LIST TO RECIPES]
         </text>
     </properties>
     <spawn chance="0" />

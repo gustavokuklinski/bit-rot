@@ -5,9 +5,9 @@
         <weight weight="1.5" reduction="10%" />
     </properties>
     <loot>
-        <item name="9mm Ammo" chance="0.5" />
-        <item name="9mm Ammo" chance="0.5" />
-        <item name="9mm Ammo" chance="0.5" />
+        <item name="9mm Ammo" chance="1.0" />
+        <item name="9mm Ammo" chance="1.0" />
+        <item name="9mm Ammo" chance="1.0" />
     </loot>
     <spawn chance="1" />
 </item>

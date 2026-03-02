@@ -5,8 +5,9 @@
         <weight weight="0.1" reduction="50%" />
     </properties>
     <loot>
-        <item name="ID" chance="1" />
-        <item name="Mobile off" chance="0.9" />
+        <item name="ID" chance="1.0" />
+        <item name="Mobile off" chance="1.0" />
+        <item name="Money WBRL" chance="1.0" />
     </loot>
     <spawn chance="1" />
 </item>

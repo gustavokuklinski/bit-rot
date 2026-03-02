@@ -2,37 +2,37 @@
     <visuals>
         <sprite file="house_wardrobe.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="20" />
     <loot>
-        <item item="Balaclava" chance="0.2" />
-        <item item="Beret" chance="0.2" />
-        <item item="Black Hat" chance="0.2" />
-        <item item="Tshirt" chance="0.2" />
-        <item item="Sneakers" chance="0.2" />
-        <item item="Jacket" chance="0.2" />
-        <item item="Jeans Pants" chance="0.2" />
-        <item item="Jeans Short" chance="0.2" />
-        <item item="Leather Black Gloves" chance="0.2" />
-        <item item="Leather Black Jacket" chance="0.2" />
-        <item item="Leather Black Pants" chance="0.2" />
-        <item item="38 Revolver" chance="0.1" />
-        <item item="38 Ammo" chance="0.1" />
-        <item item="Powerbank" chance="0.3" />
-        <item item="Pistol 9mm" chance="0.1" />
-        <item item="9mm Ammo" chance="0.1" />
-        <item item="Medkit" chance="0.1" />
-        <item item="Batton" chance="0.1" />
-        <item item="Infection Pills" chance="0.1" />
-        <item item="Cigarette Pack" chance="0.2" />
-        <item item="Duck Tape" chance="0.2" />
-        <item item="Car Key Jeep" chance="0.1" />
-        <item item="Sleeping Bag" chance="0.1" />
-        <item item="Shotgun" chance="0.1" />
-        <item item="Double Barrel Shotgun" chance="0.1" />
-        <item item="Shotgun Shells" chance="0.1" />
-        <item item="Baseball Bat" chance="0.2" />
-        <item item="Alcohol Bottle" chance="0.3" />
-        <item item="Medical Kit" chance="0.1" />
-        <item item="Sewing Kit" chance="0.1" />
+        <item item="Balaclava" chance="1.0" />
+        <item item="Beret" chance="1.0" />
+        <item item="Black Hat" chance="1.0" />
+        <item item="Tshirt" chance="1.0" />
+        <item item="Sneakers" chance="1.0" />
+        <item item="Jacket" chance="1.0" />
+        <item item="Jeans Pants" chance="1.0" />
+        <item item="Jeans Short" chance="1.0" />
+        <item item="Leather Black Gloves" chance="1.0" />
+        <item item="Leather Black Jacket" chance="1.0" />
+        <item item="Leather Black Pants" chance="1.0" />
+        <item item="38 Revolver" chance="1.0" />
+        <item item="38 Ammo" chance="1.0" />
+        <item item="Powerbank" chance="1.0" />
+        <item item="Pistol 9mm" chance="1.0" />
+        <item item="9mm Ammo" chance="1.0" />
+        <item item="Medkit" chance="1.0" />
+        <item item="Batton" chance="1.0" />
+        <item item="Infection Pills" chance="1.0" />
+        <item item="Cigarette Pack" chance="1.0" />
+        <item item="Duck Tape" chance="1.0" />
+        <item item="Car Key Jeep" chance="1.0" />
+        <item item="Sleeping Bag" chance="1.0" />
+        <item item="Shotgun" chance="1.0" />
+        <item item="Double Barrel Shotgun" chance="1.0" />
+        <item item="Shotgun Shells" chance="1.0" />
+        <item item="Baseball Bat" chance="1.0" />
+        <item item="Alcohol Bottle" chance="1.0" />
+        <item item="Medical Kit" chance="1.0" />
+        <item item="Sewing Kit" chance="1.0" />
     </loot>
 </map>

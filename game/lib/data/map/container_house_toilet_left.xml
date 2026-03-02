@@ -2,8 +2,8 @@
     <visuals>
         <sprite file="house_toilet_left.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="1" />
     <loot>
-        <item item="Water Unit" chance="1" />
+        <item item="Water Unit" chance="1.0" />
     </loot>
 </map>

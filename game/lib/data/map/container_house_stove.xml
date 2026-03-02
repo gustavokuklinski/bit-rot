@@ -4,11 +4,12 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Canned Food" chance="0.1" />
-        <item item="Matches" chance="0.1" />
-        <item item="Cheese" chance="0.1" />
-        <item item="Chicken" chance="0.1" />
-        <item item="Meat" chance="0.1" />
-        <item item="Fish" chance="0.1" />
+        <item item="Canned Food" chance="1.0" />
+        <item item="Matches" chance="1.0" />
+        <item item="Lighter off" chance="1.0" />
+        <item item="Cheese" chance="1.0" />
+        <item item="Chicken" chance="1.0" />
+        <item item="Meat" chance="1.0" />
+        <item item="Fish" chance="1.0" />
     </loot>
 </map>

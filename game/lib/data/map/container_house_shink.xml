@@ -2,12 +2,8 @@
     <visuals>
         <sprite file="house_shink.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="1" />
     <loot>
-        <item item="Water Unit" chance="1" />
-        <item item="Duck Tape" chance="0.2" />
-        <item item="Alcohol Bottle" chance="0.3" />
-        <item item="Medical Kit" chance="0.2" />
-        <item item="Sewing Kit" chance="0.1" />
+        <item item="Water Unit" chance="1.0" />
     </loot>
 </map>

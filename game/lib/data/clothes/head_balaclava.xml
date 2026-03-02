@@ -1,4 +1,4 @@
-<cloth name="Balaclava" type="cloth" id="head" builder="true">
+<cloth name="Balaclava" type="cloth" id="head" builder="true" hide_cloth="[hair, facial]">
     <properties>
         <defence value="0.01" />
         <durability min="1" max="100" />

@@ -174,6 +174,11 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 builder_str = root.attrib.get('builder', 'false')
                 template['builder'] = (builder_str.lower() == 'true')
 
+                # NEW: Parsing the hide_cloth attribute to hide other clothes
+                hide_cloth_str = root.attrib.get('hide_cloth')
+                if hide_cloth_str:
+                    template['properties']['hide_cloth'] = [t.strip() for t in hide_cloth_str.replace('[', '').replace(']', '').split(',')]
+
                 template['properties']['slot'] = {'value': root.attrib.get('id')}
                 
                 props_node = root.find('properties')

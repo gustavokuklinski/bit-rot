@@ -4,8 +4,8 @@
     </visuals>
     <capacity value="1" />
     <loot>
-        <item item="Stone" chance="0.1" />
-        <item item="Tree Branch" chance="0.1" />
-        <item item="Slingshot Rock" chance="0.1" />
+        <item item="Stone" chance="1.0" />
+        <item item="Tree Branch" chance="1.0" />
+        <item item="Log" chance="1.0" />
     </loot>
 </map>

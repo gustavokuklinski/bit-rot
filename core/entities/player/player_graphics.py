@@ -2,6 +2,7 @@ import pygame
 import math
 import random
 from core.data.config import TILE_SIZE, SPRITE_PATH, DARK_GRAY, YELLOW
+from core.entities.item.item_data import ITEM_TEMPLATES  # NEW: Import ITEM_TEMPLATES
 
 # Define ORANGE if not imported
 ORANGE = (255, 165, 0)
@@ -99,7 +100,21 @@ class PlayerGraphics:
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
 
+        # NEW: Accumulate slots that are designated to be hidden by currently worn clothes
+        hidden_slots = set()
+        for slot in self.clothes_slots:
+            item = self.clothes.get(slot)
+            if item:
+                # Retrieve the item's properties from ITEM_TEMPLATES instead of directly from the item object
+                template = ITEM_TEMPLATES.get(item.name)
+                if template and 'properties' in template and 'hide_cloth' in template['properties']:
+                    hidden_slots.update(template['properties']['hide_cloth'])
+
         for slot in self.clothes_slots: 
+            # NEW: Skip drawing if this slot is hidden by another piece of clothing
+            if slot in hidden_slots:
+                continue
+                
             item = self.clothes.get(slot)
             if item and item.image:
                 img_to_draw = item.image

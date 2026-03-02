@@ -2,20 +2,17 @@
     <visuals>
         <sprite file="house_library.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="15" />
     <loot>
-        <item item="Magazine (General content)" chance="1" />
-        <item item="Matches" chance="0.1" />
-        <item item="Powerbank" chance="0.3" />
-        <item item="Bible" chance="0.1" />
-        <item item="Lantern off" chance="0.2" />
-        <item item="Family Photo" chance="0.2" />
-        <item item="Medkit" chance="0.1" />
-        <item item="Alcohol Bottle" chance="0.1" />
-        <item item="Medical Bandage" chance="0.3" />
-        <item item="Medicine Vol.1" chance="0.2" />
-        <item item="Survivor Guide Basic" chance="0.2" />
-        <item item="Vehicle Engineering Vol.1" chance="0.2" />
-        <item item="Vehicle Engineering Vol.2" chance="0.2" />
+        <item item="Magazine (General content)" chance="1.0" />
+        <item item="Medicine Vol.1" chance="1.0" />
+        <item item="Survivor Guide Basic" chance="1.0" />
+        <item item="Vehicle Engineering Vol.1" chance="1.0" />
+        <item item="Vehicle Engineering Vol.2" chance="1.0" />
+        <item item="Vehicle Engineering Vol.3" chance="1.0" />
+        <item item="Bible" chance="1.0" />
+        <item item="Family Photo" chance="1.0" />
+        <item item="Lighter off" chance="1.0" />
+        <item item="Cigarette Pack" chance="1.0" />
     </loot>
 </map>

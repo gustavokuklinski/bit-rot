@@ -2,6 +2,7 @@ import pygame
 import os
 from core.data.config import SPRITE_PATH, TILE_SIZE, RED, DARK_GRAY, GREEN
 from core.entities.item.item import Item
+from core.entities.item.item_data import ITEM_TEMPLATES # NEW: Import ITEM_TEMPLATES
 
 class ZombieGraphics:
     def load_sprite(self, sprite_file):
@@ -71,7 +72,28 @@ class ZombieGraphics:
 
             # Draw clothes (only if visible)
             if opacity >= 150:
+                # --- NEW: Accumulate hidden slots ---
+                hidden_slots = set()
                 for slot, clothe in self.clothes.items():
+                    if clothe:
+                        item_name = None
+                        if isinstance(clothe, Item):
+                            item_name = clothe.name
+                        elif isinstance(clothe, dict):
+                            item_name = clothe.get('name')
+                        elif isinstance(clothe, str):
+                            item_name = clothe
+                        
+                        if item_name:
+                            template = ITEM_TEMPLATES.get(item_name)
+                            if template and 'properties' in template and 'hide_cloth' in template['properties']:
+                                hidden_slots.update(template['properties']['hide_cloth'])
+
+                for slot, clothe in self.clothes.items():
+                    # --- NEW: Skip drawing if this slot is hidden by another piece of clothing
+                    if slot in hidden_slots:
+                        continue
+                    
                     if clothe:
                         clothe_sprite = None
                         # [FIX] Handle both Item objects (NPCs) and Dicts (Zombies)

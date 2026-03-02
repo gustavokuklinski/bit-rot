@@ -4,7 +4,7 @@
         <sprite file="container_disposable_cigarrete_pack.png" />
     </properties>
     <loot>
-        <item name="Cigarette" chance="1" />
+        <item name="Cigarette" chance="1.0" />
     </loot>
     <spawn chance="1" />
 </item>

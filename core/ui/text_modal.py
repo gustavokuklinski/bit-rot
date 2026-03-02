@@ -71,10 +71,9 @@ def draw_text_modal(surface, game, modal, assets):
     modal['content_rect'] = content_rect # Store for input handling
 
     # --- Text Wrapping & Height Calculation ---
-    #text_to_display = getattr(item, 'text', "This item has no text.")
-
     raw_text = getattr(item, 'text', "This item has no text.")
     processed_text = raw_text
+    
     if game.player:
         player = game.player
         
@@ -95,7 +94,17 @@ def draw_text_modal(surface, game, modal, assets):
         else:
             # If no traits, replace placeholder with "- None"
             processed_text = processed_text.replace("- [LIST TO TRAITS]", "            - None")
-    
+
+        # 4. Replace Recipes List
+        player_recipes = getattr(player, 'known_recipes', [])
+        
+        if player_recipes:
+            # Format the recipe list
+            recipe_list_str = "\n".join([f"            - {recipe.title()}" for recipe in player_recipes])
+            processed_text = processed_text.replace("- [LIST TO RECIPES]", recipe_list_str)
+        else:
+            # If no recipes, replace placeholder with "- None"
+            processed_text = processed_text.replace("- [LIST TO RECIPES]", "            - None")
     
     text_to_display = processed_text
 

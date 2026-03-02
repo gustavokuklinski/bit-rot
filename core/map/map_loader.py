@@ -74,11 +74,23 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                         if tile_def['type'] == 'maptile_container':
                             items = []
-                            if 'loot' in tile_def:
-                                for loot_item in tile_def['loot']:
-                                    if random.random() < loot_item['chance']:
-                                        items.append(Item.create_from_name(loot_item['item']))
                             capacity = tile_def.get('capacity', 0)
+                            if 'loot' in tile_def:
+                                # NEW: Randomize loot pool to handle items with 100% chance fairly
+                                loot_pool = list(tile_def['loot'])
+                                random.shuffle(loot_pool)
+                                
+                                for loot_item in loot_pool:
+                                    if capacity > 0 and len(items) >= capacity:
+                                        break
+                                        
+                                    adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                    
+                                    if random.random() < adjusted_chance:
+                                        new_item = Item.create_from_name(loot_item['item'])
+                                        if new_item:
+                                            items.append(new_item)
+                            
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
                             container.image = tile_def['image']
@@ -114,11 +126,24 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             obstacles.append(rect) 
                         if tile_def['type'] == 'maptile_container':
                             items = []
-                            if 'loot' in tile_def:
-                                for loot_item in tile_def['loot']:
-                                    if random.random() < loot_item['chance']:
-                                        items.append(Item.create_from_name(loot_item['item']))
                             capacity = tile_def.get('capacity', 0)
+                            if 'loot' in tile_def:
+                                # NEW: Randomize loot pool to handle items with 100% chance fairly
+                                loot_pool = list(tile_def['loot'])
+                                random.shuffle(loot_pool)
+                                
+                                for loot_item in loot_pool:
+                                    if capacity > 0 and len(items) >= capacity:
+                                        break
+                                        
+                                    # [FIX] Apply multiplier to Base Layer containers!
+                                    adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                    
+                                    if random.random() < adjusted_chance:
+                                        new_item = Item.create_from_name(loot_item['item'])
+                                        if new_item:
+                                            items.append(new_item)
+                                            
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
                             container.image = tile_def['image']
@@ -154,7 +179,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 
                 elif char == 'I':
-                    # Random Item Spawn
+                    # Random Item Spawn (already respects global multiplier in factory)
                     item_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 
                 elif char.strip() == 'NPC': 
@@ -169,8 +194,9 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     # Check for Specific Item Code
                     test_item = Item.create_from_name(char)
                     if test_item:
-                        # Append with name for spawn_manager to handle
-                        item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char))
+                        # [FIX] Apply global multiplier so specifically placed map items aren't 100% guaranteed
+                        if random.random() <= ITEM_SPAWN_CHANCE_MULTIPLIER:
+                            item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char))
                     else:
                         # Not an item, maybe player spawn fallback
                         possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
@@ -187,11 +213,24 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                     if tile_def['type'] == 'maptile_container':
                         items = []
-                        if 'loot' in tile_def:
-                            for loot_item in tile_def['loot']:
-                                if random.random() < loot_item['chance']:
-                                    items.append(Item.create_from_name(loot_item['item']))
                         capacity = tile_def.get('capacity', 0)
+                        if 'loot' in tile_def:
+                            # NEW: Randomize loot pool to handle items with 100% chance fairly
+                            loot_pool = list(tile_def['loot'])
+                            random.shuffle(loot_pool)
+                            
+                            for loot_item in loot_pool:
+                                if capacity > 0 and len(items) >= capacity:
+                                    break
+                                
+                                # [FIX] Apply multiplier to Spawn Layer containers!
+                                adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                
+                                if random.random() < adjusted_chance:
+                                    new_item = Item.create_from_name(loot_item['item'])
+                                    if new_item:
+                                        items.append(new_item)
+                                        
                         container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                         container.rect = rect
                         container.image = tile_def['image']

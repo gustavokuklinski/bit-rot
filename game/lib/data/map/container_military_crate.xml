@@ -4,43 +4,43 @@
     </visuals>
     <capacity value="15" />
     <loot>
-        <item item="Canned Food" chance="0.3" />
-        <item item="Pistol 9mm" chance="0.2" />
-        <item item="9mm Ammo" chance="0.2" />
-        <item item="Military Pants" chance="0.2" />
-        <item item="Military Tshirt" chance="0.2" />
-        <item item="Leather Black Gloves" chance="0.3" />
-        <item item="Military Jacket" chance="0.5" />
-        <item item="Military Boots" chance="0.5" />
-        <item item="Tshirt" chance="0.5" />
-        <item item="Powerbank" chance="0.5" />
-        <item item="Large Backpack" chance="0.2" />
-        <item item="Vaccine" chance="0.2" />
-        <item item="Shotgun" chance="0.1" />
-        <item item="Double Barrel Shotgun" chance="0.1" />
-        <item item="Shotgun Shells" chance="0.1" />
-        <item item="Family Photo" chance="0.01" />
-        <item item="Axe" chance="0.1" />
-        <item item="Knife" chance="0.1" />
-        <item item="Medkit" chance="0.5" />
-        <item item="Batton" chance="0.5" />
-        <item item="Infection Pills" chance="0.2" />
-        <item item="Weapon Repair Kit" chance="0.2" />
-        <item item="Car Key Jeep" chance="0.1" />
-        <item item="38 Revolver" chance="0.1" />
-        <item item="38 Ammo" chance="0.1" />
-        <item item="Ammo Canister 556" chance="0.1" />
-        <item item="Ammo Canister 9mm" chance="0.1" />
-        <item item="MPK5" chance="0.1" />
-        <item item="MAC10" chance="0.1" />
-        <item item="Sleeping Bag" chance="0.1" />
-        <item item="Camp Tent" chance="0.1" />
-        <item item="M4A1" chance="0.1" />
-        <item item="556 Ammo" chance="0.1" />
-        <item item="Toolkit" chance="0.3" />
-        <item item="Survivor Kit" chance="0.2" />
-        <item item="Medical Kit" chance="0.2" />
-        <item item="Sewing Kit" chance="0.1" />
-        <item item="Island Map" chance="0.1" />
+        <item item="Canned Food" chance="1.0" />
+        <item item="Pistol 9mm" chance="1.0" />
+        <item item="9mm Ammo" chance="1.0" />
+        <item item="Military Pants" chance="1.0" />
+        <item item="Military Tshirt" chance="1.0" />
+        <item item="Leather Black Gloves" chance="1.0" />
+        <item item="Military Jacket" chance="1.0" />
+        <item item="Military Boots" chance="1.0" />
+        <item item="Tshirt" chance="1.0" />
+        <item item="Powerbank" chance="1.0" />
+        <item item="Large Backpack" chance="1.0" />
+        <item item="Vaccine" chance="1.0" />
+        <item item="Shotgun" chance="1.0" />
+        <item item="Double Barrel Shotgun" chance="1.0" />
+        <item item="Shotgun Shells" chance="1.0" />
+        <item item="Family Photo" chance="1.0" />
+        <item item="Axe" chance="1.0" />
+        <item item="Knife" chance="1.0" />
+        <item item="Medkit" chance="1.0" />
+        <item item="Batton" chance="1.0" />
+        <item item="Infection Pills" chance="1.0" />
+        <item item="Weapon Repair Kit" chance="1.0" />
+        <item item="Car Key Jeep" chance="1.0" />
+        <item item="38 Revolver" chance="1.0" />
+        <item item="38 Ammo" chance="1.0" />
+        <item item="Ammo Canister 556" chance="1.0" />
+        <item item="Ammo Canister 9mm" chance="1.0" />
+        <item item="MPK5" chance="1.0" />
+        <item item="MAC10" chance="1.0" />
+        <item item="Sleeping Bag" chance="1.0" />
+        <item item="Camp Tent" chance="1.0" />
+        <item item="M4A1" chance="1.0" />
+        <item item="556 Ammo" chance="1.0" />
+        <item item="Toolkit" chance="1.0" />
+        <item item="Survivor Kit" chance="1.0" />
+        <item item="Medical Kit" chance="1.0" />
+        <item item="Sewing Kit" chance="1.0" />
+        <item item="Island Map" chance="1.0" />
     </loot>
 </map>

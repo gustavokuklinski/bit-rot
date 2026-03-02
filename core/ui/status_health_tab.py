@@ -3,6 +3,7 @@
 import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
+from core.entities.item.item_data import ITEM_TEMPLATES
 
 class StatusTooltipItem:
     """Helper class to mock an item for the generic tooltip system."""
@@ -75,10 +76,32 @@ def draw_health_tab(surface, player, modal, assets):
         char_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
         char_surface.blit(player.image, (0, 0))
         
+        # --- NEW: Accumulate slots that are designated to be hidden by currently worn clothes ---
+        hidden_slots = set()
         for slot in player.clothes_slots:
             item = player.clothes.get(slot)
+            if item:
+                template = ITEM_TEMPLATES.get(item.name)
+                if template and 'properties' in template and 'hide_cloth' in template['properties']:
+                    hidden_slots.update(template['properties']['hide_cloth'])
+        
+        for slot in player.clothes_slots:
+            if slot in hidden_slots:
+                continue
+                
+            item = player.clothes.get(slot)
             if item and item.image:
-                char_surface.blit(item.image, (0, 0))
+                img_to_draw = item.image
+                
+                # Apply dynamic tint if the item has a custom color
+                if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
+                    if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:
+                        item.tinted_image = item.image.copy()
+                        item.tinted_image.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
+                        item.last_color = item.color
+                    img_to_draw = item.tinted_image
+
+                char_surface.blit(img_to_draw, (0, 0))
         
         scale_factor = 8
         new_w = TILE_SIZE * scale_factor

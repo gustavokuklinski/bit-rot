@@ -23,7 +23,7 @@ class NPCGraphics:
         return None
 
     def _load_base_sprite(self):
-        candidates = ["player/base.png", "player/player.png", "player/idle.png", "zombie/zombie.png"]
+        candidates = ["player/player.png"]
         found_img = None
         for filename in candidates:
             if filename in NPCGraphics._base_cache:

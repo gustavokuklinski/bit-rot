@@ -14,7 +14,7 @@ fake = Faker()
 from types import SimpleNamespace
 from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
-from core.ui.helpers.settings import _draw_settings_screen
+from core.ui.helpers.settings import _draw_settings_screen, handle_settings_events
 
 _stat_icons_cache = {}
 
@@ -71,108 +71,6 @@ def _load_stat_icons():
         img = pygame.image.load(path).convert_alpha()
         _stat_icons_cache[key] = pygame.transform.scale(img, icon_size)
 
-def _draw_dropdown(surface, state, slot_name, rect, mouse_pos):
-    """Draws a single dropdown menu and its options if active."""
-    clickable_rects = {
-        'button': rect,
-        'options': [] # List of (option_name, rect)
-    }
-    
-    # 1. Draw the main button
-    pygame.draw.rect(surface, (50, 50, 50), rect)
-    pygame.draw.rect(surface, WHITE, rect, 1)
-    
-    selected_item = state['chosen_clothes'].get(slot_name, "None") or "None"
-    text = font.render(selected_item, True, WHITE)
-    surface.blit(text, (rect.x + 5, rect.y + 5))
-    
-    # Draw arrow
-    pygame.draw.polygon(surface, WHITE, [(rect.right - 15, rect.y + 10), (rect.right - 5, rect.y + 10), (rect.right - 10, rect.y + 15)])
-
-    # 2. Check if this dropdown is active
-    if state.get('active_dropdown') == slot_name:
-        options = state['available_clothes'].get(slot_name, [])
-        if not options:
-            return clickable_rects # No options to draw
-            
-        option_height = 25
-        
-        # --- NEW: SCROLLING LOGIC ---
-        max_options_visible = 4 # Max items to show before scrolling
-        max_list_height = max_options_visible * option_height
-        
-        total_options_height = len(options) * option_height
-        
-        # Determine final list height (clamped)
-        list_height = min(max_list_height, total_options_height)
-        
-        # Get scroll state for this *specific* dropdown
-        scroll_state = state['gear_dropdown_scrolls'][slot_name]
-        max_scroll_offset = max(0, total_options_height - list_height)
-        scroll_state['max_scroll'] = max_scroll_offset
-        
-        # Clamp offset
-        scroll_offset_y = max(0, min(scroll_state['offset'], max_scroll_offset))
-        scroll_state['offset'] = scroll_offset_y
-        
-        # Define rects
-        list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
-        # Content rect needs to be clipped by the *screen* edge
-        if list_rect.bottom > GAME_HEIGHT:
-            list_rect.height = GAME_HEIGHT - list_rect.top
-        
-        content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height) # Room for scrollbar
-        
-        # Handle ValueError by clipping content_rect to surface
-        drawable_rect = surface.get_rect().clip(content_rect)
-        if drawable_rect.width <= 0 or drawable_rect.height <= 0:
-             return clickable_rects # Cannot draw subsurface
-             
-        # Create clipping subsurface
-        content_surface = surface.subsurface(drawable_rect)
-        content_surface.fill((30, 30, 30))
-        
-        # Draw options onto subsurface
-        y_offset = 0 - scroll_offset_y
-        for option_name in options:
-            option_rect_rel = pygame.Rect(0, y_offset, content_rect.width, option_height)
-            
-            # Get screen-space rect for hover/click
-            option_rect_abs = pygame.Rect(content_rect.x, content_rect.y + y_offset, content_rect.width, option_height)
-            
-            # Draw highlight only if visible
-            if option_rect_abs.bottom > content_rect.top and option_rect_abs.top < content_rect.bottom:
-                if option_rect_abs.collidepoint(mouse_pos):
-                    pygame.draw.rect(content_surface, (70, 70, 70), option_rect_rel)
-                
-                text = font.render(option_name, True, WHITE)
-                content_surface.blit(text, (option_rect_rel.x + 5, option_rect_rel.y + 2))
-            
-            # Add the *absolute* screen rect for click detection
-            clickable_rects['options'].append((option_name, option_rect_abs))
-            y_offset += option_height
-
-        # Draw Scrollbar
-        if total_options_height > list_height:
-            scrollbar_area_rect = pygame.Rect(content_rect.right, list_rect.top, 10, list_rect.height)
-            
-            handle_height_ratio = list_height / total_options_height
-            handle_height = max(10, scrollbar_area_rect.height * handle_height_ratio)
-            
-            handle_pos_ratio = 0
-            if max_scroll_offset > 0:
-                 handle_pos_ratio = scroll_offset_y / max_scroll_offset
-            
-            handle_y = scrollbar_area_rect.top + (scrollbar_area_rect.height - handle_height) * handle_pos_ratio
-            
-            handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-            pygame.draw.rect(surface, GRAY, handle_rect, 0, 2)
-            scroll_state['handle_rect'] = handle_rect # Store for click/drag
-        else:
-            scroll_state['handle_rect'] = None
-        # --- END SCROLLING LOGIC ---
-
-    return clickable_rects
 
 def _draw_player_build_screen(game, state, mouse_pos):
     """Draws the three-column layout and returns clickable rects."""
@@ -181,16 +79,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
         "add_trait": [], 
         "remove_trait": [],
         "start_button": None,
-        "dropdown_buttons": {},
-        "dropdown_options": [],
-        "slot_color_buttons": {}, # Sub-colors buttons per slot
+        "gear_cycle_buttons": {}, 
+        "slot_color_buttons": {}, 
         "name_input": None,
         "save_button": None,
         "delete_button": None,
         "load_dropdown_button": None,
-        "load_dropdown_options": [],
-        "game_config_dropdown_button": None, 
-        "game_config_options": [],           
+        "load_dropdown_options": [],          
         "random_button": None
     }
     header_height = 30
@@ -210,16 +105,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     padding = 10
     
-    # --- Column 1, Block 0: Game Settings (Top-Left) ---
-    
-    # NEW BLOCK
-    config_rect = pygame.Rect(col1_x, 30, col1_width, 90)
-    config_header_rect = pygame.Rect(config_rect.x, config_rect.y, config_rect.width, header_height)
-    config_body_rect = pygame.Rect(config_rect.x, config_rect.y + header_height, config_rect.width, config_rect.height - header_height)
-
     # --- Column 1, Block 1: Preset Management Panel ---
-    # Adjusted Y position (pushed down) and Height (shrunk)
-    preset_rect = pygame.Rect(col1_x, config_rect.bottom - 90, col1_width, 260) # Moved down, height 280 -> 250
+    preset_rect = pygame.Rect(col1_x, 30, col1_width, 260)
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -245,36 +132,22 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     clickable_rects['name_input'] = name_input_rect
 
-    # ----------------------------------
-
-    # [Adjust Buttons Y position to account for the new input field]
+    # 2. Buttons
     buttons_y = preset_body_rect.y + 80
-
     btn_width = 80
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
     
     save_btn_rect = pygame.Rect(preset_body_rect.x + padding, buttons_y, btn_width, 30)
-    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
-    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
-    
-    # [Update Load Dropdown position]
-    load_dd_rect = pygame.Rect(preset_body_rect.x + padding, save_btn_rect.bottom + 15, preset_body_rect.width - padding*2, 30)
-
-    # 2. Buttons
-    btn_width = 80
-    btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
-    
-    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 80, btn_width, 30)
     pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
     game.game_screen.blit(font.render("Save", True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
     clickable_rects['save_button'] = save_btn_rect
     
-    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
+    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
     pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
     game.game_screen.blit(font.render("Random", True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
     clickable_rects['random_button'] = random_btn_rect
 
-    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, preset_body_rect.y + 80, btn_width, 30)
+    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
     pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
     game.game_screen.blit(font.render("Delete", True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
     clickable_rects['delete_button'] = delete_btn_rect
@@ -332,42 +205,58 @@ def _draw_player_build_screen(game, state, mouse_pos):
         gear_rect.width - (padding * 2),
         gear_rect.height - (padding * 2) - 30
     )
-    state['gear_content_rect'] = gear_content_rect 
 
     drawable_gear_rect = game.game_screen.get_rect().clip(gear_content_rect)
-    dropdown_draw_list = []
     
     if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
         gear_content_surface = game.game_screen.subsurface(drawable_gear_rect)
         gear_content_surface.fill((30, 30, 30))
         label_width = 80
         color_btn_w = 25
-        base_dropdown_width = col1_width - label_width - (padding * 3)
+        base_cycle_width = col1_width - label_width - (padding * 3)
         y_offset = 0
         
         for slot_name in state['clothes_slots']:
             selected_item = state['chosen_clothes'].get(slot_name, "None")
             show_color_box = (slot_name in VALID_COLOR_ITEMS and selected_item in VALID_COLOR_ITEMS[slot_name])
             
-            dropdown_width = base_dropdown_width
+            cycle_width = base_cycle_width
             if show_color_box:
-                dropdown_width -= (color_btn_w + 5)
+                cycle_width -= (color_btn_w + 5)
             
-            dropdown_rect = pygame.Rect(gear_content_rect.x + label_width + (padding * 2), gear_content_rect.y + y_offset, dropdown_width, 25)
+            cycle_rect_abs = pygame.Rect(gear_content_rect.x + label_width + (padding * 2), gear_content_rect.y + y_offset, cycle_width, 25)
             
-            if dropdown_rect.bottom > gear_content_rect.top and dropdown_rect.top < gear_content_rect.bottom:
+            if cycle_rect_abs.bottom > gear_content_rect.top and cycle_rect_abs.top < gear_content_rect.bottom:
                 gear_content_surface.blit(font.render(f"{slot_name.capitalize()}:", True, WHITE), (0, y_offset + 5))
-                dropdown_draw_list.append((slot_name, dropdown_rect))
+                
+                cycle_rect_rel = pygame.Rect(cycle_rect_abs.x - gear_content_rect.x, y_offset, cycle_width, 25)
+                
+                hovered = cycle_rect_abs.collidepoint(mouse_pos)
+                bg_color = (70, 70, 70) if hovered else (50, 50, 50)
+                
+                # Draw cycle button box
+                pygame.draw.rect(gear_content_surface, bg_color, cycle_rect_rel, border_radius=3)
+                pygame.draw.rect(gear_content_surface, WHITE, cycle_rect_rel, 1, border_radius=3)
+                
+                text = font.render(selected_item, True, WHITE)
+                text_x = cycle_rect_rel.x + (cycle_rect_rel.width - text.get_width()) // 2
+                text_y = cycle_rect_rel.y + (cycle_rect_rel.height - text.get_height()) // 2
+                gear_content_surface.blit(text, (text_x, text_y))
+                
+                # Draw cycle arrows on sides
+                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.right - 8, cycle_rect_rel.centery), (cycle_rect_rel.right - 14, cycle_rect_rel.centery - 4), (cycle_rect_rel.right - 14, cycle_rect_rel.centery + 4)])
+                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.x + 8, cycle_rect_rel.centery), (cycle_rect_rel.x + 14, cycle_rect_rel.centery - 4), (cycle_rect_rel.x + 14, cycle_rect_rel.centery + 4)])
+                
+                clickable_rects['gear_cycle_buttons'][slot_name] = cycle_rect_abs
                 
                 if show_color_box:
-                    color_rect_abs = pygame.Rect(dropdown_rect.right + 5, dropdown_rect.y, color_btn_w, 25)
-                    color_rect_rel = pygame.Rect(dropdown_rect.x - gear_content_rect.x + dropdown_width + 5, y_offset, color_btn_w, 25)
+                    color_rect_abs = pygame.Rect(cycle_rect_abs.right + 5, cycle_rect_abs.y, color_btn_w, 25)
+                    color_rect_rel = pygame.Rect(cycle_rect_rel.right + 5, y_offset, color_btn_w, 25)
                     current_color = state['clothes_colors'].get(slot_name, (255, 255, 255))
                     
                     pygame.draw.rect(gear_content_surface, current_color, color_rect_rel, border_radius=3)
                     pygame.draw.rect(gear_content_surface, WHITE, color_rect_rel, 1, border_radius=3)
                     
-                    # Save the absolute rect for mouse detection
                     clickable_rects['slot_color_buttons'][slot_name] = color_rect_abs
                 
             y_offset += 35
@@ -441,22 +330,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
     total_cost = sum(TRAIT_DEFINITIONS.get(t, {}).get('cost', 0) for t in state['chosen_traits'])
     state['total_trait_cost'] = total_cost
     
-    # Calculate remaining points
     points_remaining = STARTING_POINTS - total_cost
-    
-    # Display the remaining points
     cost_text = f"Points: {points_remaining}"
-    
-    # If points are >= 0 (positive or zero), show Green. If negative, show Red.
     cost_color = (100, 255, 100) if points_remaining >= 0 else (255, 100, 100)
     
     cost_surf = font.render(cost_text, True, cost_color)
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
     game.game_screen.blit(cost_surf, cost_rect)
     
-    # [CHANGE] New Scrolling Logic for Chosen Traits
     chosen_content_rect = pygame.Rect(chosen_rect.x + padding, chosen_rect.y + header_height + padding, chosen_rect.width - (padding * 2) - 10, chosen_rect.height - header_height - (padding * 2))
-    state['chosen_content_rect'] = chosen_content_rect # Store for input handling
+    state['chosen_content_rect'] = chosen_content_rect 
 
     line_height = 35
     total_items = len(state['chosen_traits'])
@@ -469,7 +352,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
     scroll_offset_y = max(0, min(state.get('chosen_scroll_offset_y', 0), max_scroll_offset))
     state['chosen_scroll_offset_y'] = scroll_offset_y
     
-    # Clipping
     drawable_chosen_rect = game.game_screen.get_rect().clip(chosen_content_rect)
     if drawable_chosen_rect.width > 0 and drawable_chosen_rect.height > 0:
         content_surface = game.game_screen.subsurface(drawable_chosen_rect)
@@ -481,16 +363,12 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     if content_surface:
         for i, trait_name in enumerate(state['chosen_traits']):
-            # Relative to content_surface for drawing
             row_rect_rel = pygame.Rect(0, y_offset, chosen_content_rect.width, 30)
-            
-            # Absolute for click detection
             row_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, chosen_content_rect.width, 30)
             
             remove_btn_rect_rel = pygame.Rect(0, row_rect_rel.y, 25, 25)
             remove_btn_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, 25, 25)
 
-            # Draw if visible
             if row_rect_rel.bottom > 0 and row_rect_rel.top < chosen_content_rect.height:
                 if row_rect_abs.collidepoint(mouse_pos):
                     hovered_trait_id = trait_name
@@ -501,7 +379,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
             clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
             y_offset += 35
             
-    # Draw Scrollbar for Chosen Traits
     if total_text_height > visible_height:
         scrollbar_area_height = chosen_content_rect.height
         scrollbar_area_rect = pygame.Rect(chosen_content_rect.right + 2, chosen_content_rect.top, 8, scrollbar_area_height)
@@ -517,7 +394,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
         state['chosen_scrollbar_handle_rect'] = chosen_scrollbar_handle_rect
     else:
         state['chosen_scrollbar_handle_rect'] = None
-    # [END CHANGE]
 
     # --- Column 4 ---
     sprite_rect_container = pygame.Rect(col4_x, 30, col4_width, 310)
@@ -526,7 +402,18 @@ def _draw_player_build_screen(game, state, mouse_pos):
     if state.get('player_sprite_large'):
         sprite_rect = state['player_sprite_large'].get_rect(center=sprite_rect_container.center)
         game.game_screen.blit(state['player_sprite_large'], sprite_rect)
+
+        hidden_slots = set()
         for slot in state['clothes_slots']:
+            item_name = state['chosen_clothes'].get(slot)
+            if item_name and item_name != "None":
+                template = ITEM_TEMPLATES.get(item_name)
+                if template and 'properties' in template and 'hide_cloth' in template['properties']:
+                    hidden_slots.update(template['properties']['hide_cloth'])
+
+        for slot in state['clothes_slots']:
+            if slot in hidden_slots:
+                continue
             item_name = state['chosen_clothes'].get(slot)
             if item_name and item_name != "None":
                 clothing_img = state['clothing_sprites'].get(item_name)
@@ -607,12 +494,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
             trait_str = f"{int(trait_mod):+}% Rate"
             
             mod_color = WHITE
-            if trait_mod > 0: mod_color = (100, 255, 100) # Green for positive
-            elif trait_mod < 0: mod_color = (255, 100, 100) # Red for negative
+            if trait_mod > 0: mod_color = (100, 255, 100) 
+            elif trait_mod < 0: mod_color = (255, 100, 100) 
 
             text_surf = font.render(f"{stat_name_str}", True, WHITE)
             
-            # Only draw modifier if exists
             if trait_mod != 0:
                 mod_surf = font.render(f"{trait_str}", True, mod_color)
                 content_surface.blit(text_surf, (text_x, y_offset + 3))
@@ -645,7 +531,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
             current_draw_x = text_x + 100
             
             if lvl_mod > 0:
-                lvl_surf = font.render(f"+{lvl_mod} Level", True, (100, 255, 100)) # Green
+                lvl_surf = font.render(f"+{lvl_mod} Level", True, (100, 255, 100)) 
                 content_surface.blit(lvl_surf, (current_draw_x, y_offset + 3))
                 current_draw_x += lvl_surf.get_width() + 8
             
@@ -683,55 +569,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     game.game_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
 
-    # --- Draw dropdowns LAST ---
-    active_dropdown_slot = state.get('active_dropdown')
     active_preset_dropdown = state.get('preset_dropdown_active', False)
-    active_game_conf_dropdown = state.get('game_config_dropdown_active', False) # NEW
-
-    # 1. Gear Buttons
-    for slot_name, rect in dropdown_draw_list:
-        dropdown_rects = _draw_dropdown(game.game_screen, state, slot_name, rect, mouse_pos)
-        clickable_rects['dropdown_buttons'][slot_name] = dropdown_rects['button']
-
-    # 2. Preset Button
-    pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
-    pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
-    selected_preset = state.get('selected_preset', "None")
-    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
-    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
     
-    # 3. Gear List
-    if active_dropdown_slot:
-        for slot_name, rect in dropdown_draw_list:
-            if slot_name == active_dropdown_slot:
-                options = state['available_clothes'].get(slot_name, [])
-                option_height = 25
-                max_options_visible = 6
-                list_height = min(max_options_visible * option_height, len(options) * option_height)
-                list_rect = pygame.Rect(rect.x, rect.bottom, rect.width, list_height)
-                if list_rect.bottom > GAME_HEIGHT: list_rect.height = GAME_HEIGHT - list_rect.top
-                content_rect = pygame.Rect(list_rect.x, list_rect.y, list_rect.width - 10, list_rect.height)
-                pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
-                pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
-                drawable_rect = game.game_screen.get_rect().clip(content_rect)
-                if drawable_rect.width > 0 and drawable_rect.height > 0:
-                    content_surface = game.game_screen.subsurface(drawable_rect)
-                    content_surface.fill((30, 30, 30))
-                    scroll_state = state['gear_dropdown_scrolls'][slot_name]
-                    y_offset = 0 - scroll_state['offset']
-                    clickable_rects["dropdown_options"] = [] 
-                    for option_name in options:
-                        option_rect_rel = pygame.Rect(0, y_offset, content_rect.width, option_height)
-                        option_rect_abs = pygame.Rect(content_rect.x, content_rect.y + y_offset, content_rect.width, option_height)
-                        if option_rect_abs.bottom > content_rect.top and option_rect_abs.top < content_rect.bottom:
-                            if option_rect_abs.collidepoint(mouse_pos): pygame.draw.rect(content_surface, (70, 70, 70), option_rect_rel)
-                            content_surface.blit(font.render(option_name, True, WHITE), (option_rect_rel.x + 5, option_rect_rel.y + 2))
-                        clickable_rects['dropdown_options'].append((slot_name, option_name, option_rect_abs))
-                        y_offset += option_height
-                    if scroll_state.get('handle_rect'): pygame.draw.rect(game.game_screen, GRAY, scroll_state['handle_rect'], 0, 2)
-                break
-    
-    # 4. Preset List
+    # 3. Preset List
     if active_preset_dropdown:
         options = state.get('preset_list', ["None"])
         option_height = 25
@@ -746,23 +586,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
             if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
             game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
             clickable_rects["load_dropdown_options"].append((option_name, option_rect))
-            y_offset += option_height
-
-    # 5. Game Config List (NEW)
-    if active_game_conf_dropdown:
-        options = state.get('config_preset_list', ["default"])
-        option_height = 25
-        list_height = len(options) * option_height
-        list_rect = pygame.Rect(game_conf_dd_rect.x, game_conf_dd_rect.bottom, game_conf_dd_rect.width, list_height)
-        pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
-        pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
-        y_offset = list_rect.y
-        clickable_rects["game_config_options"] = []
-        for option_name in options:
-            option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
-            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
-            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
-            clickable_rects["game_config_options"].append((option_name, option_rect))
             y_offset += option_height
 
     if hovered_trait_id:
@@ -820,6 +643,183 @@ def _update_available_traits(state):
     state['available_traits'] = pos_traits + neg_traits
 
 
+def handle_player_events(game, state, event, mouse_pos, clickable_rects):
+    if event.type == pygame.MOUSEWHEEL:
+        stats_rect = state.get('stats_content_rect')
+        chosen_rect = state.get('chosen_content_rect')
+        
+        if state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
+             state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * 70, state.get('traits_max_scroll', 0)))
+        elif stats_rect and stats_rect.collidepoint(mouse_pos):
+             state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * 50, state.get('stats_max_scroll', 0)))
+        elif chosen_rect and chosen_rect.collidepoint(mouse_pos):
+             state['chosen_scroll_offset_y'] = max(0, min(state['chosen_scroll_offset_y'] - event.y * 70, state.get('chosen_max_scroll', 0)))
+
+    elif event.type == pygame.KEYDOWN:
+        if state.get('name_input_active'):
+            if event.key == pygame.K_BACKSPACE: 
+                state['player_name'] = state['player_name'][:-1]
+            elif event.key == pygame.K_RETURN: 
+                state['name_input_active'] = False
+            elif len(state['player_name']) <= 20: 
+                state['player_name'] += event.unicode
+            
+        if state.get('seed_input_active'):
+            if event.key == pygame.K_BACKSPACE:
+                state['world_seed'] = state['world_seed'][:-1]
+            elif event.key == pygame.K_RETURN:
+                state['seed_input_active'] = False
+            elif len(state.get('world_seed', "")) <= 10: 
+                if event.unicode.isalnum() or event.unicode == '-':
+                    state['world_seed'] += event.unicode.upper()
+
+    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        dropdown_clicked = False
+        scrollbar_clicked = False
+        
+        if state.get('stats_scrollbar_handle_rect') and state['stats_scrollbar_handle_rect'].collidepoint(mouse_pos):
+            state['is_dragging_stats_scrollbar'] = True; state['stats_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
+        if not scrollbar_clicked and state.get('traits_scrollbar_handle_rect') and state['traits_scrollbar_handle_rect'].collidepoint(mouse_pos):
+            state['is_dragging_traits_scrollbar'] = True; state['traits_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
+        
+        if not scrollbar_clicked and state.get('chosen_scrollbar_handle_rect') and state['chosen_scrollbar_handle_rect'].collidepoint(mouse_pos):
+             state['is_dragging_chosen_scrollbar'] = True; state['chosen_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
+
+        if scrollbar_clicked: return
+
+        if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos): state['name_input_active'] = True
+        else: state['name_input_active'] = False
+
+        if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
+            state['seed_input_active'] = True
+            state['name_input_active'] = False 
+        else:
+            state['seed_input_active'] = False
+        
+        if clickable_rects.get('slot_color_buttons'):
+            for slot_name, rect in clickable_rects['slot_color_buttons'].items():
+                if rect.collidepoint(mouse_pos):
+                    current_color = state['clothes_colors'].get(slot_name, (255, 255, 255))
+                    try:
+                        c_idx = CLOTHING_COLORS.index(current_color)
+                        state['clothes_colors'][slot_name] = CLOTHING_COLORS[(c_idx + 1) % len(CLOTHING_COLORS)]
+                    except ValueError:
+                        state['clothes_colors'][slot_name] = CLOTHING_COLORS[0]
+                    dropdown_clicked = True
+                    break
+            if dropdown_clicked: return
+
+        if clickable_rects.get('gear_cycle_buttons'):
+            for slot_name, rect in clickable_rects['gear_cycle_buttons'].items():
+                if rect.collidepoint(mouse_pos):
+                    options = state['available_clothes'].get(slot_name, [])
+                    if options:
+                        current_item = state['chosen_clothes'].get(slot_name, "None")
+                        try:
+                            current_index = options.index(current_item)
+                        except ValueError:
+                            current_index = 0
+                            
+                        next_index = (current_index + 1) % len(options)
+                        new_item = options[next_index]
+                        state['chosen_clothes'][slot_name] = new_item
+                        
+                        if slot_name not in VALID_COLOR_ITEMS or new_item not in VALID_COLOR_ITEMS[slot_name]:
+                            state['clothes_colors'][slot_name] = (255, 255, 255)
+                    dropdown_clicked = True
+                    break
+            if dropdown_clicked: return
+
+        if clickable_rects.get("start_button") and clickable_rects["start_button"].collidepoint(mouse_pos):
+            if state.get('total_trait_cost', 0) <= STARTING_POINTS:
+                final_player_data = state['base_data'].copy()
+                final_player_data['attributes'] = state['final_attrs']
+                final_player_data['clothes'] = state['chosen_clothes']
+                final_player_data['clothes_colors'] = state.get('clothes_colors', {})
+                final_player_data['name'] = state.get('player_name', "Player")
+                final_player_data['sex'] = state['base_data'].get('sex', 'Male')
+                final_player_data['traits'] = state['chosen_traits']
+                final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
+                final_player_data['sounds'] = { 'steps': 'steps.ogg' }
+                
+                final_player_data['game_settings'] = state.get('settings_data')
+
+                raw_seed = state.get('world_seed', "").strip()
+                if not raw_seed:
+                    raw_seed = core.data.config.generate_random_seed()
+                
+                final_player_data['world_seed'] = raw_seed
+
+                game.loading_data = final_player_data
+                game.game_state = 'LOADING'
+                game.loading_done = False
+                return
+        
+        if state.get('preset_dropdown_active'):
+            for option_name, option_rect in clickable_rects.get("load_dropdown_options", []):
+                if option_rect.collidepoint(mouse_pos):
+                    state['selected_preset'] = option_name; state['preset_dropdown_active'] = False; _load_preset(state); dropdown_clicked = True; break
+            if dropdown_clicked: return
+
+        if clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
+            state['preset_dropdown_active'] = not state.get('preset_dropdown_active', False); dropdown_clicked = True
+
+        if not dropdown_clicked:
+            state['preset_dropdown_active'] = False
+
+        if 'sex_buttons' in clickable_rects:
+            for sex, rect in clickable_rects['sex_buttons'].items():
+                if rect.collidepoint(mouse_pos):
+                    state['base_data']['sex'] = sex
+                    if state['player_name'] == "Survivor" or not state['player_name']:
+                         state['player_name'] = fake.name_male() if sex == 'Male' else fake.name_female()
+                    break
+
+        for trait_name, rect in clickable_rects.get("add_trait", []):
+            if rect.collidepoint(mouse_pos):
+                if trait_name in state['available_traits']:
+                    state['chosen_traits'].append(trait_name)
+                    _update_available_traits(state) 
+                    break 
+        
+        for trait_name, rect in clickable_rects.get("remove_trait", []):
+            if rect.collidepoint(mouse_pos):
+                if trait_name in state['chosen_traits']:
+                    state['chosen_traits'].remove(trait_name)
+                    _update_available_traits(state) 
+                    break
+        
+        if clickable_rects.get('save_button') and clickable_rects['save_button'].collidepoint(mouse_pos): _save_preset(state)
+        if clickable_rects.get('random_button') and clickable_rects['random_button'].collidepoint(mouse_pos): 
+            _randomize_character(state)
+            _update_available_traits(state)
+        if clickable_rects.get('delete_button') and clickable_rects['delete_button'].collidepoint(mouse_pos): _delete_preset(state)
+
+    elif event.type == pygame.MOUSEBUTTONUP:
+        state['is_dragging_stats_scrollbar'] = False
+        state['is_dragging_traits_scrollbar'] = False
+        state['is_dragging_chosen_scrollbar'] = False
+
+    elif event.type == pygame.MOUSEMOTION:
+        if state.get('is_dragging_stats_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - state['stats_scroll_drag_last_y']; state['stats_scroll_drag_last_y'] = mouse_pos[1]
+            track_height = state['stats_content_rect'].height - state['stats_scrollbar_handle_rect'].height
+            if track_height > 0:
+                state['stats_scroll_offset_y'] = max(0, min(state.get('stats_scroll_offset_y', 0) + (mouse_delta_y * (state['stats_max_scroll'] / track_height)), state['stats_max_scroll']))
+        
+        elif state.get('is_dragging_traits_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - state['traits_scroll_drag_last_y']; state['traits_scroll_drag_last_y'] = mouse_pos[1]
+            track_height = state['traits_content_rect'].height - state['traits_scrollbar_handle_rect'].height
+            if track_height > 0:
+                state['traits_scroll_offset_y'] = max(0, min(state.get('traits_scroll_offset_y', 0) + (mouse_delta_y * (state['traits_max_scroll'] / track_height)), state['traits_max_scroll']))
+
+        elif state.get('is_dragging_chosen_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - state['chosen_scroll_drag_last_y']; state['chosen_scroll_drag_last_y'] = mouse_pos[1]
+            track_height = state['chosen_content_rect'].height - state['chosen_scrollbar_handle_rect'].height
+            if track_height > 0:
+                 state['chosen_scroll_offset_y'] = max(0, min(state.get('chosen_scroll_offset_y', 0) + (mouse_delta_y * (state['chosen_max_scroll'] / track_height)), state['chosen_max_scroll']))
+
+
 def run_player_setup(game):
     # Initialize state on the game object the first time
     if 'base_data' not in game.player_setup_state:
@@ -858,8 +858,6 @@ def run_player_setup(game):
         state['clothes_colors'] = {slot: (255, 255, 255) for slot in state['clothes_slots']}
         state['available_clothes'] = {slot: [] for slot in state['clothes_slots']}
         state['chosen_clothes'] = {slot: "None" for slot in state['clothes_slots']}
-        state['active_dropdown'] = None
-        state['gear_dropdown_scrolls'] = {slot: {'offset': 0, 'is_dragging': False, 'last_y': 0, 'handle_rect': None, 'max_scroll': 0} for slot in state['clothes_slots']}
         state['clothing_sprites'] = {}
 
         for item_name, template in ITEM_TEMPLATES.items():
@@ -913,7 +911,6 @@ def run_player_setup(game):
         
         state['config_preset_list'] = ["config"] 
         state['selected_config_preset'] = 'config'
-        state['game_config_dropdown_active'] = False
         _load_config_presets(state)
 
     state = game.player_setup_state
@@ -955,81 +952,6 @@ def run_player_setup(game):
             game.running = False
             return
             
-        if event.type == pygame.MOUSEWHEEL:
-            if state['current_tab'] == 'Settings':
-                 rect = state.get('settings_content_rect')
-                 if rect and rect.collidepoint(mouse_pos):
-                     state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] - (event.y * 30), state.get('settings_max_scroll', 0)))
-            elif state['current_tab'] == 'Player':
-                stats_rect = state.get('stats_content_rect')
-                chosen_rect = state.get('chosen_content_rect')
-                active_dropdown_slot = state.get('active_dropdown')
-                
-                if active_dropdown_slot:
-                     scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
-                     scroll_state['offset'] = max(0, min(scroll_state['offset'] - event.y * 50, scroll_state['max_scroll']))
-                elif state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
-                     state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * 70, state.get('traits_max_scroll', 0)))
-                elif stats_rect and stats_rect.collidepoint(mouse_pos):
-                     state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * 50, state.get('stats_max_scroll', 0)))
-                elif chosen_rect and chosen_rect.collidepoint(mouse_pos):
-                     state['chosen_scroll_offset_y'] = max(0, min(state['chosen_scroll_offset_y'] - event.y * 70, state.get('chosen_max_scroll', 0)))
-
-        
-        if event.type == pygame.KEYDOWN:
-            if state['current_tab'] == 'Settings':
-                if state.get('config_name_active'):
-                    if event.key == pygame.K_BACKSPACE: state['config_name'] = state['config_name'][:-1]
-                    elif event.key == pygame.K_RETURN: state['config_name_active'] = False
-                    else: state['config_name'] += event.unicode
-                elif state.get('seed_input_active'):
-                    if event.key == pygame.K_BACKSPACE:
-                        state['world_seed'] = state['world_seed'][:-1]
-                    elif event.key == pygame.K_RETURN:
-                        state['seed_input_active'] = False
-                    elif len(state.get('world_seed', "")) <= 10:
-                        if event.unicode.isalnum() or event.unicode == '-':
-                            state['world_seed'] += event.unicode.upper()
-                elif state.get('active_setting'):
-                    block, key = state['active_setting']
-
-                    setting_obj = state['settings_data'][block][key]
-                    
-                    if not isinstance(setting_obj, dict):
-                         setting_obj = {'value': setting_obj, 'name': key}
-                         state['settings_data'][block][key] = setting_obj
-                    
-                    current_val = str(setting_obj['value'])
-
-                    if event.key == pygame.K_BACKSPACE:
-                        setting_obj['value'] = current_val[:-1]
-
-                    elif event.key == pygame.K_RETURN: 
-                        state['active_setting'] = None
-
-                    else: 
-                        setting_obj['value'] = current_val + event.unicode
-                        
-            elif state['current_tab'] == 'Player':
-                if state.get('name_input_active'):
-                    if event.key == pygame.K_BACKSPACE: 
-                        state['player_name'] = state['player_name'][:-1]
-
-                    elif event.key == pygame.K_RETURN: 
-                        state['name_input_active'] = False
-
-                    elif len(state['player_name']) <= 20: 
-                        state['player_name'] += event.unicode
-                    
-                if state.get('seed_input_active'):
-                    if event.key == pygame.K_BACKSPACE:
-                        state['world_seed'] = state['world_seed'][:-1]
-                    elif event.key == pygame.K_RETURN:
-                        state['seed_input_active'] = False
-                    elif len(state.get('world_seed', "")) <= 10: 
-                        if event.unicode.isalnum() or event.unicode == '-':
-                            state['world_seed'] += event.unicode.upper()
-
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if back_btn.collidepoint(mouse_pos):
                 game.game_state = 'MENU'
@@ -1041,268 +963,10 @@ def run_player_setup(game):
                 state['current_tab'] = 'Settings'
                 continue
 
-            if state['current_tab'] == 'Settings':
-                state['config_name_active'] = False
-                state['active_setting'] = None
-                
-                if state.get('settings_scroll_handle') and state['settings_scroll_handle'].collidepoint(mouse_pos):
-                    state['is_dragging_settings_scrollbar'] = True
-                    state['settings_scroll_drag_last_y'] = mouse_pos[1]
-                    continue
-
-                if clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
-                    preset_name = state.get('selected_config_preset', 'config')
-                    save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
-                    core.data.config.load_settings(preset_name)
-                    
-                    if core.data.config.UI_BACKGROUND_MUSIC:
-                        if not pygame.mixer.music.get_busy():
-                            game.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=0.2)
-                    else:
-                        pygame.mixer.music.stop()
-
-                    state['current_tab'] = 'Player'
-                    print("Settings applied. Returning to Player Builder.")
-
-                elif clickable_rects.get('load_config_dd') and clickable_rects['load_config_dd'].collidepoint(mouse_pos):
-                    state['config_dd_active'] = not state.get('config_dd_active')
-                
-                elif state.get('config_dd_active'):
-                    dropdown_handled = False
-                    for opt, r in clickable_rects.get('load_config_options', []):
-                        if r.collidepoint(mouse_pos):
-                            state['selected_config_preset'] = opt
-                            state['config_name'] = opt if opt != 'default' else ""
-                            new_data = load_config_data(f"./game/save/config/{opt}.xml")
-                            if new_data:
-                                state['settings_data'] = new_data
-                            
-                            state['config_dd_active'] = False
-                            dropdown_handled = True
-                            break
-                    
-                    if not dropdown_handled:
-                        state['config_dd_active'] = False
-
-                else:
-                    clicked_input = False
-                    for block, key, rect in clickable_rects.get('config_inputs', []):
-                        if rect.collidepoint(mouse_pos):
-                            state['active_setting'] = (block, key)
-                            state['seed_input_active'] = False
-                            state['config_name_active'] = False
-                            clicked_input = True
-                            break
-                    
-                    if not clicked_input:
-                        for block, key, rect in clickable_rects.get('config_bools', []):
-                            if rect.collidepoint(mouse_pos):
-                                setting_obj = state['settings_data'][block][key]
-                                
-                                if not isinstance(setting_obj, dict):
-                                     setting_obj = {'value': setting_obj, 'name': key}
-                                     state['settings_data'][block][key] = setting_obj
-
-                                current_val = setting_obj['value']
-                                new_val = "false" if str(current_val).lower() == "true" else "true"
-                                state['settings_data'][block][key] = new_val
-                                break
-
-            else: # Player Tab
-                dropdown_clicked = False
-                scrollbar_clicked = False
-                
-                if state.get('stats_scrollbar_handle_rect') and state['stats_scrollbar_handle_rect'].collidepoint(mouse_pos):
-                    state['is_dragging_stats_scrollbar'] = True; state['stats_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
-                if not scrollbar_clicked and state.get('traits_scrollbar_handle_rect') and state['traits_scrollbar_handle_rect'].collidepoint(mouse_pos):
-                    state['is_dragging_traits_scrollbar'] = True; state['traits_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
-                
-                if not scrollbar_clicked and state.get('chosen_scrollbar_handle_rect') and state['chosen_scrollbar_handle_rect'].collidepoint(mouse_pos):
-                     state['is_dragging_chosen_scrollbar'] = True; state['chosen_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
-
-                active_dropdown_slot = state.get('active_dropdown')
-                if active_dropdown_slot:
-                    scroll_state = state['gear_dropdown_scrolls'][active_dropdown_slot]
-                    if scroll_state.get('handle_rect') and scroll_state['handle_rect'].collidepoint(mouse_pos):
-                        scroll_state['is_dragging'] = True; scroll_state['last_y'] = mouse_pos[1]; scrollbar_clicked = True
-
-                if scrollbar_clicked: continue
-
-                if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos): state['name_input_active'] = True
-                else: state['name_input_active'] = False
-
-                if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
-                    state['seed_input_active'] = True
-                    state['name_input_active'] = False 
-                else:
-                    state['seed_input_active'] = False
-                
-                # Catch specific sub-color button clicks per slot
-                if clickable_rects.get('slot_color_buttons'):
-                    for slot_name, rect in clickable_rects['slot_color_buttons'].items():
-                        if rect.collidepoint(mouse_pos):
-                            current_color = state['clothes_colors'].get(slot_name, (255, 255, 255))
-                            try:
-                                c_idx = CLOTHING_COLORS.index(current_color)
-                                state['clothes_colors'][slot_name] = CLOTHING_COLORS[(c_idx + 1) % len(CLOTHING_COLORS)]
-                            except ValueError:
-                                state['clothes_colors'][slot_name] = CLOTHING_COLORS[0]
-                            dropdown_clicked = True
-                            break
-                    if dropdown_clicked: continue
-
-                if clickable_rects["start_button"] and clickable_rects["start_button"].collidepoint(mouse_pos):
-                    if state.get('total_trait_cost', 0) <= STARTING_POINTS:
-                        final_player_data = state['base_data'].copy()
-                        final_player_data['attributes'] = state['final_attrs']
-                        final_player_data['clothes'] = state['chosen_clothes']
-                        final_player_data['clothes_colors'] = state.get('clothes_colors', {}) # Send generated colors to the Player logic
-                        final_player_data['name'] = state.get('player_name', "Player")
-                        final_player_data['sex'] = state['base_data'].get('sex', 'Male')
-                        final_player_data['traits'] = state['chosen_traits']
-                        final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
-                        final_player_data['sounds'] = { 'steps': 'steps.ogg' }
-                        
-                        final_player_data['game_settings'] = state.get('settings_data')
-
-                        raw_seed = state.get('world_seed', "").strip()
-                        if not raw_seed:
-                            raw_seed = core.data.config.generate_random_seed()
-                        
-                        final_player_data['world_seed'] = raw_seed
-
-                        game.loading_data = final_player_data
-                        game.game_state = 'LOADING'
-                        game.loading_done = False
-                        return
-
-                if state.get('active_dropdown'):
-                    for slot_name, option_name, option_rect in clickable_rects["dropdown_options"]:
-                        if option_rect.collidepoint(mouse_pos):
-                            state['chosen_clothes'][slot_name] = option_name 
-                            
-                            # --- FIX: Ensure color resets to white if changed to an invalid item ---
-                            if slot_name not in VALID_COLOR_ITEMS or option_name not in VALID_COLOR_ITEMS[slot_name]:
-                                state['clothes_colors'][slot_name] = (255, 255, 255)
-                                
-                            state['active_dropdown'] = None
-                            dropdown_clicked = True
-                            break
-                    if dropdown_clicked: continue
-
-                for slot_name, rect in clickable_rects.get("dropdown_buttons", {}).items():
-                    if rect.collidepoint(mouse_pos):
-                        if state.get('active_dropdown') == slot_name: state['active_dropdown'] = None
-                        else: state['active_dropdown'] = slot_name; state['gear_dropdown_scrolls'][slot_name]['offset'] = 0
-                        dropdown_clicked = True; break
-                
-                if state.get('preset_dropdown_active'):
-                    for option_name, option_rect in clickable_rects["load_dropdown_options"]:
-                        if option_rect.collidepoint(mouse_pos):
-                            state['selected_preset'] = option_name; state['preset_dropdown_active'] = False; _load_preset(state); dropdown_clicked = True; break
-                    if dropdown_clicked: continue
-
-                if clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
-                    state['preset_dropdown_active'] = not state.get('preset_dropdown_active', False); state['active_dropdown'] = None; dropdown_clicked = True
-
-                if state.get('game_config_dropdown_active'):
-                    for option_name, option_rect in clickable_rects.get("game_config_options", []):
-                         if option_rect.collidepoint(mouse_pos):
-                             state['selected_config_preset'] = option_name
-                             state['game_config_dropdown_active'] = False
-                             path = os.path.join("game", "save", "config", f"{option_name}.xml")
-                             new_settings = load_config_data(path)
-                             if new_settings:
-                                 state['settings_data'] = new_settings
-                             dropdown_clicked = True
-                             break
-                    if dropdown_clicked: continue
-
-                if clickable_rects.get('game_config_dropdown_button') and clickable_rects['game_config_dropdown_button'].collidepoint(mouse_pos):
-                     state['game_config_dropdown_active'] = not state.get('game_config_dropdown_active', False)
-                     state['preset_dropdown_active'] = False
-                     state['active_dropdown'] = None
-                     dropdown_clicked = True
-
-                if not dropdown_clicked:
-                    state['active_dropdown'] = None; state['preset_dropdown_active'] = False; state['game_config_dropdown_active'] = False
-
-                if 'sex_buttons' in clickable_rects:
-                    for sex, rect in clickable_rects['sex_buttons'].items():
-                        if rect.collidepoint(mouse_pos):
-                            state['base_data']['sex'] = sex
-                            if state['player_name'] == "Survivor" or not state['player_name']:
-                                 state['player_name'] = fake.name_male() if sex == 'Male' else fake.name_female()
-                            break
-
-                for trait_name, rect in clickable_rects["add_trait"]:
-                    if rect.collidepoint(mouse_pos):
-                        if trait_name in state['available_traits']:
-                            state['chosen_traits'].append(trait_name)
-                            _update_available_traits(state) 
-                            break 
-                
-                for trait_name, rect in clickable_rects["remove_trait"]:
-                    if rect.collidepoint(mouse_pos):
-                        if trait_name in state['chosen_traits']:
-                            state['chosen_traits'].remove(trait_name)
-                            _update_available_traits(state) 
-                            break
-                
-                if clickable_rects['save_button'].collidepoint(mouse_pos): _save_preset(state)
-                if clickable_rects['random_button'].collidepoint(mouse_pos): 
-                    _randomize_character(state)
-                    _update_available_traits(state)
-                if clickable_rects['delete_button'].collidepoint(mouse_pos): _delete_preset(state)
-
-        if event.type == pygame.MOUSEBUTTONUP:
-            state['is_dragging_stats_scrollbar'] = False
-            state['is_dragging_traits_scrollbar'] = False
-            state['is_dragging_chosen_scrollbar'] = False
-            state['is_dragging_settings_scrollbar'] = False
-            for slot in state.get('gear_dropdown_scrolls', {}):
-                state['gear_dropdown_scrolls'][slot]['is_dragging'] = False
-
-        if event.type == pygame.MOUSEMOTION:
-            if state.get('is_dragging_stats_scrollbar'):
-                mouse_delta_y = mouse_pos[1] - state['stats_scroll_drag_last_y']; state['stats_scroll_drag_last_y'] = mouse_pos[1]
-                track_height = state['stats_content_rect'].height - state['stats_scrollbar_handle_rect'].height
-                if track_height > 0:
-                    state['stats_scroll_offset_y'] = max(0, min(state.get('stats_scroll_offset_y', 0) + (mouse_delta_y * (state['stats_max_scroll'] / track_height)), state['stats_max_scroll']))
-            
-            elif state.get('is_dragging_traits_scrollbar'):
-                mouse_delta_y = mouse_pos[1] - state['traits_scroll_drag_last_y']; state['traits_scroll_drag_last_y'] = mouse_pos[1]
-                track_height = state['traits_content_rect'].height - state['traits_scrollbar_handle_rect'].height
-                if track_height > 0:
-                    state['traits_scroll_offset_y'] = max(0, min(state.get('traits_scroll_offset_y', 0) + (mouse_delta_y * (state['traits_max_scroll'] / track_height)), state['traits_max_scroll']))
-
-            elif state.get('is_dragging_chosen_scrollbar'):
-                mouse_delta_y = mouse_pos[1] - state['chosen_scroll_drag_last_y']; state['chosen_scroll_drag_last_y'] = mouse_pos[1]
-                track_height = state['chosen_content_rect'].height - state['chosen_scrollbar_handle_rect'].height
-                if track_height > 0:
-                     state['chosen_scroll_offset_y'] = max(0, min(state.get('chosen_scroll_offset_y', 0) + (mouse_delta_y * (state['chosen_max_scroll'] / track_height)), state['chosen_max_scroll']))
-
-            if state.get('is_dragging_settings_scrollbar'):
-                mouse_delta_y = mouse_pos[1] - state['settings_scroll_drag_last_y']
-                state['settings_scroll_drag_last_y'] = mouse_pos[1]
-                
-                track_rect = state.get('settings_scrollbar_track')
-                handle_rect = state.get('settings_scroll_handle')
-                max_scroll = state.get('settings_max_scroll', 0)
-
-                if track_rect and handle_rect and max_scroll > 0:
-                    track_height = track_rect.height - handle_rect.height
-                    if track_height > 0:
-                        scroll_amount = mouse_delta_y * (max_scroll / track_height)
-                        state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] + scroll_amount, max_scroll))
-
-            if state.get('active_dropdown'):
-                scroll_state = state['gear_dropdown_scrolls'][state['active_dropdown']]
-                if scroll_state.get('is_dragging'):
-                    mouse_delta_y = mouse_pos[1] - scroll_state['last_y']; scroll_state['last_y'] = mouse_pos[1]
-                    track_height = (4 * 25) - scroll_state['handle_rect'].height
-                    if track_height > 0:
-                        scroll_state['offset'] = max(0, min(scroll_state['offset'] + (mouse_delta_y * (scroll_state['max_scroll'] / track_height)), scroll_state['max_scroll']))
+        if state['current_tab'] == 'Settings':
+            handle_settings_events(game, state, event, mouse_pos, clickable_rects)
+        else:
+            handle_player_events(game, state, event, mouse_pos, clickable_rects)
 
     game._update_screen()
 
