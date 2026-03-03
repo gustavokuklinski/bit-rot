@@ -4,7 +4,6 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Magazine (General content)" chance="1.0" />
         <item item="Vaccine" chance="1.0" />
         <item item="Infection Pills" chance="1.0" />
         <item item="Matches" chance="1.0" />

@@ -131,10 +131,14 @@ class TileManager:
                                     if loot_node is not None:
                                         definition['loot'] = []
                                         for item_node in loot_node.findall('item'):
-                                            definition['loot'].append({
-                                                'item': item_node.get('item'),
-                                                'chance': float(item_node.get('chance', '0'))
-                                            })
+                                            entry = {'chance': float(item_node.get('chance', '0'))}
+                                            if item_node.get('type'):
+                                                entry['type'] = item_node.get('type')
+                                                entry['min'] = int(item_node.get('min', '1'))
+                                                entry['max'] = int(item_node.get('max', '1'))
+                                            elif item_node.get('item'):
+                                                entry['item'] = item_node.get('item')
+                                            definition['loot'].append(entry)
 
                                 if root.get('type') == 'maptile_container':
                                     capacity_node = root.find('capacity')
@@ -144,10 +148,14 @@ class TileManager:
                                     if loot_node is not None:
                                         definition['loot'] = []
                                         for item_node in loot_node.findall('item'):
-                                            definition['loot'].append({
-                                                'item': item_node.get('item'),
-                                                'chance': float(item_node.get('chance', '0'))
-                                            })
+                                            entry = {'chance': float(item_node.get('chance', '0'))}
+                                            if item_node.get('type'):
+                                                entry['type'] = item_node.get('type')
+                                                entry['min'] = int(item_node.get('min', '1'))
+                                                entry['max'] = int(item_node.get('max', '1'))
+                                            elif item_node.get('item'):
+                                                entry['item'] = item_node.get('item')
+                                            definition['loot'].append(entry)
                                 
                                 self.definitions[char] = definition
                             except pygame.error as e:

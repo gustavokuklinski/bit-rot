@@ -222,15 +222,17 @@ def handle_attack(game, mouse_pos):
                             if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
                             if animal.rect.collidepoint(world_pos) or angle_diff < 1.0:
+                                # [FIX] Calculate knockback angle FIRST, regardless of damage
+                                dx_kb = animal.rect.centerx - game.player.rect.centerx
+                                dy_kb = animal.rect.centery - game.player.rect.centery
+                                kb_angle = math.atan2(dy_kb, dx_kb)
+
                                 if can_deal_damage:
                                     damage = game.player.get_attack_damage()
                                     is_dead = animal.take_damage(damage, game, attacker=game.player)
                                     display_message_player(f"You attacked the animal for {damage} damage!")
 
-                                    # Calculate direction for blood splatter and knockback
-                                    dx_kb = animal.rect.centerx - game.player.rect.centerx
-                                    dy_kb = animal.rect.centery - game.player.rect.centery
-                                    kb_angle = math.atan2(dy_kb, dx_kb)
+                                    # Calculate direction for blood splatter
                                     direction = [math.cos(kb_angle), math.sin(kb_angle)]
 
                                     # Create blood splatter
@@ -288,15 +290,17 @@ def handle_attack(game, mouse_pos):
                                 if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
                                 if npc.rect.collidepoint(world_pos) or angle_diff < 1.0:
+                                    # [FIX] Calculate knockback angle FIRST, regardless of damage
+                                    dx_kb = npc.rect.centerx - game.player.rect.centerx
+                                    dy_kb = npc.rect.centery - game.player.rect.centery
+                                    kb_angle = math.atan2(dy_kb, dx_kb)
+
                                     if can_deal_damage:
                                         damage = game.player.get_attack_damage()
                                         is_dead = npc.take_damage(damage, game, attacker=game.player)
                                         display_message(game, f"You attacked {npc.name} for {damage} damage!")
 
-                                        # Calculate direction for blood splatter and knockback
-                                        dx_kb = npc.rect.centerx - game.player.rect.centerx
-                                        dy_kb = npc.rect.centery - game.player.rect.centery
-                                        kb_angle = math.atan2(dy_kb, dx_kb)
+                                        # Calculate direction for blood splatter
                                         direction = [math.cos(kb_angle), math.sin(kb_angle)]
 
                                         # Create blood splatter

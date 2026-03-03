@@ -37,6 +37,9 @@ def generate_random_item(cls):
     chances = []
     
     for name, data in spawnable.items():
+        if name.endswith(' on'):
+            continue
+
         base_chance = float(data['spawn']['chance'])
         item_type = data.get('type', '')
         
@@ -53,6 +56,7 @@ def generate_random_item(cls):
         elif item_type == 'recipe': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
         elif item_type == 'resource': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
         elif item_type == 'map': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
+        elif item_type == 'liquid': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
         elif item_type == 'consumable':
             multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
             # Check sub-types/categories if applicable
@@ -240,6 +244,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     if 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
             
+            if loot_info['name'].endswith(' on'):
+                continue
+
             target_template = ITEM_TEMPLATES.get(loot_info['name'], {})
             target_type = target_template.get('type', '')
 
@@ -258,6 +265,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             elif target_type == 'recipe': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
             elif target_type == 'resource': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
             elif target_type == 'map': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
+            elif target_type == 'liquid': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
             elif target_type == 'consumable':
                 m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
                 target_props = target_template.get('properties', {})
@@ -280,11 +288,14 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         fits = False
                     
                     if fits and new_item.item_type in ['container', 'backpack']:
-                         current_weight = sum(i.get_total_weight() for i in new_item.inventory)
-                         item_weight = loot_item.get_total_weight()
+                        current_weight = sum(i.get_total_weight() for i in new_item.inventory)
+                        item_weight = loot_item.get_total_weight()
                          
-                         if current_weight + item_weight > max_cap:
-                             fits = False
+                        if current_weight + item_weight > max_cap:
+                            fits = False
+
+                        if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):
+                            fits = False
 
                     if fits:
                         new_item.inventory.append(loot_item)

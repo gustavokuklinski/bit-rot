@@ -187,19 +187,26 @@ class PlayerInventory:
             if source == 'backpack': item = self.backpack
             elif source_inventory and 0 <= index < len(source_inventory): item = source_inventory[index] 
 
+            # [FIX] Attach 'obj' to the target definitions so we can check their liquid flags
             targets = []
             if target_container is self:
-                targets.append({'inv': self.inventory, 'cap': self.base_inventory_slots, 'name': "Inventory"})
+                targets.append({'inv': self.inventory, 'cap': self.base_inventory_slots, 'name': "Inventory", 'obj': self})
                 if self.backpack:
-                    targets.append({'inv': self.backpack.inventory, 'cap': self.backpack.capacity or 0, 'name': self.backpack.name})
+                    targets.append({'inv': self.backpack.inventory, 'cap': self.backpack.capacity or 0, 'name': self.backpack.name, 'obj': self.backpack})
             elif target_container and hasattr(target_container, 'inventory'):
-                targets.append({'inv': target_container.inventory, 'cap': target_container.capacity or 0, 'name': target_container.name})
+                targets.append({'inv': target_container.inventory, 'cap': target_container.capacity or 0, 'name': target_container.name, 'obj': target_container})
             else: return
 
             if not item: return
             remaining_load = item.load
+            is_item_liquid = getattr(item, 'liquid', False)
             
             for target in targets:
+                # [FIX] Skip this target container if liquid flags don't perfectly match
+                target_obj = target.get('obj')
+                if getattr(target_obj, 'allow_liquid', False) != is_item_liquid:
+                    continue
+                    
                 target_inv = target['inv']
                 for target_item in target_inv:
                     if target_item.can_stack_with(item):
@@ -228,6 +235,11 @@ class PlayerInventory:
             if remaining_load > 0:
                 transferred = False
                 for target in targets:
+                    # [FIX] Apply liquid match constraint for creating new item slots too
+                    target_obj = target.get('obj')
+                    if getattr(target_obj, 'allow_liquid', False) != is_item_liquid:
+                        continue
+                        
                     target_inv = target['inv']
                     target_cap = target['cap']
                     target_name = target['name']

@@ -4,6 +4,7 @@ import random
 
 from core.data.config import *
 from core.entities.item.item import Item, Container
+from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 from core.entities.vehicle.vehicle import Vehicle
@@ -76,20 +77,36 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             items = []
                             capacity = tile_def.get('capacity', 0)
                             if 'loot' in tile_def:
+                                if not ITEM_TEMPLATES:
+                                    load_item_templates_data()
                                 # NEW: Randomize loot pool to handle items with 100% chance fairly
                                 loot_pool = list(tile_def['loot'])
                                 random.shuffle(loot_pool)
                                 
-                                for loot_item in loot_pool:
+                                for loot_entry in loot_pool:
                                     if capacity > 0 and len(items) >= capacity:
                                         break
                                         
-                                    adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                    adjusted_chance = loot_entry['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
                                     
                                     if random.random() < adjusted_chance:
-                                        new_item = Item.create_from_name(loot_item['item'])
-                                        if new_item:
-                                            items.append(new_item)
+                                        if 'type' in loot_entry:
+                                            min_qty = loot_entry.get('min', 1)
+                                            max_qty = loot_entry.get('max', 1)
+                                            qty = random.randint(min_qty, max_qty)
+                                            
+                                            matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type']]
+                                            if matching_items:
+                                                for _ in range(qty):
+                                                    if capacity > 0 and len(items) >= capacity: break
+                                                    chosen_item = random.choice(matching_items)
+                                                    new_item = Item.create_from_name(chosen_item)
+                                                    if new_item: items.append(new_item)
+                                                    
+                                        elif 'item' in loot_entry:
+                                            new_item = Item.create_from_name(loot_entry['item'])
+                                            if new_item:
+                                                items.append(new_item)
                             
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
@@ -128,21 +145,37 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             items = []
                             capacity = tile_def.get('capacity', 0)
                             if 'loot' in tile_def:
+                                if not ITEM_TEMPLATES:
+                                    load_item_templates_data()
                                 # NEW: Randomize loot pool to handle items with 100% chance fairly
                                 loot_pool = list(tile_def['loot'])
                                 random.shuffle(loot_pool)
                                 
-                                for loot_item in loot_pool:
+                                for loot_entry in loot_pool:
                                     if capacity > 0 and len(items) >= capacity:
                                         break
                                         
                                     # [FIX] Apply multiplier to Base Layer containers!
-                                    adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                    adjusted_chance = loot_entry['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
                                     
                                     if random.random() < adjusted_chance:
-                                        new_item = Item.create_from_name(loot_item['item'])
-                                        if new_item:
-                                            items.append(new_item)
+                                        if 'type' in loot_entry:
+                                            min_qty = loot_entry.get('min', 1)
+                                            max_qty = loot_entry.get('max', 1)
+                                            qty = random.randint(min_qty, max_qty)
+                                            
+                                            matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type']]
+                                            if matching_items:
+                                                for _ in range(qty):
+                                                    if capacity > 0 and len(items) >= capacity: break
+                                                    chosen_item = random.choice(matching_items)
+                                                    new_item = Item.create_from_name(chosen_item)
+                                                    if new_item: items.append(new_item)
+                                                    
+                                        elif 'item' in loot_entry:
+                                            new_item = Item.create_from_name(loot_entry['item'])
+                                            if new_item:
+                                                items.append(new_item)
                                             
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
@@ -215,21 +248,37 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         items = []
                         capacity = tile_def.get('capacity', 0)
                         if 'loot' in tile_def:
+                            if not ITEM_TEMPLATES:
+                                load_item_templates_data()
                             # NEW: Randomize loot pool to handle items with 100% chance fairly
                             loot_pool = list(tile_def['loot'])
                             random.shuffle(loot_pool)
                             
-                            for loot_item in loot_pool:
+                            for loot_entry in loot_pool:
                                 if capacity > 0 and len(items) >= capacity:
                                     break
                                 
                                 # [FIX] Apply multiplier to Spawn Layer containers!
-                                adjusted_chance = loot_item['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
+                                adjusted_chance = loot_entry['chance'] * ITEM_SPAWN_CHANCE_MULTIPLIER
                                 
                                 if random.random() < adjusted_chance:
-                                    new_item = Item.create_from_name(loot_item['item'])
-                                    if new_item:
-                                        items.append(new_item)
+                                    if 'type' in loot_entry:
+                                        min_qty = loot_entry.get('min', 1)
+                                        max_qty = loot_entry.get('max', 1)
+                                        qty = random.randint(min_qty, max_qty)
+                                        
+                                        matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type']]
+                                        if matching_items:
+                                            for _ in range(qty):
+                                                if capacity > 0 and len(items) >= capacity: break
+                                                chosen_item = random.choice(matching_items)
+                                                new_item = Item.create_from_name(chosen_item)
+                                                if new_item: items.append(new_item)
+                                                
+                                    elif 'item' in loot_entry:
+                                        new_item = Item.create_from_name(loot_entry['item'])
+                                        if new_item:
+                                            items.append(new_item)
                                         
                         container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                         container.rect = rect

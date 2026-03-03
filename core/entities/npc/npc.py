@@ -139,7 +139,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if not hasattr(self, 'dx'): self.dx = 0
         if not hasattr(self, 'dy'): self.dy = 0
             
-        self.attack_range = TILE_SIZE * 1
+        self.attack_range = TILE_SIZE * 1.5
         self.last_attack_time = 0
         self.attack_cooldown = 1000
         
@@ -201,7 +201,19 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if self.is_dead: return 
 
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-        effective_speed = self.speed * multiplier * game.dt_mult
+        
+        # [NEW] Determine terrain speed multiplier
+        speed_mult = 1.0
+        gx = self.rect.centerx // TILE_SIZE
+        gy = self.rect.centery // TILE_SIZE
+        if hasattr(game, 'map_manager'):
+            tile_def = game.map_manager.get_tile_at(gx, gy)
+            if tile_def:
+                name = tile_def.get('name', '').lower()
+                if 'window' in name or tile_def.get('is_window'):
+                    speed_mult = 0.35 # Slow down on windows
+
+        effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()
         
         is_raining = getattr(game, 'is_raining', False)
@@ -442,13 +454,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                          return True, obstacle
             
             for entity in entities_to_check:
-                if rect_check.colliderect(entity.rect):
-                    if hasattr(entity, 'mask') and entity.mask:
-                        offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)
-                        if self.mask.overlap(entity.mask, offset):
-                            return True, entity
-                    else:
-                        return True, entity
+                # [FIX] Shrink the entity's hitbox slightly so the NPC can step inside a few pixels
+                # We also ignore pixel-perfect mask checks here so edges can visually overlap
+                hitbox = entity.rect.inflate(-12, -12)
+                if rect_check.colliderect(hitbox):
+                    return True, entity
             return False, None
 
         for _ in range(steps):

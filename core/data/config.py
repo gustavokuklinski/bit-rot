@@ -140,6 +140,7 @@ ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = 1.0
+ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = 1.0
 NPC_MAX_CHUNK = 0
@@ -188,7 +189,7 @@ def load_settings(preset="default"):
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
     global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS, ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY, ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE, ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
+    global ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE, ITEM_SPAWN_CHANCE_MULTIPLIER_MAP, ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
@@ -263,10 +264,11 @@ def load_settings(preset="default"):
 
         spawning_config = root.find('item_spawning')
         ITEM_SPAWN_CHANCE_MULTIPLIER = float(spawning_config.find('item_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = float(spawning_config.find('item_container_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE = float(spawning_config.find('item_weapon_melee_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED = float(spawning_config.find('item_weapon_ranged_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE = float(spawning_config.find('item_mobile_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = float(spawning_config.find('item_container_spawn_chance_multiplier').get('value'))
+        ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID = float(spawning_config.find('item_liquid_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK = float(spawning_config.find('item_backpack_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE = float(spawning_config.find('item_consumable_spawn_chance_multiplier').get('value'))
         ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = float(spawning_config.find('item_consumable_food_spawn_chance_multiplier').get('value'))

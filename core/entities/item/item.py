@@ -193,7 +193,7 @@ class Item:
 
     def is_stackable(self):
         return (self.capacity is not None and self.capacity > 1 and 
-                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility'])
+                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility', 'liquid'])
 
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():

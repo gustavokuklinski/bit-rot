@@ -38,12 +38,8 @@
     <initial_loot>
         <item name="Wallet" chance="1" />
         <item name="Keyring Default" chance="1" />
-        <item name="M4A1" chance="1" />
-        <item name="Medicine Vol.1" chance="1.0" />
-        <item name="Survivor Guide Basic" chance="1.0" />
-        <item name="Vehicle Engineering Vol.1" chance="1.0" />
-        <item name="Vehicle Engineering Vol.2" chance="1.0" />
-        <item name="Vehicle Engineering Vol.3" chance="1.0" />
+        <item name="ID" chance="1" />
+        <item name="Mobile off" chance="1" />
     </initial_loot>
 
     <visuals>

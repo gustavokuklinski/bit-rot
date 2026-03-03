@@ -4,6 +4,8 @@ import random
 import os
 from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
+from core.entities.zombie.corpse import Corpse
+from core.entities.item.item import Item
 
 class Animal(Zombie):
 
@@ -35,7 +37,7 @@ class Animal(Zombie):
 
         super().__init__(x, y, zombie_template)
         
-        # [FIX] Track the layer this Animal belongs to
+        # Track the layer this Animal belongs to
         if layer is not None:
             self.layer = layer
         elif game:
@@ -43,7 +45,7 @@ class Animal(Zombie):
         else:
             self.layer = 1
 
-        # [FIX] Clear inventory to prevent ID Cards or default Zombie items from appearing
+        # Clear inventory to prevent ID Cards or default Zombie items from appearing
         self.inventory = []
         
         self.type = "animal"
@@ -59,3 +61,102 @@ class Animal(Zombie):
         self.speed = random.uniform(min_spd, max_spd)
         
         print(f"[ANIMAL] Created {self.name} at ({self.x}, {self.y}) with sprite: {self.image is not None}")
+
+    # [FIX] Explicitly prevent the AI update from running if the animal is dead
+    def update_ai(self, player_rect, obstacles, other_zombies, game):
+        if self.is_dead:
+            return
+        super().update_ai(player_rect, obstacles, other_zombies, game)
+
+    # [FIX] Override take_damage for instant hit feedback
+    def take_damage(self, amount, game, attacker=None):
+        if self.is_dead:
+            return False
+            
+        self.health -= amount
+        self.show_health_bar_timer = 120
+        
+        # Play hit sound BEFORE checking death so the final blow feels punchy and instant
+        current_time = pygame.time.get_ticks()
+        if hasattr(self, 'sound_hit') and self.sound_hit and game and hasattr(game, 'sound_manager'):
+            if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
+                game.sound_manager.play_sound(self.sound_hit, subdir='zombies', game=game, source_pos=self.rect.center)
+                self.last_hit_sound_time = current_time
+        
+        # Instantly register as ready to die so the game calls die() without delay
+        if self.health <= 0:
+            self.health = 0
+            self.state = 'dead' # Extra safety flag
+            return True
+            
+        # Make the animal chase the attacker if hit but not killed
+        self.aggro_timer = 10000
+        self.state = 'chasing'
+                
+        return False
+
+    # [FIX] Custom animal die method without the lag-inducing grid rebuilds
+    def die(self, game):
+        if self.is_dead: return
+        self.is_dead = True
+        self.state = 'dead'
+        
+        # 1. Play animal death sound
+        #if getattr(self, 'sound_dead', None) and hasattr(game, 'sound_manager'):
+        #    game.sound_manager.play_sound(self.sound_dead, subdir='zombies', game=game, source_pos=self.rect.center)
+
+        # 2. Create Animal Corpse using the updated relative path
+        corpse = Corpse(
+            name=f"Dead {self.name}",
+            capacity=10, 
+            image_path="../animals/dead.png",  
+            pos=self.rect.center,
+            decay_ms=120000 
+        )
+
+        # 3. Add animal-specific loot
+        if hasattr(self, 'loot_table') and self.loot_table:
+            for loot_entry in self.loot_table:
+                chance_val = float(loot_entry.get('chance', 0))
+                if chance_val > 1.0: chance_val /= 100.0
+                if random.random() <= chance_val:
+                    item_name = loot_entry.get('item')
+                    new_item = Item.create_from_name(item_name)
+                    if new_item: corpse.inventory.append(new_item)
+
+        # 4. Add corpse to map INSTANTLY
+        game.items_on_ground.append(corpse)
+        
+        # Add a death burst effect to make the death visually pop and feel responsive
+        if hasattr(game, 'splashes'):
+            game.splashes.append({
+                'pos': (self.rect.centerx, self.rect.bottom), 
+                'time': pygame.time.get_ticks(),
+                'duration': 250, 
+                'radius': 5,    
+                'type': 'death_burst'
+            })
+
+        # 5. Safely clean up from active memory to prevent ghost artifacts
+        try: self.kill() # Instantly removes it from Pygame rendering groups if it exists in one
+        except: pass
+        
+        if self in game.items_on_ground:
+            try: game.items_on_ground.remove(self)
+            except ValueError: pass
+            
+        if hasattr(game, 'active_animals') and self in game.active_animals:
+            try: game.active_animals.remove(self)
+            except ValueError: pass
+            
+        if self in game.zombies:
+            try: game.zombies.remove(self)
+            except ValueError: pass
+            
+        if hasattr(game, 'active_zombies') and self in game.active_zombies:
+            try: game.active_zombies.remove(self)
+            except ValueError: pass
+            
+        # Force position offscreen to prevent 1-frame ghost rendering 
+        self.rect.x = -9999
+        self.rect.y = -9999

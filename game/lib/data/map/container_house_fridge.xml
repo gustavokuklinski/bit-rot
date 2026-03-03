@@ -4,15 +4,7 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Canned Food" chance="1.0" />
-        <item item="Plastic Bottle" chance="1.0" />
-        <item item="Sparkling Water" chance="1.0" />
-        <item item="Cheese" chance="1.0" />
-        <item item="Chicken" chance="1.0" />
-        <item item="Meat" chance="1.0" />
-        <item item="Fish" chance="1.0" />
-        <item item="Apple" chance="1.0" />
-        <item item="Carrot" chance="1.0" />
-        <item item="Cola Drink" chance="1.0" />
+        <item type="consumable_drink" min="1" max="5" chance="1.0" />
+        <item type="consumable_food" min="1" max="5" chance="1.0" />
     </loot>
 </map>

@@ -2,26 +2,10 @@
     <visuals>
         <sprite file="crate.png" />
     </visuals>
-    <capacity value="10" />
+    <capacity value="15" />
     <loot>
-        <item item="Plastic Bottle" chance="1.0" />
-        <item item="Knife" chance="1.0" />
-        <item item="Batton" chance="1.0" />
-        <item item="Matches" chance="1.0" />
-        <item item="Lantern off" chance="1.0" />
-        <item item="Vaccine" chance="1.0" />
-        <item item="Medkit" chance="1.0" />
-        <item item="Duck Tape" chance="1.0" />
-        <item item="38 Revolver" chance="1.0" />
-        <item item="38 Ammo" chance="1.0" />
-        <item item="Powerbank" chance="1.0" />
-        <item item="Car Key Jeep" chance="1.0" />
-        <item item="Sleeping Bag" chance="1.0" />
-        <item item="Camp Tent" chance="1.0" />
-        <item item="Baseball Bat" chance="1.0" />
-        <item item="Screws" chance="1.0" />
-        <item item="Nails" chance="1.0" />
-        <item item="Hammer" chance="1.0" />
-        <item item="Island Map" chance="1.0" />
+        <item type="resource" min="1" max="5" chance="1.0" />
+        <item type="weapon_melee" min="1" max="5" chance="1.0" />
+        <item item="Cigarette Pack" chance="1.0" />
     </loot>
 </map>

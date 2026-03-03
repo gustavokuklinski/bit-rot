@@ -887,7 +887,9 @@ def handle_right_click(game, mouse_pos):
 
             if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
                 if can_grab:
-                    if not getattr(clicked_item, 'liquid', False) or getattr(game.player.backpack, 'allow_liquid', False):
+                    bp_allow_liquid = getattr(game.player.backpack, 'allow_liquid', False)
+                    is_item_liquid = getattr(clicked_item, 'liquid', False)
+                    if bp_allow_liquid == is_item_liquid:
                         if 'Place on Backpack' not in options: options.append('Place on Backpack')
 
             if is_camp and getattr(clicked_item, 'allow_sleep', False):

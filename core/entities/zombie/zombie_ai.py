@@ -328,8 +328,21 @@ class ZombieAI:
             self.move_towards(target_pos, obstacles, other_zombies, game, can_see_target=(can_see_target and self.state == 'chasing'))
 
     def move_towards(self, target_pos, obstacles, other_zombies, game, can_see_target=True):
+
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-        effective_speed = self.speed * multiplier * game.dt_mult
+        
+        # [NEW] Determine terrain speed multiplier
+        speed_mult = 1.0
+        gx = self.rect.centerx // TILE_SIZE
+        gy = self.rect.centery // TILE_SIZE
+        if hasattr(game, 'map_manager'):
+            tile_def = game.map_manager.get_tile_at(gx, gy)
+            if tile_def:
+                name = tile_def.get('name', '').lower()
+                if 'window' in name or tile_def.get('is_window'):
+                    speed_mult = 0.35 # Slow down on windows
+
+        effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()
 
         move_x, move_y = 0, 0
@@ -451,6 +464,11 @@ class ZombieAI:
             collided = False
             for obs in obstacles:
                 if self.rect.colliderect(obs): collided = True; break
+                
+            # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
+            if not collided and getattr(game, 'player', None) and not game.player.is_dead:
+                if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
+                    collided = True
             
             if collided:
                 self.x -= step_x
@@ -464,6 +482,11 @@ class ZombieAI:
             collided = False
             for obs in obstacles:
                 if self.rect.colliderect(obs): collided = True; break
+
+            # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
+            if not collided and getattr(game, 'player', None) and not game.player.is_dead:
+                if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
+                    collided = True
 
             if collided:
                 self.y -= step_y

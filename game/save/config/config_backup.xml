@@ -35,24 +35,25 @@
         <cloth_multiplier value="1.0" name="Cloth (Default: 1.0)"/>
     </durability>
     <item_spawning>
-        <item_spawn_chance_multiplier value="1.0" name="Multiplier (Default: 1.0)"/>
-        <item_weapon_melee_spawn_chance_multiplier value="1.0" name="Melee weapons (Default: 1.0)"/>
-        <item_weapon_ranged_spawn_chance_multiplier value="1.0" name="Ranged weapons (Default: 1.0)"/>
-        <item_mobile_spawn_chance_multiplier value="1.0" name="Mobile (Default: 1.0)"/>
-        <item_container_spawn_chance_multiplier value="1.0" name="Containers (Default: 1.0)"/>
-        <item_backpack_spawn_chance_multiplier value="1.0" name="Backpack (Default: 1.0)"/>
-        <item_consumable_spawn_chance_multiplier value="1.0" name="Consumables (Default: 1.0)"/>
-        <item_consumable_food_spawn_chance_multiplier value="1.0" name="Foods (Default: 1.0)"/>
-        <item_consumable_drink_spawn_chance_multiplier value="1.0" name="Drinks (Default: 1.0)"/>
-        <item_consumable_medication_spawn_chance_multiplier value="1.0" name="Medications (Default: 1.0)"/>
-        <item_consumable_ammo_spawn_chance_multiplier value="1.0" name="Ammo (Default: 1.0)"/>
-        <item_consumable_drugs_spawn_chance_multiplier value="1.0" name="Drugs (Default: 1.0)"/>
-        <item_utility_spawn_chance_multiplier value="1.0" name="Utility (Default: 1.0)"/>
-        <item_recipe_spawn_chance_multiplier value="1.0" name="Recipe (Default: 1.0)"/>
-        <item_resource_spawn_chance_multiplier value="1.0" name="Resource (Default: 1.0)"/>
-        <item_map_spawn_chance_multiplier value="1.0" name="Map (Default: 1.0)"/>
-        <item_currency_spawn_chance_multiplier value="1.0" name="Currency (Default: 1.0)"/>
-        <item_text_spawn_chance_multiplier value="1.0" name="Text (Default: 1.0)"/>
+        <item_spawn_chance_multiplier value="1.0" name="Global Multiplier (Default: 1.0)"/>
+        <item_mobile_spawn_chance_multiplier value="0.5" name="Mobile"/>
+        <item_map_spawn_chance_multiplier value="0.5" name="Map"/>
+        <item_currency_spawn_chance_multiplier value="0.5" name="Currency"/>
+        <item_text_spawn_chance_multiplier value="0.5" name="Text"/>
+        <item_map_spawn_chance_liquid  value="0.5" name="Liquid (Water, Wine)"/>
+        <item_backpack_spawn_chance_multiplier value="0.5" name="Backpack"/>
+        <item_weapon_melee_spawn_chance_multiplier value="0.5" name="Melee weapons"/>
+        <item_weapon_ranged_spawn_chance_multiplier value="0.5" name="Ranged weapons"/>
+        <item_container_spawn_chance_multiplier value="0.5" name="Containers (Toolbox, Sewing kits)"/>
+        <item_utility_spawn_chance_multiplier value="0.5" name="Utility (Lighters, Powerbanks)"/>
+        <item_recipe_spawn_chance_multiplier value="0.5" name="Recipe (Skill books)"/>
+        <item_resource_spawn_chance_multiplier value="0.5" name="Resource (Planks, nails)"/>
+        <item_consumable_spawn_chance_multiplier value="0.5" name="Consumables (General)"/>
+        <item_consumable_food_spawn_chance_multiplier value="0.5" name="Foods (Meat, Chesse)"/>
+        <item_consumable_drink_spawn_chance_multiplier value="0.5" name="Drinks (Cola, Energy)"/>
+        <item_consumable_medication_spawn_chance_multiplier value="0.5" name="Medications (Medkits, bandages)"/>
+        <item_consumable_ammo_spawn_chance_multiplier value="0.5" name="Ammo"/>
+        <item_consumable_drugs_spawn_chance_multiplier value="0.5" name="Drugs (Pills and medicine)"/>
     </item_spawning>
     <vehicle>
         <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk (Default: 5)"/>
@@ -78,7 +79,7 @@
         <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
+        <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 10)"/>
         <zombie_multiplier value="1" name="Multiplier by day (Default: 1)"/>
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>

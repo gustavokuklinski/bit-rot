@@ -227,6 +227,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = False
                                         
                                 elif target_list is not None: # e.g. Main Inventory
+                                    if getattr(game.dragged_item, 'liquid', False):
+                                        print(f"The {game.dragged_item.name} spills and is lost (pockets cannot hold liquid).")
+                                        dropped_successfully = True
+                                        
                                     if len(target_list) < game.player.get_total_inventory_slots():
                                          if is_external_source:
                                              item_ref = game.dragged_item

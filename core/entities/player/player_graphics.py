@@ -213,13 +213,23 @@ class PlayerGraphics:
                self.active_weapon.item_type in ['weapon_melee', 'tool']:
                 
                 original_image = self.active_weapon.image
-                angle_degrees = math.degrees(self.melee_swing_angle)
+                
+                # --- NEW: Calculate Dynamic Swing Angle ---
+                # Assuming standard melee swing timer maxes out around 15 frames.
+                # As the timer decreases from 15 to 0, swing_progress goes from ~1.0 to -1.0.
+                swing_progress = (self.melee_swing_timer - 7.5) / 7.5
+                
+                # Apply progress to sweep across the same arc drawn below (+45 to -45 degrees)
+                dynamic_swing_angle = self.melee_swing_angle + (swing_progress * (3.1415 / 4))
+                
+                angle_degrees = math.degrees(dynamic_swing_angle)
                 rotated_image = pygame.transform.rotate(original_image, angle_degrees) 
                 rotated_rect = rotated_image.get_rect(center=draw_rect.center)
                 
                 offset_radius = TILE_SIZE * 0.8 
-                offset_x_weapon = math.cos(self.melee_swing_angle) * offset_radius
-                offset_y_weapon = -math.sin(self.melee_swing_angle) * offset_radius
+                offset_x_weapon = math.cos(dynamic_swing_angle) * offset_radius
+                offset_y_weapon = -math.sin(dynamic_swing_angle) * offset_radius
+                # ------------------------------------------
                 
                 rotated_rect.centerx += offset_x_weapon
                 rotated_rect.centery += offset_y_weapon

@@ -157,6 +157,7 @@ class PlayerMovement:
         else:
             # Standard Player Walking Movement (when not in vehicle)
             def check_collision(rect_check):
+                # Only check for hard obstacle/wall collisions here
                 for obstacle in obstacles:
                     if rect_check.colliderect(obstacle):
                         gx = obstacle.x // TILE_SIZE
@@ -168,40 +169,45 @@ class PlayerMovement:
                                 return 'tile'
                         else:
                             return 'tile'
-                
-                entities = zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else [])
-                for entity in entities:
-                    if rect_check.colliderect(entity.rect):
-                        if hasattr(entity, 'mask') and entity.mask:
-                            offset = (entity.rect.x - rect_check.x, entity.rect.y - rect_check.y)
-                            if self.mask.overlap(entity.mask, offset):
-                                return 'entity'
-                        else:
-                            return 'entity'
                 return None
 
+            # [FIX] Calculate terrain/entity speed multiplier
+            speed_mult = 1.0
+
+            # 1. Check if over entities (Zombies, NPCs, Animals)
+            entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
+            for entity in entities:
+                if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
+                    speed_mult = min(speed_mult, 0.35) # Slow down heavily when walking over entities
+                    break
+                    
+            # 2. Check if over open window
+            gx = self.rect.centerx // TILE_SIZE
+            gy = self.rect.centery // TILE_SIZE
+            if hasattr(game, 'map_manager'):
+                tile_def = game.map_manager.get_tile_at(gx, gy)
+                if tile_def:
+                    name = tile_def.get('name', '').lower()
+                    if 'window' in name or tile_def.get('is_window'):
+                        speed_mult = min(speed_mult, 0.35) # Slow down through windows
+
+            move_x = self.vx * speed_mult * game.dt_mult
+            move_y = self.vy * speed_mult * game.dt_mult
+
             # Move X
-            self.x += self.vx * game.dt_mult
+            self.x += move_x
             self.rect.x = round(self.x)
             
-            col_type = check_collision(self.rect)
-            if col_type == 'tile':
-                 self.x -= self.vx * game.dt_mult
-                 self.rect.x = round(self.x)
-            elif col_type == 'entity':
-                 self.x -= self.vx * 0.8 * game.dt_mult
+            if check_collision(self.rect) == 'tile':
+                 self.x -= move_x
                  self.rect.x = round(self.x)
 
             # Move Y
-            self.y += self.vy * game.dt_mult
+            self.y += move_y
             self.rect.y = round(self.y)
 
-            col_type = check_collision(self.rect)
-            if col_type == 'tile':
-                 self.y -= self.vy * game.dt_mult
-                 self.rect.y = round(self.y)
-            elif col_type == 'entity':
-                 self.y -= self.vy * 0.8 * game.dt_mult
+            if check_collision(self.rect) == 'tile':
+                 self.y -= move_y
                  self.rect.y = round(self.y)
 
         # --- CHUNK TRANSITION LOGIC ---

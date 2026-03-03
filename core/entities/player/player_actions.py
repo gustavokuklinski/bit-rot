@@ -95,7 +95,7 @@ class PlayerActions:
 
         source_inventory = self._get_source_inventory(source_type, container_item)
         
-        if not item.item_type.startswith('consumable'):
+        if not (item.item_type.startswith('consumable') or item.item_type == 'liquid'):
             return False
 
         if item.load <= 0:
@@ -105,7 +105,7 @@ class PlayerActions:
         duration_mult = 1.0
         if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
             duration_mult = 2.0
-        elif 'Water' in item.name or item.item_type == 'consumable_drink':
+        elif item.item_type == 'consumable_drink' or item.item_type == 'liquid':
             duration_mult = 1.0
         elif item.item_type == 'consumable_food':
             duration_mult = 1.0
@@ -375,7 +375,7 @@ class PlayerActions:
             else: options.append('Drop')
             return options
 
-        if item.item_type.startswith('consumable'):
+        if item.item_type.startswith('consumable') or item.item_type == 'liquid':
             if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
                 pass
             elif item.item_type == 'consumable_medication' or 'Medkit' in item.name or 'Bandage' in item.name:
@@ -453,7 +453,9 @@ class PlayerActions:
             if item.load > 1: options.append('Drop all')
             
             if self.backpack and container_item is not self.backpack:
-                if not is_liquid or getattr(self.backpack, 'allow_liquid', False):
+                # [FIX] Ensure matching liquid states before allowing transfer stack
+                bp_allow_liquid = getattr(self.backpack, 'allow_liquid', False)
+                if bp_allow_liquid == is_liquid:
                     options.append('Send all to Backpack')
             
             if source != 'inventory':

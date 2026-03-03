@@ -3,6 +3,7 @@ import math
 import random
 from core.data.config import *
 from core.entities.item.item import Item
+from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle_loader import VehicleLoader
@@ -205,17 +206,33 @@ class Vehicle:
     def generate_trunk_loot(self, loot_table=None):
         if not loot_table: return
             
+        if not ITEM_TEMPLATES:
+            load_item_templates_data()
+            
         for entry in loot_table:
             if len(self.inventory) >= self.capacity: break
             
-            item_name = entry.get('item')
             chance = entry.get('chance', 0)
             try: chance = float(chance)
             except (ValueError, TypeError): chance = 0.0
             
             if random.random() < chance:
-                item = Item.create_from_name(item_name)
-                if item: self.inventory.append(item)
+                if 'type' in entry:
+                    min_qty = entry.get('min', 1)
+                    max_qty = entry.get('max', 1)
+                    qty = random.randint(min_qty, max_qty)
+                    
+                    matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == entry['type']]
+                    if matching_items:
+                        for _ in range(qty):
+                            if len(self.inventory) >= self.capacity: break
+                            chosen_name = random.choice(matching_items)
+                            new_item = Item.create_from_name(chosen_name)
+                            if new_item: self.inventory.append(new_item)
+                elif 'item' in entry:
+                    item_name = entry.get('item')
+                    item = Item.create_from_name(item_name)
+                    if item: self.inventory.append(item)
 
     def is_driveable(self):
         if self.motor <= 0: return False
