@@ -1,4 +1,4 @@
-<item name="Powerbank" type="utility" allow_belt="false">
+<item name="Powerbank" type="utility" allow_belt="false" tip="Use to recharge Mobile\n and Vehicle battery">
     <properties>
         <load min="1" max="100" />
         <weight weight="0.001"/>

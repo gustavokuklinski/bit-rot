@@ -218,7 +218,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             for _ in range(num_random_items):
                 item_name = random.choice(ZombieData.ALL_ITEM_TEMPLATES)
                 # Don't add default clothes randomly either
-                if item_name not in ["Pants", "Tshirt", "TShirt", "Jacket", "Sneakers"]:
+                if item_name not in ["Pants", "Tshirt", "TShirt", "Jacket", "Sneakers"] and not item_name.endswith(' on'):
                     zombie.loot_table.append({
                         'item': item_name,
                         'chance': random.uniform(25.0, 75.0) 

@@ -2,7 +2,7 @@
     <visuals>
         <sprite file="store_sale_02.png" />
     </visuals>
-    <capacity value="20" />
+    <capacity value="15" />
     <loot>
         <item type="resource" min="1" max="5" chance="1.0" />
         <item type="utility" min="1" max="5" chance="1.0" />

@@ -19,8 +19,8 @@
         <feet><cloth name="Military Boots" /></feet>
         <hand><cloth name="Leather Black Gloves" /></hand>
         <body><cloth name="Military Tshirt" /></body>
-        <arms><cloth name="Military Jacket" /></arms>
-        <legs><cloth name="Military Pants" /></legs>
+        <arms><cloth name="Special Force Jacket" /></arms>
+        <legs><cloth name="Special Force Pants" /></legs>
     </clothes>
 
     <visuals>
@@ -31,10 +31,11 @@
     
     <loot>
         <item item="Zombie Meat" chance="1.0" />
-        <item item="M4A1" chance="1.0" />
-        <item item="Large Backpack" chance="1.0" />
-        <item item="Knife" chance="1.0" />
-        <item item="Pistol 9mm" chance="1.0" />
+        <item item="MPK5" chance="0.1" />
+        <item item="MAC10" chance="0.1" />
+        <item item="Large Backpack" chance="0.1" />
+        <item item="Knife" chance="0.6" />
+        <item item="Pistol 9mm" chance="0.5" />
     </loot>
 
     <sound>

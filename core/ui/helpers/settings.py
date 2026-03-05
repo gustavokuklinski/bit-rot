@@ -150,12 +150,14 @@ def _draw_settings_screen(game, state, mouse_pos):
                 str_val = str(val).lower()
                 is_bool = str_val in ('true', 'false')
                 is_spawning_multiplier = (block == 'item_spawning' and 'multiplier' in key)
+                is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']
+                is_cycle_setting = is_spawning_multiplier or is_time_cycle
 
                 lbl = font_small.render(display_label + ":", True, WHITE)
                 sub.blit(lbl, (0, y_off + 12)) 
                 
                 friendly_text = _get_friendly_value_display(key, val)
-                if friendly_text and not is_bool and not is_spawning_multiplier:
+                if friendly_text and not is_bool and not is_cycle_setting:
                     info_surf = font_small.render(friendly_text, True, GRAY)
                     info_pos_x = input_rect.x - info_surf.get_width() - 15
                     sub.blit(info_surf, (info_pos_x, y_off + 12))
@@ -180,7 +182,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['config_bools'].append((block, key, abs_rect))
                         
-                elif is_spawning_multiplier:
+                elif is_cycle_setting:
                     hovered = abs_rect.collidepoint(mouse_pos)
                     bg_color = (70, 70, 70) if hovered else (50, 50, 50)
                     
@@ -192,12 +194,23 @@ def _draw_settings_screen(game, state, mouse_pos):
                     except ValueError:
                         current_val_float = 1.0
                         
-                    if abs(current_val_float - 0.01) < 0.001: label = "Extreme Low (1%)"
-                    elif abs(current_val_float - 0.25) < 0.001: label = "Low (25%)"
-                    elif abs(current_val_float - 0.50) < 0.001: label = "Balanced (50%)"
-                    elif abs(current_val_float - 0.75) < 0.001: label = "High (75%)"
-                    elif abs(current_val_float - 1.0) < 0.001: label = "Extreme High (100%)"
-                    else: label = f"Custom ({current_val_float*100:.0f}%)"
+                    if is_spawning_multiplier:
+                        if abs(current_val_float - 0.01) < 0.001: label = "Extreme Low (1%)"
+                        elif abs(current_val_float - 0.25) < 0.001: label = "Low (25%)"
+                        elif abs(current_val_float - 0.50) < 0.001: label = "Balanced (50%)"
+                        elif abs(current_val_float - 0.75) < 0.001: label = "High (75%)"
+                        elif abs(current_val_float - 1.0) < 0.001: label = "Extreme High (100%)"
+                        else: label = f"Custom ({current_val_float*100:.0f}%)"
+                    elif key == 'time_daylength':
+                        mins = int(current_val_float / 60000)
+                        if mins == 0: mins = 15
+                        label = f"{mins} min"
+                    elif key in ['time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']:
+                        hours = int(current_val_float)
+                        minutes = int((current_val_float - hours) * 60)
+                        label = f"{hours:02d}:{minutes:02d}"
+                    else:
+                        label = str(current_val_float)
                     
                     txt_surf = font_small.render(label, True, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
@@ -351,15 +364,41 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                         try:
                             current_val = float(setting_obj['value'])
                         except ValueError:
-                            current_val = 1.0
+                            current_val = 0.0
                             
-                        if current_val < 0.25: new_val = 0.25
-                        elif current_val < 0.50: new_val = 0.50
-                        elif current_val < 0.75: new_val = 0.75
-                        elif current_val < 1.0: new_val = 1.0
-                        else: new_val = 0.01
+                        if block == 'item_spawning' and 'multiplier' in key:
+                            if current_val < 0.25: new_val = 0.25
+                            elif current_val < 0.50: new_val = 0.50
+                            elif current_val < 0.75: new_val = 0.75
+                            elif current_val < 1.0: new_val = 1.0
+                            else: new_val = 0.01
+                        elif key == 'time_daylength':
+                            if current_val < 1800000: new_val = 1800000.0
+                            elif current_val < 2700000: new_val = 2700000.0
+                            elif current_val < 3600000: new_val = 3600000.0
+                            else: new_val = 900000.0
+                        elif key == 'time_sunrise_hr':
+                            if current_val < 5.5: new_val = 5.5
+                            elif current_val < 6.0: new_val = 6.0
+                            elif current_val < 6.5: new_val = 6.5
+                            elif current_val < 7.0: new_val = 7.0
+                            else: new_val = 5.0
+                        elif key == 'time_sunset_hr':
+                            if current_val < 17.5: new_val = 17.5
+                            elif current_val < 18.0: new_val = 18.0
+                            elif current_val < 18.5: new_val = 18.5
+                            elif current_val < 19.0: new_val = 19.0
+                            else: new_val = 17.0
+                        elif key == 'time_start_hr':
+                            new_val = current_val + 1.0
+                            if new_val > 23.0: new_val = 0.0
+                        else:
+                            new_val = current_val
                         
-                        state['settings_data'][block][key]['value'] = str(new_val)
+                        if key == 'time_daylength':
+                            state['settings_data'][block][key]['value'] = str(int(new_val))
+                        else:
+                            state['settings_data'][block][key]['value'] = str(new_val)
                         clicked_input = True
                         break
 

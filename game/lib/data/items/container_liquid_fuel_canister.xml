@@ -1,4 +1,4 @@
-<item name="Fuel Canister" type="container" allow_liquid="true" allow_belt="false">
+<item name="Fuel Canister" type="container" allow_liquid="true" allow_belt="false" tip="Only liquids allowed">
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_fuel_canister.png" />

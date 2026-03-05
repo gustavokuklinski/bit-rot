@@ -189,6 +189,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         fuel_type = [t.strip() for t in fuel_type[1:-1].split(',')]
     
     text = template.get('text')
+    tip = template.get('tip')
 
     attribute_modifiers = template.get('attribute_modifiers', {})
     status_effect = get_prop_val(props, 'status', 'value', None)
@@ -228,7 +229,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     reduction_str = get_prop_val(props, 'weight', 'reduction', '0%').replace('%', '')
     weight_reduction = float(reduction_str) / 100.0
 
-    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction, allow_belt=allow_belt)
+    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction, allow_belt=allow_belt, tip=tip)
 
     if item_name in COLORABLE_ITEMS:
         if force_color is not None:
@@ -287,11 +288,12 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                     if len(new_item.inventory) >= max_cap:
                         fits = False
                     
-                    if fits and new_item.item_type in ['container', 'backpack']:
+                    if fits and new_item.item_type in ['container', 'backpack', 'cloth']:
                         current_weight = sum(i.get_total_weight() for i in new_item.inventory)
                         item_weight = loot_item.get_total_weight()
+                        max_weight = new_item.weight * 5.0
                          
-                        if current_weight + item_weight > max_cap:
+                        if current_weight + item_weight > max_weight:
                             fits = False
 
                         if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):

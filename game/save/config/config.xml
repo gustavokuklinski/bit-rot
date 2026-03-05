@@ -1,15 +1,13 @@
 <?xml version="1.0" ?>
 <config>
     <ui>
-        <ui_background_music value="true" name="Background music (Default: True)"/>
+        <ui_background_music value="false" name="Background music (Default: True)"/>
     </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 900000)"/>
         <time_sunrise_hr value="5.5" name="Time sunrise (Default: 5.5)"/>
         <time_sunset_hr value="17.5" name="Time sunset (Default: 17.5)"/>
-        <time_transition_hr value="1.0" name="Time transition (Default: 1.0)"/>
         <time_start_hr value="6.0" name="Start hour (Default: 6.0)"/>
-        <day_night_cycle_darkness value="255" name="Darkness color (Default: 255)"/>
         <zoom_start value="3.0" name="Zoom start (Default: 3.0)"/>
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
@@ -19,7 +17,6 @@
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>
-        <blur_unseen value="true" name="blur_unseen"/>
         <food_water_decay_seconds value="5.0" name="Food and Water decay (Default: 5.0)"/>
         <food_decay value="0.2" name="Food decay % (Default: 0.2)"/>
         <water_decay value="0.3" name="Water decay % (Default: 0.3)"/>
@@ -31,44 +28,43 @@
         <multiplier value="1.0" name="Base multiplier (Default: 1.0)"/>
         <weapon_melee_multiplier value="1.0" name="Weapon melee (Default: 1.0)"/>
         <weapon_ranged_multiplier value="1.0" name="Weapon ranged (Default: 1.0)"/>
-        <tool_multiplier value="1.0" name="Tools (Default: 1.0)"/>
         <cloth_multiplier value="1.0" name="Cloth (Default: 1.0)"/>
     </durability>
     <item_spawning>
-        <item_spawn_chance_multiplier value="1.0" name="Global Multiplier (Default: 1.0)"/>
-        <item_mobile_spawn_chance_multiplier value="0.5" name="Mobile"/>
-        <item_map_spawn_chance_multiplier value="0.5" name="Map"/>
-        <item_currency_spawn_chance_multiplier value="0.5" name="Currency"/>
-        <item_text_spawn_chance_multiplier value="0.5" name="Text"/>
-        <item_liquid_spawn_chance_multiplier value="0.5" name="Liquid (Water, Wine)"/>
-        <item_backpack_spawn_chance_multiplier value="0.5" name="Backpack"/>
-        <item_weapon_melee_spawn_chance_multiplier value="0.5" name="Melee weapons"/>
-        <item_weapon_ranged_spawn_chance_multiplier value="0.5" name="Ranged weapons"/>
-        <item_container_spawn_chance_multiplier value="0.5" name="Containers (Toolbox, Sewing kits)"/>
-        <item_utility_spawn_chance_multiplier value="0.5" name="Utility (Lighters, Powerbanks)"/>
-        <item_recipe_spawn_chance_multiplier value="0.5" name="Recipe (Skill books)"/>
-        <item_resource_spawn_chance_multiplier value="0.5" name="Resource (Planks, nails)"/>
-        <item_consumable_spawn_chance_multiplier value="0.5" name="Consumables (General)"/>
-        <item_consumable_food_spawn_chance_multiplier value="0.5" name="Foods (Meat, Chesse)"/>
-        <item_consumable_drink_spawn_chance_multiplier value="0.5" name="Drinks (Cola, Energy)"/>
-        <item_consumable_medication_spawn_chance_multiplier value="0.5" name="Medications (Medkits, bandages)"/>
-        <item_consumable_ammo_spawn_chance_multiplier value="0.5" name="Ammo"/>
-        <item_consumable_drugs_spawn_chance_multiplier value="0.5" name="Drugs (Pills and medicine)"/>
+        <item_spawn_chance_multiplier value="1.0" name="Global Multiplier"/>
+        <item_mobile_spawn_chance_multiplier value="1.0" name="Mobile"/>
+        <item_map_spawn_chance_multiplier value="1.0" name="Map"/>
+        <item_currency_spawn_chance_multiplier value="1.0" name="Currency"/>
+        <item_text_spawn_chance_multiplier value="1.0" name="Text"/>
+        <item_liquid_spawn_chance_multiplier value="1.0" name="Liquid (Water, Wine)"/>
+        <item_backpack_spawn_chance_multiplier value="1.0" name="Backpack"/>
+        <item_weapon_melee_spawn_chance_multiplier value="1.0" name="Melee weapons"/>
+        <item_weapon_ranged_spawn_chance_multiplier value="1.0" name="Ranged weapons"/>
+        <item_container_spawn_chance_multiplier value="1.0" name="Containers (Toolbox, Sewing kits)"/>
+        <item_utility_spawn_chance_multiplier value="1.0" name="Utility (Lighters, Powerbanks)"/>
+        <item_recipe_spawn_chance_multiplier value="1.0" name="Recipe (Skill books)"/>
+        <item_resource_spawn_chance_multiplier value="1.0" name="Resource (Planks, nails)"/>
+        <item_consumable_spawn_chance_multiplier value="1.0" name="Consumables (General)"/>
+        <item_consumable_food_spawn_chance_multiplier value="1.0" name="Foods (Meat, Chesse)"/>
+        <item_consumable_drink_spawn_chance_multiplier value="1.0" name="Drinks (Cola, Energy)"/>
+        <item_consumable_medication_spawn_chance_multiplier value="1.0" name="Medications (Medkits, bandages)"/>
+        <item_consumable_ammo_spawn_chance_multiplier value="1.0" name="Ammo"/>
+        <item_consumable_drugs_spawn_chance_multiplier value="1.0" name="Drugs (Pills and medicine)"/>
     </item_spawning>
     <vehicle>
-        <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk (Default: 5)"/>
-        <has_fuel_chance value="0.2" name="Car Fuel chance (Default: 0.2)"/>
-        <has_key_chance value="0.2" name="Car Key chance (Default: 0.2)"/>
-        <has_motor_chance value="0.2" name="Car Motor chance (Default: 0.2)"/>
-        <has_battery_chance value="0.2" name="Car Battery chance (Default: 0.2)"/>
-        <has_tires_chance value="0.9" name="Car Tires chance (Default: 0.9)"/>
+        <vehicle_spawn_per_chunk value="15" name="Max vehicle spawn on chunk (Default: 5)"/>
+        <has_fuel_chance value="1.0" name="Car Fuel chance (Default: 0.2)"/>
+        <has_key_chance value="1.0" name="Car Key chance (Default: 0.2)"/>
+        <has_motor_chance value="1.0" name="Car Motor chance (Default: 0.2)"/>
+        <has_battery_chance value="1.0" name="Car Battery chance (Default: 0.2)"/>
+        <has_tires_chance value="1.0" name="Car Tires chance (Default: 0.9)"/>
     </vehicle>
     <animal>
         <animal_spawn_per_chunk value="5" name="Max Animal spawn on chunk (Default: 5)"/>
         <animal_respawn_ms_timer value="30000" name="Animal respawn (Default: 30000)"/>
     </animal>
     <npc>
-        <npc_spawn_per_chunk value="135" name="Max NPC spawn on chunk (Default: 5)"/>
+        <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk (Default: 5)"/>
         <static_spawn_chance value="0.2" name="Max Static NPC (Default: 0.2)"/>
         <hostile_spawn_chance value="0.5" name="Max Hostile NPC (Default: 0.5)"/>
         <max_npcs value="1500" name="World Max NPCs (Default: 1500)"/>
@@ -79,7 +75,7 @@
         <detection_radius value="10" name="Detection Radius (Default: 10)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 10)"/>
+        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
         <zombie_multiplier value="1" name="Multiplier by day (Default: 1)"/>
         <spawn value="5" name="Zombies per spawn (Default: 5)"/>
         <speed value="0.3" name="Speed (Default: 0.3)"/>

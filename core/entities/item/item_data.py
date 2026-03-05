@@ -31,7 +31,8 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
         allow_belt = (allow_belt_str.lower() == 'true')
 
         state = root.attrib.get('state')
-        template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid, 'allow_belt': allow_belt}
+        tip = root.attrib.get('tip')
+        template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid, 'allow_belt': allow_belt, 'tip': tip}
 
         props_node = root.find('properties')
         if props_node is not None:
@@ -206,6 +207,17 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     weight_node = props_node.find('weight')
                     if weight_node is not None:
                         template['properties']['weight'] = {k: v for k, v in weight_node.attrib.items()}
+
+                # NEW: Parse loot for clothes
+                loot_node = root.find('loot')
+                if loot_node is not None:
+                    template['loot'] = []
+                    for loot_item_node in loot_node.findall('item'):
+                        loot_item_name = loot_item_node.attrib.get('name')
+                        if loot_item_name is None:
+                            print(f"Missing 'name' attribute in loot for cloth: {name}")
+                        loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
+                        template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
                         
                 if name in ITEM_TEMPLATES:
                     print(f"Warning: Duplicate item/cloth name '{name}'")

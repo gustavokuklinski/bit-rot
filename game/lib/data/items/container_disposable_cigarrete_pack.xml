@@ -1,4 +1,4 @@
-<item name="Cigarette Pack" type="container" disposable="true" allow_belt="false">
+<item name="Cigarette Pack" type="container" disposable="true" allow_belt="false" tip="This container will be destroyed when empty">
     <properties>
         <capacity value="1" />
         <sprite file="container_disposable_cigarrete_pack.png" />

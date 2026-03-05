@@ -4,20 +4,14 @@
     </visuals>
     <capacity value="10" />
     <loot>
+        <item type="ranged_weapon" min="1" max="1" chance="1.0" />
+        <item type="consumable_ammo" min="1" max="2" chance="1.0" />
+        <item type="drugs" min="1" max="2" chance="1.0" />
+        <item type="recipe" min="1" max="1" chance="1.0" />
+        <item item="MRE" chance="1.0" />
         <item item="Magazine (General content)" chance="1.0" />
-        <item item="Powerbank" chance="1.0" />
-        <item item="Car Key Jeep" chance="1.0" />
-        <item item="38 Revolver" chance="1.0" />
-        <item item="38 Ammo" chance="1.0" />
-        <item item="Sleeping Bag" chance="1.0" />
-        <item item="M4A1" chance="1.0" />
-        <item item="MAC10" chance="1.0" />
-        <item item="556 Ammo" chance="1.0" />
-        <item item="Pistol 9mm" chance="1.0" />
-        <item item="9mm Ammo" chance="1.0" />
-        <item item="Toolkit" chance="1.0" />
-        <item item="Survivor Kit" chance="1.0" />
-        <item item="Medical Kit" chance="1.0" />
-        <item item="Island Map" chance="1.0" />
+        <item item="Mobile off" chance="1.0" />
+        <item item="Flask" chance="1.0" />
+        <item item="Mobile off" chance="1.0" />
     </loot>
 </map>

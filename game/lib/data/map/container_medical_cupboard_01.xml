@@ -4,19 +4,15 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item item="Magazine (General content)" chance="1.0" />
-        <item item="Vaccine" chance="1.0" />
-        <item item="Infection Pills" chance="1.0" />
-        <item item="Matches" chance="1.0" />
-        <item item="Medkit" chance="1.0" />
-        <item item="Powerbank" chance="1.0" />
-        <item item="Duck Tape" chance="1.0" />
-        <item item="Car Key Jeep" chance="1.0" />
-        <item item="Alcohol Bottle" chance="1.0" />
-        <item item="Medical Bandage" chance="1.0" />
-        <item item="Medicine Vol.1" chance="1.0" />
+        <item type="utility" min="1" max="1" chance="1.0" />
+        <item type="drugs" min="1" max="3" chance="1.0" />
+        <item type="recipe" min="1" max="2" chance="1.0" />
+        <item type="consumable_ammo" min="1" max="1" chance="1.0" />
+        <item type="ranged_weapon" min="1" max="1" chance="1.0" />
+
         <item item="Medical Kit" chance="1.0" />
-        <item item="Sewing Kit" chance="1.0" />
+        <item item="Medicine Vol.1" chance="1.0" />
         <item item="Island Map" chance="1.0" />
+        
     </loot>
 </map>

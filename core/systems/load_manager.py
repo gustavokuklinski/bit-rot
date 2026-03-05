@@ -507,6 +507,17 @@ def load_game(game, save_folder_name):
                         if item:
                             z.inventory.append(item)
                 
+                clothes_data = z_data.get('clothes', {})
+                z.clothes = {}
+                for slot, c_data in clothes_data.items():
+                    if c_data:
+                        if isinstance(c_data, dict):
+                            z.clothes[slot] = Item.from_dict(c_data)
+                        else:
+                            z.clothes[slot] = Item.create_from_name(c_data)
+                    else:
+                        z.clothes[slot] = None
+
                 game.zombies.append(z)
 
         else:

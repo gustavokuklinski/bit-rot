@@ -2,10 +2,10 @@
     <visuals>
         <sprite file="house_table.png" />
     </visuals>
-    <capacity value="15" />
+    <capacity value="10" />
     <loot>
-        <item type="utility" min="1" max="5" chance="1.0" />
-        <item type="resource" min="1" max="5" chance="1.0" />
-        <item type="recipe" min="1" max="5" chance="1.0" />
+        <item type="utility" min="1" max="4" chance="1.0" />
+        <item type="resource" min="1" max="4" chance="1.0" />
+        <item type="recipe" min="1" max="2" chance="1.0" />
     </loot>
 </map>

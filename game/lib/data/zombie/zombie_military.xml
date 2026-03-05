@@ -32,9 +32,8 @@
     <loot>
         <item item="Zombie Meat" chance="1.0" />
         <item item="Knife" chance="1.0" />
-        <item item="MPK5" chance="1.0" />
-        <item item="MAC10" chance="1.0" />
-        <item item="Pistol 9mm" chance="1.0" />
+        <item item="M4A1" chance="0.1" />
+        <item item="Pistol 9mm" chance="0.2" />
     </loot>
 
     <sound>

@@ -211,9 +211,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
         gear_content_surface = game.game_screen.subsurface(drawable_gear_rect)
         gear_content_surface.fill((30, 30, 30))
-        label_width = 80
+        label_width = 50
         color_btn_w = 25
-        base_cycle_width = col1_width - label_width - (padding * 3)
+        base_cycle_width = col1_width - label_width - (padding * 3) - 10
         y_offset = 0
         
         for slot_name in state['clothes_slots']:
@@ -1124,14 +1124,37 @@ def _randomize_character(state):
     # 3. Randomize Clothes
     available_clothes = state['available_clothes']
     chosen_clothes = {}
+    
+    # Create a pool of colors and shuffle them to guarantee uniqueness
+    available_colors = list(CLOTHING_COLORS)
+    random.shuffle(available_colors)
+    
     for slot, options in available_clothes.items():
         if options:
-            chosen_item = random.choice(options)
+            # Do not generate facial hair for females
+            if slot == 'facial' and state['base_data']['sex'] == 'Female':
+                chosen_item = "None"
+            else:
+                # Enforce mandatory generation for specific slots
+                valid_options = options
+                if slot in ['body', 'legs', 'feet']:
+                    valid_options = [opt for opt in options if opt != "None"]
+                    # Fallback in case there are no items loaded for the slot
+                    if not valid_options:
+                        valid_options = options
+                        
+                chosen_item = random.choice(valid_options)
+                
             chosen_clothes[slot] = chosen_item
             
-            # --- FIX: Strict enforcement via the central dictionary ---
+            # --- Strict enforcement of color assignment ---
             if slot in VALID_COLOR_ITEMS and chosen_item in VALID_COLOR_ITEMS[slot]:
-                state['clothes_colors'][slot] = random.choice(CLOTHING_COLORS)
+                # Pop a color from the unique pool so it cannot be reused
+                if available_colors:
+                    state['clothes_colors'][slot] = available_colors.pop()
+                else:
+                    # Fallback just in case there are more slots than available colors
+                    state['clothes_colors'][slot] = random.choice(CLOTHING_COLORS)
             else:
                 state['clothes_colors'][slot] = (255, 255, 255)
         else:

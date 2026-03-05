@@ -79,6 +79,7 @@ def draw_tooltip(surface, item, pos):
         lines.append(f"Load: {item.load:.0f}")
     
     # --- Weight Info (Updated) ---
+    total_weight = 0
     if hasattr(item, 'get_total_weight'):
         total_weight = item.get_total_weight()
         weight_str = f"Weight: {total_weight:.2f}"
@@ -86,17 +87,29 @@ def draw_tooltip(surface, item, pos):
         # Only show unit weight if the item is stackable
         if item.is_stackable() and hasattr(item, 'weight'):
              weight_str += f" (unit: {item.weight:.2f})"
+             
+        # Add reduction to the same line if it exists
+        if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
+            weight_str += f" (Reduction: {int(item.weight_reduction * 100)}%)"
         
         lines.append(weight_str)
     elif hasattr(item, 'weight'):
         # Fallback if get_total_weight doesn't exist for some reason
-        lines.append(f"Weight: {item.weight:.2f}")
-    
-    elif hasattr(item, 'allow_belt'):
-        lines.append(f"Allow belt: {item.allow_belt}")
+        total_weight = item.weight
+        weight_str = f"Weight: {item.weight:.2f}"
+        if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
+            weight_str += f" (Reduction: {int(item.weight_reduction * 100)}%)"
+        lines.append(weight_str)
 
-    if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
-        lines.append(f"Reduction: {int(item.weight_reduction * 100)}%")
+    # Calculate and display max weight based on base weight x 5
+    if hasattr(item, 'inventory') and item.item_type in ['container', 'backpack', 'cloth'] and hasattr(item, 'weight'):
+        max_weight = item.weight * 5.0
+        if max_weight > 0:
+            lines.append(f"Max weight: {total_weight:.2f} / {max_weight:.2f}")
+    
+    # Fixed allow_belt checking (moved out of elif structure so it doesn't get skipped)
+    if hasattr(item, 'allow_belt') and item.allow_belt:
+        lines.append(f"Allow belt: {item.allow_belt}")
     # -------------------
 
     if item.min_damage is not None and item.max_damage is not None:
@@ -124,6 +137,17 @@ def draw_tooltip(surface, item, pos):
         if len(item.inventory) > 0:
             lines.append({'type': 'item_preview', 'items': item.inventory[:5]})
     # -----------------------------------------------
+
+    if hasattr(item, 'tip') and item.tip:
+        # Replace literal "\n" from XML with actual newlines, then split into a list
+        tip_lines = str(item.tip).replace('\\n', '\n').split('\n')
+        
+        # Add the first line with the yellow "Tip: " prefix
+        lines.append([("Tip: ", (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
+        
+        # Add any remaining lines with invisible spaces to align them perfectly under the first line
+        for extra_line in tip_lines[1:]:
+            lines.append([("", (255, 255, 0)), (extra_line.strip(), WHITE)])
 
     rendered_lines = []
     for line in lines:
