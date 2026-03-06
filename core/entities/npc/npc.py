@@ -250,7 +250,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 self.current_attacker = None
 
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
-        if game.player and not game.player.is_dead:
+        if game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
             entities_to_check.append(game.player)
 
         target_entity = None
@@ -280,10 +280,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             for npc in game.npcs:
                 if npc != self and not npc.is_dead and not npc.is_friendly:
                     potential_targets.append(npc)
-            if attacker == game.player and game.player and not game.player.is_dead:
+            if attacker == game.player and game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 potential_targets.append(game.player)
         else:
-            if game.player and not game.player.is_dead:
+            if game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 potential_targets.append(game.player)
             for npc in game.npcs:
                 if npc != self and not npc.is_dead and npc.is_friendly:
@@ -301,9 +301,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if is_aggroed:
             if attacker and not attacker.is_dead:
-                target_entity = attacker
-                self.state = 'chasing'
-            elif game.player and not game.player.is_dead:
+                if attacker == game.player and getattr(game.player, 'godzen_mode', False):
+                    self.aggro_timer = 0
+                else:
+                    target_entity = attacker
+                    self.state = 'chasing'
+            elif game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 target_entity = game.player
                 self.state = 'chasing'
 
@@ -603,3 +606,4 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.clothes = {}
 
         super().die(game)
+}

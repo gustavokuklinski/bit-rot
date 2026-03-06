@@ -16,7 +16,7 @@
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet><cloth name="Military Boots" /></feet>
+        <feet><cloth name="Shoes" /></feet>
         <hand></hand>
         <body></body>
         <arms><cloth name="Medical Vest" /></arms>

@@ -132,6 +132,10 @@ class ZombieAI:
         Check if the zombie should enter chasing state based on player actions.
         Returns True if the zombie should chase, False otherwise.
         """
+        # [NEW] Ignore triggers if player is in Godzen mode
+        if getattr(player, 'godzen_mode', False):
+            return False
+
         # Initialize cache attributes if not present
         if not hasattr(self, 'last_trigger_check_time'):
             self.last_trigger_check_time = 0
@@ -253,6 +257,16 @@ class ZombieAI:
 
         # [FIX] Aggroed zombies always chase player regardless of distance
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
+
+        # [NEW] Godzen mode override: Ignore player completely
+        if target_entity == game.player and getattr(game.player, 'godzen_mode', False):
+            can_see_target = False
+            should_chase = False
+            is_aggroed = False
+            self.aggro_timer = 0
+            dist_to_target_sq = float('inf')
+            if self.state == 'chasing':
+                self.state = 'wandering'
 
         detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
         if should_chase or is_aggroed or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
@@ -466,7 +480,7 @@ class ZombieAI:
                 if self.rect.colliderect(obs): collided = True; break
                 
             # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
-            if not collided and getattr(game, 'player', None) and not game.player.is_dead:
+            if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
                     collided = True
             
@@ -484,7 +498,7 @@ class ZombieAI:
                 if self.rect.colliderect(obs): collided = True; break
 
             # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
-            if not collided and getattr(game, 'player', None) and not game.player.is_dead:
+            if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
                     collided = True
 

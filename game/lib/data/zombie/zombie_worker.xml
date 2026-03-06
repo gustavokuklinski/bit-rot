@@ -12,13 +12,13 @@
     </stats>
     
     <clothes>
-        <head></head>
+        <head><cloth name="Worker Helmet" /></head>
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet><cloth name="Military Boots" /></feet>
+        <feet><cloth name="Shoes" /></feet>
         <hand><cloth name="Leather Black Gloves" /></hand>
-        <body></body>
+        <body><cloth name="Next Petrol Tshirt" /></body>
         <arms></arms>
         <legs></legs>
     </clothes>

@@ -1,11 +1,11 @@
 import pygame
 import uuid
 import math
+import random # Added for %rot vehicle
 from core.data.config import *
 from core.events.game_actions import try_grab_item
 from core.ui.crafting_modal import CraftingModal
 
-# ... (Previous toggle functions remain unchanged) ...
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
     for modal in game.modals:
@@ -168,6 +168,134 @@ def toggle_pause(game):
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
+def process_chat_command(game, text):
+    """Processes potential cheat commands entered in chat."""
+    from core.messages import display_message_player
+    import re
+    
+    text = text.strip()
+    if not text.startswith("%rot "):
+        return False
+        
+    command = text[5:].strip()
+    
+    # --- GOD MODE ---
+    if command == "god" or command == "godzen":
+        if game.player:
+            # Stats to max
+            game.player.health = 100.0
+            game.player.max_health = 100.0
+            game.player.water = 100.0
+            game.player.food = 100.0
+            game.player.stamina = 100.0
+            game.player.max_stamina = 100.0
+            game.player.tireness = 100.0
+            game.player.max_tireness = 100.0
+            game.player.infection = 0.0
+            game.player.anxiety = 0.0
+            
+            for part in game.player.body_parts.values():
+                part['value'] = 100.0
+                
+            # Attributes to 10
+            for attr in game.player.attributes.keys():
+                game.player.progression.add_xp(game.player, attr, 999999) # Add lots of XP
+                
+            game.player.god_mode = True
+            
+            if command == "godzen":
+                 game.player.godzen_mode = True
+                 display_message_player(game, "GODZEN Mode Activated: Invincible and Invisible.")
+            else:
+                 game.player.godzen_mode = False
+                 display_message_player(game, "GOD Mode Activated: Invincible.")
+        return True
+
+    # --- ITEM SPAWN ---
+    # Matches %rot item "Item Name" [qty]
+    item_match = re.match(r'item\s+"([^"]+)"(?:\s+(\d+))?', command)
+    if item_match:
+        item_name = item_match.group(1)
+        qty = int(item_match.group(2)) if item_match.group(2) else 1
+        
+        from core.entities.item.item import Item
+        spawned = 0
+        for _ in range(qty):
+            new_item = Item.create_from_name(item_name)
+            if new_item:
+                if len(game.player.inventory) < game.player.base_inventory_slots:
+                    game.player.inventory.append(new_item)
+                    spawned += 1
+                else:
+                    break
+        
+        if spawned > 0:
+            display_message_player(game, f"Spawned {spawned}x '{item_name}' into inventory.")
+        else:
+            display_message_player(game, f"Could not spawn '{item_name}'. (Inventory full or invalid item)")
+        return True
+
+    # --- CLOTH SPAWN ---
+    cloth_match = re.match(r'cloth\s+"([^"]+)"(?:\s+(\d+))?', command)
+    if cloth_match:
+        cloth_name = cloth_match.group(1)
+        qty = int(cloth_match.group(2)) if cloth_match.group(2) else 1
+        
+        from core.entities.item.item import Item
+        spawned = 0
+        for _ in range(qty):
+            new_cloth = Item.create_from_name(cloth_name)
+            if new_cloth:
+                if len(game.player.inventory) < game.player.base_inventory_slots:
+                    game.player.inventory.append(new_cloth)
+                    spawned += 1
+                else:
+                    break
+        
+        if spawned > 0:
+            display_message_player(game, f"Spawned {spawned}x '{cloth_name}' into inventory.")
+        else:
+            display_message_player(game, f"Could not spawn cloth '{cloth_name}'.")
+        return True
+        
+    # --- VEHICLE SPAWN ---
+    veh_match = re.match(r'vehicle\s+"([^"]+)"', command)
+    if veh_match:
+        veh_name = veh_match.group(1)
+        from core.entities.vehicle.vehicle_loader import VehicleLoader
+        from core.entities.vehicle.vehicle import Vehicle
+        
+        loader = VehicleLoader()
+        veh_def = loader.get_definition_by_name(veh_name)
+        
+        if veh_def and game.player:
+            # Spawn 1 tile away in a random direction
+            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            dx, dy = random.choice(directions)
+            spawn_x = game.player.rect.centerx + (dx * TILE_SIZE * 2)
+            spawn_y = game.player.rect.centery + (dy * TILE_SIZE * 2)
+            
+            new_vehicle = Vehicle(
+                name=veh_def['name'],
+                x=spawn_x,
+                y=spawn_y,
+                width=veh_def.get('images', {}).get('right', pygame.Surface((32,32))).get_width(),
+                height=veh_def.get('images', {}).get('right', pygame.Surface((32,32))).get_height(),
+                image=veh_def['images'],
+                stats=veh_def.get('stats', {}),
+                capacity=veh_def.get('capacity', 20),
+                loot_table=veh_def.get('loot_table', [])
+            )
+            
+            game.containers.append(new_vehicle)
+            game.rebuild_container_grid() # Update grid
+            display_message_player(game, f"Spawned vehicle '{veh_name}' nearby.")
+        else:
+             display_message_player(game, f"Could not find vehicle '{veh_name}'.")
+        return True
+
+    return False
+
 
 def handle_keyboard_events(game, event):
     if event.type == pygame.KEYDOWN:
@@ -220,11 +348,14 @@ def handle_keyboard_events(game, event):
         if game.chat_active:
             if event.key == pygame.K_RETURN:
                 if game.chat_input_text.strip():
-                    game.player.chat_text = game.chat_input_text
-                    game.player.chat_timer = game.player.chat_duration
+                    is_command = process_chat_command(game, game.chat_input_text)
                     
-                    from core.messages import display_message_player
-                    display_message_player(game, f"{game.player.name}: {game.chat_input_text}")
+                    if not is_command:
+                        game.player.chat_text = game.chat_input_text
+                        game.player.chat_timer = game.player.chat_duration
+                        
+                        from core.messages import display_message_player
+                        display_message_player(game, f"{game.player.name}: {game.chat_input_text}")
                 
                 game.chat_input_text = ""
                 game.chat_active = False

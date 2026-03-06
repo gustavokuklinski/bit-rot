@@ -1,6 +1,6 @@
 <cloth name="Special Force Jacket" type="cloth" id="arms" builder="false">
     <properties>
-        <defence value="1.0" />
+        <defence value="0.8" />
         <capacity value="5" />
         <durability min="50" max="100" />
         <sprite file="arms_special_force_jacket.png" />
