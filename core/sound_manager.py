@@ -15,7 +15,7 @@ class SoundManager:
         # We still pre-init the mixer for better performance
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.mixer.init()
-        pygame.mixer.set_num_channels(32) # 32 simultaneous sounds
+        pygame.mixer.set_num_channels(128) # 32 simultaneous sounds
 
     def load_sound(self, name, sound_path):
         """
@@ -36,15 +36,51 @@ class SoundManager:
             print(f"Warning: Could not load sound '{name}' from '{full_path}': {e}")
             return False
 
+    def get_pitched_sound(self, sound_key, base_sound, pitch_factor):
+        """
+        Dynamically resamples the sound array to shift the pitch and caches it.
+        """
+        if pitch_factor == 1.0:
+            return base_sound
+            
+        pitched_key = f"{sound_key}_pitch_{pitch_factor:.2f}"
+        
+        if pitched_key in self.sounds:
+            return self.sounds[pitched_key]
+            
+        try:
+            import numpy as np
+            import pygame.sndarray
+            
+            # Extract the raw sound data array
+            snd_array = pygame.sndarray.array(base_sound)
+            
+            # Resample the array to change speed/pitch
+            indices = np.round(np.arange(0, len(snd_array), pitch_factor)).astype(int)
+            indices = indices[indices < len(snd_array)]
+            
+            pitched_array = snd_array[indices]
+            
+            # Ensure the array is memory-contiguous (required by pygame.sndarray)
+            pitched_array = np.ascontiguousarray(pitched_array)
+            
+            pitched_sound = pygame.sndarray.make_sound(pitched_array)
+            self.sounds[pitched_key] = pitched_sound
+            return pitched_sound
+            
+        except ImportError:
+            print("Notice: 'numpy' is required for pitch shifting. Playing default sound.")
+            return base_sound
+        except Exception as e:
+            print(f"Warning: Failed to shift pitch for {sound_key}: {e}")
+            return base_sound
 
-    def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0):
+    def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0, pitch_variance=0.0):
         """
         Plays a sound by its name. Loads it if not already loaded.
-        'subdir' specifies the subfolder within SOUND_PATH (e.g., 'zombie' or 'items').
-        'game' and 'source_pos' are used to calculate spatial audio.
+        'pitch_variance' applies a random +/- pitch shift (e.g., 0.15 for slight variation).
         """
-        
-        if not name: # Don't try to play None or empty string
+        if not name: 
             return
             
         sound_key = name
@@ -62,80 +98,63 @@ class SoundManager:
                 
         sound = self.sounds[sound_key]
 
+        # --- NEW: Pitch Variation ---
+        if pitch_variance > 0:
+            # Calculate a random pitch factor
+            raw_pitch = random.uniform(1.0 - pitch_variance, 1.0 + pitch_variance)
+            # Round to nearest 0.05 so we don't cache hundreds of nearly identical variations
+            pitch_factor = round(raw_pitch * 20) / 20.0 
+            sound = self.get_pitched_sound(sound_key, sound, pitch_factor)
 
         zoom_multiplier = 1.0 # Default if no game object
         if game:
-            # 1. Define our desired volume range
-            MAX_ZOOM_VOLUME = 1.0 # At nearest zoom (e.g., 2.0)
-            MIN_ZOOM_VOLUME = 0.3 # At farthest zoom (e.g., 0.5)
-            
-            # 2. Get the current zoom level (clamped)
+            MAX_ZOOM_VOLUME = 1.0 
+            MIN_ZOOM_VOLUME = 0.3 
             current_zoom = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
-            
-            # 3. Calculate how far 'current_zoom' is through the zoom range (0.0 to 1.0)
             if (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM) != 0:
                 zoom_progress = (current_zoom - core.data.config.FAR_ZOOM) / (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM)
             else:
-                zoom_progress = 1.0 # Avoid division by zero
-            
-            # 4. Map this progress to our volume range
-            # When zoom_progress is 0 (far), multiplier is 0.2
-            # When zoom_progress is 1 (near), multiplier is 1.0
+                zoom_progress = 1.0 
             zoom_multiplier = MIN_ZOOM_VOLUME + (zoom_progress * (MAX_ZOOM_VOLUME - MIN_ZOOM_VOLUME))
-
 
         channel = pygame.mixer.find_channel()
         if not channel:
             return
         
         # --- Spatial Audio Logic ---
-        # We only apply spatial audio if we know *where* the sound is and *who* is listening.
         if game and source_pos and game.player:
             player_pos = game.player.rect.center
             dx = source_pos[0] - player_pos[0]
             dy = source_pos[1] - player_pos[1]
             distance = math.hypot(dx, dy)
 
-            # 1. Volume Falloff
-            # Sounds fade to nothing at about half the game screen's width
             max_dist = GAME_WIDTH / 2 
             if distance > max_dist:
-                return # Too far to hear
+                return 
 
-            # Use a quadratic falloff (more natural)
             volume_falloff = (1.0 - (distance / max_dist)) ** 2
-            # final_volume = base_volume * volume_falloff
             final_volume = base_volume * volume_falloff * zoom_multiplier
 
-            # 2. Panning (Stereo)
-            # How far left/right a sound needs to be to be fully panned
-            pan_range = TILE_SIZE * 10 # e.g., 10 tiles
-            
-            # Get pan_factor: -1.0 (full left) to 1.0 (full right)
+            pan_range = TILE_SIZE * 10 
             pan_factor = max(-1.0, min(1.0, dx / pan_range))
             
             left_vol = 0.0
             right_vol = 0.0
 
-            if pan_factor < 0: # Sound is to the left
+            if pan_factor < 0: 
                 left_vol = final_volume
-                right_vol = final_volume * (1.0 + pan_factor) # (1.0 + -1.0) = 0.0
-            else: # Sound is to the right
+                right_vol = final_volume * (1.0 + pan_factor) 
+            else: 
                 right_vol = final_volume
-                left_vol = final_volume * (1.0 - pan_factor) # (1.0 - 1.0) = 0.0
+                left_vol = final_volume * (1.0 - pan_factor) 
             
             channel.set_volume(left_vol, right_vol)
             
         else:
-            # --- Non-Spatial (UI/Player) Sound ---
-            # Play centered at the requested base volume
-            # channel.set_volume(base_volume, base_volume)
             final_ui_volume = base_volume * zoom_multiplier
             channel.set_volume(final_ui_volume, final_ui_volume)
         
-        # 3. Play
         channel.play(sound, loops=loops)
-
         return channel
     
     def play_music(self, path, volume=0.5, loops=-1):

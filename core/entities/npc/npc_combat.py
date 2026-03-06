@@ -90,6 +90,13 @@ class NPCCombat:
                 'radius': 3,
                 'type': 'hit_puff'
              })
+        
+        if hasattr(game, 'sound_manager') and hasattr(self, 'sound_hit') and self.sound_hit:
+            current_time = pygame.time.get_ticks()
+            if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
+                game.sound_manager.play_sound(self.sound_hit, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7),pitch_variance=0.15)
+                self.last_hit_sound_time = current_time
+
         if self.health <= 0:
             self.die(game)
             return True
@@ -98,6 +105,9 @@ class NPCCombat:
     def die(self, game):
         if self.is_dead: return
         self.is_dead = True 
+
+        if hasattr(game, 'sound_manager') and hasattr(self, 'sound_dead') and self.sound_dead:
+            game.sound_manager.play_sound(self.sound_dead, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
 
         corpse = Corpse(
             name=f"Corpse of {self.name}",

@@ -1,8 +1,9 @@
 import pygame
 import os
+import math  # NEW: Required for the wiggle math
 from core.data.config import SPRITE_PATH, TILE_SIZE, RED, DARK_GRAY, GREEN
 from core.entities.item.item import Item
-from core.entities.item.item_data import ITEM_TEMPLATES # NEW: Import ITEM_TEMPLATES
+from core.entities.item.item_data import ITEM_TEMPLATES
 
 class ZombieGraphics:
     def load_sprite(self, sprite_file):
@@ -41,38 +42,51 @@ class ZombieGraphics:
             return None
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
-        # This draw method is for the pixelated zoom approach
-        draw_rect = self.rect.move(offset_x, offset_y)
+        # --- NEW: Desynchronized Positional and Rotational Wiggle ---
+        wiggle_y = 0
+        draw_angle = getattr(self, 'walk_anim_angle', 0)
+
+        if draw_angle != 0:
+            # Use object memory address as a unique phase offset for each entity
+            phase_shift = id(self) % 1000
+            current_time = pygame.time.get_ticks()
+            
+            # Vertical positional bounce
+            wiggle_y = int(math.sin(current_time * 0.015 + phase_shift) * 2)
+            # Add rotation desynchronization
+            draw_angle += math.sin(current_time * 0.01 + phase_shift) * 5
+
+        # Save this frame's wiggle so child classes (NPCs) can sync their weapons to it
+        self._current_wiggle_y = wiggle_y
+        
+        # Apply the wiggle to the base drawing rect
+        draw_rect = self.rect.move(offset_x, offset_y + wiggle_y)
 
         current_image = None
-        if self.vx < -0.1: # Moving left (using a small threshold)
+        if self.vx < -0.1: 
             current_image = self.images.get('left')
-        elif self.vx > 0.1: # Moving right
+        elif self.vx > 0.1: 
             current_image = self.images.get('right')
 
-        # Default to 'center' if moving vertically or standing still
         if current_image is None:
             current_image = self.images.get('center')
 
         if current_image:
             temp_image = current_image.copy()
             
-            # If opacity is low (not visible), draw as black silhouette
             if opacity < 150:
                 temp_image.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MULT)
             else:
                 temp_image.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
             
-            if self.walk_anim_angle != 0:
-                rotated_img = pygame.transform.rotate(temp_image, self.walk_anim_angle)
+            if draw_angle != 0:
+                rotated_img = pygame.transform.rotate(temp_image, draw_angle)
                 rot_rect = rotated_img.get_rect(center=draw_rect.center)
                 surface.blit(rotated_img, rot_rect)
             else:
                 surface.blit(temp_image, draw_rect)
 
-            # Draw clothes (only if visible)
             if opacity >= 150:
-                # --- NEW: Accumulate hidden slots ---
                 hidden_slots = set()
                 for slot, clothe in self.clothes.items():
                     if clothe:
@@ -90,13 +104,11 @@ class ZombieGraphics:
                                 hidden_slots.update(template['properties']['hide_cloth'])
 
                 for slot, clothe in self.clothes.items():
-                    # --- NEW: Skip drawing if this slot is hidden by another piece of clothing
                     if slot in hidden_slots:
                         continue
                     
                     if clothe:
                         clothe_sprite = None
-                        # [FIX] Handle both Item objects (NPCs) and Dicts (Zombies)
                         if isinstance(clothe, Item):
                             if clothe.image:
                                 clothe_sprite = clothe.image.copy()
@@ -105,24 +117,22 @@ class ZombieGraphics:
 
                         if clothe_sprite:
                             clothe_sprite.fill((255, 255, 255, opacity), special_flags=pygame.BLEND_RGBA_MULT)
-                            if self.walk_anim_angle != 0:
-                                rotated_cloth = pygame.transform.rotate(clothe_sprite, self.walk_anim_angle)
+                            if draw_angle != 0:
+                                rotated_cloth = pygame.transform.rotate(clothe_sprite, draw_angle)
                                 rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
                                 surface.blit(rotated_cloth, rot_cloth_rect)
                             else:
                                 surface.blit(clothe_sprite, draw_rect)
         else:
-            # Fallback for zombies without an image
             temp_surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
             
-            # If opacity is low (not visible), draw as black silhouette
             if opacity < 150:
                 temp_surface.fill((0, 0, 0, 255))
             else:
                 temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
 
-            if self.walk_anim_angle != 0:
-                rotated_surf = pygame.transform.rotate(temp_surface, self.walk_anim_angle)
+            if draw_angle != 0:
+                rotated_surf = pygame.transform.rotate(temp_surface, draw_angle)
                 rot_rect = rotated_surf.get_rect(center=draw_rect.center)
                 surface.blit(rotated_surf, rot_rect)
             else:

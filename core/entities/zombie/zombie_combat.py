@@ -16,7 +16,7 @@ class ZombieCombat:
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_sound_time > self.hit_sound_cooldown:
             if self.sound_hit: # Check if a sound is defined
-                game.sound_manager.play_sound(self.sound_hit, subdir='zombie', game=game, source_pos=self.rect.center)
+                game.sound_manager.play_sound(self.sound_hit, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
             self.last_hit_sound_time = current_time
 
         return self.health <= 0 # Return True if dead
@@ -68,7 +68,7 @@ class ZombieCombat:
                 display_message("A survivor has been killed by a zombie.")
 
         if self.sound_attack:
-            game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center)
+            game.sound_manager.play_sound(self.sound_attack, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
 
     def die(self, game):
         """Handles zombie death: plays sound, creates corpse, generates loot."""
@@ -87,7 +87,7 @@ class ZombieCombat:
         
         # 1. Play sound
         if self.sound_dead:
-             game.sound_manager.play_sound(self.sound_dead, subdir='zombie', game=game, source_pos=self.rect.center)
+             game.sound_manager.play_sound(self.sound_dead, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
 
         # 2. Create Corpse
         corpse = Corpse(

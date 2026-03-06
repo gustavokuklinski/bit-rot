@@ -52,7 +52,7 @@
         <item_consumable_drugs_spawn_chance_multiplier value="1.0" name="Drugs (Pills and medicine)"/>
     </item_spawning>
     <vehicle>
-        <vehicle_spawn_per_chunk value="15" name="Max vehicle spawn on chunk (Default: 5)"/>
+        <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk (Default: 5)"/>
         <has_fuel_chance value="1.0" name="Car Fuel chance (Default: 0.2)"/>
         <has_key_chance value="1.0" name="Car Key chance (Default: 0.2)"/>
         <has_motor_chance value="1.0" name="Car Motor chance (Default: 0.2)"/>

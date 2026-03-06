@@ -47,7 +47,9 @@ def handle_attack(game, mouse_pos):
                         weapon.sounds['shoot'], 
                         subdir='items',
                         game=game,
-                        source_pos=game.player.rect.center
+                        source_pos=game.player.rect.center,
+                        base_volume=random.uniform(0.2, 0.7),
+                        pitch_variance=0.15
                     )
 
                 target_world_x, target_world_y = game.screen_to_world(mouse_pos)
@@ -104,7 +106,7 @@ def handle_attack(game, mouse_pos):
                     
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
-                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center)
+                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
             else: print(f"**CLUNK!** {weapon.name} is broken.")
 
@@ -124,7 +126,9 @@ def handle_attack(game, mouse_pos):
                         weapon.sounds['swing'],
                         subdir='items',
                         game=game,
-                        source_pos=game.player.rect.center
+                        source_pos=game.player.rect.center,
+                        base_volume=random.uniform(0.2, 0.7),
+                        pitch_variance=0.15
                     )
 
                 game.player.melee_swing_timer = 10

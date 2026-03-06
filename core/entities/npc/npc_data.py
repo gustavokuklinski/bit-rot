@@ -23,8 +23,11 @@ class NPCData:
                     root = tree.getroot()
                     if root.tag == 'npc':
                         template = {}
+                        template['type'] = root.get('type', 'common').lower()
+                        
                         name_node = root.find('name')
                         template['name'] = name_node.get('value') if name_node is not None else 'Survivor'
+                        
                         stats_node = root.find('stats')
                         if stats_node is not None:
                             health_node = stats_node.find('health')
@@ -41,12 +44,14 @@ class NPCData:
                             infection_node = stats_node.find('infection')
                             template['min_infection'] = int(infection_node.get('min', 0))
                             template['max_infection'] = int(infection_node.get('max', 0))
+                            
                         xp_node = root.find('xp')
                         if xp_node is not None:
                             template['min_xp'] = float(xp_node.get('min', 10))
                             template['max_xp'] = float(xp_node.get('max', 20))
                         else:
                             template['min_xp'], template['max_xp'] = 10, 20
+                            
                         visuals_node = root.find('visuals')
                         template['sprites'] = {}
                         if visuals_node is not None:
@@ -55,11 +60,20 @@ class NPCData:
                                 s_file = sprite_node.get('file')
                                 if s_id and s_file:
                                     template['sprites'][s_id] = s_file
+                                    
+                        # --- UPDATED CLOTHES PARSING ---
                         clothes_node = root.find('clothes')
                         template['clothes_slots'] = []
+                        template['predefined_clothes'] = {}
                         if clothes_node is not None:
                             for slot_node in clothes_node:
                                 template['clothes_slots'].append(slot_node.tag)
+                                cloth_node = slot_node.find('cloth')
+                                if cloth_node is not None:
+                                    cloth_name = cloth_node.get('name')
+                                    if cloth_name:
+                                        template['predefined_clothes'][slot_node.tag] = cloth_name
+
                         sound_node = root.find('sound')
                         template['sounds'] = {}
                         if sound_node is not None:
@@ -67,8 +81,20 @@ class NPCData:
                                 node = sound_node.find(sound_type)
                                 if node is not None:
                                     template['sounds'][sound_type] = node.get('src')
+                                    
                         template['sex'] = root.find('sex').get('value') if root.find('sex') is not None else 'Random'
-                        template['loot'] = [] 
+                        
+                        # --- UPDATED LOOT PARSING ---
+                        loot_node = root.find('loot')
+                        template['loot'] = []
+                        if loot_node is not None:
+                            for item_node in loot_node.findall('item'):
+                                item_name = item_node.get('item') or item_node.get('name')
+                                template['loot'].append({
+                                    'item': item_name,
+                                    'chance': float(item_node.get('chance', 1.0))
+                                })
+                                
                         NPCData.NPC_TEMPLATES.append(template)
                 except Exception as e:
                     print(f"NPC Error: Could not load {filename}: {e}")

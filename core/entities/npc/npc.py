@@ -25,10 +25,21 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             NPCData.load_templates()
 
         if NPCData.NPC_TEMPLATES:
-            template = random.choice(NPCData.NPC_TEMPLATES)
+            # --- NEW: Weighted Template Selection ---
+            type_weights = {
+                'common': 55,
+                'worker': 20,
+                'doctor': 10,
+                'military': 20,
+                'special_force': 5
+            }
+            template_weights = [type_weights.get(t.get('type', 'common'), 10) for t in NPCData.NPC_TEMPLATES]
+            template = random.choices(NPCData.NPC_TEMPLATES, weights=template_weights, k=1)[0]
+
         else:
             template = {
-                'name': "Survivor", 
+                'type': 'common',
+                'name': "Survivor",
                 'sex': random.choice(['Male', 'Female']),
                 'health': 100,
                 'speed': 1.0,
@@ -151,44 +162,53 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if not self.images or not self.images.get('center'):
             self._load_base_sprite()
             
-        # -- FORCE SPECIFIC ITEMS AND DYNAMICALLY PRE-TINT THEIR IMAGE SURFACES --
-        if not self.clothes:
-            self.clothes = {}
-            hair_options = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
-            selected_hair = random.choice(hair_options)
-            default_clothes = ["Sneakers", "Pants", "Tshirt", "Jacket", selected_hair]
-            for cloth_name in default_clothes:
-                item = Item.create_from_name(cloth_name)
-                if item:
+        self.clothes = {}
+        hair_options = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
+        predefined_clothes = template.get('predefined_clothes', {})
+        selected_hair = predefined_clothes.get('hair', random.choice(hair_options))
+        
+        # Base fallback logic combined with XML predefined rules
+        clothes_to_equip = {
+            "feet": predefined_clothes.get("feet") or "Sneakers",
+            "legs": predefined_clothes.get("legs") or "Pants",
+            "body": predefined_clothes.get("body") or "Tshirt",
+            "arms": predefined_clothes.get("arms") or ("Jacket" if random.random() < 0.2 else None),
+            "hair": selected_hair
+        }
+        
+        # Inject other predefined specific clothing slots (like hand, head, util)
+        for slot_name, cloth_name in predefined_clothes.items():
+            if slot_name not in clothes_to_equip:
+                clothes_to_equip[slot_name] = cloth_name
+        
+        for slot_name, cloth_name in clothes_to_equip.items():
+            if not cloth_name:
+                continue
+            item = Item.create_from_name(cloth_name)
+            if item:
+                # Check if this specific item was explicitly defined in the XML for this slot
+                is_explicitly_defined = (slot_name in predefined_clothes and predefined_clothes[slot_name] == cloth_name)
+
+                # Only apply random tint to fallback/randomized clothing (Not XML overrides)
+                if not is_explicitly_defined:
                     item.color = random.choice(CLOTHING_COLORS)
                     if item.image:
                         tinted = item.image.copy()
                         tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
                         item.image = tinted
-                    
-                    slot = getattr(item, 'slot', None)
-                    if not slot:
-                        if cloth_name == "Pants": slot = "legs"
-                        elif cloth_name == "Jacket": slot = "arms"
-                        elif cloth_name == "Tshirt": slot = "body"
-                        elif cloth_name == "Sneakers": slot = "feet"
-                        elif cloth_name in hair_options: slot = "hair"
-                    
-                    if slot:
-                        self.clothes[slot] = item
+                
+                actual_slot = getattr(item, 'slot', slot_name)
+                
+                # Apply fallback slot overrides just in case item doesn't have it explicitly defined
+                if not getattr(item, 'slot', None):
+                    if cloth_name == "Pants": actual_slot = "legs"
+                    elif cloth_name == "Jacket": actual_slot = "arms"
+                    elif cloth_name == "Tshirt": actual_slot = "body"
+                    elif cloth_name == "Sneakers": actual_slot = "feet"
+                    elif cloth_name in hair_options: actual_slot = "hair"
 
-        clean_clothes = {}
-        for slot, item_data in self.clothes.items():
-            if not item_data: continue
-            
-            if isinstance(item_data, Item):
-                clean_clothes[slot] = item_data
-            elif isinstance(item_data, str):
-                clean_clothes[slot] = Item.create_from_name(item_data)
-            elif isinstance(item_data, dict) and 'name' in item_data:
-                clean_clothes[slot] = Item.create_from_name(item_data['name'])
-        
-        self.clothes = clean_clothes
+                if actual_slot not in self.clothes:
+                    self.clothes[actual_slot] = item
         
         if self.image:
             self.mask = pygame.mask.from_surface(self.image)
@@ -419,6 +439,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if is_moving:
             self.walk_anim_angle = math.sin(time.time() * 15) * 2
             self.vx = self.dx
+
+            if hasattr(self, 'sound_steps') and self.sound_steps:
+                if current_time - getattr(self, 'last_step_sound_time', 0) > 400:
+                    game.sound_manager.play_sound(self.sound_steps, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
+                    self.last_step_sound_time = current_time
         else:
             self.walk_anim_angle = 0
             self.vx = 0
@@ -559,32 +584,40 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             attack_cooldown = 500 / multiplier
         
         if dist <= effective_attack_range and (current_time - self.last_attack_time > attack_cooldown):
-             weapon_is_ready = True
+            weapon_is_ready = True
              
-             has_los = True
-             if is_ranged_weapon:
-                 has_los = self.check_line_of_sight(target_entity, game)
+            has_los = True
+            if is_ranged_weapon:
+                has_los = self.check_line_of_sight(target_entity, game)
 
-             if weapon_is_ready and has_los:
-                 self.last_attack_time = current_time
-                 attack_angle = math.atan2(-dy, dx)
+            if weapon_is_ready and has_los:
+                self.last_attack_time = current_time
+                attack_angle = math.atan2(-dy, dx)
                  
-                 damage_to_deal = random.randint(self.min_attack, self.max_attack)
+                damage_to_deal = random.randint(self.min_attack, self.max_attack)
                  
-                 if is_ranged_weapon and weapon:
-                      projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
-                      projectile.damage = damage_to_deal
-                      projectile.owner = self
-                      projectile.hostile = True
-                      game.projectiles.append(projectile)
-                 else:
-                      self.melee_swing_timer = 250
-                      self.melee_swing_angle = attack_angle
-                      
-                      if target_entity == game.player:
-                           target_entity.take_damage(game, damage_to_deal, 0)
-                      else:
-                           target_entity.take_damage(damage_to_deal, game, attacker=self)
+                if is_ranged_weapon and weapon:
+                    weapon_sound = weapon.sounds.get('shoot') if hasattr(weapon, 'sounds') else None
+                    
+                    if weapon_sound:
+                        game.sound_manager.play_sound(weapon_sound, subdir='items', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
+                    
+
+                    projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
+                    projectile.damage = damage_to_deal
+                    projectile.owner = self
+                    projectile.hostile = True
+                    game.projectiles.append(projectile)
+                else:
+                    if getattr(self, 'sound_attack', None):
+                        game.sound_manager.play_sound(self.sound_attack, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
+                    self.melee_swing_timer = 250
+                    self.melee_swing_angle = attack_angle
+                    
+                    if target_entity == game.player:
+                        target_entity.take_damage(game, damage_to_deal, 0)
+                    else:
+                        target_entity.take_damage(damage_to_deal, game, attacker=self)
 
     def stop_moving(self):
         self.state = 'idle'
@@ -606,4 +639,3 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.clothes = {}
 
         super().die(game)
-}

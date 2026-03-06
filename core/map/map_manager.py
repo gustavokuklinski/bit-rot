@@ -421,7 +421,8 @@ class MapManager:
                     subdir='map',
                     game=self.game,
                     source_pos=tile_rect.center,
-                    base_volume=random.uniform(0.2, 0.7)
+                    base_volume=random.uniform(0.2, 0.7),
+                    pitch_variance=0.15
                 )
             
             # [NEW] Invalidate chunk so it redraws with the new door state
@@ -465,7 +466,8 @@ class MapManager:
                 subdir='map',
                 game=self.game,
                 source_pos=tile_rect.center,
-                base_volume=random.uniform(0.2, 0.7)
+                base_volume=random.uniform(0.2, 0.7),
+                pitch_variance=0.15
             )
 
         self.shaking_tiles[(grid_x, grid_y)] = time.time()

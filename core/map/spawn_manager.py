@@ -297,9 +297,9 @@ def spawn_animals(game, count=5, target_layer=None):
     Rules:
       - Rat: Spawns in Layer 1 and 2.
       - Bat: Spawns only in Layer 2.
+      - Cow: Spawns only in Layer 1.
     """
     # [FIX] Respect Global Animal Configuration
-    # If animal spawn count is 0 or less, do not spawn any animals
     if core.data.config.ANIMAL_SPAWN_COUNT <= 0:
         print(f"[ANIMAL] Spawn skipped: ANIMAL_SPAWN_COUNT={core.data.config.ANIMAL_SPAWN_COUNT}")
         return
@@ -309,13 +309,11 @@ def spawn_animals(game, count=5, target_layer=None):
     
     print(f"[ANIMAL] Spawning {count} animals on layer {target_layer}")
 
-    # Ensure storage exists
     if not hasattr(game, 'layer_zombies'):
         game.layer_zombies = {}
     if target_layer not in game.layer_zombies:
         game.layer_zombies[target_layer] = []
 
-    # Decide where to add the entities
     if target_layer == game.current_layer_index:
         if not hasattr(game, 'items_on_ground'): game.items_on_ground = []
         target_list = game.items_on_ground
@@ -330,6 +328,10 @@ def spawn_animals(game, count=5, target_layer=None):
     if target_layer >= 1:
         valid_animal_types.append("Rat")
     
+    if target_layer == 1:
+        # --- NEW: Cow only spawns on L1 ---
+        valid_animal_types.append("Cow")
+        
     if target_layer == 2:
         valid_animal_types.append("Bat")
         

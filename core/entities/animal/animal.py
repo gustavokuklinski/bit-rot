@@ -2,6 +2,7 @@
 import pygame
 import random
 import os
+import math
 from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
 from core.entities.zombie.corpse import Corpse
@@ -66,7 +67,73 @@ class Animal(Zombie):
     def update_ai(self, player_rect, obstacles, other_zombies, game):
         if self.is_dead:
             return
-        super().update_ai(player_rect, obstacles, other_zombies, game)
+        
+        if self.name in ["Rat", "Bat"]:
+            super().update_ai(player_rect, obstacles, other_zombies, game)
+            return
+
+        current_time = pygame.time.get_ticks()
+        multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+        
+        # Determine threat radius based on animal type
+        threat_radius = 150 if self.name != "Cow" else 250 
+        
+        threat_detected = False
+        flee_x, flee_y = 0, 0
+        
+        # 1. Check for player threat (Player is running or shooting)
+        if game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
+            dx = game.player.rect.centerx - self.rect.centerx
+            dy = game.player.rect.centery - self.rect.centery
+            dist = math.hypot(dx, dy)
+            
+            # Flee if player shoots (loud) or gets too close
+            if getattr(game.player, 'gun_flash_timer', 0) > 0 and dist < threat_radius * 2:
+                flee_x -= dx
+                flee_y -= dy
+                threat_detected = True
+            elif dist < threat_radius and (getattr(game.player, 'is_running', False) or getattr(self, 'aggro_timer', 0) > 0):
+                flee_x -= dx
+                flee_y -= dy
+                threat_detected = True
+
+        # 2. Check for Zombie / Hostile NPC threats
+        for entity in other_zombies + list(getattr(game, 'npcs', [])):
+            if entity is self or entity.is_dead: continue
+            
+            # If it's an NPC, only flee if it's hostile. If it's a zombie, always flee.
+            if hasattr(entity, 'is_friendly') and entity.is_friendly: continue
+
+            dx = entity.rect.centerx - self.rect.centerx
+            dy = entity.rect.centery - self.rect.centery
+            dist = math.hypot(dx, dy)
+            
+            if dist < threat_radius:
+                flee_x -= dx
+                flee_y -= dy
+                threat_detected = True
+                
+        # 3. Movement Execution
+        if threat_detected:
+            self.state = 'fleeing'
+            self.aggro_timer = 2000 # Keep running for 2 seconds after threat is gone
+            
+            # Normalize flee vector
+            flee_dist = math.hypot(flee_x, flee_y)
+            if flee_dist > 0:
+                # Add a bit of randomness so they don't just run in a perfect straight line into a wall
+                flee_x += random.uniform(-50, 50)
+                flee_y += random.uniform(-50, 50)
+                
+                target_x = self.rect.centerx + flee_x
+                target_y = self.rect.centery + flee_y
+                self.move_towards((target_x, target_y), obstacles, other_zombies, game, can_see_target=True)
+        else:
+            if getattr(self, 'aggro_timer', 0) > 0:
+                 self.aggro_timer -= game.dt_ms
+            else:
+                 # Standard wandering from Zombie base class
+                 super().update_ai(player_rect, obstacles, other_zombies, game)
 
     # [FIX] Override take_damage for instant hit feedback
     def take_damage(self, amount, game, attacker=None):
@@ -87,11 +154,16 @@ class Animal(Zombie):
         if self.health <= 0:
             self.health = 0
             self.state = 'dead' # Extra safety flag
+            self.die(game)
             return True
             
         # Make the animal chase the attacker if hit but not killed
-        self.aggro_timer = 10000
-        self.state = 'chasing'
+        if self.name in ["Rat", "Bat"]:
+            self.aggro_timer = 10000
+            self.state = 'chasing'
+        else:
+            self.aggro_timer = 2000
+            self.state = 'fleeing'
                 
         return False
 

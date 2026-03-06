@@ -304,8 +304,9 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     subdir='player',
                     game=game,
                     source_pos=self.rect.center,
-                    base_volume=random.uniform(0.2, 0.4)
-                )
+                    base_volume=random.uniform(0.2, 0.4),
+                    pitch_variance=0.15)
+                
                 if self.is_running:
                     next_delay = random.uniform(0.25, 0.35) 
                 else:

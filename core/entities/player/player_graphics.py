@@ -79,7 +79,21 @@ class PlayerGraphics:
 
             return
 
-        draw_rect = self.rect.move(offset_x, offset_y)
+        # --- NEW: Desynchronized Positional and Rotational Wiggle ---
+        wiggle_y = 0
+        draw_angle = getattr(self, 'walk_anim_angle', 0)
+
+        if draw_angle != 0:
+            phase_shift = id(self) % 1000
+            current_time = pygame.time.get_ticks()
+            
+            # Vertical positional bounce
+            wiggle_y = int(math.sin(current_time * 0.015 + phase_shift) * 2)
+            # Add rotation desynchronization
+            draw_angle += math.sin(current_time * 0.01 + phase_shift) * 5
+
+        # Base draw_rect includes the vertical wiggle
+        draw_rect = self.rect.move(offset_x, offset_y + wiggle_y)
 
         current_image = None
         if self.facing_direction[0] < 0: 
@@ -91,8 +105,8 @@ class PlayerGraphics:
             current_image = self.images.get('center')
 
         if current_image:
-            if self.walk_anim_angle != 0:
-                rotated_img = pygame.transform.rotate(current_image, self.walk_anim_angle)
+            if draw_angle != 0:
+                rotated_img = pygame.transform.rotate(current_image, draw_angle)
                 rot_rect = rotated_img.get_rect(center=draw_rect.center)
                 surface.blit(rotated_img, rot_rect)
             else:
@@ -100,18 +114,16 @@ class PlayerGraphics:
         else:
             pygame.draw.rect(surface, self.color, draw_rect)
 
-        # NEW: Accumulate slots that are designated to be hidden by currently worn clothes
+        # Accumulate slots that are designated to be hidden by currently worn clothes
         hidden_slots = set()
         for slot in self.clothes_slots:
             item = self.clothes.get(slot)
             if item:
-                # Retrieve the item's properties from ITEM_TEMPLATES instead of directly from the item object
                 template = ITEM_TEMPLATES.get(item.name)
                 if template and 'properties' in template and 'hide_cloth' in template['properties']:
                     hidden_slots.update(template['properties']['hide_cloth'])
 
         for slot in self.clothes_slots: 
-            # NEW: Skip drawing if this slot is hidden by another piece of clothing
             if slot in hidden_slots:
                 continue
                 
@@ -119,22 +131,21 @@ class PlayerGraphics:
             if item and item.image:
                 img_to_draw = item.image
                 
-                # --- NEW: Dynamically Tint Rendered Clothing Surface ---
                 if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
-                    # Keep a cached tinted surface so we don't recalculate it every frame
                     if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:
                         item.tinted_image = item.image.copy()
                         item.tinted_image.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
                         item.last_color = item.color
                     img_to_draw = item.tinted_image
 
-                if self.walk_anim_angle != 0:
-                    rotated_cloth = pygame.transform.rotate(img_to_draw, self.walk_anim_angle)
+                if draw_angle != 0:
+                    rotated_cloth = pygame.transform.rotate(img_to_draw, draw_angle)
                     rot_cloth_rect = rotated_cloth.get_rect(center=draw_rect.center)
                     surface.blit(rotated_cloth, rot_cloth_rect)
                 else:
                     surface.blit(img_to_draw, draw_rect)
 
+        # Weapons (Idle / Melee / Aiming)
         if self.active_weapon and self.active_weapon.image:
             is_swinging = (self.melee_swing_timer > 0)
             is_ranged_aiming = (is_aiming and self.active_weapon.item_type == 'weapon_ranged')
@@ -151,6 +162,7 @@ class PlayerGraphics:
                 offset_x_weapon = math.cos(self.aim_angle) * offset_dist
                 offset_y_weapon = -math.sin(self.aim_angle) * offset_dist
                 
+                # Bounces naturally since draw_rect.center contains wiggle_y
                 rotated_rect = rotated_image.get_rect(center=draw_rect.center)
                 rotated_rect.centerx += offset_x_weapon
                 rotated_rect.centery += offset_y_weapon
@@ -177,6 +189,7 @@ class PlayerGraphics:
 
             surface.blit(rotated_image, rotated_rect)
 
+        # UI Bars
         if self.is_sleeping:
             if self.max_tireness < 0:
                 progress = 1.0 - max(0.0, min(1.0, self.tireness / self.max_tireness))
@@ -214,12 +227,7 @@ class PlayerGraphics:
                 
                 original_image = self.active_weapon.image
                 
-                # --- NEW: Calculate Dynamic Swing Angle ---
-                # Assuming standard melee swing timer maxes out around 15 frames.
-                # As the timer decreases from 15 to 0, swing_progress goes from ~1.0 to -1.0.
                 swing_progress = (self.melee_swing_timer - 7.5) / 7.5
-                
-                # Apply progress to sweep across the same arc drawn below (+45 to -45 degrees)
                 dynamic_swing_angle = self.melee_swing_angle + (swing_progress * (3.1415 / 4))
                 
                 angle_degrees = math.degrees(dynamic_swing_angle)
@@ -229,7 +237,6 @@ class PlayerGraphics:
                 offset_radius = TILE_SIZE * 0.8 
                 offset_x_weapon = math.cos(dynamic_swing_angle) * offset_radius
                 offset_y_weapon = -math.sin(dynamic_swing_angle) * offset_radius
-                # ------------------------------------------
                 
                 rotated_rect.centerx += offset_x_weapon
                 rotated_rect.centery += offset_y_weapon

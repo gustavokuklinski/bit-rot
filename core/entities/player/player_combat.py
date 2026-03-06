@@ -48,7 +48,9 @@ class PlayerCombat:
                 target_weapon.sounds['reload'],
                 subdir='items',
                 game=game,
-                source_pos=self.rect.center
+                source_pos=self.rect.center,
+                base_volume=random.uniform(0.2, 0.7),
+                pitch_variance=0.15
             )
             
         self.is_reloading = True

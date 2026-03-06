@@ -1,6 +1,7 @@
 # /// script
 # dependencies = [
-#  "faker"
+#  "faker",
+#  "numpy"
 # ]
 # ///
 

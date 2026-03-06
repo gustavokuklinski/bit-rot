@@ -1,22 +1,24 @@
-<npc type="common">
+<npc type="worker">
     <name value="RANDOM" />
     <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
     
     <stats>
         <health min="100" max="100" />
         <speed min="1" max="1" />
-        <attack min="1" max="15" />
-        <infection min="1" max="5" />
+        <attack min="5" max="15" />
+        <infection min="2" max="5" />
     </stats>
     
     <clothes>
-        <head></head>
+        <head><cloth name="Worker Helmet" /></head>
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet></feet>
-        <hand></hand>
-        <body></body>
+        <feet><cloth name="Shoes" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Next Petrol Tshirt" /></body>
         <arms></arms>
         <legs></legs>
     </clothes>
@@ -28,6 +30,10 @@
     </visuals>
     
     <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="Screwdriver" chance="1.0" />
+        <item item="Toolkit" chance="1.0" />
+        <item item="38 Revolver" chance="1.0" />
     </loot>
 
     <sound>

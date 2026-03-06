@@ -221,30 +221,41 @@ class ZombieAI:
         target_rect = player_rect
         target_entity = game.player
 
-        # Use squared distance for efficiency (avoid sqrt when possible)
         dx = player_rect.centerx - self.rect.centerx
         dy = player_rect.centery - self.rect.centery
         dist_to_player_sq = dx*dx + dy*dy
         dist_to_player = math.sqrt(dist_to_player_sq)
 
-        nearest_npc = None
-        min_npc_dist_sq = 9999**2
+        nearest_target = None
+        min_target_dist_sq = dist_to_player_sq
 
+        # Check NPCs
         if hasattr(game, 'npcs'):
             for npc in game.npcs:
                 if npc.is_dead: continue
                 ndx = npc.rect.centerx - self.rect.centerx
                 ndy = npc.rect.centery - self.rect.centery
                 npc_dist_sq = ndx*ndx + ndy*ndy
-                if npc_dist_sq < min_npc_dist_sq:
-                    min_npc_dist_sq = npc_dist_sq
-                    nearest_npc = npc
+                if npc_dist_sq < min_target_dist_sq:
+                    min_target_dist_sq = npc_dist_sq
+                    nearest_target = npc
 
-        if nearest_npc and min_npc_dist_sq < dist_to_player_sq:
-            target_rect = nearest_npc.rect
-            target_entity = nearest_npc
-            dist_to_target = math.sqrt(min_npc_dist_sq)
-            dist_to_target_sq = min_npc_dist_sq
+        # --- NEW: Check Animals ---
+        # Animals exist in the same array as zombies. We only target them if they have type 'animal'.
+        for entity in other_zombies:
+            if getattr(entity, 'type', '') == 'animal' and not entity.is_dead:
+                adx = entity.rect.centerx - self.rect.centerx
+                ady = entity.rect.centery - self.rect.centery
+                animal_dist_sq = adx*adx + ady*ady
+                if animal_dist_sq < min_target_dist_sq:
+                    min_target_dist_sq = animal_dist_sq
+                    nearest_target = entity
+
+        if nearest_target:
+            target_rect = nearest_target.rect
+            target_entity = nearest_target
+            dist_to_target = math.sqrt(min_target_dist_sq)
+            dist_to_target_sq = min_target_dist_sq
         else:
             dist_to_target = dist_to_player
             dist_to_target_sq = dist_to_player_sq
@@ -305,7 +316,8 @@ class ZombieAI:
                         subdir='zombie', 
                         game=game, 
                         source_pos=self.rect.center, 
-                        base_volume=random.uniform(0.05, 0.08)
+                        base_volume=random.uniform(0.06, 0.09),
+                        pitch_variance=0.15
                     )
                     self.last_wander_sound_time = current_time
                     self.wander_sound_cooldown = random.randint(4000, 12000)
@@ -462,7 +474,7 @@ class ZombieAI:
             
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
              if current_time > self.last_step_sound_time:
-                game.sound_manager.play_sound(self.sound_steps, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.02, 0.06))
+                game.sound_manager.play_sound(self.sound_steps, subdir='zombie', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.02, 0.06), pitch_variance=0.15)
                 self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))
 
         # --- PHYSICS SUB-STEPPING ---

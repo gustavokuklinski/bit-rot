@@ -1,6 +1,8 @@
-<npc type="common">
+<npc type="doctor">
     <name value="RANDOM" />
     <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
     
     <stats>
         <health min="100" max="100" />
@@ -10,15 +12,15 @@
     </stats>
     
     <clothes>
-        <head></head>
+        <head><cloth name="Medical Mask" /></head>
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet></feet>
+        <feet><cloth name="Shoes" /></feet>
         <hand></hand>
         <body></body>
-        <arms></arms>
-        <legs></legs>
+        <arms><cloth name="Medical Vest" /></arms>
+        <legs><cloth name="Jeans Pants" /></legs>
     </clothes>
 
     <visuals>
@@ -28,6 +30,11 @@
     </visuals>
     
     <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="Vaccine" chance="1.0" />
+        <item item="Medicine Vol.1" chance="1.0" />
+        <item item="Sewing Kit" chance="1.0" />
+        <item item="Medical Kit" chance="1.0" />
     </loot>
 
     <sound>
