@@ -29,6 +29,7 @@ class Animal(Zombie):
             'min_infection': template['stats']['infection']['min'],
             'max_infection': template['stats']['infection']['max'],
             'loot': template['loot'],
+            'sounds': template.get('sounds', {}),
             'min_xp': 1, 
             'max_xp': 3,
             'sex': 'Animal', 
@@ -38,6 +39,12 @@ class Animal(Zombie):
 
         super().__init__(x, y, zombie_template)
         
+        sounds = template.get('sounds', {})
+        self.sound_hit = sounds.get('hit')
+        self.sound_dead = sounds.get('dead')
+        self.sound_attack = sounds.get('attack')
+        self.sound_steps = sounds.get('steps')
+
         # Track the layer this Animal belongs to
         if layer is not None:
             self.layer = layer
@@ -62,6 +69,30 @@ class Animal(Zombie):
         self.speed = random.uniform(min_spd, max_spd)
         
         print(f"[ANIMAL] Created {self.name} at ({self.x}, {self.y}) with sprite: {self.image is not None}")
+
+    def update(self, game):
+        # Call the base class update first
+        super().update(game)
+        
+        if self.is_dead:
+            return
+            
+        # Check if the animal is currently moving
+        is_moving = hasattr(self, 'dx') and hasattr(self, 'dy') and (self.dx != 0 or self.dy != 0)
+        
+        if is_moving and hasattr(self, 'sound_steps') and self.sound_steps:
+            current_time = pygame.time.get_ticks()
+            # Step speed (400ms is a good default trot, adjust if needed)
+            if current_time - getattr(self, 'last_step_sound_time', 0) > 400:
+                game.sound_manager.play_sound(
+                    self.sound_steps, 
+                    subdir='animals',  # Assuming your sounds are in sounds/animals/
+                    game=game, 
+                    source_pos=self.rect.center, 
+                    base_volume=random.uniform(0.2, 0.7),
+                    pitch_variance=0.15 # Natural sound variation!
+                )
+                self.last_step_sound_time = current_time
 
     # [FIX] Explicitly prevent the AI update from running if the animal is dead
     def update_ai(self, player_rect, obstacles, other_zombies, game):
@@ -147,7 +178,7 @@ class Animal(Zombie):
         current_time = pygame.time.get_ticks()
         if hasattr(self, 'sound_hit') and self.sound_hit and game and hasattr(game, 'sound_manager'):
             if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
-                game.sound_manager.play_sound(self.sound_hit, subdir='zombies', game=game, source_pos=self.rect.center)
+                game.sound_manager.play_sound(self.sound_hit, subdir='animals', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15) # Natural sound variation!
                 self.last_hit_sound_time = current_time
         
         # Instantly register as ready to die so the game calls die() without delay
@@ -174,8 +205,8 @@ class Animal(Zombie):
         self.state = 'dead'
         
         # 1. Play animal death sound
-        #if getattr(self, 'sound_dead', None) and hasattr(game, 'sound_manager'):
-        #    game.sound_manager.play_sound(self.sound_dead, subdir='zombies', game=game, source_pos=self.rect.center)
+        if getattr(self, 'sound_dead', None) and hasattr(game, 'sound_manager'):
+            game.sound_manager.play_sound(self.sound_dead, subdir='animals', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15) # Natural sound variation!
 
         # 2. Create Animal Corpse using the updated relative path
         corpse = Corpse(

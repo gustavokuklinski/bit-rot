@@ -1,0 +1,9 @@
+<item name="Sewing Vol.1" type="recipe" allow_belt="false">
+    <properties>
+        <load min="1" max="1" />
+        <weight weight="0.001"/>
+        <capacity value="10" />
+        <sprite file="recipe_magazine_sewing_vol_1.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

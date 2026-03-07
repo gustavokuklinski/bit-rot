@@ -240,21 +240,19 @@ def load_settings(preset="default"):
         BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
 
         zombie_config = root.find('zombie')
-        ZOMBIE_SPEED = float(zombie_config.find('speed').get('value'))
-        MAX_ZOMBIES_GLOBAL = int(zombie_config.find('max_zombies').get('value'))
-        ZOMBIE_DROP = int(zombie_config.find('drop').get('value'))
-        ZOMBIE_DETECTION_RADIUS = int(zombie_config.find('zombie_detection_radius').get('value')) * TILE_SIZE
         val_wander = zombie_config.find('wander').get('value')
         ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
-        ZOMBIE_WANDER_CHANGE_INTERVAL = int(zombie_config.find('wander_interval').get('value'))
-        val_sight = zombie_config.find('sight_check').get('value')
-        ZOMBIE_LINE_OF_SIGHT_CHECK = str(val_sight).lower() == 'true'
         ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
         ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
-        ZOMBIE_INFECTION_CHANCE = float(zombie_config.find('infection_chance').get('value'))
         ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value'))
         ZOMBIE_MULTIPLIER = int(zombie_config.find('zombie_multiplier').get('value'))
-
+        ZOMBIE_INFECTION_CHANCE = 0.4
+        ZOMBIE_LINE_OF_SIGHT_CHECK = True
+        ZOMBIE_SPEED = 0.3
+        ZOMBIE_DETECTION_RADIUS = 5 * TILE_SIZE
+        ZOMBIE_DROP = 1
+        MAX_ZOMBIES_GLOBAL = 10000
+        ZOMBIE_WANDER_CHANGE_INTERVAL = 2000
 
         durability_config = root.find('durability')
         DURABILITY_MULTIPLIER = float(durability_config.find('multiplier').get('value'))
@@ -285,15 +283,15 @@ def load_settings(preset="default"):
 
 
         npc_config = root.find('npc')
-        MAX_NPCS_GLOBAL = int(npc_config.find('max_npcs').get('value'))
-        NPC_SPAWN_CHANCE = float(npc_config.find('spawn_chance').get('value'))
+        MAX_NPCS_GLOBAL = 1500
+        NPC_SPAWN_CHANCE = 1.0
         NPC_STATIC_SPAWN = float(npc_config.find('static_spawn_chance').get('value'))
         NPC_HOSTILE_SPAWN = float(npc_config.find('hostile_spawn_chance').get('value'))
-        NPC_HEALTH_MULTIPLIER = float(npc_config.find('health_multiplier').get('value'))
-        NPC_DAMAGE_MULTIPLIER = float(npc_config.find('damage_multiplier').get('value'))
-        NPC_SPEED_MULTIPLIER = float(npc_config.find('speed_multiplier').get('value'))
-        NPC_DETECTION_RADIUS = int(npc_config.find('detection_radius').get('value')) * TILE_SIZE
         NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
+        NPC_HEALTH_MULTIPLIER = 1.0
+        NPC_DAMAGE_MULTIPLIER = 1.0
+        NPC_SPEED_MULTIPLIER = 1.0
+        NPC_DETECTION_RADIUS = 10 * TILE_SIZE
 
         vehicle_config = root.find('vehicle')
         MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value'))

@@ -1,4 +1,4 @@
-<recipe type="weapon_melee" craft="create" output="Primitive Spear" gain_xp="[intelligence:0.2, maintenance:0.2]" amount="1" time="3.0">
+<recipe type="weapon_melee" craft="create" magazine="Carpentary Vol.1" output="Primitive Spear" gain_xp="[intelligence:0.2, maintenance:0.2]" amount="1" time="3.0">
     <ingredient name="[Primitive Knife, Stone Blade]" destroy="true" amount="1" />
     <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
     <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />

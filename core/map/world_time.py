@@ -39,8 +39,45 @@ class WorldTime:
         self.weather = "CLEAR"
         self.weather_timer = random.randint(60000, 180000)
 
+        # --- AMBIENCE AUDIO CHANNELS ---
+        self.day_channel = None
+        self.night_channel = None
+        self.rain_channel = None
+        self.cave_channel = None
+        self._initial_sounds_played = False
+
     def update(self):
+        # Play initial sounds if needed when the game first starts
+        if not self._initial_sounds_played and hasattr(self.game, 'sound_manager'):
+            if self.game.current_layer_index == 2:
+                self.cave_channel = self.game.sound_manager.play_sound("cave.ogg", "ambience", loops=-1, base_volume=0.4)
+            else:
+                if self.state in ["DAY", "TRANSITION_TO_DAY"]:
+                    self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.3)
+                elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"]:
+                    self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.3)
+                
+                if self.weather == "RAIN":
+                    self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.4)
+            self._initial_sounds_played = True
+
+        # --- LAYER 2 LOGIC (Indoors/Cave) ---
         if self.game.current_layer_index == 2:
+            # Stop outdoor ambience when going indoors/underground (layer 2)
+            if self.day_channel:
+                self.day_channel.fadeout(1000)
+                self.day_channel = None
+            if self.night_channel:
+                self.night_channel.fadeout(1000)
+                self.night_channel = None
+            if self.rain_channel:
+                self.rain_channel.fadeout(1000)
+                self.rain_channel = None
+                
+            # Start cave ambience
+            if not self.cave_channel and hasattr(self.game, 'sound_manager'):
+                self.cave_channel = self.game.sound_manager.play_sound("cave.ogg", "ambience", loops=-1, base_volume=0.4)
+
             self.state = "NIGHT"
             self.current_ambient_light = self.night_ambient
             self.game.player_view_radius = self.night_radius
@@ -55,6 +92,22 @@ class WorldTime:
                 self.day_count += 1
             return
 
+        # --- LAYER 1 LOGIC (Outdoors) ---
+        # Stop cave ambience when returning outside
+        if self.cave_channel:
+            self.cave_channel.fadeout(1000)
+            self.cave_channel = None
+
+        # Resume rain sound if we came back to layer 1 and it's raining
+        if self.weather == 'RAIN' and not self.rain_channel and hasattr(self.game, 'sound_manager'):
+            self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.4)
+            
+        # Ensure correct day/night ambience resumes after leaving cave
+        if self.state in ["DAY", "TRANSITION_TO_DAY"] and not self.day_channel and hasattr(self.game, 'sound_manager'):
+            self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.3)
+        elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"] and not self.night_channel and hasattr(self.game, 'sound_manager'):
+            self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.3)
+
         current_real_time = pygame.time.get_ticks()
         base_delta = current_real_time - self.last_update_time
         multiplier = self.game.fast_forward_speed if getattr(self.game, 'is_fast_forwarding', False) else 1.0
@@ -63,18 +116,23 @@ class WorldTime:
         self.last_update_time = current_real_time
         self.game_time_ms += delta_time
         
+        # Weather update
         if self.game.current_layer_index != 2:
             self.weather_timer -= delta_time
             if self.weather_timer <= 0:
-                # [FIXED] Force weather state changes so the clock timer is always 100% accurate
                 if self.weather == 'CLEAR':
                     self.weather = 'RAIN'
                     display_message(self.game, "It started raining.")
-                    self.weather_timer = random.randint(30000, 90000) # Rain duration
+                    self.weather_timer = random.randint(30000, 90000)
+                    if hasattr(self.game, 'sound_manager') and not self.rain_channel:
+                        self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.4)
                 else:
                     self.weather = 'CLEAR'
                     display_message(self.game, "The rain stopped.")
-                    self.weather_timer = random.randint(90000, 240000) # Clear duration
+                    self.weather_timer = random.randint(90000, 240000)
+                    if self.rain_channel:
+                        self.rain_channel.fadeout(2000)
+                        self.rain_channel = None
 
         if self.game_time_ms >= self.day_length_ms:
             self.game_time_ms %= self.day_length_ms
@@ -126,15 +184,32 @@ class WorldTime:
             self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.70)
             self.game.player_view_radius *= 0.90 
 
+        # --- TRANSITION LOGIC ---
         if self.state != self._last_state:
             if self.state == "TRANSITION_TO_NIGHT":
                 display_message(self.game, "Dusk falls...")
+                # Fade out day, fade in night
+                if self.day_channel:
+                    self.day_channel.fadeout(4000)
+                    self.day_channel = None
+                if not self.night_channel and hasattr(self.game, 'sound_manager'):
+                    self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.3)
+                    
             elif self.state == "NIGHT":
                 display_message(self.game, "It is now Night.")
+                
             elif self.state == "TRANSITION_TO_DAY":
                 display_message(self.game, "The sky lightens...")
+                # Fade out night, fade in day
+                if self.night_channel:
+                    self.night_channel.fadeout(4000)
+                    self.night_channel = None
+                if not self.day_channel and hasattr(self.game, 'sound_manager'):
+                    self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.3)
+                    
             elif self.state == "DAY":
                 display_message(self.game, "It is now Day.")
+                
             self._last_state = self.state
 
     def lerp(self, a, b, t):

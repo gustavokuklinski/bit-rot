@@ -34,6 +34,7 @@
         <item item="Screwdriver" chance="1.0" />
         <item item="Toolkit" chance="1.0" />
         <item item="38 Revolver" chance="1.0" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
     </loot>
 
     <sound>

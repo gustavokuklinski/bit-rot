@@ -14,5 +14,13 @@
     
     <loot>
         <item item="Rat Meat" chance="1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="1" />
     </loot>
+
+    <sound>
+        <hit src="animal_rat_hit.ogg" />
+        <attack src="animal_rat_attack.ogg" />
+        <dead src="animal_dead.ogg" />
+        <steps src="animal_rat_steps.ogg" />
+    </sound>
 </animal>

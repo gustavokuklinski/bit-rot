@@ -36,6 +36,7 @@
         <item item="Large Backpack" chance="0.1" />
         <item item="Knife" chance="0.6" />
         <item item="Pistol 9mm" chance="0.5" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
 
     <sound>

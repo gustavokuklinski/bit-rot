@@ -35,6 +35,7 @@
         <item item="Medicine Vol.1" chance="1.0" />
         <item item="Sewing Kit" chance="1.0" />
         <item item="Medical Kit" chance="1.0" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
     </loot>
 
     <sound>

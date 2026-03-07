@@ -24,6 +24,7 @@
         <item item="Medical Kit" chance="0.2" />
         <item item="Car Tire" chance="0.3" />
         <item item="Car Key Truck" chance="0.1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
     <visuals>
         <sprite id="top" file="car_truck_top.png" />

@@ -12,5 +12,12 @@
         <sprite id="right" file="bat.png" />
     </visuals>
     <loot>
+        <item item="Kukaroach (Bit Rot publisher)" chance="1" />
     </loot>
+    <sound>
+        <hit src="animal_bat_hit.ogg" />
+        <attack src="animal_bat_attack.ogg" />
+        <dead src="animal_dead.ogg" />
+        <steps src="animal_bat_steps.ogg" />
+    </sound>
 </animal>

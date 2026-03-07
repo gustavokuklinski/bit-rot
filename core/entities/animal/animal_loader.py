@@ -80,13 +80,23 @@ class AnimalLoader:
                 cap_node = animal_node.find('capacity')
                 capacity = int(cap_node.get('value', 0)) if cap_node is not None else 0
 
+                sounds = {}
+                sound_node = animal_node.find('sound')
+                if sound_node is not None:
+                    for sound_type in ['hit', 'wander', 'dead', 'attack', 'steps']:
+                        node = sound_node.find(sound_type)
+                        if node is not None:
+                            sounds[sound_type] = node.get('src')
+
                 AnimalLoader.definitions[name] = {
                     'name': name,
                     'type': animal_node.get('type'),
                     'stats': stats,
                     'sprite': sprite_file,
                     'loot': loot,
-                    'capacity': capacity
+                    'capacity': capacity,
+                    'sounds': sounds  # --- NEW: Save sounds to definition ---
                 }
+
             except Exception as e:
                 print(f"Error parsing animal node {animal_node.get('name', 'Unknown')}: {e}")

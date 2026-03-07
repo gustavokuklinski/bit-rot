@@ -1,0 +1,8 @@
+<recipe type="car_motor" craft="create" output="Car Tire" magazine="Vehicle Engineering Vol.2" gain_xp="[intelligence:2.5, maintenance:3.5]" req_level="[intelligence:5, maintenance:5]" amount="1" time="50.0">
+    <ingredient name="[Wrench, Lug Wrench]" destroy="false" amount="1" />
+    <ingredient name="Screwdriver" destroy="false" amount="1" />
+    <ingredient name="Car Oil" destroy="true" amount="3" />
+    <ingredient name="Engine Parts" destroy="true" amount="10" />
+    <ingredient name="Weld" destroy="true" amount="5" />
+    <ingredient name="Blueprint" destroy="true" amount="20" />
+</recipe>

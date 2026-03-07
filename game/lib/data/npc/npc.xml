@@ -28,6 +28,7 @@
     </visuals>
     
     <loot>
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
 
     <sound>
