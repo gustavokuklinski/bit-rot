@@ -454,8 +454,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'light': [[' ' for _ in range(global_tiles_w)] for _ in range(global_tiles_h)],
             'protected_mask': [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
-        
-        occupied_mask_L2 = [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
 
         # --- PASS 2: MERGE CHUNKS INTO GLOBAL LAYERS ---
         chunk_offsets = {}
@@ -510,39 +508,44 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 chunk_layers = self._extract_dynamic_chunk(global_layers, offset_x, offset_y, c_w, c_h)
                 self._save_chunk(f"map_L1_{gx}_{gy}", chunk_layers)
         
-        # --- RE-SCAN FOR L2 TEMPLATE MASKS ---
-        print("Building L2 Occupancy Mask...")
-        for y in range(global_tiles_h):
-            for x in range(global_tiles_w):
-                if global_layers_l2['roof'][y][x] != ' ' or global_layers_l2['base'][y][x] != ' ':
-                    occupied_mask_L2[y][x] = 1
-
-        # --- POST-PROCESSING: Connect Isolated L2 Buildings ---
-        self._connect_l2_drunkards(global_layers_l2)
-
-        # --- DECORATE PATHWAYS ---
-        self._decorate_l2_pathways(global_layers_l2, occupied_mask_L2)
-
-        # --- POPULATE L2 SPAWNS (Zombies & NPCs) ---
-        print("Populating L2 Spawns (Zombies on Paths)...")
-        self._populate_l2_spawns(global_layers_l2)
-        
-        print("Scattering Animals (L2)...")
-        self._scatter_animals(global_layers_l2, occupied_mask_L2, global_tiles_w, global_tiles_h)
-
-        # --- RENDER COMPLETE L2 MAP ---
-        print("Rendering global world map L2 with pathways...")
-        self._render_full_map_to_surface(full_map_surface_l2, heat_map_surface_l2, global_layers_l2)
-        
-        # --- SAVE L2 CHUNKS (Separated) ---
-        print("Saving L2 separate chunk maps...")
+        # --- CHUNK-BASED L2 PROCESSING ---
+        print("Processing L2 Chunks independently...")
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
                 c_w = col_widths[gx]
                 c_h = row_heights[gy]
                 offset_x, offset_y = chunk_offsets[(gx, gy)]
+                
+                # Extract chunk L2 layers natively
                 chunk_layers_l2 = self._extract_dynamic_chunk(global_layers_l2, offset_x, offset_y, c_w, c_h)
+                
+                # Build local occupancy mask for the extracted chunk
+                chunk_mask_l2 = [[0 for _ in range(c_w)] for _ in range(c_h)]
+                for y in range(c_h):
+                    for x in range(c_w):
+                        if chunk_layers_l2['roof'][y][x] != ' ' or chunk_layers_l2['base'][y][x] != ' ':
+                            chunk_mask_l2[y][x] = 1
+                            
+                # Process L2 logic independently within the isolated chunk bounds
+                self._connect_l2_drunkards(chunk_layers_l2)
+                self._decorate_l2_pathways(chunk_layers_l2, chunk_mask_l2)
+                self._populate_l2_spawns(chunk_layers_l2)
+                
+                if hasattr(self, '_scatter_animals'):
+                    self._scatter_animals(chunk_layers_l2, chunk_mask_l2, c_w, c_h)
+
+                # Paste fully processed chunk back into the global_layers_l2 matrix for map preview/rendering
+                for layer_key, layer_grid in chunk_layers_l2.items():
+                    for r in range(c_h):
+                        for c in range(c_w):
+                            global_layers_l2[layer_key][offset_y + r][offset_x + c] = layer_grid[r][c]
+                            
+                # Save isolated L2 chunk map
                 self._save_chunk(f"map_L2_{gx}_{gy}", chunk_layers_l2)
+
+        # --- RENDER COMPLETE L2 MAP ---
+        print("Rendering global world map L2 with pathways...")
+        self._render_full_map_to_surface(full_map_surface_l2, heat_map_surface_l2, global_layers_l2)
         
         # DEBUG images
         try:

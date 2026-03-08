@@ -40,7 +40,7 @@ def load_map(game, map_filename):
     match = re.search(r'map_L(\d+)_', map_filename)
     layer_index = int(match.group(1)) if match else 1
     
-    set_active_layer(game, layer_index)
+    set_active_layer(game, layer_index, skip_cache_save=True)
     
     # [NEW] Fully parse the active chunk layer layout to extract physical barriers and containers
     base_layout = game.all_map_layers.get(layer_index)
@@ -492,6 +492,9 @@ def load_game(game, save_folder_name):
                 
                 z = Zombie(z_data['x'], z_data['y'], template)
                 
+                layer = z_data.get('layer', 1)
+                z.layer = layer
+
                 z.health = z_data.get('health', z.max_health)
                 z.max_health = z_data.get('max_health', z.health)
                 if 'id' in z_data and z_data['id']:
@@ -518,7 +521,12 @@ def load_game(game, save_folder_name):
                     else:
                         z.clothes[slot] = None
 
-                game.zombies.append(z)
+                if layer == game.current_layer_index:
+                    game.zombies.append(z)
+                else:
+                    if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
+                    if layer not in game.layer_zombies: game.layer_zombies[layer] = []
+                    game.layer_zombies[layer].append(z)
 
         else:
              game.logger.info("zombies.rot not found. Attempting to load zombies from world.rot (legacy)...")
@@ -536,7 +544,8 @@ def load_game(game, save_folder_name):
              
              for a_data in animal_list:
                 animal_type = a_data.get('name', 'Rat')
-                a = Animal(a_data['x'], a_data['y'], animal_type)
+                layer = a_data.get('layer', 1)
+                a = Animal(a_data['x'], a_data['y'], animal_type, game=game, layer=layer)
                 
                 a.health = a_data.get('health', a.max_health)
                 a.max_health = a_data.get('max_health', a.health)
@@ -553,7 +562,12 @@ def load_game(game, save_folder_name):
                             item = Item.create_from_name(i_data)
                          if item: a.inventory.append(item)
 
-                game.items_on_ground.append(a)
+                if layer == game.current_layer_index:
+                    game.items_on_ground.append(a)
+                else:
+                    if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
+                    if layer not in game.layer_zombies: game.layer_zombies[layer] = []
+                    game.layer_zombies[layer].append(a)
 
         
         if 'modal_positions' in world_data:
@@ -574,7 +588,8 @@ def load_game(game, save_folder_name):
                 game.npcs.empty()
                 for n_data in npc_list:
                     is_static = n_data.get('is_static', False)
-                    npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static)
+                    layer = n_data.get('layer', 1)
+                    npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static, layer=layer)
                     npc.name = n_data.get('name', 'Survivor')
                     npc.health = n_data.get('health', 100)
                     npc.max_health = n_data.get('max_health', 100)
@@ -618,7 +633,12 @@ def load_game(game, save_folder_name):
                     if 'loot_table' in n_data:
                         npc.loot_table = n_data['loot_table']
                             
-                    game.npcs.add(npc)
+                    if layer == game.current_layer_index or npc.is_following:
+                        game.npcs.add(npc)
+                    else:
+                        if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}
+                        if layer not in game.layer_npcs: game.layer_npcs[layer] = []
+                        game.layer_npcs[layer].append(npc)
         
         if os.path.exists(os.path.join(save_path, "vehicles.rot")):
             with open(os.path.join(save_path, "vehicles.rot"), "r") as f:

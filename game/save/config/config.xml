@@ -31,7 +31,7 @@
         <cloth_multiplier value="1.0" name="Cloth (Default: 1.0)"/>
     </durability>
     <item_spawning>
-        <item_spawn_chance_multiplier value="1.0" name="Global Multiplier"/>
+        <item_spawn_chance_multiplier value="0.5" name="Global Multiplier"/>
         <item_mobile_spawn_chance_multiplier value="1.0" name="Mobile"/>
         <item_map_spawn_chance_multiplier value="1.0" name="Map"/>
         <item_currency_spawn_chance_multiplier value="1.0" name="Currency"/>

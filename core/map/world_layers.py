@@ -1,3 +1,5 @@
+# core/map/world_layers.py
+
 import os
 import re
 import pygame
@@ -39,13 +41,11 @@ def load_giant_map(game):
     
     start_file = game.map_manager.current_map_filename
     if start_file not in map_files:
-         # Fallback search if the exact filename isn't in the list but exists on disk
          if os.path.exists(os.path.join(map_folder, start_file)):
              print(f"Warning: {start_file} not in discovered list, but exists. Loading anyway.")
          else:
              raise Exception(f"Starting map file {start_file} not found in discovered maps.")
     
-    # Load the single world map files
     base_name = start_file.rsplit('_map.csv', 1)[0]
     
     print(f"Loading world map from: {base_name}")
@@ -64,28 +64,24 @@ def load_giant_map(game):
     if not roof_layout: roof_layout = []
     if not light_layout: light_layout = []
 
-    # Get dimensions directly from the loaded file
     mega_h = len(base_layout)
     mega_w = len(base_layout[0]) if mega_h > 0 else 0
     
     print(f"World map dimensions: {mega_w}x{mega_h} tiles.")
 
-    # In this new system, the loaded file IS the mega map. 
-    # We no longer need to copy it into a larger grid.
     mega_base = base_layout
     mega_ground = ground_layout
     mega_spawn = spawn_layout
     mega_roof = roof_layout
     mega_light_grid = light_layout
 
-    # Extract possible player spawns from the loaded spawn layer
     possible_player_spawns = []
     for r in range(mega_h):
         for c in range(mega_w):
             if r < len(mega_spawn) and c < len(mega_spawn[r]):
                 if mega_spawn[r][c] == 'P':
                     possible_player_spawns.append((c * TILE_SIZE, r * TILE_SIZE))
-                    mega_spawn[r][c] = ' ' # Clear marker
+                    mega_spawn[r][c] = ' ' 
 
     print("Parsing mega-layouts...")
     
@@ -101,9 +97,6 @@ def load_giant_map(game):
          mega_base, mega_ground, mega_spawn, mega_roof, mega_light_grid, game.tile_manager
      )
     
-    # [MEMORY OPTIMIZATION] 
-    # Clear the huge render lists for giant maps to save RAM.
-    # The new draw loop uses grid-based rendering (game.map_data) instead.
     if mega_w > 500 or mega_h > 500:
         print("Optimizing memory for giant map...")
         game.renderable_tiles = [] 
@@ -164,17 +157,12 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
     all_roof_layers = {}
     all_light_layers = {}
 
-    # Regex for new single world map: map_L<layer>_world_map.csv
-    world_pattern = re.compile(r'map_L(\d+)_(\d+)_(\d+)_map\.csv')
+    chunk_pattern = re.compile(r'map_L(\d+)_(\d+)_(\d+)_map\.csv')
+    chunk_match = chunk_pattern.match(base_map_filename)
+    
+    world_pattern = re.compile(r'map_L(\d+)_world_map\.csv')
     world_match = world_pattern.match(base_map_filename)
 
-    if not world_match:
-        # Fallback check for exact filename matching if using custom names, 
-        # or if caller passed full path, but strictly enforce no legacy chunk parsing here.
-        if "_map.csv" not in base_map_filename:
-             print(f"Note: Base map filename '{base_map_filename}' does not match standard world pattern.")
-    
-    # Load dimensions from Layer 1 first to determine target width/height
     base_map_file = os.path.join(base_path, base_map_filename)
     if not os.path.exists(base_map_file):
          print(f"CRITICAL: World map file not found: {base_map_file}")
@@ -192,32 +180,34 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         target_height = len(base_map_data)
         target_width = len(base_map_data[0]) if target_height > 0 else 0
 
-    # Load Layers 1 through 9
     for i in range(1, 9):
-        gx = world_match.group(2)
-        gy = world_match.group(3)
-        # Construct filename based on the new standard
-        layer_prefix = f"map_L{i}_{gx}_{gy}"
-        
-        # If the base filename provided was somehow different (e.g. custom save),
-        # we might need to handle that, but for now we assume standard naming 
-        # for layers L2-L9 if L1 is standard.
-        if "world_map" not in base_map_filename and i == 1:
-             # Special case: Just load the provided filename for L1
-             layer_map_file_relative = base_map_filename
-             # Try to deduce suffix for others
-             base_prefix = base_map_filename.rsplit('_map.csv', 1)[0]
-             layer_ground_file_relative = f"{base_prefix}_ground.csv"
-             layer_spawn_file_relative = f"{base_prefix}_spawn.csv"
-             layer_roof_file_relative = f"{base_prefix}_roof.csv"
-             layer_light_file_relative = f"{base_prefix}_light.csv"
+        if chunk_match:
+            gx = chunk_match.group(2)
+            gy = chunk_match.group(3)
+            layer_prefix = f"map_L{i}_{gx}_{gy}"
+            layer_map_file_relative = f"{layer_prefix}_map.csv"
+            layer_ground_file_relative = f"{layer_prefix}_ground.csv"
+            layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
+            layer_roof_file_relative = f"{layer_prefix}_roof.csv"
+            layer_light_file_relative = f"{layer_prefix}_light.csv"
+        elif world_match:
+            layer_prefix = f"map_L{i}_world"
+            layer_map_file_relative = f"{layer_prefix}_map.csv"
+            layer_ground_file_relative = f"{layer_prefix}_ground.csv"
+            layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
+            layer_roof_file_relative = f"{layer_prefix}_roof.csv"
+            layer_light_file_relative = f"{layer_prefix}_light.csv"
         else:
-             layer_map_file_relative = f"{layer_prefix}_map.csv"
-             layer_ground_file_relative = f"{layer_prefix}_ground.csv"
-             layer_spawn_file_relative = f"{layer_prefix}_spawn.csv"
-             layer_roof_file_relative = f"{layer_prefix}_roof.csv"
-             layer_light_file_relative = f"{layer_prefix}_light.csv"
-        
+            if i == 1:
+                layer_map_file_relative = base_map_filename
+                base_prefix = base_map_filename.rsplit('_map.csv', 1)[0]
+                layer_ground_file_relative = f"{base_prefix}_ground.csv"
+                layer_spawn_file_relative = f"{base_prefix}_spawn.csv"
+                layer_roof_file_relative = f"{base_prefix}_roof.csv"
+                layer_light_file_relative = f"{base_prefix}_light.csv"
+            else:
+                continue
+
         layer_map_file = os.path.join(base_path, layer_map_file_relative)
         layer_ground_file = os.path.join(base_path, layer_ground_file_relative)
         layer_spawn_file = os.path.join(base_path, layer_spawn_file_relative)
@@ -230,25 +220,21 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         roof_data = load_map_from_file(layer_roof_file)
         light_data = load_map_from_file(layer_light_file)
 
-        if not map_data and not ground_data and not spawn_data and not roof_data  and not light_data:
+        if not map_data and not ground_data and not spawn_data and not roof_data and not light_data:
             continue
             
         if map_data:
             map_data = resize_map_layer(map_data, target_width, target_height, fill_value=' ')
             all_map_layers[i] = map_data
-        
         if ground_data:
             ground_data = resize_map_layer(ground_data, target_width, target_height, fill_value=' ')
             all_ground_layers[i] = ground_data
-        
         if spawn_data:
             spawn_data = resize_map_layer(spawn_data, target_width, target_height, fill_value=' ') 
             all_spawn_layers[i] = spawn_data
-
         if roof_data:
             roof_data = resize_map_layer(roof_data, target_width, target_height, fill_value=' ') 
             all_roof_layers[i] = roof_data
-        
         if light_data:
             light_data = resize_map_layer(light_data, target_width, target_height, fill_value=' ')
             all_light_layers[i] = light_data
@@ -259,7 +245,6 @@ def _rebuild_world_from_data(game):
     game.obstacles.clear()
     game.containers.clear()
 
-    # [FIX] Unpack 9 variables
     obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles, map_lights, npc_spawns = \
         parse_layered_map_layout(game.map_data, game.ground_data, game.spawn_data, game.roof_data, game.light_data, game.tile_manager)
 
@@ -270,10 +255,8 @@ def _rebuild_world_from_data(game):
     game.map_lights = map_lights
     game.npc_spawn_points = npc_spawns
     
-    # --- FIX: Re-inject dynamic vehicles back into Layer 1 ---
     if getattr(game, 'current_layer_index', 1) == 1:
         vehicles_list = getattr(game, 'vehicles', [])
-        # Fallback to map_manager if game.vehicles is empty
         if not vehicles_list and hasattr(game, 'map_manager'):
             vehicles_list = getattr(game.map_manager, 'vehicles', [])
             
@@ -283,8 +266,6 @@ def _rebuild_world_from_data(game):
             if hasattr(v, 'rect') and v.rect not in game.obstacles:
                 game.obstacles.append(v.rect)
     
-    # [MEMORY OPTIMIZATION]
-    # Clear render lists if huge
     map_h = len(game.map_data)
     map_w = len(game.map_data[0]) if map_h > 0 else 0
     if map_w > 500 or map_h > 500:
@@ -293,23 +274,44 @@ def _rebuild_world_from_data(game):
 
     return item_spawns, zombie_spawns
 
-def set_active_layer(game, layer_index):
+def set_active_layer(game, layer_index, skip_cache_save=False):
     if layer_index not in game.all_map_layers:
         print(f"Error: Attempted to switch to non-existent layer {layer_index}")
         return False
 
     current_filename = game.map_manager.current_map_filename
+    
+    # --- CACHE CURRENT LAYER TO MAP_STATES ---
+    if not skip_cache_save and getattr(game, 'current_layer_index', None) is not None and getattr(game, 'map_data', None):
+        if current_filename not in game.map_states:
+            game.map_states[current_filename] = {}
+            
+        # [FIX] Do not filter out chasing zombies - stop teleporting zombies between layers!
+        game.map_states[current_filename]['zombies'] = list(game.zombies)
+        
+        chasing_animals = []
+        if hasattr(game, 'active_animals'):
+            chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+            game.map_states[current_filename]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
+        
+        chunk_npcs = []
+        if hasattr(game, 'npcs'):
+            for npc in game.npcs:
+                if not getattr(npc, 'is_following', False):
+                    chunk_npcs.append(npc)
+            game.map_states[current_filename]['npcs'] = chunk_npcs
+            
+        game.map_states[current_filename]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
+        
+        clean_containers = [c for c in game.containers if c != getattr(getattr(game, 'player', None), 'vehicle', None)]
+        game.map_states[current_filename]['containers'] = clean_containers
+        
+        if hasattr(game.map_manager, 'vehicles'):
+            clean_vehicles = [v for v in game.map_manager.vehicles if v != getattr(getattr(game, 'player', None), 'vehicle', None)]
+            game.map_states[current_filename]['vehicles'] = clean_vehicles
+
     new_filename = re.sub(r'map_L(\d+)_', f'map_L{layer_index}_', current_filename)
-
-    if new_filename in game.map_manager.map_files:
-        game.map_manager.current_map_filename = new_filename
-    else:
-        game.map_manager.current_map_filename = new_filename
-
-    if game.current_layer_index in game.layer_items:
-        game.layer_items[game.current_layer_index] = game.items_on_ground[:]
-    if game.current_layer_index in game.layer_zombies:
-        game.layer_zombies[game.current_layer_index] = game.zombies[:]
+    game.map_manager.current_map_filename = new_filename
 
     print(f"Setting active layer to: {layer_index}")
     game.current_layer_index = layer_index
@@ -325,26 +327,19 @@ def set_active_layer(game, layer_index):
             game.map_height_pixels = len(game.map_data) * TILE_SIZE
             game.map_width_pixels = len(game.map_data[0]) * TILE_SIZE
         else:
-            if game.map_data:
-                game.map_height_pixels = len(game.map_data) * TILE_SIZE
-                game.map_width_pixels = len(game.map_data[0]) * TILE_SIZE
-            else:
-                game.map_height_pixels = 0
-                game.map_width_pixels = 0
+            game.map_height_pixels = 0
+            game.map_width_pixels = 0
 
     item_spawns, zombie_spawns = _rebuild_world_from_data(game)
 
     game.cached_obstacle_grid = {}
     game.cached_obstacle_count = -1
-
     game.current_zombie_spawns = zombie_spawns
     game.layer_spawn_triggers.setdefault(layer_index, set())
 
-    if getattr(game, 'is_giant_map', False) and layer_index == 1:
-        pass
-    else:
+    if not getattr(game, 'is_giant_map', False):
         game.spawn_point_grid.clear()
-        GRID_SIZE_SPAWNS = game.SPAWN_GRID_SIZE 
+        GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512) 
         for sp_pos in game.current_zombie_spawns:
             grid_x = int(sp_pos[0] // GRID_SIZE_SPAWNS)
             grid_y = int(sp_pos[1] // GRID_SIZE_SPAWNS)
@@ -354,31 +349,113 @@ def set_active_layer(game, layer_index):
             else:
                 game.spawn_point_grid[cell].append(sp_pos)
 
-    if layer_index in game.layer_items:
-        game.items_on_ground = game.layer_items[layer_index][:]
+    # --- RESTORE OR SPAWN NEW LAYER STATE ---
+    if not skip_cache_save:
+        chasing_animals = []
+        if hasattr(game, 'active_animals'):
+            chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+        
+        followers = []
+        if hasattr(game, 'npcs'):
+            for npc in game.npcs:
+                if getattr(npc, 'is_following', False):
+                    followers.append(npc)
+
+        if new_filename in game.map_states:
+            game.items_on_ground = game.map_states[new_filename].get('items_on_ground', [])
+            game.zombies = game.map_states[new_filename].get('zombies', [])
+            if hasattr(game, 'active_animals'):
+                game.active_animals = game.map_states[new_filename].get('active_animals', [])
+                
+            if hasattr(game, 'npcs'):
+                game.npcs.empty()
+                for npc in game.map_states[new_filename].get('npcs', []):
+                    game.npcs.add(npc)
+                    
+            if 'containers' in game.map_states[new_filename]:
+                default_container_rects = [c.rect for c in game.containers]
+                obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
+                
+                game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
+                
+                game.containers = game.map_states[new_filename]['containers']
+                for c in game.containers:
+                    if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
+                        game.obstacles.append(c.rect)
+                        
+            if 'vehicles' in game.map_states[new_filename] and hasattr(game.map_manager, 'vehicles'):
+                default_veh_rects = [v.rect for v in game.map_manager.vehicles]
+                game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
+                
+                game.map_manager.vehicles = game.map_states[new_filename]['vehicles']
+                for v in game.map_manager.vehicles:
+                    if v.rect not in game.obstacles:
+                        game.obstacles.append(v.rect)
+        else:
+            game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
+            
+            # [FIX] Read from loaded chunk population (like L2 pre-spawns) instead of overwriting with forced marker spawns!
+            if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
+                game.zombies = list(game.layer_zombies[layer_index])
+            else:
+                game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
+                
+            if hasattr(game, 'active_animals'):
+                game.active_animals = []
+            if hasattr(game, 'npcs'):
+                game.npcs.empty()
+            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                from core.entities.npc.npc import NPC
+                from core.placement import find_free_tile
+                for nx, ny in game.npc_spawn_points:
+                    npc = NPC(nx, ny, game, is_static=False)
+                    free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                    if free_pos:
+                        npc.rect.topleft = free_pos
+                        npc.x, npc.y = free_pos
+                        game.npcs.add(npc)
+        
+        if hasattr(game, 'npcs'):
+            for f_npc in followers:
+                game.npcs.add(f_npc)
+        
+        # [FIX] Zombie extending logic was totally deleted. They don't climb stairs anymore.
+        
+        if hasattr(game, 'active_animals'):
+            game.active_animals.extend(chasing_animals)
+            game.items_on_ground.extend(chasing_animals)
+
+        if hasattr(game, 'player') and getattr(game.player, 'vehicle', None):
+            veh = game.player.vehicle
+            if veh not in game.containers:
+                game.containers.append(veh)
+            if hasattr(game.map_manager, 'vehicles') and veh not in game.map_manager.vehicles:
+                game.map_manager.vehicles.append(veh)
+            if veh.rect in game.obstacles:
+                game.obstacles.remove(veh.rect)
     else:
         game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-        game.layer_items[layer_index] = game.items_on_ground[:]
+        
+        if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
+            game.zombies = list(game.layer_zombies[layer_index])
+        else:
+            game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
 
-    if layer_index in game.layer_zombies:
-        game.zombies = game.layer_zombies[layer_index][:]
-    else:
-        game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
-        game.layer_zombies[layer_index] = game.zombies[:]
+    game.layer_items[layer_index] = game.items_on_ground
+    game.layer_zombies[layer_index] = game.zombies
 
-        #game.zombies = []
-        #game.layer_zombies[layer_index] = []
+    if hasattr(game, 'tiles_dirty'):
+        game.tiles_dirty = True
+    if hasattr(game, 'map_manager'):
+        game.map_manager.clear_cache()
     
     return True
 
 def check_for_layer_teleport(game):
-    # 1. Respect Cooldown (prevents instant bouncing back and forth)
     if game.player.layer_switch_cooldown > 0:
         return
 
     player = game.player
-    
-    # 2. Get Player Grid Position
     try:
         tile_x = int(player.rect.centerx // TILE_SIZE)
         tile_y = int(player.rect.centery // TILE_SIZE)
@@ -389,20 +466,16 @@ def check_for_layer_teleport(game):
     if not current_map_data:
         return
     
-    # 3. Check Bounds
     if not (0 <= tile_y < len(current_map_data) and 0 <= tile_x < len(current_map_data[0])):
         return
         
-    # 4. Get Tile Definition
     tile_char = current_map_data[tile_y][tile_x]
     tile_def = game.tile_manager.definitions.get(tile_char)
     
-    # 5. Check 'is_stair' Attribute and Teleport
     if tile_def and tile_def.get('is_stair'):
         target_layer = tile_def.get('target_layer')
         
         if target_layer and target_layer != game.current_layer_index:
             print(f"Auto-teleport detected: Moving to Layer {target_layer}")
             if set_active_layer(game, target_layer):
-                # Set a longer cooldown for auto-teleport to ensure player steps off the target stair
                 game.player.layer_switch_cooldown = 60

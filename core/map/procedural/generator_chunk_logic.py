@@ -264,6 +264,42 @@ class ProceduralGeneratorChunk:
                 ry2 = random.randint(safe_margin, h - safe_margin)
                 draw_secondary_maze_road(rx1, ry1, rx2, ry2, tile_type=dirt_tile)
 
+        # Helper to intelligently map generic building types to requested L2 basements
+        def get_l2_counterpart(tmpl_name, is_forest=False):
+            potential_l2_names = []
+            
+            # Check direct L1->L2 naming
+            if 'l1' in tmpl_name.lower():
+                potential_l2_names.append(tmpl_name.replace('L1', 'L2').replace('l1', 'l2'))
+                
+            # Check exact append (e.g. Building_1 -> Building_1_L2)
+            potential_l2_names.append(f"{tmpl_name}_L2")
+            
+            # Check numbered variations (e.g. Building_1 -> Building_L2_1 or just Building_L2)
+            parts = tmpl_name.rsplit('_', 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                potential_l2_names.append(f"{parts[0]}_L2_{parts[1]}")
+                potential_l2_names.append(f"{parts[0]}_L2")
+            
+            # Semantic fallback mapping matching specific requested L2 variants
+            low = tmpl_name.lower()
+            if is_forest:
+                potential_l2_names.append("Forest_L2")
+            else:
+                if "petrol" in low and "building" in low: potential_l2_names.append("Petrol_Building_L2")
+                elif "petrol" in low: potential_l2_names.append("Petrol_L2")
+                if "heli" in low: potential_l2_names.append("Heli_rescue_L2")
+                if "shed" in low: potential_l2_names.append("Shed_L2")
+                if "store" in low: potential_l2_names.append("Stores_L2")
+                if "warehouse" in low: potential_l2_names.append("Warehouse_L2")
+                if "building" in low or "condo" in low or "house" in low: potential_l2_names.append("Building_L2")
+
+            for pot in potential_l2_names:
+                for k in self.templates.keys():
+                    if k.lower() == pot.lower():
+                        return k
+            return None
+
         # 6. Place Buildings
         placed_rects = [] 
         
@@ -377,23 +413,17 @@ class ProceduralGeneratorChunk:
                                 break
                 
                 if placed:
-                    if 'l1' in tmpl_name.lower():
-                        potential_l2_name_base = tmpl_name.replace('L1', 'L2').replace('l1', 'l2') 
-                        found_l2_key = None
-                        for key in self.templates.keys():
-                            if key.lower() == potential_l2_name_base.lower():
-                                found_l2_key = key
-                                break
-                        if found_l2_key:
-                            tmpl_l2 = self.templates[found_l2_key]
-                            self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
-                            if hasattr(self, '_apply_l2_border'):
-                                self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
-                            
-                            l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
-                            for ly in range(ty, min(h, ty + l2_h)):
-                                for lx in range(tx, min(w, tx + l2_w)):
-                                    occupied_mask_L2[ly][lx] = 1
+                    found_l2_key = get_l2_counterpart(tmpl_name, is_forest=False)
+                    if found_l2_key:
+                        tmpl_l2 = self.templates[found_l2_key]
+                        self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
+                        
+                        l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
+                        for ly in range(ty, min(h, ty + l2_h)):
+                            for lx in range(tx, min(w, tx + l2_w)):
+                                occupied_mask_L2[ly][lx] = 1
 
         # 7. Forest / Nature
         if hasattr(self, 'forest_templates') and self.forest_templates and not force_forest:
@@ -403,21 +433,21 @@ class ProceduralGeneratorChunk:
                 tw, th = tmpl['width'], tmpl['height']
                 tx = random.randint(2, w - tw - 2)
                 ty = random.randint(2, h - th - 2)
+                
                 if is_area_free(tx, ty, tw, th, margin=0):
                     self._blit_template(layers, tmpl, tx, ty, w, h)
-                    if 'l1' in tmpl_name.lower():
-                        potential_l2 = tmpl_name.replace('L1', 'L2').replace('l1', 'l2')
-                        found_l2_key = next((k for k in self.templates if k.lower() == potential_l2.lower()), None)
-                        if found_l2_key:
-                            tmpl_l2 = self.templates[found_l2_key]
-                            self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
-                            if hasattr(self, '_apply_l2_border'):
-                                self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
-                            
-                            l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
-                            for ly in range(ty, min(h, ty + l2_h)):
-                                for lx in range(tx, min(w, tx + l2_w)):
-                                    occupied_mask_L2[ly][lx] = 1
+                    
+                    found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
+                    if found_l2_key:
+                        tmpl_l2 = self.templates[found_l2_key]
+                        self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
+                        
+                        l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
+                        for ly in range(ty, min(h, ty + l2_h)):
+                            for lx in range(tx, min(w, tx + l2_w)):
+                                occupied_mask_L2[ly][lx] = 1
 
                     placed_rects.append(pygame.Rect(tx, ty, tw, th))
                     for ry in range(ty, ty + th):

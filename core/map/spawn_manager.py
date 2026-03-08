@@ -532,8 +532,8 @@ def spawn_random_vehicles(game, count=10):
         print(f"Spawned {vehicle.name} at ({px}, {py})")
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
-    # [FIX] Respect Global Zombie Config - Stop spawning if global cap is 0
-    if core.data.config.MAX_ZOMBIES_GLOBAL <= 0:
+    # [FIX] Absolutely kill the spawner if global/chunk config is 0. Do not proceed to defaults.
+    if core.data.config.MAX_ZOMBIES_GLOBAL <= 0 or core.data.config.ZOMBIES_PER_SPAWN <= 0:
         return []
 
     zombies = []
