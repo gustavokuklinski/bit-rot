@@ -35,8 +35,21 @@ def spawn_initial_items(obstacles, item_spawns):
                 item.x = x
                 item.y = y
                 item_tile = (x // TILE_SIZE, y // TILE_SIZE)
-                items_on_ground.append(item)
-                occupied_tiles.add(item_tile)
+                
+                # Check for item stacking
+                stacked = False
+                if item.is_stackable():
+                    for existing in items_on_ground:
+                        if existing.rect.topleft == (x, y) and existing.can_stack_with(item):
+                            if existing.load is None: existing.load = 1
+                            if item.load is None: item.load = 1
+                            existing.load += item.load
+                            stacked = True
+                            break
+                            
+                if not stacked:
+                    items_on_ground.append(item)
+                    occupied_tiles.add(item_tile)
         else:
             # Random Item Spawn (x, y)
             pos = spawn_data
@@ -46,9 +59,22 @@ def spawn_initial_items(obstacles, item_spawns):
                 item.x = pos[0]
                 item.y = pos[1]
                 item_tile = (item.rect.x // TILE_SIZE, item.rect.y // TILE_SIZE)
-                if item_tile not in occupied_tiles:
-                    items_on_ground.append(item)
-                    occupied_tiles.add(item_tile)
+                
+                # Check for item stacking
+                stacked = False
+                if item.is_stackable():
+                    for existing in items_on_ground:
+                        if existing.rect.topleft == pos and existing.can_stack_with(item):
+                            if existing.load is None: existing.load = 1
+                            if item.load is None: item.load = 1
+                            existing.load += item.load
+                            stacked = True
+                            break
+                            
+                if not stacked:
+                    if item_tile not in occupied_tiles:
+                        items_on_ground.append(item)
+                        occupied_tiles.add(item_tile)
                     
     return items_on_ground
 

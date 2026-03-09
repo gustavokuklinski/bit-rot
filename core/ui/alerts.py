@@ -50,27 +50,27 @@ def draw_player_alerts(surface, player):
     
     # Health (Low)
     if player.health <= 80:
-        active_alerts.append(("ui/hp.png", RED, "Health Critical"))
+        active_alerts.append(("ui/hp.png", RED, "You are hurt, use a Medkit."))
     
     # Stamina (Low) - Exhausted
     if player.stamina <= 50:
-        active_alerts.append(("ui/stamina.png", GRAY, "You are tired, take a Rest"))
+        active_alerts.append(("ui/stamina.png", GRAY, "You are tired, take a Rest."))
 
     # Water (Low) - Thirsty
     if player.water <= 70:
-        active_alerts.append(("ui/water.png", BLUE, "You are thirsty"))
+        active_alerts.append(("ui/water.png", BLUE, "You are thirsty."))
 
     # Food (Low) - Hungry
     if player.food <= 50:
-        active_alerts.append(("ui/food.png", GREEN, "You are hungry"))
+        active_alerts.append(("ui/food.png", GREEN, "You are hungry, try some MRE's."))
 
     # Tireness (High) - Tired
     if player.tireness <= 20:
-        active_alerts.append(("ui/tireness.png", (100, 100, 150), "You are feeling sleepy, take a nap"))
+        active_alerts.append(("ui/tireness.png", (100, 100, 150), "You are feeling sleepy, take a nap."))
 
     # Anxiety (High) - Panicked
     if player.anxiety >= 10:
-        active_alerts.append(("ui/axiety.png", (150, 0, 150), "You are anxious"))
+        active_alerts.append(("ui/axiety.png", (150, 0, 150), "You are anxious, try reading."))
         
     # Infection (High) - Sick
     if player.infection >= 15: 
@@ -79,7 +79,7 @@ def draw_player_alerts(surface, player):
     # Overweight
     if player.current_weight > player.max_carry_weight:
         # Using an orange/brown color for the weight warning
-        active_alerts.append(("ui/weight.png", (205, 127, 50), "You are carrying too much weight"))
+        active_alerts.append(("ui/weight.png", (205, 127, 50), "You are carrying too much weight."))
 
     if not active_alerts:
         return None

@@ -149,9 +149,15 @@ def _draw_settings_screen(game, state, mouse_pos):
                 
                 str_val = str(val).lower()
                 is_bool = str_val in ('true', 'false')
+                
                 is_spawning_multiplier = (block == 'item_spawning' and 'multiplier' in key)
+                is_vehicle_option = (block == 'vehicle' and 'chance' in key)
+                is_water_threshold = (key == 'water_threshold')
+                is_water_multiplier = (key == 'food_water_multiplier_decay')
+                is_percentage_cycle = is_spawning_multiplier or is_vehicle_option or is_water_threshold or is_water_multiplier
+                
                 is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']
-                is_cycle_setting = is_spawning_multiplier or is_time_cycle
+                is_cycle_setting = is_percentage_cycle or is_time_cycle
 
                 lbl = font_small.render(display_label + ":", True, WHITE)
                 sub.blit(lbl, (0, y_off + 12)) 
@@ -194,13 +200,20 @@ def _draw_settings_screen(game, state, mouse_pos):
                     except ValueError:
                         current_val_float = 1.0
                         
-                    if is_spawning_multiplier:
-                        if abs(current_val_float - 0.01) < 0.001: label = "Extreme Low (1%)"
-                        elif abs(current_val_float - 0.25) < 0.001: label = "Low (25%)"
-                        elif abs(current_val_float - 0.50) < 0.001: label = "Balanced (50%)"
-                        elif abs(current_val_float - 0.75) < 0.001: label = "High (75%)"
-                        elif abs(current_val_float - 1.0) < 0.001: label = "Extreme High (100%)"
-                        else: label = f"Custom ({current_val_float*100:.0f}%)"
+                    if is_percentage_cycle:
+                        comp_val = current_val_float
+                        
+                        if is_water_threshold: comp_val /= 100.0
+                        if comp_val <= 0.0: comp_val = 0.01
+
+                        comp_val = round(comp_val, 2)
+
+                        if abs(comp_val - 0.01) < 0.001: label = "Extreme Low (1%)"
+                        elif abs(comp_val - 0.25) < 0.001: label = "Low (25%)"
+                        elif abs(comp_val - 0.50) < 0.001: label = "Balanced (50%)"
+                        elif abs(comp_val - 0.75) < 0.001: label = "High (75%)"
+                        elif abs(comp_val - 1.0) < 0.001: label = "Extreme High (100%)"
+                        else: label = f"Custom ({comp_val*100:.0f}%)"
                     elif key == 'time_daylength':
                         mins = int(current_val_float / 60000)
                         if mins == 0: mins = 15
@@ -366,12 +379,27 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                         except ValueError:
                             current_val = 0.0
                             
-                        if block == 'item_spawning' and 'multiplier' in key:
-                            if current_val < 0.25: new_val = 0.25
-                            elif current_val < 0.50: new_val = 0.50
-                            elif current_val < 0.75: new_val = 0.75
-                            elif current_val < 1.0: new_val = 1.0
+                        is_spawning_multiplier = (block == 'item_spawning' and 'multiplier' in key)
+                        is_vehicle_option = (block == 'vehicle' and 'chance' in key)
+                        is_water_threshold = (key == 'water_threshold')
+                        is_water_multiplier = (key == 'food_water_multiplier_decay')
+                        is_percentage_cycle = is_spawning_multiplier or is_vehicle_option or is_water_threshold or is_water_multiplier
+
+                        if is_percentage_cycle:
+                            comp_val = current_val
+                            if is_water_threshold: comp_val /= 100.0
+                            if comp_val <= 0.0: comp_val = 0.01
+                            
+                            comp_val = round(comp_val, 2)
+                            
+                            if comp_val < 0.25: new_val = 0.25
+                            elif comp_val < 0.50: new_val = 0.50
+                            elif comp_val < 0.75: new_val = 0.75
+                            elif comp_val < 1.0: new_val = 1.0
                             else: new_val = 0.01
+                            
+                            if is_water_threshold:
+                                new_val = int(new_val * 100)
                         elif key == 'time_daylength':
                             if current_val < 1800000: new_val = 1800000.0
                             elif current_val < 2700000: new_val = 2700000.0
@@ -395,7 +423,7 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                         else:
                             new_val = current_val
                         
-                        if key == 'time_daylength':
+                        if key == 'time_daylength' or key == 'water_threshold':
                             state['settings_data'][block][key]['value'] = str(int(new_val))
                         else:
                             state['settings_data'][block][key]['value'] = str(new_val)

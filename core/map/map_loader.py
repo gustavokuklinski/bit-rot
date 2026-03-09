@@ -13,7 +13,7 @@ from core.entities.vehicle.vehicle import Vehicle
 def _generate_container_items(tile_def):
     """
     Helper function to generate items for a container based on its loot table,
-    accounting for global and type-specific spawn multipliers to scale quantities.
+    accounting for global spawn multipliers to scale quantities.
     """
     items = []
     capacity = tile_def.get('capacity', 0)
@@ -31,43 +31,8 @@ def _generate_container_items(tile_def):
         if capacity > 0 and len(items) >= capacity:
             break
             
-        # 1. Determine the specific multiplier based on item type
-        specific_mult = 1.0
-        item_type_for_mult = None
-        item_name = None
-        
-        if 'type' in loot_entry:
-            item_type_for_mult = loot_entry['type']
-        elif 'item' in loot_entry:
-            item_name = loot_entry['item']
-            if item_name in ITEM_TEMPLATES:
-                item_type_for_mult = ITEM_TEMPLATES[item_name].get('type')
-                
-        if item_type_for_mult == 'weapon_melee': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
-        elif item_type_for_mult == 'weapon_ranged': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
-        elif item_type_for_mult == 'mobile': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
-        elif item_type_for_mult == 'container': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
-        elif item_type_for_mult == 'backpack': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
-        elif item_type_for_mult == 'currency': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
-        elif item_type_for_mult == 'text': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
-        elif item_type_for_mult == 'utility': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY
-        elif item_type_for_mult == 'recipe': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-        elif item_type_for_mult == 'resource': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
-        elif item_type_for_mult == 'map': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
-        elif item_type_for_mult == 'liquid': specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
-        elif item_type_for_mult == 'consumable':
-            specific_mult = ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
-            if item_name and item_name in ITEM_TEMPLATES:
-                target_props = ITEM_TEMPLATES[item_name].get('properties', {})
-                consumable_type = target_props.get('restore', {}).get('type', '')
-                if 'food' in consumable_type: specific_mult *= ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
-                elif 'drink' in consumable_type: specific_mult *= ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
-                elif 'med' in consumable_type: specific_mult *= ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
-                elif 'ammo' in consumable_type: specific_mult *= ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
-                elif 'drug' in consumable_type: specific_mult *= ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS
-
-        # Combine global and specific multiplier
-        total_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER * specific_mult
+        # 1. Use ONLY the global multiplier as requested
+        total_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER
         
         # 2. Check chance to spawn anything at all from this entry
         adjusted_chance = loot_entry['chance'] * total_multiplier

@@ -130,19 +130,6 @@ WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
 WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
 CLOTH_DURABILITY_MULTIPLIER = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = 1.0
-ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = 1.0
 NPC_MAX_CHUNK = 0
 MAX_NPCS_GLOBAL = 0
 NPC_SPAWN_CHANCE = 0.0
@@ -182,14 +169,6 @@ def load_settings(preset="default"):
     global DURABILITY_MULTIPLIER, WEAPON_MELEE_DURABILITY_MULTIPLIER
     global WEAPON_RANGED_DURABILITY_MULTIPLIER, CLOTH_DURABILITY_MULTIPLIER
     global ITEM_SPAWN_CHANCE_MULTIPLIER
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE, ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE, ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION, ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY, ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS, ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY, ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-    global ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE, ITEM_SPAWN_CHANCE_MULTIPLIER_MAP, ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_STATIC_SPAWN, NPC_HOSTILE_SPAWN
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS
@@ -209,15 +188,12 @@ def load_settings(preset="default"):
         root = tree.getroot()
 
         game_config = root.find('game')
+        TIME_TRANSITION_HR = 1.0
+        MAX_DARKNESS_OPACITY = 255
         TIME_DAYLENGTH = int(game_config.find('time_daylength').get('value'))
         TIME_SUNRISE_HR = float(game_config.find('time_sunrise_hr').get('value'))
         TIME_SUNSET_HR = float(game_config.find('time_sunset_hr').get('value'))
-        TIME_TRANSITION_HR = 1.0
         TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
-        MAX_DARKNESS_OPACITY = 255
-        START_ZOOM = float(game_config.find('zoom_start').get('value'))
-        FAR_ZOOM = float(game_config.find('zoom_far').get('value'))
-        NEAR_ZOOM = float(game_config.find('zoom_near').get('value'))
 
         map_config = root.find('map')
         MAP_CHUNKS = int(map_config.find('map_chunks').get('value'))
@@ -225,19 +201,19 @@ def load_settings(preset="default"):
         
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file
+        DECAY_RATE_SECONDS = 0.5
+        FOOD_WATER_MULTIPLIER_DECAY = 1.0
+        FOOD_DECAY_AMOUNT = 0.2 * FOOD_WATER_MULTIPLIER_DECAY
+        WATER_DECAY_AMOUNT = 0.3 * FOOD_WATER_MULTIPLIER_DECAY * 1.5
+        BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
+        START_ZOOM = float(player_config.find('zoom_start').get('value'))
+        FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
+        NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
 
-
-        DECAY_RATE_SECONDS = float(player_config.find('food_water_decay_seconds').get('value'))
-        FOOD_WATER_MULTIPLIER_DECAY = float(player_config.find('food_water_multiplier_decay').get('value'))
-        FOOD_DECAY_AMOUNT = float(player_config.find('food_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY
-        WATER_DECAY_AMOUNT = float(player_config.find('water_decay').get('value')) * FOOD_WATER_MULTIPLIER_DECAY * 1.5
-        
-        # Parse booleans correctly
         val_auto_drink = player_config.find('water_autodrink').get('value')
         AUTO_DRINK = str(val_auto_drink).lower() == 'true'
-        
         AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
-        BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
+       
 
         zombie_config = root.find('zombie')
         val_wander = zombie_config.find('wander').get('value')
@@ -254,33 +230,16 @@ def load_settings(preset="default"):
         MAX_ZOMBIES_GLOBAL = 10000
         ZOMBIE_WANDER_CHANGE_INTERVAL = 2000
 
-        durability_config = root.find('durability')
-        DURABILITY_MULTIPLIER = float(durability_config.find('multiplier').get('value'))
-        WEAPON_MELEE_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_melee_multiplier').get('value'))
-        WEAPON_RANGED_DURABILITY_MULTIPLIER = float(durability_config.find('weapon_ranged_multiplier').get('value'))
-        CLOTH_DURABILITY_MULTIPLIER = float(durability_config.find('cloth_multiplier').get('value'))
+        DURABILITY_MULTIPLIER = 1.0
+        WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
+        WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
+        CLOTH_DURABILITY_MULTIPLIER = 1.0
 
         spawning_config = root.find('item_spawning')
-        ITEM_SPAWN_CHANCE_MULTIPLIER = float(spawning_config.find('item_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER = float(spawning_config.find('item_container_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE = float(spawning_config.find('item_weapon_melee_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED = float(spawning_config.find('item_weapon_ranged_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE = float(spawning_config.find('item_mobile_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID = float(spawning_config.find('item_liquid_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK = float(spawning_config.find('item_backpack_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE = float(spawning_config.find('item_consumable_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD = float(spawning_config.find('item_consumable_food_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK = float(spawning_config.find('item_consumable_drink_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION = float(spawning_config.find('item_consumable_medication_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO = float(spawning_config.find('item_consumable_ammo_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY = float(spawning_config.find('item_currency_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT = float(spawning_config.find('item_text_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS = float(spawning_config.find('item_consumable_drugs_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY = float(spawning_config.find('item_utility_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE = float(spawning_config.find('item_recipe_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE = float(spawning_config.find('item_resource_spawn_chance_multiplier').get('value'))
-        ITEM_SPAWN_CHANCE_MULTIPLIER_MAP = float(spawning_config.find('item_map_spawn_chance_multiplier').get('value'))
-
+        if spawning_config is not None:
+            multiplier_node = spawning_config.find('item_spawn_chance_multiplier')
+            if multiplier_node is not None:
+                ITEM_SPAWN_CHANCE_MULTIPLIER = float(multiplier_node.get('value'))
 
         npc_config = root.find('npc')
         MAX_NPCS_GLOBAL = 1500
@@ -313,14 +272,11 @@ def load_settings(preset="default"):
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
 
-
-# echo "git+$(git rev-parse --short HEAD)" > game/lib/VERSION
 version_file_path = "game/lib/VERSION"
 
 # Read version from the local file
 with open(version_file_path, "r") as f:
     GAME_VERSION = f.read().strip()
-
 
 # Initial load
 load_settings()

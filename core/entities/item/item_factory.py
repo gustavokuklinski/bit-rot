@@ -41,34 +41,8 @@ def generate_random_item(cls):
             continue
 
         base_chance = float(data['spawn']['chance'])
-        item_type = data.get('type', '')
-        
-        # Determine the multiplier based on item type
-        multiplier = 1.0
-        if item_type == 'weapon_melee': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
-        elif item_type == 'weapon_ranged': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
-        elif item_type == 'mobile': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
-        elif item_type == 'container': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
-        elif item_type == 'backpack': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
-        elif item_type == 'currency': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
-        elif item_type == 'text': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
-        elif item_type == 'utility': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY
-        elif item_type == 'recipe': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-        elif item_type == 'resource': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
-        elif item_type == 'map': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
-        elif item_type == 'liquid': multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
-        elif item_type == 'consumable':
-            multiplier = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
-            # Check sub-types/categories if applicable
-            consumable_type = data.get('properties', {}).get('restore', {}).get('type', '')
-            if 'food' in consumable_type: multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
-            elif 'drink' in consumable_type: multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
-            elif 'med' in consumable_type: multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
-            elif 'ammo' in consumable_type: multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
-            elif 'drug' in consumable_type: multiplier *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS
-
         names.append(name)
-        chances.append(base_chance * multiplier)
+        chances.append(base_chance)
     
     total_chance = sum(chances)
     if total_chance == 0:
@@ -253,31 +227,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
 
             # [FIX] Start with the global multiplier so container loot is correctly throttled!
             m = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
-
-            # [FIX] Use *= instead of = so the global multiplier gets combined with sub-multipliers
-            if target_type == 'weapon_melee': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_MELEE
-            elif target_type == 'weapon_ranged': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_WEAPON_RANGED
-            elif target_type == 'mobile': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MOBILE
-            elif target_type == 'container': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONTAINER
-            elif target_type == 'backpack': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_BACKPACK
-            elif target_type == 'currency': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CURRENCY
-            elif target_type == 'text': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_TEXT
-            elif target_type == 'utility': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_UTILITY
-            elif target_type == 'recipe': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RECIPE
-            elif target_type == 'resource': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_RESOURCE
-            elif target_type == 'map': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_MAP
-            elif target_type == 'liquid': m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_LIQUID
-            elif target_type == 'consumable':
-                m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE
-                target_props = target_template.get('properties', {})
-                consumable_type = target_props.get('restore', {}).get('type', '')
-                
-                if 'food' in consumable_type: m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_FOOD
-                elif 'drink' in consumable_type: m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRINK
-                elif 'med' in consumable_type: m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_MEDICATION
-                elif 'ammo' in consumable_type: m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_AMMO
-                elif 'drug' in consumable_type: m *= core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER_CONSUMABLE_DRUGS
-
 
             if random.random() < (loot_info['chance'] * m):
                 loot_item = cls.create_from_name(loot_info['name'])
