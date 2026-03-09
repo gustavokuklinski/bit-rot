@@ -2,7 +2,7 @@
     <properties>
         <defence value="0.05" />
         <capacity value="4" />
-        <durability min="1" max="100" />
+        <durability min="100" max="100" />
         <sprite file="util_military_vest.png" />
         <weight weight="0.2" reduction="5%" />
     </properties>

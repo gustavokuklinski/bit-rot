@@ -46,7 +46,8 @@ class ProceduralGeneratorSpawning:
         if max_npcs <= 0: return
 
         # 2. Gather Candidates
-        potential_tiles = []
+        building_tiles = []
+        outside_tiles = []
         for y in range(h):
             for x in range(w):
                 if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
@@ -54,24 +55,30 @@ class ProceduralGeneratorSpawning:
                 if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
                 ground = layers['ground'][y][x]
                 if ground == self.water_tile: continue 
-                if ground in ['asphalt_01', 'sand_01', 'dirty_01']:
-                    potential_tiles.append((x, y))
+                
+                # [NEW] Differentiate building tiles from outside tiles
+                if any(b in ground for b in ['bg', 'house_floor_01']):
+                    building_tiles.append((x, y))
+                elif ground in ['asphalt_01', 'sand_01', 'dirty_01']:
+                    outside_tiles.append((x, y))
         
-        if not potential_tiles: return
+        total_candidates = len(building_tiles) + len(outside_tiles)
+        if total_candidates == 0: return
 
         # 3. Calculate Counts & Types
-        count_to_spawn = min(len(potential_tiles), max_npcs)
+        count_to_spawn = min(total_candidates, max_npcs)
         
         num_static = 0
         if static_chance > 0:
             expected = int(count_to_spawn * static_chance)
             num_static = max(1, expected) # At least 1 Static if chance > 0
         
-        num_static = min(num_static, count_to_spawn)
+        # Limit Static NPCs strictly to available building tiles
+        num_static = min(num_static, len(building_tiles))
         num_normal = count_to_spawn - num_static
         
-        spawn_types = ['S'] * num_static + ['NPC'] * num_normal
-        random.shuffle(spawn_types)
+        # Limit Normal NPCs to available outside tiles
+        num_normal = min(num_normal, len(outside_tiles))
         
         # 4. Safe Filtering (Zombies)
         # We try to keep distance from Zombies if possible
@@ -81,30 +88,35 @@ class ProceduralGeneratorSpawning:
                 if layers['spawn'][y][x] == 'Z':
                     zombie_locs.append((x, y))
                     
-        safe_candidates = []
         SAFE_DISTANCE_SQ = 15 * 15 
         
-        for px, py in potential_tiles:
-            too_close = False
-            for zx, zy in zombie_locs:
-                dist_sq = (px - zx)**2 + (py - zy)**2
-                if dist_sq < SAFE_DISTANCE_SQ:
-                    too_close = True
-                    break
-            if not too_close:
-                safe_candidates.append((px, py))
+        def get_safe_candidates(candidates):
+            safe = []
+            for px, py in candidates:
+                too_close = False
+                for zx, zy in zombie_locs:
+                    dist_sq = (px - zx)**2 + (py - zy)**2
+                    if dist_sq < SAFE_DISTANCE_SQ:
+                        too_close = True
+                        break
+                if not too_close:
+                    safe.append((px, py))
+            # Fallback to all candidates if safe ones are too few
+            return safe if len(safe) > 0 else candidates
 
-        # Fallback to all candidates if safe ones are too few
-        if len(safe_candidates) < count_to_spawn:
-            safe_candidates = potential_tiles
-            
+        safe_building = get_safe_candidates(building_tiles) if building_tiles else []
+        safe_outside = get_safe_candidates(outside_tiles) if outside_tiles else []
+
         # 5. Spawn
-        chosen = random.sample(safe_candidates, min(count_to_spawn, len(safe_candidates)))
-        
-        # If we selected fewer tiles than types (edge case), truncate types
-        for i, (nx, ny) in enumerate(chosen):
-            if i < len(spawn_types):
-                layers['spawn'][ny][nx] = spawn_types[i]
+        if num_static > 0 and safe_building:
+            chosen_static = random.sample(safe_building, min(num_static, len(safe_building)))
+            for nx, ny in chosen_static:
+                layers['spawn'][ny][nx] = 'S'
+                
+        if num_normal > 0 and safe_outside:
+            chosen_normal = random.sample(safe_outside, min(num_normal, len(safe_outside)))
+            for nx, ny in chosen_normal:
+                layers['spawn'][ny][nx] = 'NPC'
 
     def _scatter_npcs_l2(self, layers, w, h):
         """

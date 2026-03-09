@@ -1,3 +1,5 @@
+# core/map/map_loader.py
+
 import csv
 import pygame
 import random
@@ -188,6 +190,11 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
 
     # 3. Process Spawn Layer (P, Z, NPC, and Specific Items)
     possible_player_spawns = []
+    
+    # Ensure ITEM_TEMPLATES is loaded for item checking
+    if not ITEM_TEMPLATES:
+        load_item_templates_data()
+        
     if len(spawn_layout) != map_height or (map_height > 0 and len(spawn_layout[0]) != map_width):
         print("Warning: Spawn layout dimensions mismatch base layout.")
     for y, row in enumerate(spawn_layout):
@@ -221,11 +228,16 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                 elif char == 'ANM':
                     pass
                 else:
-                    # Treat anything unknown as a fallback player spawn coordinate instead of an item
-                    possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+                    # [UPDATED] Clean up state tags like ' on' and ' off' to verify base item names
+                    base_name = char.replace(' on', '').replace(' off', '').strip()
+                    if base_name in ITEM_TEMPLATES:
+                        item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
+                    else:
+                        # Treat anything truly unknown as a fallback player spawn coordinate instead of an item
+                        possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
 
                 # Check if the character is a renderable tile (e.g. specialized spawn markers)
-                # [FIXED] Do not look up 'VEH' in definitions to avoid 'No template' errors
+                # Do not look up 'VEH' in definitions to avoid 'No template' errors
                 if char != 'VEH' and char in tile_manager.definitions:
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)

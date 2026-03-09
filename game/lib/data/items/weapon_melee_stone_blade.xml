@@ -1,11 +1,12 @@
-<item name="Screwdriver" type="weapon_melee" allow_belt="true">
+<item name="Stone Blade" type="weapon_melee" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <weight weight="0.1"/>
         <damage min="2" max="5" />
         <skill type="melee" />
-        <sprite file="weapon_melee_screwdriver.png" />
+        <sprite file="weapon_melee_stone_blade.png" />
         <knockback value="0" />
     </properties>
-    <spawn chance="1" />
+
+    <spawn chance="0" />
 </item>

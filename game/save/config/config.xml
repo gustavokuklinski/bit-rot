@@ -4,10 +4,10 @@
         <ui_background_music value="true" name="Background music (Default: True)"/>
     </ui>
     <game>
-        <time_daylength value="900000" name="Day length (Default: 900000)"/>
-        <time_sunrise_hr value="5.5" name="Time sunrise (Default: 5.5)"/>
-        <time_sunset_hr value="17.5" name="Time sunset (Default: 17.5)"/>
-        <time_start_hr value="6.0" name="Start hour (Default: 6.0)"/>
+        <time_daylength value="900000" name="Day length (Default: 15 minutes)"/>
+        <time_sunrise_hr value="5.5" name="Time sunrise (Default: 5:30)"/>
+        <time_sunset_hr value="17.5" name="Time sunset (Default: 17:30)"/>
+        <time_start_hr value="6.0" name="Start hour (Default: 6:00)"/>
     </game>
     <map>
         <map_chunks value="3" name="Max map chunks (Default: 3)"/>
@@ -25,18 +25,18 @@
     </item_spawning>
     <vehicle>
         <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk (Default: 5)"/>
-        <has_fuel_chance value="0.25" name="Car Fuel chance (Default: 0.2)"/>
-        <has_key_chance value="0.25" name="Car Key chance (Default: 0.2)"/>
-        <has_motor_chance value="0.25" name="Car Motor chance (Default: 0.2)"/>
-        <has_battery_chance value="0.25" name="Car Battery chance (Default: 0.2)"/>
-        <has_tires_chance value="0.5" name="Car Tires chance (Default: 0.9)"/>
+        <has_fuel_chance value="0.25" name="Car Fuel chance (Default: Low)"/>
+        <has_key_chance value="0.25" name="Car Key chance (Default: Low)"/>
+        <has_motor_chance value="0.25" name="Car Motor chance (Default: Low)"/>
+        <has_battery_chance value="0.25" name="Car Battery chance (Default: Low)"/>
+        <has_tires_chance value="0.5" name="Car Tires chance (Default: Balanced)"/>
     </vehicle>
     <animal>
         <animal_spawn_per_chunk value="10" name="Max Animal spawn on chunk (Default: 10)"/>
         <animal_respawn_ms_timer value="30000" name="Animal respawn (Default: 30000)"/>
     </animal>
     <npc>
-        <npc_spawn_per_chunk value="0" name="Max NPC spawn on chunk (Default: 5)"/>
+        <npc_spawn_per_chunk value="5" name="Max NPC spawn on chunk (Default: 5)"/>
         <static_spawn_chance value="0.2" name="Max Static NPC (Default: 0.2)"/>
         <hostile_spawn_chance value="0.5" name="Max Hostile NPC (Default: 0.5)"/>
     </npc>

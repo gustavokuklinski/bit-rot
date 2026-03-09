@@ -1,3 +1,5 @@
+# core/entities/npc/npc.py
+
 import pygame
 import random
 import math
@@ -292,7 +294,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if is_ranged_weapon: search_range = self.base_search_range * 2 
 
         potential_targets = []
-        potential_targets.extend(game.zombies)
+        
+        # [FIX] Do not target zombies that are already dead
+        for z in game.zombies:
+            if not getattr(z, 'is_dead', False):
+                potential_targets.append(z)
 
         attacker = getattr(self, 'current_attacker', None)
 
@@ -313,6 +319,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if not player_is_far_and_following:
             for entity in potential_targets:
+                # [FIX] Static NPCs do not aggro based on proximity, they only react if hit
+                if self.is_static:
+                    continue
+
                 dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
                 if dist < search_range and dist < min_dist_to_target:
                     min_dist_to_target = dist
@@ -340,15 +350,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.idle_timer = 0
         else:
             if self.is_static:
-                if is_raining:
-                     if not self.shelter_target:
-                        self._find_shelter(game) 
-                     if self.shelter_target:
-                         target_pos = self.shelter_target
-                         self.state = 'seeking_shelter'
-                else:
-                    target_pos = None
-                    self.state = 'idle'
+                # [FIX] Static NPCs do not seek shelter or patrol. They strictly stand still unless aggroed.
+                target_pos = None
+                self.state = 'idle'
             else:
                 if is_raining:
                     if not self.shelter_target:
@@ -594,14 +598,23 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 self.last_attack_time = current_time
                 attack_angle = math.atan2(-dy, dx)
                  
-                damage_to_deal = random.randint(self.min_attack, self.max_attack)
+                # [FIX] Properly calculate NPC damage including equipped weapons
+                base_damage = random.randint(self.min_attack, self.max_attack)
+                weapon_dmg = 0
+                if weapon:
+                    if hasattr(weapon, 'damage'):
+                        weapon_dmg = weapon.damage
+                    elif hasattr(weapon, 'min_damage') and hasattr(weapon, 'max_damage'):
+                        weapon_dmg = random.randint(weapon.min_damage, weapon.max_damage)
+                
+                # Ensures that NPCs always do at least 1 damage (never 0 damage locking targets at 1 HP)
+                damage_to_deal = max(1, base_damage + weapon_dmg)
                  
                 if is_ranged_weapon and weapon:
                     weapon_sound = weapon.sounds.get('shoot') if hasattr(weapon, 'sounds') else None
                     
                     if weapon_sound:
                         game.sound_manager.play_sound(weapon_sound, subdir='items', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
-                    
 
                     projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
                     projectile.damage = damage_to_deal
@@ -639,3 +652,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.clothes = {}
 
         super().die(game)
+        
+        # [FIX] Force removal from sprite rendering groups preventing dead visual entities
+        self.kill()

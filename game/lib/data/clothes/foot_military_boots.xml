@@ -1,7 +1,7 @@
 <cloth name="Military Boots" type="cloth" id="feet" builder="false">
     <properties>
         <defence value="0.8" />
-        <durability min="1" max="100" />
+        <durability min="100" max="100" />
         <sprite file="foot_military_boots.png" />
         <weight weight="0.2" />
     </properties>

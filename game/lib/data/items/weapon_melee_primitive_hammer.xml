@@ -2,7 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <weight weight="0.8"/>
-        <damage min="3" max="5" />
+        <damage min="4" max="8" />
         <skill type="melee" />
         <sprite file="weapon_melee_primitive_hammer.png" />
         <knockback value="1" />
