@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir release
           cp -r game release/game
-          mv build/main${{ matrix.executable_ext }} release/bitrot${{ matrix.executable_ext }}
+          mv build/bitrot${{ matrix.executable_ext }} release/bitrot${{ matrix.executable_ext }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
