@@ -17,11 +17,25 @@ class ProceduralGeneratorRendering:
             nx, ny = x + dx, y + dy
             if 0 <= nx < w and 0 <= ny < h:
                 neighbor = grid[ny][nx]
-                # Return the first neighbor that IS NOT a dirt overlay or empty space
-                is_transparent_overlay = neighbor and (neighbor.startswith('dirty_') or neighbor.startswith('beach_sand_') or neighbor.startswith('sand_'))
+                # Ignore ALL pathway overlays when looking for the solid base ground
+                is_transparent_overlay = neighbor and (
+                    neighbor.startswith('dirty_') or 
+                    neighbor.startswith('beach_sand_') or 
+                    neighbor.startswith('sand_') or 
+                    neighbor.startswith('asphalt_')
+                )
                 if neighbor and not is_transparent_overlay and neighbor != ' ':
                     return neighbor
         return 'bg_grass' # Fallback if totally isolated
+
+    def _is_transparent_border(self, g_char):
+        """Returns True if the tile is a rounded border tile needing an underlay."""
+        if not g_char: return False
+        if g_char.startswith('dirty_') and g_char != 'dirty_01': return True
+        if g_char.startswith('sand_') and g_char != 'sand_01': return True
+        if g_char.startswith('beach_sand_') and g_char != 'beach_sand_01': return True
+        if g_char.startswith('asphalt_') and g_char != 'asphalt_01': return True
+        return False
 
     def _render_chunk_to_surface(self, bg_surf, heat_surf, gx, gy, data):
         if not hasattr(self.game, 'tile_manager'): return
@@ -47,8 +61,8 @@ class ProceduralGeneratorRendering:
                 if ground:
                     g_char = ground[y][x]
                     
-                    # --- NEW LOGIC: Smart Underlay for Transparent Borders ---
-                    if g_char.startswith('dirty_') and g_char != 'dirty_01':
+                    # --- UPDATED LOGIC: Smart Underlay for Transparent Borders ---
+                    if self._is_transparent_border(g_char):
                         bg_tile = self._get_adjacent_bg(ground, x, y, w, h)
                         if bg_tile in defs:
                             bg_surf.blit(defs[bg_tile]['image'], (px, py))
@@ -110,8 +124,8 @@ class ProceduralGeneratorRendering:
                 if ground:
                     g_char = ground[y][x]
                     
-                    # --- NEW LOGIC: Smart Underlay for Transparent Borders ---
-                    if g_char.startswith('dirty_') and g_char != 'dirty_01':
+                    # --- UPDATED LOGIC: Smart Underlay for Transparent Borders ---
+                    if self._is_transparent_border(g_char):
                         bg_tile = self._get_adjacent_bg(ground, x, y, w, h)
                         if bg_tile in defs:
                             bg_surf.blit(defs[bg_tile]['image'], (px, py))

@@ -58,24 +58,6 @@ class ProceduralGeneratorChunk:
         road_tile = 'asphalt_01'
         dirt_tile = 'dirty_01'
         sand_tile = 'sand_01'
-        
-        def draw_straight_road(x1, y1, x2, y2, tile_type):
-            sx, ex = min(x1, x2), max(x1, x2)
-            sy, ey = min(y1, y2), max(y1, y2)
-            
-            # Asphalt is 5x5, Dirt/Sand is 4x4 minimum brush
-            if tile_type == road_tile:
-                for y in range(sy - 2, ey + 3):
-                    for x in range(sx - 2, ex + 3):
-                        if 0 <= x < w and 0 <= y < h:
-                            layers['ground'][y][x] = tile_type
-                            occupied_mask[y][x] = 1
-            else:
-                for y in range(sy - 1, ey + 3):
-                    for x in range(sx - 1, ex + 3):
-                        if 0 <= x < w and 0 <= y < h:
-                            layers['ground'][y][x] = tile_type
-                            occupied_mask[y][x] = 1
 
         def draw_secondary_maze_road(start_x, start_y, target_x, target_y, tile_type=dirt_tile):
             current_x, current_y = start_x, start_y
@@ -86,7 +68,8 @@ class ProceduralGeneratorChunk:
             while steps < max_steps:
                 steps += 1
                 if not (0 <= current_x < w and 0 <= current_y < h): break
-                if layers['ground'][current_y][current_x] == road_tile: break 
+                # Only break if we hit the SAME type of road we are drawing to prevent short-circuiting 
+                if layers['ground'][current_y][current_x] == tile_type and steps > 5: break 
                 if layers['ground'][current_y][current_x] == getattr(self, 'water_tile', 'water_01'): break 
 
                 if math.hypot(target_x - current_x, target_y - current_y) < 2: break
@@ -115,9 +98,11 @@ class ProceduralGeneratorChunk:
                 path.append((current_x, current_y))
 
             for px, py in path:
-                # --- NEW LOGIC: Minimum 4x4 Brush for seamless auto-tiling ---
-                for oy in range(-1, 3):
-                    for ox in range(-1, 3):
+                # [UPDATED] Asphalt reduced to 3x3, Dirt/Sand is 4x4 minimum brush
+                brush_size = 1
+                extra_range = 1 if tile_type == road_tile else 2
+                for oy in range(-brush_size, brush_size + extra_range):
+                    for ox in range(-brush_size, brush_size + extra_range):
                         gx_pos, gy_pos = px + ox, py + oy
                         if 0 <= gx_pos < w and 0 <= gy_pos < h:
                             if layers['base'][gy_pos][gx_pos] == ' ' and layers['ground'][gy_pos][gx_pos] != road_tile:
@@ -125,27 +110,30 @@ class ProceduralGeneratorChunk:
                                     layers['ground'][gy_pos][gx_pos] = tile_type
                                     occupied_mask[gy_pos][gx_pos] = 1
 
-        # 1. Central Hub
-        draw_straight_road(cx, cy, cx, cy, road_tile)
+        # 1. Central Hub (Mark the center)
+        for y in range(cy-2, cy+3):
+            for x in range(cx-2, cx+3):
+                layers['ground'][y][x] = road_tile
+                occupied_mask[y][x] = 1
 
-        # 2. Connections
+        # 2. Connections (All Drunkard)
         if conns['top']:
-            if conns['top_type'] == 'asphalt': draw_straight_road(cx, 0, cx, cy, road_tile)
+            if conns['top_type'] == 'asphalt': draw_secondary_maze_road(cx, 0, cx, cy, road_tile)
             elif conns['top_type'] == 'sand': draw_secondary_maze_road(cx, 0, cx, cy, sand_tile)
             else: draw_secondary_maze_road(cx, 0, cx, cy, dirt_tile)
             
         if conns['bottom']:
-            if conns['bottom_type'] == 'asphalt': draw_straight_road(cx, cy, cx, h-1, road_tile)
+            if conns['bottom_type'] == 'asphalt': draw_secondary_maze_road(cx, h-1, cx, cy, road_tile)
             elif conns['bottom_type'] == 'sand': draw_secondary_maze_road(cx, h-1, cx, cy, sand_tile)
             else: draw_secondary_maze_road(cx, h-1, cx, cy, dirt_tile)
             
         if conns['left']:
-            if conns['left_type'] == 'asphalt': draw_straight_road(0, cy, cx, cy, road_tile)
+            if conns['left_type'] == 'asphalt': draw_secondary_maze_road(0, cy, cx, cy, road_tile)
             elif conns['left_type'] == 'sand': draw_secondary_maze_road(0, cy, cx, cy, sand_tile)
             else: draw_secondary_maze_road(0, cy, cx, cy, dirt_tile)
             
         if conns['right']:
-            if conns['right_type'] == 'asphalt': draw_straight_road(cx, cy, w-1, cy, road_tile)
+            if conns['right_type'] == 'asphalt': draw_secondary_maze_road(w-1, cy, cx, cy, road_tile)
             elif conns['right_type'] == 'sand': draw_secondary_maze_road(w-1, cy, cx, cy, sand_tile)
             else: draw_secondary_maze_road(w-1, cy, cx, cy, dirt_tile)
 
@@ -354,9 +342,38 @@ class ProceduralGeneratorChunk:
                         for cy_clr in range(max(0, ty), min(h, ty + th)):
                             for cx_clr in range(max(0, tx), min(w, tx + tw)):
                                 occupied_mask[cy_clr][cx_clr] = 0
-                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, False, sand_tile)
+                        # Pass draw_secondary_maze_road to finalizing to draw organic paths
+                        self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, False, sand_tile, draw_secondary_maze_road)
                         placed = True
                 # ------------------------------------------------
+
+                if not placed:
+                    # NEW LOGIC: Try to cluster urban buildings side by side to form dense neighborhoods
+                    is_cave = 'cave' in tmpl_name.lower()
+                    if not is_cave and placed_rects:
+                        candidates = []
+                        gap = 1 # 1 tile gap aligns asphalt lots so they merge seamlessly
+                        for pr in placed_rects:
+                            candidates.extend([
+                                (pr.x - tw - gap, pr.y), # Left, top-aligned
+                                (pr.x + pr.width + gap, pr.y), # Right, top-aligned
+                                (pr.x, pr.y - th - gap), # Top, left-aligned
+                                (pr.x, pr.y + pr.height + gap), # Bottom, left-aligned
+                                (pr.x - tw - gap, pr.y + pr.height - th), # Left, bottom-aligned
+                                (pr.x + pr.width + gap, pr.y + pr.height - th), # Right, bottom-aligned
+                                (pr.x + pr.width - tw, pr.y - th - gap), # Top, right-aligned
+                                (pr.x + pr.width - tw, pr.y + pr.height + gap), # Bottom, right-aligned
+                            ])
+                        
+                        # Sort by distance to chunk center to keep the neighborhood centered and compact
+                        candidates.sort(key=lambda c: (c[0] + tw//2 - cx)**2 + (c[1] + th//2 - cy)**2 + random.randint(-15, 15))
+                        
+                        for tx, ty in candidates:
+                            # Use margin=1 to ensure standard padding, but gap=1 exactly allows asphalt bounds to bridge together
+                            if is_area_free(tx, ty, tw, th, margin=1):
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
+                                placed = True
+                                break
 
                 if not placed:
                     for _ in range(100): 
@@ -380,7 +397,7 @@ class ProceduralGeneratorChunk:
                             ty = random.randint(safe_pad, h - safe_pad - th)
                         
                         if is_area_free(tx, ty, tw, th, margin=1):
-                            self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                            self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
                             placed = True
                             break
                 
@@ -390,7 +407,7 @@ class ProceduralGeneratorChunk:
                         if placed: break
                         for sx in range(border_w + 3, w - border_w - tw - 3, stride):
                             if is_area_free(sx, sy, tw, th, margin=1):
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
                                 placed = True
                                 break
                 
@@ -408,7 +425,7 @@ class ProceduralGeneratorChunk:
                                             layers['base'][cy_clr][cx_clr] = ' ' 
                                             layers['ground'][cy_clr][cx_clr] = sand_tile 
                                             occupied_mask[cy_clr][cx_clr] = 0 
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile)
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
                                 placed = True
                                 break
                 
@@ -610,12 +627,12 @@ class ProceduralGeneratorChunk:
 
         return layers
 
-    def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile):
+    def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road):
         is_cave = 'cave' in tmpl_name.lower()
         road_tile = 'asphalt_01'
         
         if not is_cave:
-            lot_m = 2
+            lot_m = 1  # [UPDATED] Reduced asphalt lot size around buildings slightly
             # 1. Draw the asphalt padding (lot) around the building
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
@@ -624,41 +641,9 @@ class ProceduralGeneratorChunk:
                         occupied_mask[ry][rx] = 1
             
             bx, by = tx + tw // 2, ty + th // 2
-            
-            def draw_secondary_road(start_x, start_y, target_x, target_y):
-                cur_x, cur_y = start_x, start_y
-                while cur_x != target_x or cur_y != target_y:
-                    if cur_x < target_x: cur_x += 1
-                    elif cur_x > target_x: cur_x -= 1
-                    elif cur_y < target_y: cur_y += 1
-                    elif cur_y > target_y: cur_y -= 1
-                    if 0<=cur_x<w and 0<=cur_y<h:
-                        if occupied_mask[cur_y][cur_x] == 0:
-                            if layers['ground'][cur_y][cur_x] != road_tile and layers['ground'][cur_y][cur_x] != getattr(self, 'water_tile', 'water_01'):
-                                layers['ground'][cur_y][cur_x] = road_tile
-                                occupied_mask[cur_y][cur_x] = 1
 
-            # 2. Draw the asphalt connector to the center crossroad
-            if (tw > 30 or th > 30) and not is_building2:
-                draw_secondary_road(bx, by, cx, cy)
-            else:
-                x_s, x_e = min(cx, bx), max(cx, bx)
-                for rx in range(x_s, x_e + 1): 
-                    for off in range(2): 
-                        yy = cy + off
-                        if 0<=rx<w and 0<=yy<h:
-                            if occupied_mask[yy][rx] == 0 and layers['ground'][yy][rx]!=road_tile and layers['ground'][yy][rx]!=getattr(self, 'water_tile', 'water_01'): 
-                                layers['ground'][yy][rx] = road_tile
-                                occupied_mask[yy][rx] = 1
-                                
-                y_s, y_e = min(cy, by), max(cy, by)
-                for ry in range(y_s, y_e + 1):
-                    for off in range(2): 
-                        xx = bx + off
-                        if 0<=ry<h and 0<=xx<w:
-                            if occupied_mask[ry][xx] == 0 and layers['ground'][ry][xx]!=road_tile and layers['ground'][ry][xx]!=getattr(self, 'water_tile', 'water_01'): 
-                                layers['ground'][ry][xx] = road_tile
-                                occupied_mask[ry][xx] = 1
+            # 2. Draw the organic connector to the center crossroad using the passed method
+            draw_secondary_maze_road(bx, by, cx, cy, road_tile)
         
         # 3. Blit the actual building on top
         self._blit_template(layers, tmpl, tx, ty, w, h)

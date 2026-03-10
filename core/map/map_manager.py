@@ -178,8 +178,13 @@ class MapManager:
                 row = grid[ny]
                 if 0 <= nx < len(row):
                     neighbor = row[nx]
-                    # Check if it's a solid tile (NOT dirt overlay, NOT sand overlay, NOT empty)
-                    is_transparent_overlay = neighbor and (neighbor.startswith('dirty_') or neighbor.startswith('beach_sand_') or neighbor.startswith('sand_'))
+                    # [UPDATED] Include asphalt in the transparency check
+                    is_transparent_overlay = neighbor and (
+                        neighbor.startswith('dirty_') or 
+                        neighbor.startswith('beach_sand_') or 
+                        neighbor.startswith('sand_') or 
+                        neighbor.startswith('asphalt_')
+                    )
                     if neighbor and not is_transparent_overlay and neighbor != ' ':
                         return neighbor
         return 'bg_grass'
@@ -255,9 +260,11 @@ class MapManager:
                             is_dirty_overlay = char.startswith('dirty_') and char != 'dirty_01'
                             is_sand_overlay = char.startswith('sand_') and char != 'sand_01'
                             is_beach_sand_overlay = char.startswith('beach_sand_') and char != 'beach_sand_01'
+                            # [UPDATED] Add Asphalt overlay check
+                            is_asphalt_overlay = char.startswith('asphalt_') and char != 'asphalt_01'
                             
-                            if is_dirty_overlay or is_sand_overlay or is_beach_sand_overlay:
-                                bg_tile = self._get_adjacent_bg(ground_data, x, y) # NOTE: use 'ground' and passing w, h if inside generator_rendering.py!
+                            if is_dirty_overlay or is_sand_overlay or is_beach_sand_overlay or is_asphalt_overlay:
+                                bg_tile = self._get_adjacent_bg(ground_data, x, y)
                                 if bg_tile in tm.definitions:
                                     surface.blit(tm.definitions[bg_tile]['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
 

@@ -25,7 +25,7 @@ def check_recursive_containment(dragged_item, target_container):
 
 def check_container_weight_limit(container, incoming_item, item_to_remove=None):
     """Checks if adding the incoming item exceeds the container's max weight limit (weight * 5.0)."""
-    if not hasattr(container, 'weight'): 
+    if not hasattr(container, 'weight') or container.weight <= 0.0: 
         return True
         
     # If the item is already inside this container, its weight is already counted!

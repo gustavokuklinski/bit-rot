@@ -10,17 +10,23 @@ import core.data.config
 class ZombieCombat:
     def take_damage(self, amount, game, attacker=None): 
         self.health -= amount
-        self.health = max(0, self.health)
-        self.show_health_bar_timer = 120 # Show health bar for 2 seconds (60fps)
+        # [FIX] Ensure health does not stay stuck at 1 or above if damage is sufficient
+        if self.health <= 0:
+            self.health = 0
+            
+        self.show_health_bar_timer = 120 
 
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_hit_sound_time > self.hit_sound_cooldown:
-            if self.sound_hit: # Check if a sound is defined
+        if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
+            if hasattr(self, 'sound_hit') and self.sound_hit:
                 snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
                 game.sound_manager.play_sound(self.sound_hit, subdir=snd_dir, game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
             self.last_hit_sound_time = current_time
 
-        return self.health <= 0 # Return True if dead
+        # [FIX] Return True if the entity should be dead
+        if self.health <= 0:
+            return True
+        return False
 
     def attack(self, target_entity, game):
         self.melee_swing_timer = 10

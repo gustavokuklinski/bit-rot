@@ -485,6 +485,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         self._apply_terrain_smoothing(global_layers, global_tiles_w, global_tiles_h)
         self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'sand_01')
         self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'beach_sand_01')
+        self._apply_asphalt_smoothing(global_layers, global_tiles_w, global_tiles_h) # [ADDED]
 
         # --- SCATTER VEHICLES (L1 Global) ---
         print("Scattering Vehicles (L1)...")

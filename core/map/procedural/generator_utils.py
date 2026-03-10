@@ -1,3 +1,5 @@
+# core/map/procedural/generator_utils.py
+
 import os
 import csv
 import pygame
@@ -190,5 +192,65 @@ class ProceduralGeneratorUtils:
                         changes[(x, y)] = new_tile
                         
         # Apply all smoothed edges simultaneously
+        for (x, y), tile in changes.items():
+            ground[y][x] = tile
+
+    # [UPDATED] Apply auto-tiling borders to Asphalt exactly like Dirt and Sand
+    def _apply_asphalt_smoothing(self, global_layers, w, h):
+        ground = global_layers['ground']
+        protected = global_layers.get('protected_mask')
+        
+        def is_asphalt_or_no_border(x, y):
+            if x < 0 or x >= w or y < 0 or y >= h:
+                return True
+            tile = ground[y][x]
+            # Treat water and beach_sand as if they are asphalt to prevent drawing the grass border
+            return (tile.startswith('asphalt_') or 
+                    tile.startswith('beach_sand_') or 
+                    tile.startswith('water_'))
+
+        changes = {}
+        
+        # BITMASK LOGIC: Top=1, Right=2, Bottom=4, Left=8
+        tile_map = {
+            0: 'asphalt_01',               
+            1: 'asphalt_top_01',           
+            2: 'asphalt_left_01',         
+            4: 'asphalt_bottom_01',        
+            8: 'asphalt_right_01',          
+            
+            3: 'asphalt_top_left_01',     
+            6: 'asphalt_bottom_left_01',  
+            9: 'asphalt_top_right_01',      
+            
+            12: 'asphalt_bottom_right_01',  
+            
+            5: 'asphalt_01',               
+            10: 'asphalt_01',              
+            7: 'asphalt_01',               
+            11: 'asphalt_01',              
+            13: 'asphalt_01',              
+            14: 'asphalt_01',              
+            15: 'asphalt_01'               
+        }
+
+        for y in range(h):
+            for x in range(w):
+                if ground[y][x] == 'asphalt_01':
+                    if protected and protected[y][x] == 1:
+                        continue
+
+                    # 1 if neighbor requires a grass border (grass, dirt, sand), 0 if it is ASPHALT, BEACH_SAND, or WATER
+                    t = 0 if is_asphalt_or_no_border(x, y - 1) else 1
+                    r = 0 if is_asphalt_or_no_border(x + 1, y) else 2
+                    b = 0 if is_asphalt_or_no_border(x, y + 1) else 4
+                    l = 0 if is_asphalt_or_no_border(x - 1, y) else 8
+                    
+                    mask = t + r + b + l
+                    new_tile = tile_map.get(mask, 'asphalt_01')
+                    
+                    if new_tile != 'asphalt_01':
+                        changes[(x, y)] = new_tile
+                        
         for (x, y), tile in changes.items():
             ground[y][x] = tile

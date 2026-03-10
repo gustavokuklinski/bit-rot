@@ -1,3 +1,5 @@
+Start: 20/10/2024
+
 ## Devlog
 - [x] Add: Create lootable containers on map
 - [x] Add: Add utility consumable item: Lantern consume matches
@@ -460,3 +462,105 @@
 - [x] Rem: Removed unused tiles
 - [x] Fix: Map building Forest_10 added an small camp
 - [x] Add: Game background music loop
+- [x] Fix: When the player is being followed by Hostile NPC and go to L2, Hostile NPCs still spawn at L2
+- [x] Fix: If config set no Zombies on L2, Zombies still spawn at L2
+- [x] Fix: If config set no Animals on L1 and L2, Animals still spawn at L1 and L2
+- [x] Fix: When the player is sleeping and wake up time still fast forwarding
+- [x] Add: Collider masks for: Map tiles, Zombies, NPCs, Animals and the player
+- [x] Add: Do not allow the player to get on top of entities: Zombies, NPCs and Animals
+- [x] Add: Melee Knockback
+- [x] Add: A thirth tab for player status: Health, Status and Level
+- [x] Add: Weight now shows 2f decimals (from 0.0 to 0.01)
+- [x] Fix: Ajusted the Zoom values on the game
+- [x] Fix: Remove the Blur Unseen effect due performance issues
+- [x] Fix: Improved performace for larger chunk maps (need to check the modals under performing)
+- [x] Fix: Vehicle Motor have drop durability whem player turn on the motor
+- [x] Fix: Large blood splatter when player hit zombie, npc, animal with vehicle
+- [x] Fix: Fast forward button logic
+- [x] Fix: Animals and bloody splatters with melee
+- [x] Fix: Disposable container disapearing from Nearby and whithin containers
+- [x] Fix: Bloodsplatter fixed size
+- [x] Fix: JSON save corrupt error (Commit: 49ba2ee - Backup rollback if needed)
+- [x] Add: Zombies now have 'hearing' (Commit: 12c08af)
+- [x] Add: Now NPCs, Zombies and Animals have a line of sigh, hidding from obstacles (Commit: 75e02f3)
+- [x] Fix: Removed the size of the Chunk. Make it fixed to 128 tiles to stable
+- [x] Fix: Display corpse without delay
+- [x] Fix: game map_lights (_light.csv) was not being rendered
+- [x] Fix: Animals not moving
+- [x] Fix: Zombies now spawn at player chunk
+- [x] Fix: NPC Knockback default - was too long
+- [x] Fix: Zombies chase player when get shot (part of zombie hearing)
+- [x] Fix: Whe Zombie change to 'chase' do not come back to 'wander' (player must kill them)
+- [x] Add: If player is unarmed, hurt hands/feet (like punch and kick)
+- [x] Rem: Removed the NPCs on Minimap
+- [x] Add/Fix: Maps now are individual chunks with teleport
+- [x] Fix: Player pan camera at the edges
+- [x] Rem: Removed the player auto regen. Must use items to keep health good
+- [x] Fix: Switching chunks generate obstacles
+- [x] Fix: Pathways being on top of another, showing at the bottom of the buildings
+- [x] Add: Player can hit tress and stones with anything
+- [x] Add: Seamless map decoration borders
+- [x] Add: Map decorations to random spawn
+- [x] Fix: Map borders recorations are being rebuild on map building templates
+- [x] Add: Pygbag web support
+- [x] Add: New entry points: bitrot.py for compiled version and main.py for Pygbag web version
+- [x] Rem: CTRL to aim depreched
+- [x] Add: ALT used to Aim (due web support)
+- [x] Fix: Error loading game: 'MapManager' object has no attribute 'vehicle' 
+- [x] Fix: Only allow to repair ranged_weapon with ammo.
+- [x] Fix: On player builders added the 'Intelligence'
+- [x] Fix: Map switch layer rebuild vehicles correctly
+- [x] Add: an alert info tooltip on top of interactable entities (Vehicles, NPCs, Stairs, Doors, Windows)
+- [x] Fix: Game logger now is one file instead multiple
+- [x] Re-Add: CTRL to aim and Right Click Aim (Best for WebVersion)
+- [x] Fix: Vehicle Modal options WIP
+- [x] Rem: 'Rest' option on any floor
+- [x] Add: Vehicles now have positions (Top, Bottom, Left, Right) 
+- [x] Add: Procedural generated isolated islands connected to the main game island
+- [x] Fix: Keep the chunk size fixed at 128 tiles
+- [x] Fix: Read recipe placing XP with unused attribute crashes the game
+- [x] Add: Basic clothes have pre defined colors, easier to maintain
+- [x] Fix: On the player belt only allow the items with: allow_belt="true"
+- [x] Fix: On liquid, when player Right-Click: Grab the liquid goes to inventory. 
+- [x] Fix: On liquid, when player Right-Click: Drop the liquid goes to ground.
+- [x] Fix: Ammo have the option 'Reload'
+- [x] Rem: removed the `consumable_repair` item type to `resource` (Most used via Craft menu to repair)
+- [x] Fix: On any item when player Shift + Right-Click Drag on item to get/drop only one game crash
+- [x] Add: Craft modal now search for all player containers
+- [x] Add: Items on player belt have a 10% weight reduction
+- [x] Add: Player can select items to craft when click over the item
+- [x] Add: Typed Zombies: `common`, `worker`, `doctor`, `military`, `special_force`
+- [x] Fix: Clothes on top of each other
+- [x] Add: New typo for clothes: `hide_cloth="[hair, facial]"` using slots
+- [x] Fix: Game spawn settings classified by: Extreme Low (1%), Low (25%), Balanced (50%), High (75%), Extreme High (100%)
+- [x] Fix: Split the game logic from `player_setup.py` and `settings.py`
+- [x] Add: On map tiles, the loot table are generated the item type
+- [x] Add: Player swing effect for melee weapon attack
+- [x] Fix: Animals health bar disapeared
+- [x] Fix: Loot tables are generating item turned 'on'
+- [x] Add: New item `tip="Message about that item`
+- [x] Add: New weight system. Eveything have a weight and you can place 5x inside a container as it's weight. Example: 2.0 weight can support max: 10 weight. 
+- [x] Add: Game cheat codes
+- [x] Add: NPCs sounds
+- [x] Add: Sound pitch and random volume
+- [x] Add: Window open/close sounds
+- [x] Add: New Wiggle animations
+- [x] Add: Cow animal
+- [x] Fix: Animals have a delay to die
+- [x] Add: Now game have night, day, rain and cave ambient sounds
+- [x] Fix: L2 templated are now independent, each chunk have their own L2 not connecting to adjancet chunks.
+- [x] Fix: Ajusted game settings to make it simplier
+- [x] Fix: Static NPCs only spawn inside houses
+- [x] Fix: Display the hardcoded items on map
+- [x] Fix: Added a Chunk rendered system to improve FPS
+- [x] Fix: Set some max rendering distance per frame to keep the FPS = Chunk per frame: 1
+- [x] Add: Implement a Quadtree rendering for Zombies, NPCs, Animals (Reddit suggestion)
+- [x] Add: Implementing Framerate Independence
+- [x] Add: Crafting balance and skilling
+- [x] Fix: Add new tab: 'Know Recipes' listing only player know basic recipes
+- [x] Add: New Clothes: body_next_petrol_tshirt
+- [x] Add: New Clothes: head_military_helmet
+- [x] Add: New Clothes: head_special_force_helmet
+- [x] Add: New Clothes: head_worker_helmet
+- [x] Add: New Clothes: foot_shoes.xml
+- [x] Fix: Player pickup campfire on, auto turn off and prevent to turn camp fire on in inventory

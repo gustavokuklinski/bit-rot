@@ -621,7 +621,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     projectile.owner = self
                     projectile.hostile = True
                     game.projectiles.append(projectile)
-                else:
+                    
+                else: # Melee attack
                     if getattr(self, 'sound_attack', None):
                         game.sound_manager.play_sound(self.sound_attack, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                     self.melee_swing_timer = 250
@@ -630,7 +631,16 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     if target_entity == game.player:
                         target_entity.take_damage(game, damage_to_deal, 0)
                     else:
-                        target_entity.take_damage(damage_to_deal, game, attacker=self)
+                        # [FIX] Call die() for any target entity (Zombie, Animal, NPC) if damage is lethal
+                        is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
+                        if is_dead:
+                            target_entity.die(game)
+                            if target_entity in game.npcs:
+                                display_message(game, "A survivor has been killed.")
+                            elif getattr(target_entity, 'type', '') == 'animal':
+                                pass # Animal death handled in its own die()
+                            else:
+                                display_message(game, f"A zombie was eliminated by {self.name}.")
 
     def stop_moving(self):
         self.state = 'idle'
