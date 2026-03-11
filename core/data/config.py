@@ -105,10 +105,6 @@ START_ZOOM = 1.0
 FAR_ZOOM = 0.5
 NEAR_ZOOM = 2.0
 PLAYER_SPEED = 1.6
-DECAY_RATE_SECONDS = 0.0
-FOOD_WATER_MULTIPLIER_DECAY = 1.0
-FOOD_DECAY_AMOUNT = 0.0
-WATER_DECAY_AMOUNT = 0.0
 AUTO_DRINK = False
 AUTO_DRINK_THRESHOLD = 0
 BASE_PLAYER_VIEW_RADIUS = 0
@@ -160,7 +156,6 @@ def load_settings(preset="default"):
     """Loads configuration from XML and updates global variables."""
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
-    global DECAY_RATE_SECONDS, FOOD_WATER_MULTIPLIER_DECAY, FOOD_DECAY_AMOUNT, WATER_DECAY_AMOUNT
     global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
     global ZOMBIE_SPEED, MAX_ZOMBIES_GLOBAL, ZOMBIE_DROP, ZOMBIE_DETECTION_RADIUS
     global ZOMBIE_WANDER_ENABLED, ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
@@ -200,10 +195,7 @@ def load_settings(preset="default"):
         
         player_config = root.find('player')
         PLAYER_SPEED = 1.6 # Hardcoded as per original file
-        DECAY_RATE_SECONDS = 0.5
-        FOOD_WATER_MULTIPLIER_DECAY = 1.0
-        FOOD_DECAY_AMOUNT = 0.2 * FOOD_WATER_MULTIPLIER_DECAY
-        WATER_DECAY_AMOUNT = 0.3 * FOOD_WATER_MULTIPLIER_DECAY * 1.5
+
         BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
         START_ZOOM = float(player_config.find('zoom_start').get('value'))
         FAR_ZOOM = float(player_config.find('zoom_far').get('value'))

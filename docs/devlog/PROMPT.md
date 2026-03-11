@@ -8,6 +8,8 @@ The code is in python. Show the file and the changed parts of the code to be fix
 ---
 This is my updated code Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
 
+I want all buildings with asphalt border to be generated side bby side, like connected buildings with thei neightbohoods.
+
 ---
 This is my updated code folder located at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core.
 

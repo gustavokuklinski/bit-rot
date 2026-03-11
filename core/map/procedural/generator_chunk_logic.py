@@ -55,6 +55,8 @@ class ProceduralGeneratorChunk:
         occupied_mask = [[0 for _ in range(w)] for _ in range(h)]
         occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)]
 
+        placed_rects = []
+
         road_tile = 'asphalt_01'
         dirt_tile = 'dirty_01'
         sand_tile = 'sand_01'
@@ -62,49 +64,77 @@ class ProceduralGeneratorChunk:
         def draw_secondary_maze_road(start_x, start_y, target_x, target_y, tile_type=dirt_tile):
             current_x, current_y = start_x, start_y
             path = [(current_x, current_y)]
-            steps = 0
-            max_steps = w * 6
             
-            while steps < max_steps:
-                steps += 1
-                if not (0 <= current_x < w and 0 <= current_y < h): break
-                # Only break if we hit the SAME type of road we are drawing to prevent short-circuiting 
-                if layers['ground'][current_y][current_x] == tile_type and steps > 5: break 
-                if layers['ground'][current_y][current_x] == getattr(self, 'water_tile', 'water_01'): break 
+            if tile_type == road_tile:
+                # FORCE STRAIGHT AXIS-ALIGNED PATH FOR ASPHALT
+                while current_x != target_x:
+                    current_x += 1 if target_x > current_x else -1
+                    
+                    # Stop drawing the road if it hits an already placed building
+                    if any(pr.collidepoint(current_x, current_y) for pr in placed_rects):
+                        break
+                    path.append((current_x, current_y))
+                
+                # Only continue drawing Y if we didn't just crash into a building
+                if not any(pr.collidepoint(current_x, current_y) for pr in placed_rects):
+                    while current_y != target_y:
+                        current_y += 1 if target_y > current_y else -1
+                        
+                        if any(pr.collidepoint(current_x, current_y) for pr in placed_rects):
+                            break
+                        path.append((current_x, current_y))
+            else:
+                # DRUNKARD WALK FOR DIRT/SAND (Organic pathways)
+                steps = 0
+                max_steps = w * 6
+                while steps < max_steps:
+                    steps += 1
+                    if not (0 <= current_x < w and 0 <= current_y < h): break
+                    
+                    # Stop organic paths if they hit a building
+                    if any(pr.collidepoint(current_x, current_y) for pr in placed_rects):
+                        break
+                        
+                    if layers['ground'][current_y][current_x] == tile_type and steps > 5: break 
+                    if layers['ground'][current_y][current_x] == getattr(self, 'water_tile', 'water_01'): break 
 
-                if math.hypot(target_x - current_x, target_y - current_y) < 2: break
+                    if math.hypot(target_x - current_x, target_y - current_y) < 2: break
 
-                moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                valid_moves = []
-                for dx, dy in moves:
-                    nx, ny = current_x + dx, current_y + dy
-                    if 0 <= nx < w and 0 <= ny < h:
-                        if layers['base'][ny][nx] == ' ' and layers['ground'][ny][nx] != getattr(self, 'water_tile', 'water_01'):
-                            valid_moves.append((dx, dy))
-                
-                if not valid_moves: break 
-                
-                scored_moves = []
-                for dx, dy in valid_moves:
-                    nx, ny = current_x + dx, current_y + dy
-                    dist = math.hypot(target_x - nx, target_y - ny)
-                    noise = random.uniform(-10.0, 10.0) 
-                    score = dist + noise
-                    scored_moves.append((score, dx, dy))
-                
-                scored_moves.sort(key=lambda x: x[0])
-                _, best_dx, best_dy = scored_moves[0]
-                current_x += best_dx; current_y += best_dy
-                path.append((current_x, current_y))
+                    moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                    valid_moves = []
+                    for dx, dy in moves:
+                        nx, ny = current_x + dx, current_y + dy
+                        if 0 <= nx < w and 0 <= ny < h:
+                            if layers['base'][ny][nx] == ' ' and layers['ground'][ny][nx] != getattr(self, 'water_tile', 'water_01'):
+                                valid_moves.append((dx, dy))
+                    
+                    if not valid_moves: break 
+                    
+                    scored_moves = []
+                    for dx, dy in valid_moves:
+                        nx, ny = current_x + dx, current_y + dy
+                        dist = math.hypot(target_x - nx, target_y - ny)
+                        noise = random.uniform(-10.0, 10.0) 
+                        score = dist + noise
+                        scored_moves.append((score, dx, dy))
+                    
+                    scored_moves.sort(key=lambda x: x[0])
+                    _, best_dx, best_dy = scored_moves[0]
+                    current_x += best_dx; current_y += best_dy
+                    path.append((current_x, current_y))
 
             for px, py in path:
-                # [UPDATED] Asphalt reduced to 3x3, Dirt/Sand is 4x4 minimum brush
                 brush_size = 1
                 extra_range = 1 if tile_type == road_tile else 2
                 for oy in range(-brush_size, brush_size + extra_range):
                     for ox in range(-brush_size, brush_size + extra_range):
                         gx_pos, gy_pos = px + ox, py + oy
                         if 0 <= gx_pos < w and 0 <= gy_pos < h:
+                            
+                            # 2. FINAL CHECK: Never let the asphalt brush bleed over an existing building's floor
+                            if any(pr.collidepoint(gx_pos, gy_pos) for pr in placed_rects):
+                                continue
+                                
                             if layers['base'][gy_pos][gx_pos] == ' ' and layers['ground'][gy_pos][gx_pos] != road_tile:
                                 if layers['ground'][gy_pos][gx_pos] != getattr(self, 'water_tile', 'water_01'):
                                     layers['ground'][gy_pos][gx_pos] = tile_type
@@ -255,21 +285,13 @@ class ProceduralGeneratorChunk:
         # Helper to intelligently map generic building types to requested L2 basements
         def get_l2_counterpart(tmpl_name, is_forest=False):
             potential_l2_names = []
-            
-            # Check direct L1->L2 naming
             if 'l1' in tmpl_name.lower():
                 potential_l2_names.append(tmpl_name.replace('L1', 'L2').replace('l1', 'l2'))
-                
-            # Check exact append (e.g. Building_1 -> Building_1_L2)
             potential_l2_names.append(f"{tmpl_name}_L2")
-            
-            # Check numbered variations (e.g. Building_1 -> Building_L2_1 or just Building_L2)
             parts = tmpl_name.rsplit('_', 1)
             if len(parts) == 2 and parts[1].isdigit():
                 potential_l2_names.append(f"{parts[0]}_L2_{parts[1]}")
                 potential_l2_names.append(f"{parts[0]}_L2")
-            
-            # Semantic fallback mapping matching specific requested L2 variants
             low = tmpl_name.lower()
             if is_forest:
                 potential_l2_names.append("Forest_L2")
@@ -288,30 +310,88 @@ class ProceduralGeneratorChunk:
                         return k
             return None
 
-        # 6. Place Buildings
-        placed_rects = [] 
+        # 6. Place Buildings (TETRIS METHOD)
+        #placed_rects = [] 
         
-        def is_area_free(tx, ty, tw, th, margin=0, ignore_mask=False):
-            t_rect = pygame.Rect(tx, ty, tw, th)
+        def get_tetris_candidates(tw, th, gap=1):
+            """Calculates perfectly flush corner and center coordinates to block buildings together."""
+            candidates = []
+            if not placed_rects:
+                # Start the first buildings tightly around the central crossroad hub
+                candidates.extend([
+                    (cx + 3, cy + 3),
+                    (cx - tw - 3, cy - th - 3),
+                    (cx + 3, cy - th - 3),
+                    (cx - tw - 3, cy + 3)
+                ])
+                return candidates
+            
             for pr in placed_rects:
-                if t_rect.inflate(margin*2, margin*2).colliderect(pr): return False
+                # Calculate exactly flush aligned locations to mimic blocks
+                # Right side
+                candidates.extend([
+                    (pr.x + pr.width + gap, pr.y), # Top flush
+                    (pr.x + pr.width + gap, pr.y + pr.height - th), # Bottom flush
+                    (pr.x + pr.width + gap, pr.y + (pr.height - th) // 2) # Center flush
+                ])
+                # Left side
+                candidates.extend([
+                    (pr.x - tw - gap, pr.y), 
+                    (pr.x - tw - gap, pr.y + pr.height - th), 
+                    (pr.x - tw - gap, pr.y + (pr.height - th) // 2)
+                ])
+                # Bottom
+                candidates.extend([
+                    (pr.x, pr.y + pr.height + gap), 
+                    (pr.x + pr.width - tw, pr.y + pr.height + gap),
+                    (pr.x + (pr.width - tw) // 2, pr.y + pr.height + gap)
+                ])
+                # Top
+                candidates.extend([
+                    (pr.x, pr.y - th - gap), 
+                    (pr.x + pr.width - tw, pr.y - th - gap),
+                    (pr.x + (pr.width - tw) // 2, pr.y - th - gap)
+                ])
+                    
+            # Sort strictly by distance to the central hub to grow outward seamlessly
+            candidates.sort(key=lambda c: (c[0] + tw/2.0 - cx)**2 + (c[1] + th/2.0 - cy)**2)
+            
+            # Remove duplicates for efficiency
+            seen = set()
+            unique_candidates = []
+            for c in candidates:
+                if c not in seen:
+                    seen.add(c)
+                    unique_candidates.append(c)
+            return unique_candidates
+
+        def is_area_free(tx, ty, tw, th, gap=1, ignore_mask=False, is_center_override=False):
             if tx < 2 or tx + tw > w - 2 or ty < 2 or ty + th > h - 2: return False
+            
+            t_rect = pygame.Rect(tx, ty, tw, th)
+            
+            # Central hub protector
+            if not is_center_override:
+                hub_rect = pygame.Rect(cx-2, cy-2, 5, 5)
+                if t_rect.colliderect(hub_rect): return False
+            
+            # 1. Footprint Collision: Ensure the minimum gap between any two building structures is maintained.
+            for pr in placed_rects:
+                if t_rect.inflate(gap*2, gap*2).colliderect(pr): 
+                    return False
+                    
+            # 2. Hard mask checks (Ignore asphalt overlap so they can seamlessly merge boundaries)
             if not ignore_mask:
-                mx1, my1 = max(0, tx - margin), max(0, ty - margin)
-                mx2, my2 = min(w, tx + tw + margin), min(h, ty + th + margin)
-                for ry in range(my1, my2):
-                    for rx in range(mx1, mx2):
-                        if 0 <= ry < h and 0 <= rx < w:
-                            if occupied_mask[ry][rx] == 1: 
-                                return False
-            else:
-                mx1, my1 = tx, ty
-                mx2, my2 = tx + tw, ty + th
-                for ry in range(my1, my2):
-                    for rx in range(mx1, mx2):
-                         if 0 <= ry < h and 0 <= rx < w:
-                             if layers['ground'][ry][rx] == getattr(self, 'water_tile', 'water_01'):
-                                 return False
+                for ry in range(ty, ty+th):
+                    for rx in range(tx, tx+tw):
+                        ground_tile = layers['ground'][ry][rx]
+                        if ground_tile == getattr(self, 'water_tile', 'water_01'): return False
+                        if layers['base'][ry][rx] == '@': return False
+                        
+                        # Only reject if occupied by something that IS NOT asphalt.
+                        # This allows the building footprints to freely snap onto each other's asphalt lots.
+                        if occupied_mask[ry][rx] == 1 and ground_tile != road_tile: 
+                            return False
             return True
 
         if allow_buildings and assigned_templates:
@@ -328,106 +408,41 @@ class ProceduralGeneratorChunk:
                 tmpl = self.templates[tmpl_name]
                 tw, th = tmpl['width'], tmpl['height']
                 is_building2 = "building2" in tmpl_name.lower()
-                is_military_base = "military_base" in tmpl_name.lower()
+                is_cave = 'cave' in tmpl_name.lower()
+                # Ensure we catch all variants of military templates to force override
+                is_military_base = "military" in tmpl_name.lower() or "heli" in tmpl_name.lower()
                 
                 placed = False
                 
-                # --- NEW LOGIC: Force Military Base to Center ---
                 if is_military_base:
                     tx = cx - (tw // 2)
                     ty = cy - (th // 2)
-                    # Use ignore_mask=True so we overwrite the central crossroad perfectly
-                    if is_area_free(tx, ty, tw, th, margin=0, ignore_mask=True):
-                        # Clear center crossroad mask so placement doesn't conflict
-                        for cy_clr in range(max(0, ty), min(h, ty + th)):
-                            for cx_clr in range(max(0, tx), min(w, tx + tw)):
-                                occupied_mask[cy_clr][cx_clr] = 0
-                        # Pass draw_secondary_maze_road to finalizing to draw organic paths
+                    # Ignore mask AND bypass center protector so Military reliably spawns exactly in center
+                    if is_area_free(tx, ty, tw, th, gap=1, ignore_mask=True, is_center_override=True):
                         self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, False, sand_tile, draw_secondary_maze_road)
                         placed = True
-                # ------------------------------------------------
 
-                if not placed:
-                    # NEW LOGIC: Try to cluster urban buildings side by side to form dense neighborhoods
-                    is_cave = 'cave' in tmpl_name.lower()
-                    if not is_cave and placed_rects:
-                        candidates = []
-                        gap = 1 # 1 tile gap aligns asphalt lots so they merge seamlessly
-                        for pr in placed_rects:
-                            candidates.extend([
-                                (pr.x - tw - gap, pr.y), # Left, top-aligned
-                                (pr.x + pr.width + gap, pr.y), # Right, top-aligned
-                                (pr.x, pr.y - th - gap), # Top, left-aligned
-                                (pr.x, pr.y + pr.height + gap), # Bottom, left-aligned
-                                (pr.x - tw - gap, pr.y + pr.height - th), # Left, bottom-aligned
-                                (pr.x + pr.width + gap, pr.y + pr.height - th), # Right, bottom-aligned
-                                (pr.x + pr.width - tw, pr.y - th - gap), # Top, right-aligned
-                                (pr.x + pr.width - tw, pr.y + pr.height + gap), # Bottom, right-aligned
-                            ])
-                        
-                        # Sort by distance to chunk center to keep the neighborhood centered and compact
-                        candidates.sort(key=lambda c: (c[0] + tw//2 - cx)**2 + (c[1] + th//2 - cy)**2 + random.randint(-15, 15))
-                        
-                        for tx, ty in candidates:
-                            # Use margin=1 to ensure standard padding, but gap=1 exactly allows asphalt bounds to bridge together
-                            if is_area_free(tx, ty, tw, th, margin=1):
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
-                                placed = True
-                                break
-
-                if not placed:
-                    for _ in range(100): 
-                        if is_building2:
-                            axis = random.choice(['vert', 'horz'])
-                            road_radius = 2 
-                            if axis == 'vert':
-                                side = random.choice([-1, 1])
-                                if side == -1: tx = cx - road_radius - 1 - tw
-                                else: tx = cx + road_radius + 1 + 1
-                                ty = random.randint(border_w + 3, h - border_w - th - 3)
-                            else:
-                                side = random.choice([-1, 1])
-                                if side == -1: ty = cy - road_radius - 1 - th
-                                else: ty = cy + road_radius + 1 + 1
-                                tx = random.randint(border_w + 3, w - border_w - tw - 3)
-                        else:
-                            safe_pad = 3 
-                            if w - safe_pad*2 < tw or h - safe_pad*2 < th: break
-                            tx = random.randint(safe_pad, w - safe_pad - tw)
-                            ty = random.randint(safe_pad, h - safe_pad - th)
-                        
-                        if is_area_free(tx, ty, tw, th, margin=1):
+                if not placed and not is_cave:
+                    # 'gap=1' enforces exactly 1 tile of space between building floors.
+                    # Because finalize_placement adds exactly 1 tile of asphalt around the floors, 
+                    # they will exactly share the asphalt border, giving the "glued together" town aesthetic.
+                    candidates = get_tetris_candidates(tw, th, gap=1)
+                    
+                    for tx, ty in candidates:
+                        if is_area_free(tx, ty, tw, th, gap=1):
                             self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
                             placed = True
                             break
-                
+
                 if not placed:
-                    stride = 2 
-                    for sy in range(border_w + 3, h - border_w - th - 3, stride):
-                        if placed: break
-                        for sx in range(border_w + 3, w - border_w - tw - 3, stride):
-                            if is_area_free(sx, sy, tw, th, margin=1):
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, sx, sy, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
-                                placed = True
-                                break
-                
-                if not placed:
-                    for _ in range(50):
-                        tx = random.randint(5, w - 5 - tw)
-                        ty = random.randint(5, h - 5 - th)
-                        hub_rect = pygame.Rect(cx-3, cy-3, 6, 6)
-                        new_rect = pygame.Rect(tx, ty, tw, th)
-                        if not hub_rect.colliderect(new_rect):
-                            if is_area_free(tx, ty, tw, th, margin=0, ignore_mask=True):
-                                for cy_clr in range(ty, ty + th):
-                                    for cx_clr in range(tx, tx + tw):
-                                        if 0 <= cy_clr < h and 0 <= cx_clr < w:
-                                            layers['base'][cy_clr][cx_clr] = ' ' 
-                                            layers['ground'][cy_clr][cx_clr] = sand_tile 
-                                            occupied_mask[cy_clr][cx_clr] = 0 
-                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
-                                placed = True
-                                break
+                    # Random fallback purely for caves or if Tetris physically hits a border wall
+                    for _ in range(100): 
+                        tx = random.randint(3, w - 3 - tw)
+                        ty = random.randint(3, h - 3 - th)
+                        if is_area_free(tx, ty, tw, th, gap=1):
+                            self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
+                            placed = True
+                            break
                 
                 if placed:
                     found_l2_key = get_l2_counterpart(tmpl_name, is_forest=False)
@@ -451,7 +466,7 @@ class ProceduralGeneratorChunk:
                 tx = random.randint(2, w - tw - 2)
                 ty = random.randint(2, h - th - 2)
                 
-                if is_area_free(tx, ty, tw, th, margin=0):
+                if is_area_free(tx, ty, tw, th, gap=1):
                     self._blit_template(layers, tmpl, tx, ty, w, h)
                     
                     found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
@@ -632,16 +647,17 @@ class ProceduralGeneratorChunk:
         road_tile = 'asphalt_01'
         
         if not is_cave:
-            lot_m = 1  # [UPDATED] Reduced asphalt lot size around buildings slightly
+            lot_m = 1
             # 1. Draw the asphalt padding (lot) around the building
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
-                    if 1 <= rx < w-1 and 1 <= ry < h-1 and layers['ground'][ry][rx] == 'bg_grass':
-                        layers['ground'][ry][rx] = road_tile
-                        occupied_mask[ry][rx] = 1
+                    if 1 <= rx < w-1 and 1 <= ry < h-1:
+                        # Only apply asphalt if we're not running into water 
+                        if layers['ground'][ry][rx] != getattr(self, 'water_tile', 'water_01'):
+                            layers['ground'][ry][rx] = road_tile
+                            occupied_mask[ry][rx] = 1
             
             bx, by = tx + tw // 2, ty + th // 2
-
             # 2. Draw the organic connector to the center crossroad using the passed method
             draw_secondary_maze_road(bx, by, cx, cy, road_tile)
         

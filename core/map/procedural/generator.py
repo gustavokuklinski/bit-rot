@@ -45,11 +45,11 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
         # --- GLOBAL BUILDING LIMITS (MAX ON FULL MAP) ---
         self.global_building_limits = {
-            'Warehouse': MAP_CHUNKS * 2,
+            'Warehouse': MAP_CHUNKS * 5,
             'Stores': MAP_CHUNKS * 2,
-            'Shed': MAP_CHUNKS * 2,
-            'Building': MAP_CHUNKS * 3,
-            'Petrol': MAP_CHUNKS * 3,
+            'Shed': MAP_CHUNKS * 5,
+            'Building': MAP_CHUNKS * 10,
+            'Petrol': MAP_CHUNKS * 5,
             'Heli': 1,
             'Military': 1
         }

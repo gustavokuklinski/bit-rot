@@ -262,14 +262,22 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.saved_detection_radius = None
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
+        # Get dynamic stats from your progression.xml
+        tireness_drain = abs(PROGRESSION_CONFIG.get_stat('tireness', 'night_decay', -0.002))
+        stamina_regen = PROGRESSION_CONFIG.get_stat('stamina', 'regen_base', 0.02)
+        tireness_recovery = PROGRESSION_CONFIG.get_stat('tireness', 'day_recovery', 0.001)
+
         if not self.is_sleeping and not is_active_resting:
-            self.tireness = min(self.max_tireness, self.tireness - 0.002 * game.dt_mult)
+            # Apply stamina penalty to tireness if stamina is depleted
+            stamina_penalty = abs(PROGRESSION_CONFIG.get_stat('tireness', 'stamina_penalty', -0.005)) if self.stamina <= 0 else 0
+            total_drain = (tireness_drain + stamina_penalty) * game.dt_mult
+            self.tireness = max(0.0, self.tireness - total_drain)
 
         if not self.is_sleeping and is_active_resting:
             if self.stamina < self.max_stamina:
-                self.stamina = min(self.max_stamina, self.stamina + 0.5 * game.dt_mult)
+                self.stamina = min(self.max_stamina, self.stamina + stamina_regen * game.dt_mult)
             if self.tireness < self.max_tireness:
-                self.tireness = min(self.max_tireness, self.tireness + 0.03 * game.dt_mult)
+                self.tireness = min(self.max_tireness, self.tireness + tireness_recovery * game.dt_mult)
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
@@ -338,37 +346,29 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             for part in self.body_parts.values():
                 part['value'] = max(0.0, part['value'] - damage_this_frame)
             self.update_global_health()
-            
-        # Do not regenerate body damage if starving, dehydrated, or infected!
-        # can_regen = not (is_starving or is_dehydrated or is_infected)
-        
-        #if can_regen:
-        #    healed_any = False
-        #    for part, data in self.body_parts.items():
-        #        if data['value'] < 100.0:
-        #            rate = PROGRESSION_CONFIG.healing_rates.get(part, 0.005) * multiplier
-        #            data['value'] = min(100.0, data['value'] + rate)
-        #            healed_any = True
-        #    if healed_any:
-        #        self.update_global_health()
 
         if getattr(game, 'is_fast_forwarding', False):
              dt = 1.0 / 60.0
              decay_boost = dt * (game.fast_forward_speed - 1.0)
              self.last_decay_time -= decay_boost
 
-        if current_time - self.last_decay_time >= core.data.config.DECAY_RATE_SECONDS:
+        decay_rate = PROGRESSION_CONFIG.get_stat('metabolism', 'decay_rate_seconds', 5.0)
+        
+        # FIXED TYPO: Removed the extra "- current_time" so the math evaluates correctly in seconds
+        if current_time - self.last_decay_time >= decay_rate:
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
             food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
             
-            water_decay = max(0, core.data.config.WATER_DECAY_AMOUNT * water_mod)
-            food_decay = max(0, core.data.config.FOOD_DECAY_AMOUNT * food_mod)
+            base_water_decay = PROGRESSION_CONFIG.get_stat('water', 'decay_amount', 0.2)
+            base_food_decay = PROGRESSION_CONFIG.get_stat('food', 'decay_amount', 0.1)
+            
+            water_decay = max(0, base_water_decay * water_mod)
+            food_decay = max(0, base_food_decay * food_mod)
             
             self.water = max(0, self.water - water_decay)
             self.food = max(0, self.food - food_decay)
 
             self.last_decay_time = current_time
-            
             
 
             if AUTO_DRINK and self.water <= core.data.config.AUTO_DRINK_THRESHOLD:

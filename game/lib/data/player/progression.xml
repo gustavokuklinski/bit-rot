@@ -41,10 +41,9 @@
 
     <stats>
         <stat id="stamina">
-            <param name="regen_base" value="0.01" />
-            <param name="run_cost_base" value="0.02" />
+            <param name="regen_base" value="0.02" />
+            <param name="run_cost_base" value="0.03" />
         </stat>
-
         <stat id="tireness">
             <param name="night_decay" value="-0.002" />
             <param name="day_recovery" value="0.001" />
@@ -52,8 +51,20 @@
             <param name="run_penalty" value="-0.005" />
         </stat>
 
+        <stat id="metabolism">
+            <param name="decay_rate_seconds" value="5.0" />
+        </stat>
+
+        <stat id="food">
+            <param name="decay_amount" value="0.1" />
+        </stat>
+
+        <stat id="water">
+            <param name="decay_amount" value="0.2" />
+        </stat>
+        
         <stat id="anxiety">
-            <param name="horde_gain" value="0.02" />
+            <param name="horde_gain" value="0.005" />
             <param name="passive_gain" value="0.002" />
         </stat>
 

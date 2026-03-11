@@ -58,7 +58,8 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL])
+    # Fixed typo and added right-click (mouse_buttons[2]) detection for panning
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
 
     target_pan_x = 0
     target_pan_y = 0
@@ -70,11 +71,14 @@ def draw_game(game):
         game.player.aim_angle = math.atan2(-dy, dx)
 
     if is_aiming and game.player:
-        edge_margin = 80 
-        at_left_edge = mouse_pos[0] < edge_margin
-        at_right_edge = mouse_pos[0] > GAME_WIDTH - edge_margin
-        at_top_edge = mouse_pos[1] < edge_margin
-        at_bottom_edge = mouse_pos[1] > GAME_HEIGHT - edge_margin
+        # Panning starts when the mouse is in the outer 5% of the screen (95% threshold)
+        edge_margin_x = GAME_WIDTH * 0.02
+        edge_margin_y = GAME_HEIGHT * 0.02
+        
+        at_left_edge = mouse_pos[0] < edge_margin_x
+        at_right_edge = mouse_pos[0] > GAME_WIDTH - edge_margin_x
+        at_top_edge = mouse_pos[1] < edge_margin_y
+        at_bottom_edge = mouse_pos[1] > GAME_HEIGHT - edge_margin_y
 
         if at_left_edge or at_right_edge or at_top_edge or at_bottom_edge:
             pan_distance = min(view_w, view_h) * 0.5
