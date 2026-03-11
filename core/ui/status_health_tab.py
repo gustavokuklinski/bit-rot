@@ -1,4 +1,4 @@
-# core/ui/health_tab.py
+# core/ui/status_health_tab.py
 
 import pygame
 from core.data.config import *
@@ -40,33 +40,84 @@ def draw_health_tab(surface, player, modal, assets):
     y_offset = start_y
     
     # Title
-    section_title = font.render(f"{player.name}", True, WHITE)
+    section_title = font.render(f"{player.name} Condition", True, WHITE)
     surface.blit(section_title, (col1_x, y_offset))
-    y_offset += 150
+    y_offset += 140 
     
-    for part, data in player.body_parts.items():
-        val = data.get('value', 100.0)
-        max_val = 100.0
+    # Icons loading
+    stat_icons = {}
+    icon_files = {
+        "HP": SPRITE_PATH + "ui/hp.png",
+        "STM": SPRITE_PATH + "ui/stamina.png",
+        "TIR": SPRITE_PATH + "ui/tireness.png",
+        "WGT": SPRITE_PATH + "ui/weight.png",
+        "DEF": SPRITE_PATH + "ui/defence.png"
+    }
+    
+    # Full names mapping for tooltip
+    stat_names = {
+        "HP": "Health",
+        "STM": "Stamina",
+        "TIR": "Tiredness",
+        "WGT": "Weight",
+        "DEF": "Defence"
+    }
+
+    for k, path in icon_files.items():
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            stat_icons[k] = pygame.transform.scale(img, (24, 24))
+        except Exception:
+            stat_icons[k] = None
+
+    stats = [
+        ("HP", player.health, player.max_health, GRAY),
+        ("STM", player.stamina, player.max_stamina, GRAY),
+        ("TIR", player.tireness, 100, GRAY),
+        ("WGT", player.current_weight, player.max_carry_weight, GRAY),
+        ("DEF", player.get_total_defence(), 5.0, GRAY)
+    ]
+    
+    for i, (name, value, max_value, color) in enumerate(stats):
+        y_pos = y_offset + i * 28
         
-        part_name = font_notification.render(part.capitalize(), True, WHITE)
-        # Adjusted X offset slightly since there are no icons to the left
-        surface.blit(part_name, (col1_x + 5, y_offset)) 
+        icon = stat_icons.get(name)
+        if icon:
+            surface.blit(icon, (col1_x, y_pos))
+            label_x = col1_x + 28
+        else:
+            text = font_notification.render(f"{name}:", True, WHITE)
+            surface.blit(text, (col1_x, y_pos))
+            label_x = col1_x + 40
+            
+        bar_x = label_x + 10
         
-        bar_w = 100
-        fill_w = int(bar_w * (val / max_val))
+        ratio = value / max_value if max_value > 0 else 0
+        draw_color = color
         
-        bar_x_pos = col1_x + 80 
+        if name == "WGT" and ratio > 1.0:
+            draw_color = RED 
+            
+        max_bar_width = int(col_width + 55)
+        bar_width = int(max_bar_width * min(1.0, ratio))
         
-        bg_rect = pygame.Rect(bar_x_pos - 1, y_offset + 2, bar_w + 2, 10)
+        bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
+        border_rect = pygame.Rect(bar_x, y_pos + 5, max_bar_width, 10)
         
-        pygame.draw.rect(surface, WHITE, bg_rect)
-        pygame.draw.rect(surface, (40, 40, 40), (bar_x_pos, y_offset + 3, bar_w, 8))
-        pygame.draw.rect(surface, GRAY, (bar_x_pos, y_offset + 3, fill_w, 8))
-        
-        if bg_rect.collidepoint(mouse_pos):
-             active_tooltip_item = StatusTooltipItem(f"{part.capitalize()}: {int(val)}%")
-        
-        y_offset += 20
+        pygame.draw.rect(surface, draw_color, bar_rect)
+        pygame.draw.rect(surface, WHITE, border_rect, 1)
+
+        # Hover Logic
+        if border_rect.collidepoint(mouse_pos):
+             full_name = stat_names.get(name, name)
+             if name == "WGT":
+                 val_str = f"{value:.2f} / {max_value:.2f}"
+             elif name == "DEF":
+                 val_str = f"{(value / 5.0) * 100:.0f}%"
+             else:
+                 val_str = f"{int(value)}%"
+                 
+             active_tooltip_item = StatusTooltipItem(f"{full_name}: {val_str}")
 
     # --- Column 2: Visuals & Attributes ---
     

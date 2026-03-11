@@ -4,54 +4,7 @@ import random
 from core.messages import display_message
 
 class PlayerStats:
-    def update_global_health(self):
-        if not self.body_parts:
-            return
-        total_value = sum(part['value'] for part in self.body_parts.values())
-        max_possible = 100.0 * len(self.body_parts)
-        self.health = (total_value / max_possible) * 100.0
 
-    def get_vulnerable_part(self):
-        slot_map = {
-            'hand': 'hands',
-            'facial': 'facial_hair', 
-            'utility': 'util'
-        } 
-        candidates = []
-        lowest_def = float('inf')
-
-        for part, data in self.body_parts.items():
-            defence = data.get('defence', 0.0)
-            c_slot = slot_map.get(part, part)
-            item = self.clothes.get(c_slot)
-            if item and hasattr(item, 'defence'):
-                defence += item.defence
-            
-            if defence < lowest_def:
-                lowest_def = defence
-                candidates = [part]
-            elif defence == lowest_def:
-                candidates.append(part)
-        
-        return random.choice(candidates) if candidates else 'body'
-
-    def take_damage_to_part(self, part, amount):
-        if part in self.body_parts:
-            self.body_parts[part]['value'] = max(0.0, self.body_parts[part]['value'] - amount)
-            self.update_global_health()
-
-    def get_most_damaged_part(self):
-        candidates = []
-        lowest_val = 101.0
-        for part, data in self.body_parts.items():
-            if data['value'] < lowest_val:
-                lowest_val = data['value']
-                candidates = [part]
-            elif data['value'] == lowest_val:
-                candidates.append(part)
-        if lowest_val >= 100.0:
-            return None
-        return random.choice(candidates)
 
     def get_total_defence(self):
         total_defence = 0
@@ -107,8 +60,7 @@ class PlayerStats:
         final_damage_taken = max(0, base_damage * damage_modifier)
         final_infection_taken = max(0, base_infection * infection_modifier)
         
-        target_part = random.choice(list(self.body_parts.keys()))
-        self.take_damage_to_part(target_part, final_damage_taken)
+        self.health = max(0.0, self.health - final_damage_taken)
 
         if final_infection_taken > 0:
             self.infection = min(100, self.infection + final_infection_taken)

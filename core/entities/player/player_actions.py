@@ -127,25 +127,13 @@ class PlayerActions:
                     
                     for target_stat in targets:
                         if eff_type == 'restore' and target_stat == 'health':
-                             part = target_part.lower() if target_part else self.get_most_damaged_part()
-                             
-                             if part and part in self.body_parts:
-                                 current_part_val = self.body_parts[part]['value']
-                                 if current_part_val >= 100.0:
-                                     display_message_player(f"{part.capitalize()} is already healthy.")
-                                     consumed = False
-                                 else:
-                                     new_part_val = min(100.0, current_part_val + val)
-                                     self.body_parts[part]['value'] = new_part_val
-                                     self.update_global_health()
-                                     display_message_player(f"Used {item.name}. Restored {val} on {part.capitalize()}.")
-                                     consumed = True
-                             elif part:
-                                 display_message_player(f"Cannot heal {part}.")
+                             if self.health >= self.max_health:
+                                 display_message_player(f"Health is already full.")
                                  consumed = False
                              else:
-                                 display_message_player(f"Health is full.")
-                                 consumed = False
+                                 self.health = min(self.max_health, self.health + val)
+                                 display_message_player(f"Used {item.name}. Restored {val} Health.")
+                                 consumed = True
                                  
                         elif hasattr(self, target_stat):
                             current_val = getattr(self, target_stat)
@@ -380,8 +368,7 @@ class PlayerActions:
                 pass
             elif item.item_type == 'consumable_medication' or 'Medkit' in item.name or 'Bandage' in item.name:
                 options.append('Use')
-                for part, data in self.body_parts.items():
-                    if data['value'] < 100.0: options.append(f"Bandage {part.capitalize()}")
+                
             else: options.append('Use')
             
             # CHECK ALLOW BELT FOR CONSUMABLES

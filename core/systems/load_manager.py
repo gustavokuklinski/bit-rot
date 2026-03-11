@@ -343,10 +343,8 @@ def load_game(game, save_folder_name):
             for key, value in prog_data.items():
                 if key in game.player.progression.attributes:
                         game.player.progression.attributes[key] = value
-        if 'body_parts' in player_data:
-            game.player.body_parts = player_data['body_parts']
-            if hasattr(game.player, 'update_global_health'):
-                game.player.update_global_health()
+
+
         game.player.x = player_data['x']
         game.player.y = player_data['y']
         game.player.rect.topleft = (game.player.x, game.player.y)

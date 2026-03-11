@@ -38,22 +38,15 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         # Stats
         self.name = data.get('name', "Player")
-        self.body_parts = data.get('body_parts', {
-            'head': {'value': 100.0, 'defence': 0.0},
-            'legs': {'value': 100.0, 'defence': 0.0},
-            'feet': {'value': 100.0, 'defence': 0.0},
-            'body': {'value': 100.0, 'defence': 0.0},
-            'hand': {'value': 100.0, 'defence': 0.0},
-            'arms': {'value': 100.0, 'defence': 0.0}
-        })
+        
         
         self.attributes = data.get('attributes', {
             'strength': 0.0, 'fitness': 0.0, 'melee': 0.0, 
-            'ranged': 0.0, 'lucky': 0.0, 'agility': 0.0
+            'ranged': 0.0, 'lucky': 0.0, 'agility': 0.0, 'intelligence': 0.0
         })
 
         self.max_health = stats.get('health', 100.0)
-        self.update_global_health()
+        self.health = self.max_health
         
         self.max_tireness = stats.get('tireness', 100.0)
         self.tireness = stats.get('tireness', self.max_tireness)
@@ -63,6 +56,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.food = stats.get('food', 100.0)
         self.infection = stats.get('infection', 0.0)
         self.anxiety = stats.get('anxiety', 0.0)
+        self.intelligence = stats.get('intelligence', 0.0)
 
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
@@ -330,8 +324,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
             self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier * game.dt_mult))
             
-        is_starving = self.food <= 50.0
-        is_dehydrated = self.water <= 70.0
+        is_starving = self.food <= 20.0
+        is_dehydrated = self.water <= 20.0
         is_infected = self.infection > 0
         
         damage_this_frame = 0.0
@@ -343,9 +337,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             damage_this_frame += 0.005 * (self.infection / 100.0) * multiplier * game.dt_mult
             
         if damage_this_frame > 0:
-            for part in self.body_parts.values():
-                part['value'] = max(0.0, part['value'] - damage_this_frame)
-            self.update_global_health()
+            self.health = max(0.0, self.health - damage_this_frame)
 
         if getattr(game, 'is_fast_forwarding', False):
              dt = 1.0 / 60.0
@@ -383,10 +375,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         if overweight_ratio > 1.0:
              loss = 0.01 * (overweight_ratio - 1.0) 
-             for part in self.body_parts.values():
-                 part['value'] = max(0.0, part['value'] - loss)
-             
-             self.update_global_health()
+             self.health = max(0.0, self.health - loss)
              
              if self.is_running and is_moving:
                   self.progression.add_xp(self, 'strength', 0.001)
@@ -430,16 +419,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             if actual_rain_infection > 0:
                 self.infection = min(100.0, self.infection + actual_rain_infection)
 
-        # 3. Barefoot Damage
-        if is_moving and self.vehicle is None:
-            # Check if player is not wearing anything on feet
-            if not self.clothes.get('feet'):
-                foot_dmg = (0.02 if self.is_running else 0.005) * game.dt_mult
-                self.take_damage_to_part('feet', foot_dmg)
-                
-                # Show message rarely
-                if random.random() < 0.002:
-                    display_message_player("Your bare feet are bleeding!")
+        
 
 
         def msg(text):

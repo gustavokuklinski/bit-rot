@@ -26,15 +26,6 @@
         <intelligence value="0.0" />
     </attributes>
 
-    <body>
-        <head value="100.0" defence="0.0" />
-        <legs value="100.0" defence="0.0" />
-        <feet value="100.0" defence="0.0" />
-        <body value="100.0" defence="0.0" />
-        <hand value="100.0" defence="0.0" />
-        <arms value="100.0" defence="0.0" />
-    </body>
-
     <initial_loot>
         <item name="Wallet" chance="1" />
         <item name="Keyring Default" chance="1" />

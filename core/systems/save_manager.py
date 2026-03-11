@@ -61,7 +61,7 @@ def save_game(game):
                 "infection": game.player.infection,
                 "anxiety": game.player.anxiety
             },
-            "body_parts": game.player.body_parts,
+
             "attributes": attributes_base,
             "progression": progression_data,
             "traits": game.player.traits,

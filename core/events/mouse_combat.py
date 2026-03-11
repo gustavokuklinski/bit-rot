@@ -150,14 +150,7 @@ def handle_attack(game, mouse_pos):
                      attack_range = weapon.reach * TILE_SIZE
 
                 # --- UNARMED COMBAT: Check if player can deal damage ---
-                can_deal_damage = True
-                hand_part = game.player.body_parts.get('hand')
-                feet_part = game.player.body_parts.get('feet')
-                
-                if weapon is None:
-                    # Both hands and feet at 0 - can only push
-                    if hand_part and hand_part['value'] <= 0 and feet_part and feet_part['value'] <= 0:
-                        can_deal_damage = False
+                can_deal_damage = game.player.stamina > 0
 
                 # --- ZOMBIE COLLISION ---
                 for zombie in game.zombies:
@@ -191,23 +184,8 @@ def handle_attack(game, mouse_pos):
 
                             # Unarmed self-damage logic
                             if weapon is None and can_deal_damage:
-                                # Determine which part to hurt
-                                hurt_part = None
-                                if hand_part and hand_part['value'] > 0:
-                                    # Check if feet has clothing
-                                    feet_cloth = game.player.clothes.get('feet')
-                                    if feet_cloth is None and random.random() < 0.3:
-                                        hurt_part = 'feet'
-                                    else:
-                                        hurt_part = 'hand'
-                                elif feet_part and feet_part['value'] > 0:
-                                    hurt_part = 'feet'
-                                elif hand_part and hand_part['value'] > 0:
-                                    hurt_part = 'hand'
-                                
-                                if hurt_part:
-                                    self_damage = random.randint(1, 3)
-                                    game.player.take_damage_to_part(hurt_part, self_damage)
+                                self_damage = random.randint(1, 3)
+                                game.player.stamina = max(0.0, game.player.stamina - self_damage)
 
                             hit_something = True
                             break
@@ -260,21 +238,8 @@ def handle_attack(game, mouse_pos):
 
                                 # Unarmed self-damage logic
                                 if weapon is None and can_deal_damage:
-                                    hurt_part = None
-                                    if hand_part and hand_part['value'] > 0:
-                                        feet_cloth = game.player.clothes.get('feet')
-                                        if feet_cloth is None and random.random() < 0.3:
-                                            hurt_part = 'feet'
-                                        else:
-                                            hurt_part = 'hand'
-                                    elif feet_part and feet_part['value'] > 0:
-                                        hurt_part = 'feet'
-                                    elif hand_part and hand_part['value'] > 0:
-                                        hurt_part = 'hand'
-                                    
-                                    if hurt_part:
-                                        self_damage = random.randint(1, 3)
-                                        game.player.take_damage_to_part(hurt_part, self_damage)
+                                    self_damage = random.randint(1, 3)
+                                    game.player.stamina = max(0.0, game.player.stamina - self_damage)
 
                                 hit_something = True
                                 break
@@ -320,21 +285,8 @@ def handle_attack(game, mouse_pos):
 
                                     # Unarmed self-damage logic
                                     if weapon is None and can_deal_damage:
-                                        hurt_part = None
-                                        if hand_part and hand_part['value'] > 0:
-                                            feet_cloth = game.player.clothes.get('feet')
-                                            if feet_cloth is None and random.random() < 0.3:
-                                                hurt_part = 'feet'
-                                            else:
-                                                hurt_part = 'hand'
-                                        elif feet_part and feet_part['value'] > 0:
-                                            hurt_part = 'feet'
-                                        elif hand_part and hand_part['value'] > 0:
-                                            hurt_part = 'hand'
-                                        
-                                        if hurt_part:
-                                            self_damage = random.randint(1, 3)
-                                            game.player.take_damage_to_part(hurt_part, self_damage)
+                                        self_damage = random.randint(1, 3)
+                                        game.player.stamina = max(0.0, game.player.stamina - self_damage)
 
                                     hit_something = True
                                     break
@@ -359,25 +311,21 @@ def handle_attack(game, mouse_pos):
 
                              if dist <= TILE_SIZE * 2:
                                  if weapon is None:
-                                     # Check if player can hit tiles
                                      if not can_deal_damage:
-                                         display_message(game, "Your hands and feet are too injured to hit this!")
                                          hit_something = True
                                          break
-                                     hand_part = game.player.body_parts.get('hand')
-                                     if hand_part and hand_part['value'] <= 10:
-                                         display_message(game, "Your hands are too injured to hit this!")
-                                         hit_something = True
-                                         break
-                                     else:
-                                         self_damage = random.randint(1, 2)
-                                         game.player.take_damage_to_part('hand', self_damage)
+                                     self_damage = random.randint(1, 2)
+                                     game.player.stamina = max(0.0, game.player.stamina - self_damage)
 
                                  damage = game.player.get_attack_damage()
                                  result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
+                                 
                                  if result:
                                      hit_something = True
                                      target_found = True
+                                     # Drain extra stamina when successfully hitting/breaking an object
+                                     if game.player.stamina > 0:
+                                         game.player.stamina = max(0.0, game.player.stamina - 0.5)
                                      break
 
                 if not hit_something: print("Swung and missed!")
