@@ -658,13 +658,13 @@ def draw_game(game):
                     if dist < TILE_SIZE * 1.5:
                         tile_rect = pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                         if is_stair:
-                            interactables.append({'rect': tile_rect, 'tip': 'Press E to go Down/Up'})
+                            interactables.append({'rect': tile_rect, 'tip': 'Press E\nto go Down/Up'})
                         else:
                             name = t.get('name', '').lower()
                             if 'window' in name:
-                                interactables.append({'rect': tile_rect, 'tip': 'Press E to Open/Close'})
+                                interactables.append({'rect': tile_rect, 'tip': 'Press E or RMB\nto Open/Close'})
                             else:
-                                interactables.append({'rect': tile_rect, 'tip': 'Press E to Open/Close'})
+                                interactables.append({'rect': tile_rect, 'tip': 'Press E or RMB\nto Open/Close'})
                                 
         # Draw the '!' marks
         mouse_pos = game._get_scaled_mouse_pos()

@@ -141,7 +141,10 @@ def handle_context_menu_click(game, mouse_pos):
             if option == 'Sleep':
                 print("You go to sleep...")
                 game.player.is_sleeping = True
-            
+            if option in ['Open door/window', 'Close door/window']:
+                if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
+                    game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
+                clicked_on_menu = True
             if option == 'Toggle Light':
                 if source == 'light_source':
                     item['active'] = not item['active']
@@ -789,19 +792,31 @@ def handle_right_click(game, mouse_pos):
             dist_sq = dx*dx + dy*dy
             max_dist_sq = (TILE_SIZE * 2) ** 2
 
-            if tile and tile.get('type') == "maptile_car":
+            if tile:
                 if dist_sq <= max_dist_sq:
-                    vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
-                    if vehicle:
-                        clicked_item = vehicle
-                        click_source = 'container_map'
-                        click_index = 0
-            else:
-                display_message(game, "Too far away to interact.")
-
-            if tile and tile.get('sleep') and dist_sq < max_dist_sq:
-                clicked_item = {'name': 'Bed', 'type': 'map_tile'}
-                click_source = 'map_tile'
+                    if tile.get('type') == "maptile_car":
+                        vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
+                        if vehicle:
+                            clicked_item = vehicle
+                            click_source = 'container_map'
+                            click_index = 0
+                    # --- NEW: Check if the tile can be opened/closed ---
+                    elif tile.get('is_statable'):
+                        clicked_item = {
+                            'name': tile.get('name', 'Object'), 
+                            'type': 'map_tile', 
+                            'grid_x': grid_x, 
+                            'grid_y': grid_y, 
+                            'state': tile.get('state')
+                        }
+                        click_source = 'map_tile'
+                    elif tile.get('sleep'):
+                        clicked_item = {'name': 'Bed', 'type': 'map_tile'}
+                        click_source = 'map_tile'
+                else:
+                    # Only show distance warning if they clicked something interactable
+                    if tile.get('type') == "maptile_car" or tile.get('is_statable') or tile.get('sleep'):
+                        display_message(game, "Too far away to interact.")
 
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
@@ -848,7 +863,15 @@ def handle_right_click(game, mouse_pos):
                 display_message(game, "Too far to talk to them.")
 
         elif click_source == 'map_tile':
-            options = ['Sleep']
+            options = []
+            if clicked_item.get('name') == 'Bed':
+                options.append('Sleep')
+            # --- NEW: Provide contextual Open/Close text based on current state ---
+            elif 'state' in clicked_item:
+                if clicked_item['state'] == 'close':
+                    options.append('Open door/window')
+                elif clicked_item['state'] == 'open':
+                    options.append('Close door/window')
         elif click_source == 'light_source':
             options = ['Toggle Light']
         elif click_source == 'player_self':
