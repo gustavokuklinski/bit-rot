@@ -241,7 +241,7 @@ def handle_input(game):
                                 
                                 # Append vehicle options modal
                                 if not any(m['type'] == 'vehicle' for m in game.modals):
-                                    default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 - 200)
+                                    default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 + 45)
                                     pos = game.last_modal_positions.get('vehicle', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
                                     
                                     new_modal = {

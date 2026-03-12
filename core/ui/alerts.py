@@ -49,19 +49,19 @@ def draw_player_alerts(surface, player):
     # Format: (Icon Path, Color, Tooltip Text)
     
     # Health (Low)
-    if player.health <= 80:
+    if player.health <= 50:
         active_alerts.append(("ui/hp.png", RED, "You are hurt, use a Medkit."))
     
     # Stamina (Low) - Exhausted
-    if player.stamina <= 50:
+    if player.stamina <= 20:
         active_alerts.append(("ui/stamina.png", GRAY, "You are tired, take a Rest."))
 
     # Water (Low) - Thirsty
-    if player.water <= 70:
+    if player.water <= 20:
         active_alerts.append(("ui/water.png", BLUE, "You are thirsty."))
 
     # Food (Low) - Hungry
-    if player.food <= 50:
+    if player.food <= 20:
         active_alerts.append(("ui/food.png", GREEN, "You are hungry, try some MRE's."))
 
     # Tireness (High) - Tired
@@ -69,11 +69,11 @@ def draw_player_alerts(surface, player):
         active_alerts.append(("ui/tireness.png", (100, 100, 150), "You are feeling sleepy, take a nap."))
 
     # Anxiety (High) - Panicked
-    if player.anxiety >= 10:
+    if player.anxiety >= 30:
         active_alerts.append(("ui/axiety.png", (150, 0, 150), "You are anxious, try reading."))
         
     # Infection (High) - Sick
-    if player.infection >= 15: 
+    if player.infection >= 70: 
         active_alerts.append(("ui/infection.png", YELLOW, "Are you feeling sick or infected?"))
 
     # Overweight

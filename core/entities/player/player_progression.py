@@ -312,9 +312,17 @@ class PlayerProgression:
     # --- COMBAT & ACTIONS (Calculated via Attributes) ---
 
     def handle_melee_attack(self, player):
-        fatigue_cost = 0.5 # Could move to XML if desired
+        stamina_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
+        tireness_cost = self.config.get_stat('tireness', 'melee_cost', 0.02)
+        
+        # Consume stamina
+        if player.stamina > 0:
+            player.stamina = max(0.0, player.stamina - stamina_cost)
+            
+        # Consume tiredness
         if player.tireness > 0:
-            player.tireness = max(0.0, player.tireness - fatigue_cost)
+            player.tireness = max(0.0, player.tireness - tireness_cost)
+            
         return True
 
     def get_melee_damage_multiplier(self, player):

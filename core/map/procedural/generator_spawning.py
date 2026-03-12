@@ -57,7 +57,7 @@ class ProceduralGeneratorSpawning:
                 if ground == self.water_tile: continue 
                 
                 # [NEW] Differentiate building tiles from outside tiles
-                if any(b in ground for b in ['bg', 'house_floor_01']):
+                if 'house_floor_01' in ground:
                     building_tiles.append((x, y))
                 elif ground in ['asphalt_01', 'sand_01', 'dirty_01']:
                     outside_tiles.append((x, y))
