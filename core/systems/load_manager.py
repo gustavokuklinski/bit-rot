@@ -16,7 +16,7 @@ from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
 from core.map.world_layers import load_all_map_layers, set_active_layer
 from core.map.map_loader import parse_layered_map_layout
-from core.map.spawn_manager import spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles, spawn_animals
+from core.map.spawn_manager import get_house_spawn_position, spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles, spawn_animals
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
@@ -261,7 +261,24 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             spawn_l2_population(game, count=20, target_layer=2)
             spawn_animals(game, target_layer=2)
 
-    if game.player_spawn:
+    # ---------------------------------------------------------
+    # [NEW] Determine Player Spawn Position
+    # ---------------------------------------------------------
+    
+    # Force a quick chunk update so that `game.roof_data` and map definitions 
+    # are populated for our spawn scan to read
+    if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
+        center_x = getattr(game, 'map_width_pixels', 1000) // 2
+        center_y = getattr(game, 'map_height_pixels', 1000) // 2
+        game.map_manager.update_chunks((center_x, center_y))
+
+    house_spawn = get_house_spawn_position(game)
+
+    if house_spawn:
+        game.logger.info(f"House spawn point found at {house_spawn}. Setting player position.")
+        game.player.x, game.player.y = house_spawn
+        game.player.rect.topleft = house_spawn
+    elif game.player_spawn:
         game.logger.info(f"Player spawn point found at {game.player_spawn}. Setting player position.")
         game.player.x, game.player.y = game.player_spawn
         game.player.rect.topleft = game.player_spawn
@@ -269,6 +286,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         game.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
         game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
         game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+
 
     if spawn_entities:
         nearby_spawns = []

@@ -390,7 +390,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.state != 'chasing': 
                      has_los = False 
                 else:
-                    has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), obstacles, current_time)
+                    has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
 
                 if not has_los or self.stuck_timer > 0:
                     if current_time - self.last_path_calc_time > 1000 or not self.path or (self.state == 'chasing' and current_time - self.last_path_calc_time > 500):

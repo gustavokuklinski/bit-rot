@@ -296,15 +296,7 @@ class PlayerProgression:
 
     def update_infection(self, player):
         if player.infection > 0:
-            gain = self.config.get_stat('infection', 'passive_gain', 0.0005)
             cap = self.config.get_stat('infection', 'death_threshold', 100.0)
-            
-            # Apply Trait Modifier (Resilient / Prone to Illness)
-            bonus_perc = self.get_infection_bonus(player)
-            modifier = 1.0 - (bonus_perc / 100.0)
-            modifier = max(0.1, min(5.0, modifier))
-            
-            player.infection += (gain * modifier)
             
             if player.infection >= cap:
                 player.health = 1

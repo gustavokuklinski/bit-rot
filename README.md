@@ -5,21 +5,24 @@ Bit Rot is a zombie survivor game.
 **Minimum requirements**
 
 RAM: 1 GB Ram
-Processor: Intel Core i3
+Processor: Intel Core i3, Silicon M-series
 Video: Intel HD Graphics 3000
-OS: Ubuntu/Debian, Windows 7
+OS: Ubuntu/Debian, Windows 7, MacOS
 Resolution: 1280x720
 Disk: 500MB
 
 **Hacking the game**
 
-Install on virtual environment
+## Install on virtual environment
 ```shell
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
+---
+
+## Running
 Run locally
 ```shell
 $ python bitrot.py # Play the game
@@ -31,14 +34,29 @@ Running on web browser
 $ pygbag . # Open localhost:8000 (Uses the main.py default file)
 ```
 
-Generate documentation
+---
+
+## Build executables (.bin, .exe, .app):
+
+**Linux**
 ```shell
-$ python manual/manual_generate.py # Generate HTML files based on XML files as documentation
+# Nuitka
+$ nuitka --onefile --output-dir=./build bitrot.py # Compile the game
+$ nuitka --onefile --output-dir=./build editor.py # Compile the editor
 ```
 
-Build executable system target
+**Windows**
 ```shell
 # Nuitka
 $ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --output-dir=./build bitrot.py # Compile the game
 $ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --output-dir=./build editor.py # Compile the editor
 ```
+Windows Defender may flag.
+
+**MacOS**
+```shell
+# Nuitka
+$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns --output-dir=./build bitrot.py # Compile the game
+$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns --output-dir=./build editor.py # Compile the editor
+```
+After finish, open a terminal and type: ```xattr -cr bitrot.app```

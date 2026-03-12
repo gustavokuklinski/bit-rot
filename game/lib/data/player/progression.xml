@@ -74,12 +74,12 @@
         </stat>
         
         <stat id="anxiety">
-            <param name="horde_gain" value="0.005" />
-            <param name="passive_gain" value="0.002" />
+            <param name="horde_gain" value="0.002" />
+            <param name="passive_gain" value="0.001" />
         </stat>
 
         <stat id="infection">
-            <param name="passive_gain" value="0.002" />
+            <param name="passive_gain_on_rain" value="0.002" />
             <param name="death_threshold" value="100.0" />
         </stat>
     </stats>

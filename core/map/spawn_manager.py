@@ -19,6 +19,44 @@ NPC_SPAWN_RADIUS = 70 * TILE_SIZE
 NPC_DESPAWN_RADIUS = 80 * TILE_SIZE
 NPC_MIN_SPAWN_DIST = 50 * TILE_SIZE
 
+def get_house_spawn_position(game):
+    """
+    Scans the global map to find all 'house_floor_01' tiles
+    and returns a random valid (x, y) pixel coordinate.
+    """
+    valid_spawns = []
+    layer = game.current_layer_index
+    
+    # Access the global, unchunked ground map array directly
+    ground_layer = game.all_ground_layers.get(layer)
+    
+    if not ground_layer:
+        return None
+
+    map_height = len(ground_layer)
+    
+    defs = game.tile_manager.definitions
+    
+    for y in range(map_height):
+        # Determine the width of the current row to prevent out-of-bounds
+        row_width = len(ground_layer[y])
+        for x in range(row_width):
+            g_key = ground_layer[y][x]
+            if g_key and g_key != ' ':
+                tile_def = defs.get(g_key)
+                
+                # Check the ground tile name (using lower() for safety)
+                ground_name = tile_def.get('name', '').lower() if tile_def else ''
+                if ground_name == 'house_floor_01':
+                    valid_spawns.append((x, y))
+                    
+    if valid_spawns:
+        # Pick a random valid spawn tile and convert grid coordinates to pixel coordinates
+        spawn_grid_x, spawn_grid_y = random.choice(valid_spawns)
+        return spawn_grid_x * TILE_SIZE, spawn_grid_y * TILE_SIZE
+        
+    return None # Fallback if no such tile exists anywhere on the map
+
 def spawn_initial_items(obstacles, item_spawns):
     items_on_ground = []
     occupied_tiles = set()

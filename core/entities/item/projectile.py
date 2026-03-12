@@ -48,11 +48,11 @@ class Projectile:
             
             if tile_def:
                 # If bullet hits a destructible obstacle (tree/stone), hit it and destroy bullet
-                if tile_def.get('destructible') and tile_def.get('is_obstacle'):
+                if tile_def.get('destructible') and tile_def.get('is_obstacle') and not tile_def.get('is_visible'):
                     self.game.map_manager.hit_tile(grid_x, grid_y, self.damage, weapon=None, is_projectile=True)
                     return True
                 # If bullet hits an indestructible wall, destroy bullet
-                elif tile_def.get('is_obstacle'):
+                elif tile_def.get('is_obstacle') and not tile_def.get('is_visible'):
                     return True
 
         if self.max_distance is not None:

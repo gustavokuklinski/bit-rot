@@ -31,6 +31,9 @@ class TileManager:
                         allow_liquid = root.get('allow_liquid', 'false').lower() == 'true'
 
                         is_stair = root.get('is_stair', 'false').lower() == 'true'
+                        
+                        is_visible = root.get('is_visible', 'false').lower() == 'true'
+
                         # Default to 0 if not specified
                         target_layer = int(root.get('target_layer', '0'))
 
@@ -50,6 +53,7 @@ class TileManager:
                                     'is_obstacle': is_obstacle,
                                     'destructible': is_destructible, 
                                     'allow_liquid': allow_liquid, # [ADDED] Store the flag
+                                    'is_visible': is_visible,
                                     'image': image,
                                     'mask': mask, # [ADDED] Store the mask in the definition
                                     'type': root.get('type'),

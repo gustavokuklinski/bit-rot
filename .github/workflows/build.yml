@@ -26,6 +26,11 @@ jobs:
             asset_name: bitrot_linux
             nuitka_flags: 
 
+          - os: macos-latest
+            executable_ext: .app
+            asset_name: bitrot_macos
+            nuitka_flags: --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

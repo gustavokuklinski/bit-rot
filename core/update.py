@@ -158,7 +158,18 @@ def update_game_state(game):
 
         local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
 
-        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or any(p.rect.colliderect(ob) for ob in local_obstacles):
+        hit_wall = False
+        for ob in local_obstacles:
+            if p.rect.colliderect(ob):
+                gx = ob.centerx // TILE_SIZE
+                gy = ob.centery // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy)
+                if tile_def and tile_def.get('is_visible'):
+                    continue # Bullet passes through!
+                hit_wall = True
+                break
+
+        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or hit_wall:
             projectiles_to_remove.append(p)
             continue
 

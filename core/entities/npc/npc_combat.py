@@ -22,8 +22,14 @@ class NPCCombat:
             check_x = x1 + dx * i
             check_y = y1 + dy * i
             check_rect.center = (int(check_x), int(check_y))
-            for obstacle in game.obstacles:
-                if check_rect.colliderect(obstacle):
+            if check_rect.colliderect(obstacle):
+                    # [NEW] Check if this obstacle tile allows visibility
+                    gx = obstacle.centerx // TILE_SIZE
+                    gy = obstacle.centery // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and tile_def.get('is_visible'):
+                        continue # It's transparent, keep checking further!
+                        
                     return False
         return True
 

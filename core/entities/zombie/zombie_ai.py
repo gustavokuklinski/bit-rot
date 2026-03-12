@@ -18,7 +18,7 @@ class ZombieAI:
         self.stuck_timer = 0
         self.stuck_angle = 0
         
-    def has_line_of_sight(self, target_rect, obstacles, current_time):
+    def has_line_of_sight(self, target_rect, game, current_time):
         """Checks if there is an uninterrupted line between zombie and target."""
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
             return True
@@ -36,8 +36,15 @@ class ZombieAI:
         end_pos = target_rect.center
         
         los_result = True
-        for obs in obstacles:
+        for obs in game.obstacles:
             if obs.clipline(start_pos, end_pos):
+                # Check if this obstacle tile allows visibility
+                gx = obs.centerx // TILE_SIZE
+                gy = obs.centery // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy)
+                if tile_def and tile_def.get('is_visible'):
+                    continue # It's a transparent obstacle, ignore for line-of-sight!
+                
                 los_result = False
                 break
         
@@ -170,7 +177,7 @@ class ZombieAI:
         # If zombie can see player within detection radius, always chase
         if dist_sq <= detection_radius_sq:
             if core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
-                if self.has_line_of_sight(player.rect, game.obstacles, current_time):
+                if self.has_line_of_sight(player.rect, game, current_time):
                     trigger_result = True
             else:
                 trigger_result = True
@@ -260,7 +267,7 @@ class ZombieAI:
             dist_to_target = dist_to_player
             dist_to_target_sq = dist_to_player_sq
 
-        can_see_target = self.has_line_of_sight(target_rect, obstacles, current_time)
+        can_see_target = self.has_line_of_sight(target_rect, game, current_time)
         target_pos = None
 
         # Check chase triggers to determine state

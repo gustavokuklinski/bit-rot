@@ -201,8 +201,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
     @property
     def max_carry_weight(self):
         # Base 10 + scaling with strength
-        strength = self.progression.get_strength(self)
-        return 5.0 + (strength * 1.5)
+        _, flat_bonus = self.progression.get_derived_bonus('carry_weight')
+        return 5.0 + flat_bonus
 
     def update_stats(self, game):
         current_time = time.time()
@@ -431,7 +431,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             total_weather_protection = min(1.0, total_defence / 5.0)
             
             # Base infection increase per tick while standing in rain
-            base_rain_infection = 0.005 
+            base_rain_infection = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain_on_rain', 0.002)
             actual_rain_infection = base_rain_infection * (1.0 - total_weather_protection)
             
             if actual_rain_infection > 0:
@@ -488,13 +488,21 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         return False
 
-    def has_line_of_sight(self, target_rect, obstacles):
+    def has_line_of_sight(self, target_rect, obstacles, game=None):
         """Checks if there is an uninterrupted line between player and target."""
         start_pos = self.rect.center
         end_pos = target_rect.center
 
         for obs in obstacles:
             if obs.clipline(start_pos, end_pos):
+                # [NEW] Check if this obstacle tile allows visibility
+                if game and hasattr(game, 'map_manager'):
+                    gx = obs.centerx // TILE_SIZE
+                    gy = obs.centery // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and tile_def.get('is_visible'):
+                        continue # It's transparent, keep checking further!
+                
                 return False
 
         return True

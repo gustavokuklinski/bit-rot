@@ -418,7 +418,7 @@ def draw_game(game):
                 
                 if current_time - entity.last_los_draw_check > 500:
                     entity.last_los_draw_check = current_time
-                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.obstacles)
+                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.obstacles, game)
                 
                 if not entity.cached_los_draw_result:
                     opacity = 80  # Dark/silhouette for entities not in line of sight
