@@ -7,6 +7,7 @@ from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_dat
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle_loader import VehicleLoader
+from core.messages import display_message
 
 class Vehicle:
     def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None, facing='right'):
@@ -300,7 +301,7 @@ class Vehicle:
                         broken_tire = True
             
             if broken_tire:
-                print("A tire has broken!")
+                display_message("A tire has broken!")
                 self.velocity = [0, 0]
                 self.active = False
                 self.car_state = "Off"
@@ -416,18 +417,18 @@ class Vehicle:
             if has_power:
                 self.lights = 'on'
             else:
-                print("Cannot turn on lights: No Battery Power.")
+                display_message("Cannot turn on lights: No Battery Power.")
 
     def toggle_engine(self):
         driver_seat = self.seats[0]
         if not driver_seat or type(driver_seat).__name__ != 'Player':
-            print("Cannot start engine: No driver in the driver's seat.")
+            display_message("Cannot start engine: No driver in the driver's seat.")
             return
 
         if self.active:
             self.active = False
             self.car_state = "Off"
-            print(f"{self.name} engine turned OFF.")
+            display_message(f"{self.name} engine turned OFF.")
         else:
             has_key = self.equipment.get('key') is not None
             battery_item = self.equipment.get('battery')
@@ -457,7 +458,7 @@ class Vehicle:
                 if not has_key: missing.append("Key")
                 if not has_power: missing.append("Battery Power")
                 if not has_fuel: missing.append("Fuel")
-                print(f"Cannot start. Missing/Empty: {', '.join(missing)}")
+                display_message(f"Cannot start. Missing/Empty: {', '.join(missing)}")
 
     def can_equip(self, item, slot):
         if slot not in self.equipment: return False
@@ -514,7 +515,7 @@ class Vehicle:
 
     def add_equipment(self, item, slot):
         if not self.can_equip(item, slot):
-            print(f"Cannot equip {item.name} in {slot} slot.")
+            display_message(f"Cannot equip {item.name} in {slot} slot.")
             return False
 
         old_item = self.equipment.pop(slot, None)
@@ -582,7 +583,7 @@ class Vehicle:
              else:
                  self.active = False
                  self.car_state = "Off"
-                 print("Engine died (No Fuel).")
+                 display_message("Engine died (No Fuel).")
 
         if self.lights == 'on':
             drain_amount = 0.0005 * dt_mult
@@ -599,18 +600,18 @@ class Vehicle:
                 if self.active:
                     self.active = False
                     self.car_state = "Off"
-                    print("Engine died (No Battery).")
+                    display_message("Engine died (No Battery).")
 
         has_key = self.equipment.get('key') is not None
         if not has_key and self.active:
              self.active = False
              self.car_state = "Off"
-             print("Engine stopped (Key removed).")
+             display_message("Engine stopped (Key removed).")
              
         if not battery_item and self.active:
              self.active = False
              self.car_state = "Off"
-             print("Engine stopped (Battery removed).")
+             display_message("Engine stopped (Battery removed).")
 
     @property
     def current_weight(self):

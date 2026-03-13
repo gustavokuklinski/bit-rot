@@ -3,7 +3,7 @@ import pygame
 import random
 from core.data.config import *
 from core.entities.item.item import Item
-from core.messages import display_message_player
+from core.messages import display_message
 
 class CraftingDismantleTab:
     def __init__(self, modal):
@@ -294,8 +294,8 @@ class CraftingDismantleTab:
 
             if created_items_log:
                 msg = ", ".join(created_items_log)
-                display_message_player(f"Dismantled into: {msg}")
+                display_message(f"Dismantled into: {msg}")
             else:
-                 display_message_player("Dismantling yielded nothing.")
+                 display_message("Dismantling yielded nothing.")
 
         self.modal.player.start_action(f"Dismantling {recipe.output_name}", recipe.time_required, craft_complete)

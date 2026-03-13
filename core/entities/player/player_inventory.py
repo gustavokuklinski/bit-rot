@@ -2,7 +2,7 @@
 import random
 from core.entities.item.item import Item
 from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
-from core.messages import display_message_player
+from core.messages import display_message
 
 class PlayerInventory:
     def get_total_inventory_slots(self):
@@ -117,7 +117,7 @@ class PlayerInventory:
 
     def equip_item_to_belt(self, item, source_type, item_index, container_item=None):
         if not any(slot is None for slot in self.belt):
-            display_message_player("Belt is full.")
+            display_message("Belt is full.")
             return False
         source_inventory = self._get_source_inventory(source_type, container_item)
         if source_inventory is None:
@@ -132,7 +132,7 @@ class PlayerInventory:
                     source_inventory[item_index] = None
                 else:
                     source_inventory.pop(item_index)
-                display_message_player(f"Equipped {item.name} to belt.")
+                display_message(f"Equipped {item.name} to belt.")
                 return True
         return False
     
@@ -178,7 +178,7 @@ class PlayerInventory:
 
     def transfer_item_stack(self, source, index, container_item, target_container, game=None):
         if self.action_timer > 0:
-            display_message_player("Busy...")
+            display_message("Busy...")
             return
 
         def execute_transfer():
@@ -229,7 +229,7 @@ class PlayerInventory:
                     if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                         game.items_on_ground.remove(item)
                 dest_name = targets[0]['name'] if targets else "Inventory"
-                display_message_player(f"Merged all of {item.name} into {dest_name}.")
+                display_message(f"Merged all of {item.name} into {dest_name}.")
                 return
                 
             if remaining_load > 0:
@@ -260,12 +260,12 @@ class PlayerInventory:
                             if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
 
-                        display_message_player(f"Sent {remaining_load} {item.name} to {target_name}.")
+                        display_message(f"Sent {remaining_load} {item.name} to {target_name}.")
                         transferred = True
                         break 
                 
                 if not transferred:
-                    display_message_player(f"Inventory full. Could not transfer remaining {remaining_load}.")
+                    display_message(f"Inventory full. Could not transfer remaining {remaining_load}.")
 
         def is_on_player(container):
             if not container: return False
@@ -286,7 +286,7 @@ class PlayerInventory:
 
     def drop_item(self, game, source, index, container_item=None):
         if self.drop_cooldown > 0:
-            display_message_player("Cannot drop items so quickly.")
+            display_message("Cannot drop items so quickly.")
             return None
 
         item_to_drop = None

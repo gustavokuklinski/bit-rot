@@ -3,7 +3,7 @@ import math
 import core.data.config
 from core.data.config import *
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
-from core.messages import display_message_player
+from core.messages import display_message
 # Import the new loader
 from core.data.progression_loader import PROGRESSION_CONFIG
 
@@ -192,7 +192,7 @@ class PlayerProgression:
         
         # Get nice name for display
         display_name = self.config.attributes.get(attr['name'], {}).get('name', attr['name'])
-        display_message_player(f"Leveled up {display_name} to level {attr['level']}!")
+        display_message(f"Leveled up {display_name} to level {attr['level']}!")
 
     def add_agility_xp(self, player, amount):
         self.add_xp(player, 'agility', amount)
@@ -221,7 +221,7 @@ class PlayerProgression:
             player.is_sleeping = True
             player.vx = 0
             player.vy = 0
-            display_message_player("You passed out from exhaustion!")
+            display_message("You passed out from exhaustion!")
 
         if is_moving and player.is_running and player.stamina > 0:
             self.add_xp(player, 'fitness', 0.002)

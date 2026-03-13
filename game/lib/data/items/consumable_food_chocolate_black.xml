@@ -3,8 +3,8 @@
         <restore status="[food]" min="1" max="3" />
         <restore status="[tireness]" min="1" max="2" />
         <restore status="[stamina]" min="2" max="5" />
-        <load min="1" max="6" />
-        <capacity value="6" />
+        <load min="1" max="12" />
+        <capacity value="12" />
         <weight weight="0.1"/>
         <sprite file="consumable_food_chocolate_black.png" />
     </properties>

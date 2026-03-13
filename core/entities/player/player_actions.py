@@ -1,5 +1,5 @@
 import random
-from core.messages import display_message_player
+from core.messages import display_message
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.data.recipe_manager import RecipeManager
@@ -7,7 +7,7 @@ from core.data.recipe_manager import RecipeManager
 class PlayerActions:
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
         if self.action_timer > 0:
-            display_message_player("Busy...")
+            display_message("Busy...")
             return False
 
         UNIT_TIME = 60
@@ -30,12 +30,12 @@ class PlayerActions:
         self.action_callback = callback
         self.action_xp_reward = xp_reward
         
-        display_message_player(f"{action_name}...")
+        display_message(f"{action_name}...")
         return True
 
     def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None, target_part=None):
         if self.action_timer > 0 and not is_auto_drink:
-            display_message_player("Busy...")
+            display_message("Busy...")
             return False
 
         if getattr(item, 'item_type', '').lower() == 'recipe':
@@ -90,7 +90,7 @@ class PlayerActions:
             
             if not required_item_found:
                 req_str = " or ".join(candidates)
-                display_message_player(f"Requires {req_str} to use.")
+                display_message(f"Requires {req_str} to use.")
                 return False
 
         source_inventory = self._get_source_inventory(source_type, container_item)
@@ -99,7 +99,7 @@ class PlayerActions:
             return False
 
         if item.load <= 0:
-            display_message_player(f"Cannot use {item.name}, it is empty.")
+            display_message(f"Cannot use {item.name}, it is empty.")
             return False
             
         duration_mult = 1.0
@@ -128,11 +128,11 @@ class PlayerActions:
                     for target_stat in targets:
                         if eff_type == 'restore' and target_stat == 'health':
                              if self.health >= self.max_health:
-                                 display_message_player(f"Health is already full.")
+                                 
                                  consumed = False
                              else:
                                  self.health = min(self.max_health, self.health + val)
-                                 display_message_player(f"Used {item.name}. Restored {val} Health.")
+                                 display_message(f"Used {item.name}. Restored {val} Health.")
                                  consumed = True
                                  
                         elif hasattr(self, target_stat):
@@ -146,14 +146,14 @@ class PlayerActions:
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)
-                                display_message_player(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                                display_message(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
                                 consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0
                                 new_val = max(min_cap, current_val - val)
                                 setattr(self, target_stat, new_val)
-                                display_message_player(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
+                                display_message(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
                                 consumed = True
             
             elif status_effect_legacy and hasattr(self, status_effect_legacy):
@@ -161,7 +161,7 @@ class PlayerActions:
             
             else:
                 if not consumed:
-                    display_message_player(f"Cannot consume {item.name}: no valid effects found.")
+                    display_message(f"Cannot consume {item.name}: no valid effects found.")
                     return 
 
             if consumed:
@@ -196,7 +196,7 @@ class PlayerActions:
                                     required_container.inventory.pop(idx)
                                 except ValueError: pass
                             
-                            display_message_player(f"{required_item_found.name} used up.")
+                            display_message(f"{required_item_found.name} used up.")
 
         if is_auto_drink:
             execute_consume()
@@ -210,7 +210,7 @@ class PlayerActions:
 
         # Prevent turning on campfires in inventory (they can only be on when placed on ground)
         if item.state == "off" and "Campfire" in item.name and source not in ['ground', 'nearby']:
-            display_message_player("Campfires can only be lit when placed on the ground.")
+            display_message("Campfires can only be lit when placed on the ground.")
             return
 
         new_name = ""
@@ -218,13 +218,13 @@ class PlayerActions:
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                display_message_player(f"Cannot turn on {item.name}, it's out of power.")
+                display_message(f"Cannot turn on {item.name}, it's out of power.")
                 return
 
             if item.fuel_type == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
-                    display_message_player("No matches to light the lantern.")
+                    display_message("No matches to light the lantern.")
                     return
 
                 matches.load -= 1
@@ -280,22 +280,21 @@ class PlayerActions:
         recipes_taught = RecipeManager.get_recipes_by_magazine(item.name)
         
         if not recipes_taught:
-            display_message_player(f"You read {item.name}, but learn nothing new.")
+            display_message(f"You read {item.name}, but learn nothing new.")
             return
 
         new_recipes = [r for r in recipes_taught if r.magazine not in self.known_recipes] 
         
         if not new_recipes and item.name in self.known_recipes:
-            display_message_player(f"You already know the recipes in {item.name}.")
+            display_message(f"You already know the recipes in {item.name}.")
             return
 
         def finish_reading():
             if item.name not in self.known_recipes:
                 self.known_recipes.append(item.name)
-                for r in recipes_taught:
-                    display_message_player(f"Learned how to craft: {r.output_name}")
+                
             else:
-                 display_message_player(f"You reviewed {item.name}.")
+                 display_message(f"You reviewed {item.name}.")
             
             # Add the intelligence XP here, right when the action successfully finishes
             self.progression.add_xp(self, 'intelligence', 10)
@@ -321,21 +320,21 @@ class PlayerActions:
 
     def repair_item(self, game, target_item):
         if self.action_timer > 0:
-            display_message_player("Busy...")
+            display_message("Busy...")
             return
         kit, source, index, container = self.find_repair_kit(target_item)
         if not kit:
-            display_message_player(f"No repair kit found for {target_item.name}.")
+            display_message(f"No repair kit found for {target_item.name}.")
             return
         if target_item.durability >= target_item.max_durability:
-            display_message_player(f"{target_item.name} is already in perfect condition.")
+            display_message(f"{target_item.name} is already in perfect condition.")
             return
         def execute_repair():
             restore_amount = random.randint(kit.min_restore, kit.max_restore)
             old_dur = target_item.durability
             target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
             restored = target_item.durability - old_dur
-            display_message_player(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
+            display_message(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
             self.progression.add_xp(self, 'maintenance', 20)
             kit.load -= 1
             if kit.load <= 0:
@@ -343,30 +342,35 @@ class PlayerActions:
                 if inv:
                     if source == 'belt': self.belt[index] = None
                     else: inv.pop(index)
-                display_message_player(f"{kit.name} used up.")
+                display_message(f"{kit.name} used up.")
         self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
-        if getattr(item, 'item_type', '') == 'vehicle':
+        
+        # Safely get item_type using getattr to prevent AttributeError for NPCs/Animals
+        item_type = getattr(item, 'item_type', '')
+        
+        if item_type == 'vehicle':
              options.append("Inspect"); return options
         if isinstance(item, Corpse):
             options.append('Open'); return options
         
-        if item.item_type == 'text' or item.item_type == 'recipe' or item.item_type == 'map':
-            if item.item_type == 'recipe': options.append('Use')
-            elif item.item_type == 'map': options.append('Open')
+        if item_type == 'text' or item_type == 'recipe' or item_type == 'map':
+            if item_type == 'recipe': options.append('Use')
+            elif item_type == 'map': options.append('Open')
             else: options.append('Read')
             if hasattr(item, 'is_stackable') and item.is_stackable():
                 options.append('Drop one')
-                if item.load > 1: options.append('Drop all')
+                if getattr(item, 'load', 0) > 1: options.append('Drop all')
             else: options.append('Drop')
             return options
 
-        if item.item_type.startswith('consumable') or item.item_type == 'liquid':
-            if item.item_type == 'consumable_ammo' or 'Ammo' in item.name or 'Shells' in item.name:
+        if item_type.startswith('consumable') or item_type == 'liquid':
+            item_name = getattr(item, 'name', '')
+            if item_type == 'consumable_ammo' or 'Ammo' in item_name or 'Shells' in item_name:
                 pass
-            elif item.item_type == 'consumable_medication' or 'Medkit' in item.name or 'Bandage' in item.name:
+            elif item_type == 'consumable_medication' or 'Medkit' in item_name or 'Bandage' in item_name:
                 options.append('Use')
                 
             else: options.append('Use')
@@ -375,31 +379,32 @@ class PlayerActions:
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
-        elif item.item_type in ['utility', 'mobile']:
-            if item.state == 'on': options.append('Turn off')
-            elif item.state == 'off':
+        elif item_type in ['utility', 'mobile']:
+            item_state = getattr(item, 'state', '')
+            if item_state == 'on': options.append('Turn off')
+            elif item_state == 'off':
                 # Campfires can only be turned on when on the ground
-                if "Campfire" in item.name and source not in ['ground', 'nearby']:
+                if "Campfire" in getattr(item, 'name', '') and source not in ['ground', 'nearby']:
                     pass  # Don't add "Turn on" for campfires in inventory
                 else:
                     options.append('Turn on')
-            if item.fuel_type: options.append('Reload')
-            if item.item_type == 'mobile': options.append('Open')
+            if getattr(item, 'fuel_type', None): options.append('Reload')
+            if item_type == 'mobile': options.append('Open')
             
             # CHECK ALLOW BELT FOR UTILITIES
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
-        elif item.item_type == 'backpack':
+        elif item_type == 'backpack':
             options.append('Open')
             if not self.backpack: options.append('Equip')
-        elif item.item_type == 'cloth':
+        elif item_type == 'cloth':
             options.append('Open'); options.append('Equip')
-        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
+        elif item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
             options.append('Equip')
-            if item.item_type == 'weapon_ranged': options.append('Reload')
-            if item.item_type == 'weapon_ranged' and item.load is not None and item.load > 0: options.append('Get bullets')
-        elif item.item_type == 'container':
+            if item_type == 'weapon_ranged': options.append('Reload')
+            if item_type == 'weapon_ranged' and getattr(item, 'load', None) is not None and getattr(item, 'load', 0) > 0: options.append('Get bullets')
+        elif item_type == 'container':
             options.append('Open')
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
@@ -435,9 +440,9 @@ class PlayerActions:
             for name in sorted(found_names):
                 options.append(f"Add to {name}")
 
-        if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None:
+        if hasattr(item, 'is_stackable') and item.is_stackable() and getattr(item, 'load', None) is not None:
             options.append('Drop one')
-            if item.load > 1: options.append('Drop all')
+            if getattr(item, 'load', 0) > 1: options.append('Drop all')
             
             if self.backpack and container_item is not self.backpack:
                 # [FIX] Ensure matching liquid states before allowing transfer stack

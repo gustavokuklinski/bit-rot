@@ -147,7 +147,7 @@ class Game:
             'gear': (650, 10),
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
             'nearby': (970, 360),
-            'messages': (10, 360),
+            'messages': (10, 390),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100)

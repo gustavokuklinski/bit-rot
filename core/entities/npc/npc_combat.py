@@ -3,7 +3,6 @@ import pygame
 import random
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
-from core.messages import display_message
 from core.data.config import TILE_SIZE
 
 class NPCCombat:
@@ -22,7 +21,8 @@ class NPCCombat:
             check_x = x1 + dx * i
             check_y = y1 + dy * i
             check_rect.center = (int(check_x), int(check_y))
-            if check_rect.colliderect(obstacle):
+            for obstacle in game.obstacles:
+                if check_rect.colliderect(obstacle):
                     # [NEW] Check if this obstacle tile allows visibility
                     gx = obstacle.centerx // TILE_SIZE
                     gy = obstacle.centery // TILE_SIZE
@@ -45,7 +45,6 @@ class NPCCombat:
                 self.inventory.append(self.equipped_weapon)
             self.inventory.remove(best_candidate)
             self.equipped_weapon = best_candidate
-            display_message(game, f"{self.name} switched to {best_candidate.name}!")
             return True
         return False
 
@@ -58,7 +57,6 @@ class NPCCombat:
                 weapon.load += amount
                 item.load -= amount
                 if item.load <= 0: self.inventory.remove(item)
-                display_message(game, f"{self.name} reloaded!")
                 return True
         return False
 

@@ -3,7 +3,7 @@ import pygame
 import random
 from core.data.config import *
 from core.entities.item.item import Item
-from core.messages import display_message_player
+from core.messages import display_message
 
 class CraftingCraftTab:
     def __init__(self, modal):
@@ -262,8 +262,8 @@ class CraftingCraftTab:
 
             if created_items_log:
                 msg = ", ".join(created_items_log)
-                display_message_player(f"Crafted: {msg}")
+                display_message(f"Crafted: {msg}")
             else:
-                 display_message_player("Crafting yielded nothing.")
+                 display_message("Crafting yielded nothing.")
 
         self.modal.player.start_action(f"Crafting {recipe.output_name}", recipe.time_required, craft_complete)

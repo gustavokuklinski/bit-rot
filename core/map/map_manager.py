@@ -7,7 +7,7 @@ import pygame
 import random
 import time
 from core.data.config import *
-from core.messages import display_message_player
+from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
 
@@ -407,7 +407,7 @@ class MapManager:
 
         if new_state == "close":
             if self.game.player.rect.colliderect(tile_rect):
-                display_message_player("Player is in the doorway, cannot close.")
+                display_message("Player is in the doorway, cannot close.")
                 return 
         
         base_name = current_char.replace("_open", "").replace("_close", "")
@@ -452,7 +452,7 @@ class MapManager:
         if not is_projectile:
             STAMINA_COST = 0.5
             if self.game.player.stamina < STAMINA_COST:
-                display_message_player("You are too exhausted to chop!")
+                display_message("You are too exhausted to chop/mine!")
                 return True
 
             self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
@@ -463,7 +463,7 @@ class MapManager:
                 weapon.durability = max(0, weapon.durability - DURABILITY_COST)
                 if weapon.durability <= 0:
                     self.game.player.active_weapon = None
-                    display_message_player(f"{weapon.name} is broken and unequipped.")
+                    display_message(f"{weapon.name} is broken and unequipped.")
                     return True
         
         if definition.get('sound_src'):
@@ -494,7 +494,7 @@ class MapManager:
         
         self.game.map_states[map_name]['tile_health'][pos_key] -= damage
         current_hp = self.game.map_states[map_name]['tile_health'][pos_key]
-        display_message_player(f"({max(0, current_hp)} HP left)")
+        print(f"Maptile Destructible ({max(0, current_hp)} HP left)")
         
         if current_hp <= 0:
             del self.game.map_states[map_name]['tile_health'][pos_key]

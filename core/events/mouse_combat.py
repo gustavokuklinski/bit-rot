@@ -6,7 +6,7 @@ from core.data.config import *
 from core.entities.item.item import Projectile
 from core.update import player_hit_zombie, handle_zombie_death, create_blood_splatter
 from core.ui.inventory_modal import get_belt_hud_slot_rect
-from core.messages import display_message, display_message_player
+from core.messages import display_message, display_message
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):
@@ -145,7 +145,7 @@ def handle_attack(game, mouse_pos):
                 world_pos = game.screen_to_world(mouse_pos)
 
                 # Determine Attack Range
-                attack_range = TILE_SIZE * 2.0 # Default melee reach
+                attack_range = TILE_SIZE * 1.5 # Default melee reach
                 if weapon and hasattr(weapon, 'reach'):
                      attack_range = weapon.reach * TILE_SIZE
 
@@ -212,7 +212,7 @@ def handle_attack(game, mouse_pos):
                                 if can_deal_damage:
                                     damage = game.player.get_attack_damage()
                                     is_dead = animal.take_damage(damage, game, attacker=game.player)
-                                    display_message_player(f"You attacked the animal for {damage} damage!")
+                                    display_message(f"You attacked the animal for {damage} damage!")
 
                                     # Calculate direction for blood splatter
                                     direction = [math.cos(kb_angle), math.sin(kb_angle)]
@@ -226,7 +226,7 @@ def handle_attack(game, mouse_pos):
                                             game.items_on_ground.remove(animal)
                                         if animal in game.active_animals:
                                             game.active_animals.remove(animal)
-                                        display_message_player(f"You killed the animal!")
+                                        display_message(f"You killed the animal!")
                                 else:
                                     is_dead = False
 

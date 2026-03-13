@@ -5,7 +5,7 @@ import re
 import random
 import pygame
 from core.data.config import TILE_SIZE
-from core.messages import display_message_player
+from core.messages import display_message
 from core.placement import find_free_tile
 
 class PlayerMovement:
@@ -17,7 +17,7 @@ class PlayerMovement:
                 break
         
         if seat_idx == -1:
-            display_message_player("Vehicle is full! No free seats.")
+            display_message("Vehicle is full! No free seats.")
             return
 
         self.vehicle = vehicle
@@ -32,7 +32,7 @@ class PlayerMovement:
             game.obstacles.remove(vehicle.rect)
         
         seat_name = "Driver's Seat" if seat_idx == 0 else f"Seat {seat_idx+1}"
-        display_message_player(f"Entered {vehicle.name} ({seat_name})")
+        display_message(f"Entered {vehicle.name} ({seat_name})")
 
     def exit_vehicle(self, game):
         if self.vehicle:
@@ -49,7 +49,7 @@ class PlayerMovement:
             self.vehicle = None
             self.vehicle_seat_index = None
             
-            display_message_player("Exited vehicle")
+            display_message("Exited vehicle")
 
     def update_position(self, obstacles, zombies, game):
         if self.vehicle:
@@ -106,7 +106,7 @@ class PlayerMovement:
 
                     if zombie.take_damage(damage_to_zombie, game):
                         zombie.die(game)
-                        display_message_player(f"Roadkill! Zombie splattered.")
+                        display_message(f"Roadkill! Zombie splattered.")
 
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
@@ -127,7 +127,7 @@ class PlayerMovement:
                             game.items_on_ground.remove(animal)
                         if animal in game.active_animals:
                             game.active_animals.remove(animal)
-                        display_message_player(f"Roadkill! Animal splattered.")
+                        display_message(f"Roadkill! Animal splattered.")
 
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
@@ -147,7 +147,7 @@ class PlayerMovement:
                         
                         if is_dead:
                             npc.die(game)
-                            display_message_player(f"You ran over {npc.name}!")
+                            display_message(f"You ran over {npc.name}!")
 
             # Sync player position to vehicle
             self.x = self.vehicle.x
@@ -157,18 +157,19 @@ class PlayerMovement:
         else:
             # Standard Player Walking Movement (when not in vehicle)
             def check_collision(rect_check):
-                # Only check for hard obstacle/wall collisions here
-                for obstacle in obstacles:
-                    if rect_check.colliderect(obstacle):
-                        gx = obstacle.x // TILE_SIZE
-                        gy = obstacle.y // TILE_SIZE
-                        tile_def = game.map_manager.get_tile_at(gx, gy)
-                        if tile_def and 'mask' in tile_def:
-                            offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
-                            if self.mask.overlap(tile_def['mask'], offset):
-                                return 'tile'
-                        else:
+                # Optimize by using collidelistall to only evaluate AABBs we are already touching
+                indices = rect_check.collidelistall(obstacles)
+                for idx in indices:
+                    obstacle = obstacles[idx]
+                    gx = obstacle.x // TILE_SIZE
+                    gy = obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and 'mask' in tile_def:
+                        offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                        if self.mask.overlap(tile_def['mask'], offset):
                             return 'tile'
+                    else:
+                        return 'tile'
                 return None
 
             # [FIX] Calculate terrain/entity speed multiplier
@@ -194,21 +195,67 @@ class PlayerMovement:
             move_x = self.vx * speed_mult * game.dt_mult
             move_y = self.vy * speed_mult * game.dt_mult
 
-            # Move X
-            self.x += move_x
-            self.rect.x = round(self.x)
-            
-            if check_collision(self.rect) == 'tile':
-                 self.x -= move_x
-                 self.rect.x = round(self.x)
+            # --- SUB-STEPPING WITH SLIDE/SNAG RESOLUTION ---
+            total_dist = max(abs(move_x), abs(move_y))
+            steps = max(1, int(math.ceil(total_dist)))
+            step_x = move_x / steps
+            step_y = move_y / steps
 
-            # Move Y
-            self.y += move_y
-            self.rect.y = round(self.y)
+            # Increased slide tolerance to easily slip past jagged/diagonal masks
+            max_slide = 4 
 
-            if check_collision(self.rect) == 'tile':
-                 self.y -= move_y
-                 self.rect.y = round(self.y)
+            for _ in range(steps):
+                # Move X
+                self.x += step_x
+                self.rect.x = round(self.x)
+                if check_collision(self.rect) == 'tile':
+                    resolved = False
+                    for offset in range(1, max_slide + 1):
+                        # Try sliding vertically UP
+                        self.rect.y -= offset
+                        if check_collision(self.rect) != 'tile':
+                            self.y -= offset
+                            resolved = True
+                            break
+                        self.rect.y += offset  # Revert UP attempt
+
+                        # Try sliding vertically DOWN
+                        self.rect.y += offset
+                        if check_collision(self.rect) != 'tile':
+                            self.y += offset
+                            resolved = True
+                            break
+                        self.rect.y -= offset  # Revert DOWN attempt
+
+                    if not resolved:
+                        self.x -= step_x
+                        self.rect.x = round(self.x)
+
+                # Move Y
+                self.y += step_y
+                self.rect.y = round(self.y)
+                if check_collision(self.rect) == 'tile':
+                    resolved = False
+                    for offset in range(1, max_slide + 1):
+                        # Try sliding horizontally LEFT
+                        self.rect.x -= offset
+                        if check_collision(self.rect) != 'tile':
+                            self.x -= offset
+                            resolved = True
+                            break
+                        self.rect.x += offset  # Revert LEFT attempt
+
+                        # Try sliding horizontally RIGHT
+                        self.rect.x += offset
+                        if check_collision(self.rect) != 'tile':
+                            self.x += offset
+                            resolved = True
+                            break
+                        self.rect.x -= offset  # Revert RIGHT attempt
+
+                    if not resolved:
+                        self.y -= step_y
+                        self.rect.y = round(self.y)
 
         # --- CHUNK TRANSITION LOGIC ---
         if not getattr(game, 'is_giant_map', False):

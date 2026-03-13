@@ -777,7 +777,8 @@ def handle_right_click(game, mouse_pos):
         if not clicked_item:
             sorted_npcs = sorted(game.npcs, key=lambda n: n.rect.bottom, reverse=True)
             for npc in sorted_npcs:
-                if npc.rect.collidepoint(world_pos):
+                # Only allow clicking on the NPC if they are friendly
+                if npc.rect.collidepoint(world_pos) and npc.is_friendly:
                     clicked_item = npc
                     click_source = 'npc'
                     break
@@ -830,7 +831,8 @@ def handle_right_click(game, mouse_pos):
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
         for npc in game.npcs:
-            if npc.rect.collidepoint(world_pos):
+            # Fallback check also requires the NPC to be friendly
+            if npc.rect.collidepoint(world_pos) and npc.is_friendly:
                 clicked_item = npc
                 click_source = 'npc'
                 click_index = 0
@@ -856,9 +858,11 @@ def handle_right_click(game, mouse_pos):
             print(f"DEBUG: NPC Interact - Name: {clicked_item.name}, Friendly: {clicked_item.is_friendly}, Dist: {dist:.1f}/{max_dist_px}")
 
             if dist_sq <= max_dist_px_sq:
-                options.append('Talk')
-                if hasattr(clicked_item, 'stop_moving'):
-                    clicked_item.stop_moving()
+                # Final safety check before providing the Talk option
+                if clicked_item.is_friendly:
+                    options.append('Talk')
+                    if hasattr(clicked_item, 'stop_moving'):
+                        clicked_item.stop_moving()
             else:
                 display_message(game, "Too far to talk to them.")
 

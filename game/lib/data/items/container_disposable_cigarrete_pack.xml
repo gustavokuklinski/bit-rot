@@ -2,6 +2,7 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_disposable_cigarrete_pack.png" />
+        <weight weight="0.02" reduction="10%" />
     </properties>
     <loot>
         <item name="Cigarette" chance="1.0" />

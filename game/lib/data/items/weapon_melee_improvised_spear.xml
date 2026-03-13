@@ -2,7 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <weight weight="0.5"/>
-        <damage min="6" max="19" />
+        <damage min="8" max="19" />
         <skill type="melee" />
         <sprite file="weapon_melee_improvised_spear.png" />
         <knockback value="2" />

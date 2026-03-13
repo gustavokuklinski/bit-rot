@@ -28,7 +28,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     padding = 10
     col_width = (modal['rect'].width - (padding * 3)) // 2
     
-    start_y = modal['rect'].y + 80
+    start_y = modal['rect'].y + 75
     col1_x = modal['rect'].x + padding
     # col2_x = modal['rect'].x + col_width + (padding * 2) # Not used in simplified status tab
     

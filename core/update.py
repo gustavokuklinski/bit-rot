@@ -13,7 +13,7 @@ from core.entities.player.player import Player
 from core.placement import find_free_tile
 from core.map.world_layers import check_for_layer_teleport
 from core.map.spawn_manager import spawn_initial_zombies, spawn_animals
-from core.messages import display_message_zombie, display_message_player
+from core.messages import display_message, display_message
 
 
 def build_obstacle_grid(obstacles, grid_size):
@@ -177,7 +177,7 @@ def update_game_state(game):
             if p.rect.colliderect(game.player.rect):
                 damage = getattr(p, 'damage', 5) 
                 game.player.take_damage(game, damage, 0)
-                display_message_player(f"You were hit!")
+                print(f"You were hit!")
                 game.splashes.append({
                     'pos': game.player.rect.center,
                     'time': pygame.time.get_ticks(),
@@ -329,9 +329,9 @@ def update_game_state(game):
 
              is_dead = hit_npc.take_damage(damage, game, attacker=attacker)
              if attacker == game.player:
-                 display_message_player(f"You shot {hit_npc.name}")
+                 print(f"You shot {hit_npc.name}")
                  if is_dead:
-                    display_message_player(f"You killed {hit_npc.name}!")
+                    print(f"You killed {hit_npc.name}!")
              projectiles_to_remove.append(p)
              continue
 
@@ -583,13 +583,13 @@ def update_game_state(game):
     for ground_item in list(game.items_on_ground):
         if isinstance(ground_item, Corpse):
             if ground_item.is_expired(now_ms):
-                display_message_zombie(f"{getattr(ground_item,'name','Corpse')} decayed.")
+                print(f"{getattr(ground_item,'name','Corpse')} decayed.")
                 try: game.items_on_ground.remove(ground_item)
                 except ValueError: pass
 
     # Cleanup empty disposable containers on ground
     def ground_msg(text):
-        display_message_player(text)
+        print(text)
     Item.cleanup_disposables(game.items_on_ground, game.modals, ground_msg)
 
     # Cleanup empty disposable containers in game.containers (vehicles, etc.)
@@ -683,7 +683,7 @@ def update_game_state(game):
                                      game.items_on_ground.remove(entity)
                                  if entity in game.active_animals:
                                      game.active_animals.remove(entity)
-                                 display_message_player(f"You ran over an animal!")
+                                 display_message(f"You ran over an animal!")
                              else:
                                  if speed > 0:
                                      push_x = (vehicle.velocity[0] / speed) * 15
@@ -695,7 +695,7 @@ def update_game_state(game):
                              is_dead = entity.take_damage(impact_damage, game, attacker=game.player)
                              if is_dead:
                                  handle_zombie_death(game, entity, game.items_on_ground, game.obstacles, None)
-                                 display_message_player(f"You ran over {entity.name}!")
+                                 display_message(f"You ran over {entity.name}!")
                              else:
                                  if speed > 0:
                                      push_x = (vehicle.velocity[0] / speed) * 15 
@@ -748,7 +748,7 @@ def player_hit_zombie(player, zombie, game):
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
                     player.active_weapon = None
-                    display_message_player(f"{active_weapon.name} is broken and unequipped.")
+                    display_message(f"{active_weapon.name} is broken and unequipped.")
     else: 
         base_damage = progression.get_unarmed_damage(player)
 
@@ -787,7 +787,7 @@ def player_hit_zombie(player, zombie, game):
         return True
 
     hit_type = "Headshot" if is_headshot else "Hit"
-    display_message_player(f"{hit_type}! Dealt {final_damage:.1f} damage.")
+    print(f"{hit_type}! Dealt {final_damage:.1f} damage.")
     return False
 
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):

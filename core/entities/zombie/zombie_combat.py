@@ -3,7 +3,6 @@ import math
 import pygame
 from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Item
-from core.messages import display_message
 from core.data.config import ZOMBIE_INFECTION_CHANCE
 import core.data.config
 
@@ -45,9 +44,9 @@ class ZombieCombat:
             final_dmg, final_inf = target_entity.take_damage(game, damage, infection)
             
             if final_inf > 0:
-                 display_message(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
+                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
             else:
-                 display_message(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
 
         # 2. Target is an NPC, Animal, or other Zombie
         else:
@@ -55,7 +54,7 @@ class ZombieCombat:
             if is_dead and hasattr(game, 'npcs') and target_entity in game.npcs:
                 # Target entity die() is usually called inside its own take_damage, 
                 # but we print the message here.
-                display_message("A survivor has been killed by a zombie.")
+                print("A survivor has been killed by a zombie.")
 
         # Play attack sound
         if getattr(self, 'sound_attack', None):

@@ -3,7 +3,7 @@ import pygame
 import random
 from core.data.config import *
 from core.entities.item.item import Item
-from core.messages import display_message_player
+from core.messages import display_message
 
 class CraftingRepairTab:
     def __init__(self, modal):
@@ -254,7 +254,7 @@ class CraftingRepairTab:
                     break
             
             if not target_item:
-                display_message_player(f"No damaged {recipe.output_name} found.")
+                display_message(f"No damaged {recipe.output_name} found.")
                 return
 
             total_repair_amount = 0
@@ -313,6 +313,6 @@ class CraftingRepairTab:
             if hasattr(self.modal.player, 'progression'):
                 self.modal.player.progression.add_xp(self.modal.player, 'maintenance', 15)
 
-            display_message_player(f"Repaired {target_item.name} by {int(restored)} points.")
+            display_message(f"Repaired {target_item.name} by {int(restored)} points.")
 
         self.modal.player.start_action(f"Repairing {recipe.output_name}", recipe.time_required, craft_complete)

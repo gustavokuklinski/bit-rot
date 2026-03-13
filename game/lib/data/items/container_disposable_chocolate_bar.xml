@@ -2,6 +2,7 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_disposable_chocolate_bar.png" />
+        <weight weight="0.12" reduction="10%" />
     </properties>
     <loot>
         <item name="Chocolate Black" chance="1.0" />

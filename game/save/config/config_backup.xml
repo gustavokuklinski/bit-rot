@@ -18,7 +18,7 @@
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
         <water_autodrink value="true" name="Allow Autodrink"/>
-        <water_threshold value="50" name="Minimum % to start autodrink"/>
+        <water_threshold value="95" name="Minimum % to start autodrink (Default: 95)"/>
     </player>
     <item_spawning>
         <item_spawn_chance_multiplier value="0.5" name="Global Multiplier"/>

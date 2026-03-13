@@ -2,7 +2,7 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
-from core.ui.tabs import Tabs
+# Removed unused Tabs import (optional, but cleaner)
 
 def draw_messages_modal(surface, game, modal, assets):
     base_modal = BaseModal(surface, modal, assets, "Messages (M)")
@@ -12,24 +12,11 @@ def draw_messages_modal(surface, game, modal, assets):
     if base_modal.minimized:
         return None, close_button, minimize_button
 
-    # --- Tabs ---
-    tabs_data = [
-        {'label': 'All'},
-        {'label': 'Chat'},
-        {'label': 'Player'},
-        {'label': 'Zombie'}
-    ]
-    modal['tabs_data'] = tabs_data
+    # --- REMOVED TABS LOGIC ---
+    # The tabs_data list and tabs.draw() have been deleted.
 
-    # Ensure active_tab is set
-    if 'active_tab' not in modal or modal['active_tab'] not in {t['label'] for t in tabs_data}:
-        modal['active_tab'] = 'All'
-
-    tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw()
-
-    # Get active log
-    active_log = game.message_logs.get(modal['active_tab'], [])
+    # Get active log (Hardcoded to 'All' since tabs are gone)
+    active_log = game.message_logs.get('All', [])
 
     # --- Layout Constants ---
     padding = 5
@@ -54,7 +41,9 @@ def draw_messages_modal(surface, game, modal, assets):
     )
 
     # Content Area Position
-    content_y_start = base_modal.modal_y + base_modal.header_h + 35 # +35 for tabs
+    # CHANGED: Removed the +35 padding that was previously making room for the tabs. 
+    # Added +5 for a small natural margin under the header.
+    content_y_start = base_modal.modal_y + base_modal.header_h + 5 
     content_height = input_area_y - content_y_start - padding
     content_width = modal['rect'].width - (padding * 2)
     content_rect = pygame.Rect(base_modal.modal_x + padding, content_y_start, content_width, content_height)
@@ -69,19 +58,18 @@ def draw_messages_modal(surface, game, modal, assets):
     max_scroll = max(0, total_text_height - content_height)
     
     # [NEW] Auto-scroll Logic
-    # Create a unique key for the last known length of this specific tab
-    log_len_key = f"last_len_{modal['active_tab']}"
+    # CHANGED: Hardcoded the key to "All" instead of using modal['active_tab']
+    log_len_key = "last_len_All"
     current_len = len(active_log)
     last_len = modal.get(log_len_key, 0)
     
-    # If new messages arrived since last frame (or tab switch), snap to bottom
+    # If new messages arrived since last frame, snap to bottom
     if current_len > last_len:
         modal['scroll_offset_y'] = max_scroll
         modal[log_len_key] = current_len
     elif log_len_key not in modal:
-        # Initialize for new tabs
+        # Initialize
         modal[log_len_key] = current_len
-        # Optional: Snap to bottom on first load? Yes, usually better.
         if 'scroll_offset_y' not in modal:
             modal['scroll_offset_y'] = max_scroll
 

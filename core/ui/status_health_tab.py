@@ -29,7 +29,7 @@ def draw_health_tab(surface, player, modal, assets):
     padding = 10
     col_width = (modal['rect'].width - (padding * 3)) // 2
     
-    start_y = modal['rect'].y + 80
+    start_y = modal['rect'].y + 75
     col1_x = modal['rect'].x + padding
     col2_x = modal['rect'].x + col_width
     
@@ -40,7 +40,7 @@ def draw_health_tab(surface, player, modal, assets):
     y_offset = start_y
     
     # Title
-    section_title = font.render(f"{player.name} Condition", True, WHITE)
+    section_title = font.render(f"{player.name}", True, WHITE)
     surface.blit(section_title, (col1_x, y_offset))
     y_offset += 140 
     
@@ -49,7 +49,7 @@ def draw_health_tab(surface, player, modal, assets):
     icon_files = {
         "HP": SPRITE_PATH + "ui/hp.png",
         "STM": SPRITE_PATH + "ui/stamina.png",
-        "TIR": SPRITE_PATH + "ui/tireness.png",
+        "WTR": SPRITE_PATH + "ui/water.png",
         "WGT": SPRITE_PATH + "ui/weight.png",
         "DEF": SPRITE_PATH + "ui/defence.png"
     }
@@ -58,7 +58,7 @@ def draw_health_tab(surface, player, modal, assets):
     stat_names = {
         "HP": "Health",
         "STM": "Stamina",
-        "TIR": "Tiredness",
+        "WTR": "Water",
         "WGT": "Weight",
         "DEF": "Defence"
     }
@@ -73,7 +73,7 @@ def draw_health_tab(surface, player, modal, assets):
     stats = [
         ("HP", player.health, player.max_health, GRAY),
         ("STM", player.stamina, player.max_stamina, GRAY),
-        ("TIR", player.tireness, 100, GRAY),
+        ("WTR", player.water, 100, GRAY),
         ("WGT", player.current_weight, player.max_carry_weight, GRAY),
         ("DEF", player.get_total_defence(), 5.0, GRAY)
     ]
@@ -154,7 +154,7 @@ def draw_health_tab(surface, player, modal, assets):
 
                 char_surface.blit(img_to_draw, (0, 0))
         
-        scale_factor = 8
+        scale_factor = 7
         new_w = TILE_SIZE * scale_factor
         new_h = TILE_SIZE * scale_factor
         

@@ -170,7 +170,7 @@ def toggle_pause(game):
 
 def process_chat_command(game, text):
     """Processes potential cheat commands entered in chat."""
-    from core.messages import display_message_player
+    from core.messages import display_message
     import re
     
     text = text.strip()
@@ -205,10 +205,10 @@ def process_chat_command(game, text):
             
             if command == "godzen":
                  game.player.godzen_mode = True
-                 display_message_player(game, "GODZEN Mode Activated: Invincible and Invisible.")
+                 display_message(game, "GODZEN Mode Activated: Invincible and Invisible.")
             else:
                  game.player.godzen_mode = False
-                 display_message_player(game, "GOD Mode Activated: Invincible.")
+                 display_message(game, "GOD Mode Activated: Invincible.")
         return True
 
     # --- ITEM SPAWN ---
@@ -230,9 +230,9 @@ def process_chat_command(game, text):
                     break
         
         if spawned > 0:
-            display_message_player(game, f"Spawned {spawned}x '{item_name}' into inventory.")
+            display_message(game, f"Spawned {spawned}x '{item_name}' into inventory.")
         else:
-            display_message_player(game, f"Could not spawn '{item_name}'. (Inventory full or invalid item)")
+            display_message(game, f"Could not spawn '{item_name}'. (Inventory full or invalid item)")
         return True
 
     # --- CLOTH SPAWN ---
@@ -253,9 +253,9 @@ def process_chat_command(game, text):
                     break
         
         if spawned > 0:
-            display_message_player(game, f"Spawned {spawned}x '{cloth_name}' into inventory.")
+            display_message(game, f"Spawned {spawned}x '{cloth_name}' into inventory.")
         else:
-            display_message_player(game, f"Could not spawn cloth '{cloth_name}'.")
+            display_message(game, f"Could not spawn cloth '{cloth_name}'.")
         return True
         
     # --- VEHICLE SPAWN ---
@@ -289,9 +289,9 @@ def process_chat_command(game, text):
             
             game.containers.append(new_vehicle)
             game.rebuild_container_grid() # Update grid
-            display_message_player(game, f"Spawned vehicle '{veh_name}' nearby.")
+            display_message(game, f"Spawned vehicle '{veh_name}' nearby.")
         else:
-             display_message_player(game, f"Could not find vehicle '{veh_name}'.")
+             display_message(game, f"Could not find vehicle '{veh_name}'.")
         return True
 
     return False
@@ -354,8 +354,8 @@ def handle_keyboard_events(game, event):
                         game.player.chat_text = game.chat_input_text
                         game.player.chat_timer = game.player.chat_duration
                         
-                        from core.messages import display_message_player
-                        display_message_player(game, f"{game.player.name}: {game.chat_input_text}")
+                        from core.messages import display_message
+                        display_message(game, f"{game.player.name}: {game.chat_input_text}")
                 
                 game.chat_input_text = ""
                 game.chat_active = False

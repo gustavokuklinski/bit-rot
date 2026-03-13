@@ -225,30 +225,41 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             target_template = ITEM_TEMPLATES.get(loot_info['name'], {})
             target_type = target_template.get('type', '')
 
-            # [FIX] Start with the global multiplier so container loot is correctly throttled!
-            m = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
+            # --- CORRECTED LOOT CHANCE LOGIC ---
+            # Now correctly checking the 'allow_liquid' boolean directly
+            if disposable or allow_liquid:
+                spawn_loot = True
+            else:
+                m = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
+                spawn_loot = random.random() < (loot_info['chance'] * m)
 
-            if random.random() < (loot_info['chance'] * m):
+            if spawn_loot:
                 loot_item = cls.create_from_name(loot_info['name'])
                 if loot_item:
-                    fits = True
-                    max_cap = new_item.capacity or 0
-                    
-                    if len(new_item.inventory) >= max_cap:
-                        fits = False
-                    
-                    if fits and new_item.item_type in ['container', 'backpack', 'cloth']:
-                        current_weight = sum(i.get_total_weight() for i in new_item.inventory)
-                        item_weight = loot_item.get_total_weight()
-                        max_weight = new_item.weight * 5.0
-                         
-                        if current_weight + item_weight > max_weight:
-                            fits = False
-
-                        if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):
-                            fits = False
-
-                    if fits:
+                    # --- CORRECTED BYPASS LOGIC ---
+                    if disposable or allow_liquid:
                         new_item.inventory.append(loot_item)
+                    else:
+                        fits = True
+                        max_cap = new_item.capacity or 0
+                        
+                        if len(new_item.inventory) >= max_cap:
+                            fits = False
+                        
+                        if fits and new_item.item_type in ['container', 'backpack', 'cloth']:
+                            current_weight = sum(i.get_total_weight() for i in new_item.inventory)
+                            item_weight = loot_item.get_total_weight()
+                            # If a container lacks a weight tag in XML, max_weight defaults to 0.0
+                            # This bypass prevents 0.0 weight disposable containers from rejecting items.
+                            max_weight = new_item.weight * 5.0
+                             
+                            if current_weight + item_weight > max_weight:
+                                fits = False
+
+                            if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):
+                                fits = False
+
+                        if fits:
+                            new_item.inventory.append(loot_item)
     
     return new_item

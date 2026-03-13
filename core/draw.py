@@ -633,6 +633,7 @@ def draw_game(game):
         interactables = []
         # 1. Check NPCs
         for npc in game.npcs:
+            if not npc.is_friendly: continue
             if not screen_rect.colliderect(npc.rect): continue
             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
             if dist < TILE_SIZE * 1.5:

@@ -7,7 +7,7 @@ import core.data.config
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, BLUE, AUTO_DRINK
 from core.entities.item.item import Item
 from core.entities.player.player_progression import PlayerProgression
-from core.messages import display_message_player
+from core.messages import display_message
 from core.data.recipe_manager import RecipeManager
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.data.progression_loader import PROGRESSION_CONFIG
@@ -300,7 +300,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.tireness = self.max_tireness
                 self.is_sleeping = False
                 game.is_fast_forwarding = False
-                display_message_player("You wake up refreshed.")
+                display_message("You wake up refreshed.")
 
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL]
@@ -441,7 +441,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
 
         def msg(text):
-            display_message_player(text)
+            display_message(text)
 
         def close_modal(target_item):
             for m in list(game.modals):

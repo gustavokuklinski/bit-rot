@@ -180,7 +180,19 @@ def handle_mouse_down(game, event, mouse_pos):
                             else:
                                 topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
-            
+
+                    elif button['type'] == 'send_msg':
+                        if game.chat_input_text.strip():
+                            game.player.chat_text = game.chat_input_text
+                            game.player.chat_timer = game.player.chat_duration
+                            display_message(game, f"[You]: {game.chat_input_text}")
+                            game.chat_input_text = ""
+                            game.chat_active = True 
+                        return
+                    elif button['type'] == 'chat_input':
+                        game.chat_active = True
+                        return
+
             if topmost_modal.get('minimized', False):
                  modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
                  if modal_header_rect.collidepoint(mouse_pos):
@@ -272,21 +284,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 handle_left_click_drag_candidate(game, mouse_pos)
                 return
 
-        for button in getattr(game, 'modal_buttons', []):
-             if not button.get('id'): 
-                 if button['rect'].collidepoint(mouse_pos):
-                      if button['type'] == 'send_msg':
-                           if game.chat_input_text.strip():
-                               game.player.chat_text = game.chat_input_text
-                               game.player.chat_timer = game.player.chat_duration
-                               from core.messages import display_message_player
-                               display_message_player(game, f"You: {game.chat_input_text}")
-                               game.chat_input_text = ""
-                               game.chat_active = True 
-                           return
-                      elif button['type'] == 'chat_input':
-                           game.chat_active = True
-                           return
+        
 
         if game.chat_active:
             game.chat_active = False

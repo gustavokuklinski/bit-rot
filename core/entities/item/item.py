@@ -284,20 +284,31 @@ class Item:
                 Item.cleanup_disposables(item.inventory, modals, message_func)
 
             # 2. Check if this item itself should be destroyed
-            if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
-                # Close associated modal if it's open
-                if modals:
-                    for m in list(modals):
-                        if m.get('item') == item:
-                            modals.remove(m)
+            if getattr(item, 'disposable', False):
+                is_empty = False
                 
-                # Notify
-                if message_func:
-                    message_func(f"Discarded empty {item.name}.")
-                
-                # Remove the item from the list
-                if item in item_list:
-                    item_list.remove(item)
+                # Check 'load' for liquids/stackables, fallback to 'inventory' for bags/boxes
+                if getattr(item, 'load', None) is not None:
+                    is_empty = (item.load <= 0)
+                elif hasattr(item, 'inventory'):
+                    is_empty = (len(item.inventory) == 0)
+                else:
+                    is_empty = True
+
+                if is_empty:
+                    # Close associated modal if it's open
+                    if modals:
+                        for m in list(modals):
+                            if m.get('item') == item:
+                                modals.remove(m)
+                    
+                    # Notify
+                    if message_func:
+                        message_func(f"Discarded empty {item.name}.")
+                    
+                    # Remove the item from the list
+                    if item in item_list:
+                        item_list.remove(item)
 
     def draw(self, surface, offset_x, offset_y, opacity=0):
         draw_rect = self.rect.move(offset_x, offset_y)

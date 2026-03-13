@@ -223,6 +223,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     elif len(target_container.inventory) < (target_container.capacity or 0):
                                          if not check_container_weight_limit(target_container, game.dragged_item):
                                              print(f"{target_container.name} cannot carry that much weight.")
+                                             display_message(f"{target_container.name} cannot carry that much weight.")
                                              dropped_successfully = False
                                          elif is_external_source:
                                              item_ref = game.dragged_item
@@ -454,6 +455,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     elif len(container.inventory) < (container.capacity or 0):
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -497,6 +499,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                             if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
                                                 print(f"{container.name} cannot carry that much weight.")
+                                                display_message(f"{container.name} cannot carry that much weight.")
                                                 dropped_successfully = False
                                             else:
                                                 item_to_swap = container.inventory.pop(target_index)
@@ -506,6 +509,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     else:
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             container.inventory.insert(target_index, game.dragged_item)
@@ -514,6 +518,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 elif len(container.inventory) < (container.capacity or 0):
                                     if not check_container_weight_limit(container, game.dragged_item):
                                         print(f"{container.name} cannot carry that much weight.")
+                                        display_message(f"{container.name} cannot carry that much weight.")
                                         dropped_successfully = False
                                     else:
                                         container.inventory.append(game.dragged_item)
@@ -556,11 +561,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                             can_loot = True; is_stack = True
                                         else:
                                             print("Cannot swap while looting.")
+                                            display_message("Cannot swap while looting.")
                                             dropped_successfully = False
                                             break
                                     elif len(container.inventory) < (container.capacity or 0):
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -596,6 +603,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                             if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
                                                 print(f"{container.name} cannot carry that much weight.")
+                                                display_message(f"{container.name} cannot carry that much weight.")
                                                 dropped_successfully = False
                                             else:
                                                 item_to_swap = container.inventory.pop(target_index)
@@ -605,6 +613,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     else:
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             container.inventory.insert(target_index, game.dragged_item)
@@ -613,6 +622,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 elif len(container.inventory) < (container.capacity or 0):
                                     if not check_container_weight_limit(container, game.dragged_item):
                                         print(f"{container.name} cannot carry that much weight.")
+                                        display_message(f"{container.name} cannot carry that much weight.")
                                         dropped_successfully = False
                                     else:
                                         container.inventory.append(game.dragged_item)
@@ -640,16 +650,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                             if getattr(target_container, 'allow_liquid', False):
                                                 if not getattr(game.dragged_item, 'liquid', False):
                                                     print(f"This {target_container.name} only accepts liquids.")
+                                                    display_message(f"This {target_container.name} only accepts liquids.")
                                                     dropped_successfully = False
                                                     break
                                             elif getattr(game.dragged_item, 'liquid', False):
                                                 print("Liquid spills.")
+                                                display_message("Liquid spills.")
                                                 dropped_successfully = True
                                                 break
 
                                             if len(target_container.inventory) < (target_container.capacity or 0):
                                                  if not check_container_weight_limit(target_container, game.dragged_item):
                                                      print(f"{target_container.name} cannot carry that much weight.")
+                                                     display_message(f"{target_container.name} cannot carry that much weight.")
                                                      dropped_successfully = False
                                                      break
 
@@ -665,6 +678,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                      dropped_successfully = True
                                             else:
                                                 print(f"{target_container.name} is full.")
+                                                display_message(f"{target_container.name} is full.")
                                                 dropped_successfully = False
                                         
                                         break 
@@ -687,12 +701,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                             
                                             if getattr(dragged_item, 'liquid', False):
                                                 print(f"The {dragged_item.name} spills and is lost.")
+                                                display_message(f"The {dragged_item.name} spills and is lost.")
                                                 dropped_successfully = True; break
 
                                             if is_external_source:
                                                 item_in_slot = game.player.clothes.get(slot_name)
                                                 if item_in_slot:
                                                     print("Cannot swap items while equipping from external source.")
+                                                    display_message("Cannot swap items while equipping from external source.")
                                                     dropped_successfully = False
                                                     break
 
@@ -705,6 +721,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                         new_item.load = item_ref.load
                                                         item_ref = new_item
                                                         print("Campfire extinguished when picked up.")
+                                                        display_message("Campfire extinguished when picked up.")
                                                 def do_gear_equip():
                                                     game.player.clothes[slot_name] = item_ref
 
@@ -740,16 +757,19 @@ def handle_mouse_up(game, event, mouse_pos):
                             if container:
                                 if check_recursive_containment(game.dragged_item, container):
                                     print("Recursion detected: Cannot put the container inside itself.")
+                                    display_message("Cannot put the container inside itself.")
                                     dropped_successfully = False
                                     break
                                 
                                 if getattr(container, 'allow_liquid', False):
                                     if not getattr(game.dragged_item, 'liquid', False):
                                         print(f"This {container.name} only accepts liquids.")
+                                        display_message(f"This {container.name} only accepts liquids.")
                                         dropped_successfully = False 
                                         break
                                 elif getattr(game.dragged_item, 'liquid', False):
                                     print(f"The {game.dragged_item.name} spills and is lost.")
+                                    display_message(f"The {game.dragged_item.name} spills and is lost.")
                                     dropped_successfully = True 
                                     break
                                 
@@ -769,11 +789,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                             can_loot = True; is_stack = True
                                         else:
                                             print("Cannot swap while looting.")
+                                            display_message("Cannot swap while looting.")
                                             dropped_successfully = False
                                             break
                                     elif len(container.inventory) < (container.capacity or 0):
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{target_container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -809,6 +831,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                             if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
                                                 print(f"{container.name} cannot carry that much weight.")
+                                                display_message(f"{target_container.name} cannot carry that much weight.")
                                                 dropped_successfully = False
                                             else:
                                                 item_to_swap = container.inventory.pop(target_index)
@@ -818,6 +841,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     else:
                                         if not check_container_weight_limit(container, game.dragged_item):
                                             print(f"{container.name} cannot carry that much weight.")
+                                            display_message(f"{target_container.name} cannot carry that much weight.")
                                             dropped_successfully = False
                                         else:
                                             container.inventory.insert(target_index, game.dragged_item)
@@ -825,6 +849,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 elif len(container.inventory) < (container.capacity or 0):
                                     if not check_container_weight_limit(container, game.dragged_item):
                                         print(f"{container.name} cannot carry that much weight.")
+                                        display_message(f"{target_container.name} cannot carry that much weight.")
                                         dropped_successfully = False
                                     else:
                                         container.inventory.append(game.dragged_item)
@@ -853,16 +878,19 @@ def handle_mouse_up(game, event, mouse_pos):
                         
                         if check_recursive_containment(game.dragged_item, container):
                             print("Recursion detected: Cannot put container into itself.")
+                            display_message("Recursion detected: Cannot put container into itself.")
                             dropped_successfully = False
                             break
 
                         if getattr(container, 'allow_liquid', False):
                             if not getattr(game.dragged_item, 'liquid', False):
                                 print(f"This {container.name} only accepts liquids.")
+                                display_message(f"This {container.name} only accepts liquids.")
                                 dropped_successfully = False 
                                 break
                         elif getattr(game.dragged_item, 'liquid', False):
                             print(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
+                            display_message(f"The {game.dragged_item.name} spills and is lost (container does not allow liquid).")
                             dropped_successfully = True 
                             break
                         
@@ -956,11 +984,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                     can_action = True; is_stack = True
                                 else:
                                     print(f"Cannot swap items while {action_name.lower()}.")
+                                    display_message(f"Cannot swap items while {action_name.lower()}.")
                                     dropped_successfully = False
                                     break
                             elif len(container.inventory) < (container.capacity or 0):
                                 if not check_container_weight_limit(container, game.dragged_item):
                                     print(f"{container.name} cannot carry that much weight.")
+                                    display_message(f"{container.name} cannot carry that much weight.")
                                     dropped_successfully = False
                                     break
                                 else:
@@ -1003,6 +1033,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             else:
                                 if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
                                     print(f"{container.name} cannot carry that much weight.")
+                                    display_message(f"{container.name} cannot carry that much weight.")
                                     dropped_successfully = False
                                 else:
                                     item_to_swap = container.inventory.pop(target_index)
@@ -1012,12 +1043,14 @@ def handle_mouse_up(game, event, mouse_pos):
                         elif len(container.inventory) < (container.capacity or 0):
                             if not check_container_weight_limit(container, game.dragged_item):
                                 print(f"{container.name} cannot carry that much weight.")
+                                display_message(f"{container.name} cannot carry that much weight.")
                                 dropped_successfully = False
                             else:
                                 container.inventory.append(game.dragged_item)
                                 dropped_successfully = True
                         else:
                             print(f"{container.name} is full.")
+                            display_message(f"{container.name} is full.")
                         
                         if dropped_successfully: break
                 if dropped_successfully:
@@ -1044,8 +1077,10 @@ def handle_mouse_up(game, event, mouse_pos):
                             if tile_def and tile_def.get('allow_liquid', False):
                                 is_safe_ground = True
                                 print(f"Placed {game.dragged_item.name} on {tile_def.get('name')}.")
+                                display_message(f"Placed {game.dragged_item.name} on {tile_def.get('name')}.")
                             else:
                                 print(f"The {game.dragged_item.name} spills on the ground.")
+                                display_message(f"The {game.dragged_item.name} spills on the ground.")
                                 dropped_successfully = True 
                         
                         if (not getattr(game.dragged_item, 'liquid', False)) or is_safe_ground:
@@ -1331,6 +1366,8 @@ def handle_mouse_motion(game, event, mouse_pos):
                                 new_item.y = item_to_drag.y
                                 game.dragged_item = new_item
                                 print("Campfire extinguished when picked up (drag).")
+                                display_message("Campfire extinguished when picked up.")
+                                
                 elif type_orig == 'vehicle_equipment':
                     vehicle = container_info[0]
                     slot_name = i_orig
