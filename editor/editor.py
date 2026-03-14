@@ -22,7 +22,7 @@ pygame.font.init()
 
 # Initialize Clipboard safety for Pygame Scrap 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("Bit Rot - Map Editor")
+pygame.display.set_caption("Rot Engine - Game Editor")
 
 try:
     pygame.scrap.init()

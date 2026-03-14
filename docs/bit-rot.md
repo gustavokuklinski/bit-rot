@@ -49,3 +49,9 @@ Music:
 
 Sprites
     - Kenney: 1 bit pack
+
+External tools:
+    - Icons - PixelForge by Butterfly (https://www.youtube.com/@butterflyx1811)
+
+Play tester:
+    - Spoken (https://www.youtube.com/@spoken-cafe)
