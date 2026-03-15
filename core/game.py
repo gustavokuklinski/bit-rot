@@ -397,6 +397,9 @@ class Game:
                     if self.save_game():
                         pass
                 elif btn_quit.collidepoint(mouse_pos):
+                    # --- NEW: Stop ambient sounds when quitting to menu ---
+                    if hasattr(self, 'world_time') and self.world_time:
+                        self.world_time.stop_all_sounds()
                     self.game_state = 'MENU'
 
         self._update_screen()
@@ -567,6 +570,10 @@ class Game:
         run_player_setup(self)
 
     def run_game_over(self):
+        # --- NEW: Stop ambient sounds when on Game Over screen ---
+        if hasattr(self, 'world_time') and self.world_time:
+            self.world_time.stop_all_sounds()
+            
         pygame.mouse.set_visible(True)
         mouse_pos = self._get_scaled_mouse_pos()
         menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)

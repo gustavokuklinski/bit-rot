@@ -46,6 +46,22 @@ class WorldTime:
         self.cave_channel = None
         self._initial_sounds_played = False
 
+    def stop_all_sounds(self):
+        """Stops all ambient sounds immediately."""
+        if self.day_channel:
+            self.day_channel.stop()
+            self.day_channel = None
+        if self.night_channel:
+            self.night_channel.stop()
+            self.night_channel = None
+        if self.rain_channel:
+            self.rain_channel.stop()
+            self.rain_channel = None
+        if self.cave_channel:
+            self.cave_channel.stop()
+            self.cave_channel = None
+        self._initial_sounds_played = False
+
     def update(self):
         # Play initial sounds if needed when the game first starts
         if not self._initial_sounds_played and hasattr(self.game, 'sound_manager'):
