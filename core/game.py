@@ -64,14 +64,14 @@ class Game:
         self.game_state = 'MENU'
         self.running = True
         
-        self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 32
+        self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 128
 
         self.map_manager = MapManager(self)
         self.tile_manager = TileManager()
         
-        c_size = getattr(core.data.config, 'CHUNK_SIZE', 32)
-        m_chunks = getattr(core.data.config, 'MAP_CHUNKS', 64) 
-        t_size = getattr(core.data.config, 'TILE_SIZE', 32)
+        c_size = getattr(core.data.config, 'CHUNK_SIZE', 128)
+        m_chunks = getattr(core.data.config, 'MAP_CHUNKS', 3) 
+        t_size = getattr(core.data.config, 'TILE_SIZE', 16)
         
         total_world_size = m_chunks * c_size * t_size
         self.quadtree = Quadtree(pygame.Rect(0, 0, total_world_size, total_world_size))

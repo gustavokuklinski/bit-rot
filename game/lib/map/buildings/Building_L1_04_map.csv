@@ -1,6 +1,6 @@
-@,@,window_01_close,@,wall_01_part_left_top,wall_01_broke
-@,lab_cupboard_01,house_table,@,factory_industrial_pipe_right,factory_industrial_part_left_02
-window_01_open,,house_bench,@,factory_industrial_pipe_right,factory_industrial_part_left_02
-@,door_02_close,@,@,wall_01_part_left,
-road_curve_top_01,,crate,misc_barrel,misc_chainwheel_left_right,road_curve_bottom_01
-road_curve_left_01,road_sewer_bottom_01,road_bottom_01,road_bottom_01,road_sewer_bottom_01,road_curve_right_01
+@@,@@,window_02_close,@@,@@,@@
+@@,lab_cupboard_01,house_bench,military_radio,military_crate,@@
+window_02_close,medical_cupboard_01,,,store_sale_01,@@
+@@,medical_cupboard_01,,,,@@
+@@,window_02_close,@@,,,@@
+misc_barrel,misc_blood,@@,@@,door_02_close,@@
