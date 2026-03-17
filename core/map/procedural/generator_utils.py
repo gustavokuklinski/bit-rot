@@ -198,11 +198,19 @@ class ProceduralGeneratorUtils:
     # [UPDATED] Apply auto-tiling borders to Asphalt exactly like Dirt and Sand
     def _apply_asphalt_smoothing(self, global_layers, w, h):
         ground = global_layers['ground']
+        base = global_layers['base']
         protected = global_layers.get('protected_mask')
         
         def is_asphalt_or_no_border(x, y):
             if x < 0 or x >= w or y < 0 or y >= h:
                 return True
+                
+            # If the adjacent tile is part of a building template or an obstacle, treat as seamless
+            if protected and protected[y][x] == 1:
+                return True
+            if base[y][x] != ' ':
+                return True
+                
             tile = ground[y][x]
             # Treat water and beach_sand as if they are asphalt to prevent drawing the grass border
             return (tile.startswith('asphalt_') or 
@@ -240,7 +248,7 @@ class ProceduralGeneratorUtils:
                     if protected and protected[y][x] == 1:
                         continue
 
-                    # 1 if neighbor requires a grass border (grass, dirt, sand), 0 if it is ASPHALT, BEACH_SAND, or WATER
+                    # 1 if neighbor requires a grass border (grass, dirt, sand), 0 if it is ASPHALT, BEACH_SAND, WATER, or BUILDING
                     t = 0 if is_asphalt_or_no_border(x, y - 1) else 1
                     r = 0 if is_asphalt_or_no_border(x + 1, y) else 2
                     b = 0 if is_asphalt_or_no_border(x, y + 1) else 4

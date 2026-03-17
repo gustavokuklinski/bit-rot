@@ -15,7 +15,21 @@ def load_trait_definitions():
         tree = ET.parse(filepath)
         root = tree.getroot()
         
-        for trait_node in root.findall('trait'):
+        # [NEW] Gather nodes from both <profession> and <traits>
+        nodes_to_parse = []
+        prof_node = root.find('profession')
+        if prof_node is not None:
+            for t in prof_node.findall('trait'): nodes_to_parse.append((t, True))
+            
+        traits_node = root.find('traits')
+        if traits_node is not None:
+            for t in traits_node.findall('trait'): nodes_to_parse.append((t, False))
+            
+        # Fallback for old XML structure
+        if prof_node is None and traits_node is None:
+            for t in root.findall('trait'): nodes_to_parse.append((t, False))
+        
+        for trait_node, is_prof in nodes_to_parse:
             trait_id = trait_node.get('id')
             if not trait_id:
                 continue
@@ -29,12 +43,13 @@ def load_trait_definitions():
                 'cost': cost, 
                 'stats': {}, 
                 'attributes': {},
-                'config_modifiers': {}, # [NEW] Store dynamic config changes
+                'config_modifiers': {}, 
                 'starting_levels': {},
                 'conflicts': [],
                 'recipes': [],
                 'name': trait_node.get('name', trait_id),
-                'tooltip': trait_node.get('tooltip')
+                'tooltip': trait_node.get('tooltip'),
+                'is_profession': is_prof # [NEW] Distinguish professions
             }
             
             # Parse 'stats'
@@ -47,20 +62,17 @@ def load_trait_definitions():
                     except ValueError:
                         pass
 
-            # [NEW] Parse 'config' modifiers
-            # Example: <config set="BASE_PLAYER_VIEW_RADIUS:0.65, PLAYER_SPEED:1.1" />
+            # Parse 'config' modifiers
             config_node = trait_node.find('config')
             if config_node is not None:
                 set_str = config_node.get('set')
                 if set_str:
-                    # Remove brackets just in case, split by comma
                     clean_str = set_str.strip("[] ")
                     parts = clean_str.split(',')
                     for part in parts:
                         if ':' in part:
                             key, val = part.split(':')
                             try:
-                                # We store the float value (multiplier) keyed by the config variable name
                                 trait_data['config_modifiers'][key.strip()] = float(val)
                             except ValueError:
                                 print(f"Error parsing config modifier '{part}' in trait {trait_id}")

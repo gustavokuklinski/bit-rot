@@ -262,7 +262,66 @@ def _draw_player_build_screen(game, state, mouse_pos):
             y_offset += 35
     
     # --- Column 2: Available Traits (Middle-Left) ---
-    available_rect = pygame.Rect(col2_x, 30, col2_width, 640)
+    prof_rect = pygame.Rect(col2_x, 30, col2_width, 160)
+    prof_header_rect = pygame.Rect(prof_rect.x, prof_rect.y, prof_rect.width, header_height)
+    prof_body_rect = pygame.Rect(prof_rect.x, prof_rect.y + header_height, prof_rect.width, prof_rect.height - header_height)
+    
+    pygame.draw.rect(game.game_screen, (30, 30, 30), prof_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, GRAY_60, prof_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+    pygame.draw.rect(game.game_screen, WHITE, prof_rect, 1, border_radius=border_radius)
+    game.game_screen.blit(font.render("Available Professions", True, WHITE), (prof_header_rect.x + 10, prof_header_rect.y + 7))
+    
+    prof_content_rect = pygame.Rect(prof_rect.x + padding, prof_rect.y + header_height + padding, prof_rect.width - (padding * 2) - 10, prof_rect.height - header_height - (padding * 2))
+    state['prof_content_rect'] = prof_content_rect
+    line_height = 35
+    
+    total_prof_items = len(state.get('available_professions', []))
+    total_prof_text_height = total_prof_items * line_height
+    prof_max_scroll = max(0, total_prof_text_height - prof_content_rect.height)
+    state['prof_max_scroll'] = prof_max_scroll
+    prof_scroll_y = max(0, min(state.get('prof_scroll_offset_y', 0), prof_max_scroll))
+    state['prof_scroll_offset_y'] = prof_scroll_y
+    
+    drawable_prof_rect = game.game_screen.get_rect().clip(prof_content_rect)
+    hovered_trait_id = None
+    
+    if drawable_prof_rect.width > 0 and drawable_prof_rect.height > 0:
+        prof_surface = game.game_screen.subsurface(drawable_prof_rect)
+        prof_surface.fill((30, 30, 30))
+        y_off = 0 - prof_scroll_y
+        for p_id in state.get('available_professions', []):
+            row_rect_rel = pygame.Rect(0, y_off, prof_content_rect.width, 30)
+            row_rect_abs = pygame.Rect(prof_content_rect.x, prof_content_rect.y + y_off, prof_content_rect.width, 30)
+            add_btn_rect_rel = pygame.Rect(row_rect_rel.right - 25, row_rect_rel.y, 25, 25)
+            add_btn_rect_abs = pygame.Rect(prof_content_rect.x + add_btn_rect_rel.x, prof_content_rect.y + add_btn_rect_rel.y, 25, 25)
+            
+            if row_rect_rel.bottom > 0 and row_rect_rel.top < prof_content_rect.height:
+                if row_rect_abs.collidepoint(mouse_pos): hovered_trait_id = p_id
+                trait_cost = TRAIT_DEFINITIONS.get(p_id, {}).get('cost', 0)
+                cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
+                name_surf = font.render(TRAIT_DEFINITIONS[p_id].get('name', p_id), True, WHITE)
+                cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
+                
+                prof_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
+                prof_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
+                pygame.draw.rect(prof_surface, GREEN, add_btn_rect_rel, border_radius=4)
+                prof_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
+                
+            clickable_rects["add_trait"].append((p_id, add_btn_rect_abs))
+            y_off += line_height
+
+    if total_prof_text_height > prof_content_rect.height:
+        scroll_rect = pygame.Rect(prof_content_rect.right + 2, prof_content_rect.top, 8, prof_content_rect.height)
+        handle_h = max(10, prof_content_rect.height * (prof_content_rect.height / total_prof_text_height))
+        handle_pos = 0 if prof_max_scroll <= 0 else prof_scroll_y / prof_max_scroll
+        handle_y = scroll_rect.top + (prof_content_rect.height - handle_h) * handle_pos
+        prof_handle_rect = pygame.Rect(scroll_rect.left, handle_y, scroll_rect.width, handle_h)
+        pygame.draw.rect(game.game_screen, GRAY, prof_handle_rect, 0, 2)
+        state['prof_scrollbar_handle_rect'] = prof_handle_rect
+    else: state['prof_scrollbar_handle_rect'] = None
+
+    # --- Column 2B: Available Traits (Bottom 75%) ---
+    available_rect = pygame.Rect(col2_x, prof_rect.bottom + 20, col2_width, 640 - 160 - 20)
     
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
@@ -270,9 +329,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, available_rect, 1, border_radius=border_radius)
     game.game_screen.blit(font.render("Available Traits", True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
+    
     traits_content_rect = pygame.Rect(available_rect.x + padding, available_rect.y + header_height + padding, available_rect.width - (padding * 2) - 10, available_rect.height - header_height - (padding * 2))
     state['traits_content_rect'] = traits_content_rect
-    line_height = 35
+    
+    # Ensure this variable matches the rest of the file
     state['traits_line_height'] = line_height
     total_items = len(state['available_traits'])
     total_text_height = total_items * line_height
@@ -282,11 +343,12 @@ def _draw_player_build_screen(game, state, mouse_pos):
     scroll_offset_y = max(0, min(state.get('traits_scroll_offset_y', 0), max_scroll_offset))
     state['traits_scroll_offset_y'] = scroll_offset_y
     drawable_traits_rect = game.game_screen.get_rect().clip(traits_content_rect)
+    
     if drawable_traits_rect.width > 0 and drawable_traits_rect.height > 0:
         content_surface = game.game_screen.subsurface(drawable_traits_rect)
         content_surface.fill((30, 30, 30))
     else: content_surface = None
-    hovered_trait_id = None
+    
     y_offset = 0 - scroll_offset_y
     if content_surface:
         for i, trait_name in enumerate(state['available_traits']):
@@ -294,19 +356,23 @@ def _draw_player_build_screen(game, state, mouse_pos):
             row_rect_abs = pygame.Rect(traits_content_rect.x, traits_content_rect.y + y_offset, traits_content_rect.width, 30)
             add_btn_rect_rel = pygame.Rect(row_rect_rel.right - 25, row_rect_rel.y, 25, 25)
             add_btn_rect_abs = pygame.Rect(traits_content_rect.x + add_btn_rect_rel.x, traits_content_rect.y + add_btn_rect_rel.y, 25, 25)
+            
             if row_rect_rel.bottom > 0 and row_rect_rel.top < traits_content_rect.height:
                 if row_rect_abs.collidepoint(mouse_pos):
                     hovered_trait_id = trait_name
                 trait_cost = TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
-                name_surf = font.render(trait_name.capitalize(), True, WHITE)
+                name_surf = font.render(TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize()), True, WHITE)
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
+                
                 content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
                 content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
                 pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel, border_radius=4)
                 content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
+                
             clickable_rects["add_trait"].append((trait_name, add_btn_rect_abs))
             y_offset += line_height
+
     if total_text_height > visible_height:
         scrollbar_area_height = traits_content_rect.height
         scrollbar_area_rect = pygame.Rect(traits_content_rect.right + 2, traits_content_rect.top, 8, scrollbar_area_height)
@@ -607,15 +673,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     return clickable_rects
 
 def _update_available_traits(state):
-    """
-    Recalculates available traits based on:
-    1. Traits already chosen (cannot pick again)
-    2. Traits disabled by currently chosen traits (conflicts)
-    """
     all_defs = state['all_traits']
     chosen = state['chosen_traits']
     
-    # 1. Identify all traits disabled by current selection
     disabled_ids = set()
     for t_id in chosen:
         t_def = all_defs.get(t_id)
@@ -623,23 +683,28 @@ def _update_available_traits(state):
             for conflict_id in t_def['conflicts']:
                 disabled_ids.add(conflict_id)
     
-    # 2. Filter all traits
-    valid_ids = []
+    valid_traits = []
+    valid_profs = []
+    
     for t_id in all_defs.keys():
-        if t_id in chosen: continue        # Already picked
-        if t_id in disabled_ids: continue  # Disabled by another trait
-        valid_ids.append(t_id)
+        if t_id in chosen: continue        
+        if t_id in disabled_ids: continue  
+        
+        if all_defs[t_id].get('is_profession', False):
+            valid_profs.append(t_id)
+        else:
+            valid_traits.append(t_id)
 
-    # 3. Sort them (Positive first, then Negative) like before
     pos_traits = sorted(
-        [t for t in valid_ids if all_defs[t].get('cost', 0) > 0], 
+        [t for t in valid_traits if all_defs[t].get('cost', 0) > 0], 
         key=lambda t: (all_defs[t].get('cost', 0), t)
     )
     neg_traits = sorted(
-        [t for t in valid_ids if all_defs[t].get('cost', 0) < 0], 
+        [t for t in valid_traits if all_defs[t].get('cost', 0) < 0], 
         key=lambda t: (abs(all_defs[t].get('cost', 0)), t)
     )
     
+    state['available_professions'] = sorted(valid_profs, key=lambda t: all_defs[t].get('name', t))
     state['available_traits'] = pos_traits + neg_traits
 
 
@@ -650,6 +715,8 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         
         if state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
              state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * 70, state.get('traits_max_scroll', 0)))
+        elif state.get('prof_content_rect') and state['prof_content_rect'].collidepoint(mouse_pos):
+             state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) - event.y * 70, state.get('prof_max_scroll', 0)))
         elif stats_rect and stats_rect.collidepoint(mouse_pos):
              state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * 50, state.get('stats_max_scroll', 0)))
         elif chosen_rect and chosen_rect.collidepoint(mouse_pos):
@@ -681,7 +748,8 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             state['is_dragging_stats_scrollbar'] = True; state['stats_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
         if not scrollbar_clicked and state.get('traits_scrollbar_handle_rect') and state['traits_scrollbar_handle_rect'].collidepoint(mouse_pos):
             state['is_dragging_traits_scrollbar'] = True; state['traits_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
-        
+        if state.get('prof_scrollbar_handle_rect') and state['prof_scrollbar_handle_rect'].collidepoint(mouse_pos):
+            state['is_dragging_prof_scrollbar'] = True; state['prof_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
         if not scrollbar_clicked and state.get('chosen_scrollbar_handle_rect') and state['chosen_scrollbar_handle_rect'].collidepoint(mouse_pos):
              state['is_dragging_chosen_scrollbar'] = True; state['chosen_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
 
@@ -799,6 +867,7 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         state['is_dragging_stats_scrollbar'] = False
         state['is_dragging_traits_scrollbar'] = False
         state['is_dragging_chosen_scrollbar'] = False
+        state['is_dragging_prof_scrollbar'] = False
 
     elif event.type == pygame.MOUSEMOTION:
         if state.get('is_dragging_stats_scrollbar'):
@@ -818,6 +887,12 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             track_height = state['chosen_content_rect'].height - state['chosen_scrollbar_handle_rect'].height
             if track_height > 0:
                  state['chosen_scroll_offset_y'] = max(0, min(state.get('chosen_scroll_offset_y', 0) + (mouse_delta_y * (state['chosen_max_scroll'] / track_height)), state['chosen_max_scroll']))
+        
+        elif state.get('is_dragging_prof_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - state['prof_scroll_drag_last_y']; state['prof_scroll_drag_last_y'] = mouse_pos[1]
+            track_height = state['prof_content_rect'].height - state['prof_scrollbar_handle_rect'].height
+            if track_height > 0:
+                 state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) + (mouse_delta_y * (state['prof_max_scroll'] / track_height)), state['prof_max_scroll']))
 
 
 def run_player_setup(game):
@@ -832,14 +907,9 @@ def run_player_setup(game):
             return
         state['all_traits'] = TRAIT_DEFINITIONS
 
-        all_ids = list(TRAIT_DEFINITIONS.keys())
-        pos_traits = sorted([t for t in all_ids if TRAIT_DEFINITIONS[t]['cost'] > 0], key=lambda t: (TRAIT_DEFINITIONS[t]['cost'], t))
-        neg_traits = sorted([t for t in all_ids if TRAIT_DEFINITIONS[t]['cost'] < 0], key=lambda t: (abs(TRAIT_DEFINITIONS[t]['cost']), t))
-        state['available_traits'] = []
-        if pos_traits: state['available_traits'].extend(pos_traits)
-        if neg_traits: state['available_traits'].extend(neg_traits)
-
         state['chosen_traits'] = []
+        _update_available_traits(state)
+
         state['final_stats'] = state['base_data']['stats'].copy()
         state['final_attrs'] = state['base_data']['attributes'].copy()
         
@@ -908,7 +978,12 @@ def run_player_setup(game):
         state['settings_scroll_drag_last_y'] = 0        
         state['active_setting'] = None
         state['config_dd_active'] = False
-        
+        state['prof_scroll_offset_y'] = 0 
+        state['prof_content_rect'] = None 
+        state['prof_max_scroll'] = 0 
+        state['is_dragging_prof_scrollbar'] = False 
+        state['prof_scroll_drag_last_y'] = 0
+
         state['config_preset_list'] = ["config"] 
         state['selected_config_preset'] = 'config'
         _load_config_presets(state)
@@ -1053,8 +1128,8 @@ def _load_preset(state):
         if traits_node is not None:
             new_traits = [node.text for node in traits_node.findall('trait')]
             
-        state['available_traits'] = [t for t in TRAIT_DEFINITIONS if t not in new_traits]
         state['chosen_traits'] = new_traits
+        _update_available_traits(state)
         
         clothes_node = root.find('clothes')
         if clothes_node is not None:
@@ -1094,7 +1169,6 @@ def _delete_preset(state):
         print(f"Error deleting preset: {e}")
 
 def _randomize_character(state):
-    """Randomizes the character's name, traits, and clothes strictly enforcing VALID_COLOR_ITEMS."""
     print("Generating random character...")
     
     state['base_data']['sex'] = random.choice(['Male', 'Female'])
@@ -1103,57 +1177,55 @@ def _randomize_character(state):
     else:
         state['player_name'] = fake.name_female()
  
-    # 2. Randomize Traits
-    all_traits = list(state['all_traits'].keys())
+    all_profs = [t for t in state['all_traits'] if state['all_traits'][t].get('is_profession')]
+    all_traits = [t for t in state['all_traits'] if not state['all_traits'][t].get('is_profession')]
     
+    new_traits = []
+    
+    # Pick 1 Profession
+    if all_profs:
+        chosen_prof = random.choice(all_profs)
+        new_traits.append(chosen_prof)
+        disabled_ids = state['all_traits'][chosen_prof].get('conflicts', [])
+        all_traits = [t for t in all_traits if t not in disabled_ids]
+    
+    # Randomize Traits
     pos_traits = [t for t in all_traits if state['all_traits'][t]['cost'] > 0]
     neg_traits = [t for t in all_traits if state['all_traits'][t]['cost'] < 0]
     
     num_pos = random.randint(1, 2)
     num_neg = random.randint(0, 1)
     
-    new_traits = []
-    if pos_traits:
-        new_traits.extend(random.sample(pos_traits, min(num_pos, len(pos_traits))))
-    if neg_traits:
-        new_traits.extend(random.sample(neg_traits, min(num_neg, len(neg_traits))))
+    if pos_traits: new_traits.extend(random.sample(pos_traits, min(num_pos, len(pos_traits))))
+    if neg_traits: new_traits.extend(random.sample(neg_traits, min(num_neg, len(neg_traits))))
     
     state['chosen_traits'] = new_traits
-    state['available_traits'] = [t for t in all_traits if t not in new_traits]
+    _update_available_traits(state)
     
     # 3. Randomize Clothes
     available_clothes = state['available_clothes']
     chosen_clothes = {}
-    
-    # Create a pool of colors and shuffle them to guarantee uniqueness
     available_colors = list(CLOTHING_COLORS)
     random.shuffle(available_colors)
     
     for slot, options in available_clothes.items():
         if options:
-            # Do not generate facial hair for females
             if slot == 'facial' and state['base_data']['sex'] == 'Female':
                 chosen_item = "None"
             else:
-                # Enforce mandatory generation for specific slots
                 valid_options = options
                 if slot in ['body', 'legs', 'feet']:
                     valid_options = [opt for opt in options if opt != "None"]
-                    # Fallback in case there are no items loaded for the slot
-                    if not valid_options:
-                        valid_options = options
+                    if not valid_options: valid_options = options
                         
                 chosen_item = random.choice(valid_options)
                 
             chosen_clothes[slot] = chosen_item
             
-            # --- Strict enforcement of color assignment ---
             if slot in VALID_COLOR_ITEMS and chosen_item in VALID_COLOR_ITEMS[slot]:
-                # Pop a color from the unique pool so it cannot be reused
                 if available_colors:
                     state['clothes_colors'][slot] = available_colors.pop()
                 else:
-                    # Fallback just in case there are more slots than available colors
                     state['clothes_colors'][slot] = random.choice(CLOTHING_COLORS)
             else:
                 state['clothes_colors'][slot] = (255, 255, 255)
@@ -1162,6 +1234,4 @@ def _randomize_character(state):
             state['clothes_colors'][slot] = (255, 255, 255)
             
     state['chosen_clothes'] = chosen_clothes
-    
-    # 4. Reset preset dropdown
     state['selected_preset'] = "None"

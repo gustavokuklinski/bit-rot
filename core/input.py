@@ -203,7 +203,7 @@ def handle_input(game):
                             # 1. Check for nearby NPC
                             found_npc = None
                             for npc in game.npcs:
-                                if not npc.is_friendly:
+                                if not npc.is_friendly or npc.aggro_timer > 0:
                                     continue
                                 dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
                                 if dist < TILE_SIZE * 1.5:

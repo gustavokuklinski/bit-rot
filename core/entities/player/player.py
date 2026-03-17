@@ -312,7 +312,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                   handle_attack(game, pygame.mouse.get_pos())
 
         if is_moving:
-            self.walk_anim_angle = math.sin(current_time * 15) * 2
+            anim_speed = 25 if self.is_running else 15
+            self.walk_anim_angle = math.sin(current_time * anim_speed) * 2
         else:
             self.walk_anim_angle = 0
         self.update_aim(is_moving)

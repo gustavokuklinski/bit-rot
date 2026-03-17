@@ -775,12 +775,13 @@ def handle_right_click(game, mouse_pos):
                 click_container_item = None
 
         if not clicked_item:
-            sorted_npcs = sorted(game.npcs, key=lambda n: n.rect.bottom, reverse=True)
-            for npc in sorted_npcs:
-                # Only allow clicking on the NPC if they are friendly
-                if npc.rect.collidepoint(world_pos) and npc.is_friendly:
+            world_pos = game.screen_to_world(mouse_pos)
+            for npc in game.npcs:
+                # [MODIFIED] Fallback check also requires the NPC to be friendly and calm
+                if npc.rect.collidepoint(world_pos) and npc.is_friendly and npc.aggro_timer <= 0:
                     clicked_item = npc
                     click_source = 'npc'
+                    click_index = 0
                     break
 
         if not clicked_item:
@@ -859,7 +860,7 @@ def handle_right_click(game, mouse_pos):
 
             if dist_sq <= max_dist_px_sq:
                 # Final safety check before providing the Talk option
-                if clicked_item.is_friendly:
+                if clicked_item.is_friendly and clicked_item.aggro_timer <= 0:
                     options.append('Talk')
                     if hasattr(clicked_item, 'stop_moving'):
                         clicked_item.stop_moving()

@@ -426,10 +426,10 @@ class ProceduralGeneratorChunk:
                     # 'gap=1' enforces exactly 1 tile of space between building floors.
                     # Because finalize_placement adds exactly 1 tile of asphalt around the floors, 
                     # they will exactly share the asphalt border, giving the "glued together" town aesthetic.
-                    candidates = get_tetris_candidates(tw, th, gap=1)
+                    candidates = get_tetris_candidates(tw, th, gap=2)
                     
                     for tx, ty in candidates:
-                        if is_area_free(tx, ty, tw, th, gap=1):
+                        if is_area_free(tx, ty, tw, th, gap=2):
                             self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
                             placed = True
                             break
@@ -466,7 +466,7 @@ class ProceduralGeneratorChunk:
                 tx = random.randint(2, w - tw - 2)
                 ty = random.randint(2, h - th - 2)
                 
-                if is_area_free(tx, ty, tw, th, gap=1):
+                if is_area_free(tx, ty, tw, th, gap=2):
                     self._blit_template(layers, tmpl, tx, ty, w, h)
                     
                     found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
@@ -647,7 +647,7 @@ class ProceduralGeneratorChunk:
         road_tile = 'asphalt_01'
         
         if not is_cave:
-            lot_m = 1
+            lot_m = 2
             # 1. Draw the asphalt padding (lot) around the building
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
