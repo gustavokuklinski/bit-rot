@@ -337,7 +337,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             # Main Inventory Grid
                             if not dropped_successfully:
                                 target_index = -1
-                                for i in range(5): 
+                                for i in range(10): 
                                     if get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
                                         target_index = i
                                         break

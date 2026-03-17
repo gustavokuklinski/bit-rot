@@ -1,4 +1,4 @@
-<item name="Lighter Fluid" type="utility" allow_belt="false">
+<item name="Lighter Fluid" type="utility" allow_belt="false" tip="Use to Reload Lighter">
     <properties>
         <load min="1" max="50" />
         <weight weight="0.1"/>

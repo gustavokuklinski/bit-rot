@@ -1,4 +1,4 @@
-<item name="Campfire off" type="utility" state="off" allow_belt="false">
+<item name="Campfire off" type="utility" state="off" allow_belt="false" tip="Use Matches or Lighter on\n to Reload/Turn on">
     <properties>
         <durability min="1" max="100" />
         <weight weight="1.0"/>
