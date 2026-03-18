@@ -2,6 +2,7 @@
 <config>
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
+        <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay"/>
     </ui>
     <game>
         <time_daylength value="900000" name="Day length (Default: 15 minutes)"/>

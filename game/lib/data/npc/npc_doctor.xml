@@ -1,4 +1,4 @@
-<npc type="doctor">
+<npc type="doctor" spawn_weight="10">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

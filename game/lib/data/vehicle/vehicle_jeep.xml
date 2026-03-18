@@ -1,4 +1,4 @@
-<vehicle name="car_jeep" type="car" is_obstacle="true">
+<vehicle name="car_jeep" type="car" is_obstacle="true"  spawn_weight="40">
     <capacity value="10" />
     <car>
         <max_speed value="8" />

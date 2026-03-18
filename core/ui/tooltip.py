@@ -105,7 +105,7 @@ def draw_tooltip(surface, item, pos):
     if hasattr(item, 'inventory') and item.item_type in ['container', 'backpack', 'cloth'] and hasattr(item, 'weight'):
         max_weight = item.weight * 5.0
         if max_weight > 0:
-            lines.append(f"Max weight: {total_weight:.2f} / {max_weight:.2f}")
+            lines.append(f"Max weight: {max_weight:.2f}")
     
     # Fixed allow_belt checking (moved out of elif structure so it doesn't get skipped)
     if hasattr(item, 'allow_belt') and item.allow_belt:

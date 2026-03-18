@@ -8,8 +8,7 @@ from core.entities.item.item import Item
 from core.ui.inventory_modal import get_belt_hud_slot_rect, get_backpack_slot_rect
 from core.ui.npc_dialog_modal import get_npc_dialog_option_rect
 from core.messages import display_message
-from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause
-
+from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause, toggle_help_modal
 # Imports from split files
 from core.events.mouse_context import handle_context_menu_click, handle_right_click
 from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion, handle_left_click_drag_candidate
@@ -160,6 +159,8 @@ def handle_mouse_down(game, event, mouse_pos):
                         elif topmost_modal['type'] == 'messages': full_h = MESSAGES_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'crafting': full_h = CRAFTING_MODAL_HEIGHT
                         elif topmost_modal['type'] == 'npc_dialog': full_h = CRAFTING_MODAL_HEIGHT
+                        elif topmost_modal['type'] == 'help': full_h = HELP_MODAL_HEIGHT
+                        elif topmost_modal['type'] == 'big_map': full_h = MAP_MODAL_HEIGHT
                         else: full_h = CONTAINER_MODAL_WIDTH
                         topmost_modal['rect'].height = header_height if is_minimized else full_h
                         return
@@ -306,6 +307,8 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_messages_modal(game); return
         if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
             toggle_crafting_modal(game); return
+        if getattr(game, 'help_button_rect', None) and game.help_button_rect.collidepoint(mouse_pos): # <--- ADD THIS
+            toggle_help_modal(game); return
 
         for i, item in enumerate(game.player.belt):
             slot_rect = get_belt_hud_slot_rect(i)
@@ -339,6 +342,16 @@ def handle_mouse_down(game, event, mouse_pos):
                 topmost_modal['crafting_scroll_offset'] = max(0, offset - 1)
             elif event.button == 5: # Scroll Down
                 topmost_modal['crafting_scroll_offset'] = min(max_scroll, offset + 1)
+            return
+
+        if topmost_modal and topmost_modal['type'] in ['text', 'help']:
+            offset = topmost_modal.get('scroll_offset_y', 0)
+            max_scroll = topmost_modal.get('max_scroll_offset', 0)
+            
+            if event.button == 4: # Scroll Up
+                topmost_modal['scroll_offset_y'] = max(0, offset - 30)
+            elif event.button == 5: # Scroll Down
+                topmost_modal['scroll_offset_y'] = min(max_scroll, offset + 30)
             return
 
     elif event.button == 3:

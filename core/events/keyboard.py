@@ -141,6 +141,28 @@ def toggle_crafting_modal(game):
         
         game.modals.append(modal_data)
 
+def toggle_help_modal(game):
+    help_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'help':
+            game.modals.remove(modal)
+            help_modal_exists = True
+            break
+    if not help_modal_exists:
+        new_help_modal = {
+            'id': uuid.uuid4(),
+            'type': 'help',
+            'position': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2), # Centered
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(0, 0, HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
+            'minimized': False,
+            'scroll_offset_y': 0
+        }
+        # Realize rect bounds
+        new_help_modal['rect'].topleft = new_help_modal['position']
+        game.modals.append(new_help_modal)
+
 def find_closest_vehicle(game):
     closest_vehicle = None
     closest_dist_sq = float('inf')
@@ -393,7 +415,8 @@ def handle_keyboard_events(game, event):
                 toggle_messages_modal(game)
             if event.key == pygame.K_c:
                 toggle_crafting_modal(game)
-
+            if event.unicode == '?' or event.key == pygame.K_SLASH:
+                toggle_help_modal(game)
             if event.key == pygame.K_r:
                 if game.player:
                     game.player.reload_active_weapon(game=game)

@@ -15,8 +15,9 @@ from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby_modal import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button,draw_forward_button,draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_forward_button, draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button, draw_help_button
 from core.ui.tooltip import draw_tooltip
+from core.ui.help_modal import draw_help_modal
 from core.ui.gear_modal import draw_gear_modal
 from core.ui.messages_modal import draw_messages_modal
 from core.ui.text_modal import draw_text_modal
@@ -773,6 +774,10 @@ def draw_game(game):
         elif modal['type'] == 'npc_dialog':
             buttons = draw_npc_dialog_modal(game.game_screen, modal, game)
             game.modal_buttons.extend(buttons)
+        elif modal['type'] == 'help': 
+            _, close_button, minimize_button = draw_help_modal(game.game_screen, game, modal, game.assets)
+            if close_button: game.modal_buttons.append(close_button)
+            if minimize_button: game.modal_buttons.append(minimize_button)
         elif modal['type'] == 'crafting':
             if 'instance' not in modal:
                 modal['instance'] = CraftingModal(game.game_screen, modal, game.assets, game)
@@ -788,7 +793,7 @@ def draw_game(game):
     game.gear_button_rect = draw_gear_button(game.game_screen)
     game.messages_button_rect = draw_messages_button(game.game_screen)
     game.crafting_button_rect = draw_crafting_button(game.game_screen)
-
+    game.help_button_rect = draw_help_button(game.game_screen)
     highlighted_rect = None
     highlighted_allowed = False
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
@@ -900,7 +905,8 @@ def draw_game(game):
             (game.gear_button_rect, "Gear (G)"),
             (game.nearby_button_rect, "Nearby (N)"),
             (game.messages_button_rect, "Messages (M)"),
-            (game.crafting_button_rect, "Crafting (C)")
+            (game.crafting_button_rect, "Crafting (C)"),
+            (getattr(game, 'help_button_rect', None), "Tutorial & Help (?)")
         ]
         
         mouse_pos = game._get_scaled_mouse_pos()
@@ -956,9 +962,15 @@ def draw_game(game):
 
     if hasattr(game, 'clock'):
         fps = int(game.clock.get_fps())
-        fps_text = f"FPS: {fps}"
+        
+        # Pull the GAME_VERSION already loaded in config.py
+        game_version = getattr(core.data.config, 'GAME_VERSION', 'Unknown')
+        
+        # Append it to the FPS string
+        fps_text = f"FPS: {fps} | Build: {game_version}"
+        
         font = game.assets.get('font')
         if font:
-            fps_surface = font.render(fps_text, True, (0, 255, 0))
+            fps_surface = font.render(fps_text, True, (255, 255, 255))
             fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
             game.game_screen.blit(fps_surface, fps_rect)

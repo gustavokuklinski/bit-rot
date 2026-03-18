@@ -6,7 +6,7 @@ from core.data.config import *
 from core.entities.item.item import Projectile
 from core.update import player_hit_zombie, handle_zombie_death, create_blood_splatter
 from core.ui.inventory_modal import get_belt_hud_slot_rect
-from core.messages import display_message, display_message
+from core.messages import display_message
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):
@@ -108,7 +108,10 @@ def handle_attack(game, mouse_pos):
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
                     game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
-            else: print(f"**CLUNK!** {weapon.name} is broken.")
+                display_message(f"{weapon.name} is out of ammo.")
+            else 
+                print(f"**CLUNK!** {weapon.name} is broken.")
+                display_message(f"{weapon.name} is broken.")
 
         else:
             # --- MELEE ATTACK LOGIC ---

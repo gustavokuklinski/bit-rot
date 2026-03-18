@@ -9,6 +9,7 @@ _gear_img = None
 _crafting_img = None
 _pause_img = None
 _forward_img = None
+_help_img = None
 
 def draw_pause_button(surface):
     global _pause_img
@@ -132,4 +133,19 @@ def draw_crafting_button(surface):
     # Position: 260 (Messages 210 + 40 + 10 gap)
     button_rect = pygame.Rect(10, 290, 40, 40)
     surface.blit(_crafting_img, button_rect)
+    return button_rect
+
+def draw_help_button(surface):
+    global _help_img
+    if _help_img is None:
+        try:
+            _help_img = pygame.image.load(SPRITE_PATH + 'ui/help.png').convert_alpha()
+            _help_img = pygame.transform.scale(_help_img, (40, 40))
+        except pygame.error:
+            _help_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _help_img.fill(GRAY)
+            
+    # Position: 340 (Crafting 290 + 40 + 10 gap)
+    button_rect = pygame.Rect(10, 340, 40, 40)
+    surface.blit(_help_img, button_rect)
     return button_rect

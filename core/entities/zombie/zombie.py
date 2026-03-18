@@ -195,15 +195,15 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             }
             return Zombie(x, y, default_template)
 
-        type_weights = {
-            'common': 55,
-            'worker': 20,
-            'doctor': 10,
-            'military': 20,
-            'special_force': 5
-        }
+        #type_weights = {
+        #    'common': 55,
+        #    'worker': 20,
+        #    'doctor': 10,
+        #    'military': 20,
+        #    'special_force': 5
+        #}
+        template_weights = [t.get('spawn_weight', 10) for t in ZombieData.ZOMBIE_TEMPLATES]
         
-        template_weights = [type_weights.get(t.get('type', 'common'), 10) for t in ZombieData.ZOMBIE_TEMPLATES]
         template = random.choices(ZombieData.ZOMBIE_TEMPLATES, weights=template_weights, k=1)[0]
         
         zombie = Zombie(x, y, template)

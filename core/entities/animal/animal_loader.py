@@ -40,6 +40,20 @@ class AnimalLoader:
         for animal_node in nodes:
             try:
                 name = animal_node.get('name')
+                spawn_weight = int(animal_node.get('spawn_weight', '10'))
+                spawn_layer_raw = animal_node.get('spawn_layer', '[1]')
+                
+                spawn_layers = []
+                try:
+                    # Elegantly strip brackets and split into a list of ints
+                    clean_str = spawn_layer_raw.replace('[', '').replace(']', '')
+                    if clean_str.strip():
+                        spawn_layers = [int(x.strip()) for x in clean_str.split(',')]
+                    else:
+                        spawn_layers = [1]
+                except ValueError:
+                    spawn_layers = [1] # Fallback if malformed
+
                 stats_node = animal_node.find('stats')
                 
                 stats = {
@@ -91,6 +105,8 @@ class AnimalLoader:
                 AnimalLoader.definitions[name] = {
                     'name': name,
                     'type': animal_node.get('type'),
+                    'spawn_weight': spawn_weight,  # <--- NEW
+                    'spawn_layers': spawn_layers,
                     'stats': stats,
                     'sprite': sprite_file,
                     'loot': loot,

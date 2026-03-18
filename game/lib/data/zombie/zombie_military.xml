@@ -1,4 +1,4 @@
-<zombie type="military">
+<zombie type="military" spawn_weight="20">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

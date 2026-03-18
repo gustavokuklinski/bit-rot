@@ -6,7 +6,7 @@ from core.entities.item.item import Item
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
-from core.entities.vehicle.vehicle_loader import VehicleLoader
+from core.entities.vehicle.vehicle_data import VehicleData
 from core.messages import display_message
 
 class Vehicle:
@@ -17,9 +17,8 @@ class Vehicle:
 
         # Fetch stats directly from the definition if they are missing or empty (e.g., during load from save state)
         if not stats or 'seats' not in stats:
-            from core.entities.vehicle.vehicle_loader import VehicleLoader
-            loader = VehicleLoader()
-            definition = loader.get_definition_by_name(name)
+            if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates() # Auto-load safely
+            definition = VehicleData.get_definition_by_name(name)
             if definition and 'stats' in definition:
                 merged_stats = definition['stats'].copy()
                 if stats:
@@ -112,8 +111,8 @@ class Vehicle:
         Auto-restores the images dictionary if missing (e.g., after loading a save).
         """
         if not self.images:
-            loader = VehicleLoader() # Singleton access
-            definition = loader.get_definition_by_name(self.name)
+            if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates() # Auto-load safely
+            definition = VehicleData.get_definition_by_name(self.name)
             if definition and definition.get('images'):
                 self.images = definition['images']
         

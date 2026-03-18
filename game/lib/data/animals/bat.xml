@@ -1,4 +1,4 @@
-<animal name="Bat" type="animal">
+<animal name="Bat" type="animal" spawn_weight="50" spawn_layer="[2]">
     <stats>
         <health min="1" max="5" />
         <speed min="0.5" max="0.8" />

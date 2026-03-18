@@ -238,7 +238,15 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 pygame.draw.rect(gear_content_surface, bg_color, cycle_rect_rel, border_radius=3)
                 pygame.draw.rect(gear_content_surface, WHITE, cycle_rect_rel, 1, border_radius=3)
                 
-                text = font.render(selected_item, True, WHITE)
+                # 1. Look up the display name from ITEM_TEMPLATES, fallback to formatted ID
+                display_item_name = selected_item
+                if selected_item != "None":
+                    template = ITEM_TEMPLATES.get(selected_item, {})
+                    # Attempts to get the 'name', otherwise formats the ID (e.g., 'red_shirt' -> 'Red Shirt')
+                    display_item_name = template.get('name', selected_item.replace("_", " ").title())
+
+                # 2. Render the display name instead of the raw selected_item
+                text = font.render(display_item_name, True, WHITE)
                 text_x = cycle_rect_rel.x + (cycle_rect_rel.width - text.get_width()) // 2
                 text_y = cycle_rect_rel.y + (cycle_rect_rel.height - text.get_height()) // 2
                 gear_content_surface.blit(text, (text_x, text_y))
@@ -440,7 +448,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     hovered_trait_id = trait_name
                 pygame.draw.rect(content_surface, RED, remove_btn_rect_rel, border_radius=4)
                 content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + 7, remove_btn_rect_rel.y + 2))
-                content_surface.blit(font.render(trait_name.capitalize(), True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
+                
+                # Look up the actual name from TRAIT_DEFINITIONS, fallback to capitalized ID
+                display_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
+                content_surface.blit(font.render(display_name, True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
 
             clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
             y_offset += 35
@@ -845,10 +856,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
         for trait_name, rect in clickable_rects.get("add_trait", []):
             if rect.collidepoint(mouse_pos):
-                if trait_name in state['available_traits']:
+                if trait_name in state['available_traits'] or trait_name in state.get('available_professions', []):
                     state['chosen_traits'].append(trait_name)
                     _update_available_traits(state) 
-                    break 
+                    break
         
         for trait_name, rect in clickable_rects.get("remove_trait", []):
             if rect.collidepoint(mouse_pos):

@@ -1,6 +1,7 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
+from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 def wrap_text(text, width, font):
     """Wraps text to fit within a specific width."""
@@ -88,8 +89,8 @@ def draw_text_modal(surface, game, modal, assets):
         
         # Note: The "            " spaces are to match the indentation in your XML
         if player_traits:
-            # Format the trait list
-            trait_list_str = "\n".join([f"            - {trait.capitalize()}" for trait in player_traits])
+            # Format the trait list using TRAIT_DEFINITIONS to get the actual name
+            trait_list_str = "\n".join([f"            - {TRAIT_DEFINITIONS.get(trait, {}).get('name', trait.capitalize())}" for trait in player_traits])
             processed_text = processed_text.replace("- [LIST TO TRAITS]", trait_list_str)
         else:
             # If no traits, replace placeholder with "- None"

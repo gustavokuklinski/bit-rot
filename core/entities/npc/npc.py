@@ -28,14 +28,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if NPCData.NPC_TEMPLATES:
             # --- NEW: Weighted Template Selection ---
-            type_weights = {
-                'common': 55,
-                'worker': 20,
-                'doctor': 10,
-                'military': 20,
-                'special_force': 5
-            }
-            template_weights = [type_weights.get(t.get('type', 'common'), 10) for t in NPCData.NPC_TEMPLATES]
+            #type_weights = {
+            #    'common': 55,
+            #    'worker': 20,
+            #    'doctor': 10,
+            #    'military': 20,
+            #    'special_force': 5
+            #}
+            template_weights = [t.get('spawn_weight', 10) for t in NPCData.NPC_TEMPLATES]
+  
             template = random.choices(NPCData.NPC_TEMPLATES, weights=template_weights, k=1)[0]
 
         else:
@@ -635,12 +636,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         if is_dead:
                             target_entity.die(game)
-                            if target_entity in game.npcs:
-                                display_message(game, "A survivor has been killed.")
-                            elif getattr(target_entity, 'type', '') == 'animal':
-                                pass # Animal death handled in its own die()
-                            else:
-                                display_message(game, f"A zombie was eliminated by {self.name}.")
+                            #if target_entity in game.npcs:
+                            #    display_message(game, "A survivor has been killed.")
+                            #elif getattr(target_entity, 'type', '') == 'animal':
+                            #    pass # Animal death handled in its own die()
+                            #else:
+                            #    display_message(game, f"A zombie was eliminated by {self.name}.")
 
     def stop_moving(self):
         self.state = 'idle'

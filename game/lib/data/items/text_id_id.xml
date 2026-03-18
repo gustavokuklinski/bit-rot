@@ -1,4 +1,4 @@
-<item name="ID" type="text">
+<item name="ID" type="text" tip="Contains:\nPlayer: Name, Sex, Traits and Known Recipes\nZombie and NPC: Name, Sex">
     <properties>
         <sprite file="text_id_id.png" />
         <weight weight="0.001"/>

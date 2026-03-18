@@ -99,6 +99,7 @@ class ZombieData:
                             if root.tag == 'zombie':
                                 template = {}
                                 template['type'] = root.get('type', 'common').lower()
+                                template['spawn_weight'] = int(root.get('spawn_weight', 10))
                                 name_node = root.find('name')
                                 stats_node = root.find('stats')
                                 visuals_node = root.find('visuals')

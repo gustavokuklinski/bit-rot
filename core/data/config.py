@@ -81,6 +81,10 @@ MAP_MODAL_HEIGHT = 700
 NPC_DIALOG_MODAL_WIDTH = 500
 NPC_DIALOG_MODAL_HEIGHT = 400
 
+# Help Modal
+HELP_MODAL_WIDTH = 680
+HELP_MODAL_HEIGHT = 570
+
 
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 
@@ -142,6 +146,7 @@ VEH_HAS_BATTERY = 1.0
 VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
+UI_SHOW_TUTORIAL_DEFAULT = True
 ANIMAL_SPAWN_COUNT = 0
 ANIMAL_RESPAWN_TIMER_MS = 0
 
@@ -169,7 +174,7 @@ def load_settings(preset="default"):
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
-    global UI_BACKGROUND_MUSIC
+    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
 
     filepath = f'./game/save/config/{preset}.xml'
@@ -254,6 +259,8 @@ def load_settings(preset="default"):
         ui_config = root.find('ui')
         val_music = ui_config.find('ui_background_music').get('value')
         UI_BACKGROUND_MUSIC = str(val_music).lower() == 'true'
+        val_tutorial = ui_config.find('ui_show_tutorial_default')
+        UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
 
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))

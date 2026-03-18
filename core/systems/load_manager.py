@@ -240,6 +240,19 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'minimized': False
         }
     ]
+
+    if getattr(core.data.config, 'UI_SHOW_TUTORIAL_DEFAULT', False):
+        help_pos = game.last_modal_positions.get('help', (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2))
+        game.modals.append({
+            'type': 'help', 
+            'id': str(uuid.uuid4()), 
+            'position': help_pos,
+            'rect': pygame.Rect(help_pos, (HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'minimized': False
+        })
+    
     game.map_states = {}
     
     # The load map handles everything now, bypass giant map logic

@@ -1,4 +1,4 @@
-<zombie type="special_force">
+<zombie type="special_force" spawn_weight="5">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

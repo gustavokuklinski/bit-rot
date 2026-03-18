@@ -24,7 +24,7 @@ class NPCData:
                     if root.tag == 'npc':
                         template = {}
                         template['type'] = root.get('type', 'common').lower()
-                        
+                        template['spawn_weight'] = int(root.get('spawn_weight', 10))
                         name_node = root.find('name')
                         template['name'] = name_node.get('value') if name_node is not None else 'Survivor'
                         

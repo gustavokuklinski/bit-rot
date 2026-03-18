@@ -39,6 +39,8 @@ class BaseModal:
             return CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
         elif self.modal['type'] == 'big_map':
             return MAP_MODAL_WIDTH, MAP_MODAL_HEIGHT
+        elif self.modal['type'] == 'help':
+            return HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT
         elif self.modal['type'] == 'npc_dialog':
             return NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT
         # return 300, 300
@@ -63,7 +65,7 @@ class BaseModal:
     def draw_base(self):
         height = self.header_h if self.minimized else self.modal_h
         s = pygame.Surface((self.modal_w, height), pygame.SRCALPHA)
-        s.fill((20, 20, 20, 230))
+        s.fill((20, 20, 20, 250))
         self.surface.blit(s, (self.modal_x, self.modal_y))
 
         # pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)

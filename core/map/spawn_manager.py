@@ -6,7 +6,7 @@ from core.data.config import *
 from core.entities.item.item import Item
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
-from core.entities.vehicle.vehicle_loader import VehicleLoader
+from core.entities.vehicle.vehicle_data import VehicleData
 from core.entities.vehicle.vehicle import Vehicle
 
 # Import Animal classes
@@ -387,18 +387,13 @@ def spawn_animals(game, count=5, target_layer=None):
     AnimalLoader.load_animals()
     
     valid_animal_types = []
+    valid_weights = []
     
-    # Layer Logic
-    if target_layer >= 1:
-        valid_animal_types.append("Rat")
-    
-    if target_layer == 1:
-        # --- NEW: Cow only spawns on L1 ---
-        valid_animal_types.append("Cow")
-        
-    if target_layer == 2:
-        valid_animal_types.append("Bat")
-        
+    for name, definition in AnimalLoader.definitions.items():
+        if target_layer in definition.get('spawn_layers', []):
+            valid_animal_types.append(name)
+            valid_weights.append(definition.get('spawn_weight', 10))
+            
     if not valid_animal_types:
         return
 
@@ -435,7 +430,7 @@ def spawn_animals(game, count=5, target_layer=None):
         if any(isinstance(a, Animal) and a.rect.colliderect(rect) for a in existing_animals):
              continue
 
-        a_type = random.choice(valid_animal_types)
+        a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
         # [FIX] Pass game instance and target_layer to Animal
         animal = Animal(px, py, a_type, game=game, layer=target_layer)
         target_list.append(animal)
@@ -471,8 +466,7 @@ def spawn_animals(game, count=5, target_layer=None):
                 if not t_def or t_def.get('is_obstacle', False): continue
 
                 # Only Rats spawn randomly ambiently in most layers
-                chosen_type = "Rat" if "Rat" in valid_animal_types else random.choice(valid_animal_types)
-                
+                chosen_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                 px, py = rx * TILE_SIZE, ry * TILE_SIZE
                 # [FIX] Pass game instance and target_layer to Animal
                 animal = Animal(px, py, chosen_type, game=game, layer=target_layer)
@@ -483,8 +477,10 @@ def spawn_animals(game, count=5, target_layer=None):
         print(f"  > Spawned {spawned_count} animals on Layer {target_layer} (Markers: {len(spawn_markers)}).")
 
 def spawn_random_vehicles(game, count=10):
-    loader = VehicleLoader()
-    if not loader.definitions:
+    if not VehicleData.VEHICLE_TEMPLATES:
+        VehicleData.load_templates()
+
+    if not VehicleData.VEHICLE_TEMPLATES:
         print("No vehicle definitions found. Skipping vehicle generation.")
         return
 
@@ -547,7 +543,7 @@ def spawn_random_vehicles(game, count=10):
     for tx, ty in valid_tiles:
         if spawned_count >= limit: break
         
-        definition = loader.get_random_definition()
+        definition = VehicleData.get_random_definition()
         if not definition: break
 
         images = definition.get('images', {})

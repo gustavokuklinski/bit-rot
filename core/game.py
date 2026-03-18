@@ -122,7 +122,28 @@ class Game:
 
         self.modals = []
         self.saved_modals = [] 
-        
+
+        self.last_modal_positions = {
+            'status': (65, 10),
+            'inventory': (970, 10),
+            'gear': (650, 10),
+            'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
+            'nearby': (970, 360),
+            'messages': (10, 390),
+            'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
+            'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
+            'crafting': (300, 100),
+            'help': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2)
+        }
+
+        if UI_SHOW_TUTORIAL_DEFAULT:
+            help_pos = self.last_modal_positions['help']
+            self.modals.append({
+                'type': 'help',
+                'rect': pygame.Rect(help_pos[0], help_pos[1], HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
+                'minimized': False
+            })
+
         self.context_menu = {
             'active': False,
             'item': None,
@@ -141,17 +162,7 @@ class Game:
         self.drag_start_pos = (0, 0)
         self.DRAG_THRESHOLD = 5
 
-        self.last_modal_positions = {
-            'status': (65, 10),
-            'inventory': (970, 10),
-            'gear': (650, 10),
-            'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'nearby': (970, 360),
-            'messages': (10, 390),
-            'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
-            'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
-            'crafting': (300, 100)
-        }
+        
         self.pause_button_rect = None
         self.forward_button_rect = None
         self.status_button_rect = None
