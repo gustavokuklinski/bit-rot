@@ -2,9 +2,9 @@
 
 import random
 from core.messages import display_message
+from core.data.localization import tr
 
 class PlayerStats:
-
 
     def get_total_defence(self):
         total_defence = 0
@@ -30,7 +30,7 @@ class PlayerStats:
         if dur_damage > 0:
             item_hit.durability = max(0, item_hit.durability - dur_damage)
             if item_hit.durability <= 0:
-                display_message(f"Your {item_hit.name} broke!")
+                display_message(f"{tr('msg', 'Your')} {item_hit.name} {tr('msg', 'broke!')}")
 
     def take_damage(self, game, base_damage, base_infection):
         

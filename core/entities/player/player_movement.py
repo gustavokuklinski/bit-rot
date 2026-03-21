@@ -7,6 +7,7 @@ import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message
 from core.placement import find_free_tile
+from core.data.localization import tr
 
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):
@@ -17,7 +18,7 @@ class PlayerMovement:
                 break
         
         if seat_idx == -1:
-            display_message("Vehicle is full! No free seats.")
+            display_message(tr('msg', "Vehicle is full! No free seats."))
             return
 
         self.vehicle = vehicle
@@ -32,7 +33,7 @@ class PlayerMovement:
             game.obstacles.remove(vehicle.rect)
         
         seat_name = "Driver's Seat" if seat_idx == 0 else f"Seat {seat_idx+1}"
-        display_message(f"Entered {vehicle.name} ({seat_name})")
+        display_message(f"{tr('msg', 'Entered')} {vehicle.name} ({tr('msg', seat_name)})")
 
     def exit_vehicle(self, game):
         if self.vehicle:
@@ -49,7 +50,7 @@ class PlayerMovement:
             self.vehicle = None
             self.vehicle_seat_index = None
             
-            display_message("Exited vehicle")
+            display_message(tr('msg', "Exited vehicle"))
 
     def update_position(self, obstacles, zombies, game):
         if self.vehicle:
@@ -106,7 +107,7 @@ class PlayerMovement:
 
                     if zombie.take_damage(damage_to_zombie, game):
                         zombie.die(game)
-                        display_message(f"Roadkill! Zombie splattered.")
+                        display_message(tr('msg', "Roadkill! Zombie splattered."))
 
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
@@ -127,7 +128,7 @@ class PlayerMovement:
                             game.items_on_ground.remove(animal)
                         if animal in game.active_animals:
                             game.active_animals.remove(animal)
-                        display_message(f"Roadkill! Animal splattered.")
+                        display_message(tr('msg', "Roadkill! Animal splattered."))
 
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
@@ -147,7 +148,7 @@ class PlayerMovement:
                         
                         if is_dead:
                             npc.die(game)
-                            display_message(f"You ran over {npc.name}!")
+                            display_message(f"{tr('msg', 'You ran over')} {npc.name}!")
 
             # Sync player position to vehicle
             self.x = self.vehicle.x

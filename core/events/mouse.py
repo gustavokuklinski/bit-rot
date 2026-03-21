@@ -13,6 +13,7 @@ from core.events.keyboard import toggle_messages_modal, toggle_status_modal, tog
 from core.events.mouse_context import handle_context_menu_click, handle_right_click
 from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion, handle_left_click_drag_candidate
 from core.events.mouse_combat import handle_attack
+from core.data.localization import tr
 
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
@@ -121,12 +122,12 @@ def handle_mouse_down(game, event, mouse_pos):
                                             # Check Inventory Space
                                             if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                                 game.player.inventory.append(new_item)
-                                                display_message(game, f"Received {new_item.name}!")
+                                                display_message(game, f"{tr('msg', 'Received')} {new_item.name}!")
                                             else:
                                                 # Drop on ground if full
                                                 new_item.rect.center = game.player.rect.center
                                                 game.items_on_ground.append(new_item)
-                                                display_message(game, f"Inventory full. {new_item.name} dropped on ground.")
+                                                display_message(game, f"{tr('msg', 'Inventory full.')} {new_item.name} {tr('msg', 'dropped on ground.')}")
                                         else:
                                             print(f"Error: Could not create award item '{item_name}'")
 
@@ -186,7 +187,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         if game.chat_input_text.strip():
                             game.player.chat_text = game.chat_input_text
                             game.player.chat_timer = game.player.chat_duration
-                            display_message(game, f"[You]: {game.chat_input_text}")
+                            display_message(game, f"[{tr('msg', 'You')}]: {game.chat_input_text}")
                             game.chat_input_text = ""
                             game.chat_active = True 
                         return

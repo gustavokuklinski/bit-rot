@@ -6,6 +6,7 @@ from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.messages import display_message
 # Import the new loader
 from core.data.progression_loader import PROGRESSION_CONFIG
+from core.data.localization import tr
 
 class PlayerProgression:
     def __init__(self, player_data):

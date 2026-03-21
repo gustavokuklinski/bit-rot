@@ -374,6 +374,51 @@
         <msg name="You killed the animal!" translation_msg="Você matou o animal!" />
         <msg name="You attacked" translation_msg="Você atacou" />
         <msg name="for" translation_msg="causando" />
+
+        <msg name="Your" translation_msg="Seu" />
+        <msg name="broke!" translation_msg="quebrou!" />
+        <msg name="You are too exhausted to chop/mine!" translation_msg="Você está exausto demais para cortar/minerar!" />
+        <msg name="Player is in the doorway, cannot close." translation_msg="O jogador está na porta, não é possível fechar." />
+
+        <msg name="Vehicle is full! No free seats." translation_msg="Veículo lotado! Não há assentos livres." />
+        <msg name="Entered" translation_msg="Entrou em" />
+        <msg name="Exited vehicle" translation_msg="Saiu do veículo" />
+        <msg name="Roadkill! Zombie splattered." translation_msg="Atropelamento! Zumbi esmagado." />
+        <msg name="Roadkill! Animal splattered." translation_msg="Atropelamento! Animal esmagado." />
+        <msg name="You ran over" translation_msg="Você atropelou" />
+        <msg name="A tire has broken!" translation_msg="Um pneu furou!" />
+        <msg name="Cannot turn on lights: No Battery Power." translation_msg="Não é possível ligar os faróis: Sem Bateria." />
+        <msg name="engine turned OFF." translation_msg="motor DESLIGADO." />
+        <msg name="Cannot start. Missing/Empty:" translation_msg="Não é possível ligar. Faltando/Vazio:" />
+        <msg name="Cannot equip" translation_msg="Não é possível equipar" />
+        <msg name="slot." translation_msg="." />
+        <msg name="Engine died (No Fuel)." translation_msg="O motor morreu (Sem Combustível)." />
+        <msg name="Engine died (No Battery)." translation_msg="O motor morreu (Sem Bateria)." />
+        <msg name="Engine stopped (Key removed)." translation_msg="Motor desligado (Chave removida)." />
+        <msg name="Engine stopped (Battery removed)." translation_msg="Motor desligado (Bateria removida)." />
+
+        <msg name="cannot carry that much weight." translation_msg="não consegue carregar tanto peso." />
+        <msg name="is full." translation_msg="está cheio(a)." />
+        <msg name="This" translation_msg="Este(a)" />
+        <msg name="only accepts liquids." translation_msg="só aceita líquidos." />
+        <msg name="Liquid spills." translation_msg="O líquido derramou." />
+        <msg name="spills and is lost." translation_msg="derramou e foi perdido." />
+        <msg name="spills on the ground." translation_msg="derramou no chão." />
+        <msg name="Cannot put the container inside itself." translation_msg="Não é possível colocar o recipiente dentro dele mesmo." />
+        <msg name="Placed" translation_msg="Colocou" />
+        <msg name="on" translation_msg="em" />
+        <msg name="Cannot swap items while" translation_msg="Não é possível trocar itens ao" />
+        <msg name="Cannot swap items while equipping from external source." translation_msg="Não é possível trocar itens ao equipar de fonte externa." />
+        <msg name="Received" translation_msg="Recebeu" />
+        <msg name="Inventory full." translation_msg="Inventário cheio." />
+        <msg name="dropped on ground." translation_msg="caiu no chão." />
+        <msg name="You" translation_msg="Você" />
+
+        <msg name="No damaged" translation_msg="Nenhum(a)" />
+        <msg name="found." translation_msg="danificado(a) encontrado(a)." />
+        <msg name="Repaired" translation_msg="Consertou" />
+        <msg name="by" translation_msg="em" />
+        <msg name="points." translation_msg="pontos." />
     </msg>
 
 </language>

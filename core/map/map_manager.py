@@ -10,7 +10,7 @@ from core.data.config import *
 from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
-
+from core.data.localization import tr
 class MapManager:
     def __init__(self, game, map_folder='./game/lib/map'):
         self.game = game
@@ -407,7 +407,7 @@ class MapManager:
 
         if new_state == "close":
             if self.game.player.rect.colliderect(tile_rect):
-                display_message("Player is in the doorway, cannot close.")
+                display_message(tr('msg', "Player is in the doorway, cannot close."))
                 return 
         
         base_name = current_char.replace("_open", "").replace("_close", "")
@@ -452,7 +452,7 @@ class MapManager:
         if not is_projectile:
             STAMINA_COST = 0.5
             if self.game.player.stamina < STAMINA_COST:
-                display_message("You are too exhausted to chop/mine!")
+                display_message(tr('msg', "You are too exhausted to chop/mine!"))
                 return True
 
             self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
@@ -463,7 +463,7 @@ class MapManager:
                 weapon.durability = max(0, weapon.durability - DURABILITY_COST)
                 if weapon.durability <= 0:
                     self.game.player.active_weapon = None
-                    display_message(f"{weapon.name} is broken and unequipped.")
+                    display_message(f"{weapon.name} {tr('msg', 'is broken and unequipped.')}")
                     return True
         
         if definition.get('sound_src'):

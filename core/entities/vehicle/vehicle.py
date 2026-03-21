@@ -8,6 +8,7 @@ from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle_data import VehicleData
 from core.messages import display_message
+from core.data.localization import tr
 
 class Vehicle:
     def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None, facing='right'):
@@ -300,7 +301,7 @@ class Vehicle:
                         broken_tire = True
             
             if broken_tire:
-                display_message("A tire has broken!")
+                display_message(tr('msg', "A tire has broken!"))
                 self.velocity = [0, 0]
                 self.active = False
                 self.car_state = "Off"
@@ -416,7 +417,7 @@ class Vehicle:
             if has_power:
                 self.lights = 'on'
             else:
-                display_message("Cannot turn on lights: No Battery Power.")
+                display_message(tr('msg', "Cannot turn on lights: No Battery Power."))
 
     def toggle_engine(self):
         driver_seat = self.seats[0]
@@ -427,7 +428,7 @@ class Vehicle:
         if self.active:
             self.active = False
             self.car_state = "Off"
-            display_message(f"{self.name} engine turned OFF.")
+            display_message(f"{self.name} {tr('msg', 'engine turned OFF.')}")
         else:
             has_key = self.equipment.get('key') is not None
             battery_item = self.equipment.get('battery')
@@ -457,7 +458,7 @@ class Vehicle:
                 if not has_key: missing.append("Key")
                 if not has_power: missing.append("Battery Power")
                 if not has_fuel: missing.append("Fuel")
-                display_message(f"Cannot start. Missing/Empty: {', '.join(missing)}")
+                display_message(f"{tr('msg', 'Cannot start. Missing/Empty:')} {', '.join(missing)}")
 
     def can_equip(self, item, slot):
         if slot not in self.equipment: return False
@@ -514,7 +515,7 @@ class Vehicle:
 
     def add_equipment(self, item, slot):
         if not self.can_equip(item, slot):
-            display_message(f"Cannot equip {item.name} in {slot} slot.")
+            display_message(f"{tr('msg', 'Cannot equip')} {item.name} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
             return False
 
         old_item = self.equipment.pop(slot, None)
@@ -582,7 +583,7 @@ class Vehicle:
              else:
                  self.active = False
                  self.car_state = "Off"
-                 display_message("Engine died (No Fuel).")
+                 display_message(tr('msg', "Engine died (No Fuel)."))
 
         if self.lights == 'on':
             drain_amount = 0.0005 * dt_mult
@@ -599,18 +600,18 @@ class Vehicle:
                 if self.active:
                     self.active = False
                     self.car_state = "Off"
-                    display_message("Engine died (No Battery).")
+                    display_message(tr('msg', "Engine died (No Battery)."))
 
         has_key = self.equipment.get('key') is not None
         if not has_key and self.active:
              self.active = False
              self.car_state = "Off"
-             display_message("Engine stopped (Key removed).")
+             display_message(tr('msg', "Engine stopped (Key removed)."))
              
         if not battery_item and self.active:
              self.active = False
              self.car_state = "Off"
-             display_message("Engine stopped (Battery removed).")
+             display_message(tr('msg', "Engine stopped (Battery removed)."))
 
     @property
     def current_weight(self):
