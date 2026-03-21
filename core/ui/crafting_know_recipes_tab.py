@@ -2,6 +2,7 @@
 from core.ui.crafting_craft_tab import CraftingCraftTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
 from core.ui.crafting_dismantle_tab import CraftingDismantleTab
+from core.data.localization import tr
 
 class CraftingKnowRecipesTab:
     def __init__(self, modal):

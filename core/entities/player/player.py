@@ -20,6 +20,8 @@ from core.entities.player.player_inventory import PlayerInventory
 from core.entities.player.player_actions import PlayerActions
 from core.entities.player.player_combat import PlayerCombat
 
+from core.data.localization import tr
+
 class Player(PlayerStats, PlayerMovement, PlayerGraphics, 
              PlayerInventory, PlayerActions, PlayerCombat):
              

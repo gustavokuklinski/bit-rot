@@ -21,6 +21,11 @@
         <tab name="Map" translation_tab="Mapa" />
         <tab name="Info" translation_tab="Informação" />
         <tab name="Mechanics" translation_tab="Mecânica" />
+
+        <tab name="Known Recipes" translation_tab="Receitas Conhecidas" />
+        <tab name="Craft" translation_tab="Criar" />
+        <tab name="Repair" translation_tab="Consertar" />
+        <tab name="Dismantle" translation_tab="Desmontar" />
     </tab>
 
     <ui>
@@ -154,6 +159,36 @@
 
         <ui name="Backpack" translation_ui="Mochila" />
         <ui name="Slots:" translation_ui="Espaços:" />
+
+        <ui name="Search..." translation_ui="Pesquisar..." />
+        <ui name="Select a recipe to view details" translation_ui="Selecione uma receita para ver os detalhes" />
+        <ui name="(None available)" translation_ui="(Nenhum disponível)" />
+        <ui name="Required Ingredients:" translation_ui="Ingredientes Necessários:" />
+        <ui name="Any" translation_ui="Qualquer" />
+        <ui name="Need:" translation_ui="Falta:" />
+        <ui name="OR Skills:" translation_ui="OU Habilidades:" />
+        <ui name="Requires Skills:" translation_ui="Requer Habilidades:" />
+        <ui name="Requires Magazine:" translation_ui="Requer Revista:" />
+        <ui name="Time:" translation_ui="Tempo:" />
+        <ui name="Yields:" translation_ui="Rendimento:" />
+        <ui name="Unknown" translation_ui="Desconhecido" />
+
+        <ui name="LOCKED (MAG/SKILL)" translation_ui="BLOQUEADO (REV/HAB)" />
+        <ui name="NEED MAGAZINE" translation_ui="PRECISA DE REVISTA" />
+        <ui name="NEED SKILLS" translation_ui="PRECISA DE HABILIDADES" />
+        <ui name="CRAFT ITEM" translation_ui="CRIAR ITEM" />
+        <ui name="REPAIR ITEM" translation_ui="CONSERTAR ITEM" />
+        <ui name="DISMANTLE" translation_ui="DESMONTAR" />
+        <ui name="MISSING RESOURCES" translation_ui="FALTAM RECURSOS" />
+
+        <ui name="New Game" translation_ui="Novo Jogo" />
+        <ui name="Load Game" translation_ui="Carregar Jogo" />
+        <ui name="Settings" translation_ui="Configurações" />
+        <ui name="Quit" translation_ui="Sair" />
+        <ui name="Empty Slot" translation_ui="Espaço Vazio" />
+        <ui name="Delete" translation_ui="Excluir" />
+        <ui name="Back" translation_ui="Voltar" />
+        <ui name="Day" translation_ui="Dia" />
     </ui>
 
     <alert>
@@ -419,6 +454,11 @@
         <msg name="Repaired" translation_msg="Consertou" />
         <msg name="by" translation_msg="em" />
         <msg name="points." translation_msg="pontos." />
+
+        <msg name="Cannot use" translation_msg="Não é possível usar" />
+        <msg name="It contains items!" translation_msg="Contém itens!" />
+        <msg name="Missing" translation_msg="Faltando" />
+        <msg name="of" translation_msg="de" />
     </msg>
 
 </language>

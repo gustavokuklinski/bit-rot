@@ -129,15 +129,15 @@ class PlayerCombat:
              self.inventory.append(ammo); return
         if self.backpack and len(self.backpack.inventory) < (self.backpack.capacity or 0):
              self.backpack.inventory.append(ammo)
-             display_message("Moved to backpack.")
+             display_message(tr('msg', "Moved to backpack."))
              return
         ammo.rect.center = self.rect.center
         if find_free_tile(ammo.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)
-            display_message("Inventory full. Dropped ammo on ground.")
+            display_message(tr('msg', "Inventory full. Dropped ammo on ground."))
         else:
              weapon.load = ammo.load
-             display_message("No space to unload ammo!")
+             display_message(tr('msg', "No space to unload ammo!"))
 
     def destroy_broken_weapon(self, broken_weapon):
         if self.active_weapon == broken_weapon: self.active_weapon = None
@@ -148,5 +148,5 @@ class PlayerCombat:
                 return
         try:
             self.inventory.remove(broken_weapon)
-            display_message(f"{broken_weapon.name} broke and was removed from your inventory.")
+            display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your inventory.')}")
         except ValueError: pass

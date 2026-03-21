@@ -4,7 +4,7 @@ import random
 from core.data.config import *
 from core.entities.item.item import Item
 from core.messages import display_message
-
+from core.data.localization import tr
 class CraftingDismantleTab:
     def __init__(self, modal):
         self.modal = modal
@@ -42,7 +42,7 @@ class CraftingDismantleTab:
         
         # Ingredients
         ing_y = details_y + 50
-        lbl = font_small.render("Required Ingredients:", True, GRAY)
+        lbl = font_small.render(tr('ui', "Required Ingredients:"), True, GRAY)
         surface.blit(lbl, (details_x, ing_y))
         
         curr_y = ing_y + 30
@@ -67,7 +67,7 @@ class CraftingDismantleTab:
             
             primary_name = valid_names[0]
             img = self.modal.ingredient_images.get(primary_name)
-            name_display = primary_name if len(valid_names) == 1 else f"{primary_name} (Any)"
+            name_display = primary_name if len(valid_names) == 1 else f"{primary_name} ({tr('ui', 'Any')})"
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:
@@ -105,7 +105,7 @@ class CraftingDismantleTab:
                             'req_idx': r_idx, 'position': mouse_pos
                         })
 
-            txt_str = f" {name_display}: {int(have)} / Need: {needed}"
+            txt_str = f" {name_display}: {int(have)} / {tr('ui', 'Need:')} {needed}"
             ing_surf = font_small.render(txt_str, True, color)
             surface.blit(ing_surf, (text_x, curr_y + 8))
             curr_y += 35
@@ -171,14 +171,15 @@ class CraftingDismantleTab:
         if r.req_level:
             for attr, lvl in reversed(list(r.req_level.items())):
                 attr_name = attr.replace('_', ' ').capitalize()
+                attr_name_tr = tr('ui', attr_name) # Fetch translated skill name
                 p_lvl = self.modal.player.progression.get_level(attr)
                 s_color = GREEN if p_lvl >= lvl else RED
-                txt = f"- {attr_name}: {p_lvl}/{int(lvl)}"
+                txt = f"- {attr_name_tr}: {p_lvl}/{int(lvl)}"
                 s_surf = font_small.render(txt, True, s_color)
                 element_cursor_y -= 20
                 surface.blit(s_surf, (details_x + 10, element_cursor_y))
             
-            head_txt = "OR Skills:" if r.magazine else "Requires Skills:"
+            head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
             head_surf = font_small.render(head_txt, True, WHITE)
             element_cursor_y -= 20
             surface.blit(head_surf, (details_x, element_cursor_y))
@@ -186,13 +187,13 @@ class CraftingDismantleTab:
 
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED
-            mag_text = f"Requires Magazine: {r.magazine}"
+            mag_text = f"{tr('ui', 'Requires Magazine:')} {r.magazine}"
             mag_surf = font_small.render(mag_text, True, mag_color)
             element_cursor_y -= 20
             surface.blit(mag_surf, (details_x, element_cursor_y))
             element_cursor_y -= 5 
 
-        time_text = f"Time: {r.time_required}s"
+        time_text = f"{tr('ui', 'Time:')} {r.time_required}s"
         time_surf = font_small.render(time_text, True, GRAY)
         element_cursor_y -= 20
         surface.blit(time_surf, (details_x, element_cursor_y))
@@ -208,14 +209,15 @@ class CraftingDismantleTab:
         pygame.draw.rect(surface, btn_color, btn_rect, border_radius=5)
         pygame.draw.rect(surface, border_color, btn_rect, 1, border_radius=5)
         
+        
         if not is_unlocked:
-            if r.magazine and not knows_magazine and r.req_level: btn_text = "LOCKED (MAG/SKILL)"
-            elif r.magazine: btn_text = "NEED MAGAZINE"
-            else: btn_text = "NEED SKILLS"
+            if r.magazine and not knows_magazine and r.req_level: btn_text = tr('ui', "LOCKED (MAG/SKILL)")
+            elif r.magazine: btn_text = tr('ui', "NEED MAGAZINE")
+            else: btn_text = tr('ui', "NEED SKILLS")
         elif can_craft:
-            btn_text = "DISMANTLE"
+            btn_text = tr('ui', "DISMANTLE") # Use "REPAIR ITEM" and "DISMANTLE" for the other tabs
         else:
-            btn_text = "MISSING RESOURCES"
+            btn_text = tr('ui', "MISSING RESOURCES")
 
         lbl = font.render(btn_text, True, WHITE if can_craft else GRAY)
         text_rect = lbl.get_rect(center=btn_rect.center)

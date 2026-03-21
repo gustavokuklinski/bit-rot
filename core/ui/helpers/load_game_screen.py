@@ -3,6 +3,7 @@ import os
 import shutil
 from datetime import datetime
 from core.data.config import *
+from core.data.localization import tr
 
 def get_save_files():
     """Scans the save directory and returns a sorted list of save folders (newest first)."""
@@ -93,7 +94,7 @@ def draw_load_game_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, WHITE, panel_rect, 1, border_radius=border_radius)
 
     # Header Text
-    title_surf = font.render("Load Game", True, WHITE)
+    title_surf = font.render(tr('ui', "Load Game"), True, WHITE)
     game.game_screen.blit(title_surf, (header_rect.x + 15, header_rect.y + 10))
 
     # --- Save List Area ---
@@ -171,7 +172,7 @@ def draw_load_game_screen(game, state, mouse_pos):
     load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
     load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
     pygame.draw.rect(game.game_screen, load_color, load_btn_rect, border_radius=4)
-    load_txt = large_font.render("LOAD GAME", True, WHITE)
+    load_txt = large_font.render(tr('ui', "LOAD GAME"), True, WHITE)
     game.game_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
     if state['selected_save_index'] is not None:
         clickable_rects['load_button'] = load_btn_rect
@@ -179,13 +180,13 @@ def draw_load_game_screen(game, state, mouse_pos):
     del_btn_rect = pygame.Rect(panel_rect.x + padding, button_area_y, btn_width - 20, btn_height)
     if state['selected_save_index'] is not None:
         pygame.draw.rect(game.game_screen, RED, del_btn_rect, border_radius=4)
-        del_txt = font.render("Delete", True, WHITE)
+        del_txt = font.render(tr('ui', "Delete"), True, WHITE)
         game.game_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
         clickable_rects['delete_button'] = del_btn_rect
     
     back_btn_rect = pygame.Rect(panel_rect.right - padding - (btn_width - 20), button_area_y, btn_width - 20, btn_height)
     pygame.draw.rect(game.game_screen, GRAY_80, back_btn_rect, border_radius=4)
-    back_txt = font.render("Back", True, WHITE)
+    back_txt = font.render(tr('ui', "Back"), True, WHITE)
     game.game_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
     clickable_rects['back_button'] = back_btn_rect
 

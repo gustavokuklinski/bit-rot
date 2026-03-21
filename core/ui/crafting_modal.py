@@ -12,6 +12,7 @@ from core.ui.crafting_know_recipes_tab import CraftingKnowRecipesTab
 from core.ui.crafting_craft_tab import CraftingCraftTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
 from core.ui.crafting_dismantle_tab import CraftingDismantleTab
+from core.data.localization import tr
 
 class CraftingModal(BaseModal):
     def __init__(self, surface, modal_data, assets, game):
@@ -46,15 +47,15 @@ class CraftingModal(BaseModal):
         self.yield_colors = {}
 
         self.tabs_data = [
-            {'label': "Known Recipes"},
-            {'label': "Craft"},
-            {'label': "Repair"},
-            {'label': "Dismantle"}
+            {'label': tr('tab', "Known Recipes")},
+            {'label': tr('tab', "Craft")},
+            {'label': tr('tab', "Repair")},
+            {'label': tr('tab', "Dismantle")}
         ]
         self.tabs_manager = Tabs(surface, self.modal, self.tabs_data, assets)
         
         if 'active_tab' not in self.modal:
-            self.modal['active_tab'] = "Known Recipes"
+            self.modal['active_tab'] = tr('tab', "Known Recipes")
 
         # Search State
         self.search_text = ""
@@ -68,10 +69,10 @@ class CraftingModal(BaseModal):
         self.dropdown_just_closed = False
 
         self.tab_handlers = {
-            "Known Recipes": CraftingKnowRecipesTab(self),
-            "Craft": CraftingCraftTab(self),
-            "Repair": CraftingRepairTab(self),
-            "Dismantle": CraftingDismantleTab(self)
+            tr('tab', "Known Recipes"): CraftingKnowRecipesTab(self),
+            tr('tab', "Craft"): CraftingCraftTab(self),
+            tr('tab', "Repair"): CraftingRepairTab(self),
+            tr('tab', "Dismantle"): CraftingDismantleTab(self)
         }
 
     def handle_event(self, event):
@@ -271,7 +272,7 @@ class CraftingModal(BaseModal):
         if self.search_active and (pygame.time.get_ticks() // 500) % 2 == 0: display_text += "_"
             
         if not self.search_text and not self.search_active:
-            display_text = "Search..."
+            display_text = tr('ui', "Search...")
             txt_col = (80, 80, 80)
         else:
             txt_col = WHITE
@@ -289,7 +290,7 @@ class CraftingModal(BaseModal):
         pygame.draw.rect(self.surface, (30, 30, 30), (list_x, list_y, self.list_width, list_h))
         pygame.draw.rect(self.surface, GRAY, (list_x, list_y, self.list_width, list_h), 1)
 
-        active_tab = self.modal.get('active_tab', 'Known Recipes')
+        active_tab = self.modal.get('active_tab', tr('tab', 'Known Recipes'))
         tab_handler = self.tab_handlers.get(active_tab)
 
         nearby_items = []
@@ -410,7 +411,7 @@ class CraftingModal(BaseModal):
                 mouse_pos, click, nearby_containers, player_items, nearby_items
             )
         else:
-            info_txt = font.render("Select a recipe to view details", True, GRAY)
+            info_txt = font.render(tr('ui', "Select a recipe to view details"), True, GRAY)
             text_rect = info_txt.get_rect(center=(details_x + details_w//2, details_y + 100))
             self.surface.blit(info_txt, text_rect)
 
@@ -443,7 +444,7 @@ class CraftingModal(BaseModal):
             for name in names:
                 img = self.get_preview_image(name)
                 if img: img = pygame.transform.scale(img, (20, 20))
-                s = font_small.render(name + " (None available)", True, GRAY)
+                s = font_small.render(f"{name} {tr('ui', '(None available)')}", True, GRAY)
                 
                 row_w = dash_w + (25 if img else 0) + s.get_width()
                 if row_w > max_w: max_w = row_w
@@ -503,11 +504,11 @@ class CraftingModal(BaseModal):
                 if removed_check >= to_remove: break
 
                 if item.name in valid_names:
-                    if hasattr(item, 'inventory') and item.inventory: return f"Cannot use {item.name}: It contains items!"
+                    if hasattr(item, 'inventory') and item.inventory: return f"{tr('msg', 'Cannot use')} {item.name}: {tr('msg', 'It contains items!')}"
 
                     item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                     take = min(to_remove - removed_check, item_qty)
                     removed_check += take
                     
-            if removed_check < to_remove: return f"Missing {to_remove - removed_check} of {valid_names[0]}"
+            if removed_check < to_remove: return f"{tr('msg', 'Missing')} {to_remove - removed_check} {tr('msg', 'of')} {valid_names[0]}"
         return None

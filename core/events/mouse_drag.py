@@ -242,7 +242,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                              def do_tab_loot():
                                                  target_container.inventory.append(item_ref)
                                         
-                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_loot, xp_reward=0.5)
                                              game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                              return
                                          else:
@@ -272,7 +272,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                              def do_tab_inv_loot():
                                                  target_list.append(item_ref)
                              
-                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_inv_loot, xp_reward=0.5)
                                              game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                              return
                                          else:
@@ -373,7 +373,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     item_in_slot.load += trans
                                                     item_ref.load -= trans
 
-                                                game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                                game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_stack, xp_reward=0.5)
                                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                 return
                                             else:
@@ -400,7 +400,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             def do_inv_loot():
                                                 game.player.inventory.insert(target_index, item_ref)
                                             
-                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_loot, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -418,7 +418,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             def do_inv_append():
                                                 game.player.inventory.append(item_ref)
                               
-                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_append, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -497,7 +497,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     container.inventory.append(item_ref)
                                         
                                       
-                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_container_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -602,7 +602,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     container.inventory.append(item_ref)
                                         
                           
-                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_bag_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -686,7 +686,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                      def do_tab_loot():
                                                          target_container.inventory.append(item_ref)
                                   
-                                                     game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                                     game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_loot, xp_reward=0.5)
                                                      game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                      return
                                                  else:
@@ -833,7 +833,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     container.inventory.append(item_ref)
                                         
                          
-                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_gear_container_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                 
