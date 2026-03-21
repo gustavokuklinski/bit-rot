@@ -362,6 +362,18 @@
         <msg name="It is now Night." translation_msg="Agora é Noite." />
         <msg name="The sky lightens..." translation_msg="O céu clareia..." />
         <msg name="It is now Day." translation_msg="Agora é Dia." />
+
+        <msg name="You wake up refreshed." translation_msg="Você acorda revigorado." />
+        <msg name="Discarded empty" translation_msg="Descartou vazio(a)" />
+        <msg name="Discarded empty backpack container." translation_msg="Recipiente da mochila vazio descartado." />
+        <msg name="is broken and unequipped." translation_msg="quebrou e foi desequipada." />
+        <msg name="is out of ammo." translation_msg="está sem munição." />
+        <msg name="is broken." translation_msg="está quebrada." />
+        <msg name="You attacked the animal for" translation_msg="Você atacou o animal causando" />
+        <msg name="damage!" translation_msg="de dano!" />
+        <msg name="You killed the animal!" translation_msg="Você matou o animal!" />
+        <msg name="You attacked" translation_msg="Você atacou" />
+        <msg name="for" translation_msg="causando" />
     </msg>
 
 </language>

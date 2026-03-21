@@ -328,7 +328,7 @@ class PlayerActions:
             display_message(f"{tr('msg', 'No repair kit found for')} {target_item.name}.")
             return
         if target_item.durability >= target_item.max_durability:
-            display_message(f"{target_item.name} is already in perfect condition.")
+            display_message(f"{target_item.name} {tr('msg', 'is already in perfect condition.')}")
             return
         def execute_repair():
             restore_amount = random.randint(kit.min_restore, kit.max_restore)

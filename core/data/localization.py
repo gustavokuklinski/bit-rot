@@ -13,6 +13,11 @@ def load_language(lang_code, lang_dir="./game/lib/lang"):
     _translations.clear()
     _current_lang = lang_code
     
+    # --- NEW: Explicitly intercept en_US to use hardcoded defaults without throwing missing file warnings ---
+    if lang_code == "en_US":
+        print("Language set to en_US. Using default hardcoded English.")
+        return 
+    
     if not os.path.exists(filepath):
         print(f"Language file {filepath} not found. Defaulting to hardcoded English.")
         return 

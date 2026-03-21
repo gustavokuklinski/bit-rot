@@ -126,11 +126,12 @@ def _draw_settings_screen(game, state, mouse_pos):
             else:
                 block, key, val_data = item[1], item[2], item[3]
                 
-                # --- NEW: Better Translation Fallback for raw keys ---
-                #raw_label = val_data.get('name', key) if isinstance(val_data, dict) else key
-                #display_label = tr('ui', raw_label)
-                display_label = tr('ui', key)
+                raw_label = val_data.get('name', key) if isinstance(val_data, dict) else key
                 
+                # Try to translate the key. If there is no translation (like in en_US), 
+                # it will fall back to 'raw_label' instead of the underscore key.
+                display_label = tr('ui', key, default=raw_label)
+
                 val = val_data.get('value') if isinstance(val_data, dict) else val_data
                 
                 input_w = 200

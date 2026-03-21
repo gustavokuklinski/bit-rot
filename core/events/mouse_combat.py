@@ -102,16 +102,16 @@ def handle_attack(game, mouse_pos):
                     print(f"{weapon.name} broke!")
                     game.player.progression.add_xp(game.player, 'maintenance', 50)
                     game.player.active_weapon = None 
-                    display_message(game, f"{weapon.name} is broken and unequipped.")
+                    display_message(game, f"{weapon.name} {tr('msg', 'is broken and unequipped.')}")
                     
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
                     game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
-                display_message(f"{weapon.name} is out of ammo.")
+                display_message(f"{weapon.name} {tr('msg', 'is out of ammo.')}")
             else:
                 print(f"**CLUNK!** {weapon.name} is broken.")
-                display_message(f"{weapon.name} is broken.")
+                display_message(f"{weapon.name} {tr('msg', 'is broken.')}")
 
         else:
             # --- MELEE ATTACK LOGIC ---
@@ -215,7 +215,7 @@ def handle_attack(game, mouse_pos):
                                 if can_deal_damage:
                                     damage = game.player.get_attack_damage()
                                     is_dead = animal.take_damage(damage, game, attacker=game.player)
-                                    display_message(f"You attacked the animal for {damage} damage!")
+                                    display_message(f"{tr('msg', 'You attacked the animal for')} {damage} {tr('msg', 'damage!')}")
 
                                     # Calculate direction for blood splatter
                                     direction = [math.cos(kb_angle), math.sin(kb_angle)]
@@ -229,7 +229,7 @@ def handle_attack(game, mouse_pos):
                                             game.items_on_ground.remove(animal)
                                         if animal in game.active_animals:
                                             game.active_animals.remove(animal)
-                                        display_message(f"You killed the animal!")
+                                        display_message(tr('msg', "You killed the animal!"))
                                 else:
                                     is_dead = False
 
@@ -270,7 +270,7 @@ def handle_attack(game, mouse_pos):
                                     if can_deal_damage:
                                         damage = game.player.get_attack_damage()
                                         is_dead = npc.take_damage(damage, game, attacker=game.player)
-                                        display_message(game, f"You attacked {npc.name} for {damage} damage!")
+                                        display_message(game, f"{tr('msg', 'You attacked')} {npc.name} {tr('msg', 'for')} {damage} {tr('msg', 'damage!')}")
 
                                         # Calculate direction for blood splatter
                                         direction = [math.cos(kb_angle), math.sin(kb_angle)]

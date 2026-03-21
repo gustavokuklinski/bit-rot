@@ -56,7 +56,7 @@ class PlayerCombat:
         self.is_reloading = True
         self.reloading_weapon = target_weapon 
         self.reload_timer = self.reload_duration
-        display_message(f"Reloading {target_weapon.name}...")
+        display_message(f"{tr('msg', 'Reloading')} {target_weapon.name}...")
 
     def _finish_reload(self):
         self.is_reloading = False
@@ -86,23 +86,23 @@ class PlayerCombat:
 
     def reload_utility_item(self, item, source, index, container_item):
         if not item.fuel_type:
-            display_message(f"{item.name} does not use fuel.")
+            display_message(f"{item.name} {tr('msg', 'does not use fuel.')}")
             return
 
         fuel_item, f_source, f_index, f_container = self.find_fuel(item.fuel_type)
         if not fuel_item:
-            display_message(f"No {item.fuel_type} found to reload.")
+            display_message(f"{tr('msg', 'No')} {item.fuel_type} {tr('msg', 'found to reload.')}")
             return
             
         max_dur = item.max_durability
         dur_needed = max_dur - (item.durability or 0)
         
         if dur_needed <= 0:
-            display_message(f"{item.name} durability is already full.")
+            display_message(f"{item.name} {tr('msg', 'durability is already full.')}")
             return
 
         if fuel_item.load <= 0:
-            display_message(f"No {fuel_item.name} left to use.")
+            display_message(f"{tr('msg', 'No')} {fuel_item.name} {tr('msg', 'left to use.')}")
             return
 
         fuel_item.load -= 1
@@ -122,7 +122,7 @@ class PlayerCombat:
             return
         ammo.load = weapon.load
         weapon.load = 0
-        display_message(f"Unloaded {int(ammo.load)} {ammo.name} from {weapon.name}.")
+        display_message(f"{tr('msg', 'Unloaded')} {int(ammo.load)} {ammo.name} {tr('msg', 'from')} {weapon.name}.")
         self.stack_item_in_inventory(ammo)
         if ammo.load <= 0: return 
         if len(self.inventory) < self.base_inventory_slots:

@@ -178,7 +178,7 @@ class PlayerInventory:
 
     def transfer_item_stack(self, source, index, container_item, target_container, game=None):
         if self.action_timer > 0:
-            display_message("Busy...")
+            display_message(tr('msg', "Busy..."))
             return
 
         def execute_transfer():

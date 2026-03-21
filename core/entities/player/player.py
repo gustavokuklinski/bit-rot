@@ -300,7 +300,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.tireness = self.max_tireness
                 self.is_sleeping = False
                 game.is_fast_forwarding = False
-                display_message("You wake up refreshed.")
+                display_message(tr('msg', "You wake up refreshed."))
 
         mouse_buttons = pygame.mouse.get_pressed()
         is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL]
@@ -459,7 +459,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
                     close_modal(item)
                     self.belt[i] = None
-                    msg(f"Discarded empty {item.name}.")
+                    display_message(f"{tr('msg', 'Discarded empty')} {item.name}.")
 
         if self.backpack:
             Item.cleanup_disposables(self.backpack.inventory, game.modals, msg)
@@ -467,7 +467,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             if getattr(self.backpack, 'disposable', False) and hasattr(self.backpack, 'inventory') and len(self.backpack.inventory) == 0:
                 close_modal(self.backpack)
                 self.backpack = None
-                msg(f"Discarded empty backpack container.")
+                display_message(tr('msg', "Discarded empty backpack container."))
 
         if self.is_reloading:
             self.reload_timer -= game.dt_mult
