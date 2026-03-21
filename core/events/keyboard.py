@@ -226,11 +226,11 @@ def process_chat_command(game, text):
             game.player.god_mode = True
             
             if command == "godzen":
-                 game.player.godzen_mode = True
-                 display_message(game, "GODZEN Mode Activated: Invincible and Invisible.")
+                game.player.godzen_mode = True
+                display_message(game, tr('msg', "GODZEN Mode Activated: Invincible and Invisible."))
             else:
                  game.player.godzen_mode = False
-                 display_message(game, "GOD Mode Activated: Invincible.")
+                 display_message(game, tr('msg', "GOD Mode Activated: Invincible."))
         return True
 
     # --- ITEM SPAWN ---
@@ -252,9 +252,9 @@ def process_chat_command(game, text):
                     break
         
         if spawned > 0:
-            display_message(game, f"Spawned {spawned}x '{item_name}' into inventory.")
+            display_message(game, f"{tr('msg', 'Spawned')} {spawned}x '{item_name}' {tr('msg', 'into inventory.')}")
         else:
-            display_message(game, f"Could not spawn '{item_name}'. (Inventory full or invalid item)")
+            display_message(game, f"{tr('msg', 'Could not spawn cloth')} '{cloth_name}'.")
         return True
 
     # --- CLOTH SPAWN ---
@@ -313,7 +313,7 @@ def process_chat_command(game, text):
             game.rebuild_container_grid() # Update grid
             display_message(game, f"Spawned vehicle '{veh_name}' nearby.")
         else:
-             display_message(game, f"Could not find vehicle '{veh_name}'.")
+            display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
         return True
 
     return False

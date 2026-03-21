@@ -28,6 +28,7 @@ from core.ui.crafting_modal import CraftingModal
 from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.systems.utils import get_player_facing_tile
+from core.data.localization import tr
 
 def draw_game(game):
     # Clear the main screen
@@ -578,7 +579,7 @@ def draw_game(game):
     if game.player and game.player.is_sleeping:
         game.game_screen.fill((0, 0, 0))
         font = game.assets.get('font') or pygame.font.Font(None, 30)
-        text_surf = font.render("Sweet Dreams. Press Space to Wake up.", True, (255, 255, 255))
+        text_surf = font.render(tr('ui', "Sweet Dreams. Press Space to Wake up."), True, (255, 255, 255))
         text_rect = text_surf.get_rect(center=(game.game_screen.get_width() // 2, game.game_screen.get_height() // 2))
         game.game_screen.blit(text_surf, text_rect)
 
@@ -638,7 +639,7 @@ def draw_game(game):
             if not screen_rect.colliderect(npc.rect): continue
             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
             if dist < TILE_SIZE * 1.5:
-                interactables.append({'rect': npc.rect, 'tip': 'Press E to Talk\nRMB For Talk option'})
+                interactables.append({'rect': npc.rect, 'tip': tr('tooltip', 'Press E to Talk\nRMB For Talk option')})
                 
         # 2. Check Vehicles
         for obj in game.containers:
@@ -646,8 +647,41 @@ def draw_game(game):
                 if not screen_rect.colliderect(obj.rect): continue
                 dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
                 if dist < TILE_SIZE * 2.0:
-                    interactables.append({'rect': obj.rect, 'tip': 'Press E to enter/exit vehicle\nPress Q to turn on/off engine\nRMB for Vehicle Options and Trunk'})
+                    # Safely extract vehicle stats
+                    equip = getattr(obj, 'equipment', {})
+                    motor_pct = int(getattr(obj, 'motor', 0.0) * 100)
+                    fuel_val = int(getattr(obj, 'fuel', 0))
+                    power_val = int(getattr(obj, 'battery', 0))
                     
+                    # Count valid tires
+                    tires_count = sum(1 for t in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br'] 
+                                      if equip.get(t) and getattr(equip.get(t), 'durability', 0) > 0)
+                    
+                    # Determine Key status
+                    if not getattr(obj, 'required_key_id', None):
+                        key_status = tr('tooltip', "Not Req")
+                    else:
+                        key_status = tr('tooltip', "Yes") if equip.get('key') else tr('tooltip', "Missing")
+                        
+                    # Construct multi-line tooltip - UPDATE THESE LINES:
+                    t_enter = tr('tooltip', "Press E to enter/exit vehicle")
+                    t_engine = tr('tooltip', "Press Q to turn on/off engine")
+                    t_rmb = tr('tooltip', "RMB for Vehicle Options and Trunk")
+                    t_mot = tr('tooltip', "Motor")
+                    t_fuel = tr('tooltip', "Fuel")
+                    t_pow = tr('tooltip', "Power")
+                    t_tire = tr('tooltip', "Tires")
+                    t_key = tr('tooltip', "Key")
+                    
+                    tip_text = (
+                        f"{t_enter}\n"
+                        f"{t_engine}\n"
+                        f"{t_rmb}\n\n"
+                        f"{t_mot}: {motor_pct}% | {t_fuel}: {fuel_val} | {t_pow}: {power_val} | {t_tire}: {tires_count}/4 | {t_key}: {key_status}"
+                    )
+                    
+                    interactables.append({'rect': obj.rect, 'tip': tip_text})
+
         # 3. Check Tiles (Doors, Windows, Stairs)
         fx, fy = get_player_facing_tile(game)
         if fx is not None:
@@ -660,13 +694,15 @@ def draw_game(game):
                     if dist < TILE_SIZE * 1.5:
                         tile_rect = pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                         if is_stair:
-                            interactables.append({'rect': tile_rect, 'tip': 'Press E\nto go Down/Up'})
+                            # Update this line:
+                            interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E\nto go Down/Up')})
                         else:
                             name = t.get('name', '').lower()
+                            # Update these lines:
                             if 'window' in name:
-                                interactables.append({'rect': tile_rect, 'tip': 'Press E or RMB\nto Open/Close'})
+                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E or RMB\nto Open/Close')})
                             else:
-                                interactables.append({'rect': tile_rect, 'tip': 'Press E or RMB\nto Open/Close'})
+                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E or RMB\nto Open/Close')})
                                 
         # Draw the '!' marks
         mouse_pos = game._get_scaled_mouse_pos()
@@ -898,15 +934,15 @@ def draw_game(game):
 
     elif not game.context_menu['active']:
         ui_buttons = [
-            (game.pause_button_rect, "Pause and Save (F2)"),
-            (game.forward_button_rect, "Skip time (F3)"),
-            (game.status_button_rect, "Player Status (H)"),
-            (game.inventory_button_rect, "Inventory (I)"),
-            (game.gear_button_rect, "Gear (G)"),
-            (game.nearby_button_rect, "Nearby (N)"),
-            (game.messages_button_rect, "Messages (M)"),
-            (game.crafting_button_rect, "Crafting (C)"),
-            (getattr(game, 'help_button_rect', None), "Tutorial & Help (?)")
+            (game.pause_button_rect, tr('ui', "Pause and Save (F2)")),
+            (game.forward_button_rect, tr('ui', "Skip time (F3)")),
+            (game.status_button_rect, tr('ui', "Player Status (H)")),
+            (game.inventory_button_rect, tr('ui', "Inventory (I)")),
+            (game.gear_button_rect, tr('ui', "Gear (G)")),
+            (game.nearby_button_rect, tr('ui', "Nearby (N)")),
+            (game.messages_button_rect, tr('ui', "Messages (M)")),
+            (game.crafting_button_rect, tr('ui', "Crafting (C)")),
+            (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
         ]
         
         mouse_pos = game._get_scaled_mouse_pos()

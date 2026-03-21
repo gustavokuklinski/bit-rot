@@ -581,6 +581,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 new_item.y = item.y
                                 item_to_grab = new_item
                                 print("Campfire extinguished when picked up.")
+                                display_message(tr('msg', "Campfire extinguished when picked up."))
 
                         if source == 'ground' and item in game.items_on_ground:
                             game.items_on_ground.remove(item)
@@ -750,7 +751,7 @@ def handle_right_click(game, mouse_pos):
                     click_container_item = None
                     break
                 else:
-                    display_message("Item is too far away to interact with.")
+                    display_message(tr('msg', "Item is too far away to interact with."))
 
         if not clicked_item:
             for i, container in enumerate(game.containers):
@@ -765,7 +766,7 @@ def handle_right_click(game, mouse_pos):
                         click_container_item = None
                         break
                     else:
-                        display_message("Item is too far away to interact with.")
+                        display_message(tr('msg', "Item is too far away to interact with."))
 
         if not clicked_item:
             if game.player.rect.collidepoint(world_pos):
@@ -818,7 +819,7 @@ def handle_right_click(game, mouse_pos):
                 else:
                     # Only show distance warning if they clicked something interactable
                     if tile.get('type') == "maptile_car" or tile.get('is_statable') or tile.get('sleep'):
-                        display_message(game, "Too far away to interact.")
+                        display_message(game, tr('msg', "Too far away to interact."))
 
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
@@ -865,7 +866,7 @@ def handle_right_click(game, mouse_pos):
                     if hasattr(clicked_item, 'stop_moving'):
                         clicked_item.stop_moving()
             else:
-                display_message(game, "Too far to talk to them.")
+                display_message(game, tr('msg', "Too far to talk to them."))
 
         elif click_source == 'map_tile':
             options = []

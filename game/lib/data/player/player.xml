@@ -33,7 +33,7 @@
         <item name="Mobile off" chance="1" />
         <item name="38 Revolver" chance="1" />
         <item name="38 Ammo" chance="1" />
-        <item name="Chocolate Bar" chance="1" />
+        <item name="Bag" chance="1" />
     </initial_loot>
 
     <visuals>

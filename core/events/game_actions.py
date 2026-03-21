@@ -28,7 +28,7 @@ def try_grab_item(game):
                 new_item.x = closest_item.x
                 new_item.y = closest_item.y
                 item_to_grab = new_item
-                print("Campfire extinguished when picked up.")
+                display_message(tr('msg', "Campfire extinguished when picked up."))
 
         target_inventory = game.player.inventory
         target_capacity = game.player.base_inventory_slots
@@ -42,13 +42,16 @@ def try_grab_item(game):
             game.items_on_ground.remove(closest_item)
             success = True
             print(f"Grabbed {item_to_grab.name}.")
+            display_message(f"{tr('msg', 'Grabbed')} {item_to_grab.name}.")
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
             game.player.inventory.append(item_to_grab)
             game.items_on_ground.remove(closest_item)
             success = True
             print(f"Grabbed {item_to_grab.name} into inventory.")
+            display_message(f"{tr('msg', 'Grabbed')} {item_to_grab.name} {tr('msg', 'into inventory.')}")
         else:
             print("No space to grab the item.")
+            display_message(tr('msg', "No space to grab the item."))
 
         if success:
             current_map_filename = game.map_manager.current_map_filename

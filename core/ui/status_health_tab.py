@@ -4,6 +4,7 @@ import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
 from core.entities.item.item_data import ITEM_TEMPLATES
+from core.data.localization import tr
 
 class StatusTooltipItem:
     """Helper class to mock an item for the generic tooltip system."""
@@ -109,15 +110,16 @@ def draw_health_tab(surface, player, modal, assets):
 
         # Hover Logic
         if border_rect.collidepoint(mouse_pos):
-             full_name = stat_names.get(name, name)
-             if name == "WGT":
-                 val_str = f"{value:.2f} / {max_value:.2f}"
-             elif name == "DEF":
-                 val_str = f"{(value / 5.0) * 100:.0f}%"
-             else:
-                 val_str = f"{int(value)}%"
+            full_name = stat_names.get(name, name)
+            translated_name = tr('tooltip', full_name) # <-- Translate the name part first
+            if name == "WGT":
+                val_str = f"{value:.2f} / {max_value:.2f}"
+            elif name == "DEF":
+                val_str = f"{(value / 5.0) * 100:.0f}%"
+            else:
+                val_str = f"{int(value)}%"
                  
-             active_tooltip_item = StatusTooltipItem(f"{full_name}: {val_str}")
+            active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
 
     # --- Column 2: Visuals & Attributes ---
     

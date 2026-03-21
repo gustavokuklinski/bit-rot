@@ -262,8 +262,8 @@ class CraftingCraftTab:
 
             if created_items_log:
                 msg = ", ".join(created_items_log)
-                display_message(f"Crafted: {msg}")
+                display_message(f"{tr('msg', 'Crafted:')} {msg}")
             else:
-                 display_message("Crafting yielded nothing.")
+                display_message(tr('msg', "Crafting yielded nothing."))
 
         self.modal.player.start_action(f"Crafting {recipe.output_name}", recipe.time_required, craft_complete)

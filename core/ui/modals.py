@@ -1,12 +1,16 @@
 import pygame
 from core.data.config import *
+from core.data.localization import tr
 
 class BaseModal:
     def __init__(self, surface, modal, assets, title, w=None, h=None):
         self.surface = surface
         self.modal = modal
         self.assets = assets
-        self.title = title
+        
+        # --- THE FIX: Instantly translate any title passed to any modal ---
+        self.title = tr('modal', title) 
+        
         self.modal_w, self.modal_h = self.get_modal_dimensions()
         self.modal_x, self.modal_y = modal['position']
         self.header_h = 35
@@ -43,15 +47,13 @@ class BaseModal:
             return HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT
         elif self.modal['type'] == 'npc_dialog':
             return NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT
-        # return 300, 300
+        return 300, 300
 
     def draw_header(self):
         header_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h)
 
-        #pygame.draw.rect(self.surface, GRAY_60, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
-        #pygame.draw.rect(self.surface, WHITE, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
-        header_color = GRAY if self.is_active else GRAY_60 # Active: (128,128,128), Inactive: (60,60,60)
-        border_color = WHITE if self.is_active else GRAY     # Active: WHITE, Inactive: (128,128,128)
+        header_color = GRAY if self.is_active else GRAY_60 
+        border_color = WHITE if self.is_active else GRAY     
         
         pygame.draw.rect(self.surface, header_color, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
         pygame.draw.rect(self.surface, border_color, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
@@ -68,7 +70,6 @@ class BaseModal:
         s.fill((20, 20, 20, 250))
         self.surface.blit(s, (self.modal_x, self.modal_y))
 
-        # pygame.draw.rect(self.surface, WHITE, self.modal_rect, 1, 4)
         border_color = WHITE if self.is_active else GRAY
         pygame.draw.rect(self.surface, border_color, self.modal_rect, 1, 4)
 

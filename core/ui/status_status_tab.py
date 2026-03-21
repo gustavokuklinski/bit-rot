@@ -3,6 +3,7 @@
 import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
+from core.data.localization import tr
 
 class StatusTooltipItem:
     """Helper class to mock an item for the generic tooltip system."""
@@ -38,7 +39,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     # --- Column 1: General Stats ---
     
     # 1. Header
-    name_text = font.render("Condition", True, WHITE)
+    name_text = font.render(tr('ui', "Condition"), True, WHITE)
     surface.blit(name_text, (col1_x, start_y))
     
     y_offset = start_y + 30
@@ -124,6 +125,8 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         # Hover Logic
         if border_rect.collidepoint(mouse_pos):
              full_name = stat_names.get(name, name)
+             translated_name = tr('tooltip', full_name)
+
              if name == "WGT":
                  val_str = f"{value:.2f} / {max_value:.2f}"
              elif name == "DEF":
@@ -131,7 +134,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
              else:
                  val_str = f"{int(value)}%"
                  
-             active_tooltip_item = StatusTooltipItem(f"{full_name}: {val_str}")
+             active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
 
     # --- Draw Active Tooltip using Default System ---
     if active_tooltip_item:

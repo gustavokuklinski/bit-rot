@@ -3,7 +3,7 @@ from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs 
 from core.ui.container_modal import _draw_slots
-
+from core.data.localization import tr
 # --- NEW: Belt HUD Functions ---
 
 def draw_text_shadow(surface, font, text, color, pos, align='topleft', shadow_color=BLACK, offset=(1, 1)):
@@ -152,7 +152,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
     
     # "Backpack" Label with Shadow
-    backpack_label = font_notification.render("Backpack", True, GRAY)
+    backpack_label = font_notification.render(tr('ui', "Backpack"), True, GRAY)
     surface.blit(backpack_label, (backpack_slot_rect.x + 3, backpack_slot_rect.y + 1))
 
     if (backpack := player.backpack):
@@ -171,7 +171,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
         draw_text_shadow(surface, font, f"{backpack.name}", backpack.color, (text_x_offset, backpack_slot_rect.top + 5))
         
         # Slots Info with Shadow
-        draw_text_shadow(surface, font, f"Slots: {backpack.capacity or 0}", WHITE, (text_x_offset, backpack_slot_rect.top + 25))
+        draw_text_shadow(surface, font, f"{tr('ui', 'Slots:')} {backpack.capacity or 0}", WHITE, (text_x_offset, backpack_slot_rect.top + 25))
     else:
         pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
     

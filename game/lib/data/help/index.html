@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #555;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        /* CSS Grid System for Block Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 20px; /* Space between blocks */
+        }
+        .block {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        .full-width {
+            grid-column: span 2; /* Forces this block to take up both columns */
+        }
+        h3 {
+            margin-top: 0;
+            color: #ffcc00;
+            border-bottom: 1px dotted #555;
+            padding-bottom: 5px;
+        }
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+        li strong {
+            color: #26bd01; /* Green color for keys/commands */
+        }
+    </style>
+</head>
+<body>
+    <h1>=== BIT ROT SURVIVAL GUIDE ===</h1>
+
+    <div class="grid-container">
+        <div class="block full-width">
+            <h3>[ COMMANDS & KEYBINDINGS ]</h3>
+            <ul>
+                <li><strong>W, A, S, D</strong> : Move your character</li>
+                <li><strong>E</strong> : Interact: Talk to NPCs, Open/Close Doors/Windows, Enter Vehicles, Use Stairs</li>
+                <li><strong>1 to 5</strong> : Use or Equip item from your Belt</li>
+                <li><strong>LCTRL / RCTRL / Right Mouse Button</strong> : Aim Weapon</li>
+                <li><strong>Left Click (while aiming)</strong> : Attack / Shoot / Melee</li>
+                <li><strong>Right Click (on items)</strong> : Context Menu (Equip, Drop, Consume, Reload)</li>
+                <li><strong>Space</strong> : Wake up from sleep</li>
+                <li><strong>F2</strong> : Pause / Save Menu</li>
+                <li><strong>F3</strong> : Fast Forward Time</li>
+                <li><strong>F11</strong> : Fullscreen</li>
+            </ul>
+        </div>
+
+        <div class="block full-width">
+            <h3>[ INTERFACE SHORTCUTS ]</h3>
+            <ul>
+                <li><strong>I</strong> : Inventory - Player inventory and backpack</li>
+                <li><strong>H</strong> : Status - Player status</li>
+                <li><strong>G</strong> : Gear - Player clothes</li>
+                <li><strong>N</strong> : Nearby - Nearby items from containers</li>
+                <li><strong>M</strong> : Messages - Events happening in game</li>
+                <li><strong>C</strong> : Crafting - Craft recipes</li>
+                <li><strong>? or /</strong> : Open this Help menu</li>
+            </ul>
+        </div>
+
+        <div class="block full-width">
+            <h3>[ INVENTORY & DRAG-DROP ]</h3>
+            <ul>
+                <li><strong>Left-click and hold</strong> an item to drag it across slots.</li>
+                <li><strong>Drop items into your Belt</strong> for quick access (keys 1-5).</li>
+                <li><strong>Drop items into the Gear menu</strong> to equip clothing.</li>
+                <li><strong>Drop items outside the UI (world)</strong> to discard them.</li>
+            </ul>
+        </div>
+
+        <div class="block full-width">
+            <h3>[ PLAYER STATUS ]</h3>
+            <ul>
+                <li><strong>Health</strong> : Keep it above 0. Use bandages or meds to heal.</li>
+                <li><strong>Stamina</strong> : Depletes when running or attacking. Recovers when standby.</li>
+                <li><strong>Hunger & Thirst</strong> : Scavenge for food and water to stay alive.</li>
+                <li><strong>Tireness</strong> : Find a bed or safe place to sleep when exhausted.</li>
+                <li><strong>Infection</strong> : If hit by zombies, find meds quickly!</li>
+            </ul>
+        </div>
+
+        <div class="block full-width">
+            <h3>[ USEFUL TIPS ]</h3>
+            <ul>
+                <li><strong>Vehicles</strong> : Approach a vehicle and press 'E' to enter. Press 'Q' to toggle the engine on/off - Remember to check Mechanics!</li>
+                <li><strong>Crafting</strong> : Open the Crafting menu ('C') to combine items and survive - Read books and collect Blueprints.</li>
+                <li><strong>Combat</strong> : Always aim before attacking.</li>
+                <li><strong>Lighting</strong> : Turn on the Mobile in your inventory or belt to see clearly at night.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

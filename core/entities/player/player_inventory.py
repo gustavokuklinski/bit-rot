@@ -117,7 +117,7 @@ class PlayerInventory:
 
     def equip_item_to_belt(self, item, source_type, item_index, container_item=None):
         if not any(slot is None for slot in self.belt):
-            display_message("Belt is full.")
+            display_message(tr('msg', "Belt is full."))
             return False
         source_inventory = self._get_source_inventory(source_type, container_item)
         if source_inventory is None:
@@ -132,7 +132,7 @@ class PlayerInventory:
                     source_inventory[item_index] = None
                 else:
                     source_inventory.pop(item_index)
-                display_message(f"Equipped {item.name} to belt.")
+                display_message(f"{tr('msg', 'Equipped')} {item.name} {tr('msg', 'to belt.')}")
                 return True
         return False
     
@@ -229,7 +229,8 @@ class PlayerInventory:
                     if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                         game.items_on_ground.remove(item)
                 dest_name = targets[0]['name'] if targets else "Inventory"
-                display_message(f"Merged all of {item.name} into {dest_name}.")
+                
+                display_message(f"{tr('msg', 'Merged all of')} {item.name} {tr('msg', 'into')} {dest_name}.")
                 return
                 
             if remaining_load > 0:
@@ -260,12 +261,12 @@ class PlayerInventory:
                             if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
 
-                        display_message(f"Sent {remaining_load} {item.name} to {target_name}.")
+                        display_message(f"{tr('msg', 'Sent')} {remaining_load} {item.name} {tr('msg', 'to')} {target_name}.")
                         transferred = True
                         break 
                 
                 if not transferred:
-                    display_message(f"Inventory full. Could not transfer remaining {remaining_load}.")
+                    display_message(f"{tr('msg', 'Inventory full. Could not transfer remaining')} {remaining_load}.")
 
         def is_on_player(container):
             if not container: return False
@@ -286,7 +287,7 @@ class PlayerInventory:
 
     def drop_item(self, game, source, index, container_item=None):
         if self.drop_cooldown > 0:
-            display_message("Cannot drop items so quickly.")
+            display_message(tr('msg', "Cannot drop items so quickly."))
             return None
 
         item_to_drop = None

@@ -1,6 +1,7 @@
 import pygame
 import math
 from core.data.config import *
+from core.data.localization import tr
 
 # Global variable to cache the image so we don't reload it every frame
 LOADING_IMG = None
@@ -58,7 +59,7 @@ def draw_loading_screen(surface, is_done, mouse_pos):
             text_color = WHITE
             
         # Draw Text (Using large_font for bold effect)
-        btn_text = large_font.render("Click to start", True, text_color)
+        btn_text = large_font.render(tr('ui', "Click to start"), True, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
         
         # Draw invisible hit box (or subtle bg if needed)

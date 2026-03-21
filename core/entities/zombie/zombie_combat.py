@@ -47,6 +47,7 @@ class ZombieCombat:
                 print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
             else:
                 print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+                
 
         # 2. Target is an NPC, Animal, or other Zombie
         else:

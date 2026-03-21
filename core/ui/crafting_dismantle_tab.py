@@ -294,8 +294,8 @@ class CraftingDismantleTab:
 
             if created_items_log:
                 msg = ", ".join(created_items_log)
-                display_message(f"Dismantled into: {msg}")
+                display_message(f"{tr('msg', 'Dismantled into:')} {msg}")
             else:
-                 display_message("Dismantling yielded nothing.")
+                display_message(tr('msg', "Dismantling yielded nothing."))
 
         self.modal.player.start_action(f"Dismantling {recipe.output_name}", recipe.time_required, craft_complete)

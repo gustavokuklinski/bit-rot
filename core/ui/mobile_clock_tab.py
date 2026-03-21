@@ -1,5 +1,6 @@
 import pygame
 from core.data.config import *
+from core.data.localization import tr
 
 def draw_clock_tab(surface, game, modal, assets):
     # Adjust offsets to start inside the mobile screen area
@@ -16,13 +17,13 @@ def draw_clock_tab(surface, game, modal, assets):
     
     # Label Logic
     if current_state == "DAY":
-        label_text = "Daylight"
+        label_text = tr('ui', "Daylight")
     elif current_state == "NIGHT":
-        label_text = "Darkness"
+        label_text = tr('ui', "Darkness")
     elif current_state == "TRANSITION_TO_NIGHT":
-        label_text = "Twilight"
+        label_text = tr('ui', "Twilight")
     else:
-        label_text = "Sunrise"
+        label_text = tr('ui', "Sunrise")
     
     # Draw Icon
     if icon:
@@ -69,7 +70,7 @@ def draw_clock_tab(surface, game, modal, assets):
 
     # --- 3. Stats (Kills) ---
     zombies_killed = game.zombies_killed
-    kills_text = f"Kills: {zombies_killed}"
+    kills_text = f"{tr('ui', 'Kills:')} {zombies_killed}"
     kills_surf = font.render(kills_text, True, WHITE) 
     kills_rect = kills_surf.get_rect(center=(center_x, y_offset))
     surface.blit(kills_surf, kills_rect)
@@ -82,9 +83,9 @@ def draw_clock_tab(surface, game, modal, assets):
         # Calculate hours passed today
         hours_today = (total_minutes_in_day // 60)
         
-        alive_text = f"Survived: {days_survived} Days"
+        alive_text = f"{tr('ui', 'Survived:')} {days_survived} {tr('ui', 'Days')}"
     except Exception:
-        alive_text = "Survived: --"
+        alive_text = f"{tr('ui', 'Survived:')} --"
         
     alive_surf = font.render(alive_text, True, WHITE)
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
@@ -104,11 +105,11 @@ def draw_clock_tab(surface, game, modal, assets):
         timer_minutes = timer_in_game_minutes % 60
         
         if current_weather == 'CLEAR':
-            weather_text = f"Weather: Clear (Rain in {timer_hours}h)"
+            weather_text = f"{tr('ui', 'Weather: Clear')} ({tr('ui', 'Rain in')} {timer_hours}h)"
         else:
-            weather_text = f"Weather: Raining"
+            weather_text = tr('ui', "Weather: Raining")
     except Exception:
-        weather_text = "Weather: Unknown"
+        weather_text = tr('ui', "Weather: Unknown")
         
     weather_surf = font.render(weather_text, True, WHITE)
     weather_rect = weather_surf.get_rect(center=(center_x, y_offset))

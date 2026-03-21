@@ -3,11 +3,12 @@ from core.messages import display_message
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.data.recipe_manager import RecipeManager
+from core.data.localization import tr
 
 class PlayerActions:
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
         if self.action_timer > 0:
-            display_message("Busy...")
+            display_message(tr('msg', "Busy..."))
             return False
 
         UNIT_TIME = 60
@@ -35,7 +36,7 @@ class PlayerActions:
 
     def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None, target_part=None):
         if self.action_timer > 0 and not is_auto_drink:
-            display_message("Busy...")
+            display_message(tr('msg', "Busy..."))
             return False
 
         if getattr(item, 'item_type', '').lower() == 'recipe':
@@ -90,7 +91,7 @@ class PlayerActions:
             
             if not required_item_found:
                 req_str = " or ".join(candidates)
-                display_message(f"Requires {req_str} to use.")
+                display_message(f"{tr('msg', 'Requires')} {req_str} {tr('msg', 'to use.')}")
                 return False
 
         source_inventory = self._get_source_inventory(source_type, container_item)
@@ -99,7 +100,7 @@ class PlayerActions:
             return False
 
         if item.load <= 0:
-            display_message(f"Cannot use {item.name}, it is empty.")
+            display_message(f"{tr('msg', 'Cannot use')} {item.name}{tr('msg', ', it is empty.')}")
             return False
             
         duration_mult = 1.0
@@ -131,9 +132,9 @@ class PlayerActions:
                                  
                                  consumed = False
                              else:
-                                 self.health = min(self.max_health, self.health + val)
-                                 display_message(f"Used {item.name}. Restored {val} Health.")
-                                 consumed = True
+                                self.health = min(self.max_health, self.health + val)
+                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Restored')} {val} {tr('msg', 'Health.')}")
+                                consumed = True
                                  
                         elif hasattr(self, target_stat):
                             current_val = getattr(self, target_stat)
@@ -146,14 +147,14 @@ class PlayerActions:
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"Used {item.name}. Restored {val} {target_stat.capitalize()}.")
+                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
                                 consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0
                                 new_val = max(min_cap, current_val - val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"Used {item.name}. Reduced {target_stat.capitalize()} by {val}.")
+                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
                                 consumed = True
             
             elif status_effect_legacy and hasattr(self, status_effect_legacy):
@@ -161,7 +162,7 @@ class PlayerActions:
             
             else:
                 if not consumed:
-                    display_message(f"Cannot consume {item.name}: no valid effects found.")
+                    display_message(f"{tr('msg', 'Cannot consume')} {item.name}{tr('msg', ': no valid effects found.')}")
                     return 
 
             if consumed:
@@ -196,7 +197,7 @@ class PlayerActions:
                                     required_container.inventory.pop(idx)
                                 except ValueError: pass
                             
-                            display_message(f"{required_item_found.name} used up.")
+                            display_message(f"{required_item_found.name} {tr('msg', 'used up.')}")
 
         if is_auto_drink:
             execute_consume()
@@ -210,7 +211,7 @@ class PlayerActions:
 
         # Prevent turning on campfires in inventory (they can only be on when placed on ground)
         if item.state == "off" and "Campfire" in item.name and source not in ['ground', 'nearby']:
-            display_message("Campfires can only be lit when placed on the ground.")
+            display_message(tr('msg', "Campfires can only be lit when placed on the ground."))
             return
 
         new_name = ""
@@ -218,13 +219,13 @@ class PlayerActions:
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                display_message(f"Cannot turn on {item.name}, it's out of power.")
+                display_message(f"{tr('msg', 'Cannot turn on')} {item.name}{tr('msg', ", it's out of power.")}")
                 return
 
             if item.fuel_type == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
-                    display_message("No matches to light the lantern.")
+                    display_message(tr('msg', "No matches to light the lantern."))
                     return
 
                 matches.load -= 1
@@ -280,13 +281,13 @@ class PlayerActions:
         recipes_taught = RecipeManager.get_recipes_by_magazine(item.name)
         
         if not recipes_taught:
-            display_message(f"You read {item.name}, but learn nothing new.")
+            display_message(f"{tr('msg', 'You read')} {item.name}{tr('msg', ', but learn nothing new.')}")
             return
 
         new_recipes = [r for r in recipes_taught if r.magazine not in self.known_recipes] 
         
         if not new_recipes and item.name in self.known_recipes:
-            display_message(f"You already know the recipes in {item.name}.")
+            display_message(f"{tr('msg', 'You already know the recipes in')} {item.name}.")
             return
 
         def finish_reading():
@@ -294,7 +295,7 @@ class PlayerActions:
                 self.known_recipes.append(item.name)
                 
             else:
-                 display_message(f"You reviewed {item.name}.")
+                display_message(f"{tr('msg', 'You reviewed')} {item.name}.")
             
             # Add the intelligence XP here, right when the action successfully finishes
             self.progression.add_xp(self, 'intelligence', 10)
@@ -320,11 +321,11 @@ class PlayerActions:
 
     def repair_item(self, game, target_item):
         if self.action_timer > 0:
-            display_message("Busy...")
+            display_message(tr('msg', "Busy..."))
             return
         kit, source, index, container = self.find_repair_kit(target_item)
         if not kit:
-            display_message(f"No repair kit found for {target_item.name}.")
+            display_message(f"{tr('msg', 'No repair kit found for')} {target_item.name}.")
             return
         if target_item.durability >= target_item.max_durability:
             display_message(f"{target_item.name} is already in perfect condition.")
@@ -334,7 +335,7 @@ class PlayerActions:
             old_dur = target_item.durability
             target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
             restored = target_item.durability - old_dur
-            display_message(f"Repaired {target_item.name} by {restored:.0f} points using {kit.name}.")
+            display_message(f"{tr('msg', 'Repaired')} {target_item.name} {tr('msg', 'by')} {restored:.0f} {tr('msg', 'points using')} {kit.name}.")
             self.progression.add_xp(self, 'maintenance', 20)
             kit.load -= 1
             if kit.load <= 0:
@@ -342,7 +343,7 @@ class PlayerActions:
                 if inv:
                     if source == 'belt': self.belt[index] = None
                     else: inv.pop(index)
-                display_message(f"{kit.name} used up.")
+                display_message(f"{kit.name} {tr('msg', 'used up.')}")
         self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
 
     def get_item_context_options(self, item, source, container_item=None):

@@ -32,6 +32,7 @@ from core.systems.utils import (
     find_nearby_containers, screen_to_world, get_player_facing_tile
 )
 from core.entities.animal.animal import Animal
+from core.data.localization import load_language, tr
 
 class Game:
     def __init__(self):
@@ -56,6 +57,8 @@ class Game:
         self.logger.info("Initializing Rot Engine...")
 
         init_messages(self)
+
+        load_language(core.data.config.GAME_LANGUAGE)
 
         self.clock = pygame.time.Clock()
         self.dt_ms = 16 # Default to 16ms for the very first frame
@@ -364,36 +367,36 @@ class Game:
             self.modals.remove(modal)
 
     def run_paused(self):
-        if self.paused_surface:
-            self.game_screen.blit(self.paused_surface, (0, 0))
-        else:
-            self.game_screen.fill((50, 50, 50))
-
+        # Create a darker overlay
         overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.game_screen.blit(overlay, (0, 0))
 
-        center_x = GAME_WIDTH // 2
-        center_y = GAME_HEIGHT // 2
-        btn_w, btn_h = 220, 50
-        spacing = 20
-        
-        btn_continue = pygame.Rect(center_x - btn_w//2, center_y - btn_h - spacing, btn_w, btn_h)
-        btn_save     = pygame.Rect(center_x - btn_w//2, center_y, btn_w, btn_h)
-        btn_quit     = pygame.Rect(center_x - btn_w//2, center_y + btn_h + spacing, btn_w, btn_h)
+        # --- FIX: Translated Pause Text ---
+        text = title_font.render(tr('ui', "GAME PAUSED"), True, WHITE)
+        text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
+        self.game_screen.blit(text, text_rect)
 
         mouse_pos = self._get_scaled_mouse_pos()
+        
+        btn_w = 200
+        btn_h = 50
+        btn_continue = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2, btn_w, btn_h)
+        btn_save = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2 + 70, btn_w, btn_h)
+        btn_quit = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2 + 140, btn_w, btn_h)
 
-        def draw_btn(rect, text, color_base, color_hover):
-            color = color_hover if rect.collidepoint(mouse_pos) else color_base
-            pygame.draw.rect(self.game_screen, color, rect, border_radius=5)
-            pygame.draw.rect(self.game_screen, WHITE, rect, 1, border_radius=5)
-            txt_surf = font_notification.render(text, True, WHITE)
-            self.game_screen.blit(txt_surf, txt_surf.get_rect(center=rect.center))
+        def draw_btn(surface, rect, text, mouse_pos):
+            is_hovered = rect.collidepoint(mouse_pos)
+            bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
+            pygame.draw.rect(surface, bg_color, rect, border_radius=6)
+            txt_surf = large_font.render(text, True, WHITE)
+            txt_rect = txt_surf.get_rect(center=rect.center)
+            surface.blit(txt_surf, txt_rect)
 
-        draw_btn(btn_continue, "Continue", (80, 80, 80), (60, 60, 60))
-        draw_btn(btn_save, "Save Game", (80, 80, 80), (60, 60, 60))
-        draw_btn(btn_quit, "Quit", (80, 80, 80), (60, 60, 60))
+        # --- FIX: Translated Buttons ---
+        draw_btn(self.game_screen, btn_continue, tr('ui', "Continue"), mouse_pos)
+        draw_btn(self.game_screen, btn_save, tr('ui', "Save Game"), mouse_pos)
+        draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

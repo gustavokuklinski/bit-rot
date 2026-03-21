@@ -1,6 +1,7 @@
 import pygame
 from core.data.config import *
 from core.data.recipe_manager import RecipeManager
+from core.data.localization import tr
 
 def draw_tooltip(surface, item, pos):
     if not item:
@@ -12,11 +13,11 @@ def draw_tooltip(surface, item, pos):
         lines.append(item.tooltip_text)
         
     if item.item_type:
-        lines.append(f"Type: {item.item_type}")
+        lines.append(f"{tr('tooltip', 'Type:')} {tr('tooltip', item.item_type)}")
 
     if hasattr(item, 'require') and item.require:
         reqs = item.require if isinstance(item.require, list) else [item.require]
-        lines.append(f"Requires: {' or '.join(reqs)}")
+        lines.append(f"{tr('tooltip', 'Requires:')} {f' {tr('tooltip', 'or')} '.join(reqs)}")
 
     if item.item_type == 'recipe':
         # Ensure recipes are loaded if checking from main menu or early state
@@ -25,14 +26,14 @@ def draw_tooltip(surface, item, pos):
              
         recipes = RecipeManager.get_recipes_by_magazine(item.name)
         if recipes:
-            lines.append("Teaches:")
+            lines.append(tr('tooltip', "Teaches:"))
             for r in recipes:
                 lines.append(f" - {r.output_name}")
 
     if hasattr(item, 'inventory') and item.inventory is not None:
         if item.item_type in ['container', 'backpack', 'cloth']:
             cap = item.capacity if item.capacity is not None else 0
-            lines.append(f"Contents: {len(item.inventory)} / {cap}")
+            lines.append(f"{tr('tooltip', 'Contents:')} {len(item.inventory)} / {cap}")
         
     # --- Durability Bar Logic ---
     if item.durability is not None:
@@ -49,7 +50,7 @@ def draw_tooltip(surface, item, pos):
     if hasattr(item, 'effects') and item.effects:
         for effect in item.effects:
             # Format targets nicely: "Health, Tireness"
-            targets_str = ", ".join([t.capitalize() for t in effect['targets']])
+            targets_str = ", ".join([tr('tooltip', t.capitalize()) for t in effect['targets']])
             
             min_v = effect['min']
             max_v = effect['max']
@@ -72,54 +73,54 @@ def draw_tooltip(surface, item, pos):
         if item.durability is not None and item.max_durability > 0:
             effective_defence *= (item.durability / item.max_durability)
         
-        lines.append(f"Defence: {effective_defence:.1f}")
+        lines.append(f"{tr('tooltip', 'Defence:')} {effective_defence:.1f}")
     if item.load is not None and item.capacity is not None:
-        lines.append(f"Load: {item.load:.0f}/{item.capacity:.0f}")
+        lines.append(f"{tr('tooltip', 'Load:')} {item.load:.0f}/{item.capacity:.0f}")
     elif item.load is not None:
-        lines.append(f"Load: {item.load:.0f}")
+        lines.append(f"{tr('tooltip', 'Load:')} {item.load:.0f}")
     
     # --- Weight Info (Updated) ---
     total_weight = 0
     if hasattr(item, 'get_total_weight'):
         total_weight = item.get_total_weight()
-        weight_str = f"Weight: {total_weight:.2f}"
+        weight_str = f"{tr('tooltip', 'Weight:')} {total_weight:.2f}"
         
         # Only show unit weight if the item is stackable
         if item.is_stackable() and hasattr(item, 'weight'):
-             weight_str += f" (unit: {item.weight:.2f})"
+             weight_str += f" ({tr('tooltip', 'unit:')} {item.weight:.2f})"
              
         # Add reduction to the same line if it exists
         if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
-            weight_str += f" (Reduction: {int(item.weight_reduction * 100)}%)"
+            weight_str += f" ({tr('tooltip', 'Reduction:')} {int(item.weight_reduction * 100)}%)"
         
         lines.append(weight_str)
     elif hasattr(item, 'weight'):
         # Fallback if get_total_weight doesn't exist for some reason
         total_weight = item.weight
-        weight_str = f"Weight: {item.weight:.2f}"
+        weight_str = f"{tr('tooltip', 'Weight:')} {item.weight:.2f}"
         if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
-            weight_str += f" (Reduction: {int(item.weight_reduction * 100)}%)"
+            weight_str += f" ({tr('tooltip', 'Reduction:')} {int(item.weight_reduction * 100)}%)"
         lines.append(weight_str)
 
     # Calculate and display max weight based on base weight x 5
     if hasattr(item, 'inventory') and item.item_type in ['container', 'backpack', 'cloth'] and hasattr(item, 'weight'):
         max_weight = item.weight * 5.0
         if max_weight > 0:
-            lines.append(f"Max weight: {max_weight:.2f}")
+            lines.append(f"{tr('tooltip', 'Max weight:')} {max_weight:.2f}")
     
     # Fixed allow_belt checking (moved out of elif structure so it doesn't get skipped)
     if hasattr(item, 'allow_belt') and item.allow_belt:
-        lines.append(f"Allow belt: {item.allow_belt}")
+        lines.append(f"{tr('tooltip', 'Allow belt:')} {tr('tooltip', str(item.allow_belt))}")
     # -------------------
 
     if item.min_damage is not None and item.max_damage is not None:
         min_damage, max_damage = item.current_damage_range
-        lines.append(f"Damage: {min_damage}-{max_damage}")
+        lines.append(f"{tr('tooltip', 'Damage:')} {min_damage}-{max_damage}")
     if item.ammo_type:
-        lines.append(f"Ammo: {item.ammo_type}")
+        lines.append(f"{tr('tooltip', 'Ammo:')} {item.ammo_type}")
     
     if hasattr(item, 'repair_list') and item.repair_list:
-        lines.append("Repairs:")
+        lines.append(tr('tooltip', "Repairs:"))
         for target_name in item.repair_list:
             # Display item name (replacing underscores for cleaner look if desired)
             display_str = target_name.replace('_', ' ')
@@ -127,7 +128,7 @@ def draw_tooltip(surface, item, pos):
     
     if item.item_type == 'charm' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line
-        lines.append("Passive (in Inventory):")
+        lines.append(tr('tooltip', "Passive (in Inventory):"))
         for attr_name, value in item.attribute_modifiers.items():
             # Format as: "  Lucky: +0.5%"
             lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")
@@ -143,7 +144,7 @@ def draw_tooltip(surface, item, pos):
         tip_lines = str(item.tip).replace('\\n', '\n').split('\n')
         
         # Add the first line with the yellow "Tip: " prefix
-        lines.append([("Tip: ", (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
+        lines.append([(tr('tooltip', "Tip: "), (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
         
         # Add any remaining lines with invisible spaces to align them perfectly under the first line
         for extra_line in tip_lines[1:]:

@@ -4,6 +4,7 @@ from core.ui.modals import BaseModal
 from core.ui.inventory_modal import draw_text_shadow
 from core.ui.tooltip import draw_tooltip
 from core.ui.tabs import Tabs
+from core.data.localization import tr
 
 # --- CONFIGURATION: LAYOUT & COLORS ---
 STYLE = {
@@ -42,13 +43,13 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # --- 1. HEADER SECTION (Engine, Lights, & Speed) ---
     
     # Engine
-    surface.blit(font.render("Engine:", True, STYLE["TEXT_MAIN"]), (x, y))
+    surface.blit(font.render(tr('vehicle', "Engine:"), True, STYLE["TEXT_MAIN"]), (x, y))
     is_engine_on = vehicle.active
     e_on_color = STYLE["TEXT_MAIN"] if is_engine_on else STYLE["TEXT_DIM"]
     e_off_color = STYLE["TEXT_DIM"] if is_engine_on else STYLE["TEXT_MAIN"]
     
-    e_on_txt = font.render("[ON]", True, e_on_color)
-    e_off_txt = font.render("[OFF]", True, e_off_color)
+    e_on_txt = font.render(tr('vehicle', "[ON]"), True, e_on_color)
+    e_off_txt = font.render(tr('vehicle', "[OFF]"), True, e_off_color)
     
     e_on_rect = e_on_txt.get_rect(topleft=(x + 70, y))
     e_off_rect = e_off_txt.get_rect(topleft=(e_on_rect.right + 10, y))
@@ -62,20 +63,20 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     if speed_kmh > 50: speed_color = STYLE["WARN"]
     if speed_kmh > 90: speed_color = STYLE["INACTIVE"]
     
-    speed_surf = font.render(f"Speed: {speed_kmh} km/h", True, speed_color)
+    speed_surf = font.render(f"{tr('vehicle', 'Speed:')} {speed_kmh} {tr('vehicle', 'km/h')}", True, speed_color)
     surface.blit(speed_surf, (x + 180, y))
 
     y += 25 
     
     # Lights
-    surface.blit(font.render("Lights:", True, STYLE["TEXT_MAIN"]), (x, y))
+    surface.blit(font.render(tr('vehicle', "Lights:"), True, STYLE["TEXT_MAIN"]), (x, y))
     is_lights_on = getattr(vehicle, 'lights', 'off') == 'on'
     
     l_on_color = STYLE["TEXT_MAIN"] if is_lights_on else STYLE["TEXT_DIM"]
     l_off_color = STYLE["TEXT_DIM"] if is_lights_on else STYLE["TEXT_MAIN"]
     
-    l_on_txt = font.render("[ON]", True, l_on_color)
-    l_off_txt = font.render("[OFF]", True, l_off_color)
+    l_on_txt = font.render(tr('vehicle', "[ON]"), True, l_on_color)
+    l_off_txt = font.render(tr('vehicle', "[OFF]"), True, l_off_color)
     
     l_on_rect = l_on_txt.get_rect(topleft=(x + 70, y))
     l_off_rect = l_off_txt.get_rect(topleft=(l_on_rect.right + 10, y))
@@ -98,7 +99,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     col2_x = x + STYLE["COL_2_OFFSET"]
     
     # --- LEFT COLUMN: STATS ---
-    surface.blit(font.render("Status:", True, STYLE["TEXT_MAIN"]), (col1_x, y))
+    surface.blit(font.render(tr('vehicle', "Status:"), True, STYLE["TEXT_MAIN"]), (col1_x, y))
     
     current_stat_y = y + 20 + STYLE["TITLE_SPACING"] 
 
@@ -106,7 +107,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         safe_val = max(0, min(val, max_val))
         
         # Label
-        label_str = f"{label}: {int(safe_val)}/{int(max_val)}"
+        label_str = f"{tr('vehicle', label)}: {int(safe_val)}/{int(max_val)}"
         surface.blit(font_notification.render(label_str, True, STYLE["TEXT_DIM"]), (col1_x, current_y))
         
         # Bar Background
@@ -167,7 +168,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     stats_y = draw_stat_bar("Trunk", trunk_val, trunk_cap, stats_y, STYLE["TRUNK_BAR"])
 
     # --- RIGHT COLUMN: SEATS ---
-    surface.blit(font.render("Seats:", True, STYLE["TEXT_MAIN"]), (col2_x, y))
+    surface.blit(font.render(tr('vehicle', "Seats:"), True, STYLE["TEXT_MAIN"]), (col2_x, y))
     
     seats_y = y + 20 + STYLE["TITLE_SPACING"]
     
@@ -187,7 +188,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         if i == 0:
-            lbl = font_notification.render("D", True, STYLE["DRIVER_LBL"])
+            lbl = font_notification.render(tr('vehicle', "D"), True, STYLE["DRIVER_LBL"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
         else:
             lbl = font_notification.render(str(i+1), True, STYLE["TEXT_DIM"])
@@ -195,7 +196,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
 
         if occupant:
             if type(occupant).__name__ == 'Player':
-                txt = font.render("YOU", True, (0, 255, 255))
+                txt = font.render(tr('vehicle', "YOU"), True, (0, 255, 255))
                 txt_rect = txt.get_rect(center=slot_rect.center)
                 surface.blit(txt, txt_rect)
             elif hasattr(occupant, 'image') and occupant.image:
@@ -228,7 +229,8 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
-        lbl = font_notification.render(slot_name.capitalize(), True, STYLE["TEXT_DIM"])
+        lbl_text = tr('vehicle', slot_name.capitalize())
+        lbl = font_notification.render(lbl_text, True, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -253,7 +255,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         # Format "tire_fl" -> "FL TIRE", etc.
-        lbl_text = slot_name.split('_')[1].upper() + " TIRE"
+        lbl_text = slot_name.split('_')[1].upper() + " " + tr('vehicle', 'TIRE')
         lbl = font_notification.render(lbl_text, True, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
@@ -280,12 +282,12 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
 
     # Initialize tabs data if not already set
     tabs_data = [
-        {'label': 'Info'},
-        {'label': 'Mechanics'}
+        {'label': tr('tab', 'Info')},
+        {'label': tr('tab', 'Mechanics')}
     ]
     
     if 'active_tab' not in modal:
-        modal['active_tab'] = 'Info'
+        modal['active_tab'] = tr('tab', 'Info')
         
     # Draw Tabs
     tabs = Tabs(surface, modal, tabs_data, assets)
@@ -302,9 +304,9 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     
     active_tab = modal.get('active_tab')
     
-    if active_tab == 'Info':
+    if active_tab == tr('tab', 'Info'):
         draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
-    elif active_tab == 'Mechanics':
+    elif active_tab == tr('tab', 'Mechanics'):
         draw_vehicle_mechanics_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
     
     if 'equipment_rects' in modal:

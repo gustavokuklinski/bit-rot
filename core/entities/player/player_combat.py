@@ -2,7 +2,7 @@ import random
 from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
-
+from core.data.localization import tr
 class PlayerCombat:
     def get_attack_damage(self):
         min_dmg = 1
@@ -24,23 +24,23 @@ class PlayerCombat:
 
     def reload_active_weapon(self, weapon=None, game=None):
         if self.is_reloading:
-            display_message("Already reloading.")
+            display_message(tr('msg', "Already reloading."))
             return
             
         target_weapon = weapon if weapon else self.active_weapon
         
         if not target_weapon or not getattr(target_weapon, 'ammo_type', None):
-            display_message("Cannot reload: No gun equipped.")
+            display_message(tr('msg', "Cannot reload: No gun equipped."))
             return
             
         if target_weapon.load >= target_weapon.capacity:
-            display_message(f"{target_weapon.name} is already full ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
+            display_message(f"{target_weapon.name} {tr('msg', 'is already full')} ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
             return
         
         ammo_item, _, _, _ = self.find_matching_ammo(target_weapon)
         
         if not ammo_item:
-            display_message(f"No {target_weapon.ammo_type} found.")
+            display_message(f"{tr('msg', 'No')} {target_weapon.ammo_type} {tr('msg', 'found.')}")
             return
         
         if game and hasattr(target_weapon, 'sounds') and 'reload' in target_weapon.sounds and target_weapon.sounds['reload']:
@@ -73,8 +73,7 @@ class PlayerCombat:
         if transfer_amount > 0:
             weapon.load += transfer_amount
             ammo_item.load -= transfer_amount
-            display_message(f"Finished reloading {weapon.name}. Load: {weapon.load:.0f}/{weapon.capacity:.0f}.")
-            
+            display_message(f"{tr('msg', 'Finished reloading')} {weapon.name}. {tr('msg', 'Load:')} {weapon.load:.0f}/{weapon.capacity:.0f}.")
             if ammo_item.load <= 0:
                 if source_type == 'inventory':
                     try: self.inventory.remove(ammo_item)
@@ -108,7 +107,7 @@ class PlayerCombat:
 
         fuel_item.load -= 1
         item.durability = max_dur
-        display_message(f"Used 1 {fuel_item.name} to reload {item.name}. Durability set to: {item.durability:.0f}")
+        display_message(f"{tr('msg', 'Used 1')} {fuel_item.name} {tr('msg', 'to reload')} {item.name}. {tr('msg', 'Durability set to:')} {item.durability:.0f}")
 
         if fuel_item.load <= 0:
             f_inv = self._get_source_inventory(f_source, f_container)
@@ -145,7 +144,7 @@ class PlayerCombat:
         for i, item in enumerate(self.belt):
             if item == broken_weapon:
                 self.belt[i] = None
-                display_message(f"{broken_weapon.name} broke and was removed from your belt.")
+                display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your belt.')}")
                 return
         try:
             self.inventory.remove(broken_weapon)

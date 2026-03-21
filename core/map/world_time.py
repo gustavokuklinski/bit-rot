@@ -6,6 +6,7 @@ import random
 from core.data.config import *
 import core.data.config
 from core.messages import display_message
+from core.data.localization import tr
 
 class WorldTime:
     def __init__(self, game):
@@ -138,13 +139,13 @@ class WorldTime:
             if self.weather_timer <= 0:
                 if self.weather == 'CLEAR':
                     self.weather = 'RAIN'
-                    display_message(self.game, "It started raining.")
+                    display_message(tr('msg', "It started raining."))
                     self.weather_timer = random.randint(30000, 90000)
                     if hasattr(self.game, 'sound_manager') and not self.rain_channel:
                         self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.4)
                 else:
                     self.weather = 'CLEAR'
-                    display_message(self.game, "The rain stopped.")
+                    display_message(tr('msg', "The rain stopped."))
                     self.weather_timer = random.randint(90000, 240000)
                     if self.rain_channel:
                         self.rain_channel.fadeout(2000)
@@ -165,7 +166,8 @@ class WorldTime:
                 core.data.config.ZOMBIE_DETECTION_RADIUS *= z_mult
             
             print(f"Day {self.day_count} Complete. Difficulty Increased (x{z_mult})!")
-            display_message(self.game, f"The horde grows stronger... (Day {self.day_count})")
+            display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})") # <--- AQUI
+            
             
         exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
         self.current_hour = int(exact_hour)
@@ -203,7 +205,8 @@ class WorldTime:
         # --- TRANSITION LOGIC ---
         if self.state != self._last_state:
             if self.state == "TRANSITION_TO_NIGHT":
-                display_message(self.game, "Dusk falls...")
+                display_message(self.game, tr('msg', "Dusk falls...")) # <--- AQUI
+                
                 # Fade out day, fade in night
                 if self.day_channel:
                     self.day_channel.fadeout(4000)
@@ -212,10 +215,10 @@ class WorldTime:
                     self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.3)
                     
             elif self.state == "NIGHT":
-                display_message(self.game, "It is now Night.")
+                display_message(self.game, tr('msg', "It is now Night.")) # <--- AQUI
                 
             elif self.state == "TRANSITION_TO_DAY":
-                display_message(self.game, "The sky lightens...")
+                display_message(self.game, tr('msg', "The sky lightens...")) # <--- AQUI
                 # Fade out night, fade in day
                 if self.night_channel:
                     self.night_channel.fadeout(4000)
@@ -224,7 +227,7 @@ class WorldTime:
                     self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.3)
                     
             elif self.state == "DAY":
-                display_message(self.game, "It is now Day.")
+                display_message(self.game, tr('msg', "It is now Day.")) # <--- AQUI
                 
             self._last_state = self.state
 

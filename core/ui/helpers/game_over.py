@@ -1,6 +1,7 @@
 import pygame
 from core.data.config import *
 from datetime import datetime
+from core.data.localization import tr
 
 _logo_img = None
 
@@ -42,12 +43,12 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
         title_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(_logo_img, title_rect)
     else:
-        title_text = title_font.render("YOU DIED", True, RED)
+        title_text = title_font.render(tr('ui', "YOU DIED"), True, RED)
         title_rect = title_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(title_text, title_rect)
 
     # --- 2. Stats ---
-    score_text = large_font.render(f"You Killed: {zombies_killed}", True, WHITE)
+    score_text = large_font.render(f"{tr('ui', 'You Killed:')} {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.45))
     screen.blit(score_text, score_rect)
 
@@ -61,7 +62,7 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
 
     # Back to Menu Button (Replaces Quit)
     menu_rect = pygame.Rect(center_x - btn_width // 2,  start_y, btn_width, btn_height)
-    draw_btn(screen, menu_rect, "Back to Menu", mouse_pos)
+    draw_btn(screen, menu_rect, tr('ui', "Back to Menu"), mouse_pos)
 
     # --- 4. Footer ---
     current_year = datetime.now().year

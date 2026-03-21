@@ -5,11 +5,12 @@ from core.ui.tabs import Tabs
 from core.ui.container_modal import draw_container_content
 from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Container
+from core.data.localization import tr
 
 # --- NEW: Virtual Container for grouping loose items ---
 class VirtualGroundContainer:
     def __init__(self, items):
-        self.name = "Ground"
+        self.name = tr('ui', "Ground")
         self.inventory = items
         self.capacity = 20 # Infinite capacity for ground view
         self.item_type = 'ground'
@@ -17,7 +18,7 @@ class VirtualGroundContainer:
 # -----------------------------------------------------
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
-    base_modal = BaseModal(surface, modal, assets, "Nearby (N)")
+    base_modal = BaseModal(surface, modal, assets, tr('ui', "Nearby (N)"))
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
@@ -94,21 +95,14 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         if isinstance(container, Corpse):
             label = "Corpse" # Use a consistent label for corpses
             icon_path = SPRITE_PATH + 'zombie/dead.png'
-        elif getattr(container, 'item_type', '') == 'backpack':
-            # Use specific backpack icons
-            if 'large' in container.name.lower():
-                icon_path = SPRITE_PATH + 'items/large_backpack.png'
-            elif 'small' in container.name.lower():
-                icon_path = SPRITE_PATH + 'items/small_backpack.png'
-            else:
-                icon_path = SPRITE_PATH + 'items/bag.png'
+        
         # --- NEW: Icon logic for Ground ---
         elif getattr(container, 'item_type', '') == 'ground':
-            label = "GRD"
+            #label = "GRD"
             # You can set a specific icon_path here if you have one, e.g.:
-            # icon_path = SPRITE_PATH + 'ui/floor.png' 
+            icon_path = SPRITE_PATH + 'ui/ground.png' 
         # ----------------------------------
-        elif hasattr(container, 'image'):
+        elif hasattr(container, 'image') and container.image:
              # Use the container's own image if available (and not handled above)
              icon = container.image # Pass the surface directly if loaded
 

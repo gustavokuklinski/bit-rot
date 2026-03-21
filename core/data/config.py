@@ -1,3 +1,4 @@
+# core/data/config.py
 import pygame
 import xml.etree.ElementTree as ET
 import os
@@ -7,15 +8,14 @@ import uuid
 pygame.init()
 infoObject = pygame.display.Info()
 
-GAME_OFFSET_X = 0 # X position where the central game box starts (no left panel)
+GAME_OFFSET_X = 0 
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
-
-MAP_DIR = "./game/lib/map/" # Game map files
-DATA_PATH = "./game/lib/data/" # Folders with XML data files
-SPRITE_PATH = "./game/lib/sprites/" # Folders with PNG sprites
-SOUND_PATH = "./game/lib/sfx/" # Sound OGG files
+MAP_DIR = "./game/lib/map/" 
+DATA_PATH = "./game/lib/data/" 
+SPRITE_PATH = "./game/lib/sprites/" 
+SOUND_PATH = "./game/lib/sfx/" 
 
 # Colors
 TRANSPARENT = (0, 0, 0, 0)
@@ -33,72 +33,43 @@ GRAY_60 = (60, 60, 60)
 GRAY_40 = (40, 40, 40)
 GRAY_80 = (80, 80, 80)
 
-# Inventory Modal
 INVENTORY_MODAL_WIDTH = 300
 INVENTORY_MODAL_HEIGHT = 345
-
-# Status Modal
-STATUS_MODAL_WIDTH = 230 # 250
+STATUS_MODAL_WIDTH = 230 
 STATUS_MODAL_HEIGHT = 360
-
-# Nearby Modal
 NEARBY_MODAL_WIDTH = 300
 NEARBY_MODAL_HEIGHT = 320
-
-# Container Modal
 CONTAINER_MODAL_WIDTH = 300
 CONTAINER_MODAL_HEIGHT = 300
-
-# Messages Modal
 MESSAGES_MODAL_WIDTH = 400
 MESSAGES_MODAL_HEIGHT = 300
-
-# Text modal
 TEXT_MODAL_WIDTH = 300
 TEXT_MODAL_HEIGHT = 300
-
-# Vehicle Options modal
 VEHICLE_MODAL_WIDTH = 400
 VEHICLE_MODAL_HEIGHT = 300
-
-# Mobile modal
 MOBILE_MODAL_WIDTH = 250
 MOBILE_MODAL_HEIGHT = 350
-
-# Gear Modal
 GEAR_MODAL_WIDTH = 300
 GEAR_MODAL_HEIGHT = 320
-
-# Craft Modal
 CRAFTING_MODAL_WIDTH = 700
 CRAFTING_MODAL_HEIGHT = 560
-
-# Map Modal
 MAP_MODAL_WIDTH = 950
 MAP_MODAL_HEIGHT = 700
-
-# NPC Dialog Modal
 NPC_DIALOG_MODAL_WIDTH = 500
 NPC_DIALOG_MODAL_HEIGHT = 400
-
-# Help Modal
 HELP_MODAL_WIDTH = 680
 HELP_MODAL_HEIGHT = 570
 
-
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 
-# Fonts
 font = pygame.font.Font(FONT_FACE, 14)
 font_small = pygame.font.Font(FONT_FACE, 14)
 large_font = pygame.font.Font(FONT_FACE, 14)
 title_font = pygame.font.Font(FONT_FACE, 14)
 font_notification = pygame.font.Font(FONT_FACE, 14)
 
-
 TILE_SIZE = 16
 
-# Global Default game settings
 TIME_DAYLENGTH = 0
 TIME_SUNRISE_HR = 0.0
 TIME_SUNSET_HR = 0.0
@@ -150,15 +121,14 @@ UI_SHOW_TUTORIAL_DEFAULT = True
 ANIMAL_SPAWN_COUNT = 0
 ANIMAL_RESPAWN_TIMER_MS = 0
 
+GAME_LANGUAGE = "en_US"
+
 def generate_random_seed(chunks=None):
-    """Generates a formatted seed string: 'CHUNKS-HASH'."""
     if chunks is None:
         chunks = MAP_CHUNKS
-        
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 def load_settings(preset="default"):
-    """Loads configuration from XML and updates global variables."""
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
     global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
@@ -176,6 +146,7 @@ def load_settings(preset="default"):
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
+    global GAME_LANGUAGE 
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
@@ -199,7 +170,7 @@ def load_settings(preset="default"):
         CHUNK_SIZE = 128
         
         player_config = root.find('player')
-        PLAYER_SPEED = 1.6 # Hardcoded as per original file
+        PLAYER_SPEED = 1.6 
 
         BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
         START_ZOOM = float(player_config.find('zoom_start').get('value'))
@@ -209,7 +180,6 @@ def load_settings(preset="default"):
         val_auto_drink = player_config.find('water_autodrink').get('value')
         AUTO_DRINK = str(val_auto_drink).lower() == 'true'
         AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
-       
 
         zombie_config = root.find('zombie')
         val_wander = zombie_config.find('wander').get('value')
@@ -262,19 +232,62 @@ def load_settings(preset="default"):
         val_tutorial = ui_config.find('ui_show_tutorial_default')
         UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
 
+        val_lang = ui_config.find('language')
+        if val_lang is not None:
+            GAME_LANGUAGE = val_lang.get('value', 'en_US')
+        else:
+            GAME_LANGUAGE = 'en_US'
+
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))
         ANIMAL_RESPAWN_TIMER_MS = int(animal_config.find('animal_respawn_ms_timer').get('value'))
+        
         print(f"Configuration loaded from {filepath}")
 
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
 
+# --- NEW: Independent save override for Language to strictly respect XML ---
+def save_language_to_config(lang_code, preset="config"):
+    global GAME_LANGUAGE
+    GAME_LANGUAGE = lang_code
+    filepath = f'./game/save/config/{preset}.xml'
+    
+    if not os.path.exists(filepath):
+        return
+        
+    try:
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+        
+        ui_config = root.find('ui')
+        if ui_config is None:
+            ui_config = ET.SubElement(root, 'ui')
+            
+        lang_node = ui_config.find('language')
+        if lang_node is None:
+            lang_node = ET.SubElement(ui_config, 'language')
+            
+        lang_node.set('value', lang_code)
+        lang_node.set('name', 'Language')
+        
+        # Cleanly Format
+        import xml.dom.minidom
+        raw_xml = ET.tostring(root, 'utf-8')
+        pretty_xml = xml.dom.minidom.parseString(raw_xml).toprettyxml(indent="    ")
+        pretty_xml = os.linesep.join([s for s in pretty_xml.splitlines() if s.strip()])
+        
+        with open(filepath, "w") as f:
+            f.write(pretty_xml)
+    except Exception as e:
+        print(f"Error saving language to config: {e}")
+
 version_file_path = "game/lib/VERSION"
 
-# Read version from the local file
-with open(version_file_path, "r") as f:
-    GAME_VERSION = f.read().strip()
+try:
+    with open(version_file_path, "r") as f:
+        GAME_VERSION = f.read().strip()
+except:
+    GAME_VERSION = "0.0.1"
 
-# Initial load
 load_settings()

@@ -109,7 +109,7 @@ def handle_attack(game, mouse_pos):
                     game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
                 display_message(f"{weapon.name} is out of ammo.")
-            else 
+            else:
                 print(f"**CLUNK!** {weapon.name} is broken.")
                 display_message(f"{weapon.name} is broken.")
 
