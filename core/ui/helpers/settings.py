@@ -128,9 +128,11 @@ def _draw_settings_screen(game, state, mouse_pos):
                 
                 raw_label = val_data.get('name', key) if isinstance(val_data, dict) else key
                 
-                # Try to translate the key. If there is no translation (like in en_US), 
-                # it will fall back to 'raw_label' instead of the underscore key.
                 display_label = tr('ui', key)
+                if display_label == key:
+                    display_label = tr('ui', raw_label)
+                    if display_label == raw_label:
+                        display_label = raw_label
 
                 val = val_data.get('value') if isinstance(val_data, dict) else val_data
                 
@@ -288,6 +290,9 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             preset_name = state.get('selected_config_preset', 'config')
             save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
             core.data.config.load_settings(preset_name)
+
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.set_volume(0.5 * core.data.config.VOLUME_MUSIC)
 
             state['current_tab'] = 'Player'
             return

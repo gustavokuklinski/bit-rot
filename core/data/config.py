@@ -244,14 +244,14 @@ def load_settings(preset="default"):
             GAME_LANGUAGE = 'en_US'
         
         audio_config = root.find('audio')
-        if audio_config is not None:
-            VOLUME_MUSIC = float(audio_config.find('volume_music').get('value', '0.50'))
-            VOLUME_BACKGROUND = float(audio_config.find('volume_background').get('value', '0.50'))
-            VOLUME_ATMOSPHERIC = float(audio_config.find('volume_atmospheric').get('value', '0.50'))
-        else:
-            VOLUME_MUSIC = 0.50
-            VOLUME_BACKGROUND = 0.50
-            VOLUME_ATMOSPHERIC = 0.50
+        vol_m = audio_config.find('volume_music')
+        VOLUME_MUSIC = float(vol_m.get('value'))
+        
+        vol_b = audio_config.find('volume_background')
+        VOLUME_BACKGROUND = float(vol_b.get('value'))
+        
+        vol_a = audio_config.find('volume_atmospheric')
+        VOLUME_ATMOSPHERIC = float(vol_a.get('value'))
 
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))

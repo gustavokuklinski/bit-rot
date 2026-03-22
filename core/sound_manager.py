@@ -166,7 +166,7 @@ class SoundManager:
         channel.play(sound, loops=loops)
         return channel
     
-    def play_music(self, path, volume=0.5, loops=-1):
+    def play_music(self, path, volume=1.0, loops=-1):
         """
         Plays background music using pygame.mixer.music (streaming).
         """
