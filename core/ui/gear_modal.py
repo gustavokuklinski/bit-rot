@@ -16,7 +16,7 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     
     # --- Tabs Logic ---
     # 1. Start with default Gear tab
-    tabs_data = [{'label': 'Gear', 'icon': None}] 
+    tabs_data = [{'label': 'Gear', 'icon': assets.get('gear_icon')}] 
     container_mapping = {}
 
     # 2. Add tabs for clothes with capacity (e.g. Vests, Cargo Pants)

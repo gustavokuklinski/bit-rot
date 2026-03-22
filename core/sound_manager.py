@@ -98,6 +98,8 @@ class SoundManager:
                 
         sound = self.sounds[sound_key]
 
+        
+
         # --- NEW: Pitch Variation ---
         if pitch_variance > 0:
             # Calculate a random pitch factor
@@ -122,6 +124,10 @@ class SoundManager:
             return
         
         # --- Spatial Audio Logic ---
+        volume_modifier = core.data.config.VOLUME_ATMOSPHERIC
+        if subdir and subdir.lower() in ['ambient', 'background', 'weather']:
+            volume_modifier = core.data.config.VOLUME_BACKGROUND
+
         if game and source_pos and game.player:
             player_pos = game.player.rect.center
             dx = source_pos[0] - player_pos[0]
@@ -133,7 +139,9 @@ class SoundManager:
                 return 
 
             volume_falloff = (1.0 - (distance / max_dist)) ** 2
-            final_volume = base_volume * volume_falloff * zoom_multiplier
+            
+            # MULTIPLY by volume_modifier
+            final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
 
             pan_range = TILE_SIZE * 10 
             pan_factor = max(-1.0, min(1.0, dx / pan_range))
@@ -151,9 +159,10 @@ class SoundManager:
             channel.set_volume(left_vol, right_vol)
             
         else:
-            final_ui_volume = base_volume * zoom_multiplier
+            # MULTIPLY by volume_modifier
+            final_ui_volume = base_volume * zoom_multiplier * volume_modifier
             channel.set_volume(final_ui_volume, final_ui_volume)
-        
+    
         channel.play(sound, loops=loops)
         return channel
     
@@ -164,7 +173,11 @@ class SoundManager:
         try:
             if os.path.exists(path):
                 pygame.mixer.music.load(path)
-                pygame.mixer.music.set_volume(volume)
+                
+                # APPLY the Music Volume Setting
+                final_music_volume = volume * core.data.config.VOLUME_MUSIC
+                pygame.mixer.music.set_volume(final_music_volume)
+                
                 pygame.mixer.music.play(loops)
             else:
                 print(f"Warning: Music file not found at '{path}'")

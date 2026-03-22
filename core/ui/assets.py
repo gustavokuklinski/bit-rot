@@ -41,6 +41,24 @@ def load_assets():
         assets['minimize_button'] = None
 
     try:
+        assets['gear_icon'] = pygame.image.load(SPRITE_PATH + 'ui/gear_icon.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading gear icon: {e}")
+        assets['gear_icon'] = None
+
+    try:
+        assets['vehicle_icon'] = pygame.image.load(SPRITE_PATH + 'ui/vehicle.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading vehicle icon: {e}")
+        assets['vehicle_icon'] = None
+
+    try:
+        assets['mechanics_icon'] = pygame.image.load(SPRITE_PATH + 'ui/mechanics.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading mechanics icon: {e}")
+        assets['mechanics_icon'] = None
+        
+    try:
         # This image should be a white circle fading to transparent
         assets['light_texture'] = pygame.image.load(SPRITE_PATH + 'ui/light.png').convert_alpha()
     except pygame.error as e:

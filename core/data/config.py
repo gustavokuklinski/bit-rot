@@ -121,6 +121,10 @@ UI_SHOW_TUTORIAL_DEFAULT = True
 ANIMAL_SPAWN_COUNT = 0
 ANIMAL_RESPAWN_TIMER_MS = 0
 
+VOLUME_MUSIC = 0.50
+VOLUME_BACKGROUND = 0.50
+VOLUME_ATMOSPHERIC = 0.50
+
 GAME_LANGUAGE = "en_US"
 
 def generate_random_seed(chunks=None):
@@ -146,6 +150,7 @@ def load_settings(preset="default"):
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
+    global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
 
     filepath = f'./game/save/config/{preset}.xml'
@@ -237,6 +242,16 @@ def load_settings(preset="default"):
             GAME_LANGUAGE = val_lang.get('value', 'en_US')
         else:
             GAME_LANGUAGE = 'en_US'
+        
+        audio_config = root.find('audio')
+        if audio_config is not None:
+            VOLUME_MUSIC = float(audio_config.find('volume_music').get('value', '0.50'))
+            VOLUME_BACKGROUND = float(audio_config.find('volume_background').get('value', '0.50'))
+            VOLUME_ATMOSPHERIC = float(audio_config.find('volume_atmospheric').get('value', '0.50'))
+        else:
+            VOLUME_MUSIC = 0.50
+            VOLUME_BACKGROUND = 0.50
+            VOLUME_ATMOSPHERIC = 0.50
 
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))

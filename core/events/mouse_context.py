@@ -571,7 +571,7 @@ def handle_context_menu_click(game, mouse_pos):
                         item_to_grab = item
                         
                         # Convert "Campfire on" to "Campfire off" when picking up
-                        if tr('item', item.name) == "Campfire on":
+                        if item.name == "Campfire on":
                             from core.entities.item.item import Item
                             new_item = Item.create_from_name("Campfire off")
                             if new_item:
@@ -598,7 +598,7 @@ def handle_context_menu_click(game, mouse_pos):
                             game.player.stack_item_in_inventory(item_to_grab)
 
                     if source == 'nearby':
-                        game.player.start_action("Looting", 1.0, do_grab, xp_reward=0.5)
+                        game.player.start_action(tr('msg', "Looting"), 1.0, do_grab, xp_reward=0.5)
                     else:
                         do_grab()
                 else:
@@ -614,7 +614,7 @@ def handle_context_menu_click(game, mouse_pos):
                         
                         # Convert "Campfire on" to "Campfire off" when placing in backpack
                         if ground_item.name == "Campfire on":
-                            from core.entities.item.item import Item
+                            
                             new_item = Item.create_from_name("Campfire off")
                             if new_item:
                                 new_item.durability = ground_item.durability

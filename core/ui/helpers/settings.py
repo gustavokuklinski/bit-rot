@@ -27,7 +27,7 @@ def _get_friendly_value_display(key, value):
         minutes = int((val_float - hours) * 60)
         return f"({hours:02d}:{minutes:02d})"
         
-    if 'multiplier' in key or 'chance' in key:
+    if 'multiplier' in key or 'chance' in key or 'volume' in key:
         return f"({val_float*100:.0f}%)"
         
     if key == 'map_chunks':
@@ -96,7 +96,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     if 'ui' in config_data and 'language' not in config_data['ui']:
         config_data['ui']['language'] = {'value': 'en_US', 'name': 'Language'}
 
-    block_order = ['ui','game', 'map', 'player','durability', 'vehicle', 'item_spawning','animal', 'zombie', 'npc']
+    block_order = ['ui', 'audio', 'game', 'map', 'player','durability', 'vehicle', 'item_spawning','animal', 'zombie', 'npc']
     for k in config_data:
         if k not in block_order: block_order.append(k)
 
@@ -130,7 +130,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                 
                 # Try to translate the key. If there is no translation (like in en_US), 
                 # it will fall back to 'raw_label' instead of the underscore key.
-                display_label = tr('ui', key, default=raw_label)
+                display_label = tr('ui', key)
 
                 val = val_data.get('value') if isinstance(val_data, dict) else val_data
                 
@@ -141,7 +141,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                 str_val = str(val).lower()
                 is_bool = str_val in ('true', 'false')
                 
-                is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay'])
+                is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay']) or ('volume' in key)
                 is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
                 is_language_cycle = (key == 'language')
                 is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle
@@ -190,10 +190,12 @@ def _draw_settings_screen(game, state, mouse_pos):
                         if is_percentage_cycle:
                             comp_val = current_val_float
                             if key == 'water_threshold': comp_val /= 100.0
-                            if comp_val <= 0.0: comp_val = 0.01
+                            if not 'volume' in key and comp_val <= 0.0: comp_val = 0.01
                             comp_val = round(comp_val, 2)
 
-                            if abs(comp_val - 0.01) < 0.001: label = tr('ui', "Extreme Low (1%)")
+                            # New 0% label specifically for Volume
+                            if 'volume' in key and abs(comp_val - 0.0) < 0.001: label = tr('ui', "Muted (0%)")
+                            elif abs(comp_val - 0.01) < 0.001: label = tr('ui', "Extreme Low (1%)")
                             elif abs(comp_val - 0.25) < 0.001: label = tr('ui', "Low (25%)")
                             elif abs(comp_val - 0.50) < 0.001: label = tr('ui', "Balanced (50%)")
                             elif abs(comp_val - 0.75) < 0.001: label = tr('ui', "High (75%)")
@@ -345,12 +347,15 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                         except ValueError:
                             current_val = 0.0
                             
-                        is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay'])
+
+                        is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay']) or ('volume' in key)
 
                         if is_percentage_cycle:
                             comp_val = current_val
                             if key == 'water_threshold': comp_val /= 100.0
-                            if comp_val <= 0.0: comp_val = 0.01
+                            
+                            # Allow volume to reach 0.0
+                            if not 'volume' in key and comp_val <= 0.0: comp_val = 0.01
                             
                             comp_val = round(comp_val, 2)
                             
@@ -358,10 +363,9 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             elif comp_val < 0.50: new_val = 0.50
                             elif comp_val < 0.75: new_val = 0.75
                             elif comp_val < 1.0: new_val = 1.0
-                            else: new_val = 0.01
-                            
-                            if key == 'water_threshold':
-                                new_val = int(new_val * 100)
+                            else: 
+                                new_val = 0.0 if 'volume' in key else 0.01 # Volume cycles to 0
+
                         elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
                             if current_val < 1800000: new_val = 1800000.0
                             elif current_val < 2700000: new_val = 2700000.0

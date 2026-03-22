@@ -3,6 +3,7 @@ from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
 from core.data.localization import tr
+
 class PlayerCombat:
     def get_attack_damage(self):
         min_dmg = 1
@@ -34,13 +35,13 @@ class PlayerCombat:
             return
             
         if target_weapon.load >= target_weapon.capacity:
-            display_message(f"{target_weapon.name} {tr('msg', 'is already full')} ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
+            display_message(f"{tr('item', target_weapon.name)} {tr('msg', 'is already full')} ({target_weapon.load:.0f}/{target_weapon.capacity:.0f}).")
             return
         
         ammo_item, _, _, _ = self.find_matching_ammo(target_weapon)
         
         if not ammo_item:
-            display_message(f"{tr('msg', 'No')} {target_weapon.ammo_type} {tr('msg', 'found.')}")
+            display_message(f"{tr('msg', 'No')} {tr('item', target_weapon.ammo_type)} {tr('msg', 'found.')}")
             return
         
         if game and hasattr(target_weapon, 'sounds') and 'reload' in target_weapon.sounds and target_weapon.sounds['reload']:
@@ -56,7 +57,7 @@ class PlayerCombat:
         self.is_reloading = True
         self.reloading_weapon = target_weapon 
         self.reload_timer = self.reload_duration
-        display_message(f"{tr('msg', 'Reloading')} {target_weapon.name}...")
+        display_message(f"{tr('msg', 'Reloading')} {tr('item', target_weapon.name)}...")
 
     def _finish_reload(self):
         self.is_reloading = False
@@ -73,7 +74,7 @@ class PlayerCombat:
         if transfer_amount > 0:
             weapon.load += transfer_amount
             ammo_item.load -= transfer_amount
-            display_message(f"{tr('msg', 'Finished reloading')} {weapon.name}. {tr('msg', 'Load:')} {weapon.load:.0f}/{weapon.capacity:.0f}.")
+            display_message(f"{tr('msg', 'Finished reloading')} {tr('item', weapon.name)}. {tr('msg', 'Load:')} {weapon.load:.0f}/{weapon.capacity:.0f}.")
             if ammo_item.load <= 0:
                 if source_type == 'inventory':
                     try: self.inventory.remove(ammo_item)
@@ -89,9 +90,34 @@ class PlayerCombat:
             display_message(f"{tr('item', item.name)} {tr('msg', 'does not use fuel.')}")
             return
 
-        fuel_item, f_source, f_index, f_container = self.find_fuel(item.fuel_type)
+        # Parse fuel_type if it is a list or formatted as "[Item1, Item2]"
+        raw_fuel = item.fuel_type
+        if isinstance(raw_fuel, dict) and 'type' in raw_fuel:
+            raw_fuel = raw_fuel['type']
+            
+        candidates = []
+        if isinstance(raw_fuel, list):
+            candidates = raw_fuel
+        elif isinstance(raw_fuel, str):
+            if raw_fuel.startswith('[') and raw_fuel.endswith(']'):
+                candidates = [s.strip() for s in raw_fuel[1:-1].split(',')]
+            else:
+                candidates = [raw_fuel]
+
+        fuel_item = None
+        f_source = None
+        f_index = -1
+        f_container = None
+
+        # Try to find any of the accepted fuels
+        for cand in candidates:
+            fuel_item, f_source, f_index, f_container = self.find_fuel(cand)
+            if fuel_item:
+                break
+
         if not fuel_item:
-            display_message(f"{tr('msg', 'No')} {item.fuel_type} {tr('msg', 'found to reload.')}")
+            cand_str = " or ".join([tr('item', c) for c in candidates])
+            display_message(f"{tr('msg', 'No')} {cand_str} {tr('msg', 'found to reload.')}")
             return
             
         max_dur = item.max_durability
@@ -102,13 +128,13 @@ class PlayerCombat:
             return
 
         if fuel_item.load <= 0:
-            display_message(f"{tr('msg', 'No')} {fuel_item.name} {tr('msg', 'left to use.')}")
+            display_message(f"{tr('msg', 'No')} {tr('item', fuel_item.name)} {tr('msg', 'left to use.')}")
             return
 
         fuel_item.load -= 1
         item.durability = max_dur
-        display_message(f"{tr('msg', 'Used 1')} {fuel_item.name} {tr('msg', 'to reload')} {tr('item', item.name)}. {tr('msg', 'Durability set to:')} {item.durability:.0f}")
-
+        display_message(f"{tr('msg', 'Used 1')} {tr('item', fuel_item.name)} {tr('msg', 'to reload')} {tr('item', item.name)}. {tr('msg', 'Durability set to:')} {item.durability:.0f}")
+        
         if fuel_item.load <= 0:
             f_inv = self._get_source_inventory(f_source, f_container)
             if f_inv and f_index < len(f_inv) and f_inv[f_index] == fuel_item:
@@ -122,7 +148,7 @@ class PlayerCombat:
             return
         ammo.load = weapon.load
         weapon.load = 0
-        display_message(f"{tr('msg', 'Unloaded')} {int(ammo.load)} {ammo.name} {tr('msg', 'from')} {weapon.name}.")
+        display_message(f"{tr('msg', 'Unloaded')} {int(ammo.load)} {tr('item', ammo.name)} {tr('msg', 'from')} {tr('item', weapon.name)}.")
         self.stack_item_in_inventory(ammo)
         if ammo.load <= 0: return 
         if len(self.inventory) < self.base_inventory_slots:
@@ -144,9 +170,9 @@ class PlayerCombat:
         for i, item in enumerate(self.belt):
             if item == broken_weapon:
                 self.belt[i] = None
-                display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your belt.')}")
+                display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your inventory.')}")
                 return
         try:
             self.inventory.remove(broken_weapon)
-            display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your inventory.')}")
+            display_message(f"{tr('item', broken_weapon.name)} {tr('msg', 'broke and was removed from your inventory.')}")
         except ValueError: pass

@@ -282,12 +282,12 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
 
     # Initialize tabs data if not already set
     tabs_data = [
-        {'label': tr('tab', 'Info')},
-        {'label': tr('tab', 'Mechanics')}
+        {'label': 'Vehicle', 'icon': assets.get('vehicle_icon')},
+        {'label': 'Mechanics', 'icon': assets.get('mechanics_icon')}
     ]
     
-    if 'active_tab' not in modal:
-        modal['active_tab'] = tr('tab', 'Info')
+    if 'active_tab' not in modal or modal['active_tab'] not in ['Vehicle', 'Mechanics']:
+        modal['active_tab'] = 'Vehicle'
         
     # Draw Tabs
     tabs = Tabs(surface, modal, tabs_data, assets)
@@ -304,9 +304,9 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     
     active_tab = modal.get('active_tab')
     
-    if active_tab == tr('tab', 'Info'):
+    if active_tab == 'Vehicle':
         draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
-    elif active_tab == tr('tab', 'Mechanics'):
+    elif active_tab == 'Mechanics':
         draw_vehicle_mechanics_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
     
     if 'equipment_rects' in modal:

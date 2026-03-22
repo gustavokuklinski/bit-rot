@@ -61,6 +61,10 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             if require_node is not None:
                 template['properties']['require'] = {k: v for k, v in require_node.attrib.items()}
 
+            fuel_node = props_node.find('fuel')
+            if fuel_node is not None:
+                template['properties']['fuel_type'] = fuel_node.attrib.get('type')
+
             for node in props_node.findall('restore'):
                 status_str = node.get('status')
                 targets = parse_status_list(status_str) if status_str else ([global_status] if global_status else [])

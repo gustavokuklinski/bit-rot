@@ -19,6 +19,23 @@ def draw_tooltip(surface, item, pos):
         reqs = item.require if isinstance(item.require, list) else [item.require]
         lines.append(f"{tr('tooltip', 'Requires:')} {f' {tr('tooltip', 'or')} '.join(reqs)}")
 
+    if getattr(item, 'fuel_type', None):
+        raw_fuel = item.fuel_type
+        if isinstance(raw_fuel, dict) and 'type' in raw_fuel:
+            raw_fuel = raw_fuel['type']
+            
+        candidates = []
+        if isinstance(raw_fuel, list):
+            candidates = raw_fuel
+        elif isinstance(raw_fuel, str):
+            if raw_fuel.startswith('[') and raw_fuel.endswith(']'):
+                candidates = [s.strip() for s in raw_fuel[1:-1].split(',')]
+            else:
+                candidates = [raw_fuel]
+        
+        translated_fuels = [tr('item', c) for c in candidates]
+        lines.append(f"{tr('tooltip', 'Fuel:')} {', '.join(translated_fuels)}")
+
     if item.item_type == 'recipe':
         # Ensure recipes are loaded if checking from main menu or early state
         if not RecipeManager.RECIPES:
@@ -117,7 +134,7 @@ def draw_tooltip(surface, item, pos):
         min_damage, max_damage = item.current_damage_range
         lines.append(f"{tr('tooltip', 'Damage:')} {min_damage}-{max_damage}")
     if item.ammo_type:
-        lines.append(f"{tr('tooltip', 'Ammo:')} {item.ammo_type}")
+        lines.append(f"{tr('tooltip', 'Ammo:')} {tr('item', item.ammo_type)}")
     
     if hasattr(item, 'repair_list') and item.repair_list:
         lines.append(tr('tooltip', "Repairs:"))

@@ -46,7 +46,7 @@ class PlayerInventory:
                 return None
             for i, item in enumerate(container_item.inventory):
                 if item:
-                    if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
+                    if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                         return item, 'container', i, container_item
                     result = search_recursive(item)
                     if result: return result
@@ -54,21 +54,21 @@ class PlayerInventory:
 
         for i, item in enumerate(self.belt):
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'belt', i, None
                 res = search_recursive(item)
                 if res: return res
 
         for i, item in enumerate(self.inventory):
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'inventory', i, None
                 res = search_recursive(item)
                 if res: return res
         
         for slot, item in self.clothes.items():
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
                     return item, 'gear', slot, None
                 res = search_recursive(item)
                 if res: return res

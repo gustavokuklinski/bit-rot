@@ -299,6 +299,7 @@
         <tooltip name="Anxiety" translation_tooltip="Ansiedade" />
         <tooltip name="Defence" translation_tooltip="Defesa" />
         <tooltip name="Infection" translation_tooltip="Infecção" />
+        <tooltip name="Fuel:" translation_tooltip="Combustível:" />
     </tooltip>
 
     <msg>
@@ -467,6 +468,7 @@
         <msg name="It contains items!" translation_msg="Contém itens!" />
         <msg name="Missing" translation_msg="Faltando" />
         <msg name="of" translation_msg="de" />
+        <msg name="Looting" translation_msg="Saqueando" />
     </msg>
 
 </language>

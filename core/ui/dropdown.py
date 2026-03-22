@@ -11,7 +11,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         return
         
     # Translate options for display using the 'context' category
-    translated_options = [tr('context', opt, default=opt) for opt in options]
+    translated_options = [tr('context', opt) for opt in options]
 
     item_height = 25
     padding = 5

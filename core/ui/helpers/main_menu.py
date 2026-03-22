@@ -117,7 +117,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     draw_btn(screen, quit_rect, tr('ui', "Quit"), mouse_pos)
 
     current_year = datetime.now().year
-    footer_str = f"Developed by: Gustavo Kuklinski - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
+    footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
     footer_text = font_notification.render(footer_str, True, (100, 100, 100))
     footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)

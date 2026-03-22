@@ -51,6 +51,8 @@ class PlayerActions:
 
         if hasattr(item, 'require') and item.require:
             raw_req = item.require
+            if isinstance(raw_req, dict) and 'type' in raw_req:
+                raw_req = raw_req['type']
             candidates = []
             if isinstance(raw_req, list):
                 candidates = raw_req
@@ -104,7 +106,7 @@ class PlayerActions:
             return False
             
         duration_mult = 1.0
-        if item.item_type == 'consumable_medication' or 'Medkit' in tr('item', item.name):
+        if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
             duration_mult = 2.0
         elif item.item_type == 'consumable_drink' or item.item_type == 'liquid':
             duration_mult = 1.0
@@ -209,20 +211,87 @@ class PlayerActions:
         if not hasattr(item, 'state'):
             return
 
-        # Prevent turning on campfires in inventory (they can only be on when placed on ground)
-        if item.state == "off" and "Campfire" in tr('item', item.name) and source not in ['ground', 'nearby']:
+        is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
+
+        # Prevent turning on campfires in inventory or any map containers (they can only be on when placed on ground)
+        if item.state == "off" and "Campfire" in item.name and not is_on_ground:
             display_message(tr('msg', "Campfires can only be lit when placed on the ground."))
             return
 
         new_name = ""
         if item.state == "on":
-            new_name = tr('item', item.name).replace(" on", " off")
+            new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
                 display_message(f"{tr('msg', 'Cannot turn on')} {tr('item', item.name)}{tr('msg', ", it's out of power.")}")
                 return
 
-            if item.fuel_type == "Matches":
+            # Check Requirements (Lighters/Matches) for ignition
+            req_consumed = False
+            if hasattr(item, 'require') and item.require:
+                raw_req = item.require
+                if isinstance(raw_req, dict) and 'type' in raw_req:
+                    raw_req = raw_req['type']
+                candidates = []
+                if isinstance(raw_req, list):
+                    candidates = raw_req
+                elif isinstance(raw_req, str):
+                    if raw_req.startswith('[') and raw_req.endswith(']'):
+                        candidates = [s.strip() for s in raw_req[1:-1].split(',')]
+                    else:
+                        candidates = [raw_req]
+
+                def find_candidate(cand_name):
+                    for i, it in enumerate(self.belt):
+                        if it and it.name == cand_name:
+                            if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                            return it, 'belt', i, None
+                    for i, it in enumerate(self.inventory):
+                        if it and it.name == cand_name:
+                            if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                            return it, 'inventory', i, None
+                    if self.backpack and hasattr(self.backpack, 'inventory'):
+                        for i, it in enumerate(self.backpack.inventory):
+                            if it and it.name == cand_name:
+                                 if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
+                                 return it, 'container', i, self.backpack
+                    return None, None, None, None
+
+                required_item_found = None
+                required_source = None
+                required_index = -1
+                required_container = None
+
+                for cand in candidates:
+                    r_item, r_src, r_idx, r_cont = find_candidate(cand)
+                    if r_item:
+                        required_item_found = r_item
+                        required_source = r_src
+                        required_index = r_idx
+                        required_container = r_cont
+                        break
+                
+                if not required_item_found:
+                    req_str = " or ".join(candidates)
+                    display_message(f"{tr('msg', 'Requires')} {req_str} {tr('msg', 'to turn on.')}")
+                    return
+                
+                if hasattr(required_item_found, 'load') and required_item_found.load is not None:
+                    required_item_found.load -= 1
+                    if required_item_found.load <= 0:
+                        if required_source == 'belt':
+                            self.belt[required_index] = None
+                        elif required_source == 'inventory':
+                            try: self.inventory.remove(required_item_found)
+                            except ValueError: pass
+                        elif required_source == 'container' and required_container:
+                            try: required_container.inventory.remove(required_item_found)
+                            except ValueError: pass
+                        display_message(f"{required_item_found.name} {tr('msg', 'used up.')}")
+                req_consumed = True
+
+            # Fallback for old code behavior
+            if not req_consumed and getattr(item, 'fuel_type', None) == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
                     display_message(tr('msg', "No matches to light the lantern."))
@@ -234,7 +303,7 @@ class PlayerActions:
                     if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
                         m_inv.pop(m_index)
 
-            new_name = tr('item', item.name).replace(" off", " on")
+            new_name = item.name.replace(" off", " on")
 
         if not new_name:
             return
@@ -286,13 +355,13 @@ class PlayerActions:
 
         new_recipes = [r for r in recipes_taught if r.magazine not in self.known_recipes] 
         
-        if not new_recipes and tr('item', item.name) in self.known_recipes:
+        if not new_recipes and item.name in self.known_recipes:
             display_message(f"{tr('msg', 'You already know the recipes in')} {tr('item', item.name)}.")
             return
 
         def finish_reading():
-            if tr('item', item.name) not in self.known_recipes:
-                self.known_recipes.append(tr('item', item.name))
+            if item.name not in self.known_recipes:
+                self.known_recipes.append(item.name)
                 
             else:
                 display_message(f"{tr('msg', 'You reviewed')} {tr('item', item.name)}.")
@@ -384,9 +453,11 @@ class PlayerActions:
             item_state = getattr(item, 'state', '')
             if item_state == 'on': options.append('Turn off')
             elif item_state == 'off':
-                # Campfires can only be turned on when on the ground
-                if "Campfire" in getattr(item, 'name', '') and source not in ['ground', 'nearby']:
-                    pass  # Don't add "Turn on" for campfires in inventory
+                # Campfires can only be turned on when strictly on the ground
+                if "Campfire" in getattr(item, 'name', ''):
+                    is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
+                    if is_on_ground:
+                        options.append('Turn on')
                 else:
                     options.append('Turn on')
             if getattr(item, 'fuel_type', None): options.append('Reload')

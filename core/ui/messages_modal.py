@@ -50,9 +50,33 @@ def draw_messages_modal(surface, game, modal, assets):
     
     modal['content_rect'] = content_rect 
 
+    def wrap_text(text, font, max_width):
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        for word in words:
+            test_line = ' '.join(current_line + [word]) if current_line else word
+            if font.size(test_line)[0] <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    lines.append(word)
+                    current_line = []
+        if current_line:
+            lines.append(' '.join(current_line))
+        return lines
+
+    max_text_width = max(50, content_width - 15)
+    wrapped_log = []
+    for msg in active_log:
+        wrapped_log.extend(wrap_text(msg, font_notification, max_text_width))
+
     # --- Draw Messages (Bottom-Up Alignment) ---
     line_height = font_notification.get_height() + 4
-    total_text_height = len(active_log) * line_height
+    total_text_height = len(wrapped_log) * line_height
     
     # Calculate max scroll (how much we CAN scroll)
     max_scroll = max(0, total_text_height - content_height)
@@ -105,8 +129,8 @@ def draw_messages_modal(surface, game, modal, assets):
             y_pos += skip_count * line_height
 
         # 2. Iterate only from start_index
-        for i in range(start_index, len(active_log)):
-            msg = active_log[i]
+        for i in range(start_index, len(wrapped_log)):
+            msg = wrapped_log[i]
             
             # 3. Stop rendering if we go below the view
             if y_pos > content_height:

@@ -232,7 +232,7 @@ def handle_mouse_down(game, event, mouse_pos):
                              
                              # Fix: Provide fallback tabs for Vehicle modal if 'tabs_data' isn't natively populated on the dictionary
                              if not tabs_data and topmost_modal['type'] == 'vehicle':
-                                 tabs_data = [{'label': 'Info'}, {'label': 'Mechanics'}]
+                                 tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}]
                                  
                              if i < len(tabs_data):
                                  topmost_modal['active_tab'] = tabs_data[i]['label']
@@ -242,7 +242,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     if topmost_modal.handle_event(event): return
 
                 # Engine and Lights toggles specifically on the Info tab
-                if topmost_modal['type'] == 'vehicle' and topmost_modal.get('active_tab') == 'Info':
+                if topmost_modal['type'] == 'vehicle' and topmost_modal.get('active_tab') == 'Vehicle':
                     rects = topmost_modal.get('rects', {})
                     veh = topmost_modal['vehicle']
                     
