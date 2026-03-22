@@ -2,6 +2,7 @@ import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
+from core.data.localization import tr
 
 def wrap_text(text, width, font):
     """Wraps text to fit within a specific width."""
@@ -51,7 +52,7 @@ def draw_text_modal(surface, game, modal, assets):
     if not item:
         return None, None, None
         
-    base_modal = BaseModal(surface, modal, assets, item.name)
+    base_modal = BaseModal(surface, modal, assets, tr('item', item.name))
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 

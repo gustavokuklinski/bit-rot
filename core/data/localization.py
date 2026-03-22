@@ -1,59 +1,48 @@
-# core/data/localization.py
-import os
 import xml.etree.ElementTree as ET
+import os
 
-_translations = {}
-_current_lang = "en_US"
+# Seu dicionário global de traduções
+translations = {} 
 
-def load_language(lang_code, lang_dir="./game/lib/lang"):
-    """Loads an XML language file and populates the translation dictionary."""
-    global _translations, _current_lang
-    filepath = os.path.join(lang_dir, f"{lang_code}.xml")
+def load_language(lang_code="pt_BR"):
+    global translations
+    translations.clear()
     
-    _translations.clear()
-    _current_lang = lang_code
-    
-    # --- NEW: Explicitly intercept en_US to use hardcoded defaults without throwing missing file warnings ---
-    if lang_code == "en_US":
-        print("Language set to en_US. Using default hardcoded English.")
-        return 
-    
-    if not os.path.exists(filepath):
-        print(f"Language file {filepath} not found. Defaulting to hardcoded English.")
-        return 
+    # 1. Carrega o arquivo principal (pt_BR.xml)
+    main_file = f"./game/lib/lang/{lang_code}.xml"
+    if os.path.exists(main_file):
+        _parse_xml_to_dict(main_file)
         
-    try:
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        
-        # Dynamically parse categories: <modal>, <ui>, <tab>, <vehicle>, etc.
-        for category in root:
-            cat_name = category.tag
-            _translations[cat_name] = {}
+    # 2. Carrega o arquivo de itens (pt_BR_items.xml)
+    items_file = f"./game/lib/lang/{lang_code}_items.xml"
+    if os.path.exists(items_file):
+        _parse_xml_to_dict(items_file)
+    
+    traits_file = f"./game/lib/lang/{lang_code}_traits.xml"
+    if os.path.exists(traits_file):
+        _parse_xml_to_dict(traits_file)
+
+def _parse_xml_to_dict(filepath):
+    """Função auxiliar para ler o XML e guardar no dicionário"""
+    global translations
+    tree = ET.parse(filepath)
+    root = tree.getroot()
+    
+    # Loop dinâmico por todas as categorias (<ui>, <msg>, <item>, etc)
+    for category in root:
+        cat_name = category.tag
+        if cat_name not in translations:
+            translations[cat_name] = {}
             
-            # Look for attributes like 'translation_modal', 'translation_ui', etc.
-            trans_attr = f"translation_{cat_name}" 
+        for element in category:
+            key = element.get('name')
+            # O valor a ser pego dinamicamente (ex: translation_ui, translation_item)
+            val_attr = f"translation_{cat_name}" 
+            val = element.get(val_attr)
             
-            for child in category:
-                key = child.attrib.get('name')
-                trans_val = child.attrib.get(trans_attr)
-                
-                if key and trans_val:
-                    _translations[cat_name][key] = trans_val
-                    
-        print(f"Successfully loaded language: {lang_code}")
-    except Exception as e:
-        print(f"Error loading language {lang_code}: {e}")
+            if key and val:
+                translations[cat_name][key] = val
 
-def tr(category, key, default=None):
-    """
-    Fetches the translated string. 
-    If not found, returns the 'default' string (usually the fallback English key).
-    """
-    if default is None:
-        default = key
-        
-    if category in _translations and key in _translations[category]:
-        return _translations[category][key]
-        
-    return default
+def tr(category, key):
+    """Sua função tr existente."""
+    return translations.get(category, {}).get(key, key)

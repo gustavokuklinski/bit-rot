@@ -7,6 +7,7 @@ from core.entities.item.item import Projectile
 from core.update import player_hit_zombie, handle_zombie_death, create_blood_splatter
 from core.ui.inventory_modal import get_belt_hud_slot_rect
 from core.messages import display_message
+from core.data.localization import tr
 
 def handle_attack(game, mouse_pos):
     if any(modal['is_dragging'] for modal in game.modals):

@@ -304,7 +304,7 @@ class Item:
                     
                     # Notify
                     if message_func:
-                        message_func(f"Discarded empty {item.name}.")
+                        message_func(f"Discarded empty {tr('item', item.name)}.")
                     
                     # Remove the item from the list
                     if item in item_list:

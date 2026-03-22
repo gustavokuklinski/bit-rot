@@ -25,7 +25,7 @@
             <recipe magazine="Medicine Vol.1" />
             <recipe magazine="Vehicle Engineering Vol.1" />
         </trait>
-        <trait id="Profession_CEO_assistant" name="CEO Assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_CEO_assistant" name="CEO assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:2, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
         </trait>
     </profession>

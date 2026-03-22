@@ -42,13 +42,14 @@
         <ui name="You Killed:" translation_ui="Você Matou:" />
         <ui name="Back" translation_ui="Voltar" />
         <ui name="Apply" translation_ui="Aplicar" />
+        <ui name="Delete" translation_ui="Excluir" />
+        <ui name="Empty Slot" translation_ui="Espaço Vazio" />
 
         <ui name="Preset" translation_ui="Predefinição" />
         <ui name="Player Name:" translation_ui="Nome do Jogador:" />
         <ui name="Survivor" translation_ui="Sobrevivente" />
         <ui name="Save" translation_ui="Salvar" />
         <ui name="Random" translation_ui="Aleatório" />
-        <ui name="Delete" translation_ui="Deletar" />
         <ui name="Sex:" translation_ui="Sexo:" />
         <ui name="Male" translation_ui="Masculino" />
         <ui name="Female" translation_ui="Feminino" />
@@ -117,6 +118,7 @@
         <ui name="Crafting (C)" translation_ui="Criação (C)" />
         <ui name="Help and Tutorial (?)" translation_ui="Tutorial e Ajuda (?)" />
         <ui name="Sweet Dreams. Press Space to Wake up." translation_ui="Bons Sonhos. Pressione Espaço para Acordar." />
+        <ui name="Click to start" translation_ui="Clique para iniciar" />
 
         <ui name="Game" translation_ui="Jogo" />
         <ui name="Map" translation_ui="Mapa" />
@@ -130,20 +132,37 @@
 
         <ui name="Skill" translation_ui="Habilidade" />
         <ui name="Level" translation_ui="Nível" />
-
-        <ui name="Click to start" translation_ui="Clique para iniciar" />
-        
         <ui name="Experience" translation_ui="Experiência" />
         <ui name="Progress:" translation_ui="Progresso:" />
+        <ui name="Rate" translation_ui="Taxa" />
+        <ui name="XP" translation_ui="XP" />
 
         <ui name="Strength" translation_ui="Força" />
         <ui name="Fitness" translation_ui="Aptidão Física" />
         <ui name="Agility" translation_ui="Agilidade" />
         <ui name="Luck" translation_ui="Sorte" />
+        <ui name="Lucky" translation_ui="Sortudo" />
         <ui name="Melee" translation_ui="Corpo a Corpo" />
         <ui name="Ranged" translation_ui="Arma de fogo" />
         <ui name="Maintenance" translation_ui="Manutenção" />
         <ui name="Intelligence" translation_ui="Inteligência" />
+        <ui name="Health" translation_ui="Saúde" />
+        <ui name="Stamina" translation_ui="Vigor" />
+        <ui name="Water" translation_ui="Água" />
+        <ui name="Food" translation_ui="Comida" />
+        <ui name="Anxiety" translation_ui="Ansiedade" />
+        <ui name="Tireness" translation_ui="Cansaço" />
+        <ui name="Infection" translation_ui="Infecção" />
+
+        <ui name="Hair" translation_ui="Cabelo" />
+        <ui name="Head" translation_ui="Cabeça" />
+        <ui name="Legs" translation_ui="Pernas" />
+        <ui name="Feet" translation_ui="Pés" />
+        <ui name="Body" translation_ui="Corpo" />
+        <ui name="Util" translation_ui="Acessório" />
+        <ui name="Arms" translation_ui="Braços" />
+        <ui name="Hands" translation_ui="Mãos" />
+        <ui name="Facial" translation_ui="Rosto" />
 
         <ui name="Daylight" translation_ui="Dia" />
         <ui name="Darkness" translation_ui="Noite" />
@@ -152,6 +171,7 @@
         <ui name="Kills:" translation_ui="Matei:" />
         <ui name="Survived:" translation_ui="Sobrevivência:" />
         <ui name="Days" translation_ui="dias" />
+        <ui name="Day" translation_ui="Dia" />
         <ui name="Weather: Clear" translation_ui="Clima: Limpo" />
         <ui name="Rain in" translation_ui="Chuva em" />
         <ui name="Weather: Raining" translation_ui="Clima: Chovendo" />
@@ -159,7 +179,6 @@
 
         <ui name="Backpack" translation_ui="Mochila" />
         <ui name="Slots:" translation_ui="Espaços:" />
-
         <ui name="Search..." translation_ui="Pesquisar..." />
         <ui name="Select a recipe to view details" translation_ui="Selecione uma receita para ver os detalhes" />
         <ui name="(None available)" translation_ui="(Nenhum disponível)" />
@@ -172,7 +191,6 @@
         <ui name="Time:" translation_ui="Tempo:" />
         <ui name="Yields:" translation_ui="Rendimento:" />
         <ui name="Unknown" translation_ui="Desconhecido" />
-
         <ui name="LOCKED (MAG/SKILL)" translation_ui="BLOQUEADO (REV/HAB)" />
         <ui name="NEED MAGAZINE" translation_ui="PRECISA DE REVISTA" />
         <ui name="NEED SKILLS" translation_ui="PRECISA DE HABILIDADES" />
@@ -180,15 +198,6 @@
         <ui name="REPAIR ITEM" translation_ui="CONSERTAR ITEM" />
         <ui name="DISMANTLE" translation_ui="DESMONTAR" />
         <ui name="MISSING RESOURCES" translation_ui="FALTAM RECURSOS" />
-
-        <ui name="New Game" translation_ui="Novo Jogo" />
-        <ui name="Load Game" translation_ui="Carregar Jogo" />
-        <ui name="Settings" translation_ui="Configurações" />
-        <ui name="Quit" translation_ui="Sair" />
-        <ui name="Empty Slot" translation_ui="Espaço Vazio" />
-        <ui name="Delete" translation_ui="Excluir" />
-        <ui name="Back" translation_ui="Voltar" />
-        <ui name="Day" translation_ui="Dia" />
     </ui>
 
     <alert>
@@ -244,7 +253,6 @@
         <context name="Open door/window" translation_context="Abrir porta/janela" />
         <context name="Close door/window" translation_context="Fechar porta/janela" />
         <context name="Toggle Light" translation_context="Alternar Luz" />
-
     </context>
 
     <tooltip>

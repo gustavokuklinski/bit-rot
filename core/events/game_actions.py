@@ -1,6 +1,7 @@
 import pygame
 from core.data.config import *
 from core.entities.zombie.corpse import Corpse
+from core.data.localization import tr
 
 def try_grab_item(game):
     closest_item = None

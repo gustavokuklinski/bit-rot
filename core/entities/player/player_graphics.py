@@ -3,6 +3,7 @@ import math
 import random
 from core.data.config import TILE_SIZE, SPRITE_PATH, DARK_GRAY, YELLOW
 from core.entities.item.item_data import ITEM_TEMPLATES  # NEW: Import ITEM_TEMPLATES
+from core.data.localization import tr
 
 # Define ORANGE if not imported
 ORANGE = (255, 165, 0)
@@ -122,7 +123,7 @@ class PlayerGraphics:
         for slot in self.clothes_slots:
             item = self.clothes.get(slot)
             if item:
-                template = ITEM_TEMPLATES.get(item.name)
+                template = ITEM_TEMPLATES.get(tr('item', item.name))
                 if template and 'properties' in template and 'hide_cloth' in template['properties']:
                     hidden_slots.update(template['properties']['hide_cloth'])
 

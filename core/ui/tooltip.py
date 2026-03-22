@@ -7,7 +7,7 @@ def draw_tooltip(surface, item, pos):
     if not item:
         return
 
-    lines = [item.name]
+    lines = [tr('item', item.name)]
 
     if hasattr(item, 'tooltip_text') and item.tooltip_text:
         lines.append(item.tooltip_text)
@@ -24,7 +24,7 @@ def draw_tooltip(surface, item, pos):
         if not RecipeManager.RECIPES:
              RecipeManager.load_recipes()
              
-        recipes = RecipeManager.get_recipes_by_magazine(item.name)
+        recipes = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
         if recipes:
             lines.append(tr('tooltip', "Teaches:"))
             for r in recipes:

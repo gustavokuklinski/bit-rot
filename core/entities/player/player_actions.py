@@ -100,11 +100,11 @@ class PlayerActions:
             return False
 
         if item.load <= 0:
-            display_message(f"{tr('msg', 'Cannot use')} {item.name}{tr('msg', ', it is empty.')}")
+            display_message(f"{tr('msg', 'Cannot use')} {tr('item', item.name)}{tr('msg', ', it is empty.')}")
             return False
             
         duration_mult = 1.0
-        if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
+        if item.item_type == 'consumable_medication' or 'Medkit' in tr('item', item.name):
             duration_mult = 2.0
         elif item.item_type == 'consumable_drink' or item.item_type == 'liquid':
             duration_mult = 1.0
@@ -133,7 +133,7 @@ class PlayerActions:
                                  consumed = False
                              else:
                                 self.health = min(self.max_health, self.health + val)
-                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Restored')} {val} {tr('msg', 'Health.')}")
+                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {tr('msg', 'Health.')}")
                                 consumed = True
                                  
                         elif hasattr(self, target_stat):
@@ -147,14 +147,14 @@ class PlayerActions:
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
+                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
                                 consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0
                                 new_val = max(min_cap, current_val - val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"{tr('msg', 'Used')} {item.name}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
+                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
                                 consumed = True
             
             elif status_effect_legacy and hasattr(self, status_effect_legacy):
@@ -162,7 +162,7 @@ class PlayerActions:
             
             else:
                 if not consumed:
-                    display_message(f"{tr('msg', 'Cannot consume')} {item.name}{tr('msg', ': no valid effects found.')}")
+                    display_message(f"{tr('msg', 'Cannot consume')} {tr('item', item.name)}{tr('msg', ': no valid effects found.')}")
                     return 
 
             if consumed:
@@ -203,23 +203,23 @@ class PlayerActions:
             execute_consume()
             return True
         else:
-            return self.start_action(f"Using {item.name}", duration_mult, execute_consume, xp_reward=5)
+            return self.start_action(f"Using {tr('item', item.name)}", duration_mult, execute_consume, xp_reward=5)
     
     def toggle_utility_item(self, item, source, index, container_item):
         if not hasattr(item, 'state'):
             return
 
         # Prevent turning on campfires in inventory (they can only be on when placed on ground)
-        if item.state == "off" and "Campfire" in item.name and source not in ['ground', 'nearby']:
+        if item.state == "off" and "Campfire" in tr('item', item.name) and source not in ['ground', 'nearby']:
             display_message(tr('msg', "Campfires can only be lit when placed on the ground."))
             return
 
         new_name = ""
         if item.state == "on":
-            new_name = item.name.replace(" on", " off")
+            new_name = tr('item', item.name).replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                display_message(f"{tr('msg', 'Cannot turn on')} {item.name}{tr('msg', ", it's out of power.")}")
+                display_message(f"{tr('msg', 'Cannot turn on')} {tr('item', item.name)}{tr('msg', ", it's out of power.")}")
                 return
 
             if item.fuel_type == "Matches":
@@ -234,7 +234,7 @@ class PlayerActions:
                     if m_inv and m_index < len(m_inv) and m_inv[m_index] == matches:
                         m_inv.pop(m_index)
 
-            new_name = item.name.replace(" off", " on")
+            new_name = tr('item', item.name).replace(" off", " on")
 
         if not new_name:
             return
@@ -271,37 +271,37 @@ class PlayerActions:
                 source_inventory[index] = new_item
                 return
             else:
-                print(f"Error: Could not find item {item.name} in {source} to toggle.")
+                print(f"Error: Could not find item {tr('item', item.name)} in {source} to toggle.")
         elif item in self.belt:
              self.belt[self.belt.index(item)] = new_item
         elif item in self.inventory:
              self.inventory[self.inventory.index(item)] = new_item
 
     def read_recipe_book(self, item):
-        recipes_taught = RecipeManager.get_recipes_by_magazine(item.name)
+        recipes_taught = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
         
         if not recipes_taught:
-            display_message(f"{tr('msg', 'You read')} {item.name}{tr('msg', ', but learn nothing new.')}")
+            display_message(f"{tr('msg', 'You read')} {tr('item', item.name)}{tr('msg', ', but learn nothing new.')}")
             return
 
         new_recipes = [r for r in recipes_taught if r.magazine not in self.known_recipes] 
         
-        if not new_recipes and item.name in self.known_recipes:
-            display_message(f"{tr('msg', 'You already know the recipes in')} {item.name}.")
+        if not new_recipes and tr('item', item.name) in self.known_recipes:
+            display_message(f"{tr('msg', 'You already know the recipes in')} {tr('item', item.name)}.")
             return
 
         def finish_reading():
-            if item.name not in self.known_recipes:
-                self.known_recipes.append(item.name)
+            if tr('item', item.name) not in self.known_recipes:
+                self.known_recipes.append(tr('item', item.name))
                 
             else:
-                display_message(f"{tr('msg', 'You reviewed')} {item.name}.")
+                display_message(f"{tr('msg', 'You reviewed')} {tr('item', item.name)}.")
             
             # Add the intelligence XP here, right when the action successfully finishes
             self.progression.add_xp(self, 'intelligence', 10)
 
         # Call start_action without the xp_attr or xp_reward parameters
-        self.start_action(f"Reading {item.name}", 3.0, finish_reading)
+        self.start_action(f"Reading {tr('item', item.name)}", 3.0, finish_reading)
 
     def find_repair_kit(self, target_item):
         if not target_item: return None, None, None, None

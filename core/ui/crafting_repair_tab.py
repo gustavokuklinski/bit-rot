@@ -29,8 +29,8 @@ class CraftingRepairTab:
         target_ids = []
         locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
         for container, key, item, ctype, path in locs:
-            if item.name == r.output_name and item.durability is not None and item.durability < item.max_durability:
-                target_opts.append(f"{item.name} (Dur: {int(item.durability)}) - {' > '.join(path)}")
+            if tr('item', item.name) == r.output_name and item.durability is not None and item.durability < item.max_durability:
+                target_opts.append(f"{tr('item', item.name)} (Dur: {int(item.durability)}) - {' > '.join(path)}")
                 target_ids.append(item.id)
         
         target_text = r.output_name
@@ -78,12 +78,12 @@ class CraftingRepairTab:
             
             have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in player_items 
-                       if item.name in valid_names)
+                       if tr('item', item.name) in valid_names)
             
             if nearby_items:
                 have += sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in nearby_items 
-                       if item.name in valid_names)
+                       if tr('item', item.name) in valid_names)
             
             color = GREEN if have >= needed else RED
             if have < needed: can_craft = False
@@ -96,7 +96,7 @@ class CraftingRepairTab:
             if sel_id:
                 for container, key, item, ctype, path in locs:
                     if item.id == sel_id:
-                        name_display = f"[*] {item.name}"
+                        name_display = f"[*] {tr('item', item.name)}"
                         img = item.image
                         break
 
@@ -116,9 +116,9 @@ class CraftingRepairTab:
                     opts = []
                     itms = []
                     for container, key, item, ctype, path in locs:
-                        if item.name in valid_names:
+                        if tr('item', item.name) in valid_names:
                             qty = item.load if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
-                            opts.append(f"{item.name} ({qty}) - {' > '.join(path)}")
+                            opts.append(f"{tr('item', item.name)} ({qty}) - {' > '.join(path)}")
                             itms.append(item.id)
                     if opts:
                         self.modal.dropdown_state.update({
@@ -248,7 +248,7 @@ class CraftingRepairTab:
             locations = self.modal.prioritize_locations(locations, self.modal.selected_target)
 
             for container, key, item, ctype, path in locations:
-                if item.name == recipe.output_name and item.durability is not None and item.durability < item.max_durability:
+                if tr('item', item.name) == recipe.output_name and item.durability is not None and item.durability < item.max_durability:
                     target_item = item
                     target_container = container
                     target_key = key
@@ -275,7 +275,7 @@ class CraftingRepairTab:
                 for container, key, item, ctype, path in locations:
                     if removed >= to_remove: break
 
-                    if item.name in valid_names and item != target_item:
+                    if tr('item', item.name) in valid_names and item != target_item:
                         item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                         take = min(to_remove - removed, item_qty)
                         

@@ -523,7 +523,7 @@ class MapManager:
                                  if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
                                      self.game.items_on_ground.append(item)
                                  else:
-                                     print(f"Warning: Could not place dropped item {item.name}")
+                                     print(f"Warning: Could not place dropped item {tr('item', item.name)}")
                              else:
                                  print(f"Warning: Drop item '{drop['item']}' not found in templates.")
 

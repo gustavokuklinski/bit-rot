@@ -86,7 +86,7 @@ class PlayerCombat:
 
     def reload_utility_item(self, item, source, index, container_item):
         if not item.fuel_type:
-            display_message(f"{item.name} {tr('msg', 'does not use fuel.')}")
+            display_message(f"{tr('item', item.name)} {tr('msg', 'does not use fuel.')}")
             return
 
         fuel_item, f_source, f_index, f_container = self.find_fuel(item.fuel_type)
@@ -98,7 +98,7 @@ class PlayerCombat:
         dur_needed = max_dur - (item.durability or 0)
         
         if dur_needed <= 0:
-            display_message(f"{item.name} {tr('msg', 'durability is already full.')}")
+            display_message(f"{tr('item', item.name)} {tr('msg', 'durability is already full.')}")
             return
 
         if fuel_item.load <= 0:
@@ -107,7 +107,7 @@ class PlayerCombat:
 
         fuel_item.load -= 1
         item.durability = max_dur
-        display_message(f"{tr('msg', 'Used 1')} {fuel_item.name} {tr('msg', 'to reload')} {item.name}. {tr('msg', 'Durability set to:')} {item.durability:.0f}")
+        display_message(f"{tr('msg', 'Used 1')} {fuel_item.name} {tr('msg', 'to reload')} {tr('item', item.name)}. {tr('msg', 'Durability set to:')} {item.durability:.0f}")
 
         if fuel_item.load <= 0:
             f_inv = self._get_source_inventory(f_source, f_container)

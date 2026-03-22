@@ -135,7 +135,7 @@ class CraftingModal(BaseModal):
                 if item:
                     locations.append((container_list, i, item, 'list', path))
                     if hasattr(item, 'inventory') and item.inventory:
-                        extract_list(item.inventory, path + [item.name])
+                        extract_list(item.inventory, path + [tr('item', item.name)])
 
         extract_list(self.player.inventory, ["Inventory"])
         
@@ -144,7 +144,7 @@ class CraftingModal(BaseModal):
             if item:
                 locations.append((self.player.belt, i, item, 'fixed_list', ["Belt"]))
                 if hasattr(item, 'inventory') and item.inventory:
-                    extract_list(item.inventory, ["Belt", item.name])
+                    extract_list(item.inventory, ["Belt", tr('item', item.name)])
                     
         protected_slots = ['arms', 'legs', 'body', 'feet', 'hands']
         for k in list(self.player.clothes.keys()):
@@ -153,7 +153,7 @@ class CraftingModal(BaseModal):
                 if str(k).lower() not in protected_slots:
                     locations.append((self.player.clothes, k, item, 'dict', ["Gear", str(k).capitalize()]))
                 if hasattr(item, 'inventory') and item.inventory:
-                    extract_list(item.inventory, ["Gear", str(k).capitalize(), item.name])
+                    extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
                     
         if self.player.backpack:
             locations.append((self.player, 'backpack', self.player.backpack, 'attr', ["Backpack"]))
@@ -182,7 +182,7 @@ class CraftingModal(BaseModal):
             
             have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in search_items 
-                       if item.name in valid_names)
+                       if tr('item', item.name) in valid_names)
             
             if have < needed: return False
         return True
@@ -429,7 +429,7 @@ class CraftingModal(BaseModal):
         
         available_items = []
         for container, key, item, ctype, path in locs:
-            if item.name in names:
+            if tr('item', item.name) in names:
                 available_items.append((item, path))
         
         line_height = 24
@@ -456,7 +456,7 @@ class CraftingModal(BaseModal):
                 
                 qty_str = f"x{item.load}" if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
                 breadcrumb = " > ".join(path)
-                s = font_small.render(f"{item.name} ({qty_str}) | {breadcrumb}", True, WHITE)
+                s = font_small.render(f"{tr('item', item.name)} ({qty_str}) | {breadcrumb}", True, WHITE)
                 
                 row_w = dash_w + (25 if img else 0) + s.get_width()
                 if row_w > max_w: max_w = row_w
@@ -503,8 +503,8 @@ class CraftingModal(BaseModal):
             for container, key, item, ctype, path in locations:
                 if removed_check >= to_remove: break
 
-                if item.name in valid_names:
-                    if hasattr(item, 'inventory') and item.inventory: return f"{tr('msg', 'Cannot use')} {item.name}: {tr('msg', 'It contains items!')}"
+                if tr('item', item.name) in valid_names:
+                    if hasattr(item, 'inventory') and item.inventory: return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
 
                     item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                     take = min(to_remove - removed_check, item_qty)

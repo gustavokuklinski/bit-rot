@@ -3,6 +3,7 @@ import random
 from core.entities.item.item import Item
 from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
 from core.messages import display_message
+from core.data.localization import tr
 
 class PlayerInventory:
     def get_total_inventory_slots(self):
@@ -45,7 +46,7 @@ class PlayerInventory:
                 return None
             for i, item in enumerate(container_item.inventory):
                 if item:
-                    if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
+                    if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
                         return item, 'container', i, container_item
                     result = search_recursive(item)
                     if result: return result
@@ -53,21 +54,21 @@ class PlayerInventory:
 
         for i, item in enumerate(self.belt):
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
                     return item, 'belt', i, None
                 res = search_recursive(item)
                 if res: return res
 
         for i, item in enumerate(self.inventory):
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
                     return item, 'inventory', i, None
                 res = search_recursive(item)
                 if res: return res
         
         for slot, item in self.clothes.items():
             if item:
-                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and item.name == ammo_type_needed:
+                if item.item_type.startswith('consumable') and (item.load or 0) > 0 and tr('item', item.name) == ammo_type_needed:
                     return item, 'gear', slot, None
                 res = search_recursive(item)
                 if res: return res
@@ -132,7 +133,7 @@ class PlayerInventory:
                     source_inventory[item_index] = None
                 else:
                     source_inventory.pop(item_index)
-                display_message(f"{tr('msg', 'Equipped')} {item.name} {tr('msg', 'to belt.')}")
+                display_message(f"{tr('msg', 'Equipped')} {tr('item', item.name)} {tr('msg', 'to belt.')}")
                 return True
         return False
     
@@ -153,7 +154,7 @@ class PlayerInventory:
         if quantity == 'all' or quantity >= item.load:
             item_to_drop = self.drop_item(game, source, index, container_item)
         elif quantity > 0 and item.load > 0:
-            item_to_drop = Item.create_from_name(item.name)
+            item_to_drop = Item.create_from_name(tr('item', item.name))
             if not item_to_drop: return
 
             transfer_amount = min(item.load, quantity)
@@ -230,7 +231,7 @@ class PlayerInventory:
                         game.items_on_ground.remove(item)
                 dest_name = targets[0]['name'] if targets else "Inventory"
                 
-                display_message(f"{tr('msg', 'Merged all of')} {item.name} {tr('msg', 'into')} {dest_name}.")
+                display_message(f"{tr('msg', 'Merged all of')} {tr('item', item.name)} {tr('msg', 'into')} {dest_name}.")
                 return
                 
             if remaining_load > 0:
@@ -246,7 +247,7 @@ class PlayerInventory:
                     target_name = target['name']
 
                     if len(target_inv) < target_cap:
-                        new_stack = Item.create_from_name(item.name)
+                        new_stack = Item.create_from_name(tr('item', item.name))
                         new_stack.load = remaining_load
                         new_stack.durability = item.durability 
                         target_inv.append(new_stack)
@@ -261,7 +262,7 @@ class PlayerInventory:
                             if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
 
-                        display_message(f"{tr('msg', 'Sent')} {remaining_load} {item.name} {tr('msg', 'to')} {target_name}.")
+                        display_message(f"{tr('msg', 'Sent')} {remaining_load} {tr('item', item.name)} {tr('msg', 'to')} {target_name}.")
                         transferred = True
                         break 
                 
@@ -341,26 +342,26 @@ class PlayerInventory:
             if not hasattr(container_item, 'inventory') or not container_item.inventory: return None
             for i, item in enumerate(container_item.inventory):
                 if item:
-                    if 'Water' in item.name and (item.load or 0) > 0: return item, 'container', i, container_item
+                    if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'container', i, container_item
                     result = search_recursive(item)
                     if result: return result
             return None
 
         for i, item in enumerate(self.belt):
             if item:
-                if 'Water' in item.name and (item.load or 0) > 0: return item, 'belt', i, None 
+                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'belt', i, None 
                 res = search_recursive(item)
                 if res: return res
 
         for i, item in enumerate(self.inventory):
             if item:
-                if 'Water' in item.name and (item.load or 0) > 0: return item, 'inventory', i, None 
+                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'inventory', i, None 
                 res = search_recursive(item)
                 if res: return res
 
         for slot, item in self.clothes.items():
             if item:
-                if 'Water' in item.name and (item.load or 0) > 0: return item, 'gear', slot, None
+                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'gear', slot, None
                 res = search_recursive(item)
                 if res: return res
 

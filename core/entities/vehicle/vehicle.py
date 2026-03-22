@@ -475,7 +475,7 @@ class Vehicle:
 
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
             if item_type != 'car_key':
-                print(f"[DEBUG] Item '{item.name}' rejected. Type is '{item_type}', expected 'car_key'.")
+                print(f"[DEBUG] Item '{tr('item', item.name)}' rejected. Type is '{item_type}', expected 'car_key'.")
                 return False
 
             required_val = str(self.required_key_id).strip().lower()
@@ -515,7 +515,7 @@ class Vehicle:
 
     def add_equipment(self, item, slot):
         if not self.can_equip(item, slot):
-            display_message(f"{tr('msg', 'Cannot equip')} {item.name} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
+            display_message(f"{tr('msg', 'Cannot equip')} {tr('item', item.name)} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
             return False
 
         old_item = self.equipment.pop(slot, None)

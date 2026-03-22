@@ -9,6 +9,7 @@ from core.ui.inventory_modal import get_belt_hud_slot_rect, get_inventory_slot_r
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
+from core.data.localization import tr
 
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
@@ -286,7 +287,7 @@ def handle_context_menu_click(game, mouse_pos):
                     old_backpack = game.player.backpack
                     removed = remove_from_source(source, index, container_item)
                     game.player.backpack = item
-                    print(f"Equipped {item.name} as backpack.")
+                    print(f"Equipped {tr('item', item.name)} as backpack.")
 
                     if old_backpack:
                         placed = False
@@ -361,7 +362,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.player.belt[bi] = item
                                 if 0 <= index < len(game.items_on_ground):
                                     game.items_on_ground.pop(index)
-                                print(f"Picked up and equipped {item.name} to belt slot {bi+1}.")
+                                print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
                                 placed = True
                                 break
                         if not placed:
@@ -369,7 +370,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.player.inventory.append(item)
                                 if 0 <= index < len(game.items_on_ground):
                                     game.items_on_ground.pop(index)
-                                print(f"Picked up {item.name} into inventory.")
+                                print(f"Picked up {tr('item', item.name)} into inventory.")
                             else:
                                 print("No space to equip or pick up the item.")
                         if getattr(item, 'item_type', None) == 'weapon':
@@ -381,9 +382,9 @@ def handle_context_menu_click(game, mouse_pos):
                 if getattr(item, 'liquid', False):
                     if hasattr(item, 'load') and item.load is not None and item.load > 1:
                         item.load -= 1
-                        print(f"A portion of {item.name} spills.")
+                        print(f"A portion of {tr('item', item.name)} spills.")
                     else:
-                        print(f"The {item.name} spills.")
+                        print(f"The {tr('item', item.name)} spills.")
                         if source == 'inventory' and 0 <= index < len(game.player.inventory):
                             game.player.inventory.pop(index)
                         elif source == 'belt' and 0 <= index < len(game.player.belt):
@@ -395,7 +396,7 @@ def handle_context_menu_click(game, mouse_pos):
                 
             elif option == 'Drop all':
                 if getattr(item, 'liquid', False):
-                    print(f"All of the {item.name} spills.")
+                    print(f"All of the {tr('item', item.name)} spills.")
                     if source == 'inventory' and 0 <= index < len(game.player.inventory):
                         game.player.inventory.pop(index)
                     elif source == 'belt' and 0 <= index < len(game.player.belt):
@@ -413,7 +414,7 @@ def handle_context_menu_click(game, mouse_pos):
             
             elif option == 'Drop':
                 if getattr(item, 'liquid', False):
-                    print(f"The {item.name} spills.")
+                    print(f"The {tr('item', item.name)} spills.")
                     if source == 'backpack':
                         game.player.backpack = None
                     elif source == 'gear':
@@ -570,7 +571,7 @@ def handle_context_menu_click(game, mouse_pos):
                         item_to_grab = item
                         
                         # Convert "Campfire on" to "Campfire off" when picking up
-                        if item.name == "Campfire on":
+                        if tr('item', item.name) == "Campfire on":
                             from core.entities.item.item import Item
                             new_item = Item.create_from_name("Campfire off")
                             if new_item:

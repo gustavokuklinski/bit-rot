@@ -461,7 +461,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
                     close_modal(item)
                     self.belt[i] = None
-                    display_message(f"{tr('msg', 'Discarded empty')} {item.name}.")
+                    display_message(f"{tr('msg', 'Discarded empty')} {tr('item', item.name)}.")
 
         if self.backpack:
             Item.cleanup_disposables(self.backpack.inventory, game.modals, msg)

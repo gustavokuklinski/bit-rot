@@ -5,6 +5,7 @@ import random # Added for %rot vehicle
 from core.data.config import *
 from core.events.game_actions import try_grab_item
 from core.ui.crafting_modal import CraftingModal
+from core.data.localization import tr
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -448,10 +449,10 @@ def handle_keyboard_events(game, event):
                         elif item.item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
                             if game.player.active_weapon == item:
                                 game.player.active_weapon = None
-                                print(f"Unequipped {item.name}.")
+                                print(f"Unequipped {tr('item', item.name)}.")
                             else:
                                 game.player.active_weapon = item
-                                print(f"Equipped {item.name}.")
+                                print(f"Equipped {tr('item', item.name)}.")
                     else:
                         game.player.active_weapon = None
                         print(f"Belt slot {slot_index + 1} is empty. Unequipped.")

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language name="pt_BR">
+    
+    <trait>
+        <trait name="Unemployed" translation_trait="Desempregado" />
+        <trait name="Nurse" translation_trait="Enfermeiro(a)" />
+        <trait name="Police Officer" translation_trait="Policial" />
+        <trait name="Scientist" translation_trait="Cientista" />
+        <trait name="CEO assistant" translation_trait="Assistente de CEO" />
+        <trait name="Mechanic" translation_trait="Mecânico" />
+        <trait name="Spy" translation_trait="Espião" />
+        
+        <trait name="Vaccine" translation_trait="Vacina" />
+        <trait name="Athletic" translation_trait="Atlético" />
+        <trait name="Runner" translation_trait="Corredor" />
+        <trait name="Strong" translation_trait="Forte" />
+        <trait name="Luck" translation_trait="Sorte" />
+        <trait name="Light hands" translation_trait="Mãos Leves" />
+        <trait name="Eagle Eyed" translation_trait="Olhos de Águia" />
+        <trait name="Healthy" translation_trait="Saudável" />
+        <trait name="Rested" translation_trait="Descansado" />
+        <trait name="Camel" translation_trait="Camelo" />
+        <trait name="Iron Stomach" translation_trait="Estômago de Ferro" />
+        <trait name="Fit" translation_trait="Em Forma" />
+        <trait name="Brawler" translation_trait="Lutador" />
+        <trait name="Shooter" translation_trait="Atirador" />
+        <trait name="Weak" translation_trait="Fraco" />
+        <trait name="Smoker" translation_trait="Fumante" />
+        <trait name="Drunk" translation_trait="Bêbado" />
+        <trait name="Illnes" translation_trait="Doença" />
+        <trait name="Sedentary" translation_trait="Sedentário" />
+        <trait name="Myopia" translation_trait="Miopia" />
+        <trait name="Frail" translation_trait="Frágil" />
+        <trait name="Sleepy" translation_trait="Sonolento" />
+        <trait name="High thirst" translation_trait="Muita Sede" />
+        <trait name="Sweet tooth" translation_trait="Viciado em Doce" />
+        <trait name="Unfit" translation_trait="Inapto" />
+        <trait name="Clumsy" translation_trait="Desajeitado" />
+    </trait>
+
+    <trait_tooltip>
+        <trait_tooltip name="Fast pick pocket" translation_trait_tooltip="Batedor de carteiras rápido" />
+        <trait_tooltip name="Knows basic medicine" translation_trait_tooltip="Conhece medicina básica" />
+        <trait_tooltip name="The main security skills" translation_trait_tooltip="Principais habilidades de segurança" />
+        <trait_tooltip name="Higher intelligence skills" translation_trait_tooltip="Habilidades superiores de inteligência" />
+        
+        <trait_tooltip name="-5% infection rate" translation_trait_tooltip="-5% de taxa de infecção" />
+        <trait_tooltip name="+10% stamina recovery, +5% Speed" translation_trait_tooltip="+10% de recuperação de energia, +5% de Velocidade" />
+        <trait_tooltip name="+5% stamina recovery, +15% Speed" translation_trait_tooltip="+5% de recuperação de energia, +15% de Velocidade" />
+        <trait_tooltip name="+5 Level and +2% XP on Strength | +2 Level and +1% XP on Fitness" translation_trait_tooltip="+5 Níveis e +2% de XP em Força | +2 Níveis e +1% de XP em Aptidão Física" />
+        <trait_tooltip name="+1 Level and +2% XP on Lucky" translation_trait_tooltip="+1 Nível e +2% de XP em Sorte" />
+        <trait_tooltip name="+2% XP and +3 level Agility" translation_trait_tooltip="+2% de XP e +3 níveis em Agilidade" />
+        <trait_tooltip name="+25% Vision Radius" translation_trait_tooltip="+25% de Campo de Visão" />
+        <trait_tooltip name="-15% Damage taken" translation_trait_tooltip="-15% de Dano recebido" />
+        <trait_tooltip name="+15% tireness recovery" translation_trait_tooltip="+15% de recuperação de cansaço" />
+        <trait_tooltip name="20% faster water recovery" translation_trait_tooltip="20% de recuperação mais rápida de água" />
+        <trait_tooltip name="15% faster food recovery" translation_trait_tooltip="15% de recuperação mais rápida de comida" />
+        <trait_tooltip name="+2 XP level fitness" translation_trait_tooltip="+2 de XP no nível de aptidão física" />
+        <trait_tooltip name="+2% XP level melee" translation_trait_tooltip="+2% de XP em corpo a corpo" />
+        <trait_tooltip name="+2 level and +2% XP on ranged weapons" translation_trait_tooltip="+2 níveis e +2% de XP em armas de fogo" />
+        <trait_tooltip name="-2% XP level strength gain" translation_trait_tooltip="-2% de XP no ganho de força" />
+        <trait_tooltip name="-15% slower recovery stamina and +15% faster increase anxiety" translation_trait_tooltip="-15% de recuperação de energia e +15% de aumento rápido de ansiedade" />
+        <trait_tooltip name="-15% XP agility penality and +15% faster increase anxiety" translation_trait_tooltip="-15% de penalidade de XP em agilidade e +15% de aumento rápido de ansiedade" />
+        <trait_tooltip name="+15% infection rate" translation_trait_tooltip="+15% de taxa de infecção" />
+        <trait_tooltip name="-15% stamina, +15% tireness, -10% Speed" translation_trait_tooltip="-15% de energia, +15% de cansaço, -10% de Velocidade" />
+        <trait_tooltip name="-20% Aiming XP, -35% View Radius" translation_trait_tooltip="-20% de XP de Mira, -35% de Campo de Visão" />
+        <trait_tooltip name="+15% Damage taken" translation_trait_tooltip="+15% de Dano recebido" />
+        <trait_tooltip name="-20% tireness recovery" translation_trait_tooltip="-20% de recuperação de cansaço" />
+        <trait_tooltip name="-25% water recovery" translation_trait_tooltip="-25% de recuperação de água" />
+        <trait_tooltip name="-20% food recovery" translation_trait_tooltip="-20% de recuperação de comida" />
+        <trait_tooltip name="-2% XP fitness level" translation_trait_tooltip="-2% de XP no nível de aptidão física" />
+        <trait_tooltip name="-2% XP melee level, -5% Speed" translation_trait_tooltip="-2% de XP em corpo a corpo, -5% de Velocidade" />
+    </trait_tooltip>
+
+</language>

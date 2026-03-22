@@ -3,6 +3,7 @@ from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.container_modal import _draw_slots
 from core.ui.tabs import Tabs
+from core.data.localization import tr
 
 def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Gear (G)")
@@ -24,7 +25,7 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
             # Check if item exists and acts as a container
             if item and hasattr(item, 'capacity') and item.capacity and item.capacity > 0:
                  if hasattr(item, 'inventory'):
-                     default_name = item.name
+                     default_name = tr('item', item.name)
                      # Handle duplicates (e.g. two items with same name)
                      count = sum(1 for label in container_mapping if label.startswith(default_name))
                      label = f"{default_name} #{count + 1}" if count > 0 else default_name
@@ -151,4 +152,4 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
                 else:
                     pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
             except Exception as e:
-                print(f"Error drawing gear item {item.name}: {e}")
+                print(f"Error drawing gear item {tr('item', item.name)}: {e}")

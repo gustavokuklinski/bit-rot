@@ -134,7 +134,7 @@ def draw_health_tab(surface, player, modal, assets):
         for slot in player.clothes_slots:
             item = player.clothes.get(slot)
             if item:
-                template = ITEM_TEMPLATES.get(item.name)
+                template = ITEM_TEMPLATES.get(tr('item', item.name))
                 if template and 'properties' in template and 'hide_cloth' in template['properties']:
                     hidden_slots.update(template['properties']['hide_cloth'])
         

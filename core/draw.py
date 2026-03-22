@@ -918,7 +918,7 @@ def draw_game(game):
         game.game_screen.blit(tip_s, tip_rect.topleft)
         pygame.draw.rect(game.game_screen, WHITE, tip_rect, 1)
 
-        name_surf = game.assets['font'].render(f"{item.name}", True, WHITE)
+        name_surf = game.assets['font'].render(f"{tr('item', item.name)}", True, WHITE)
         type_surf = game.assets['font'].render(f"Type: {item.item_type}", True, GRAY)
         game.game_screen.blit(name_surf, (tip_rect.x + 8, tip_rect.y + 6))
         game.game_screen.blit(type_surf, (tip_rect.x + 8, tip_rect.y + 26))

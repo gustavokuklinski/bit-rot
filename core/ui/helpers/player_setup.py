@@ -305,7 +305,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 if row_rect_abs.collidepoint(mouse_pos): hovered_trait_id = p_id
                 trait_cost = TRAIT_DEFINITIONS.get(p_id, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
-                name_surf = font.render(TRAIT_DEFINITIONS[p_id].get('name', p_id), True, WHITE)
+                base_name = TRAIT_DEFINITIONS[p_id].get('name', p_id)
+                name_surf = font.render(tr('trait', base_name), True, WHITE)
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
                 
                 prof_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
@@ -367,7 +368,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     hovered_trait_id = trait_name
                 trait_cost = TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
-                name_surf = font.render(TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize()), True, WHITE)
+                base_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
+                name_surf = font.render(tr('trait', base_name), True, WHITE)
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
                 
                 content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
@@ -448,7 +450,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 
                 # Look up the actual name from TRAIT_DEFINITIONS, fallback to capitalized ID
                 display_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
-                content_surface.blit(font.render(display_name, True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
+                content_surface.blit(font.render(tr('trait', display_name), True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
 
             clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
             y_offset += 35
@@ -666,8 +668,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
         trait_data = TRAIT_DEFINITIONS.get(hovered_trait_id)
         if trait_data and trait_data.get('tooltip'):
             t_item = SimpleNamespace(
-                name=trait_data.get('name', hovered_trait_id),
-                tooltip_text=trait_data.get('tooltip'),
+                name=tr('trait', trait_data.get('name', hovered_trait_id)),
+                tooltip_text=tr('trait_tooltip', trait_data.get('tooltip')),
                 item_type=None,
                 durability=None,
                 defence=None,

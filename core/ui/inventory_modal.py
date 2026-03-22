@@ -344,12 +344,12 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     # 3. Check Belt Slots
     for item in player.belt:
         if item:
-            register_container(item, item.name)
+            register_container(item, tr('item', item.name))
 
     # 4. Check Main Inventory Slots for nested containers
     for item in player.inventory:
         if item:
-            register_container(item, item.name)
+            register_container(item, tr('item', item.name))
 
     modal['tabs_data'] = tabs_data
     modal['container_mapping'] = container_mapping

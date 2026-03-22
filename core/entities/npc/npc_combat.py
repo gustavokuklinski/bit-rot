@@ -51,7 +51,7 @@ class NPCCombat:
     def _try_reload(self, weapon, game):
         if not weapon.ammo_type: return False
         for item in self.inventory:
-            if item.name == weapon.ammo_type and item.load > 0:
+            if tr('item', item.name) == weapon.ammo_type and item.load > 0:
                 needed = weapon.capacity - weapon.load
                 amount = min(needed, item.load)
                 weapon.load += amount
