@@ -66,7 +66,7 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
 
     # --- 4. Footer ---
     current_year = datetime.now().year
-    footer_str = f"Developed by: Gustavo Kuklinski - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
+    footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
     footer_text = font_notification.render(footer_str, True, (100, 100, 100))
     footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)

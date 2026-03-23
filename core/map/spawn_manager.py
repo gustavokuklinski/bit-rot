@@ -253,10 +253,13 @@ def manage_dynamic_npcs(game):
 
 def spawn_static_npcs(game, building_tiles):
     for (tx, ty) in building_tiles:
-        if random.random() < NPC_STATIC_SPAWN:
+        if random.random() < core.data.config.NPC_STATIC_PERCENT:
             px, py = tx * TILE_SIZE, ty * TILE_SIZE
             if not any(ob.collidepoint(px, py) for ob in game.obstacles):
-                npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
+                # --- NEW: Determine if this spawned Static NPC will be a Quest NPC ---
+                is_quest = random.random() < core.data.config.NPC_QUEST_PERCENT
+                
+                npc = NPC(px, py, game, is_static=True, is_quest=is_quest, layer=game.current_layer_index)
                 game.npcs.add(npc)
 
 def spawn_l2_population(game, count=10, target_layer=None):

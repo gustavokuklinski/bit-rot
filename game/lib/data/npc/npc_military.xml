@@ -1,4 +1,4 @@
-<npc type="military" spawn_weight="20">
+<npc type="military" spawn_weight="20" is_friendly="false" is_static="false">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

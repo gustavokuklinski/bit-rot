@@ -62,6 +62,16 @@ class NPCCombat:
 
     def take_damage(self, damage, game, attacker=None):
         if self.is_dead: return True
+        
+        # --- Quest NPC Invulnerability & Hostility ---
+        if getattr(self, 'quest_npc', False):
+            if attacker != game.player:
+                return False
+            else:
+                self.is_friendly = False
+                self.is_static = False
+                self.state = 'chasing'
+                
         self.health -= damage
         self.health_bar_timer = 180
         

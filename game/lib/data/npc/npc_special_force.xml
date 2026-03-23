@@ -1,4 +1,4 @@
-<npc type="special_force" spawn_weight="5">
+<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

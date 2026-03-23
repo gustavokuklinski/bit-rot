@@ -8,6 +8,7 @@ from core.entities.item.item import Item, Projectile, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 from core.messages import display_message
 from core.data.config import *
+from faker import Faker
 
 # Mixins
 from core.entities.npc.npc_data import NPCData
@@ -22,27 +23,48 @@ CLOTHING_COLORS = [
 ]
 
 class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
-    def __init__(self, x, y, game, is_static=False, layer=None):
+    def __init__(self, x, y, game, is_static=False, is_quest=None, layer=None):
         if not NPCData.NPC_TEMPLATES:
             NPCData.load_templates()
 
-        if NPCData.NPC_TEMPLATES:
-            # --- NEW: Weighted Template Selection ---
-            #type_weights = {
-            #    'common': 55,
-            #    'worker': 20,
-            #    'doctor': 10,
-            #    'military': 20,
-            #    'special_force': 5
-            #}
-            template_weights = [t.get('spawn_weight', 10) for t in NPCData.NPC_TEMPLATES]
-  
-            template = random.choices(NPCData.NPC_TEMPLATES, weights=template_weights, k=1)[0]
+        if not hasattr(game, 'spawned_quest_npcs'):
+            game.spawned_quest_npcs = set()
 
+        if NPCData.NPC_TEMPLATES:
+            available_templates = []
+            template_weights = []
+            for t in NPCData.NPC_TEMPLATES:
+                if t.get('quest_npc') and t['type'] in game.spawned_quest_npcs:
+                    continue
+                
+                t_static = t.get('is_static', False)
+                t_quest = t.get('quest_npc', False)
+                
+                # [FIX] If the map wants a Walkable NPC (is_static=False), 
+                # strictly prevent Quest NPCs or explicitly Static templates from spawning.
+                if not is_static and (t_static or t_quest):
+                    continue
+                
+                # Filter based on is_quest override if provided
+                if is_quest is True and not t_quest:
+                    continue
+                if is_quest is False and t_quest:
+                    continue
+                    
+                available_templates.append(t)
+                template_weights.append(t.get('spawn_weight', 10))
+                
+            if available_templates:
+                template = random.choices(available_templates, weights=template_weights, k=1)[0]
+                if template.get('quest_npc'):
+                    game.spawned_quest_npcs.add(template['type'])
+            else:
+                # Fallback if filtering removed everything
+                template = random.choices(NPCData.NPC_TEMPLATES, weights=[t.get('spawn_weight', 10) for t in NPCData.NPC_TEMPLATES], k=1)[0]
         else:
             template = {
                 'type': 'common',
-                'name': "Survivor",
+                'name': "RANDOM",
                 'sex': random.choice(['Male', 'Female']),
                 'health': 100,
                 'speed': 1.0,
@@ -52,7 +74,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 'max_attack': 5,
                 'loot': [],
                 'sprites': {},
-                'clothes': {} 
+                'clothes': {},
+                'is_friendly': False,
+                'is_static': False,
+                'quest_npc': False
             }
 
         Zombie.__init__(self, x, y, template)
@@ -79,13 +104,46 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         self.base_search_range = NPC_DETECTION_RADIUS
         
-        if self.name == "Zombie" or self.name == "RANDOM":
-             self.name = f"Survivor {random.randint(100, 999)}"
+        name_val = template.get('name', 'RANDOM')
+        self.quest_npc = template.get('quest_npc', False)
+        template_static = template.get('is_static', False)
 
-        self.is_static = is_static
-        self.is_friendly = random.random() > NPC_HOSTILE_SPAWN
+        # Ensure Sex is explicitly defined to refine Faker generation and ID Cards
+        sex_val = template.get('sex', 'Random').capitalize()
+        if sex_val == 'Random':
+            sex_val = random.choice(['Male', 'Female'])
+        self.sex = sex_val
+
+        if name_val != 'RANDOM' and name_val != 'Zombie':
+            self.name = name_val
+            self.is_static = True
+        else:
+            self.is_static = template_static or is_static
+            
+            # Use Faker for realistic names
+            try:
+                
+                fake = Faker()
+                if self.sex == 'Male':
+                    self.name = fake.first_name_male()
+                else:
+                    self.name = fake.first_name_female()
+            except ImportError:
+                # Safe fallback if faker is missing
+                self.name = f"Survivor {random.randint(100, 999)}"
+
+        if self.quest_npc:
+            self.is_static = True
+
+        # [FIX] Enforce the user's rule cleanly: 
+        # ALL Static NPCs are Friendly (chatable), ALL Walkable NPCs are Hostile.
+        if self.is_static:
+            self.is_friendly = True
+        else:
+            self.is_friendly = False
+            
+        self.state = 'wandering' if not self.is_static else 'idle'
         self.is_following = False
-        self.state = 'wandering' if not is_static else 'idle'
 
         self.start_x = x
         self.start_y = y

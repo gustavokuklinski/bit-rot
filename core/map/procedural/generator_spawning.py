@@ -41,7 +41,7 @@ class ProceduralGeneratorSpawning:
         
         # 1. Configuration
         max_npcs = NPC_MAX_CHUNK
-        static_chance = NPC_STATIC_SPAWN
+        static_chance = NPC_STATIC_PERCENT
         
         if max_npcs <= 0: return
 
@@ -56,10 +56,10 @@ class ProceduralGeneratorSpawning:
                 ground = layers['ground'][y][x]
                 if ground == self.water_tile: continue 
                 
-                # [NEW] Differentiate building tiles from outside tiles
-                if 'house_floor_01' in ground:
+                # [NEW] Strict tile rules for NPC spawn percentages
+                if ground == 'house_floor_01':
                     building_tiles.append((x, y))
-                elif ground in ['asphalt_01', 'sand_01', 'dirty_01']:
+                elif ground in ['asphalt_01', 'sand_01', 'dirty_01', 'bg_grass']:
                     outside_tiles.append((x, y))
         
         total_candidates = len(building_tiles) + len(outside_tiles)
@@ -125,7 +125,7 @@ class ProceduralGeneratorSpawning:
         """
         # 1. Config
         max_npcs = NPC_MAX_CHUNK
-        static_chance = NPC_STATIC_SPAWN
+        static_chance = NPC_STATIC_PERCENT
         if max_npcs <= 0: return
         
         # 2. Gather Candidates in L2 Layers

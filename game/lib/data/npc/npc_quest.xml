@@ -1,8 +1,6 @@
-<npc type="doctor" spawn_weight="10" is_friendly="false" is_static="false">
+<npc type="quest" quest_npc="true" is_static="true">
     <name value="RANDOM" />
     <sex value="RANDOM" />
-
-    <xp min="1" max="15" />
     
     <stats>
         <health min="100" max="100" />
@@ -12,15 +10,15 @@
     </stats>
     
     <clothes>
-        <head><cloth name="Medical Mask" /></head>
+        <head></head>
         <util></util>
         <hair></hair>
         <facial></facial>
-        <feet><cloth name="Shoes" /></feet>
+        <feet></feet>
         <hand></hand>
         <body></body>
-        <arms><cloth name="Medical Vest" /></arms>
-        <legs><cloth name="Jeans Pants" /></legs>
+        <arms></arms>
+        <legs></legs>
     </clothes>
 
     <visuals>
@@ -30,11 +28,6 @@
     </visuals>
     
     <loot>
-        <item item="Zombie Meat" chance="1.0" />
-        <item item="Vaccine" chance="1.0" />
-        <item item="Medicine Vol.1" chance="1.0" />
-        <item item="Sewing Kit" chance="1.0" />
-        <item item="Medical Kit" chance="1.0" />
         <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
 
