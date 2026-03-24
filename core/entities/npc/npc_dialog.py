@@ -22,44 +22,78 @@ class NPCDialog:
             tree = ET.parse(path)
             root = tree.getroot()
             
-            # [CHANGED] Iterate through <node> elements instead of flat <options>
             for node in root.findall('node'):
                 node_id = node.get('id')
                 if not node_id: continue
                 
                 NPCDialog.NPC_DIALOGS[node_id] = []
                 
-                for opt in node.findall('options'):
+                # --- [NEW] Helper to parse options (both Flat and Quest-nested) ---
+                def parse_option(opt, q_need='', q_reward='', q_priority=None):
                     question = opt.get('player_question')
                     answer = opt.get('npc_answer')
-                    req_level = opt.get('req_level')
-                    gain_xp = opt.get('gain_xp')
-                    dialog_type = opt.get('dialog_type')
-                    # Read priority (default 100) and unlock_flag
-                    try:
-                        priority = int(opt.get('priority', '100'))
-                    except ValueError:
-                        priority = 100
-                        
-                    unlock_flag = opt.get('unlock_flag') # Can be None
-                    npc_state_friendly = opt.get('npc_state_friendly') # Returns string "true"/"false" or None
-                    npc_state_static = opt.get('npc_state_static')     # Returns string "true"/"false" or None
-                    award_item = opt.get('award_item')
-
+                    
                     if question and answer:
+                        # Dynamically replace the wildcards
+                        if q_need:
+                            question = question.replace('[quest_need]', q_need)
+                            answer = answer.replace('[quest_need]', q_need)
+                        if q_reward:
+                            question = question.replace('[quest_reward]', q_reward)
+                            answer = answer.replace('[quest_reward]', q_reward)
+
+                        req_level = opt.get('req_level')
+                        gain_xp = opt.get('gain_xp')
+                        dialog_type = opt.get('dialog_type')
+                        
+                        try:
+                            priority = q_priority if q_priority is not None else int(opt.get('priority', '100'))
+                        except ValueError:
+                            priority = 100
+                            
+                        unlock_flag = opt.get('unlock_flag')
+                        npc_state_friendly = opt.get('npc_state_friendly')
+                        npc_state_static = opt.get('npc_state_static')
+                        
+                        # Replace wildcards in action hooks as well
+                        award_item = opt.get('award_item')
+                        if award_item and q_reward:
+                            award_item = award_item.replace('[quest_reward]', q_reward)
+                            
+                        req_item = opt.get('req_item')
+                        if req_item and q_need:
+                            req_item = req_item.replace('[quest_need]', q_need)
+
                         NPCDialog.NPC_DIALOGS[node_id].append({
                             'q': question, 
                             'a': answer,
                             'priority': priority,
                             'unlock_flag': unlock_flag,
-                            'npc_state_friendly': npc_state_friendly, # Store raw string
-                            'npc_state_static': npc_state_static,     # Store raw string
+                            'npc_state_friendly': npc_state_friendly,
+                            'npc_state_static': npc_state_static,
                             'award_item': award_item,
+                            'req_item': req_item,      # [NEW] Stored for validation 
                             'req_level': req_level,
                             'gain_xp': gain_xp,
                             'dialog_type': dialog_type,
                             'node_id': node_id
                         })
+
+                # 1. Parse standard flat <options>
+                for opt in node.findall('options'):
+                    parse_option(opt)
+                    
+                # 2. Parse nested <quest> elements and their <options>
+                for quest in node.findall('quest'):
+                    q_need = quest.get('quest_need', '')
+                    q_reward = quest.get('quest_reward', '')
+                    try:
+                        q_priority = int(quest.get('priority', '100'))
+                    except ValueError:
+                        q_priority = 100
+                        
+                    for opt in quest.findall('options'):
+                        parse_option(opt, q_need, q_reward, q_priority)
                     
         except Exception as e:
             print(f"NPC Error: Could not load dialogs: {e}")
@@ -77,7 +111,11 @@ class NPCDialog:
         # 2. Determine Active Nodes (Mandatory + Unlocked)
         active_nodes = mandatory_nodes.union(self.dialog_flags)
         
-        # [CHANGED] Sort the nodes. 
+        # [NEW] Automatically enable "quest" node ONLY for Quest NPCs
+        if getattr(self, 'quest_npc', False):
+            active_nodes.add("quest")
+        
+        # Sort the nodes
         sorted_nodes = sorted(list(active_nodes))
         player_lucky = self.game.player.progression.get_lucky(self.game.player)
 
@@ -87,14 +125,12 @@ class NPCDialog:
 
             if not node_options: continue
                 
-            # [NEW] Filter options based on Lucky level and "once" status
             valid_options = []
             for opt in node_options:
-                # Check dialog_type="once"
-                if opt.get('dialog_type') == 'once':
-                    dialog_key = f"{node_id}_{opt['q']}"
-                    if dialog_key in self.game.player.dialog_history:
-                        continue
+                # Dialogs strictly never repeat
+                dialog_key = f"{node_id}_{opt['q']}"
+                if dialog_key in self.game.player.dialog_history:
+                    continue
 
                 # Check req_level="[lucky:3]"
                 req = opt.get('req_level')
@@ -104,6 +140,16 @@ class NPCDialog:
                         if player_lucky < req_val:
                             continue
                     except: pass
+                
+                # --- [NEW] Check req_item for Quest Turn-ins ---
+                req_item = opt.get('req_item')
+                if req_item:
+                    # Strip the brackets to check raw name
+                    item_name = req_item.replace('[', '').replace(']', '')
+                    # Validate against player inventory
+                    has_item = any(i.name == item_name for i in self.game.player.inventory)
+                    if not has_item:
+                        continue # Hide option if player doesn't have the item
                 
                 valid_options.append(opt)
 
@@ -125,7 +171,7 @@ class NPCDialog:
             if selected_opt:
                 options.append(selected_opt)
             
-        # 4. Format Text
+        # 4. Format Text Wildcards
         inv_str = ", ".join([i.name for i in self.inventory]) if self.inventory else "nothing"
         cloth_str = ", ".join([i.name for i in self.clothes.values()]) if self.clothes else "ragged clothes"
         

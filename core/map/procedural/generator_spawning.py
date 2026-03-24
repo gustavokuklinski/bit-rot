@@ -37,7 +37,7 @@ class ProceduralGeneratorSpawning:
         place_zombies(count_woods, woods_tiles)
 
     def _scatter_npcs(self, layers, mask, w, h):
-        # [UPDATED] NPC Scattering with strict distribution limits
+        # [UPDATED] NPC Scattering with strict distribution limits & new Markers
         
         # 1. Configuration
         max_npcs = NPC_MAX_CHUNK
@@ -69,13 +69,32 @@ class ProceduralGeneratorSpawning:
         count_to_spawn = min(total_candidates, max_npcs)
         
         num_static = 0
+        num_quest = 0
         if static_chance > 0:
             expected = int(count_to_spawn * static_chance)
             num_static = max(1, expected) # At least 1 Static if chance > 0
+            
+            # [NEW] Determine Quest NPCs from the static pool
+            try:
+                quest_chance = NPC_QUEST_PERCENT
+            except NameError:
+                quest_chance = 0.1 # Fallback
+                
+            expected_quest = int(num_static * quest_chance)
+            num_quest = max(0, expected_quest)
+            num_static -= num_quest
         
-        # Limit Static NPCs strictly to available building tiles
-        num_static = min(num_static, len(building_tiles))
-        num_normal = count_to_spawn - num_static
+        # Limit Static/Quest NPCs strictly to available building tiles
+        total_indoor = num_static + num_quest
+        if total_indoor > len(building_tiles):
+            total_indoor = len(building_tiles)
+            if total_indoor > 0:
+                num_quest = int(total_indoor * (num_quest / max(1, (num_static + num_quest))))
+            else:
+                num_quest = 0
+            num_static = total_indoor - num_quest
+            
+        num_normal = count_to_spawn - (num_static + num_quest)
         
         # Limit Normal NPCs to available outside tiles
         num_normal = min(num_normal, len(outside_tiles))
@@ -108,10 +127,14 @@ class ProceduralGeneratorSpawning:
         safe_outside = get_safe_candidates(outside_tiles) if outside_tiles else []
 
         # 5. Spawn
-        if num_static > 0 and safe_building:
-            chosen_static = random.sample(safe_building, min(num_static, len(safe_building)))
-            for nx, ny in chosen_static:
-                layers['spawn'][ny][nx] = 'S'
+        if total_indoor > 0 and safe_building:
+            chosen_indoor = random.sample(safe_building, min(total_indoor, len(safe_building)))
+            for i, (nx, ny) in enumerate(chosen_indoor):
+                # [CHANGED] Use the new markers 'QNPC' and 'SNPC'
+                if i < num_quest:
+                    layers['spawn'][ny][nx] = 'QNPC'
+                else:
+                    layers['spawn'][ny][nx] = 'SNPC'
                 
         if num_normal > 0 and safe_outside:
             chosen_normal = random.sample(safe_outside, min(num_normal, len(safe_outside)))
@@ -158,14 +181,30 @@ class ProceduralGeneratorSpawning:
         count_to_spawn = min(len(potential_tiles), max_npcs)
         
         num_static = 0
+        num_quest = 0
         if static_chance > 0:
             expected = int(count_to_spawn * static_chance)
             num_static = max(1, expected) 
+            
+            try:
+                quest_chance = NPC_QUEST_PERCENT
+            except NameError:
+                quest_chance = 0.1 # Fallback
+                
+            expected_quest = int(num_static * quest_chance)
+            num_quest = max(0, expected_quest)
+            num_static -= num_quest
         
-        num_static = min(num_static, count_to_spawn)
-        num_normal = count_to_spawn - num_static
+        total_indoor = num_static + num_quest
+        total_indoor = min(total_indoor, count_to_spawn)
+        if total_indoor > 0:
+            num_quest = int(total_indoor * (num_quest / max(1, num_static + num_quest)))
+            num_static = total_indoor - num_quest
+            
+        num_normal = count_to_spawn - total_indoor
         
-        spawn_types = ['S'] * num_static + ['NPC'] * num_normal
+        # [CHANGED] Use 'QNPC' and 'SNPC' and 'NPC'
+        spawn_types = ['QNPC'] * num_quest + ['SNPC'] * num_static + ['NPC'] * num_normal
         random.shuffle(spawn_types)
         
         # 4. Spawn
@@ -174,7 +213,7 @@ class ProceduralGeneratorSpawning:
             if i < len(spawn_types):
                 spawn[ny][nx] = spawn_types[i]
                 
-        print(f"  > NPC Scatter L2: Placed {count_to_spawn} NPCs ({num_static} Static).")
+        print(f"  > NPC Scatter L2: Placed {count_to_spawn} NPCs ({num_static} Static, {num_quest} Quest).")
 
     def _scatter_vehicles(self, layers, mask, w, h):
         """

@@ -88,13 +88,15 @@ class ProceduralGeneratorRendering:
                 
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH', 'ANM']:
+                    # [CHANGED] Added 'SNPC' and 'QNPC'
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'SNPC', 'QNPC', 'VEH', 'ANM']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
                         elif s_char == 'I': color = (0, 0, 255)
-                        elif s_char == 'NPC': color = (255, 255, 0)
-                        elif s_char == 'S': color = (0, 0, 255) 
+                        elif s_char == 'NPC': color = (255, 255, 0)        # Hostile (Yellow)
+                        elif s_char == 'SNPC': color = (0, 200, 255)       # Static (Light Blue)
+                        elif s_char == 'QNPC': color = (0, 255, 128)       # Quest (Mint Green)
                         elif s_char == 'VEH': color = (255, 165, 0) 
                         elif s_char == 'ANM': color = (255, 0, 255) 
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
@@ -155,13 +157,15 @@ class ProceduralGeneratorRendering:
                 # Heatmap (Spawns)
                 if spawn:
                     s_char = spawn[y][x]
-                    if s_char in ['Z', 'P', 'I', 'NPC', 'S', 'VEH', 'ANM']:
+                    # [CHANGED] Added 'SNPC' and 'QNPC'
+                    if s_char in ['Z', 'P', 'I', 'NPC', 'SNPC', 'QNPC', 'VEH', 'ANM']:
                         color = (0, 0, 0)
                         if s_char == 'Z': color = (255, 0, 0)
                         elif s_char == 'P': color = (0, 255, 0)
                         elif s_char == 'I': color = (0, 0, 255)
-                        elif s_char == 'NPC': color = (255, 255, 0)
-                        elif s_char == 'S': color = (0, 0, 255)
+                        elif s_char == 'NPC': color = (255, 255, 0)        # Hostile (Yellow)
+                        elif s_char == 'SNPC': color = (0, 200, 255)       # Static (Light Blue)
+                        elif s_char == 'QNPC': color = (0, 255, 128)       # Quest (Mint Green)
                         elif s_char == 'VEH': color = (255, 165, 0) 
                         elif s_char == 'ANM': color = (255, 0, 255) 
                         pygame.draw.rect(heat_surf, color, (px, py, self.tile_size, self.tile_size))
