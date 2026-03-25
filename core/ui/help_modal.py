@@ -1,13 +1,14 @@
 import os
 import re
 import pygame
+import core.data.config as config_module  # <-- Explicit module reference
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.text_modal import wrap_text
 from core.data.localization import tr
 
 def draw_help_modal(surface, game, modal, assets):
-    base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial (?)")) # <--- UPDATE THIS
+    base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial (?)"))
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
 
@@ -23,16 +24,33 @@ def draw_help_modal(surface, game, modal, assets):
     modal['content_rect'] = content_rect 
 
     # --- Miniature Layout Engine (Parses HTML & Builds Grid) ---
-    if 'help_layout' not in modal:
-        layout_elements = [] # Stores all our pre-calculated rectangles and text surfaces
+    
+    # NEW: Safely and strictly get the LIVE language variable from memory
+    current_lang = getattr(config_module, 'GAME_LANGUAGE', 'en_US')
+    
+    # Check if it's the first time OR if the language has changed since last cache!
+    if 'help_layout' not in modal or modal.get('loaded_help_lang') != current_lang:
+        layout_elements = [] 
         total_height = 0
         
+        # 1. Construct Exact File Path
+        if current_lang == "en_US":
+            target_path = "./game/lib/data/help/en_US_help.html"
+        else:
+            target_path = f"./game/lib/lang/{current_lang}_help.html"
+            
+        # 2. Fallback if missing
+        if not os.path.exists(target_path):
+            print(f"[Help Modal] Warning: {target_path} not found. Falling back to default EN.")
+            target_path = "./game/lib/data/help/en_US_help.html"
+
         try:
-            with open("game/lib/data/help/index.html", "r", encoding="utf-8") as f:
+            # 3. Read HTML Content
+            with open(target_path, "r", encoding="utf-8") as f:
                 html = f.read()
                 
             usable_w = content_width
-            half_w = (usable_w - 20) // 2 # 20 is the gap between the two columns
+            half_w = (usable_w - 20) // 2 
             curr_y = 0
             
             # 1. Main Title (<h1>)
@@ -40,7 +58,6 @@ def draw_help_modal(surface, game, modal, assets):
             if title_match:
                 title_txt = title_match.group(1).strip()
                 title_surf = font_small.render(title_txt, True, WHITE)
-                # Center the title
                 layout_elements.append({'type': 'text', 'surf': title_surf, 'pos': ((usable_w//2) - (title_surf.get_width()//2), curr_y)})
                 curr_y += title_surf.get_height() + 25
                 
@@ -55,24 +72,20 @@ def draw_help_modal(surface, game, modal, assets):
                 is_full_width = 'full-width' in match.group(1)
                 content = match.group(2)
                 
-                # If we hit a full-width block but we are currently on the right column, push to next row
                 if is_full_width and col_index == 1:
                     row_start_y += max_row_height + 20
                     col_index = 0
                     max_row_height = 0
                 
-                # Calculate Block Dimensions
                 block_x = 0 if col_index == 0 or is_full_width else half_w + 20
                 block_w = usable_w if is_full_width else half_w
                 block_y = row_start_y
-                
-                inner_y = block_y + 15 # Top padding inside block
+                inner_y = block_y + 15
                 
                 # Render Block Title (<h3>)
                 h3_match = re.search(r'<h3>(.*?)</h3>', content, re.IGNORECASE)
                 if h3_match:
                     h3_txt = h3_match.group(1).strip()
-                    # #ffcc00 yellowish color
                     h3_surf = font_small.render(h3_txt, True, (255, 204, 0)) 
                     layout_elements.append({'type': 'text', 'surf': h3_surf, 'pos': (block_x + 15, inner_y)})
                     inner_y += h3_surf.get_height() + 12
@@ -81,23 +94,16 @@ def draw_help_modal(surface, game, modal, assets):
                 items = re.finditer(r'<li>(.*?)</li>', content, re.DOTALL | re.IGNORECASE)
                 for item in items:
                     raw_text = item.group(1).strip()
-                    
-                    # Look for <strong> tags to apply our green color
                     strong_match = re.search(r'<strong>(.*?)</strong>(.*)', raw_text, re.IGNORECASE | re.DOTALL)
                     
                     if strong_match:
-                        # Extract the key and description separately
                         key_txt = "• " + strong_match.group(1).strip()
                         desc_txt = re.sub(r'<[^>]+>', '', strong_match.group(2)).strip()
                         
-                        # Render the bold part in green (#26bd01 -> RGB: 38, 189, 1)
                         key_surf = font_small.render(key_txt, True, (38, 189, 1))
                         layout_elements.append({'type': 'text', 'surf': key_surf, 'pos': (block_x + 15, inner_y)})
                         
-                        # Calculate the X position to start the description (right after the green text)
                         desc_x = block_x + 15 + key_surf.get_width() + 5
-                        
-                        # Wrap the description text so it doesn't overflow the block
                         wrapped = wrap_text(desc_txt, block_w - (desc_x - block_x) - 15, font_small)
                         
                         temp_y = inner_y
@@ -106,11 +112,9 @@ def draw_help_modal(surface, game, modal, assets):
                             layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y)})
                             temp_y += font_small.get_height() + 4
                             
-                        # Advance Y by whichever part was taller
                         inner_y = max(inner_y + font_small.get_height() + 4, temp_y)
                         
                     else:
-                        # Fallback for normal list items without <strong>
                         i_txt = "• " + re.sub(r'<[^>]+>', '', raw_text).strip()
                         wrapped = wrap_text(i_txt, block_w - 30, font_small)
                         for line in wrapped:
@@ -120,42 +124,40 @@ def draw_help_modal(surface, game, modal, assets):
                             
                     inner_y += 6
                     
-                # Store the Block Background Rect (rendered before the text)
                 block_h = inner_y - block_y + 10
                 block_rect = pygame.Rect(block_x, block_y, block_w, block_h)
                 
-                # We insert the rect at the START of the list so it draws behind the text
                 layout_elements.insert(0, {
                     'type': 'rect', 
                     'rect': block_rect, 
-                    'bg_color': (42, 42, 42),      # #2a2a2a background
-                    'border_color': (68, 68, 68)   # #444 border
+                    'bg_color': (42, 42, 42),
+                    'border_color': (68, 68, 68)
                 })
                 
-                # Update Grid Positions
                 if is_full_width:
                     row_start_y = block_y + block_h + 20
                     curr_y = row_start_y
                 else:
                     max_row_height = max(max_row_height, block_h)
                     col_index += 1
-                    if col_index > 1: # Row is full, reset to next row
+                    if col_index > 1: 
                         col_index = 0
                         row_start_y += max_row_height + 20
                         curr_y = row_start_y
                         max_row_height = 0
                         
-            # Final height calculation for scrollbar
             if col_index == 1: 
                 curr_y = row_start_y + max_row_height + 20
                 
             modal['help_layout'] = layout_elements
             modal['help_total_h'] = curr_y
+            modal['loaded_help_lang'] = current_lang # Update the tracked language
                 
-        except FileNotFoundError:
-            # Safe fallback if file is missing
+        except Exception as e:
+            print(f"[Help Modal] Error loading {target_path}: {e}")
             modal['help_layout'] = []
             modal['help_total_h'] = 0
+            modal['loaded_help_lang'] = current_lang
 
     # --- Scrolling Math ---
     scroll_offset_y = modal.get('scroll_offset_y', 0)
@@ -172,10 +174,8 @@ def draw_help_modal(surface, game, modal, assets):
         for element in modal.get('help_layout', []):
             if element['type'] == 'rect':
                 r = element['rect']
-                # Create a shifted rect for scrolling
                 draw_rect = pygame.Rect(r.x, r.y + y_offset, r.width, r.height)
                 
-                # Only draw if it's visible on screen (performance boost)
                 if draw_rect.bottom > 0 and draw_rect.top < content_height:
                     pygame.draw.rect(content_surface, element['bg_color'], draw_rect, border_radius=6)
                     pygame.draw.rect(content_surface, element['border_color'], draw_rect, width=1, border_radius=6)
@@ -184,7 +184,6 @@ def draw_help_modal(surface, game, modal, assets):
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
                 
-                # Only draw text if visible
                 if draw_y + element['surf'].get_height() > 0 and draw_y < content_height:
                     content_surface.blit(element['surf'], (pos_x, draw_y))
                     
