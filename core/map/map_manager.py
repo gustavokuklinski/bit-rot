@@ -406,9 +406,83 @@ class MapManager:
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
         if new_state == "close":
-            if self.game.player.rect.colliderect(tile_rect):
-                display_message(tr('msg', "Player is in the doorway, cannot close."))
-                return 
+            entities_in_door = []
+            
+            # [FIX] Use a slightly relaxed hitbox to catch edge-clipping entities that need pushing
+            door_hitbox = tile_rect.inflate(-8, -8)
+
+            if getattr(self.game, 'player', None) and self.game.player.rect.colliderect(door_hitbox):
+                entities_in_door.append(self.game.player)
+            
+            for z in getattr(self.game, 'zombies', []):
+                if z.rect.colliderect(door_hitbox):
+                    entities_in_door.append(z)
+                    
+            for n in getattr(self.game, 'npcs', []):
+                if n.rect.colliderect(door_hitbox):
+                    entities_in_door.append(n)
+
+            if entities_in_door:
+                for entity in entities_in_door:
+                    ex = getattr(entity, 'x', float(entity.rect.centerx))
+                    ey = getattr(entity, 'y', float(entity.rect.centery))
+                    door_cx = tile_rect.centerx
+                    door_cy = tile_rect.centery
+                    
+                    # [NEW] "Dead Center" Check
+                    # If the player is standing solidly in the middle of the doorway, 
+                    # do not push them. Block the door and display the exact message requested.
+                    dist_sq = (ex - door_cx)**2 + (ey - door_cy)**2
+                    dead_center_threshold = (TILE_SIZE // 3) ** 2  # Represents the middle core of the tile
+                    
+                    if entity == getattr(self.game, 'player', None) and dist_sq <= dead_center_threshold:
+                        display_message(tr('msg', "Player is in the doorway, cannot close."))
+                        return 
+                    
+                    # [PUSH LOGIC] If they are off-center (or are a zombie), gracefully push them out
+                    bias_x, bias_y = 0, 0
+                    facing = getattr(entity, 'facing', '')
+                    if facing == 'up': bias_y = 5      
+                    elif facing == 'down': bias_y = -5 
+                    elif facing == 'left': bias_x = 5  
+                    elif facing == 'right': bias_x = -5 
+                    
+                    eff_ex = ex + bias_x
+                    eff_ey = ey + bias_y
+                    
+                    valid_targets = []
+                    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+                    
+                    for d_gx, d_gy in dirs:
+                        tgt_gx = grid_x + d_gx
+                        tgt_gy = grid_y + d_gy
+                        
+                        if 0 <= tgt_gy < len(self.game.map_data) and 0 <= tgt_gx < len(self.game.map_data[0]):
+                            tgt_char = self.game.map_data[tgt_gy][tgt_gx]
+                            tgt_def = self.game.tile_manager.definitions.get(tgt_char)
+                            if tgt_def and not tgt_def.get('is_obstacle'):
+                                tgt_cx = tgt_gx * TILE_SIZE + TILE_SIZE / 2
+                                tgt_cy = tgt_gy * TILE_SIZE + TILE_SIZE / 2
+                                dist = (eff_ex - tgt_cx)**2 + (eff_ey - tgt_cy)**2
+                                valid_targets.append((dist, tgt_gx, tgt_gy))
+                                
+                    pushed = False
+                    if valid_targets:
+                        valid_targets.sort(key=lambda x: x[0])
+                        best_target = valid_targets[0]
+                        tgt_rect = pygame.Rect(best_target[1] * TILE_SIZE, best_target[2] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        
+                        entity.rect.centerx = tgt_rect.centerx
+                        entity.rect.centery = tgt_rect.centery
+                        if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
+                        if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
+                        pushed = True
+                    
+                    # Fallback if they are entirely boxed in by obstacles
+                    if not pushed:
+                        if entity == getattr(self.game, 'player', None):
+                            display_message(tr('msg', "Door is completely blocked, cannot close."))
+                        return 
         
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"
@@ -432,7 +506,6 @@ class MapManager:
                     pitch_variance=0.15
                 )
             
-            # [NEW] Invalidate chunk so it redraws with the new door state
             self.invalidate_chunk(grid_x, grid_y)
 
         else:

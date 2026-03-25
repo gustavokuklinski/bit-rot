@@ -77,6 +77,66 @@ def find_nearby_containers(game):
                 
     return nearby_objects
 
+def get_targeted_interactable(game):
+    """
+    Returns the highest priority interactable entity based on where the player is facing.
+    Useful to prevent conflict between doors, NPCs, and vehicles.
+    """
+    if not getattr(game, 'player', None): return None
+
+    facing_x, facing_y = get_player_facing_tile(game)
+    if facing_x is None: return None
+    
+    # Center of the tile the player is currently facing
+    target_world_x = facing_x * TILE_SIZE + TILE_SIZE / 2
+    target_world_y = facing_y * TILE_SIZE + TILE_SIZE / 2
+    
+    candidates = []
+    
+    # 1. Stairs (Highest Priority if standing directly on them)
+    px, py = int(game.player.rect.centerx // TILE_SIZE), int(game.player.rect.centery // TILE_SIZE)
+    if hasattr(game, 'map_data') and 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
+        current_t = game.map_manager.get_tile_at(px, py)
+        if current_t and current_t.get('is_stair'):
+            candidates.append({'type': 'stair', 'entity': (px, py), 'dist': -1}) 
+    
+    # 2. Facing Tile (Doors / Windows / Stairs in front of player)
+    if hasattr(game, 'map_data') and 0 <= facing_y < len(game.map_data) and 0 <= facing_x < len(game.map_data[0]):
+        facing_t = game.map_manager.get_tile_at(facing_x, facing_y)
+        if facing_t and (facing_t.get('is_statable') or facing_t.get('is_stair')):
+            candidates.append({'type': 'tile', 'entity': (facing_x, facing_y), 'dist': 0.1})
+
+    # 3. NPCs
+    for npc in getattr(game, 'npcs', []):
+        if not getattr(npc, 'is_friendly', False) or getattr(npc, 'aggro_timer', 0) > 0: continue
+        dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
+        if dist < TILE_SIZE * 1.5:
+            # Calculate distance from the *facing tile* to the NPC
+            facing_dist = math.hypot(target_world_x - npc.rect.centerx, target_world_y - npc.rect.centery)
+            candidates.append({'type': 'npc', 'entity': npc, 'dist': facing_dist})
+            
+    # 4. Vehicles
+    for obj in getattr(game, 'containers', []):
+        if getattr(obj, 'item_type', '') == 'vehicle':
+            if getattr(game.player, 'vehicle', None) == obj:
+                continue
+            dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
+            if dist < TILE_SIZE * 2.0:
+                facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
+                # Give vehicles a bonus if they overlap the tile the player is specifically facing
+                veh_grid_rect = pygame.Rect(obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height)
+                facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if veh_grid_rect.colliderect(facing_rect):
+                    facing_dist -= TILE_SIZE 
+                candidates.append({'type': 'vehicle', 'entity': obj, 'dist': facing_dist})
+                
+    if not candidates:
+        return None
+        
+    # Sort by closest distance to the player's facing point
+    candidates.sort(key=lambda x: x['dist'])
+    return candidates[0]
+
 def screen_to_world(game, screen_pos):
     screen_x, screen_y = screen_pos
     screen_x -= GAME_OFFSET_X

@@ -27,7 +27,7 @@ from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
 from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
-from core.systems.utils import get_player_facing_tile
+from core.systems.utils import get_player_facing_tile, get_targeted_interactable
 from core.data.localization import tr
 
 def draw_game(game):
@@ -524,6 +524,17 @@ def draw_game(game):
     if game.hovered_interactable_tile_rect:
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
+    
+    target = get_targeted_interactable(game)
+    if target:
+        target_color = (0, 255, 100) # Bright Green highlight
+        if target['type'] in ['npc', 'vehicle']:
+            hover_rect = target['entity'].rect.move(offset_x, offset_y)
+            pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
+        elif target['type'] in ['tile', 'stair']:
+            tx, ty = target['entity']
+            hover_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE).move(offset_x, offset_y)
+            pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
 
     light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
     world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
@@ -644,6 +655,9 @@ def draw_game(game):
         # 2. Check Vehicles
         for obj in game.containers:
             if getattr(obj, 'item_type', '') == 'vehicle':
+                if getattr(game.player, 'vehicle', None) == obj:
+                    continue
+
                 if not screen_rect.colliderect(obj.rect): continue
                 dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
                 if dist < TILE_SIZE * 2.0:
