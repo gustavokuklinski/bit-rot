@@ -28,26 +28,18 @@ class NPCDialog:
                 
                 NPCDialog.NPC_DIALOGS[node_id] = []
                 
-                # --- [NEW] Helper to parse options (both Flat and Quest-nested) ---
-                def parse_option(opt, q_need='', q_reward='', q_priority=None):
+                # --- Helper to parse options ---
+                def parse_option(opt):
                     question = opt.get('player_question')
                     answer = opt.get('npc_answer')
                     
                     if question and answer:
-                        # Dynamically replace the wildcards
-                        if q_need:
-                            question = question.replace('[quest_need]', q_need)
-                            answer = answer.replace('[quest_need]', q_need)
-                        if q_reward:
-                            question = question.replace('[quest_reward]', q_reward)
-                            answer = answer.replace('[quest_reward]', q_reward)
-
                         req_level = opt.get('req_level')
                         gain_xp = opt.get('gain_xp')
                         dialog_type = opt.get('dialog_type')
                         
                         try:
-                            priority = q_priority if q_priority is not None else int(opt.get('priority', '100'))
+                            priority = int(opt.get('priority', '100'))
                         except ValueError:
                             priority = 100
                             
@@ -55,14 +47,8 @@ class NPCDialog:
                         npc_state_friendly = opt.get('npc_state_friendly')
                         npc_state_static = opt.get('npc_state_static')
                         
-                        # Replace wildcards in action hooks as well
                         award_item = opt.get('award_item')
-                        if award_item and q_reward:
-                            award_item = award_item.replace('[quest_reward]', q_reward)
-                            
                         req_item = opt.get('req_item')
-                        if req_item and q_need:
-                            req_item = req_item.replace('[quest_need]', q_need)
 
                         NPCDialog.NPC_DIALOGS[node_id].append({
                             'q': question, 
@@ -72,28 +58,16 @@ class NPCDialog:
                             'npc_state_friendly': npc_state_friendly,
                             'npc_state_static': npc_state_static,
                             'award_item': award_item,
-                            'req_item': req_item,      # [NEW] Stored for validation 
+                            'req_item': req_item,
                             'req_level': req_level,
                             'gain_xp': gain_xp,
                             'dialog_type': dialog_type,
                             'node_id': node_id
                         })
 
-                # 1. Parse standard flat <options>
+                # Parse standard flat <options>
                 for opt in node.findall('options'):
                     parse_option(opt)
-                    
-                # 2. Parse nested <quest> elements and their <options>
-                for quest in node.findall('quest'):
-                    q_need = quest.get('quest_need', '')
-                    q_reward = quest.get('quest_reward', '')
-                    try:
-                        q_priority = int(quest.get('priority', '100'))
-                    except ValueError:
-                        q_priority = 100
-                        
-                    for opt in quest.findall('options'):
-                        parse_option(opt, q_need, q_reward, q_priority)
                     
         except Exception as e:
             print(f"NPC Error: Could not load dialogs: {e}")
@@ -110,10 +84,6 @@ class NPCDialog:
         
         # 2. Determine Active Nodes (Mandatory + Unlocked)
         active_nodes = mandatory_nodes.union(self.dialog_flags)
-        
-        # [NEW] Automatically enable "quest" node ONLY for Quest NPCs
-        if getattr(self, 'quest_npc', False):
-            active_nodes.add("quest")
         
         # Sort the nodes
         sorted_nodes = sorted(list(active_nodes))

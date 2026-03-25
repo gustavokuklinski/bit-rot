@@ -7,6 +7,7 @@ import pygame
 from core.data.config import TILE_SIZE
 from core.messages import display_message
 from core.placement import find_free_tile
+from core.entities.npc.npc import NPC
 from core.data.localization import tr
 
 class PlayerMovement:
@@ -417,10 +418,25 @@ class PlayerMovement:
                                                 game.zombies.append(z)
                                         
                             if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
-                                from core.entities.npc.npc import NPC
-                                for nx, ny in game.npc_spawn_points:
-                                    npc = NPC(nx, ny, game, is_static=False)
-                                    # [FIX] Robust Spatial Spawn 
+                                
+                                for spawn_data in game.npc_spawn_points:
+                                    if len(spawn_data) == 3:
+                                        nx, ny, npc_type = spawn_data
+                                    else:
+                                        nx, ny = spawn_data
+                                        npc_type = 'NPC'
+                                        
+                                    is_static = (npc_type == 'SNPC')
+                                    
+                                    npc = NPC(nx, ny, game, is_static=is_static)
+                                    
+                                    if npc_type == 'NPC':
+                                        npc.is_friendly = False   
+                                        npc.is_static = False     
+                                    elif npc_type == 'SNPC':
+                                        npc.is_friendly = True    
+                                        npc.is_static = True      
+                                        
                                     free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
                                     if free_pos:
                                         npc.rect.topleft = free_pos

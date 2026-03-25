@@ -12,6 +12,8 @@ from core.entities.zombie.corpse import Corpse
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.tile_manager import TileManager
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
+from core.entities.npc.npc import NPC
+from core.placement import find_free_tile
 
 def resize_map_layer(layer_data, target_width, target_height, fill_value=' '):
     """
@@ -405,10 +407,26 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             if hasattr(game, 'npcs'):
                 game.npcs.empty()
             if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
-                from core.entities.npc.npc import NPC
-                from core.placement import find_free_tile
-                for nx, ny in game.npc_spawn_points:
-                    npc = NPC(nx, ny, game, is_static=False)
+                
+                for spawn_data in game.npc_spawn_points:
+                    if len(spawn_data) == 3:
+                        nx, ny, npc_type = spawn_data
+                    else:
+                        nx, ny = spawn_data
+                        npc_type = 'NPC'
+                        
+                    is_static = (npc_type == 'SNPC')
+                    
+                    npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
+                    
+                    # Apply specific type properties
+                    if npc_type == 'NPC':
+                        npc.is_friendly = False   # Hostile
+                        npc.is_static = False     # Roams
+                    elif npc_type == 'SNPC':
+                        npc.is_friendly = True    # Safe
+                        npc.is_static = True      # Stays in place
+                        
                     free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
                     if free_pos:
                         npc.rect.topleft = free_pos

@@ -1,4 +1,4 @@
-<npc type="common" spawn_weight="55" is_friendly="true" is_static="true">
+<npc type="static" spawn_weight="55" is_friendly="true" is_static="true">
     <name value="RANDOM" />
     <sex value="RANDOM" />
     

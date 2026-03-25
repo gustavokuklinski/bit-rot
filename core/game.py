@@ -250,6 +250,7 @@ class Game:
         return load_game(self, save_folder_name)
 
     def start_new_game(self, player_data, save_dir_name=None):
+
         return start_new_game(self, player_data, save_dir_name)
 
     def load_map(self, map_filename):

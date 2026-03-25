@@ -13,11 +13,4 @@
         <options player_question="Why did the helicopters leave us?" npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." priority="19" gain_xp="[lucky:50]" />
     </node>
 
-    <!-- Quest NPCs -->
-    <node id="quest" x="779" y="133">
-        <quest quest_need="[Blueprint]" quest_reward="[Car Key Jeep]" priority="20">
-            <options player_question="Can I do something for you?" npc_answer="Yes, I may need some [quest_need]" gain_xp="[lucky:50]" />
-            <options player_question="I've got your [quest_need]!" npc_answer="Thank you very much! Now I can fix some stuff" req_item="[quest_need]" award_item="[quest_reward]" gain_xp="[lucky:150]" />
-        </quest> 
-    </node>
 </npc_dialog>

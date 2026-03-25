@@ -37,13 +37,17 @@ class ProceduralGeneratorSpawning:
         place_zombies(count_woods, woods_tiles)
 
     def _scatter_npcs(self, layers, mask, w, h):
-        # [UPDATED] NPC Scattering with strict distribution limits & new Markers
-        
         # 1. Configuration
-        max_npcs = NPC_MAX_CHUNK
-        static_chance = NPC_STATIC_PERCENT
-        
-        if max_npcs <= 0: return
+        if NPC_MAX_CHUNK <= 0: return
+
+        # Calculate Global Limit from Per Chunk Config
+        if CHUNK_SIZE > 0:
+            num_chunks_w = w // CHUNK_SIZE
+            num_chunks_h = h // CHUNK_SIZE
+            total_chunks = max(1, num_chunks_w * num_chunks_h)
+            max_npcs_global = NPC_MAX_CHUNK * total_chunks
+        else:
+            max_npcs_global = NPC_MAX_CHUNK
 
         # 2. Gather Candidates
         building_tiles = []
@@ -56,7 +60,7 @@ class ProceduralGeneratorSpawning:
                 ground = layers['ground'][y][x]
                 if ground == self.water_tile: continue 
                 
-                # [NEW] Strict tile rules for NPC spawn percentages
+                # Strict tile rules for NPC spawn placement
                 if ground == 'house_floor_01':
                     building_tiles.append((x, y))
                 elif ground in ['asphalt_01', 'sand_01', 'dirty_01', 'bg_grass']:
@@ -65,42 +69,17 @@ class ProceduralGeneratorSpawning:
         total_candidates = len(building_tiles) + len(outside_tiles)
         if total_candidates == 0: return
 
-        # 3. Calculate Counts & Types
-        count_to_spawn = min(total_candidates, max_npcs)
+        # 3. Calculate Counts & Types strictly reflecting the XML config
+        count_to_spawn = min(total_candidates, max_npcs_global)
         
-        num_static = 0
-        num_quest = 0
-        if static_chance > 0:
-            expected = int(count_to_spawn * static_chance)
-            num_static = max(1, expected) # At least 1 Static if chance > 0
-            
-            # [NEW] Determine Quest NPCs from the static pool
-            try:
-                quest_chance = NPC_QUEST_PERCENT
-            except NameError:
-                quest_chance = 0.1 # Fallback
-                
-            expected_quest = int(num_static * quest_chance)
-            num_quest = max(0, expected_quest)
-            num_static -= num_quest
+        num_static = int(count_to_spawn * NPC_STATIC_PERCENT)
+        num_normal = int(count_to_spawn * NPC_HOSTILE_PERCENT)
         
-        # Limit Static/Quest NPCs strictly to available building tiles
-        total_indoor = num_static + num_quest
-        if total_indoor > len(building_tiles):
-            total_indoor = len(building_tiles)
-            if total_indoor > 0:
-                num_quest = int(total_indoor * (num_quest / max(1, (num_static + num_quest))))
-            else:
-                num_quest = 0
-            num_static = total_indoor - num_quest
-            
-        num_normal = count_to_spawn - (num_static + num_quest)
-        
-        # Limit Normal NPCs to available outside tiles
+        # Cap by strictly available tiles so we don't convert SNPCs into Hostile NPCs when space runs out
+        num_static = min(num_static, len(building_tiles))
         num_normal = min(num_normal, len(outside_tiles))
         
         # 4. Safe Filtering (Zombies)
-        # We try to keep distance from Zombies if possible
         zombie_locs = []
         for y in range(h):
             for x in range(w):
@@ -118,38 +97,42 @@ class ProceduralGeneratorSpawning:
                     if dist_sq < SAFE_DISTANCE_SQ:
                         too_close = True
                         break
-                if not too_close:
-                    safe.append((px, py))
-            # Fallback to all candidates if safe ones are too few
+                if not too_close: safe.append((px, py))
             return safe if len(safe) > 0 else candidates
 
         safe_building = get_safe_candidates(building_tiles) if building_tiles else []
         safe_outside = get_safe_candidates(outside_tiles) if outside_tiles else []
 
         # 5. Spawn
-        if total_indoor > 0 and safe_building:
-            chosen_indoor = random.sample(safe_building, min(total_indoor, len(safe_building)))
-            for i, (nx, ny) in enumerate(chosen_indoor):
-                # [CHANGED] Use the new markers 'QNPC' and 'SNPC'
-                if i < num_quest:
-                    layers['spawn'][ny][nx] = 'QNPC'
-                else:
-                    layers['spawn'][ny][nx] = 'SNPC'
+        spawned_static = 0
+        if num_static > 0 and safe_building:
+            chosen_indoor = random.sample(safe_building, min(num_static, len(safe_building)))
+            for nx, ny in chosen_indoor:
+                layers['spawn'][ny][nx] = 'SNPC'
+                spawned_static += 1
                 
+        spawned_normal = 0
         if num_normal > 0 and safe_outside:
             chosen_normal = random.sample(safe_outside, min(num_normal, len(safe_outside)))
             for nx, ny in chosen_normal:
                 layers['spawn'][ny][nx] = 'NPC'
+                spawned_normal += 1
+                
+        print(f"  > NPC Scatter: Placed {spawned_static} Static (Indoor), {spawned_normal} Hostile (Outdoor).")
 
     def _scatter_npcs_l2(self, layers, w, h):
-        """
-        [NEW] L2 specific NPC scattering using standard floor detection.
-        Replaces the complex candidate collection logic.
-        """
+        """L2 specific NPC scattering using standard floor detection."""
         # 1. Config
-        max_npcs = NPC_MAX_CHUNK
-        static_chance = NPC_STATIC_PERCENT
-        if max_npcs <= 0: return
+        if NPC_MAX_CHUNK <= 0: return
+        
+        # Calculate Global Limit from Per Chunk Config
+        if CHUNK_SIZE > 0:
+            num_chunks_w = w // CHUNK_SIZE
+            num_chunks_h = h // CHUNK_SIZE
+            total_chunks = max(1, num_chunks_w * num_chunks_h)
+            max_npcs_global = NPC_MAX_CHUNK * total_chunks
+        else:
+            max_npcs_global = NPC_MAX_CHUNK
         
         # 2. Gather Candidates in L2 Layers
         potential_tiles = []
@@ -171,49 +154,37 @@ class ProceduralGeneratorSpawning:
                 if spawn[y][x] != ' ': continue
                 
                 g_char = ground[y][x]
-                if g_char == ' ' or g_char == '@': continue # Must not be void or border
+                if g_char == ' ' or g_char == '@': continue 
                 
                 potential_tiles.append((x, y))
 
         if not potential_tiles: return
 
-        # 3. Calculate Distribution (Copied logic from _scatter_npcs)
-        count_to_spawn = min(len(potential_tiles), max_npcs)
+        # 3. Calculate Distribution
+        count_to_spawn = min(len(potential_tiles), max_npcs_global)
         
-        num_static = 0
-        num_quest = 0
-        if static_chance > 0:
-            expected = int(count_to_spawn * static_chance)
-            num_static = max(1, expected) 
-            
-            try:
-                quest_chance = NPC_QUEST_PERCENT
-            except NameError:
-                quest_chance = 0.1 # Fallback
-                
-            expected_quest = int(num_static * quest_chance)
-            num_quest = max(0, expected_quest)
-            num_static -= num_quest
+        num_static = int(count_to_spawn * NPC_STATIC_PERCENT)
+        num_normal = int(count_to_spawn * NPC_HOSTILE_PERCENT)
         
-        total_indoor = num_static + num_quest
-        total_indoor = min(total_indoor, count_to_spawn)
-        if total_indoor > 0:
-            num_quest = int(total_indoor * (num_quest / max(1, num_static + num_quest)))
-            num_static = total_indoor - num_quest
-            
-        num_normal = count_to_spawn - total_indoor
+        total_valid = num_static + num_normal
+        if total_valid <= 0: return
         
-        # [CHANGED] Use 'QNPC' and 'SNPC' and 'NPC'
-        spawn_types = ['QNPC'] * num_quest + ['SNPC'] * num_static + ['NPC'] * num_normal
+        # Cap to available tiles proportionally
+        if total_valid > len(potential_tiles):
+            ratio = len(potential_tiles) / total_valid
+            num_static = int(num_static * ratio)
+            num_normal = int(num_normal * ratio)
+
+        # Build the exact array of markers
+        spawn_types = ['SNPC'] * num_static + ['NPC'] * num_normal
         random.shuffle(spawn_types)
         
         # 4. Spawn
-        chosen = random.sample(potential_tiles, count_to_spawn)
+        chosen = random.sample(potential_tiles, len(spawn_types))
         for i, (nx, ny) in enumerate(chosen):
-            if i < len(spawn_types):
-                spawn[ny][nx] = spawn_types[i]
+            spawn[ny][nx] = spawn_types[i]
                 
-        print(f"  > NPC Scatter L2: Placed {count_to_spawn} NPCs ({num_static} Static, {num_quest} Quest).")
+        print(f"  > NPC Scatter L2: Placed {len(spawn_types)} NPCs ({num_static} Static, {num_normal} Hostile).")
 
     def _scatter_vehicles(self, layers, mask, w, h):
         """

@@ -101,14 +101,14 @@ WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
 CLOTH_DURABILITY_MULTIPLIER = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER = 1.0
 NPC_MAX_CHUNK = 0
+NPC_HOSTILE_PERCENT = 0
 MAX_NPCS_GLOBAL = 0
 NPC_SPAWN_CHANCE = 0.0
 NPC_HEALTH_MULTIPLIER = 1.0
 NPC_DAMAGE_MULTIPLIER = 1.0
 NPC_SPEED_MULTIPLIER = 1.0
 NPC_DETECTION_RADIUS = 0
-NPC_STATIC_PERCENT = 0.40
-NPC_QUEST_PERCENT = 0.50
+NPC_STATIC_PERCENT = 0.0
 MAX_VEH_CHUNK = 0
 VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
@@ -143,7 +143,7 @@ def load_settings(preset="default"):
     global WEAPON_RANGED_DURABILITY_MULTIPLIER, CLOTH_DURABILITY_MULTIPLIER
     global ITEM_SPAWN_CHANCE_MULTIPLIER
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
-    global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_QUEST_PERCENT
+    global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
@@ -221,7 +221,7 @@ def load_settings(preset="default"):
 
         NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
         NPC_STATIC_PERCENT = float(npc_config.find('static_percent').get('value'))    
-        NPC_QUEST_PERCENT = float(npc_config.find('quest_percent').get('value'))
+        NPC_HOSTILE_PERCENT = float(npc_config.find('hostile_percent').get('value'))
 
         vehicle_config = root.find('vehicle')
         MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value'))

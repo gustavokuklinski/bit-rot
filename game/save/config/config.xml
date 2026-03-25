@@ -43,9 +43,9 @@
         <animal_respawn_ms_timer value="30000" name="Animal respawn (Default: 30000)"/>
     </animal>
     <npc>
-        <npc_spawn_per_chunk value="60" name="Max NPC spawn on chunk (Default: 10)"/>
-        <static_percent value="1.50" name="Static NPC percentage (Default: 0.50)"/>
-        <quest_percent value="1.50" name="Quest NPC percentage (Default: 0.50)"/>
+        <npc_spawn_per_chunk value="100" name="Max NPC spawn on chunk (Default: 10)"/>
+        <static_percent value="0.90" name="Static NPC percentage (Default: 0.40)"/>
+        <hostile_percent value="0.00" name="Hostile NPC percentage (Default: 0.20)"/>
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 10)"/>

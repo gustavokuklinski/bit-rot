@@ -9,12 +9,13 @@ from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle_data import VehicleData
 from core.entities.vehicle.vehicle import Vehicle
 
+from core.placement import find_free_tile
 # Import Animal classes
 from core.entities.animal.animal import Animal
 from core.entities.animal.animal_loader import AnimalLoader
 
 # --- Configuration for Dynamic Spawning ---
-MAX_ACTIVE_NPCS = 2
+
 NPC_SPAWN_RADIUS = 70 * TILE_SIZE
 NPC_DESPAWN_RADIUS = 80 * TILE_SIZE
 NPC_MIN_SPAWN_DIST = 50 * TILE_SIZE
@@ -155,48 +156,44 @@ def manage_dynamic_npcs(game):
     if not hasattr(game, 'layer_npcs'):
         game.layer_npcs = {}
 
-    # [FIX] Clean up NPCs from incorrect layers and move them to storage
+    # Clean up NPCs from incorrect layers and move them to storage
     for npc in list(game.npcs):
-        # 1. Default to layer 1 if attribute is missing
         if not hasattr(npc, 'layer'):
             npc.layer = 1
         
         if npc.layer != game.current_layer_index:
-            # If it's a follower, bring it to the current layer
             if hasattr(npc, 'is_following') and npc.is_following:
                 npc.layer = game.current_layer_index
             else:
-                # Store NPC in layer_npcs before removing
                 if npc.layer not in game.layer_npcs:
                     game.layer_npcs[npc.layer] = []
                 
-                # Check if already stored to avoid duplicates
                 if npc not in game.layer_npcs[npc.layer]:
                     game.layer_npcs[npc.layer].append(npc)
                 
                 game.npcs.remove(npc)
                 continue
 
-        # 2. Distance Despawn Logic (skip followers)
+        # Distance Despawn Logic (skip followers)
         if hasattr(npc, 'is_following') and npc.is_following: continue
         
         dist_sq = (npc.rect.centerx - player_x)**2 + (npc.rect.centery - player_y)**2
         if dist_sq > NPC_DESPAWN_RADIUS**2:
             game.npcs.remove(npc)
 
-    # [FIX] Restore NPCs for the current layer
+    # Restore NPCs for the current layer
     current_layer = game.current_layer_index
     if current_layer in game.layer_npcs:
         stored_npcs = game.layer_npcs[current_layer]
-        # Move all stored NPCs back to game.npcs
         for npc in stored_npcs:
             if npc not in game.npcs:
                 game.npcs.add(npc)
-        # Clear storage for this layer so they are now "active"
         game.layer_npcs[current_layer] = []
 
     current_count = len(game.npcs)
-    if current_count >= MAX_ACTIVE_NPCS: return
+    
+    # [FIX] Use XML Configuration instead of the old hardcoded 2 limit
+    if current_count >= core.data.config.NPC_MAX_CHUNK: return
 
     spawn_points = getattr(game, 'npc_spawn_points', [])
     spawned_this_frame = 0
@@ -211,16 +208,37 @@ def manage_dynamic_npcs(game):
         NPC_SPAWN_RADIUS * 2, 
         NPC_SPAWN_RADIUS * 2
     )
-    valid_candidates = [pos for pos in spawn_points if search_rect.collidepoint(pos)]
-    if not valid_candidates: return
+    
+    valid_candidates = [pos for pos in spawn_points if search_rect.collidepoint((pos[0], pos[1]))]
+    
+    # [FIX] Robust Fallback: Ambient random spawning if map lacks generated NPC markers
+    if not valid_candidates: 
+        # Check against XML chance to organically spawn wandering NPCs nearby
+        if random.random() < core.data.config.NPC_SPAWN_CHANCE * 0.02: 
+            rx = player_x + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
+            ry = player_y + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
+            
+            rect = pygame.Rect(rx, ry, TILE_SIZE, TILE_SIZE)
+            # Ensure they don't spawn inside a wall/obstacle
+            if not any(ob.colliderect(rect) for ob in getattr(game, 'obstacles', [])):
+                npc = NPC(rx, ry, game, layer=game.current_layer_index, is_static=False)
+                # Respect XML configuration for hostilities 
+                npc.is_friendly = random.random() > core.data.config.NPC_HOSTILE_PERCENT
+                game.npcs.add(npc)
+        return
 
     random.shuffle(valid_candidates)
 
     for pos in valid_candidates:
-        if current_count >= MAX_ACTIVE_NPCS: break
+        # [FIX] Obey the XML Configuration
+        if current_count >= core.data.config.NPC_MAX_CHUNK: break
         if spawned_this_frame >= limit_per_frame: break
 
-        px, py = pos
+        px, py = pos[0], pos[1]
+        
+        npc_type = pos[2] if len(pos) > 2 else 'NPC'
+        is_static = (npc_type == 'SNPC')
+
         dist_sq = (px - player_x)**2 + (py - player_y)**2
 
         if min_spawn_rad_sq < dist_sq < spawn_rad_sq:
@@ -240,10 +258,15 @@ def manage_dynamic_npcs(game):
                     if not is_building:
                         continue
 
-                # Create NPC with current layer
-                npc = NPC(px, py, game, layer=game.current_layer_index)
+                npc = NPC(px, py, game, layer=game.current_layer_index, is_static=is_static)
                 
-                # [FIX] Ensure NPCs spawned on L2 are friendly
+                if npc_type == 'NPC':
+                    npc.is_friendly = False   
+                    npc.is_static = False     
+                elif npc_type == 'SNPC':
+                    npc.is_friendly = True    
+                    npc.is_static = True      
+                
                 if game.current_layer_index == 2:
                     npc.is_friendly = True
 
@@ -256,10 +279,11 @@ def spawn_static_npcs(game, building_tiles):
         if random.random() < core.data.config.NPC_STATIC_PERCENT:
             px, py = tx * TILE_SIZE, ty * TILE_SIZE
             if not any(ob.collidepoint(px, py) for ob in game.obstacles):
-                # --- NEW: Determine if this spawned Static NPC will be a Quest NPC ---
-                is_quest = random.random() < core.data.config.NPC_QUEST_PERCENT
+                npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
                 
-                npc = NPC(px, py, game, is_static=True, is_quest=is_quest, layer=game.current_layer_index)
+                # [FIX] Enforce XML rules for generated interior statics
+                npc.is_friendly = True
+                    
                 game.npcs.add(npc)
 
 def spawn_l2_population(game, count=10, target_layer=None):
@@ -593,6 +617,10 @@ def spawn_random_vehicles(game, count=10):
         
         spawned_count += 1
         print(f"Spawned {vehicle.name} at ({px}, {py})")
+
+
+
+
 
 def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, obstacle_grid=None, grid_size=128, game=None):
     # [FIX] Absolutely kill the spawner if global/chunk config is 0. Do not proceed to defaults.

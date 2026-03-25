@@ -1,4 +1,4 @@
-<npc type="quest" quest_npc="true" is_static="true">
+<npc type="common" spawn_weight="55" is_friendly="RANDOM" is_static="RANDOM">
     <name value="RANDOM" />
     <sex value="RANDOM" />
     
