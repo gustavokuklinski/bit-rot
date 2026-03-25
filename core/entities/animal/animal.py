@@ -38,7 +38,8 @@ class Animal(Zombie):
         }
 
         super().__init__(x, y, zombie_template)
-        
+        self.attack_player = template.get('attack_player', False)
+
         sounds = template.get('sounds', {})
         self.sound_hit = sounds.get('hit')
         self.sound_dead = sounds.get('dead')
@@ -99,14 +100,15 @@ class Animal(Zombie):
         if self.is_dead:
             return
         
-        if self.name in ["Rat", "Bat"]:
+        # --- CHANGED: Use the XML flag instead of hardcoded names ---
+        if self.attack_player:
+            # Attacks player and wanders normally
             super().update_ai(player_rect, obstacles, other_zombies, game)
             return
 
         current_time = pygame.time.get_ticks()
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
         
-        # Determine threat radius based on animal type
         threat_radius = 150 if self.name != "Cow" else 250 
         
         threat_detected = False
@@ -133,7 +135,7 @@ class Animal(Zombie):
             if entity is self or entity.is_dead: continue
             
             # If it's an NPC, only flee if it's hostile. If it's a zombie, always flee.
-            if hasattr(entity, 'is_friendly') and entity.is_friendly: continue
+            # if hasattr(entity, 'is_friendly') and entity.is_friendly: continue
 
             dx = entity.rect.centerx - self.rect.centerx
             dy = entity.rect.centery - self.rect.centery
@@ -189,7 +191,7 @@ class Animal(Zombie):
             return True
             
         # Make the animal chase the attacker if hit but not killed
-        if self.name in ["Rat", "Bat"]:
+        if self.attack_player:
             self.aggro_timer = 10000
             self.state = 'chasing'
         else:

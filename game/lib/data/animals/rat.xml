@@ -1,4 +1,4 @@
-<animal name="Rat" type="animal" spawn_weight="50" spawn_layer="[1, 2]">
+<animal name="Rat" attack_player="true" type="animal" spawn_weight="50" spawn_layer="[1, 2]">
     <stats>
         <health min="10" max="20" />
         <speed min="0.3" max="0.5" />

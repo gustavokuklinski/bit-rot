@@ -42,7 +42,7 @@ class AnimalLoader:
                 name = animal_node.get('name')
                 spawn_weight = int(animal_node.get('spawn_weight', '10'))
                 spawn_layer_raw = animal_node.get('spawn_layer', '[1]')
-                
+                attack_player = animal_node.get('attack_player', 'false').lower() == 'true'
                 spawn_layers = []
                 try:
                     # Elegantly strip brackets and split into a list of ints
@@ -105,7 +105,8 @@ class AnimalLoader:
                 AnimalLoader.definitions[name] = {
                     'name': name,
                     'type': animal_node.get('type'),
-                    'spawn_weight': spawn_weight,  # <--- NEW
+                    'attack_player': attack_player,
+                    'spawn_weight': spawn_weight,
                     'spawn_layers': spawn_layers,
                     'stats': stats,
                     'sprite': sprite_file,

@@ -492,6 +492,9 @@ def spawn_animals(game, count=5, target_layer=None):
                 t_def = defs.get(t_char)
                 if not t_def or t_def.get('is_obstacle', False): continue
 
+                t_name = t_def.get('name', '').lower()
+                if t_name not in ['bg_grass', 'dirty_01']:
+                    continue
                 # Only Rats spawn randomly ambiently in most layers
                 chosen_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                 px, py = rx * TILE_SIZE, ry * TILE_SIZE
