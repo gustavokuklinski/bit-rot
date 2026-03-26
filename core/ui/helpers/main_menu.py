@@ -9,6 +9,7 @@ from core.data.localization import tr
 
 _logo_img = None
 _language_cache = None
+_help_img_menu = None # NEW: Cache for the help button image
 
 def get_available_languages():
     """Parses the languages XML and caches the flags."""
@@ -75,7 +76,7 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
     surface.blit(txt_surf, txt_rect)
 
 def draw_menu(screen, mouse_pos, has_save=False):
-    global _logo_img
+    global _logo_img, _help_img_menu
     screen.fill(DARK_GRAY)
 
     try:
@@ -87,6 +88,14 @@ def draw_menu(screen, mouse_pos, has_save=False):
             _logo_img = pygame.transform.scale(_logo_img, (target_w, target_h))
     except Exception:
         _logo_img = None
+        
+    # --- NEW: Load Help Button Image ---
+    try:
+        if _help_img_menu is None:
+            _help_img_menu = pygame.image.load('./game/lib/sprites/ui/help.png').convert_alpha()
+            _help_img_menu = pygame.transform.scale(_help_img_menu, (32, 32))
+    except Exception as e:
+        print(f"Could not load help image: {e}")
 
     if _logo_img:
         logo_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.3))
@@ -122,7 +131,27 @@ def draw_menu(screen, mouse_pos, has_save=False):
     footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)
 
-    # --- NEW: Language Flags Rendering ---
+    # --- NEW: Help Button Rendering ---
+    help_rect = None
+    if _help_img_menu:
+        # Create a padded square button on the bottom left
+        help_bg_rect = pygame.Rect(0, 0, 48, 48)
+        help_bg_rect.bottomleft = (20, GAME_HEIGHT - 20) # Align left with 20px padding
+        
+        is_hovered_help = help_bg_rect.collidepoint(mouse_pos)
+        bg_color = (80, 80, 80) if is_hovered_help else (60, 60, 60)
+        
+        # Draw the button background and border
+        pygame.draw.rect(screen, bg_color, help_bg_rect, border_radius=6)
+        pygame.draw.rect(screen, (40, 40, 40), help_bg_rect, width=1, border_radius=6)
+        
+        # Center the help icon inside the padded background
+        img_rect = _help_img_menu.get_rect(center=help_bg_rect.center)
+        screen.blit(_help_img_menu, img_rect)
+        
+        help_rect = help_bg_rect # Assign to return variable
+
+    # --- Language Flags Rendering ---
     langs = get_available_languages()
     flag_rects = []
     
@@ -180,5 +209,5 @@ def draw_menu(screen, mouse_pos, has_save=False):
         pygame.draw.rect(screen, WHITE, bg_rect, 1)
         screen.blit(tooltip_text, tooltip_rect)
 
-    # Return flag_rects along with the other buttons
-    return start_rect, load_rect, settings_rect, quit_rect, flag_rects
+    # Note: Returning `help_rect` appended as the last item.
+    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect

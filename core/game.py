@@ -57,6 +57,21 @@ class Game:
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
         self.logger.info("Initializing Rot Engine...")
 
+        try:
+            # 1. Load the cursor graphic
+            cursor_surface = pygame.image.load("./game/lib/sprites/ui/cursor.png").convert_alpha()
+            
+            # 2. Create the cursor object 
+            # The (0, 0) tuple is the "hotspot" (the exact pixel on the image where the click registers - usually top-left)
+            custom_cursor = pygame.cursors.Cursor((0, 0), cursor_surface)
+            
+            # 3. Apply it globally to the game window
+            pygame.mouse.set_cursor(custom_cursor)
+            
+        except Exception as e:
+            print(f"Could not load custom cursor: {e}")
+
+
         init_messages(self)
 
         load_language(core.data.config.GAME_LANGUAGE)
@@ -494,8 +509,30 @@ class Game:
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
-        start_btn, load_btn, settings_btn, quit_btn, flag_rects = draw_menu(self.game_screen, mouse_pos, has_save)
+        # 1. Draw the base menu and capture the new help_rect
+        start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect = draw_menu(self.game_screen, mouse_pos, has_save)
 
+        # 2. NEW: If the user clicked Help, draw the modal over the menu
+        close_help_btn = None
+        if getattr(self, 'show_main_menu_help', False):
+            from core.ui.help_modal import draw_help_modal
+            
+            # Setup the dictionary container for the Help Modal if it doesn't exist yet
+            if not hasattr(self, 'main_menu_help_modal_data'):
+                self.main_menu_help_modal_data = {
+                    'type': 'help',
+                    'id': str(uuid.uuid4()),
+                    'rect': pygame.Rect(GAME_WIDTH // 2 - 300, GAME_HEIGHT // 2 - 250, HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
+                    'position': [GAME_WIDTH // 2 - 455, GAME_HEIGHT // 2 - 270],
+                    'minimized': False,
+                    'active_help_tab': 0,
+                    'scroll_offset_y': 0
+                }
+            
+            # Draw the modal directly to the screen and grab the 'X' button rect
+            _, close_help_btn, _ = draw_help_modal(self.game_screen, self, self.main_menu_help_modal_data, self.assets)
+
+        # 3. Handle Clicks and Scrolling Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -503,20 +540,101 @@ class Game:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 pygame.display.toggle_fullscreen()
 
+            # --- Handle Help Modal Scrolling ---
+            if getattr(self, 'show_main_menu_help', False):
+                # Mouse Wheel Scrolling
+                if event.type == pygame.MOUSEWHEEL:
+                    offset = self.main_menu_help_modal_data.get('scroll_offset_y', 0)
+                    max_scroll = self.main_menu_help_modal_data.get('max_scroll_offset', 0)
+                    if event.y > 0: self.main_menu_help_modal_data['scroll_offset_y'] = max(0, offset - 30)
+                    elif event.y < 0: self.main_menu_help_modal_data['scroll_offset_y'] = min(max_scroll, offset + 30)
+
+                # Stop dragging when mouse is released
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    if getattr(self, 'show_main_menu_help', False):
+                        self.main_menu_help_modal_data['is_dragging_scrollbar'] = False
+                        
+                # Handle Dragging Motion
+                elif event.type == pygame.MOUSEMOTION:
+                    if getattr(self, 'show_main_menu_help', False) and self.main_menu_help_modal_data.get('is_dragging_scrollbar'):
+                        mouse_pos = self._get_scaled_mouse_pos()
+                        dy = mouse_pos[1] - self.main_menu_help_modal_data.get('scrollbar_drag_last_y', mouse_pos[1])
+                        self.main_menu_help_modal_data['scrollbar_drag_last_y'] = mouse_pos[1]
+                        
+                        # Dynamically calculate the track height for precise 1:1 drag-to-scroll ratio
+                        content_rect = self.main_menu_help_modal_data.get('content_rect')
+                        max_scroll = self.main_menu_help_modal_data.get('max_scroll_offset', 0)
+                        handle_rect = self.main_menu_help_modal_data.get('scrollbar_handle_rect')
+                        
+                        if content_rect and max_scroll > 0 and handle_rect:
+                            track_height = content_rect.height - handle_rect.height
+                            if track_height > 0:
+                                scroll_amount = dy * (max_scroll / track_height)
+                                current = self.main_menu_help_modal_data.get('scroll_offset_y', 0)
+                                self.main_menu_help_modal_data['scroll_offset_y'] = max(0, min(max_scroll, current + scroll_amount))
+
+                # --- MOUSE DOWN EVENTS ---
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mouse_pos = self._get_scaled_mouse_pos()
+
+                    # --- IF THE HELP MODAL IS OPEN, INTERCEPT CLICKS ---
+                    if getattr(self, 'show_main_menu_help', False):
+                        
+                        # 1. Check if they clicked the 'X' close button
+                        if close_help_btn:
+                            btn_rect = close_help_btn.get('rect') if isinstance(close_help_btn, dict) else close_help_btn
+                            if btn_rect and btn_rect.collidepoint(mouse_pos):
+                                self.show_main_menu_help = False
+                                continue
+                        
+                        # 2. Check if they clicked the Scrollbar Handle to start dragging
+                        scroll_rect = self.main_menu_help_modal_data.get('scrollbar_handle_rect')
+                        if scroll_rect and scroll_rect.collidepoint(mouse_pos):
+                            self.main_menu_help_modal_data['is_dragging_scrollbar'] = True
+                            self.main_menu_help_modal_data['scrollbar_drag_last_y'] = mouse_pos[1]
+                            continue
+                # Handle Dragging Motion
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.main_menu_help_modal_data.get('is_dragging_scrollbar'):
+                        mouse_pos = self._get_scaled_mouse_pos()
+                        dy = mouse_pos[1] - self.main_menu_help_modal_data.get('scrollbar_drag_last_y', mouse_pos[1])
+                        self.main_menu_help_modal_data['scrollbar_drag_last_y'] = mouse_pos[1]
+                        
+                        max_scroll = self.main_menu_help_modal_data.get('max_scroll_offset', 0)
+                        track_height = self.main_menu_help_modal_data.get('scrollbar_track_height', 400) # Safe fallback
+                        if max_scroll > 0 and track_height > 0:
+                            scroll_amount = dy * (max_scroll / track_height)
+                            current = self.main_menu_help_modal_data.get('scroll_offset_y', 0)
+                            self.main_menu_help_modal_data['scroll_offset_y'] = max(0, min(max_scroll, current + scroll_amount))
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
 
+                # --- IF THE HELP MODAL IS OPEN, INTERCEPT CLICKS ---
+                if getattr(self, 'show_main_menu_help', False):
+                    if close_help_btn:
+                        # Extract the rect securely whether the engine returned a dictionary or a raw Rect
+                        btn_rect = close_help_btn.get('rect') if isinstance(close_help_btn, dict) else close_help_btn
+                        
+                        # Check collision against the extracted rect
+                        if btn_rect and btn_rect.collidepoint(mouse_pos):
+                            self.show_main_menu_help = False
+                            
+                    continue
+                
+                # --- CHECK IF THEY CLICKED THE HELP BUTTON ---
+                if help_rect and help_rect.collidepoint(mouse_pos):
+                    
+                    # Trigger the window to render on the next frame
+                    self.show_main_menu_help = True
+                    continue
+
+                # --- standard game load / flag clicks below ---
                 flag_clicked = False
                 for flag_info in flag_rects:
                     if flag_info['rect'].collidepoint(mouse_pos):
                         lang_code = flag_info['name']
-                        
-                        # Save it using your existing config tool
                         core.data.config.save_language_to_config(lang_code)
-                        
-                        # Hot-reload the texts immediately
                         core.data.localization.load_language(lang_code)
-                        
                         flag_clicked = True
                         break
                 
@@ -540,6 +658,7 @@ class Game:
                 elif quit_btn.collidepoint(mouse_pos):
                     self.running = False
                     return
+                    
         self._update_screen()
 
     def run_load_game_menu(self):
