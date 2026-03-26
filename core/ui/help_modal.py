@@ -18,140 +18,136 @@ def draw_help_modal(surface, game, modal, assets):
     # --- Scroll & UI Constants ---
     padding = 15
     content_y_start = base_modal.modal_y + base_modal.header_h + padding
-    content_width = modal['rect'].width - (padding * 2) - 15 # -15 for scrollbar
+    content_width = modal['rect'].width - (padding * 2) - 15 
     content_height = modal['rect'].height - base_modal.header_h - (padding * 2)
     content_rect = pygame.Rect(base_modal.modal_x + padding, content_y_start, content_width, content_height)
     modal['content_rect'] = content_rect 
 
-    # --- Miniature Layout Engine (Parses HTML & Builds Grid) ---
-    
-    # NEW: Safely and strictly get the LIVE language variable from memory
+    # --- Miniature RAW Markdown Engine ---
     current_lang = getattr(config_module, 'GAME_LANGUAGE', 'en_US')
     
-    # Check if it's the first time OR if the language has changed since last cache!
     if 'help_layout' not in modal or modal.get('loaded_help_lang') != current_lang:
         layout_elements = [] 
-        total_height = 0
         
-        # 1. Construct Exact File Path
+        # 1. Target the .md files
         if current_lang == "en_US":
-            target_path = "./game/lib/data/help/en_US_help.html"
+            target_path = "./game/lib/data/help/en_US_help.md"
         else:
-            target_path = f"./game/lib/lang/{current_lang}_help.html"
+            target_path = f"./game/lib/lang/{current_lang}_help.md"
             
-        # 2. Fallback if missing
         if not os.path.exists(target_path):
             print(f"[Help Modal] Warning: {target_path} not found. Falling back to default EN.")
-            target_path = "./game/lib/data/help/en_US_help.html"
+            target_path = "./game/lib/data/help/en_US_help.md"
 
         try:
-            # 3. Read HTML Content
             with open(target_path, "r", encoding="utf-8") as f:
-                html = f.read()
+                md_lines = f.readlines()
                 
             usable_w = content_width
-            half_w = (usable_w - 20) // 2 
             curr_y = 0
-            
-            # 1. Main Title (<h1>)
-            title_match = re.search(r'<h1>(.*?)</h1>', html, re.IGNORECASE)
-            if title_match:
-                title_txt = title_match.group(1).strip()
-                title_surf = font_small.render(title_txt, True, WHITE)
-                layout_elements.append({'type': 'text', 'surf': title_surf, 'pos': ((usable_w//2) - (title_surf.get_width()//2), curr_y)})
-                curr_y += title_surf.get_height() + 25
-                
-            # 2. Extract and Process Blocks
-            block_matches = re.finditer(r'<div class="block(.*?)">(.*?)</div>', html, re.DOTALL | re.IGNORECASE)
-            
-            col_index = 0
-            row_start_y = curr_y
-            max_row_height = 0
-            
-            for match in block_matches:
-                is_full_width = 'full-width' in match.group(1)
-                content = match.group(2)
-                
-                if is_full_width and col_index == 1:
-                    row_start_y += max_row_height + 20
-                    col_index = 0
-                    max_row_height = 0
-                
-                block_x = 0 if col_index == 0 or is_full_width else half_w + 20
-                block_w = usable_w if is_full_width else half_w
-                block_y = row_start_y
-                inner_y = block_y + 15
-                
-                # Render Block Title (<h3>)
-                h3_match = re.search(r'<h3>(.*?)</h3>', content, re.IGNORECASE)
-                if h3_match:
-                    h3_txt = h3_match.group(1).strip()
-                    h3_surf = font_small.render(h3_txt, True, (255, 204, 0)) 
-                    layout_elements.append({'type': 'text', 'surf': h3_surf, 'pos': (block_x + 15, inner_y)})
-                    inner_y += h3_surf.get_height() + 12
+
+            # 2. Parse Markdown Line-by-Line
+            for line in md_lines:
+                line = line.strip()
+                if not line:
+                    curr_y += 10
+                    continue
+
+                # Rule A: Main Title (# Title)
+                if line.startswith("# "):
+                    title_txt = line[2:].strip().replace("**", "")
                     
-                # Render List Items (<li>)
-                items = re.finditer(r'<li>(.*?)</li>', content, re.DOTALL | re.IGNORECASE)
-                for item in items:
-                    raw_text = item.group(1).strip()
-                    strong_match = re.search(r'<strong>(.*?)</strong>(.*)', raw_text, re.IGNORECASE | re.DOTALL)
+                    font_small.set_bold(True)
+                    title_surf = font_small.render(title_txt, True, WHITE)
+                    font_small.set_bold(False)
                     
-                    if strong_match:
-                        key_txt = "• " + strong_match.group(1).strip()
-                        desc_txt = re.sub(r'<[^>]+>', '', strong_match.group(2)).strip()
+                    layout_elements.append({
+                        'type': 'text', 
+                        'surf': title_surf, 
+                        'pos': ((usable_w//2) - (title_surf.get_width()//2), curr_y),
+                        'bottom_y': curr_y + title_surf.get_height()
+                    })
+                    curr_y += title_surf.get_height() + 25
+
+                # Rule B: Section Headers (### Header)
+                elif line.startswith("### "):
+                    h3_txt = line[4:].strip().replace("**", "")
+                    
+                    font_small.set_bold(True)
+                    h3_surf = font_small.render(h3_txt, True, WHITE)
+                    font_small.set_bold(False)
+                    
+                    layout_elements.append({
+                        'type': 'text', 
+                        'surf': h3_surf, 
+                        'pos': (15, curr_y),
+                        'bottom_y': curr_y + h3_surf.get_height()
+                    })
+                    curr_y += h3_surf.get_height() + 12
+
+                # Rule C: Lists (* or -)
+                elif line.startswith("* ") or line.startswith("- "):
+                    bold_match = re.search(r'^[\*\-]\s+\*\*(.*?)\*\*(.*)', line)
+                    if bold_match:
+                        key_txt = "• " + bold_match.group(1).strip()
+                        desc_txt = bold_match.group(2).strip()
+                        if desc_txt.startswith(":"):
+                            desc_txt = desc_txt[1:].strip()
+                            
+                        font_small.set_bold(True)
+                        key_surf = font_small.render(key_txt, True, WHITE)
+                        font_small.set_bold(False)
                         
-                        key_surf = font_small.render(key_txt, True, (38, 189, 1))
-                        layout_elements.append({'type': 'text', 'surf': key_surf, 'pos': (block_x + 15, inner_y)})
+                        layout_elements.append({
+                            'type': 'text', 
+                            'surf': key_surf, 
+                            'pos': (15, curr_y),
+                            'bottom_y': curr_y + key_surf.get_height()
+                        })
                         
-                        desc_x = block_x + 15 + key_surf.get_width() + 5
-                        wrapped = wrap_text(desc_txt, block_w - (desc_x - block_x) - 15, font_small)
+                        desc_x = 15 + key_surf.get_width() + 5
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_small)
                         
-                        temp_y = inner_y
-                        for line in wrapped:
-                            l_surf = font_small.render(line, True, WHITE)
-                            layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y)})
+                        temp_y = curr_y
+                        for w_line in wrapped:
+                            l_surf = font_small.render(w_line, True, WHITE)
+                            layout_elements.append({
+                                'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y),
+                                'bottom_y': temp_y + l_surf.get_height()
+                            })
                             temp_y += font_small.get_height() + 4
                             
-                        inner_y = max(inner_y + font_small.get_height() + 4, temp_y)
+                        curr_y = max(curr_y + font_small.get_height() + 4, temp_y) + 6
                         
                     else:
-                        i_txt = "• " + re.sub(r'<[^>]+>', '', raw_text).strip()
-                        wrapped = wrap_text(i_txt, block_w - 30, font_small)
-                        for line in wrapped:
-                            l_surf = font_small.render(line, True, WHITE)
-                            layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (block_x + 15, inner_y)})
-                            inner_y += font_small.get_height() + 4
+                        i_txt = "• " + line[2:].strip().replace("**", "")
+                        wrapped = wrap_text(i_txt, usable_w - 30, font_small)
+                        for w_line in wrapped:
+                            l_surf = font_small.render(w_line, True, WHITE)
+                            layout_elements.append({
+                                'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
+                                'bottom_y': curr_y + l_surf.get_height()
+                            })
+                            curr_y += font_small.get_height() + 4
                             
-                    inner_y += 6
-                    
-                block_h = inner_y - block_y + 10
-                block_rect = pygame.Rect(block_x, block_y, block_w, block_h)
-                
-                layout_elements.insert(0, {
-                    'type': 'rect', 
-                    'rect': block_rect, 
-                    'bg_color': (42, 42, 42),
-                    'border_color': (68, 68, 68)
-                })
-                
-                if is_full_width:
-                    row_start_y = block_y + block_h + 20
-                    curr_y = row_start_y
+                    curr_y += 6
+
+                # Rule D: Normal Paragraph Text
                 else:
-                    max_row_height = max(max_row_height, block_h)
-                    col_index += 1
-                    if col_index > 1: 
-                        col_index = 0
-                        row_start_y += max_row_height + 20
-                        curr_y = row_start_y
-                        max_row_height = 0
-                        
-            if col_index == 1: 
-                curr_y = row_start_y + max_row_height + 20
-                
+                    p_txt = line.replace("**", "")
+                    wrapped = wrap_text(p_txt, usable_w - 30, font_small)
+                    for w_line in wrapped:
+                        l_surf = font_small.render(w_line, True, WHITE)
+                        layout_elements.append({
+                            'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
+                            'bottom_y': curr_y + l_surf.get_height()
+                        })
+                        curr_y += font_small.get_height() + 4
+                    curr_y += 6
+
             modal['help_layout'] = layout_elements
             modal['help_total_h'] = curr_y
-            modal['loaded_help_lang'] = current_lang # Update the tracked language
+            modal['loaded_help_lang'] = current_lang
                 
         except Exception as e:
             print(f"[Help Modal] Error loading {target_path}: {e}")
@@ -172,15 +168,7 @@ def draw_help_modal(surface, game, modal, assets):
         y_offset = -scroll_offset_y
         
         for element in modal.get('help_layout', []):
-            if element['type'] == 'rect':
-                r = element['rect']
-                draw_rect = pygame.Rect(r.x, r.y + y_offset, r.width, r.height)
-                
-                if draw_rect.bottom > 0 and draw_rect.top < content_height:
-                    pygame.draw.rect(content_surface, element['bg_color'], draw_rect, border_radius=6)
-                    pygame.draw.rect(content_surface, element['border_color'], draw_rect, width=1, border_radius=6)
-                    
-            elif element['type'] == 'text':
+            if element['type'] == 'text':
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
                 

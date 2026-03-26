@@ -4,6 +4,7 @@ import uuid
 import glob
 import os
 import math
+import threading
 import core.data.config
 from core.data.config import *
 from core.ui.helpers.main_menu import draw_menu
@@ -447,26 +448,42 @@ class Game:
             self.logger.info("Game Execution Ended safely.")
 
     def run_loading(self):
+        # 1. Fetch ALL events once at the very beginning of the frame
+        events = pygame.event.get()
+        
         mouse_pos = self._get_scaled_mouse_pos()
-        start_btn = draw_loading_screen(self.game_screen, self.loading_done, mouse_pos)
+        
+        # FIX: Check for QUIT globally so the window can be closed even while loading
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.running = False
+                return
+        
+        # 2. Pass the events into the draw function so it can read the scroll wheel
+        start_btn = draw_loading_screen(self.game_screen, self.loading_done, mouse_pos, events)
         self._update_screen()
         
         if not self.loading_done:
-            if self.loading_data:
-                self.start_new_game(self.loading_data)
-                self.game_state = 'LOADING'
-                self.loading_done = True
-                self.loading_data = None 
-            elif self.loading_saved_game_folder:
-                self.load_game(self.loading_saved_game_folder)
-                self.game_state = 'LOADING'
-                self.loading_done = True
-                self.loading_saved_game_folder = None
-        else:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
+            # FIX: Use a background thread to prevent blocking the Pygame Event Loop
+            if not hasattr(self, '_loading_thread'):
                 
+                if self.loading_data:
+                    self._loading_thread = threading.Thread(target=self.start_new_game, args=(self.loading_data,), daemon=True)
+                    self._loading_thread.start()
+                elif self.loading_saved_game_folder:
+                    self._loading_thread = threading.Thread(target=self.load_game, args=(self.loading_saved_game_folder,), daemon=True)
+                    self._loading_thread.start()
+            else:
+                # If the thread exists, check if it has finished its job
+                if not self._loading_thread.is_alive():
+                    self.loading_done = True
+                    del self._loading_thread # Cleanup
+                    self.loading_data = None 
+                    self.loading_saved_game_folder = None
+        else:
+            # 3. Use the same 'events' list we already fetched! 
+            # Do NOT call pygame.event.get() again here.
+            for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if start_btn and start_btn.collidepoint(mouse_pos):
                         self.game_state = 'PLAYING'
@@ -605,6 +622,16 @@ class Game:
         # --- NEW: Stop ambient sounds when on Game Over screen ---
         if hasattr(self, 'world_time') and self.world_time:
             self.world_time.stop_all_sounds()
+        
+        if getattr(self, 'current_save_folder_name', None):
+            try:
+                delete_save(self.current_save_folder_name)
+                self.logger.info(f"Permadeath: Deleted save folder '{self.current_save_folder_name}' due to player death.")
+            except Exception as e:
+                self.logger.info(f"Permadeath deletion failed: {e}")
+            
+            # Set to None so it only triggers once while the Game Over screen is running
+            self.current_save_folder_name = None
             
         pygame.mouse.set_visible(True)
         mouse_pos = self._get_scaled_mouse_pos()

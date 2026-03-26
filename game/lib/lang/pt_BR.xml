@@ -119,6 +119,7 @@
         <ui name="Help and Tutorial (?)" translation_ui="Tutorial e Ajuda (?)" />
         <ui name="Sweet Dreams. Press Space to Wake up." translation_ui="Bons Sonhos. Pressione Espaço para Acordar." />
         <ui name="Click to start" translation_ui="Clique para iniciar" />
+        <ui name="Loading..." translation_ui="Carregando..." />
 
         <ui name="Game" translation_ui="Jogo" />
         <ui name="Map" translation_ui="Mapa" />

@@ -68,6 +68,8 @@ large_font = pygame.font.Font(FONT_FACE, 14)
 title_font = pygame.font.Font(FONT_FACE, 14)
 font_notification = pygame.font.Font(FONT_FACE, 14)
 
+font_xxl = pygame.font.Font(FONT_FACE, 16)
+
 TILE_SIZE = 16
 
 TIME_DAYLENGTH = 0
