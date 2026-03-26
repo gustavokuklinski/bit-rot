@@ -4,26 +4,27 @@ from core.ui.modals import BaseModal
 
 def get_container_slot_rect(container_pos, i):
     rows, cols = 4, 5
-    slot_size = 48
-    padding = 10
-    start_x = container_pos[0] + padding
+    slot_size = 40 # Reduced to 40
+    gap = 6        # Added gap system
+    start_x = container_pos[0] + 10
     start_y = container_pos[1] + 40
     row = i // cols
     col = i % cols
-    return pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
+    return pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
 
 def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header_h, mouse_pos):
     rows, cols = 4, 5
-    slot_size = 48
+    slot_size = 40
+    gap = 6
     padding = 10
-    max_visible_rows = int((modal_h - header_h - padding) / (slot_size + padding))
+    # Calculate visible rows dynamically utilizing the new gap calculation
+    max_visible_rows = int((modal_h - header_h - padding) / (slot_size + gap))
     max_visible_slots = max_visible_rows * cols
-    #mouse_pos = pygame.mouse.get_pos()
 
     for i in range(min(container_item.capacity or 0, max_visible_slots)):
         row = i // cols
         col = i % cols
-        slot_rect = pygame.Rect(start_x + col * (slot_size + padding), start_y + row * (slot_size + padding), slot_size, slot_size)
+        slot_rect = pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
         
         border_color = GRAY_40
         if game.is_dragging and slot_rect.collidepoint(mouse_pos):

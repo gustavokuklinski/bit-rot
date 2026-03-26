@@ -129,10 +129,10 @@ class Game:
 
         self.last_modal_positions = {
             'status': (65, 10),
-            'inventory': (970, 10),
-            'gear': (650, 10),
+            'inventory': (1020, 10),
+            'gear': (750, 10),
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'nearby': (970, 360),
+            'nearby': (1020, 330),
             'messages': (10, 390),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),

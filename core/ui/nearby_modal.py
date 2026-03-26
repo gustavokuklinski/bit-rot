@@ -24,7 +24,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     close_button, minimize_button = base_modal.get_buttons()
 
     if base_modal.minimized:
-        modal['content_rect'] = None # No content rect when minimized
+        modal['content_rect'] = None 
         return close_button, minimize_button
 
     # --- CHANGED: Filter and Group Items ---
@@ -41,8 +41,6 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
             if isinstance(obj, Corpse):
                 is_independent_container = True
             elif hasattr(obj, 'inventory') and obj.inventory is not None:
-                # Only treat it as a container if it's explicitly a container type (e.g. Backpack)
-                # This prevents weird edge cases if regular items somehow get inventory attributes
                 if getattr(obj, 'item_type', '') in ['backpack', 'container','vehicle', 'cloth']:
                     is_independent_container = True
             
@@ -51,21 +49,16 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
 
             should_show_on_ground = True
             
-            
-
             if not getattr(obj, 'item_type', None):
                 should_show_on_ground = False
 
             if is_independent_container:
-                # If it's a container, filter out non-pickupable entities
                 if isinstance(obj, Corpse):
                     should_show_on_ground = False
                 elif isinstance(obj, Container):
                     should_show_on_ground = False
-
                 elif getattr(obj, 'item_type', '') == 'vehicle':
                     should_show_on_ground = False
-                # 'backpack' and generic 'container' items will remain True
             
             if should_show_on_ground:
                 ground_items.append(obj)
@@ -74,39 +67,30 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     # If we have loose items, create a "Ground" tab at the very beginning
     if ground_items:
         nearby_containers.insert(0, VirtualGroundContainer(ground_items))
-    # ---------------------------------------
 
     if not nearby_containers:
         no_containers_text = font.render("", True, WHITE)
-        surface.blit(no_containers_text, (base_modal.modal_x + 10, base_modal.modal_y + base_modal.header_h + 30 + 10)) # Position below header+tabs
-        modal['content_rect'] = None # No content rect when empty
-        modal['tabs_data'] = [] # Ensure tabs_data is empty
-        modal['tab_rects'] = [] # Ensure tab_rects is empty
+        surface.blit(no_containers_text, (base_modal.modal_x + 10, base_modal.modal_y + base_modal.header_h + 30 + 10))
+        modal['content_rect'] = None
+        modal['tabs_data'] = []
+        modal['tab_rects'] = []
         return close_button, minimize_button
 
     tabs_data = []
-    current_tab_labels = set() # Keep track of valid labels for this frame
+    current_tab_labels = set() 
     for container in nearby_containers:
-        label = container.name # Default label
-        icon = None # Default icon
-        icon_path = None # Default icon path
+        label = container.name 
+        icon = None 
+        icon_path = None 
 
-        # Determine Icon and potentially Label based on type
         if isinstance(container, Corpse):
-            label = "Corpse" # Use a consistent label for corpses
+            label = "Corpse" 
             icon_path = SPRITE_PATH + 'zombie/dead.png'
-        
-        # --- NEW: Icon logic for Ground ---
         elif getattr(container, 'item_type', '') == 'ground':
-            #label = "GRD"
-            # You can set a specific icon_path here if you have one, e.g.:
             icon_path = SPRITE_PATH + 'ui/ground.png' 
-        # ----------------------------------
         elif hasattr(container, 'image') and container.image:
-             # Use the container's own image if available (and not handled above)
-             icon = container.image # Pass the surface directly if loaded
+             icon = container.image 
 
-        # Add unique label suffix if needed (e.g., "Corpse (1)", "Corpse (2)")
         original_label = label
         count = 1
         while label in current_tab_labels:
@@ -116,55 +100,41 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         current_tab_labels.add(label)
 
         tab_info = {
-            'label': label, # Use the potentially modified label
+            'label': label,
             'container': container
         }
         if icon:
-            tab_info['icon'] = icon # Pass pre-loaded surface
+            tab_info['icon'] = icon
         elif icon_path:
-            tab_info['icon_path'] = icon_path # Pass path for Tabs class to load
+            tab_info['icon_path'] = icon_path
 
         tabs_data.append(tab_info)
 
-    modal['tabs_data'] = tabs_data # Store the generated tabs_data
+    modal['tabs_data'] = tabs_data
 
-    # Ensure active_tab is valid, default to first if not set or invalid
     if modal.get('active_tab') not in current_tab_labels:
         modal['active_tab'] = tabs_data[0]['label'] if tabs_data else None
 
-    # DEBUG 9: Show active tab at the START of drawing
-    # print(f"--- Drawing Nearby Modal (Start): Active Tab is '{modal.get('active_tab')}' ---") # DEBUG
-
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw(game, mouse_pos) # This draws the tabs and stores 'tab_rects' in the modal dict
+    tabs.draw(game, mouse_pos) 
 
     active_tab_label_to_draw = modal.get('active_tab')
     active_tab_data = None
     if active_tab_label_to_draw:
-        # Find the active tab data using the *potentially modified* label
         active_tab_data = next((tab for tab in tabs_data if tab['label'] == active_tab_label_to_draw), None)
 
-    # Calculate the area below the header and tab bar for container content
     content_rect = pygame.Rect(
-        modal['position'][0], # Modal X
-        modal['position'][1] + base_modal.header_h, # Modal Y + Header Height + Tab Height
-        modal['rect'].width, # Modal Width
-        modal['rect'].height - base_modal.header_h # Remaining Height
+        modal['position'][0],
+        modal['position'][1] + base_modal.header_h,
+        modal['rect'].width,
+        modal['rect'].height - base_modal.header_h
     )
-    modal['content_rect'] = content_rect # Store for find_item_at_pos and potentially drawing bg
+    modal['content_rect'] = content_rect
 
 
     if active_tab_data:
         container = active_tab_data['container']
-        # Create a temporary dict containing just the rect needed by draw_container_content
         container_modal_view = {'rect': content_rect}
-
-        # Optionally draw a background for the content area
-        # pygame.draw.rect(surface, (30,30,30), content_rect) # Darker background
-
-        # print(f"    Drawing content for container: {container.name}") # DEBUG
         draw_container_content(surface, game, container, container_modal_view, assets, mouse_pos)
-    # else:
-        # print(f"    No active_tab_data found to draw content for '{active_tab_label_to_draw}'") # DEBUG
 
     return close_button, minimize_button

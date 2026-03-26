@@ -28,8 +28,8 @@ def draw_text_shadow(surface, font, text, color, pos, align='topleft', shadow_co
 # --- Belt HUD Functions ---
 
 def get_belt_hud_slot_rect(i):
-    slot_size = 48
-    gap = 8
+    slot_size = 40 # Reduced from 48
+    gap = 6        # Reduced from 8
     total_width = (slot_size * 5) + (gap * 4)
     start_x = (GAME_WIDTH - total_width) // 2
     start_y = GAME_HEIGHT - slot_size - 15 
@@ -263,12 +263,11 @@ def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
 
 def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
-    slot_w = 48
-    slot_h = 48
-    gap = 8
+    slot_w = 40 # Reduced from 48
+    slot_h = 40
+    gap = 6     # Reduced from 8
     start_x = modal_x + 10
     
-    # [CHANGED] Logic for 5 items per row
     row = i // 5
     col = i % 5
     
@@ -280,28 +279,25 @@ def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
 
 def get_belt_slot_rect_in_modal(i, modal_position):
     modal_x, modal_y = modal_position
-    slot_w = 48
-    slot_h = 48
-    gap = 8
+    slot_w = 40 # Reduced from 48
+    slot_h = 40
+    gap = 6     # Reduced from 8
     start_x = modal_x + 10
     
-    # [CHANGED] Shifted belt down to make room for second row of inventory
-    # Original y was + 230. Added 48 (slot height) + 8 (gap) ~ 56px shift. 
-    # New Y around 286
-    start_y = modal_y + 286 
+    # Recalculated spacing: Backpack bottom is ~230, plus 15px margin
+    start_y = modal_y + 245 
     
     x = start_x + i * (slot_w + gap)
     return pygame.Rect(x, start_y, slot_w, slot_h)
 
 def get_backpack_slot_rect(modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
-    slot_w = 272
-    slot_h = 48
+    slot_w = 224 # Exactly 5 slots (40px) + 4 gaps (6px) to match row width perfectly
+    slot_h = 40  # Reduced from 48
     x = modal_x + 10
     
-    # [CHANGED] Shifted backpack slot down to make room for second row of inventory
-    # Original y was + 155. Added 56px shift.
-    y = modal_y + 211
+    # Recalculated spacing: Inventory takes up to ~172, plus 18px margin
+    y = modal_y + 190
     
     return pygame.Rect(x, y, slot_w, slot_h)
 

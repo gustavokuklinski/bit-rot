@@ -83,48 +83,43 @@ def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
 # Helper function to get rects for the 'Gear' tab
 def get_gear_slot_rects(modal_position, modal_width=GEAR_MODAL_WIDTH):
     modal_x, modal_y = modal_position
-    slot_size = 48
-    gap = 8
+    slot_size = 40 # Reduced to 40
+    gap = 6        # Reduced to 6
     
-    # FIX: Use the passed modal_width (or GEAR_MODAL_WIDTH default) to calculate center
-    modal_center_x = modal_x + (modal_width / 2)
+    # Mathematical center of the active modal
+    cx = modal_x + (modal_width / 2)
+    
+    # Perfectly aligned anchor points for 3 uniform columns
+    mid_x = cx - (slot_size / 2)
+    left_x = mid_x - gap - slot_size
+    right_x = mid_x + slot_size + gap
 
-    # [MODIFIED] Content Y start is 80 (Header 35 + Tabs 30 + Padding 15)
-    # Was 40, shifted down to accommodate tabs
     y1 = modal_y + 85
-    y2 = y1 + slot_size + gap + 20
-    y3 = y2 + slot_size + gap + 20
+    y2 = y1 + slot_size + gap + 10
+    y3 = y2 + slot_size + gap + 10
 
     rects = {
         # [HEAD]
-        'head': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 5, y1, slot_size, slot_size),
-        'hair': pygame.Rect(modal_center_x - (slot_size / 2), y1, slot_size, slot_size),
-        'facial': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 5, y1, slot_size, slot_size),
-        # [HANDS][body][arms]
-        # Adjust X positions relative to the calculated center
-        'hands': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 5, y2, slot_size, slot_size),
-        'body': pygame.Rect(modal_center_x - (slot_size / 2), y2, slot_size, slot_size),
-        'arms': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 5, y2, slot_size, slot_size),
+        'head': pygame.Rect(left_x, y1, slot_size, slot_size),
+        'hair': pygame.Rect(mid_x, y1, slot_size, slot_size),
+        'facial': pygame.Rect(right_x, y1, slot_size, slot_size),
         
-        # [LEGS][FEET] (PANTS maps to LEGS)
-        # These are overwritten below for better centering, but initialized here
-        'legs': pygame.Rect(modal_center_x - (slot_size / 2) - gap - slot_size - 5, y3, slot_size, slot_size),
-        'feet': pygame.Rect(modal_center_x - (slot_size / 2), y3, slot_size, slot_size),
-        'util': pygame.Rect(modal_center_x + (slot_size / 2) + gap + 5, y3, slot_size, slot_size),
+        # [BODY]
+        'hands': pygame.Rect(left_x, y2, slot_size, slot_size),
+        'body': pygame.Rect(mid_x, y2, slot_size, slot_size),
+        'arms': pygame.Rect(right_x, y2, slot_size, slot_size),
+        
+        # [LEGS/FEET]
+        'legs': pygame.Rect(left_x, y3, slot_size, slot_size),
+        'feet': pygame.Rect(mid_x, y3, slot_size, slot_size),
+        'util': pygame.Rect(right_x, y3, slot_size, slot_size),
     }
-    
-    # Correcting legs/feet logic to be perfectly centered
-    # Total width of 2 slots = 48*2 + 8 = 104
-    # Start X = center_x - 104/2 = center_x - 52
-    #rects['legs'] = pygame.Rect(modal_center_x - 52, y3, slot_size, slot_size)
-    #rects['feet'] = pygame.Rect(modal_center_x + 4, y3, slot_size, slot_size) # -52 + 48 + 8 = +4
-
 
     return rects
 
 # Helper function to draw the content of the 'Gear' tab
 def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
-    # Pass the actual modal width so calculations are correct
+    # Pass the actual modal width so calculations are perfectly centered regardless of modal sizes
     modal['gear_slot_rects'] = get_gear_slot_rects(modal['position'], modal['rect'].width)
     
     if not hasattr(player, 'clothes'):
@@ -135,9 +130,9 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
-        # Draw label
+        # Draw label, shifting slightly up into the smaller square 
         label_text = font_14.render(slot_name.capitalize(), True, GRAY)
-        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.bottom - 42)
+        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.top + 4)
         surface.blit(label_text, label_rect)
 
         # Get item from player's clothes
