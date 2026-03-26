@@ -2,7 +2,7 @@
 <config>
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
-        <ui_show_tutorial_default value="true" name="Display Help and Tutorial at start gameplay"/>
+        <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay"/>
         <language value="en_US" name="Language"/>
     </ui>
     <audio>
