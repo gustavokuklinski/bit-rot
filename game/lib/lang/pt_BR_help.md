@@ -1,18 +1,16 @@
-![Guide Header](./game/lib/sprites/ui/survivor_guide_pt.png)
+![Bem Vindo](./game/lib/sprites/ui/survivor_guide_pt.png)
 
-### [ COMANDOS E TECLAS ]
+### [ COMANDOS ]
+
+**Teclado**
+
 * **W, A, S, D** : Mover seu personagem
 * **E** : Interagir: Falar com NPCs, Abrir/Fechar Portas/Janelas, Entrar em Veículos, Usar Escadas
 * **1 a 5** : Usar ou Equipar item do seu Cinto
-* **LCTRL / RCTRL / RMB** : Mirar Arma
-* **LMB + Click (enquanto mira)** : Atacar / Atirar / Corpo a Corpo
-* **RMB + Click (em itens)** : Menu de Contexto (Equipar, Largar, Consumir, Recarregar)
 * **Espaço** : Acordar do sono
 * **F2** : Pausa / Menu de Salvar
 * **F3** : Avançar o Tempo
 * **F11** : Tela Cheia
-
-### [ ATALHOS DA INTERFACE ]
 * **I** : Inventário - Inventário do jogador e mochila
 * **H** : Status - Status do jogador
 * **G** : Equipamento - Roupas do jogador
@@ -21,7 +19,13 @@
 * **C** : Criação (Crafting) - Receitas de criação
 * **? ou /** : Abrir este menu de Ajuda
 
-### [ INVENTÁRIO E ARRASTAR/SOLTAR ]
+**Mouse**
+
+* **LCTRL / RCTRL / RMB** : Mirar Arma
+* **LMB + Click (enquanto mira)** : Atacar / Atirar / Corpo a Corpo
+* **RMB + Click (em itens)** : Menu de Contexto (Equipar, Largar, Consumir, Recarregar)
+
+### [ INVENTÁRIO ]
 * **Clique esquerdo e segure** um item para arrastá-lo pelos espaços.
 * **Solte itens no seu Cinto** para acesso rápido (teclas 1-5).
 * **Solte itens no menu de Equipamento** para vestir roupas.

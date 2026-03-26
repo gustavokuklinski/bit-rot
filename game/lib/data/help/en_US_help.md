@@ -1,18 +1,16 @@
 ![Guide Header](./game/lib/sprites/ui/survivor_guide_en.png)
 
-### [ COMMANDS & KEYBINDINGS ]
+### [ COMMANDS ]
+
+**Keyboard**
+
 * **W, A, S, D** : Move your character
 * **E** : Interact: Talk to NPCs, Open/Close Doors/Windows, Enter Vehicles, Use Stairs
 * **1 to 5** : Use or Equip item from your Belt
-* **LCTRL / RCTRL / RMB** : Aim Weapon
-* **LMB + Click (while aiming)** : Attack / Shoot / Melee
-* **RMB + Click (on items)** : Context Menu (Equip, Drop, Consume, Reload)
 * **Space** : Wake up from sleep
 * **F2** : Pause / Save Menu
 * **F3** : Fast Forward Time
 * **F11** : Fullscreen
-
-### [ INTERFACE SHORTCUTS ]
 * **I** : Inventory - Player inventory and backpack
 * **H** : Status - Player status
 * **G** : Gear - Player clothes
@@ -21,7 +19,14 @@
 * **C** : Crafting - Craft recipes
 * **? or /** : Open Help menu
 
-### [ INVENTORY & DRAG-DROP ]
+**Mouse**
+
+* **LCTRL / RCTRL / RMB** : Aim Weapon
+* **LMB + Click (while aiming)** : Attack / Shoot / Melee
+* **RMB + Click (on items)** : Context Menu (Equip, Drop, Consume, Reload)
+
+
+### [ INVENTORY ]
 * **Left-click and hold** an item to drag it across slots.
 * **Drop items into your Belt** for quick access (keys 1-5).
 * **Drop items into the Gear menu** to equip clothing.

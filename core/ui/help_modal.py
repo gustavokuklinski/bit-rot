@@ -1,7 +1,7 @@
 import os
 import re
 import pygame
-import core.data.config as config_module  # <-- Explicit module reference
+import core.data.config as config_module
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.ui.text_modal import wrap_text
@@ -19,17 +19,17 @@ def draw_help_modal(surface, game, modal, assets):
     padding = 15
     content_y_start = base_modal.modal_y + base_modal.header_h + padding
     content_width = modal['rect'].width - (padding * 2) - 15 
-    content_height = modal['rect'].height - base_modal.header_h - (padding * 2)
-    content_rect = pygame.Rect(base_modal.modal_x + padding, content_y_start, content_width, content_height)
-    modal['content_rect'] = content_rect 
+    
+    # We will adjust content height later after we draw the tabs!
 
-    # --- Miniature RAW Markdown Engine ---
+    # --- Miniature RAW Markdown Engine w/ TABS ---
     current_lang = getattr(config_module, 'GAME_LANGUAGE', 'en_US')
     
-    if 'help_layout' not in modal or modal.get('loaded_help_lang') != current_lang:
-        layout_elements = [] 
+    if 'help_tabs' not in modal or modal.get('loaded_help_lang') != current_lang:
+        tabs = []
+        current_tab = {'title': 'Home', 'layout': [], 'curr_y': 0, 'total_h': 0}
+        tabs.append(current_tab)
         
-        # 1. Target the .md files
         if current_lang == "en_US":
             target_path = "./game/lib/data/help/en_US_help.md"
         else:
@@ -44,46 +44,39 @@ def draw_help_modal(surface, game, modal, assets):
                 md_lines = f.readlines()
                 
             usable_w = content_width
-            curr_y = 0
 
-            # 2. Parse Markdown Line-by-Line
             for line in md_lines:
                 line = line.strip()
                 if not line:
-                    curr_y += 10
+                    current_tab['curr_y'] += 10
                     continue
+                    
+                # --- NEW: TAB SEPARATOR (### Header) ---
+                if line.startswith("### "):
+                    tab_title = line[4:].strip().replace("**", "").replace("[", "").replace("]", "").strip()
+                    
+                    if current_tab['curr_y'] <= 0 and not current_tab['layout']:
+                        current_tab['title'] = tab_title
+                    else:
+                        current_tab['total_h'] = current_tab['curr_y'] 
+                        current_tab = {'title': tab_title, 'layout': [], 'curr_y': 0, 'total_h': 0}
+                        tabs.append(current_tab)
 
                 # Rule A: Main Title (# Title)
-                if line.startswith("# "):
+                elif line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
                     
                     font_14.set_bold(True)
                     title_surf = font_14.render(title_txt, True, WHITE)
                     font_14.set_bold(False)
                     
-                    layout_elements.append({
+                    current_tab['layout'].append({
                         'type': 'text', 
                         'surf': title_surf, 
-                        'pos': ((usable_w//2) - (title_surf.get_width()//2), curr_y),
-                        'bottom_y': curr_y + title_surf.get_height()
+                        'pos': ((usable_w//2) - (title_surf.get_width()//2), current_tab['curr_y']),
+                        'bottom_y': current_tab['curr_y'] + title_surf.get_height()
                     })
-                    curr_y += title_surf.get_height() + 25
-
-                # Rule B: Section Headers (### Header)
-                elif line.startswith("### "):
-                    h3_txt = line[4:].strip().replace("**", "")
-                    
-                    font_14.set_bold(True)
-                    h3_surf = font_14.render(h3_txt, True, WHITE)
-                    font_14.set_bold(False)
-                    
-                    layout_elements.append({
-                        'type': 'text', 
-                        'surf': h3_surf, 
-                        'pos': (15, curr_y),
-                        'bottom_y': curr_y + h3_surf.get_height()
-                    })
-                    curr_y += h3_surf.get_height() + 12
+                    current_tab['curr_y'] += title_surf.get_height() + 25
 
                 # Rule C: Lists (* or -)
                 elif line.startswith("* ") or line.startswith("- "):
@@ -98,67 +91,56 @@ def draw_help_modal(surface, game, modal, assets):
                         key_surf = font_14.render(key_txt, True, WHITE)
                         font_14.set_bold(False)
                         
-                        layout_elements.append({
-                            'type': 'text', 
-                            'surf': key_surf, 
-                            'pos': (15, curr_y),
-                            'bottom_y': curr_y + key_surf.get_height()
+                        current_tab['layout'].append({
+                            'type': 'text', 'surf': key_surf, 'pos': (15, current_tab['curr_y']),
+                            'bottom_y': current_tab['curr_y'] + key_surf.get_height()
                         })
                         
                         desc_x = 15 + key_surf.get_width() + 5
                         wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
                         
-                        temp_y = curr_y
+                        temp_y = current_tab['curr_y']
                         for w_line in wrapped:
                             l_surf = font_14.render(w_line, True, WHITE)
-                            layout_elements.append({
+                            current_tab['layout'].append({
                                 'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y),
                                 'bottom_y': temp_y + l_surf.get_height()
                             })
                             temp_y += font_14.get_height() + 4
                             
-                        curr_y = max(curr_y + font_14.get_height() + 4, temp_y) + 6
-                        
+                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_14.get_height() + 4, temp_y) + 6
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
                         wrapped = wrap_text(i_txt, usable_w - 30, font_14)
                         for w_line in wrapped:
                             l_surf = font_14.render(w_line, True, WHITE)
-                            layout_elements.append({
-                                'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
-                                'bottom_y': curr_y + l_surf.get_height()
+                            current_tab['layout'].append({
+                                'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
+                                'bottom_y': current_tab['curr_y'] + l_surf.get_height()
                             })
-                            curr_y += font_14.get_height() + 4
-                            
-                    curr_y += 6
+                            current_tab['curr_y'] += font_14.get_height() + 4
+                    current_tab['curr_y'] += 6
 
                 # Rule E: Images (![alt](path))
                 elif line.startswith("![") and "](" in line and line.endswith(")"):
-                    # Extract the path from between the parentheses
                     img_path = re.search(r'\((.*?)\)', line)
                     if img_path:
                         clean_path = img_path.group(1).strip()
                         if os.path.exists(clean_path):
                             try:
                                 loaded_img = pygame.image.load(clean_path).convert_alpha()
-                                
-                                # Scale image to be full-width (usable_w) while maintaining aspect ratio
                                 img_w, img_h = loaded_img.get_size()
                                 scale_factor = usable_w / img_w
                                 new_h = int(img_h * scale_factor)
                                 scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
                                 
-                                layout_elements.append({
-                                    'type': 'image', 
-                                    'surf': scaled_img, 
-                                    'pos': (0, curr_y), # Full width, so x=0
-                                    'bottom_y': curr_y + new_h
+                                current_tab['layout'].append({
+                                    'type': 'image', 'surf': scaled_img, 'pos': (0, current_tab['curr_y']),
+                                    'bottom_y': current_tab['curr_y'] + new_h
                                 })
-                                curr_y += new_h + 15 # Add margin below image
+                                current_tab['curr_y'] += new_h + 15
                             except Exception as e:
                                 print(f"[Help Modal] Error loading image {clean_path}: {e}")
-                        else:
-                            print(f"[Help Modal] Image path not found: {clean_path}")
 
                 # Rule D: Normal Paragraph Text
                 else:
@@ -166,26 +148,87 @@ def draw_help_modal(surface, game, modal, assets):
                     wrapped = wrap_text(p_txt, usable_w - 30, font_14)
                     for w_line in wrapped:
                         l_surf = font_14.render(w_line, True, WHITE)
-                        layout_elements.append({
-                            'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
-                            'bottom_y': curr_y + l_surf.get_height()
+                        current_tab['layout'].append({
+                            'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
+                            'bottom_y': current_tab['curr_y'] + l_surf.get_height()
                         })
-                        curr_y += font_14.get_height() + 4
-                    curr_y += 6
+                        current_tab['curr_y'] += font_14.get_height() + 4
+                    current_tab['curr_y'] += 6
 
-            modal['help_layout'] = layout_elements
-            modal['help_total_h'] = curr_y
+            current_tab['total_h'] = current_tab['curr_y']
+            
+            modal['help_tabs'] = tabs
             modal['loaded_help_lang'] = current_lang
+            modal['active_help_tab'] = 0
                 
         except Exception as e:
             print(f"[Help Modal] Error loading {target_path}: {e}")
-            modal['help_layout'] = []
-            modal['help_total_h'] = 0
+            modal['help_tabs'] = []
             modal['loaded_help_lang'] = current_lang
+            modal['active_help_tab'] = 0
+
+    # --- Draw Tabs Header ---
+    tab_h = 30
+    tab_y = content_y_start
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_buttons = pygame.mouse.get_pressed()
+    
+    active_tab_idx = modal.get('active_help_tab', 0)
+    tabs = modal.get('help_tabs', [])
+    active_tab = tabs[active_tab_idx] if tabs else {'layout': [], 'total_h': 0}
+
+    total_tabs = len(tabs)
+    if total_tabs > 0:
+        current_x = base_modal.modal_x + padding
+        tab_rects = []
+
+        # 1. Calculate Rects First (Dynamic full-width match to tabs.py)
+        for i in range(total_tabs):
+            tab_width = content_width // total_tabs
+            if i < content_width % total_tabs:
+                tab_width += 1
+                
+            tab_rect = pygame.Rect(current_x, tab_y, tab_width, tab_h)
+            tab_rects.append(tab_rect)
+            current_x += tab_width
+
+        # 2. Draw Inactive Tabs
+        for i, tab in enumerate(tabs):
+            if i != active_tab_idx:
+                tab_rect = tab_rects[i]
+                is_hovered = tab_rect.collidepoint(mouse_pos)
+                
+                # Input handling
+                if is_hovered and mouse_buttons[0]:
+                    modal['active_help_tab'] = i
+                    modal['scroll_offset_y'] = 0 # Reset scroll
+                    
+                pygame.draw.rect(surface, DARK_GRAY, tab_rect)
+                pygame.draw.rect(surface, WHITE, tab_rect, 1) # Normal Border
+                
+                tab_text = font_14.render(tab['title'], True, WHITE)
+                text_rect = tab_text.get_rect(center=tab_rect.center)
+                surface.blit(tab_text, text_rect)
+
+        # 3. Draw Active Tab (Last, so it stays on top)
+        if active_tab_idx < total_tabs:
+            tab_rect = tab_rects[active_tab_idx]
+            pygame.draw.rect(surface, GRAY_60, tab_rect)
+            pygame.draw.rect(surface, WHITE, tab_rect, 1) # Normal Border
+            
+            tab_text = font_14.render(tabs[active_tab_idx]['title'], True, WHITE)
+            text_rect = tab_text.get_rect(center=tab_rect.center)
+            surface.blit(tab_text, text_rect)
+
+    # --- Setup Content Rect below Tabs ---
+    content_y_start += tab_h + 10
+    content_height = modal['rect'].height - base_modal.header_h - tab_h - 10 - (padding * 2)
+    content_rect = pygame.Rect(base_modal.modal_x + padding, content_y_start, content_width, content_height)
+    modal['content_rect'] = content_rect 
 
     # --- Scrolling Math ---
     scroll_offset_y = modal.get('scroll_offset_y', 0)
-    max_scroll_offset = max(0, modal.get('help_total_h', 0) - content_height)
+    max_scroll_offset = max(0, active_tab['total_h'] - content_height)
     modal['max_scroll_offset'] = max_scroll_offset 
     scroll_offset_y = max(0, min(scroll_offset_y, max_scroll_offset))
     modal['scroll_offset_y'] = scroll_offset_y
@@ -195,8 +238,8 @@ def draw_help_modal(surface, game, modal, assets):
         content_surface = surface.subsurface(content_rect)
         y_offset = -scroll_offset_y
         
-        for element in modal.get('help_layout', []):
-            if element['type'] in ['text', 'image']: # Both texts and images have a 'surf'
+        for element in active_tab.get('layout', []):
+            if element['type'] in ['text', 'image']:
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
                 
@@ -209,7 +252,7 @@ def draw_help_modal(surface, game, modal, assets):
     # --- Draw Scrollbar ---
     if max_scroll_offset > 0:
         scrollbar_area_rect = pygame.Rect(content_rect.right + 5, content_rect.top, 8, content_height)
-        handle_height = max(20, content_height * (content_height / modal['help_total_h']))
+        handle_height = max(20, content_height * (content_height / max(1, active_tab['total_h'])))
         handle_pos_ratio = scroll_offset_y / max_scroll_offset if max_scroll_offset > 0 else 0
         handle_y = scrollbar_area_rect.top + (content_height - handle_height) * handle_pos_ratio
         
