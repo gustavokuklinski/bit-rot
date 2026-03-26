@@ -304,13 +304,13 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
 
     pygame.draw.rect(surface, GRAY_60, zoom_in_rect, 0, 3)
     pygame.draw.rect(surface, WHITE, zoom_in_rect, 1, 3)
-    plus_surf = large_font.render("+", True, WHITE)
+    plus_surf = font_14.render("+", True, WHITE)
     plus_rect = plus_surf.get_rect(center=zoom_in_rect.center)
     surface.blit(plus_surf, plus_rect)
 
     pygame.draw.rect(surface, GRAY_60, zoom_out_rect, 0, 3)
     pygame.draw.rect(surface, WHITE, zoom_out_rect, 1, 3)
-    minus_surf = large_font.render("-", True, WHITE)
+    minus_surf = font_14.render("-", True, WHITE)
     minus_rect = minus_surf.get_rect(center=zoom_out_rect.center)
     surface.blit(minus_surf, minus_rect)
     

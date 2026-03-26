@@ -375,7 +375,7 @@ class Game:
         self.game_screen.blit(overlay, (0, 0))
 
         # --- FIX: Translated Pause Text ---
-        text = title_font.render(tr('ui', "GAME PAUSED"), True, WHITE)
+        text = font_14.render(tr('ui', "GAME PAUSED"), True, WHITE)
         text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
         self.game_screen.blit(text, text_rect)
 
@@ -391,7 +391,7 @@ class Game:
             is_hovered = rect.collidepoint(mouse_pos)
             bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
             pygame.draw.rect(surface, bg_color, rect, border_radius=6)
-            txt_surf = large_font.render(text, True, WHITE)
+            txt_surf = font_14.render(text, True, WHITE)
             txt_rect = txt_surf.get_rect(center=rect.center)
             surface.blit(txt_surf, txt_rect)
 

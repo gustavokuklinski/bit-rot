@@ -72,10 +72,10 @@ def draw_messages_modal(surface, game, modal, assets):
     max_text_width = max(50, content_width - 15)
     wrapped_log = []
     for msg in active_log:
-        wrapped_log.extend(wrap_text(msg, font_notification, max_text_width))
+        wrapped_log.extend(wrap_text(msg, font_14, max_text_width))
 
     # --- Draw Messages (Bottom-Up Alignment) ---
-    line_height = font_notification.get_height() + 4
+    line_height = font_14.get_height() + 4
     total_text_height = len(wrapped_log) * line_height
     
     # Calculate max scroll (how much we CAN scroll)
@@ -136,7 +136,7 @@ def draw_messages_modal(surface, game, modal, assets):
             if y_pos > content_height:
                 break
                 
-            txt_surf = font_notification.render(msg, True, WHITE)
+            txt_surf = font_14.render(msg, True, WHITE)
             content_surface.blit(txt_surf, (5, y_pos))
             y_pos += line_height
 
@@ -169,7 +169,7 @@ def draw_messages_modal(surface, game, modal, assets):
     pygame.draw.rect(surface, (0, 0, 0), input_rect)
     pygame.draw.rect(surface, border_col, input_rect, 1)
     
-    input_surf = font_small.render(game.chat_input_text, True, WHITE)
+    input_surf = font_14.render(game.chat_input_text, True, WHITE)
     area_width = input_rect.width - 10
     if input_surf.get_width() > area_width:
         crop_area = pygame.Rect(input_surf.get_width() - area_width, 0, area_width, input_surf.get_height())
@@ -188,7 +188,7 @@ def draw_messages_modal(surface, game, modal, assets):
     pygame.draw.rect(surface, btn_col, send_btn_rect, border_radius=4)
     pygame.draw.rect(surface, WHITE, send_btn_rect, 1, border_radius=4)
     
-    send_txt = font_small.render("Send", True, WHITE)
+    send_txt = font_14.render("Send", True, WHITE)
     txt_rect = send_txt.get_rect(center=send_btn_rect.center)
     surface.blit(send_txt, txt_rect)
 

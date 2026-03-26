@@ -21,7 +21,7 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
     pygame.draw.rect(surface, bg_color, rect, border_radius=6)
     
     # Draw Text
-    txt_surf = large_font.render(text, True, text_color)
+    txt_surf = font_14.render(text, True, text_color)
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
@@ -43,12 +43,12 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
         title_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(_logo_img, title_rect)
     else:
-        title_text = title_font.render(tr('ui', "YOU DIED"), True, RED)
+        title_text = font_14.render(tr('ui', "YOU DIED"), True, RED)
         title_rect = title_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(title_text, title_rect)
 
     # --- 2. Stats ---
-    score_text = large_font.render(f"{tr('ui', 'You Killed:')} {zombies_killed}", True, WHITE)
+    score_text = font_14.render(f"{tr('ui', 'You Killed:')} {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.45))
     screen.blit(score_text, score_rect)
 
@@ -67,7 +67,7 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
     # --- 4. Footer ---
     current_year = datetime.now().year
     footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
-    footer_text = font_notification.render(footer_str, True, (100, 100, 100))
+    footer_text = font_14.render(footer_str, True, (100, 100, 100))
     footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)
 

@@ -1,4 +1,4 @@
-# === GUIA DE SOBREVIVÊNCIA DE BIT ROT ===
+![Guide Header](./game/lib/sprites/ui/survivor_guide_pt.png)
 
 ### [ COMANDOS E TECLAS ]
 * **W, A, S, D** : Mover seu personagem

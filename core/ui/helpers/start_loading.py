@@ -70,7 +70,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                 # Rule A: Main Title (# Title) -> Large Font
                 if line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
-                    title_surf = large_font.render(title_txt, True, WHITE)
+                    title_surf = font_14.render(title_txt, True, WHITE)
                     layout_elements.append({
                         'type': 'text', 
                         'surf': title_surf, 
@@ -82,9 +82,9 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                 elif line.startswith("### "):
                     h3_txt = line[4:].strip().replace("**", "")
                     
-                    font_small.set_bold(True)
-                    h3_surf = font_small.render(h3_txt, True, WHITE)
-                    font_small.set_bold(False)
+                    font_14.set_bold(True)
+                    h3_surf = font_14.render(h3_txt, True, WHITE)
+                    font_14.set_bold(False)
                     
                     layout_elements.append({'type': 'text', 'surf': h3_surf, 'pos': (15, curr_y)})
                     curr_y += h3_surf.get_height() + 12
@@ -100,40 +100,67 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                             desc_txt = desc_txt[1:].strip()
                             
                         # Render bold part natively
-                        font_small.set_bold(True)
-                        key_surf = font_small.render(key_txt, True, WHITE)
-                        font_small.set_bold(False)
+                        font_14.set_bold(True)
+                        key_surf = font_14.render(key_txt, True, WHITE)
+                        font_14.set_bold(False)
                         
                         layout_elements.append({'type': 'text', 'surf': key_surf, 'pos': (30, curr_y)})
                         
                         desc_x = 30 + key_surf.get_width() + 5
-                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_small)
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
                         
                         temp_y = curr_y
                         for w_line in wrapped:
-                            l_surf = font_small.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, True, WHITE)
                             layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y)})
-                            temp_y += font_small.get_height() + 4
+                            temp_y += font_14.get_height() + 4
                             
-                        curr_y = max(curr_y + font_small.get_height() + 4, temp_y) + 6
+                        curr_y = max(curr_y + font_14.get_height() + 4, temp_y) + 6
                         
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
-                        wrapped = wrap_text(i_txt, usable_w - 30, font_small)
+                        wrapped = wrap_text(i_txt, usable_w - 30, font_14)
                         for w_line in wrapped:
-                            l_surf = font_small.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, True, WHITE)
                             layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (30, curr_y)})
-                            curr_y += font_small.get_height() + 4
+                            curr_y += font_14.get_height() + 4
                         curr_y += 6
+
+                # Rule E: Images (![alt](path))
+                elif line.startswith("![") and "](" in line and line.endswith(")"):
+                    # Extract the path from between the parentheses
+                    img_path = re.search(r'\((.*?)\)', line)
+                    if img_path:
+                        clean_path = img_path.group(1).strip()
+                        if os.path.exists(clean_path):
+                            try:
+                                loaded_img = pygame.image.load(clean_path).convert_alpha()
+                                
+                                # Scale image to be full-width (usable_w) while maintaining aspect ratio
+                                img_w, img_h = loaded_img.get_size()
+                                scale_factor = usable_w / img_w
+                                new_h = int(img_h * scale_factor)
+                                scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
+                                
+                                layout_elements.append({
+                                    'type': 'image', 
+                                    'surf': scaled_img, 
+                                    'pos': (15, curr_y) # 15px padding on the left
+                                })
+                                curr_y += new_h + 15 # Add margin below image
+                            except Exception as e:
+                                print(f"[Loading Screen] Error loading image {clean_path}: {e}")
+                        else:
+                            print(f"[Loading Screen] Image path not found: {clean_path}")
 
                 # Rule D: Normal Paragraph Text
                 else:
                     p_txt = line.replace("**", "")
-                    wrapped = wrap_text(p_txt, usable_w - 30, font_small)
+                    wrapped = wrap_text(p_txt, usable_w - 30, font_14)
                     for w_line in wrapped:
-                        l_surf = font_small.render(w_line, True, WHITE)
+                        l_surf = font_14.render(w_line, True, WHITE)
                         layout_elements.append({'type': 'text', 'surf': l_surf, 'pos': (15, curr_y)})
-                        curr_y += font_small.get_height() + 4
+                        curr_y += font_14.get_height() + 4
                     curr_y += 6
 
             HELP_CACHE['layout'] = layout_elements
@@ -223,11 +250,11 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
         y_offset = -actual_scroll
         
         for element in HELP_CACHE.get('layout', []):
-            if element['type'] == 'text':
+            if element['type'] in ['text', 'image']:  # <--- CRUCIAL FIX: Allow images to render!
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
                 
-                # Render if text is within vertical bounds
+                # Render if element is within vertical bounds
                 if draw_y + element['surf'].get_height() > 0 and draw_y < clip_h:
                     content_surface.blit(element['surf'], (pos_x, draw_y))
     except ValueError:
@@ -240,7 +267,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
         bar_bg_rect = pygame.Rect(0, 0, bar_w, bar_h)
         bar_bg_rect.center = (center_x, h - 80)
                
-        loading_text = font_notification.render(tr('ui', "Loading..."), True, WHITE)
+        loading_text = font_14.render(tr('ui', "Loading..."), True, WHITE)
         loading_rect = loading_text.get_rect(center=bar_bg_rect.center)
         surface.blit(loading_text, loading_rect)
         
@@ -261,7 +288,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             
         pygame.draw.rect(surface, bg_color, btn_rect, border_radius=6)
         
-        btn_text = large_font.render(tr('ui', "Click to start"), True, text_color)
+        btn_text = font_14.render(tr('ui', "Click to start"), True, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
         surface.blit(btn_text, text_rect)
         

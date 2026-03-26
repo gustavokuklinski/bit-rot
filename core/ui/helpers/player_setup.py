@@ -636,11 +636,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
             pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4), border_radius=border_radius)
-        start_text = large_font.render(tr('ui', "START GAME"), True, WHITE)
+        start_text = font_14.render(tr('ui', "START GAME"), True, WHITE)
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
         pygame.draw.rect(game.game_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)
-        start_text = large_font.render(tr('ui', "START GAME"), True, (100, 100, 100))
+        start_text = font_14.render(tr('ui', "START GAME"), True, (100, 100, 100))
     text_rect = start_text.get_rect(center=start_btn_rect.center)
     game.game_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect

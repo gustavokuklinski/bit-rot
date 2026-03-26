@@ -108,7 +108,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         
         # Label
         label_str = f"{tr('vehicle', label)}: {int(safe_val)}/{int(max_val)}"
-        surface.blit(font_notification.render(label_str, True, STYLE["TEXT_DIM"]), (col1_x, current_y))
+        surface.blit(font_14.render(label_str, True, STYLE["TEXT_DIM"]), (col1_x, current_y))
         
         # Bar Background
         bar_x = col1_x + 100 
@@ -188,10 +188,10 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         if i == 0:
-            lbl = font_notification.render(tr('vehicle', "D"), True, STYLE["DRIVER_LBL"])
+            lbl = font_14.render(tr('vehicle', "D"), True, STYLE["DRIVER_LBL"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
         else:
-            lbl = font_notification.render(str(i+1), True, STYLE["TEXT_DIM"])
+            lbl = font_14.render(str(i+1), True, STYLE["TEXT_DIM"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
 
         if occupant:
@@ -203,7 +203,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
                 icon = pygame.transform.scale(occupant.image, (32, 32))
                 surface.blit(icon, icon.get_rect(center=slot_rect.center))
                 if hasattr(occupant, 'load') and occupant.load > 1:
-                     draw_text_shadow(surface, font_small, str(int(occupant.load)), STYLE["TEXT_MAIN"], 
+                     draw_text_shadow(surface, font_14, str(int(occupant.load)), STYLE["TEXT_MAIN"], 
                                     (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['seat_rects'][i] = slot_rect
@@ -230,7 +230,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         lbl_text = tr('vehicle', slot_name.capitalize())
-        lbl = font_notification.render(lbl_text, True, STYLE["TEXT_DIM"])
+        lbl = font_14.render(lbl_text, True, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -239,7 +239,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
              if hasattr(item, 'load') and item.load is not None and item.load > 0:
-                 draw_text_shadow(surface, font_small, str(int(item.load)), STYLE["TEXT_MAIN"], 
+                 draw_text_shadow(surface, font_14, str(int(item.load)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['equipment_rects'][slot_name] = slot_rect
@@ -256,7 +256,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         
         # Format "tire_fl" -> "FL TIRE", etc.
         lbl_text = slot_name.split('_')[1].upper() + " " + tr('vehicle', 'TIRE')
-        lbl = font_notification.render(lbl_text, True, STYLE["TEXT_DIM"])
+        lbl = font_14.render(lbl_text, True, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -265,7 +265,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
              if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
-                 draw_text_shadow(surface, font_small, str(int(item.durability)), STYLE["TEXT_MAIN"], 
+                 draw_text_shadow(surface, font_14, str(int(item.durability)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['equipment_rects'][slot_name] = slot_rect

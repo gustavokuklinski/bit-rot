@@ -1,4 +1,4 @@
-# === BIT ROT SURVIVAL GUIDE ===
+![Guide Header](./game/lib/sprites/ui/survivor_guide_en.png)
 
 ### [ COMMANDS & KEYBINDINGS ]
 * **W, A, S, D** : Move your character

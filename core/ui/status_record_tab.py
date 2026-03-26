@@ -29,14 +29,14 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     start_y = modal_rect.top + 100
     line_height = 30 # [CHANGED] Increased line height to fit icons
     
-    skill_text = font_notification.render(tr('ui', "Skill"), True, WHITE)
+    skill_text = font_14.render(tr('ui', "Skill"), True, WHITE)
     surface.blit(skill_text, (start_x + 35, start_y - 25))
 
-    level_text = font_notification.render(tr('ui', "Level"), True, WHITE)
+    level_text = font_14.render(tr('ui', "Level"), True, WHITE)
     surface.blit(level_text, (start_x + 140, start_y - 25))
 
     # [REMOVED] Experience column header
-    # experience_text = font_notification.render(f"Experience", True, WHITE)
+    # experience_text = font_14.render(f"Experience", True, WHITE)
     # surface.blit(experience_text, (start_x + 240, start_y - 25))
 
     pending_tooltip = None
@@ -81,16 +81,16 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         bonus_color = (100, 255, 100) if bonus_perc > 0 else (255, 100, 100)
         
         text_x = icon_x + icon_size + 10
-        label_surf = font_notification.render(f"{tr('ui', label)}:", True, WHITE)
+        label_surf = font_14.render(f"{tr('ui', label)}:", True, WHITE)
         surface.blit(label_surf, (text_x, current_y + 2)) # +2 for vertical centering
 
         if bonus_perc != 0:
-            bonus_surf = font_notification.render(f"[{int(bonus_perc):+}%]", True, bonus_color)
+            bonus_surf = font_14.render(f"[{int(bonus_perc):+}%]", True, bonus_color)
             surface.blit(bonus_surf, (text_x + label_surf.get_width() + 5, current_y + 2))
 
         # --- Draw Value (e.g., "5/10") ---
         value_x = text_x + 160
-        value_surf = font_notification.render(f"{str(level)}/10", True, WHITE)
+        value_surf = font_14.render(f"{str(level)}/10", True, WHITE)
         value_pos = (value_x - 40, current_y + 2)
         surface.blit(value_surf, value_pos)
 

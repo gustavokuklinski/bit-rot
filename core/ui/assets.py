@@ -65,6 +65,6 @@ def load_assets():
         print(f"Error loading light texture: {e}")
         assets['light_texture'] = None
 
-    assets['font'] = font
+    assets['font'] = font_14
 
     return assets

@@ -277,7 +277,7 @@ class CraftingModal(BaseModal):
         else:
             txt_col = WHITE
             
-        s_surf = font_small.render(display_text, True, txt_col)
+        s_surf = font_14.render(display_text, True, txt_col)
         
         old_clip = self.surface.get_clip()
         self.surface.set_clip(self.search_rect.inflate(-4, -4))
@@ -354,7 +354,7 @@ class CraftingModal(BaseModal):
             
             old_clip = self.surface.get_clip()
             self.surface.set_clip(row_rect)
-            name_surf = font_small.render(recipe.output_name, True, text_color)
+            name_surf = font_14.render(recipe.output_name, True, text_color)
             self.surface.blit(name_surf, (row_rect.x + 8, row_rect.y + 6))
             self.surface.set_clip(old_clip)
             
@@ -437,14 +437,14 @@ class CraftingModal(BaseModal):
         items_data = []
         max_w = 0
         
-        dash_s = font_small.render("- ", True, WHITE)
+        dash_s = font_14.render("- ", True, WHITE)
         dash_w = dash_s.get_width()
         
         if not available_items:
             for name in names:
                 img = self.get_preview_image(name)
                 if img: img = pygame.transform.scale(img, (20, 20))
-                s = font_small.render(f"{name} {tr('ui', '(None available)')}", True, GRAY)
+                s = font_14.render(f"{name} {tr('ui', '(None available)')}", True, GRAY)
                 
                 row_w = dash_w + (25 if img else 0) + s.get_width()
                 if row_w > max_w: max_w = row_w
@@ -456,7 +456,7 @@ class CraftingModal(BaseModal):
                 
                 qty_str = f"x{item.load}" if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
                 breadcrumb = " > ".join(path)
-                s = font_small.render(f"{tr('item', item.name)} ({qty_str}) | {breadcrumb}", True, WHITE)
+                s = font_14.render(f"{tr('item', item.name)} ({qty_str}) | {breadcrumb}", True, WHITE)
                 
                 row_w = dash_w + (25 if img else 0) + s.get_width()
                 if row_w > max_w: max_w = row_w

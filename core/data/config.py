@@ -63,12 +63,9 @@ HELP_MODAL_HEIGHT = 570
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 
 font = pygame.font.Font(FONT_FACE, 14)
-font_small = pygame.font.Font(FONT_FACE, 14)
-large_font = pygame.font.Font(FONT_FACE, 14)
-title_font = pygame.font.Font(FONT_FACE, 14)
-font_notification = pygame.font.Font(FONT_FACE, 14)
-
-font_xxl = pygame.font.Font(FONT_FACE, 16)
+font_14 = pygame.font.Font(FONT_FACE, 14)
+font_xl = pygame.font.Font(FONT_FACE, 16)
+font_xxl = pygame.font.Font(FONT_FACE, 24)
 
 TILE_SIZE = 16
 

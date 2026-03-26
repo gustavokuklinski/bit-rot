@@ -87,7 +87,7 @@ def draw_health_tab(surface, player, modal, assets):
             surface.blit(icon, (col1_x, y_pos))
             label_x = col1_x + 28
         else:
-            text = font_notification.render(f"{name}:", True, WHITE)
+            text = font_14.render(f"{name}:", True, WHITE)
             surface.blit(text, (col1_x, y_pos))
             label_x = col1_x + 40
             

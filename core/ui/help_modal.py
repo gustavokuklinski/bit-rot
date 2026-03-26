@@ -57,9 +57,9 @@ def draw_help_modal(surface, game, modal, assets):
                 if line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
                     
-                    font_small.set_bold(True)
-                    title_surf = font_small.render(title_txt, True, WHITE)
-                    font_small.set_bold(False)
+                    font_14.set_bold(True)
+                    title_surf = font_14.render(title_txt, True, WHITE)
+                    font_14.set_bold(False)
                     
                     layout_elements.append({
                         'type': 'text', 
@@ -73,9 +73,9 @@ def draw_help_modal(surface, game, modal, assets):
                 elif line.startswith("### "):
                     h3_txt = line[4:].strip().replace("**", "")
                     
-                    font_small.set_bold(True)
-                    h3_surf = font_small.render(h3_txt, True, WHITE)
-                    font_small.set_bold(False)
+                    font_14.set_bold(True)
+                    h3_surf = font_14.render(h3_txt, True, WHITE)
+                    font_14.set_bold(False)
                     
                     layout_elements.append({
                         'type': 'text', 
@@ -94,9 +94,9 @@ def draw_help_modal(surface, game, modal, assets):
                         if desc_txt.startswith(":"):
                             desc_txt = desc_txt[1:].strip()
                             
-                        font_small.set_bold(True)
-                        key_surf = font_small.render(key_txt, True, WHITE)
-                        font_small.set_bold(False)
+                        font_14.set_bold(True)
+                        key_surf = font_14.render(key_txt, True, WHITE)
+                        font_14.set_bold(False)
                         
                         layout_elements.append({
                             'type': 'text', 
@@ -106,43 +106,71 @@ def draw_help_modal(surface, game, modal, assets):
                         })
                         
                         desc_x = 15 + key_surf.get_width() + 5
-                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_small)
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
                         
                         temp_y = curr_y
                         for w_line in wrapped:
-                            l_surf = font_small.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, True, WHITE)
                             layout_elements.append({
                                 'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y),
                                 'bottom_y': temp_y + l_surf.get_height()
                             })
-                            temp_y += font_small.get_height() + 4
+                            temp_y += font_14.get_height() + 4
                             
-                        curr_y = max(curr_y + font_small.get_height() + 4, temp_y) + 6
+                        curr_y = max(curr_y + font_14.get_height() + 4, temp_y) + 6
                         
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
-                        wrapped = wrap_text(i_txt, usable_w - 30, font_small)
+                        wrapped = wrap_text(i_txt, usable_w - 30, font_14)
                         for w_line in wrapped:
-                            l_surf = font_small.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, True, WHITE)
                             layout_elements.append({
                                 'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
                                 'bottom_y': curr_y + l_surf.get_height()
                             })
-                            curr_y += font_small.get_height() + 4
+                            curr_y += font_14.get_height() + 4
                             
                     curr_y += 6
+
+                # Rule E: Images (![alt](path))
+                elif line.startswith("![") and "](" in line and line.endswith(")"):
+                    # Extract the path from between the parentheses
+                    img_path = re.search(r'\((.*?)\)', line)
+                    if img_path:
+                        clean_path = img_path.group(1).strip()
+                        if os.path.exists(clean_path):
+                            try:
+                                loaded_img = pygame.image.load(clean_path).convert_alpha()
+                                
+                                # Scale image to be full-width (usable_w) while maintaining aspect ratio
+                                img_w, img_h = loaded_img.get_size()
+                                scale_factor = usable_w / img_w
+                                new_h = int(img_h * scale_factor)
+                                scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
+                                
+                                layout_elements.append({
+                                    'type': 'image', 
+                                    'surf': scaled_img, 
+                                    'pos': (0, curr_y), # Full width, so x=0
+                                    'bottom_y': curr_y + new_h
+                                })
+                                curr_y += new_h + 15 # Add margin below image
+                            except Exception as e:
+                                print(f"[Help Modal] Error loading image {clean_path}: {e}")
+                        else:
+                            print(f"[Help Modal] Image path not found: {clean_path}")
 
                 # Rule D: Normal Paragraph Text
                 else:
                     p_txt = line.replace("**", "")
-                    wrapped = wrap_text(p_txt, usable_w - 30, font_small)
+                    wrapped = wrap_text(p_txt, usable_w - 30, font_14)
                     for w_line in wrapped:
-                        l_surf = font_small.render(w_line, True, WHITE)
+                        l_surf = font_14.render(w_line, True, WHITE)
                         layout_elements.append({
                             'type': 'text', 'surf': l_surf, 'pos': (15, curr_y),
                             'bottom_y': curr_y + l_surf.get_height()
                         })
-                        curr_y += font_small.get_height() + 4
+                        curr_y += font_14.get_height() + 4
                     curr_y += 6
 
             modal['help_layout'] = layout_elements
@@ -168,7 +196,7 @@ def draw_help_modal(surface, game, modal, assets):
         y_offset = -scroll_offset_y
         
         for element in modal.get('help_layout', []):
-            if element['type'] == 'text':
+            if element['type'] in ['text', 'image']: # Both texts and images have a 'surf'
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
                 

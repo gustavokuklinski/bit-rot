@@ -61,7 +61,7 @@ def draw_text_modal(surface, game, modal, assets):
 
     # --- Scroll & Content Variables ---
     scroll_offset_y = modal.get('scroll_offset_y', 0)
-    line_height = font_small.get_height() + 2
+    line_height = font_14.get_height() + 2
     padding = 10
 
     # Define the content area
@@ -110,7 +110,7 @@ def draw_text_modal(surface, game, modal, assets):
     
     text_to_display = processed_text
 
-    wrapped_lines = wrap_text(text_to_display, content_width, font_small)
+    wrapped_lines = wrap_text(text_to_display, content_width, font_14)
     
     total_text_height = len(wrapped_lines) * line_height
 
@@ -128,7 +128,7 @@ def draw_text_modal(surface, game, modal, assets):
 
         y_pos = 0 - scroll_offset_y
         for line in wrapped_lines:
-            text_surface = font_small.render(line, True, WHITE)
+            text_surface = font_14.render(line, True, WHITE)
             draw_pos_in_subsurface = (0, y_pos)
             content_surface.blit(text_surface, draw_pos_in_subsurface)
             y_pos += line_height

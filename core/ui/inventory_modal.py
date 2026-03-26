@@ -50,7 +50,7 @@ def draw_belt_hud(surface, game, player, mouse_pos):
             pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # Draw Hotkey Number (Inside, Gray)
-        num_text = font_small.render(str(i + 1), True, GRAY)
+        num_text = font_14.render(str(i + 1), True, GRAY)
         surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
 
         if item:
@@ -85,7 +85,7 @@ def draw_belt_hud(surface, game, player, mouse_pos):
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_small, 
+                    font_14, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
@@ -139,7 +139,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_small, 
+                    font_14, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
@@ -152,7 +152,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
     
     # "Backpack" Label with Shadow
-    backpack_label = font_notification.render(tr('ui', "Backpack"), True, GRAY)
+    backpack_label = font_14.render(tr('ui', "Backpack"), True, GRAY)
     surface.blit(backpack_label, (backpack_slot_rect.x + 3, backpack_slot_rect.y + 1))
 
     if (backpack := player.backpack):
@@ -192,7 +192,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
             pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # --- MATCH HUD STYLE: Number inside slot ---
-        num_text = font_small.render(str(i + 1), True, GRAY)
+        num_text = font_14.render(str(i + 1), True, GRAY)
         surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
 
         if item:
@@ -226,7 +226,7 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_small, 
+                    font_14, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 

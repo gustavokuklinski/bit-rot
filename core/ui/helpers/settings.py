@@ -148,12 +148,12 @@ def _draw_settings_screen(game, state, mouse_pos):
                 is_language_cycle = (key == 'language')
                 is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle
 
-                lbl = font_small.render(display_label + ":", True, WHITE)
+                lbl = font_14.render(display_label + ":", True, WHITE)
                 sub.blit(lbl, (0, y_off + 12)) 
                 
                 friendly_text = _get_friendly_value_display(key, val)
                 if friendly_text and not is_bool and not is_cycle_setting:
-                    info_surf = font_small.render(friendly_text, True, GRAY)
+                    info_surf = font_14.render(friendly_text, True, GRAY)
                     info_pos_x = input_rect.x - info_surf.get_width() - 15
                     sub.blit(info_surf, (info_pos_x, y_off + 12))
 
@@ -164,7 +164,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, WHITE, input_rect, 1, border_radius=3)
                     
                     val_text = tr('ui', "True") if str_val == "true" else tr('ui', "False")
-                    txt_surf = font_small.render(val_text, True, WHITE)
+                    txt_surf = font_14.render(val_text, True, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
@@ -214,7 +214,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                         else:
                             label = str(current_val_float)
                     
-                    txt_surf = font_small.render(label, True, WHITE)
+                    txt_surf = font_14.render(label, True, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
@@ -230,7 +230,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, (50, 50, 50), input_rect)
                     pygame.draw.rect(sub, col, input_rect, 1)
                     
-                    txt_surf = font_small.render(str(val), True, WHITE)
+                    txt_surf = font_14.render(str(val), True, WHITE)
                     sub.blit(txt_surf, (input_rect.x + 5, input_rect.y + 7))
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:

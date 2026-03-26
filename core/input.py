@@ -144,7 +144,7 @@ def handle_input(game):
                         active_tab = modal.get('active_tab', 'All')
                         active_log = game.message_logs.get(active_tab, [])
                         
-                        line_height = font_small.get_height() + 2
+                        line_height = font_14.get_height() + 2
                         total_text_height = len(game.message_log) * line_height # Note: logic might need active_log check
                         visible_height = content_rect.height
                         max_scroll_offset = max(0, total_text_height - visible_height)
@@ -160,7 +160,7 @@ def handle_input(game):
                         max_scroll_offset = modal.get('max_scroll_offset', 0) 
                         current_offset = modal.get('scroll_offset_y', 0)
                         
-                        line_height = font_small.get_height() + 2
+                        line_height = font_14.get_height() + 2
                         scroll_amount = event.y * line_height * 3 
                         new_offset = current_offset - scroll_amount 
 

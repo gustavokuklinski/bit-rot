@@ -172,7 +172,7 @@ def draw_load_game_screen(game, state, mouse_pos):
     load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
     load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
     pygame.draw.rect(game.game_screen, load_color, load_btn_rect, border_radius=4)
-    load_txt = large_font.render(tr('ui', "LOAD GAME"), True, WHITE)
+    load_txt = font_14.render(tr('ui', "LOAD GAME"), True, WHITE)
     game.game_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
     if state['selected_save_index'] is not None:
         clickable_rects['load_button'] = load_btn_rect

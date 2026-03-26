@@ -70,7 +70,7 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
 
     pygame.draw.rect(surface, bg_color, rect, border_radius=6)
 
-    txt_surf = large_font.render(text, True, text_color)
+    txt_surf = font_14.render(text, True, text_color)
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
@@ -92,7 +92,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
         logo_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.3))
         screen.blit(_logo_img, logo_rect)
     else:
-        title_text = title_font.render("Bit Rot", True, RED)
+        title_text = font_14.render("Bit Rot", True, RED)
         title_rect = title_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
         screen.blit(title_text, title_rect)
 
@@ -118,7 +118,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
 
     current_year = datetime.now().year
     footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
-    footer_text = font_notification.render(footer_str, True, (100, 100, 100))
+    footer_text = font_14.render(footer_str, True, (100, 100, 100))
     footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
     screen.blit(footer_text, footer_rect)
 
@@ -168,7 +168,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     # Draw WIP Tooltip if hovering
     if hovered_wip:
         wip_text = "Some translations may be incomplete"
-        tooltip_text = font_notification.render(wip_text, True, WHITE)
+        tooltip_text = font_14.render(wip_text, True, WHITE)
         # Shifted slightly lower (+45 instead of +35) to account for the new padded button
         tooltip_rect = tooltip_text.get_rect(topright=(GAME_WIDTH - 20, flag_y + 45))
         bg_rect = tooltip_rect.inflate(10, 10)

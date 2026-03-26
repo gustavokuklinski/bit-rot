@@ -35,7 +35,7 @@ class CraftingCraftTab:
         
         # Ingredients list
         ing_y = details_y + 50
-        lbl = font_small.render(tr('ui', "Required Ingredients:"), True, GRAY)
+        lbl = font_14.render(tr('ui', "Required Ingredients:"), True, GRAY)
         surface.blit(lbl, (details_x, ing_y))
         
         curr_y = ing_y + 30
@@ -99,7 +99,7 @@ class CraftingCraftTab:
                         })
 
             txt_str = f" {name_display}: {int(have)} / {tr('ui', 'Need:')} {needed}"
-            ing_surf = font_small.render(txt_str, True, color)
+            ing_surf = font_14.render(txt_str, True, color)
             surface.blit(ing_surf, (text_x, curr_y + 8))
             curr_y += 35
             
@@ -142,12 +142,12 @@ class CraftingCraftTab:
                 p_lvl = self.modal.player.progression.get_level(attr)
                 s_color = GREEN if p_lvl >= lvl else RED
                 txt = f"- {attr_name_tr}: {p_lvl}/{int(lvl)}"
-                s_surf = font_small.render(txt, True, s_color)
+                s_surf = font_14.render(txt, True, s_color)
                 element_cursor_y -= 20
                 surface.blit(s_surf, (details_x + 10, element_cursor_y))
             
             head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
-            head_surf = font_small.render(head_txt, True, WHITE)
+            head_surf = font_14.render(head_txt, True, WHITE)
             element_cursor_y -= 20
             surface.blit(head_surf, (details_x, element_cursor_y))
             element_cursor_y -= 5
@@ -155,18 +155,18 @@ class CraftingCraftTab:
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED
             mag_text = f"{tr('ui', 'Requires Magazine:')} {r.magazine}"
-            mag_surf = font_small.render(mag_text, True, mag_color)
+            mag_surf = font_14.render(mag_text, True, mag_color)
             element_cursor_y -= 20
             surface.blit(mag_surf, (details_x, element_cursor_y))
             element_cursor_y -= 5 
 
         time_text = f"{tr('ui', 'Time:')} {r.time_required}s"
-        time_surf = font_small.render(time_text, True, GRAY)
+        time_surf = font_14.render(time_text, True, GRAY)
         element_cursor_y -= 20
         surface.blit(time_surf, (details_x, element_cursor_y))
 
         if self.modal.warning_message:
-            warn_surf = font_small.render(self.modal.warning_message, True, RED)
+            warn_surf = font_14.render(self.modal.warning_message, True, RED)
             element_cursor_y -= 20
             surface.blit(warn_surf, (details_x, element_cursor_y))
 

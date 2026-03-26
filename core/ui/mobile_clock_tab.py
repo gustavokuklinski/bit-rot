@@ -57,7 +57,7 @@ def draw_clock_tab(surface, game, modal, assets):
         time_str = "00:00"
     
     # Render Large Text
-    base_time_surf = large_font.render(time_str, True, WHITE)
+    base_time_surf = font_14.render(time_str, True, WHITE)
     # Scale up by 1.8x for visibility
     scaled_w = int(base_time_surf.get_width() * 1.8)
     scaled_h = int(base_time_surf.get_height() * 1.8)

@@ -736,7 +736,7 @@ def draw_game(game):
             pygame.draw.rect(game.game_screen, (0, 0, 0), box_rect)
             pygame.draw.rect(game.game_screen, (255, 255, 255), box_rect, 1)
             
-            excl_surf = font_small.render("!", True, (255, 255, 255))
+            excl_surf = font_14.render("!", True, (255, 255, 255))
             excl_rect = excl_surf.get_rect(center=box_rect.center)
             game.game_screen.blit(excl_surf, excl_rect)
             
@@ -746,7 +746,7 @@ def draw_game(game):
         # Draw Hover Tooltip
         if tooltip_to_draw:
             lines = tooltip_to_draw.split('\n')
-            max_w = max((font_small.render(line, True, WHITE).get_width() for line in lines), default=0)
+            max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
             
             tt_w = max_w + 10
             tt_h = len(lines) * 20 + 10
@@ -765,7 +765,7 @@ def draw_game(game):
             
             curr_y = tt_y + 5
             for line in lines:
-                ls = font_small.render(line, True, WHITE)
+                ls = font_14.render(line, True, WHITE)
                 game.game_screen.blit(ls, (tt_x + 5, curr_y))
                 curr_y += 20
 
@@ -963,7 +963,7 @@ def draw_game(game):
         
         for rect, label in ui_buttons:
             if rect and rect.collidepoint(mouse_pos):
-                font_tip = globals().get('font_notification', game.assets.get('font'))
+                font_tip = globals().get('font_14', game.assets.get('font'))
                 if font_tip:
                     text_surf = font_tip.render(label, True, WHITE)
                     padding = 8
