@@ -29,11 +29,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     start_y = modal_rect.top + 100
     line_height = 30 # [CHANGED] Increased line height to fit icons
     
-    skill_text = font_14.render(tr('ui', "Skill"), True, WHITE)
-    surface.blit(skill_text, (start_x + 35, start_y - 25))
-
-    level_text = font_14.render(tr('ui', "Level"), True, WHITE)
-    surface.blit(level_text, (start_x + 140, start_y - 25))
+    
 
     # [REMOVED] Experience column header
     # experience_text = font_14.render(f"Experience", True, WHITE)
@@ -74,7 +70,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             # Draw if loaded successfully
             icon_surf = _SKILL_ICON_CACHE.get(image_rel_path)
             if icon_surf:
-                surface.blit(icon_surf, (icon_x, current_y - 3))
+                surface.blit(icon_surf, (icon_x - 5, current_y - 3))
 
         # --- Draw Label (e.g., "Strength:") ---
         bonus_perc = player.progression.get_total_attribute_bonus(player, attr_id)
@@ -82,7 +78,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         
         text_x = icon_x + icon_size + 10
         label_surf = font_14.render(f"{tr('ui', label)}:", True, WHITE)
-        surface.blit(label_surf, (text_x, current_y + 2)) # +2 for vertical centering
+        surface.blit(label_surf, (text_x - 3, current_y + 2)) # +2 for vertical centering
 
         if bonus_perc != 0:
             bonus_surf = font_14.render(f"[{int(bonus_perc):+}%]", True, bonus_color)

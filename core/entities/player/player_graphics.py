@@ -133,6 +133,9 @@ class PlayerGraphics:
                 
             item = self.clothes.get(slot)
             if item and item.image:
+                if getattr(item, 'item_type', '') == 'container':
+                    continue
+                    
                 img_to_draw = item.image
                 
                 if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):

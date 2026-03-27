@@ -84,7 +84,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         # [CHANGED] Increased base inventory slots from 5 to 10
         self.base_inventory_slots = 10
         
-        self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial']
+        self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
@@ -186,12 +186,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         total = 0.0
         # Belt
         for item in self.belt:
-             if item: total += item.get_total_weight()
+             if item: total += item.get_total_weight()* 0.85
         # Inventory
         for item in self.inventory:
              total += item.get_total_weight() 
         for item in self.clothes.values():
-             if item: total += item.get_total_weight()
+             if item: total += item.get_total_weight()* 0.85
         
         return total
 

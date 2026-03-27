@@ -259,11 +259,34 @@ def handle_context_menu_click(game, mouse_pos):
                     # For other containers, the replacement is already done in toggle_utility_item
             
             elif option == 'Equip':
-                if getattr(item, 'item_type', None) == 'cloth':
+                # INCLUSION: Added 'container' so it equips to Gear slots instead of the Belt
+                item_type = getattr(item, 'item_type', None)
+                if item_type in ('cloth', 'container'):
                     item_slot = getattr(item, 'slot', None)
+                    
+                    
+                        
                     if item_slot == 'hand': item_slot = 'hands'
                     
-                    if item_slot in game.player.clothes_slots:
+                    # CASCADE LOGIC: Allow util and container items to flow into util2 or util3 if the base slot is taken
+                    if item_type == 'container':
+                        slots_to_try = [item_slot] if item_slot and item_slot not in ['util'] else ['util', 'util2', 'util3']
+                        if item_slot == 'util':
+                            slots_to_try = ['util', 'util2', 'util3']
+                            
+                        for slot in slots_to_try:
+                            if game.player.clothes.get(slot) is None:
+                                item_slot = slot
+                                break
+                    else:
+                        if item_slot == 'util':
+                            if game.player.clothes.get('util') is not None:
+                                if game.player.clothes.get('util2') is None:
+                                    item_slot = 'util2'
+                                elif game.player.clothes.get('util3') is None:
+                                    item_slot = 'util3'
+                    
+                    if item_slot in game.player.clothes_slots or item_slot in ['util2', 'util3']:
                         item_from_source = None
                         if source == 'inventory' and 0 <= index < len(game.player.inventory):
                             item_from_source = game.player.inventory.pop(index)

@@ -1,8 +1,7 @@
 <cloth name="Belt" type="cloth" id="util" builder="true">
     <properties>
-        <defence value="0.01" />
+        <defence value="0.0" />
         <capacity value="1" />
-        <durability min="100" max="100" />
         <sprite file="util_belt.png" />
         <weight weight="0.1" reduction="5%" />
     </properties>

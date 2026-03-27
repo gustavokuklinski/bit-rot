@@ -145,7 +145,8 @@ def draw_health_tab(surface, player, modal, assets):
             item = player.clothes.get(slot)
             if item and item.image:
                 img_to_draw = item.image
-                
+                if getattr(item, 'item_type', '') == 'container':
+                    continue
                 # Apply dynamic tint if the item has a custom color
                 if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
                     if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:

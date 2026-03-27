@@ -462,6 +462,7 @@ class PlayerActions:
             if item_type == 'weapon_ranged' and getattr(item, 'load', None) is not None and getattr(item, 'load', 0) > 0: options.append('Get bullets')
         elif item_type == 'container':
             options.append('Open')
+            options.append('Equip')
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 

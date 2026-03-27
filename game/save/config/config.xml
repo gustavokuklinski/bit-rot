@@ -3,7 +3,7 @@
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay"/>
-        <language value="pt_BR" name="Language"/>
+        <language value="en_US" name="Language"/>
     </ui>
     <audio>
         <volume_music value="1.0" name="Music Volume"/>

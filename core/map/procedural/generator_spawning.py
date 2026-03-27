@@ -249,11 +249,15 @@ class ProceduralGeneratorSpawning:
                 
                 ground = layers['ground'][y][x]
                 if ground == self.water_tile: continue
+
+                if ground == 'house_floor_01': 
+                    continue
                 
                 # Check for natural or valid walking tiles
                 # Grass, Dirty, Floor, Asphalt are all valid for animals generally (Rat can go anywhere)
-                if 'grass' in ground or 'wood' in ground or 'dirty' in ground or 'floor' in ground or 'asphalt' in ground:
+                if 'grass' in ground or 'dirty' in ground:
                     valid_tiles.append((x, y))
+                
 
         if not valid_tiles: return
 

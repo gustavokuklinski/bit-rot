@@ -27,13 +27,9 @@
     </attributes>
 
     <initial_loot>
-        <item name="Wallet" chance="1" />
-        <item name="Keyring Default" chance="1" />
         <item name="ID" chance="1" />
         <item name="Mobile off" chance="1" />
-        <item name="38 Revolver" chance="1" />
-        <item name="38 Ammo" chance="1" />
-        <item name="Bag" chance="1" />
+        <item name="Wallet" chance="1" />
     </initial_loot>
 
     <visuals>
@@ -52,6 +48,8 @@
         <body></body>
         <arms></arms>
         <legs></legs>
+        <util2></util2>
+        <util3></util3>
     </clothes>
  
     <recipes>

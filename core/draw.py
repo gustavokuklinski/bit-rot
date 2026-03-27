@@ -875,7 +875,14 @@ def draw_game(game):
                             highlighted_rect = slot_rect
                             item_slot = getattr(preview_item, 'slot', None)
                             if item_slot == 'hand': item_slot = 'hands'
-                            highlighted_allowed = (item_slot == slot_name)
+                            
+                            # --- NEW CODE: Allow containers in util slots ---
+                            is_util_slot = slot_name in ['util', 'util2', 'util3']
+                            is_container = getattr(preview_item, 'item_type', '') == 'container'
+                            is_util_item = item_slot == 'util'
+                            highlighted_allowed = (item_slot == slot_name) or (is_util_slot and (is_container or is_util_item))
+                            # ------------------------------------------------
+                            
                             break
                 if highlighted_rect: break
             elif modal['type'] == 'container':

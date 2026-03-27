@@ -83,36 +83,43 @@ def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
 # Helper function to get rects for the 'Gear' tab
 def get_gear_slot_rects(modal_position, modal_width=GEAR_MODAL_WIDTH):
     modal_x, modal_y = modal_position
-    slot_size = 40 # Reduced to 40
-    gap = 6        # Reduced to 6
+    slot_size = 40 
+    gap = 6        
+    large_gap = 28 # Space separating the main slots from the Util column
     
-    # Mathematical center of the active modal
-    cx = modal_x + (modal_width / 2)
+    # Calculate total width of the entire block to center it dynamically
+    total_width = (slot_size * 4) + (gap * 2) + large_gap
+    start_x = modal_x + (modal_width - total_width) / 2
     
-    # Perfectly aligned anchor points for 3 uniform columns
-    mid_x = cx - (slot_size / 2)
-    left_x = mid_x - gap - slot_size
-    right_x = mid_x + slot_size + gap
+    # Column X coordinates
+    c1 = start_x
+    c2 = c1 + slot_size + gap
+    c3 = c2 + slot_size + gap
+    c4 = c3 + slot_size + large_gap
 
+    # Row Y coordinates (Keeping your original vertical spacing logic)
     y1 = modal_y + 85
     y2 = y1 + slot_size + gap + 10
     y3 = y2 + slot_size + gap + 10
 
     rects = {
-        # [HEAD]
-        'head': pygame.Rect(left_x, y1, slot_size, slot_size),
-        'hair': pygame.Rect(mid_x, y1, slot_size, slot_size),
-        'facial': pygame.Rect(right_x, y1, slot_size, slot_size),
+        # --- ROW 1 ---
+        'head': pygame.Rect(c1, y1, slot_size, slot_size),
+        'hair': pygame.Rect(c2, y1, slot_size, slot_size),
+        'facial': pygame.Rect(c3, y1, slot_size, slot_size),
+        'util': pygame.Rect(c4, y1, slot_size, slot_size),
         
-        # [BODY]
-        'hands': pygame.Rect(left_x, y2 - 5, slot_size, slot_size),
-        'body': pygame.Rect(mid_x, y2 - 5, slot_size, slot_size),
-        'arms': pygame.Rect(right_x, y2 - 5, slot_size, slot_size),
+        # --- ROW 2 ---
+        'hands': pygame.Rect(c1, y2 - 5, slot_size, slot_size),
+        'body': pygame.Rect(c2, y2 - 5, slot_size, slot_size),
+        'arms': pygame.Rect(c3, y2 - 5, slot_size, slot_size),
+        'util2': pygame.Rect(c4, y2 - 5, slot_size, slot_size),
         
-        # [LEGS/FEET]
-        'legs': pygame.Rect(left_x, y3 - 10, slot_size, slot_size),
-        'feet': pygame.Rect(mid_x, y3 - 10, slot_size, slot_size),
-        'util': pygame.Rect(right_x, y3 - 10, slot_size, slot_size),
+        # --- ROW 3 ---
+        'legs': pygame.Rect(c1, y3 - 10, slot_size, slot_size),
+        'feet': pygame.Rect(c2, y3 - 10, slot_size, slot_size),
+        # Column 3 is left empty here to match the 3x3 layout missing the bottom right
+        'util3': pygame.Rect(c4, y3 - 10, slot_size, slot_size),
     }
 
     return rects

@@ -1,8 +1,7 @@
 <cloth name="Sling Bullets" type="cloth" id="util" builder="false">
     <properties>
-        <defence value="0.05" />
+        <defence value="0.0" />
         <capacity value="1" />
-        <durability min="100" max="100" />
         <sprite file="util_body_sling_bullets.png" />
         <weight weight="0.2" reduction="5%" />
     </properties>

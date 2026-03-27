@@ -48,17 +48,17 @@
         </stat>
         
         <stat id="tireness">
-            <param name="night_decay" value="-0.002" />
+            <param name="night_decay" value="-0.005" />
             <param name="day_recovery" value="0.001" />
             <param name="stamina_penalty" value="-0.005" />
             <param name="run_penalty" value="-0.005" />
-            <param name="melee_cost" value="0.01" /> 
-            <param name="bed_recovery_mult" value="2.0" /> 
-            <param name="bed_sleep_mult" value="1.5" /> 
+            <param name="melee_cost" value="0.006" /> 
+            <param name="bed_recovery_mult" value="1.5" /> 
+            <param name="bed_sleep_mult" value="2.5" /> 
         </stat>
 
         <stat id="health">
-            <param name="bed_sleep_regen" value="0.01" /> 
+            <param name="bed_sleep_regen" value="0.1" /> 
         </stat>
 
         <stat id="metabolism">

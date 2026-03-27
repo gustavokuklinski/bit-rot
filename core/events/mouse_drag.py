@@ -57,7 +57,28 @@ def handle_mouse_up(game, event, mouse_pos):
                 i_orig, type_orig, *container_info = game.drag_origin
                 container_obj = container_info[0] if type_orig in ('container', 'nearby', 'inventory_stack_split', 'belt_stack_split', 'container_stack_split', 'nearby_stack_split', 'gear_stack_split') and container_info else None 
                 
-                is_raw_external = type_orig in ['nearby', 'nearby_stack_split', 'container', 'container_stack_split', 'vehicle_equipment']
+                def is_container_on_player(cont, player):
+                    if not cont: return False
+                    def check_list(items):
+                        for item in items:
+                            if not item: continue
+                            if item is cont: return True
+                            if hasattr(item, 'inventory') and item.inventory:
+                                if check_list(item.inventory): return True
+                        return False
+                    
+                    if check_list(player.belt): return True
+                    if check_list(player.inventory): return True
+                    if hasattr(player, 'clothes') and check_list(player.clothes.values()): return True
+                    return False
+
+                # Nearby and vehicle items are always external
+                is_raw_external = type_orig in ['nearby', 'nearby_stack_split', 'vehicle_equipment']
+                
+                # If dragging from a 'container' tab, verify it's not actually the player's clothes/backpack
+                if type_orig in ['container', 'container_stack_split']:
+                    if not is_container_on_player(container_obj, game.player):
+                        is_raw_external = True
                 
                 is_external_source = is_raw_external
 
@@ -560,8 +581,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dragged_item = game.dragged_item
                                         item_slot = getattr(dragged_item, 'slot', None)
                                         if item_slot == 'hand': item_slot = 'hands'
-                                            
-                                        if item_slot == slot_name:
+                                        
+                                        # [CHANGED] Allow container and util items to bypass the strict slot name check for util slots
+                                        is_util_slot = slot_name in ['util', 'util2', 'util3']
+                                        is_container = getattr(dragged_item, 'item_type', '') == 'container'
+                                        is_util_item = item_slot == 'util'
+
+                                        if item_slot == slot_name or (is_util_slot and (is_container or is_util_item)):
                                             
                                             if getattr(dragged_item, 'liquid', False):
                                                 print(f"The {dragged_item.name} spills and is lost.")
