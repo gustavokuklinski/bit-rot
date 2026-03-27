@@ -72,12 +72,6 @@ def save_game(game):
             "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in game.player.belt],
             "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item)) if item else None for slot, item in game.player.clothes.items()},
         }
-        
-        if game.player.backpack:
-                if hasattr(game.player.backpack, 'to_dict'):
-                    player_data["backpack"] = game.player.backpack.to_dict()
-                else:
-                    player_data["backpack"] = game.player.backpack
 
         with open(os.path.join(save_path, "host.rot"), "w") as f:
             json.dump(player_data, f, indent=4)

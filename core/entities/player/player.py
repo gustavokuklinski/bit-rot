@@ -78,7 +78,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
              RecipeManager.load_recipes()
 
         self.inventory = []
-        self.backpack = None
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
@@ -191,12 +190,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         # Inventory
         for item in self.inventory:
              total += item.get_total_weight() 
-        # Clothes
         for item in self.clothes.values():
              if item: total += item.get_total_weight()
-        # Backpack
-        if self.backpack:
-             total += self.backpack.get_total_weight()
         
         return total
 
@@ -402,8 +397,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                   self.progression.add_xp(self, 'strength', 0.001)
 
         all_inventories = [self.belt, self.inventory]
-        if self.backpack:
-            all_inventories.append(self.backpack.inventory)
             
         for inv in all_inventories:
             for item in inv:
@@ -462,14 +455,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     close_modal(item)
                     self.belt[i] = None
                     display_message(f"{tr('msg', 'Discarded empty')} {tr('item', item.name)}.")
-
-        if self.backpack:
-            Item.cleanup_disposables(self.backpack.inventory, game.modals, msg)
-            
-            if getattr(self.backpack, 'disposable', False) and hasattr(self.backpack, 'inventory') and len(self.backpack.inventory) == 0:
-                close_modal(self.backpack)
-                self.backpack = None
-                display_message(tr('msg', "Discarded empty backpack container."))
 
         if self.is_reloading:
             self.reload_timer -= game.dt_mult

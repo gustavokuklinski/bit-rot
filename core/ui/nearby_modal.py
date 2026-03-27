@@ -35,13 +35,13 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
 
     if raw_nearby_objects:
         for obj in raw_nearby_objects:
-            # Determine if this object deserves its own tab (Container/Backpack/Corpse)
+            # Determine if this object deserves its own tab (Container/Corpse)
             is_independent_container = False
             
             if isinstance(obj, Corpse):
                 is_independent_container = True
             elif hasattr(obj, 'inventory') and obj.inventory is not None:
-                if getattr(obj, 'item_type', '') in ['backpack', 'container','vehicle', 'cloth']:
+                if getattr(obj, 'item_type', '') in ['container','vehicle', 'cloth']:
                     is_independent_container = True
             
             if is_independent_container:

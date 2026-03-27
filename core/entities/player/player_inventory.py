@@ -1,14 +1,12 @@
 # core/entities/player/player_inventory.py
 import random
 from core.entities.item.item import Item
-from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect
+from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal
 from core.messages import display_message
 from core.data.localization import tr
 
 class PlayerInventory:
     def get_total_inventory_slots(self):
-        if self.backpack:
-            return self.base_inventory_slots + (self.backpack.capacity or 0)
         return self.base_inventory_slots
 
     def find_consumable_at_mouse(self, mouse_pos):
@@ -25,15 +23,12 @@ class PlayerInventory:
                 slot_rect = get_inventory_slot_rect(i)
                 if slot_rect.collidepoint(mouse_pos):
                     return item, 'inventory', i
+
         for i, item in enumerate(self.belt):
             if item:
                 slot_rect = get_belt_slot_rect_in_modal(i)
                 if slot_rect.collidepoint(mouse_pos):
                     return item, 'belt', i
-        if self.backpack:
-            slot_rect = get_backpack_slot_rect()
-            if slot_rect.collidepoint(mouse_pos):
-                return self.backpack, 'backpack', 0
         return None, None, None
 
     def find_matching_ammo(self, weapon):
@@ -73,11 +68,6 @@ class PlayerInventory:
                 res = search_recursive(item)
                 if res: return res
 
-        if self.backpack:
-            if hasattr(self.backpack, 'inventory'):
-                 res = search_recursive(self.backpack)
-                 if res: return res
-
         return None, None, None, None
 
     def find_fuel(self, fuel_identifier):
@@ -100,10 +90,6 @@ class PlayerInventory:
 
         for i, item in enumerate(self.inventory):
             if is_match(item): return item, 'inventory', i, None
-        
-        if self.backpack and hasattr(self.backpack, 'inventory'):
-            for i, item in enumerate(self.backpack.inventory):
-                if is_match(item): return item, 'container', i, self.backpack
                     
         return None, None, None, None
 
@@ -142,8 +128,6 @@ class PlayerInventory:
         if source_inventory and 0 <= index < len(source_inventory):
             item = source_inventory[index]
             return item, source_inventory
-        if source == 'backpack' and self.backpack:
-            return self.backpack, [self] 
         return None, None
 
     def drop_item_stack(self, game, source, index, container_item, quantity):
@@ -185,15 +169,12 @@ class PlayerInventory:
         def execute_transfer():
             item = None
             source_inventory = self._get_source_inventory(source, container_item) 
-            if source == 'backpack': item = self.backpack
-            elif source_inventory and 0 <= index < len(source_inventory): item = source_inventory[index] 
+            if source_inventory and 0 <= index < len(source_inventory): item = source_inventory[index] 
 
             # [FIX] Attach 'obj' to the target definitions so we can check their liquid flags
             targets = []
             if target_container is self:
                 targets.append({'inv': self.inventory, 'cap': self.base_inventory_slots, 'name': "Inventory", 'obj': self})
-                if self.backpack:
-                    targets.append({'inv': self.backpack.inventory, 'cap': self.backpack.capacity or 0, 'name': self.backpack.name, 'obj': self.backpack})
             elif target_container and hasattr(target_container, 'inventory'):
                 targets.append({'inv': target_container.inventory, 'cap': target_container.capacity or 0, 'name': target_container.name, 'obj': target_container})
             else: return
@@ -220,8 +201,7 @@ class PlayerInventory:
                 if remaining_load <= 0: break
             
             if item.load <= 0:
-                if source == 'backpack': self.backpack = None
-                elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                     if source == 'belt':
                         self.belt[index] = None
                         item.in_belt = False
@@ -252,8 +232,7 @@ class PlayerInventory:
                         new_stack.durability = item.durability 
                         target_inv.append(new_stack)
                         
-                        if source == 'backpack': self.backpack = None
-                        elif source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                        if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                             if source == 'belt':
                                 self.belt[index] = None
                                 item.in_belt = False
@@ -272,12 +251,11 @@ class PlayerInventory:
         def is_on_player(container):
             if not container: return False
             if container is self: return True 
-            if container is self.backpack: return True
             if container in self.belt: return True
             if container in self.clothes.values(): return True
             return False
 
-        source_is_on_player = (source in ['inventory', 'belt', 'backpack', 'gear'] or (source == 'container' and is_on_player(container_item)))
+        source_is_on_player = (source in ['inventory', 'belt', 'gear'] or (source == 'container' and is_on_player(container_item)))
         target_is_on_player = is_on_player(target_container)
         
         needs_timer = not (source_is_on_player and target_is_on_player)
@@ -300,9 +278,6 @@ class PlayerInventory:
             self.belt[index] = None
             if item_to_drop: item_to_drop.in_belt = False
             if self.active_weapon == item_to_drop: self.active_weapon = None
-        elif source == 'backpack':
-            item_to_drop = self.backpack
-            self.backpack = None
         elif source == 'gear':
             item_to_drop = self.clothes.get(index) 
             self.clothes[index] = None
@@ -364,9 +339,5 @@ class PlayerInventory:
                 if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'gear', slot, None
                 res = search_recursive(item)
                 if res: return res
-
-        if self.backpack:
-            res = search_recursive(self.backpack)
-            if res: return res
 
         return None, None, None, None

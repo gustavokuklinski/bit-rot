@@ -155,11 +155,7 @@ class CraftingModal(BaseModal):
                 if hasattr(item, 'inventory') and item.inventory:
                     extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
                     
-        if self.player.backpack:
-            locations.append((self.player, 'backpack', self.player.backpack, 'attr', ["Backpack"]))
-            if hasattr(self.player.backpack, 'inventory') and self.player.backpack.inventory:
-                extract_list(self.player.backpack.inventory, ["Backpack", self.player.backpack.name])
-
+        
         if include_nearby:
             if nearby_containers is None:
                 nearby_containers = self.game.find_nearby_containers()

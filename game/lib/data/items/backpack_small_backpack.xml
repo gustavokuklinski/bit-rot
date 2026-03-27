@@ -1,4 +1,4 @@
-<item name="Small Backpack" type="backpack" allow_belt="false">
+<item name="Small Backpack" type="container" allow_belt="false">
     <properties>
         <capacity value="10" />
         <weight weight="1.0" reduction="50%" />

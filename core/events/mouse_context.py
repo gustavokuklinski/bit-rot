@@ -5,7 +5,7 @@ import random
 from core.data.config import *
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
-from core.ui.inventory_modal import get_belt_hud_slot_rect, get_inventory_slot_rect, get_backpack_slot_rect, get_belt_slot_rect_in_modal
+from core.ui.inventory_modal import get_belt_hud_slot_rect, get_inventory_slot_rect, get_belt_slot_rect_in_modal
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
@@ -27,8 +27,7 @@ def handle_context_menu_click(game, mouse_pos):
                     verified_item = game.player.inventory[index]
                 elif source == 'belt' and 0 <= index < len(game.player.belt):
                     verified_item = game.player.belt[index]
-                elif source == 'backpack' and game.player.backpack:
-                    verified_item = game.player.backpack
+               
                 
                 elif source == 'gear':
                     verified_item = game.player.clothes.get(index)
@@ -181,8 +180,6 @@ def handle_context_menu_click(game, mouse_pos):
                         if i_item and i_item.name == container_name and can_accept_liquid(i_item):
                             target_container = i_item
                             break
-                if not target_container and game.player.backpack and game.player.backpack.name == container_name and can_accept_liquid(game.player.backpack):
-                    target_container = game.player.backpack
                 if not target_container:
                     for c_item in game.player.clothes.values():
                         if c_item and c_item.name == container_name and can_accept_liquid(c_item):
@@ -213,9 +210,6 @@ def handle_context_menu_click(game, mouse_pos):
                         elif source == 'gear':
                             removed_item = game.player.clothes.get(index)
                             game.player.clothes[index] = None
-                        elif source == 'backpack':
-                            removed_item = game.player.backpack
-                            game.player.backpack = None
                         
                         if removed_item:
                             stacked = False
@@ -265,60 +259,7 @@ def handle_context_menu_click(game, mouse_pos):
                     # For other containers, the replacement is already done in toggle_utility_item
             
             elif option == 'Equip':
-                if getattr(item, 'item_type', None) == 'backpack':
-                    def remove_from_source(src, idx, c_item=None):
-                        if src == 'inventory' and 0 <= idx < len(game.player.inventory):
-                            return game.player.inventory.pop(idx)
-                        if src == 'belt' and 0 <= idx < len(game.player.belt):
-                            it = game.player.belt[idx]
-                            game.player.belt[idx] = None
-                            return it
-                        if src == 'container' and c_item and 0 <= idx < len(c_item.inventory):
-                            return c_item.inventory.pop(idx)
-                        if (src == 'container' or src == 'nearby') and c_item and 0 <= idx < len(c_item.inventory):
-                            it = c_item.inventory.pop(idx)
-                            if getattr(c_item, 'item_type', '') == 'ground' and it in game.items_on_ground:
-                                game.items_on_ground.remove(it)
-                            return it
-                        if src == 'ground' and 0 <= idx < len(game.items_on_ground):
-                            return game.items_on_ground.pop(idx)
-                        return None
-
-                    old_backpack = game.player.backpack
-                    removed = remove_from_source(source, index, container_item)
-                    game.player.backpack = item
-                    print(f"Equipped {tr('item', item.name)} as backpack.")
-
-                    if old_backpack:
-                        placed = False
-                        if source == 'inventory':
-                            game.player.inventory.insert(index if 0 <= index <= len(game.player.inventory) else len(game.player.inventory), old_backpack)
-                            placed = True
-                        elif source == 'belt':
-                            if 0 <= index < len(game.player.belt) and game.player.belt[index] is None:
-                                game.player.belt[index] = old_backpack
-                                placed = True
-                            else:
-                                for bi in range(len(game.player.belt)):
-                                    if game.player.belt[bi] is None:
-                                        game.player.belt[bi] = old_backpack
-                                        placed = True
-                                        break
-                        elif source == 'container' and container_item:
-                            container_item.inventory.insert(index if 0 <= index <= len(container_item.inventory) else len(container_item.inventory), old_backpack)
-                            placed = True
-                        if not placed:
-                            if getattr(old_backpack, 'liquid', False):
-                                old_backpack.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_backpack)
-                            elif len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(old_backpack)
-                            else:
-                                old_backpack.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_backpack)
-                                print(f"No space to return old backpack; dropped {old_backpack.name} on ground.")
-                
-                elif getattr(item, 'item_type', None) == 'cloth':
+                if getattr(item, 'item_type', None) == 'cloth':
                     item_slot = getattr(item, 'slot', None)
                     if item_slot == 'hand': item_slot = 'hands'
                     
@@ -406,18 +347,13 @@ def handle_context_menu_click(game, mouse_pos):
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
                 
-            elif option == 'Send all to Backpack':
-                game.player.transfer_item_stack(source, index, container_item, game.player.backpack)
-            
             elif option == 'Send all to Inventory':
                 game.player.transfer_item_stack(source, index, container_item, game.player) 
             
             elif option == 'Drop':
                 if getattr(item, 'liquid', False):
                     print(f"The {tr('item', item.name)} spills.")
-                    if source == 'backpack':
-                        game.player.backpack = None
-                    elif source == 'gear':
+                    if source == 'gear':
                         game.player.clothes[index] = None
                     elif source == 'inventory' and 0 <= index < len(game.player.inventory):
                         game.player.inventory.pop(index)
@@ -427,18 +363,13 @@ def handle_context_menu_click(game, mouse_pos):
                         container_item.inventory.pop(index)
                 else:
                     dropped_item = None
-                    if source == 'backpack':
-                        dropped_item = game.player.drop_item(game, source, index, container_item)
-                        if dropped_item:
-                            print(f"Dropped {dropped_item.name} from backpack slot.")
-                    elif source == 'gear':
+                    if source == 'gear':
                         slot_name = index 
                         item_to_drop = game.player.clothes.get(slot_name)
                         if item_to_drop and item_to_drop == item:
                             dropped_item = game.player.drop_item(game, source, index, container_item)
                             if dropped_item:
                                 print(f"Dropped {dropped_item.name} from {slot_name} slot.")
-                    
                     else:
                         game.player.drop_item(game, source, index, container_item)
                     
@@ -532,18 +463,6 @@ def handle_context_menu_click(game, mouse_pos):
                     else:
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
-                elif source == 'backpack':
-                    item_to_unequip = game.player.backpack
-                    if item_to_unequip and item_to_unequip == item:
-                        game.player.backpack = None
-                        if getattr(item_to_unequip, 'liquid', False):
-                            item_to_unequip.rect.center = game.player.rect.center
-                            game.items_on_ground.append(item_to_unequip)
-                        elif len(game.player.inventory) < game.player.get_total_inventory_slots():
-                            game.player.inventory.append(item_to_unequip)
-                        else:
-                            item_to_unequip.rect.center = game.player.rect.center
-                            game.items_on_ground.append(item_to_unequip)
                 elif source == 'gear':
                     slot_name = index 
                     item_to_unequip = game.player.clothes.get(slot_name)
@@ -605,27 +524,6 @@ def handle_context_menu_click(game, mouse_pos):
                     print("Inventory full.")
 
 
-            elif source == 'ground' and option == 'Place on Backpack':
-                if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None:
-                    ground_idx = index
-                    if 0 <= ground_idx < len(game.items_on_ground):
-                        ground_item = game.items_on_ground[ground_idx]
-                        item_to_place = ground_item
-                        
-                        # Convert "Campfire on" to "Campfire off" when placing in backpack
-                        if ground_item.name == "Campfire on":
-                            
-                            new_item = Item.create_from_name("Campfire off")
-                            if new_item:
-                                new_item.durability = ground_item.durability
-                                new_item.load = ground_item.load
-                                item_to_place = new_item
-                                print("Campfire extinguished when placed in backpack.")
-                        
-                        if len(game.player.backpack.inventory) < (game.player.backpack.capacity or 0):
-                            game.player.backpack.inventory.append(item_to_place)
-                            game.items_on_ground.pop(ground_idx)
-
             clicked_on_menu = True
             break
 
@@ -658,9 +556,7 @@ def handle_right_click(game, mouse_pos):
                     for i, item in enumerate(game.player.belt):
                         if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
                             clicked_item, click_source, click_index = item, 'belt', i; break
-                if not clicked_item:
-                    if game.player.backpack and get_backpack_slot_rect(modal['position']).collidepoint(mouse_pos):
-                        clicked_item, click_source, click_index = game.player.backpack, 'backpack', 0
+                
                 
             
             elif modal.get('active_tab') in modal.get('container_mapping', {}):
@@ -681,17 +577,7 @@ def handle_right_click(game, mouse_pos):
                             if item:
                                 clicked_item, click_source, click_index = item, 'gear', slot_name; break
 
-            elif modal.get('active_tab') == 'Bag':
-                if game.player.backpack:
-                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
-                    for i, item in enumerate(game.player.backpack.inventory):
-                        if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
-                            clicked_item = item
-                            click_source = 'container'
-                            click_index = i
-                            click_container_item = game.player.backpack
-                            break
-        
+
         elif modal['type'] == 'gear':
             active_tab = modal.get('active_tab', 'Gear')
             if active_tab == 'Gear':
@@ -891,10 +777,6 @@ def handle_right_click(game, mouse_pos):
         if click_source == 'belt':
             if 'Unequip' not in options: options.append('Unequip')
             options = [o for o in options if o != 'Equip']
-        elif click_source == 'backpack':
-            if 'Unequip' not in options: options.append('Unequip')
-            if 'Drop' not in options: options.append('Drop')
-            options = [o for o in options if o != 'Equip']
         elif click_source == 'gear':
             if 'Unequip' not in options: options.append('Unequip')
             if 'Drop' not in options: options.append('Drop')
@@ -915,18 +797,11 @@ def handle_right_click(game, mouse_pos):
                 if not getattr(clicked_item, 'liquid', False):
                     if 'Grab' not in options: options.insert(0, 'Grab') 
 
-            if game.player.backpack and getattr(game.player.backpack, 'inventory', None) is not None and not isinstance(clicked_item, Corpse):
-                if can_grab:
-                    bp_allow_liquid = getattr(game.player.backpack, 'allow_liquid', False)
-                    is_item_liquid = getattr(clicked_item, 'liquid', False)
-                    if bp_allow_liquid == is_item_liquid:
-                        if 'Place on Backpack' not in options: options.append('Place on Backpack')
-
             if is_camp and getattr(clicked_item, 'allow_sleep', False):
                 options.append('Sleep')
 
             if getattr(clicked_item, 'inventory', None) is not None:
-                is_valid_type = getattr(clicked_item, 'item_type', '') in ['backpack', 'container', 'cloth']
+                is_valid_type = getattr(clicked_item, 'item_type', '') in ['container', 'cloth']
                 if isinstance(clicked_item, Corpse) or is_valid_type:
                     if 'Open' not in options: options.append('Open')
                 
@@ -944,7 +819,7 @@ def handle_right_click(game, mouse_pos):
                     if 'Grab' not in options: options.insert(0, 'Grab')
 
         if getattr(clicked_item, 'capacity', 0) and clicked_item.capacity > 0:
-            if getattr(clicked_item, 'item_type', '') in ['container', 'backpack', 'cloth']:
+            if getattr(clicked_item, 'item_type', '') in ['container', 'cloth']:
                 if 'Open' not in options:
                     options.append('Open')
 

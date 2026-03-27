@@ -10,7 +10,7 @@ from core.entities.npc.npc import NPC
 from core.entities.animal.animal import Animal
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
-from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_backpack_slot_rect, draw_belt_hud, get_belt_hud_slot_rect
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, draw_belt_hud, get_belt_hud_slot_rect
 from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -272,7 +272,7 @@ def draw_game(game):
             print(f"Error drawing player vision: {e}")
 
     all_player_inventories = [game.player.belt, game.player.inventory]
-    if game.player.backpack: all_player_inventories.append(game.player.backpack.inventory)
+    
     
     for inv in all_player_inventories:
         for item in inv:
@@ -856,7 +856,7 @@ def draw_game(game):
                         slot = get_belt_slot_rect_in_modal(i, modal['position'])
                         if slot.collidepoint(game._get_scaled_mouse_pos()):
                             highlighted_rect = slot
-                            highlighted_allowed = (preview_item.item_type != 'backpack')
+                            highlighted_allowed = (preview_item.item_type)
                             break
                     if highlighted_rect: break
                     for i in range(5):
@@ -866,11 +866,7 @@ def draw_game(game):
                             highlighted_allowed = True
                             break
                     if highlighted_rect: break
-                    slot = get_backpack_slot_rect(modal['position'])
-                    if slot.collidepoint(game._get_scaled_mouse_pos()):
-                        highlighted_rect = slot
-                        highlighted_allowed = (preview_item.item_type == 'backpack')
-                        break
+                    
                     
             elif modal['type'] == 'gear':
                 if 'gear_slot_rects' in modal:
@@ -899,7 +895,7 @@ def draw_game(game):
                 slot = get_belt_hud_slot_rect(i)
                 if slot.collidepoint(game._get_scaled_mouse_pos()):
                     highlighted_rect = slot
-                    highlighted_allowed = (preview_item.item_type != 'backpack')
+                    highlighted_allowed = (preview_item.item_type)
                     break
 
         if highlighted_rect:

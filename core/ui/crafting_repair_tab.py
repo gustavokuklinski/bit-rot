@@ -260,6 +260,10 @@ class CraftingRepairTab:
                 return
 
             total_repair_amount = 0
+            
+            # Fetch maintenance level for repair scaling (0.0 to 1.0)
+            maint_level = self.modal.player.progression.get_maintenance(self.modal.player)
+            maint_scale = min(10, maint_level) / 10.0
 
             for r_idx, req in enumerate(recipe.ingredients):
                 if not req['destroy']: continue 
@@ -280,7 +284,9 @@ class CraftingRepairTab:
                         take = min(to_remove - removed, item_qty)
                         
                         if item.min_restore is not None and item.max_restore is not None:
-                            restore_per_unit = random.randint(item.min_restore, item.max_restore)
+                            # Level 10 maintenance ensures min_restore == max_restore
+                            effective_min = item.min_restore + (item.max_restore - item.min_restore) * maint_scale
+                            restore_per_unit = random.randint(int(effective_min), int(item.max_restore))
                             total_repair_amount += (restore_per_unit * take)
                         
                         if item.is_stackable() and item.load is not None:

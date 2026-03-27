@@ -8,17 +8,39 @@ class PlayerCombat:
     def get_attack_damage(self):
         min_dmg = 1
         max_dmg = 3 
+        is_ranged = False
         
         if self.active_weapon:
             min_dmg = getattr(self.active_weapon, 'min_damage', 1)
             max_dmg = getattr(self.active_weapon, 'max_damage', 5)
+            is_ranged = self.active_weapon.item_type == 'weapon_ranged'
             
             if hasattr(self.active_weapon, 'current_damage_range'):
                 rng = self.active_weapon.current_damage_range
                 min_dmg = rng[0]
                 max_dmg = rng[1]
 
-        return random.randint(int(min_dmg), int(max_dmg))
+        # 1. Slide minimum damage up based on weapon skill
+        if is_ranged:
+            skill_level = self.progression.get_ranged(self)
+        else:
+            skill_level = self.progression.get_melee(self)
+            
+        scale = min(10, skill_level) / 10.0
+        effective_min = min_dmg + (max_dmg - min_dmg) * scale
+
+        # Calculate base randomized damage
+        base_damage = random.randint(int(effective_min), int(max_dmg))
+        
+        # 2. Apply Strength Multiplier for Melee/Unarmed Attacks
+        if not is_ranged:
+            str_level = self.progression.get_strength(self)
+            # Level 0 = 1.0x (no bonus), Level 10 = 2.0x (+100% bonus)
+            str_multiplier = 1.0 + (min(10, str_level) / 10.0)
+            
+            base_damage = int(base_damage * str_multiplier)
+
+        return base_damage
 
     def process_kill(self, weapon, zombie):
         self.progression.process_kill(self, weapon, zombie)
@@ -153,10 +175,7 @@ class PlayerCombat:
         if ammo.load <= 0: return 
         if len(self.inventory) < self.base_inventory_slots:
              self.inventory.append(ammo); return
-        if self.backpack and len(self.backpack.inventory) < (self.backpack.capacity or 0):
-             self.backpack.inventory.append(ammo)
-             display_message(tr('msg', "Moved to backpack."))
-             return
+        
         ammo.rect.center = self.rect.center
         if find_free_tile(ammo.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)

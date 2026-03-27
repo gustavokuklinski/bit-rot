@@ -1,6 +1,6 @@
 <item name="Keyring Default" type="container" allow_belt="false">
     <properties>
-        <capacity value="10" />
+        <capacity value="5" />
         <sprite file="container_keyring_default.png" />
         <weight weight="0.01" reduction="15%" />
     </properties>

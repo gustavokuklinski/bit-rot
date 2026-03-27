@@ -304,7 +304,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
         
         is_hovered = btn_rect.collidepoint(mouse_pos)
         bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
-        text_color = GREEN if (current_time // 500) % 2 == 0 else WHITE
+        text_color = WHITE
             
         pygame.draw.rect(surface, bg_color, btn_rect, border_radius=6)
         

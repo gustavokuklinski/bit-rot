@@ -26,7 +26,11 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
         col = i % cols
         slot_rect = pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
         
-        border_color = GRAY_40
+        # --- ADDED: Fill background with GRAY_40 to match inventory slots ---
+        pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
+        
+        # --- CHANGED: Default border is GRAY, changes to WHITE when highlighted ---
+        border_color = GRAY
         if game.is_dragging and slot_rect.collidepoint(mouse_pos):
             border_color = WHITE # Highlight color
 

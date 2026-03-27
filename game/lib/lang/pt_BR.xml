@@ -178,7 +178,7 @@
         <ui name="Weather: Raining" translation_ui="Clima: Chovendo" />
         <ui name="Weather: Unknown" translation_ui="Clima: Desconhecido" />
 
-        <ui name="Backpack" translation_ui="Mochila" />
+        
         <ui name="Slots:" translation_ui="Espaços:" />
         <ui name="Search..." translation_ui="Pesquisar..." />
         <ui name="Select a recipe to view details" translation_ui="Selecione uma receita para ver os detalhes" />
@@ -240,10 +240,10 @@
         <context name="Gear" translation_context="Equipamento" />
 
         <context name="Send all to Inventory" translation_context="Enviar tudo p/ Inventário" />
-        <context name="Send all to Backpack" translation_context="Enviar tudo p/ Mochila" />
+        
         <context name="Drop one" translation_context="Largar um" />
         <context name="Drop all" translation_context="Largar tudo" />
-        <context name="Place on Backpack" translation_context="Colocar na Mochila" />
+        
         <context name="Inspect" translation_context="Inspecionar" />
         <context name="Reload" translation_context="Recarregar" />
         <context name="Get bullets" translation_context="Retirar balas" />
@@ -314,7 +314,7 @@
         <msg name="Load:" translation_msg="Carga:" />
         <msg name="Unloaded" translation_msg="Descarregou" />
         <msg name="from" translation_msg="de" />
-        <msg name="Moved to backpack." translation_msg="Movido para a mochila." />
+        
         <msg name="Inventory full. Dropped ammo on ground." translation_msg="Inventário cheio. Munição caída no chão." />
         <msg name="No space to unload ammo!" translation_msg="Sem espaço para descarregar munição!" />
         <msg name="broke and was removed from your belt." translation_msg="quebrou e foi removida do seu cinto." />
@@ -410,7 +410,6 @@
 
         <msg name="You wake up refreshed." translation_msg="Você acorda revigorado." />
         <msg name="Discarded empty" translation_msg="Descartou vazio(a)" />
-        <msg name="Discarded empty backpack container." translation_msg="Recipiente da mochila vazio descartado." />
         <msg name="is broken and unequipped." translation_msg="quebrou e foi desequipada." />
         <msg name="is out of ammo." translation_msg="está sem munição." />
         <msg name="is broken." translation_msg="está quebrada." />

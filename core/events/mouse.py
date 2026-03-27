@@ -5,7 +5,7 @@ import math
 import time
 from core.data.config import *
 from core.entities.item.item import Item
-from core.ui.inventory_modal import get_belt_hud_slot_rect, get_backpack_slot_rect
+from core.ui.inventory_modal import get_belt_hud_slot_rect
 from core.ui.npc_dialog_modal import get_npc_dialog_option_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause, toggle_help_modal
@@ -259,22 +259,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         if veh.lights == 'on': veh.toggle_lights()
                         return
 
-                if topmost_modal['type'] == 'inventory' and topmost_modal.get('active_tab', 'Inventory') == 'Inventory':
-                     backpack_slot_rect = get_backpack_slot_rect(topmost_modal['position'])
-                     if backpack_slot_rect.collidepoint(mouse_pos) and game.player.backpack:
-                         modal_exists = any(m for m in game.modals if m['type'] == 'container' and m['item'] == game.player.backpack)
-                         if not modal_exists:
-                            new_container_modal = {
-                                'id': uuid.uuid4(),
-                                'type': 'container',
-                                'item': game.player.backpack,
-                                'position': game.last_modal_positions['container'],
-                                'is_dragging': False, 'drag_offset': (0, 0),
-                                'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-                                'minimized': False
-                            }
-                            game.modals.append(new_container_modal)
-                         return
+                
                 
                 if topmost_modal['type'] == 'big_map' and not topmost_modal.get('minimized', False):
                     map_rect = topmost_modal.get('map_area_rect')

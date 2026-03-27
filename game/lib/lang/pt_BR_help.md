@@ -56,25 +56,30 @@ Você tem três objetivos. Escolha com sabedoria, pois a ilha está ouvindo.
 * **LMB + Click (enquanto mira)** : Atacar / Atirar / Corpo a Corpo
 * **RMB + Click (em itens)** : Menu de Contexto (Equipar, Largar, Consumir, Recarregar)
 
+Aqui está a tradução para o português do Brasil:
+
 ### [ INVENTÁRIO ]
 
-* **Clique esquerdo e segure** um item para arrastá-lo pelos espaços.
-* **Solte itens no seu Cinto** para acesso rápido (teclas 1-5).
-* **Solte itens no menu de Equipamento** para vestir roupas.
-* **Solte itens fora da interface (no mundo)** para descartá-los.
+* **Gerenciamento de Itens**: Clique com o botão esquerdo e segure um item para arrastá-lo pelos espaços do inventário. Solte os itens fora da interface (no mundo) para descartá-los.
+* **Cinto de Acesso Rápido**: Solte ferramentas essenciais ou armas nos espaços do seu Cinto para equipá-las rapidamente usando as teclas de **1 a 5**.
+* **Trajes e Armadura**: Solte os itens no menu de Equipamentos (Gear) para vestir roupas. As roupas não mudam apenas a sua aparência; elas funcionam como um escudo de armadura. O dano recebido reduz a durabilidade da sua roupa primeiro, antes de ferir você.
+* **Peso de Carga**: Fique de olho no seu peso total! Carregar mais do que a sua capacidade máxima o deixará sobrecarregado (over-encumbered). Isso aumentará drasticamente o consumo do seu fôlego (stamina) ao correr e drenará lentamente a sua saúde com o tempo.
 
 ### [ STATUS DO JOGADOR ]
 
-* **Saúde (Vida)** : Mantenha acima de 0. Use bandagens ou remédios para se curar.
-* **Vigor (Stamina)** : Esgota ao correr ou atacar. Recupera ao ficar parado.
-* **Fome e Sede** : Vasculhe por comida e água para se manter vivo.
-* **Cansaço** : Encontre uma cama ou local seguro para dormir quando estiver exausto.
-* **Infecção** : Se for atingido por zumbis, encontre remédios rapidamente!
+* **Saúde**: Sua força vital. Ela cai devido a ataques físicos, fome, desidratação, infecção grave ou ao carregar muito peso. Use suprimentos médicos ou durma em uma cama adequada para se recuperar.
+* **Fôlego (Stamina)**: Esgota-se ao correr ou ao golpear com armas brancas. Ele se recupera naturalmente ao descansar ou caminhar. *Aviso:* Níveis altos de Infecção limitarão permanentemente seu fôlego máximo até que você seja curado!
+* **Fome e Sede**: Procure por comida e água para se manter vivo. Cair abaixo de 20% em qualquer um desses status causa inanição ou desidratação, o que suga continuamente a sua saúde.
+* **Cansaço (Energia)**: Seu estado de vigília se esgota naturalmente, drenando ainda mais rápido à noite ou quando seu fôlego está completamente vazio. Se o seu Cansaço chegar a zero, você desmaiará na hora! Encontre um lugar seguro para dormir e restaurá-lo.
+* **Infecção**: Uma condição letal e progressiva contraída por mordidas de zumbis ou exposição à chuva congelante. Uma vez infectado, age como um vírus — piorando lentamente com o tempo, drenando sua saúde a cada segundo e limitando severamente seu fôlego. Atingir 100% de infecção significa zumbificação irreversível.
+* **Ansiedade**: Estar cercado por hordas de mortos-vivos fará com que seu personagem entre em pânico. A alta ansiedade drena seu Cansaço muito mais rápido, exaurindo você rapidamente em situações tensas.
 
-### [ DICAS ÚTEIS ]
+### [ DICAS ]
 
-* **Morte Permanente** : Se você MORRER, perde tudo.
-* **Veículos** : Aproxime-se de um veículo e pressione 'E' para entrar.
-* **Criação** : Abra o menu de Criação ('C') para combinar itens e sobreviver
-* **Combate** : Sempre mire antes de atacar.
-* **Iluminação** : Ligue o Celular (Mobile) no seu inventário ou cinto para enxergar claramente à noite.
+* **Morte Permanente (Permadeath)**: É assim que você apodrece. Se você morrer, perde tudo. Jogue com cuidado.
+* **Perigos Climáticos**: A chuva não é apenas estética. Ficar exposto em um temporal sem roupas grossas fará com que você pegue uma doença que aumenta rapidamente seu nível de Infecção. Use várias camadas de roupa para aumentar sua proteção contra o clima!
+* **Descanso Seguro**: Nem todo sono é igual. Dormir em uma cama ou banco adequado restaura sua energia significativamente mais rápido do que dormir no chão, e é a única maneira de regenerar lentamente a saúde perdida enquanto descansa.
+* **Táticas de Combate**: Sempre mire antes de atacar. O combate corpo a corpo é exaustivo; fique de olho no seu fôlego, pois lutar exausto torna suas armas menos eficazes e drena sua energia.
+* **Veículos**: Aproxime-se de um veículo e pressione 'E' para entrar. Lembre-se de verificar a saúde do motor e esteja ciente de que atropelar os inimigos danificará o carro com o tempo!
+* **Criação (Crafting) e Manutenção**: Abra o menu de Criação para combinar itens, desmontar sucata e sobreviver. Fique de olho na durabilidade da sua arma, pois ela pode quebrar no meio de uma luta.
+* **Iluminação**: Ligue o Celular em seu inventário ou cinto para enxergar com clareza à noite, mas saiba que a luz pode atrair atenção indesejada.

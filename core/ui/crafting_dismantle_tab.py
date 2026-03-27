@@ -278,8 +278,16 @@ class CraftingDismantleTab:
             
             created_items_log = []
             
+            # Fetch maintenance level for dismantle yields (0.0 to 1.0)
+            maint_level = self.modal.player.progression.get_maintenance(self.modal.player)
+            maint_scale = min(10, maint_level) / 10.0
+            
             for res in recipe.results:
-                if res['chance'] < 1.0 and random.random() > res['chance']: continue
+                base_chance = res.get('chance', 1.0)
+                # At maintenance 10, effective_chance becomes exactly 1.0 (100% yield)
+                effective_chance = base_chance + (1.0 - base_chance) * maint_scale
+                
+                if effective_chance < 1.0 and random.random() > effective_chance: continue
                     
                 final_name = random.choice(res['names'])
                 result_item = Item.create_from_name(final_name)

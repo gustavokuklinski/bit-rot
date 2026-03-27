@@ -48,7 +48,7 @@ def draw_tooltip(surface, item, pos):
                 lines.append(f" - {r.output_name}")
 
     if hasattr(item, 'inventory') and item.inventory is not None:
-        if item.item_type in ['container', 'backpack', 'cloth']:
+        if item.item_type in ['container', 'cloth']:
             cap = item.capacity if item.capacity is not None else 0
             lines.append(f"{tr('tooltip', 'Contents:')} {len(item.inventory)} / {cap}")
         
@@ -120,7 +120,7 @@ def draw_tooltip(surface, item, pos):
         lines.append(weight_str)
 
     # Calculate and display max weight based on base weight x 5
-    if hasattr(item, 'inventory') and item.item_type in ['container', 'backpack', 'cloth'] and hasattr(item, 'weight'):
+    if hasattr(item, 'inventory') and item.item_type in ['container', 'cloth'] and hasattr(item, 'weight'):
         max_weight = item.weight * 5.0
         if max_weight > 0:
             lines.append(f"{tr('tooltip', 'Max weight:')} {max_weight:.2f}")

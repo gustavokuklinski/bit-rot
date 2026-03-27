@@ -105,14 +105,14 @@ def get_gear_slot_rects(modal_position, modal_width=GEAR_MODAL_WIDTH):
         'facial': pygame.Rect(right_x, y1, slot_size, slot_size),
         
         # [BODY]
-        'hands': pygame.Rect(left_x, y2, slot_size, slot_size),
-        'body': pygame.Rect(mid_x, y2, slot_size, slot_size),
-        'arms': pygame.Rect(right_x, y2, slot_size, slot_size),
+        'hands': pygame.Rect(left_x, y2 - 5, slot_size, slot_size),
+        'body': pygame.Rect(mid_x, y2 - 5, slot_size, slot_size),
+        'arms': pygame.Rect(right_x, y2 - 5, slot_size, slot_size),
         
         # [LEGS/FEET]
-        'legs': pygame.Rect(left_x, y3, slot_size, slot_size),
-        'feet': pygame.Rect(mid_x, y3, slot_size, slot_size),
-        'util': pygame.Rect(right_x, y3, slot_size, slot_size),
+        'legs': pygame.Rect(left_x, y3 - 10, slot_size, slot_size),
+        'feet': pygame.Rect(mid_x, y3 - 10, slot_size, slot_size),
+        'util': pygame.Rect(right_x, y3 - 10, slot_size, slot_size),
     }
 
     return rects
@@ -132,7 +132,7 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
 
         # Draw label, shifting slightly up into the smaller square 
         label_text = font_14.render(slot_name.capitalize(), True, GRAY)
-        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.top + 4)
+        label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.top + 13)
         surface.blit(label_text, label_rect)
 
         # Get item from player's clothes

@@ -185,10 +185,11 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
     game.zombies_killed = 0
-    stat_pos = game.last_modal_positions.get('status', (50, 50))
-    inv_pos = game.last_modal_positions.get('inventory', (400, 50))
-    nearby_pos = game.last_modal_positions.get('nearby', (1050, 360))
-    msg_pos = game.last_modal_positions.get('messages', (10, 390))
+    stat_pos = game.last_modal_positions.get('status', (65, 3))
+    inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
+    nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
+    msg_pos = game.last_modal_positions.get('messages', (3, 460))
+    gear_pos = game.last_modal_positions.get('gear', (1034, 3))
 
     game.modals = [
         {
@@ -209,6 +210,15 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'drag_offset': (0, 0),
             'minimized': False,
             'active_tab': 'Inventory'
+        },
+        {
+            'type': 'gear', 
+            'id': str(uuid.uuid4()), 
+            'position': gear_pos,
+            'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'minimized': False
         },
         {
             'type': 'nearby', 
@@ -407,15 +417,6 @@ def load_game(game, save_folder_name):
                     game.player.clothes[slot] = Item.create_from_name(item_data)
             else:
                 game.player.clothes[slot] = None
-
-        if "backpack" in player_data:
-                bp_data = player_data["backpack"]
-                if isinstance(bp_data, dict):
-                    game.player.backpack = Item.from_dict(bp_data)
-                else:
-                    game.player.backpack = Item.create_from_name(bp_data["name"])
-                    if game.player.backpack:
-                        game.player.backpack.inventory = [Item.create_from_name(name) for name in bp_data.get("inventory", [])]
 
         with open(os.path.join(save_path, "world.rot"), "r") as f:
             world_data = json.load(f)

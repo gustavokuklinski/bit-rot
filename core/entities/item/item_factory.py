@@ -246,7 +246,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         if len(new_item.inventory) >= max_cap:
                             fits = False
                         
-                        if fits and new_item.item_type in ['container', 'backpack', 'cloth']:
+                        if fits and new_item.item_type in ['container', 'cloth']:
                             current_weight = sum(i.get_total_weight() for i in new_item.inventory)
                             item_weight = loot_item.get_total_weight()
                             # If a container lacks a weight tag in XML, max_weight defaults to 0.0

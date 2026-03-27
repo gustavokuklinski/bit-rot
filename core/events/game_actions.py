@@ -33,9 +33,6 @@ def try_grab_item(game):
 
         target_inventory = game.player.inventory
         target_capacity = game.player.base_inventory_slots
-        if game.player.backpack and any(m['type'] == 'container' and m['item'] == game.player.backpack for m in game.modals):
-            target_inventory = game.player.backpack.inventory
-            target_capacity = game.player.backpack.capacity or 0
 
         success = False
         if len(target_inventory) < target_capacity:

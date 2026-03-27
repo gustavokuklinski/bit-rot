@@ -74,12 +74,6 @@ class PlayerActions:
                     if it and it.name == cand_name:
                         if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
                         return it, 'inventory', i, None
-                # Check Backpack
-                if self.backpack and hasattr(self.backpack, 'inventory'):
-                    for i, it in enumerate(self.backpack.inventory):
-                        if it and it.name == cand_name:
-                             if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
-                             return it, 'container', i, self.backpack
                 return None, None, None, None
 
             for cand in candidates:
@@ -250,11 +244,6 @@ class PlayerActions:
                         if it and it.name == cand_name:
                             if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
                             return it, 'inventory', i, None
-                    if self.backpack and hasattr(self.backpack, 'inventory'):
-                        for i, it in enumerate(self.backpack.inventory):
-                            if it and it.name == cand_name:
-                                 if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
-                                 return it, 'container', i, self.backpack
                     return None, None, None, None
 
                 required_item_found = None
@@ -330,7 +319,7 @@ class PlayerActions:
             if getattr(container_item, 'item_type', '') == 'ground':
                 # Return new_item for caller to handle replacement in game.items_on_ground
                 return new_item
-            # For other containers (corpse, backpack on ground, etc.), modify directly
+            # For other containers (corpse on ground, etc.), modify directly
             if index is not None and 0 <= index < len(container_item.inventory):
                 container_item.inventory[index] = new_item
                 return
@@ -383,9 +372,6 @@ class PlayerActions:
             if is_valid_kit(item): return item, 'belt', i, None
         for i, item in enumerate(self.inventory):
             if is_valid_kit(item): return item, 'inventory', i, None
-        if self.backpack:
-            for i, item in enumerate(self.backpack.inventory):
-                if is_valid_kit(item): return item, 'container', i, self.backpack
         return None, None, None, None
 
     def repair_item(self, game, target_item):
@@ -467,9 +453,7 @@ class PlayerActions:
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
-        elif item_type == 'backpack':
-            options.append('Open')
-            if not self.backpack: options.append('Equip')
+        
         elif item_type == 'cloth':
             options.append('Open'); options.append('Equip')
         elif item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
@@ -503,8 +487,6 @@ class PlayerActions:
             for i_item in self.inventory:
                 if can_accept_liquid(i_item):
                     found_names.add(i_item.name)
-            if can_accept_liquid(self.backpack):
-                found_names.add(self.backpack.name)
             for c_item in self.clothes.values():
                 if can_accept_liquid(c_item):
                     found_names.add(c_item.name)
@@ -515,12 +497,6 @@ class PlayerActions:
         if hasattr(item, 'is_stackable') and item.is_stackable() and getattr(item, 'load', None) is not None:
             options.append('Drop one')
             if getattr(item, 'load', 0) > 1: options.append('Drop all')
-            
-            if self.backpack and container_item is not self.backpack:
-                # [FIX] Ensure matching liquid states before allowing transfer stack
-                bp_allow_liquid = getattr(self.backpack, 'allow_liquid', False)
-                if bp_allow_liquid == is_liquid:
-                    options.append('Send all to Backpack')
             
             if source != 'inventory':
                 if not is_liquid:

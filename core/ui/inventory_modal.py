@@ -41,7 +41,7 @@ def draw_belt_hud(surface, game, player, mouse_pos):
     for i in range(5):
         slot_rect = get_belt_hud_slot_rect(i)
         
-        pygame.draw.rect(surface, (30, 30, 30), slot_rect, 0, 3)
+        pygame.draw.rect(surface, (GRAY_40), slot_rect, 0, 3)
         
         item = player.belt[i]
         if item and player.active_weapon and item.id == player.active_weapon.id:
@@ -146,38 +146,9 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
                     align='bottomright'
                 )
 
-    # 2. Draw Backpack Slot
-    # Moved backpack slot further down to accommodate two rows of inventory
-    backpack_slot_rect = get_backpack_slot_rect(modal['position'])
-    pygame.draw.rect(surface, GRAY_40, backpack_slot_rect, 0, 3)
-    
-    # "Backpack" Label with Shadow
-    backpack_label = font_14.render(tr('ui', "Backpack"), True, GRAY)
-    surface.blit(backpack_label, (backpack_slot_rect.x + 3, backpack_slot_rect.y + 1))
-
-    if (backpack := player.backpack):
-        pygame.draw.rect(surface, backpack.color, backpack_slot_rect, 2, 5)
-        if backpack.image:
-            img_h = backpack_slot_rect.height - 10
-            img_w = int(backpack.image.get_width() * (img_h / backpack.image.get_height()))
-            scaled_sprite = pygame.transform.scale(backpack.image, (img_w, img_h))
-            sprite_rect = scaled_sprite.get_rect(centery=backpack_slot_rect.centery, left=backpack_slot_rect.left + 5)
-            surface.blit(scaled_sprite, sprite_rect)
-            text_x_offset = sprite_rect.right + 10
-        else:
-            text_x_offset = backpack_slot_rect.left + 10
-        
-        # Backpack Text with Shadow
-        draw_text_shadow(surface, font, f"{backpack.name}", backpack.color, (text_x_offset, backpack_slot_rect.top + 5))
-        
-        # Slots Info with Shadow
-        draw_text_shadow(surface, font, f"{tr('ui', 'Slots:')} {backpack.capacity or 0}", WHITE, (text_x_offset, backpack_slot_rect.top + 25))
-    else:
-        pygame.draw.rect(surface, GRAY, backpack_slot_rect, 1, 3)
-    
     
     # 4. Draw Belt Slots (in Modal) - UPDATED TO MATCH HUD
-    belt_y_start = backpack_slot_rect.bottom + 15
+    belt_y_start = modal['position'][1] + 185
 
     # Optional: Add label 'Belt' if desired, or leave blank as requested
     
@@ -239,28 +210,6 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
     start_y = belt_y_start + 80
     
 
-
-def _draw_backpack_tab(surface, game, player, modal, mouse_pos):
-    if not player.backpack:
-        return
-
-    # Define content area (aligns with where tabs start)
-    padding = 10
-    start_x = modal['rect'].x + padding
-    start_y = modal['rect'].y + 80 # Header(35) + Tabs(30) + Padding(15)
-    
-    # Reuse the container drawing logic from core.ui.container
-    _draw_slots(
-        surface, 
-        game, 
-        player.backpack, 
-        start_x, 
-        start_y, 
-        modal['rect'].height, 
-        80, # Header offset for calculation
-        mouse_pos
-    )
-
 def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
     slot_w = 40 # Reduced from 48
@@ -284,22 +233,11 @@ def get_belt_slot_rect_in_modal(i, modal_position):
     gap = 6     # Reduced from 8
     start_x = modal_x + 10
     
-    # Recalculated spacing: Backpack bottom is ~230, plus 15px margin
-    start_y = modal_y + 245 
+    # Recalculated spacing: Inventory takes up to ~170, plus 15px margin
+    start_y = modal_y + 185 
     
     x = start_x + i * (slot_w + gap)
     return pygame.Rect(x, start_y, slot_w, slot_h)
-
-def get_backpack_slot_rect(modal_position=(GAME_WIDTH, 0)):
-    modal_x, modal_y = modal_position
-    slot_w = 224 # Exactly 5 slots (40px) + 4 gaps (6px) to match row width perfectly
-    slot_h = 40  # Reduced from 48
-    x = modal_x + 10
-    
-    # Recalculated spacing: Inventory takes up to ~172, plus 18px margin
-    y = modal_y + 190
-    
-    return pygame.Rect(x, y, slot_w, slot_h)
 
 
 def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
@@ -317,7 +255,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
 
     def register_container(item, default_name):
         # [CHANGE] Added check: ensure item has 'inventory' attribute before creating a tab
-        valid_container_types = ['container', 'backpack']
+        valid_container_types = ['container']
         
         if item and hasattr(item, 'inventory') and item.item_type in valid_container_types:
             # Create a unique label to handle multiple containers of the same type
@@ -331,10 +269,6 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
             container_mapping[label] = item
 
     # Scan all possible player slots for items that are containers
-    
-    # 1. Check Backpack Slot
-    if player.backpack:
-        register_container(player.backpack, "Bag")
     
 
     # 3. Check Belt Slots

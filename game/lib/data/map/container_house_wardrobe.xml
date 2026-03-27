@@ -2,7 +2,7 @@
     <visuals>
         <sprite file="house_wardrobe.png" />
     </visuals>
-    <capacity value="20" />
+    <capacity value="15" />
     <loot>
         <item item="Balaclava" chance="1.0" />
         <item item="Beret" chance="1.0" />

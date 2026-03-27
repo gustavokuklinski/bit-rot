@@ -143,12 +143,12 @@ class Game:
         self.saved_modals = [] 
 
         self.last_modal_positions = {
-            'status': (65, 10),
-            'inventory': (1020, 10),
-            'gear': (750, 10),
+            'status': (65, 3),
+            'inventory': (1034, 256),
+            'gear': (1034, 3),
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'nearby': (1020, 330),
-            'messages': (10, 390),
+            'nearby': (1034, 494),
+            'messages': (3, 460),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100),
@@ -347,7 +347,6 @@ class Game:
                             is_equipped = True
                     if not is_equipped:
                         equipped_roots = []
-                        if self.player.backpack: equipped_roots.append(self.player.backpack)
                         if self.player.clothes: 
                             equipped_roots.extend([c for c in self.player.clothes.values() if c])
                         for item in equipped_roots:
@@ -753,6 +752,7 @@ class Game:
             self.current_save_folder_name = None
             
         pygame.mouse.set_visible(True)
+        pygame.mouse.set_cursor(self.assets.get('custom_cursor') or pygame.cursors.arrow)
         mouse_pos = self._get_scaled_mouse_pos()
         menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
 

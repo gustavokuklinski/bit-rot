@@ -87,7 +87,7 @@ class Item:
         # Add weight of contents if it's a container (recursive)
         if self.inventory:
             contents_weight = sum(item.get_total_weight() for item in self.inventory)
-            # Apply reduction (e.g., backpack reduces content weight by %)
+            # Apply reduction (e.g., containers can reduce content weight by %)
             total += contents_weight * (1.0 - self.weight_reduction)
             
         if getattr(self, 'in_belt', False):
