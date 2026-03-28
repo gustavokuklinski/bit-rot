@@ -1,6 +1,6 @@
 <cloth name="Military Pants" type="cloth" id="legs" builder="false">
     <properties>
-        <defence value="0.6" />
+        <defence value="20" />
         <capacity value="4" />
         <durability min="1" max="100" />
         <sprite file="legs_military_pants.png" />

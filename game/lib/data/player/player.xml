@@ -13,6 +13,8 @@
         <food value="100.0" />
         <anxiety value="0.0" />
         <infection value="0.0" />
+        <defence value="0.0" />
+        <weight value="0.0" />
     </stats>
 
     <attributes>

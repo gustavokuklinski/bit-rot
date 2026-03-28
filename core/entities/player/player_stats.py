@@ -18,7 +18,7 @@ class PlayerStats:
                          total_defence += item.defence
                 elif not hasattr(item, 'durability') or item.durability is None:
                      total_defence += item.defence
-        return total_defence
+        return min(100, int(total_defence))
 
     def take_durability_damage(self, raw_damage, game):
         # We keep this intact in case environmental hazards or explosions call it directly

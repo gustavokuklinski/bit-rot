@@ -58,6 +58,8 @@ def _load_stat_icons():
         "anxiety": SPRITE_PATH + "ui/axiety.png", # Assuming 'anxiety.png'
         "tireness": SPRITE_PATH + "ui/tireness.png", # Assuming 'tireness.png'
         "infection": SPRITE_PATH + "ui/infection.png",
+        "defence": SPRITE_PATH + "ui/defence.png",
+        "weight": SPRITE_PATH + "ui/weight.png",
         "strength": SPRITE_PATH + "ui/strength.png",
         "fitness": SPRITE_PATH + "ui/fitness.png",
         "melee": SPRITE_PATH + "ui/melee.png",
@@ -539,6 +541,26 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     else:
                         current_attrs[attr] = curr_val + value
 
+    total_defence = 0
+    total_weight = 0.0
+    for slot, item_name in state['chosen_clothes'].items():
+        if item_name != "None":
+            template = ITEM_TEMPLATES.get(item_name, {})
+            props = template.get('properties', {})
+            
+            if 'defence' in props:
+                def_str = str(props['defence'].get('value', '0')).replace('%', '')
+                try: total_defence += int(float(def_str))
+                except ValueError: pass
+                
+            if 'weight' in props:
+                w_str = props['weight'].get('weight', '0.0')
+                try: total_weight += float(w_str)
+                except ValueError: pass
+
+    current_stats['defence'] = min(100, total_defence + display_modifiers.get('defence', 0))
+    current_stats['weight'] = total_weight + display_modifiers.get('weight', 0)
+
     state['final_stats'] = current_stats
     state['final_attrs'] = current_attrs
     line_height = 25
@@ -561,6 +583,35 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 content_surface.blit(icon, (0, y_offset + (line_height - icon.get_height()) // 2))
                 text_x = icon_padding
             else: text_x = 0
+
+            if stat == 'defence':
+                text_surf = font.render(f"{tr('ui', 'Defence')}", True, WHITE)
+                val_surf = font.render(f"{int(value)}%", True, WHITE)
+                
+                content_surface.blit(text_surf, (text_x, y_offset + 3))
+                content_surface.blit(val_surf, (text_x + 100, y_offset + 3)) # Aligned to 100px
+                y_offset += line_height
+                continue
+                
+            elif stat == 'weight':
+                text_surf = font.render(f"{tr('ui', 'Weight')}", True, WHITE)
+                
+                # Calculate Max Weight dynamically based on chosen traits and base strength
+                str_val = current_attrs.get('strength', 5)
+                str_level = str_val.get('level', 5) if isinstance(str_val, dict) else int(str_val)
+                final_str = str_level + level_modifiers.get('strength', 0)
+                
+                # NOTE: Adjust the '10.0 + final_str' math below to perfectly match 
+                # whatever formula you use in player.max_carry_weight!
+                max_wgt = state['base_data'].get('max_carry_weight', 10.0 + final_str)
+                
+                val_surf = font.render(f"{value:.2f} / {max_wgt:.2f}", True, WHITE)
+                
+                content_surface.blit(text_surf, (text_x, y_offset + 3))
+                content_surface.blit(val_surf, (text_x + 100, y_offset + 3)) # Aligned to 100px
+                y_offset += line_height
+                continue
+
             base_value = state['base_data']['stats'].get(stat, 100.0)
 
             trait_mod = display_modifiers.get(stat, 0)

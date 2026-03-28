@@ -120,7 +120,7 @@ class PlayerActions:
                 for effect in item.effects:
                     eff_type = effect['type'] 
                     targets = effect['targets'] 
-                    val = random.randint(effect['min'], effect['max'])
+                    val = effect.get('value', 0)
                     
                     for target_stat in targets:
                         if eff_type == 'restore' and target_stat == 'health':

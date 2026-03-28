@@ -1,6 +1,6 @@
 <cloth name="Special Force Pants" type="cloth" id="legs" builder="false">
     <properties>
-        <defence value="1.0" />
+        <defence value="20" />
         <capacity value="6" />
         <durability min="50" max="100" />
         <sprite file="legs_special_force_pants.png" />

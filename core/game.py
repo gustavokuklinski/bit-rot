@@ -227,7 +227,7 @@ class Game:
         self.sound_manager = SoundManager()
         
         if core.data.config.UI_BACKGROUND_MUSIC:
-            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=1.0)
+            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=0.25)
 
         self.world_min_x = 0
         self.world_min_y = 0

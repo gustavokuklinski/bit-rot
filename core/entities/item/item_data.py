@@ -73,14 +73,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     template['effects'].append({
                         'type': 'restore',
                         'targets': targets,
-                        'min': int(node.get('min', '0')),
-                        'max': int(node.get('max', '0'))
+                        'value': int(node.get('value', '0'))
                     })
                 
                 if not status_str and global_status:
-                        template['properties']['restore'] = {
-                        'min': node.get('min', '0'),
-                        'max': node.get('max', '0')
+                    template['properties']['restore'] = {
+                        'value': node.get('value', '0')
                     }
 
             for node in props_node.findall('reduce'):
@@ -91,14 +89,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     template['effects'].append({
                         'type': 'reduce',
                         'targets': targets,
-                        'min': int(node.get('min', '0')),
-                        'max': int(node.get('max', '0'))
+                        'value': int(node.get('value', '0'))
                     })
                 
                 if not status_str and global_status:
-                        template['properties']['reduce'] = {
-                        'min': node.get('min', '0'),
-                        'max': node.get('max', '0')
+                    template['properties']['reduce'] = {
+                        'value': node.get('value', '0')
                     }
                 
         spawn_node = root.find('spawn')

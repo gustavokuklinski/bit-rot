@@ -1,6 +1,6 @@
 <item name="Water Unit" type="liquid" liquid="true">
     <properties>
-        <restore status="[water]" min="5" max="25" />
+        <restore status="[water]" value="15" />
         <load min="1" max="100" />
         <capacity value="100" />
         <weight weight="0.001" />

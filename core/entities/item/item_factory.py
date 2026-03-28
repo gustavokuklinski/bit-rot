@@ -147,7 +147,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     max_reduce = int(get_prop_val(props, 'reduce', 'max', 0)) if 'reduce' in props else None 
 
     slot = get_prop_val(props, 'slot', 'value', None)
-    defence = float(get_prop_val(props, 'defence', 'value', 0))
+    defence_str = str(get_prop_val(props, 'defence', 'value', '0')).replace('%', '')
+    defence = int(float(defence_str))
+    
     speed = float(get_prop_val(props, 'speed', 'value', 0))
 
     state = template.get('state')

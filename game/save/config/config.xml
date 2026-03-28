@@ -6,7 +6,7 @@
         <language value="en_US" name="Language"/>
     </ui>
     <audio>
-        <volume_music value="1.0" name="Music Volume"/>
+        <volume_music value="0.25" name="Music Volume"/>
         <volume_background value="1.0" name="Background Volume"/>
         <volume_atmospheric value="1.0" name="Atmospheric Volume"/>
     </audio>

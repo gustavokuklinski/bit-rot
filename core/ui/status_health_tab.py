@@ -76,7 +76,7 @@ def draw_health_tab(surface, player, modal, assets):
         ("STM", player.stamina, player.max_stamina, GRAY),
         ("WTR", player.water, 100, GRAY),
         ("WGT", player.current_weight, player.max_carry_weight, GRAY),
-        ("DEF", player.get_total_defence(), 5.0, GRAY)
+        ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
@@ -115,7 +115,7 @@ def draw_health_tab(surface, player, modal, assets):
             if name == "WGT":
                 val_str = f"{value:.2f} / {max_value:.2f}"
             elif name == "DEF":
-                val_str = f"{(value / 5.0) * 100:.0f}%"
+                val_str = f"{int(value)}%"
             else:
                 val_str = f"{int(value)}%"
                  

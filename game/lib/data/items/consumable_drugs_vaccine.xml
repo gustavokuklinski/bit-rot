@@ -1,6 +1,6 @@
 <item name="Vaccine" type="consumable_drugs" allow_belt="true">
     <properties>
-        <reduce status="[infection]" min="5" max="15" />
+        <reduce status="[infection]" value="15" />
         <load value="1" />
         <capacity value="5" />
         <weight weight="0.1" />

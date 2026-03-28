@@ -69,9 +69,8 @@ def draw_tooltip(surface, item, pos):
             # Format targets nicely: "Health, Tireness"
             targets_str = ", ".join([tr('tooltip', t.capitalize()) for t in effect['targets']])
             
-            min_v = effect['min']
-            max_v = effect['max']
-            range_str = f"{min_v}" if min_v == max_v else f"{min_v}-{max_v}"
+            val = effect.get('value', 0)
+            range_str = f"{val}"
             
             # Determine Sign and Color
             if effect['type'] == 'restore':
@@ -90,7 +89,7 @@ def draw_tooltip(surface, item, pos):
         if item.durability is not None and item.max_durability > 0:
             effective_defence *= (item.durability / item.max_durability)
         
-        lines.append(f"{tr('tooltip', 'Defence:')} {effective_defence:.1f}")
+        lines.append(f"{tr('tooltip', 'Defence:')} {effective_defence:.0f}%")
     if item.load is not None and item.capacity is not None:
         lines.append(f"{tr('tooltip', 'Load:')} {item.load:.0f}/{item.capacity:.0f}")
     elif item.load is not None:

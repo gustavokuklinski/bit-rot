@@ -12,7 +12,7 @@
         <knockback value="5" />
     </properties>
     <sound>
-        <shoot src="mpk5.ogg" />
+        <shoot src="m4a1.ogg" />
         <reload src="reload.ogg" />
         <noammo src="outofammo.ogg" />
     </sound>

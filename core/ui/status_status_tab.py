@@ -87,7 +87,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),
         ("ANX", player.anxiety, 100, GRAY),
-        ("DEF", player.get_total_defence(), 5.0, GRAY), 
+        ("DEF", player.get_total_defence(), 100, GRAY), 
         ("WGT", player.current_weight, player.max_carry_weight, GRAY)
     ]
     
@@ -130,7 +130,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
              if name == "WGT":
                  val_str = f"{value:.2f} / {max_value:.2f}"
              elif name == "DEF":
-                 val_str = f"{(value / 5.0) * 100:.0f}%"
+                 val_str = f"{int(value)}%"
              else:
                  val_str = f"{int(value)}%"
                  

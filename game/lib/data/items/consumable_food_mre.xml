@@ -1,11 +1,11 @@
 <item name="MRE" type="consumable_food" allow_belt="false">
     <properties>
-        <restore status="[food]" min="15" max="30" />
-        <restore status="[water]" min="5" max="10" />
-        <restore status="[health]" min="10" max="10" />
-        <restore status="[tireness]" min="10" max="20" />
-        <restore status="[stamina]" min="10" max="20" />
-        <reduce status="[anxiety]" min="10" max="20" />
+        <restore status="[food]" value="30" />
+        <restore status="[water]" value="10" />
+        <restore status="[health]" value="10" />
+        <restore status="[tireness]" value="20" />
+        <restore status="[stamina]" value="20" />
+        <reduce status="[anxiety]" value="20" />
         <weight weight="0.1" />
         <load value="1" />
         <capacity value="3" />

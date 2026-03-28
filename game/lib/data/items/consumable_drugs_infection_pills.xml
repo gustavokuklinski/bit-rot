@@ -1,6 +1,6 @@
 <item name="Infection Pills" type="consumable_drugs" allow_belt="true">
     <properties>
-        <reduce status="[infection]" min="1" max="5" />
+        <reduce status="[infection]" value="5" />
         <load value="1" />
         <capacity value="10" />
         <weight weight="0.1" />

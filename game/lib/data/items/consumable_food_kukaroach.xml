@@ -1,7 +1,7 @@
 <item name="Kukaroach (Bit Rot publisher)" type="consumable_food" allow_belt="false">
     <properties>
-        <restore status="[food]" min="1" max="5" />
-        <restore status="[infection]" min="60" max="90" />
+        <restore status="[food]" value="5" />
+        <restore status="[infection]" value="50" />
         <weight weight="0.001" />
         <load value="1" />
         <capacity value="100" />

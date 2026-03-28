@@ -1,6 +1,6 @@
 <cloth name="Leather Black Jacket" type="cloth" id="arms" builder="false">
     <properties>
-        <defence value="0.6" />
+        <defence value="30" />
         <capacity value="4" />
         <durability min="1" max="100" />
         <sprite file="arms_leather_black_jacket.png" />
