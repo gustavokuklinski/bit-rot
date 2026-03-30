@@ -1,3 +1,4 @@
+# core/ui/dropdown.py
 import pygame
 from core.data.config import *
 from core.data.localization import tr
@@ -9,14 +10,22 @@ def draw_context_menu(surface, menu_state, mouse_pos):
     if not options:
         menu_state['active'] = False
         return
-        
-    # Translate options for display using the 'context' category
-    translated_options = [tr('context', opt) for opt in options]
 
     item_height = 25
     padding = 5
-    # Calculate width based on the translated text
-    max_width = max(font.size(opt)[0] for opt in translated_options) + (padding * 2)
+    
+    # Pre-calculate main menu metrics
+    main_labels = []
+    has_sub = []
+    for opt in options:
+        if isinstance(opt, dict):
+            main_labels.append(tr('context', opt['label']))
+            has_sub.append(True)
+        else:
+            main_labels.append(tr('context', opt))
+            has_sub.append(False)
+
+    max_width = max((font.size(label)[0] for label in main_labels), default=0) + (padding * 4) + 10 # Extra space for arrows
     menu_height = len(options) * item_height
     menu_x, menu_y = menu_state['position']
     
@@ -26,21 +35,115 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         menu_y -= menu_height
         
     menu_rect = pygame.Rect(menu_x, menu_y, max_width, menu_height)
+    
+    # Draw main menu background
     s = pygame.Surface((max_width, menu_height), pygame.SRCALPHA)
     s.fill((20, 20, 20, 220))
     surface.blit(s, menu_rect.topleft)
     pygame.draw.rect(surface, WHITE, menu_rect, 1)
     
     menu_state['rects'] = []
-    for i, translated_option in enumerate(translated_options):
+    menu_state['action_map'] = [] # Maps drawn rect index to the actual string action
+    
+    hovered_main_index = -1
+    
+    # Draw main items
+    for i, label in enumerate(main_labels):
         option_rect = pygame.Rect(menu_x, menu_y + i * item_height, max_width, item_height)
-        menu_state['rects'].append(option_rect)
         
+        is_hovered = option_rect.collidepoint(mouse_pos)
+        
+        # If hovering a submenu parent or its child, keep it highlighted
+        if is_hovered:
+            hovered_main_index = i
+            
         text_color = WHITE
-        if option_rect.collidepoint(mouse_pos):
+        if is_hovered:
             pygame.draw.rect(surface, GRAY_80, option_rect)
             text_color = YELLOW
             
-        # Draw using the translated string
-        text_surf = font.render(translated_option, True, text_color)
+        text_surf = font.render(label, True, text_color)
         surface.blit(text_surf, (option_rect.x + padding, option_rect.y + (item_height - text_surf.get_height()) // 2))
+        
+        if has_sub[i]:
+            arrow_surf = font.render(">", True, text_color)
+            surface.blit(arrow_surf, (option_rect.right - padding - arrow_surf.get_width(), option_rect.y + (item_height - arrow_surf.get_height()) // 2))
+            
+        if not has_sub[i]:
+            menu_state['rects'].append(option_rect)
+            menu_state['action_map'].append(options[i])
+            
+    # Handle Submenu drawing
+    # Need to check if mouse is in the submenu rect too to keep the parent highlighted
+    active_sub_idx = -1
+    
+    # First pass to see if we are in a submenu
+    if 'last_hovered_sub' not in menu_state:
+        menu_state['last_hovered_sub'] = -1
+
+    # BUG FIX: Ensure the last hovered index isn't stale/out-of-bounds for the current menu
+    if menu_state['last_hovered_sub'] >= len(has_sub):
+        menu_state['last_hovered_sub'] = -1
+
+    if hovered_main_index != -1 and has_sub[hovered_main_index]:
+        active_sub_idx = hovered_main_index
+        menu_state['last_hovered_sub'] = active_sub_idx
+    elif menu_state['last_hovered_sub'] != -1 and has_sub[menu_state['last_hovered_sub']]:
+        active_sub_idx = menu_state['last_hovered_sub']
+
+    if active_sub_idx != -1:
+        parent_rect = pygame.Rect(menu_x, menu_y + active_sub_idx * item_height, max_width, item_height)
+        sub_options = options[active_sub_idx]['sub']
+        
+        sub_labels = [tr('context', sub) for sub in sub_options]
+        sub_max_width = max((font.size(label)[0] for label in sub_labels), default=0) + (padding * 2)
+        sub_height = len(sub_options) * item_height
+        
+        sub_x = menu_x + max_width
+        sub_y = menu_y + active_sub_idx * item_height
+        
+        if sub_x + sub_max_width > GAME_WIDTH:
+            sub_x = menu_x - sub_max_width
+            
+        if sub_y + sub_height > GAME_HEIGHT:
+            sub_y = GAME_HEIGHT - sub_height
+            
+        sub_rect = pygame.Rect(sub_x, sub_y, sub_max_width, sub_height)
+        
+        # Check if mouse is in submenu or parent
+        in_sub = sub_rect.collidepoint(mouse_pos)
+        in_parent = parent_rect.collidepoint(mouse_pos)
+        
+        if not (in_sub or in_parent):
+            # Mouse left both, close submenu
+            menu_state['last_hovered_sub'] = -1
+        else:
+            # Highlight parent if we are in the submenu
+            if in_sub:
+                pygame.draw.rect(surface, GRAY_80, parent_rect)
+                text_surf = font.render(main_labels[active_sub_idx], True, YELLOW)
+                surface.blit(text_surf, (parent_rect.x + padding, parent_rect.y + (item_height - text_surf.get_height()) // 2))
+                arrow_surf = font.render(">", True, YELLOW)
+                surface.blit(arrow_surf, (parent_rect.right - padding - arrow_surf.get_width(), parent_rect.y + (item_height - arrow_surf.get_height()) // 2))
+
+            # Draw submenu
+            sub_s = pygame.Surface((sub_max_width, sub_height), pygame.SRCALPHA)
+            sub_s.fill((20, 20, 20, 220))
+            surface.blit(sub_s, sub_rect.topleft)
+            pygame.draw.rect(surface, WHITE, sub_rect, 1)
+            
+            for i, sub_label in enumerate(sub_labels):
+                sub_opt_rect = pygame.Rect(sub_x, sub_y + i * item_height, sub_max_width, item_height)
+                
+                # Add to rects so it can be clicked, mapping to "Parent::Child" action string
+                menu_state['rects'].append(sub_opt_rect)
+                action_string = f"{options[active_sub_idx]['label']}::{sub_options[i]}"
+                menu_state['action_map'].append(action_string)
+                
+                text_color = WHITE
+                if sub_opt_rect.collidepoint(mouse_pos):
+                    pygame.draw.rect(surface, GRAY_80, sub_opt_rect)
+                    text_color = YELLOW
+                    
+                text_surf = font.render(sub_label, True, text_color)
+                surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))

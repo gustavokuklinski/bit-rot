@@ -6,7 +6,7 @@
         <language value="en_US" name="Language"/>
     </ui>
     <audio>
-        <volume_music value="1.0" name="Music Volume"/>
+        <volume_music value="0.25" name="Music Volume"/>
         <volume_background value="1.0" name="Background Volume"/>
         <volume_atmospheric value="1.0" name="Atmospheric Volume"/>
     </audio>
@@ -17,7 +17,7 @@
         <time_start_hr value="6.0" name="Start hour (Default: 6:00)"/>
     </game>
     <map>
-        <map_chunks value="3" name="Map size (Default: 3)"/>
+        <map_chunks value="2" name="Map size (Default: 2)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>
@@ -25,7 +25,7 @@
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)"/>
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)"/>
         <water_autodrink value="true" name="Allow Autodrink"/>
-        <water_threshold value="75" name="Minimum % to start autodrink (Default: 95)"/>
+        <water_threshold value="99" name="Minimum % to start autodrink (Default: 99)"/>
     </player>
     <item_spawning>
         <item_spawn_chance_multiplier value="0.5" name="Global Multiplier"/>

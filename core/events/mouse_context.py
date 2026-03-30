@@ -13,9 +13,24 @@ from core.data.localization import tr
 
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
+
+    if 'rects' not in game.context_menu or 'action_map' not in game.context_menu:
+        game.context_menu['active'] = False
+        return
+
     for i, rect in enumerate(game.context_menu['rects']):
         if rect.collidepoint(mouse_pos):
-            option = game.context_menu['options'][i]
+            # Parse the actual action string (Handles normal strings AND "Equip::util2" submenus)
+            raw_option = game.context_menu['action_map'][i]
+            
+            target_sub_slot = None
+            if "::" in raw_option:
+                parts = raw_option.split("::")
+                option = parts[0]
+                target_sub_slot = parts[1]
+            else:
+                option = raw_option
+
             item = game.context_menu['item']
             source = game.context_menu['source']
             index = game.context_menu['index']
@@ -27,8 +42,6 @@ def handle_context_menu_click(game, mouse_pos):
                     verified_item = game.player.inventory[index]
                 elif source == 'belt' and 0 <= index < len(game.player.belt):
                     verified_item = game.player.belt[index]
-               
-                
                 elif source == 'gear':
                     verified_item = game.player.clothes.get(index)
                 elif source == 'ground' and 0 <= index < len(game.items_on_ground):
@@ -42,10 +55,10 @@ def handle_context_menu_click(game, mouse_pos):
                         verified_item = item
                     else:
                         verified_item = None
-                elif source == 'container_map': # Vehicle or object
+                elif source == 'container_map': 
                     if getattr(item, 'item_type', '') == 'vehicle':
-                        verified_item = item # Pass through for vehicles
-                    elif container_item: # If it had a container reference
+                        verified_item = item 
+                    elif container_item: 
                         verified_item = container_item.inventory[index] if 0 <= index < len(container_item.inventory) else None
                     else:
                         verified_item = item
@@ -64,10 +77,7 @@ def handle_context_menu_click(game, mouse_pos):
 
             if source == 'npc':
                 if option == 'Talk':
-                    # Load dialog options
                     dialogs = item.get_dialog_options()
-                    
-                    # Center the modal
                     pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
                     pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
                     
@@ -187,6 +197,12 @@ def handle_context_menu_click(game, mouse_pos):
                             break
                 
                 if target_container:
+                    if source in ['nearby', 'ground', 'container', 'container_map']:
+                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
+                            display_message(tr('msg', "Cannot carry anymore weight"))
+                            game.context_menu['active'] = False
+                            return
+
                     def do_add_to_container():
                         removed_item = None
                         if source == 'inventory':
@@ -229,7 +245,8 @@ def handle_context_menu_click(game, mouse_pos):
                                 target_container.inventory.append(removed_item)
                     
                     if source in ['nearby', 'ground', 'container', 'container_map']:
-                        game.player.start_action(f"Transferring to {target_container.name}", 1.0, do_add_to_container, xp_reward=0.5)
+                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                        game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_add_to_container, xp_reward=0.5)
                     else:
                         do_add_to_container()
                 
@@ -244,49 +261,55 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Get bullets': game.player.unload_weapon(game, item)
             elif option == 'Turn on' or option == 'Turn off':
                 result = game.player.toggle_utility_item(item, source, index, container_item)
-                # Handle ground source - replace item in game.items_on_ground
                 if source == 'ground' and result and hasattr(result, 'name'):
                     if index is not None and 0 <= index < len(game.items_on_ground):
                         game.items_on_ground[index] = result
                 elif source == 'nearby' and container_item and result and hasattr(result, 'name'):
-                    # Check if it's a VirtualGroundContainer (ground items in nearby modal)
                     if getattr(container_item, 'item_type', '') == 'ground':
-                        # Find and replace the item in game.items_on_ground using identity comparison
                         for i, ground_item in enumerate(game.items_on_ground):
                             if ground_item is item:
                                 game.items_on_ground[i] = result
                                 break
-                    # For other containers, the replacement is already done in toggle_utility_item
             
+            # --- FIXED EQUIP BLOCK WITH NESTED TARGETS ---
             elif option == 'Equip':
-                # INCLUSION: Added 'container' so it equips to Gear slots instead of the Belt
                 item_type = getattr(item, 'item_type', None)
                 if item_type in ('cloth', 'container'):
-                    item_slot = getattr(item, 'slot', None)
                     
-                    
-                        
-                    if item_slot == 'hand': item_slot = 'hands'
-                    
-                    # CASCADE LOGIC: Allow util and container items to flow into util2 or util3 if the base slot is taken
-                    if item_type == 'container':
-                        slots_to_try = [item_slot] if item_slot and item_slot not in ['util'] else ['util', 'util2', 'util3']
-                        if item_slot == 'util':
-                            slots_to_try = ['util', 'util2', 'util3']
-                            
-                        for slot in slots_to_try:
-                            if game.player.clothes.get(slot) is None:
-                                item_slot = slot
-                                break
+                    # Target submenu slot directly
+                    if target_sub_slot:
+                        item_slot = target_sub_slot
                     else:
-                        if item_slot == 'util':
-                            if game.player.clothes.get('util') is not None:
-                                if game.player.clothes.get('util2') is None:
-                                    item_slot = 'util2'
-                                elif game.player.clothes.get('util3') is None:
-                                    item_slot = 'util3'
-                    
-                    if item_slot in game.player.clothes_slots or item_slot in ['util2', 'util3']:
+                        item_slot = getattr(item, 'slot', None)
+                        if item_slot == 'hand': item_slot = 'hands'
+                        
+                        if item_type == 'container':
+                            slots_to_try = [item_slot] if item_slot and item_slot not in ['util'] else ['util', 'util2', 'util3']
+                            if item_slot == 'util' or not item_slot:
+                                slots_to_try = ['util', 'util2', 'util3']
+                                
+                            found_empty_slot = False
+                            for slot in slots_to_try:
+                                if game.player.clothes.get(slot) is None:
+                                    item_slot = slot
+                                    found_empty_slot = True
+                                    break
+                        else:
+                            if item_slot == 'util':
+                                if game.player.clothes.get('util') is not None:
+                                    if game.player.clothes.get('util2') is None:
+                                        item_slot = 'util2'
+                                    elif game.player.clothes.get('util3') is None:
+                                        item_slot = 'util3'
+
+                    source_is_external = source in ['ground', 'nearby']
+                    if source_is_external:
+                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
+                            display_message(tr('msg', "Cannot carry anymore weight"))
+                            game.context_menu['active'] = False
+                            return
+
+                    if item_slot in game.player.clothes_slots or item_slot in ['util', 'util2', 'util3']:
                         item_from_source = None
                         if source == 'inventory' and 0 <= index < len(game.player.inventory):
                             item_from_source = game.player.inventory.pop(index)
@@ -320,15 +343,39 @@ def handle_context_menu_click(game, mouse_pos):
                             game.context_menu['active'] = False
                             return
 
+                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
+                            display_message(tr('msg', "Cannot carry anymore weight"))
+                            game.context_menu['active'] = False
+                            return
+
                         placed = False
-                        for bi, slot in enumerate(game.player.belt):
-                            if slot is None and getattr(item, 'item_type', None) in ('weapon', 'tool'):
+                        if target_sub_slot and target_sub_slot.startswith('belt_'):
+                            try:
+                                bi = int(target_sub_slot.split('_')[1])
+                                old_belt_item = game.player.belt[bi]
                                 game.player.belt[bi] = item
                                 if 0 <= index < len(game.items_on_ground):
                                     game.items_on_ground.pop(index)
                                 print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
                                 placed = True
-                                break
+                                
+                                if old_belt_item:
+                                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                        game.player.inventory.append(old_belt_item)
+                                    else:
+                                        old_belt_item.rect.center = game.player.rect.center
+                                        game.items_on_ground.append(old_belt_item)
+                            except ValueError: pass
+                        else:
+                            for bi, slot in enumerate(game.player.belt):
+                                if slot is None and getattr(item, 'item_type', None) in ('weapon', 'tool'):
+                                    game.player.belt[bi] = item
+                                    if 0 <= index < len(game.items_on_ground):
+                                        game.items_on_ground.pop(index)
+                                    print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
+                                    placed = True
+                                    break
+                                    
                         if not placed:
                             if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                 game.player.inventory.append(item)
@@ -337,10 +384,36 @@ def handle_context_menu_click(game, mouse_pos):
                                 print(f"Picked up {tr('item', item.name)} into inventory.")
                             else:
                                 print("No space to equip or pick up the item.")
+                                
                         if getattr(item, 'item_type', None) == 'weapon':
                             game.player.active_weapon = item
                     else:
-                        game.player.equip_item_to_belt(item, source, index, container_item)
+                        if target_sub_slot and target_sub_slot.startswith('belt_'):
+                             try:
+                                 bi = int(target_sub_slot.split('_')[1])
+                                 item_from_source = None
+                                 if source == 'inventory' and 0 <= index < len(game.player.inventory):
+                                     item_from_source = game.player.inventory.pop(index)
+                                 elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
+                                     item_from_source = container_item.inventory.pop(index)
+                                 elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
+                                     item_from_source = container_item.inventory.pop(index)
+                                     if getattr(container_item, 'item_type', '') == 'ground' and item_from_source in game.items_on_ground:
+                                         game.items_on_ground.remove(item_from_source)
+                                         
+                                 if item_from_source:
+                                     old_belt_item = game.player.belt[bi]
+                                     game.player.belt[bi] = item_from_source
+                                     print(f"Equipped {tr('item', item_from_source.name)} to belt slot {bi+1}.")
+                                     if old_belt_item:
+                                         if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                             game.player.inventory.append(old_belt_item)
+                                         else:
+                                             old_belt_item.rect.center = game.player.rect.center
+                                             game.items_on_ground.append(old_belt_item)
+                             except ValueError: pass
+                        else:
+                             game.player.equip_item_to_belt(item, source, index, container_item)
 
             elif option == 'Drop one':
                 if getattr(item, 'liquid', False):
@@ -369,9 +442,6 @@ def handle_context_menu_click(game, mouse_pos):
                         container_item.inventory.pop(index)
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
-                
-            elif option == 'Send all to Inventory':
-                game.player.transfer_item_stack(source, index, container_item, game.player) 
             
             elif option == 'Drop':
                 if getattr(item, 'liquid', False):
@@ -395,7 +465,6 @@ def handle_context_menu_click(game, mouse_pos):
                                 print(f"Dropped {dropped_item.name} from {slot_name} slot.")
                     else:
                         game.player.drop_item(game, source, index, container_item)
-                    
 
             elif option == 'Read':
                 if getattr(item, 'item_type', None) == 'text':
@@ -501,18 +570,29 @@ def handle_context_menu_click(game, mouse_pos):
                             game.items_on_ground.append(item_to_unequip)
                 
 
-            elif (source == 'ground' or source == 'nearby') and option == 'Grab':
+            elif source in ['ground', 'nearby', 'container'] and option in ['Grab', 'Grab One', 'Grab Half', 'Grab All']:
 
                 target_inventory = game.player.inventory
                 target_capacity = game.player.get_total_inventory_slots()
 
                 if len(target_inventory) < target_capacity:
+                    
+                    weight_multiplier = 1.0
+                    if hasattr(item, 'load') and item.load and item.load > 0:
+                        if option == 'Grab One':
+                            weight_multiplier = 1.0 / item.load
+                        elif option == 'Grab Half':
+                            weight_multiplier = max(1, item.load // 2) / item.load
+
+                    if game.player.current_weight + (item.get_total_weight() * weight_multiplier) > game.player.max_carry_weight:
+                        display_message(tr('msg', "Cannot carry anymore weight"))
+                        game.context_menu['active'] = False
+                        return
 
                     def do_grab():
                         grabbed = False
                         item_to_grab = item
                         
-                        # Convert "Campfire on" to "Campfire off" when picking up
                         if item.name == "Campfire on":
                             from core.entities.item.item import Item
                             new_item = Item.create_from_name("Campfire off")
@@ -526,6 +606,31 @@ def handle_context_menu_click(game, mouse_pos):
                                 print("Campfire extinguished when picked up.")
                                 display_message(tr('msg', "Campfire extinguished when picked up."))
 
+                        is_partial = False
+                        amount = item_to_grab.load if hasattr(item_to_grab, 'load') and item_to_grab.load else 1
+                        
+                        if hasattr(item_to_grab, 'is_stackable') and item_to_grab.is_stackable() and hasattr(item_to_grab, 'load') and item_to_grab.load > 1:
+                            if option == 'Grab One':
+                                amount = 1
+                                is_partial = True
+                            elif option == 'Grab Half':
+                                amount = max(1, item_to_grab.load // 2)
+                                is_partial = True
+                            elif option == 'Grab All':
+                                amount = item_to_grab.load
+                                
+                        if is_partial and amount < item_to_grab.load:
+                            from core.entities.item.item import Item
+                            new_item = Item.create_from_name(item_to_grab.name)
+                            if new_item:
+                                new_item.load = amount
+                                if hasattr(item_to_grab, 'durability'):
+                                    new_item.durability = item_to_grab.durability
+                                item_to_grab.load -= amount
+                                target_inventory.append(new_item)
+                                game.player.stack_item_in_inventory(new_item)
+                            return
+
                         if source == 'ground' and item in game.items_on_ground:
                             game.items_on_ground.remove(item)
                             grabbed = True
@@ -534,18 +639,23 @@ def handle_context_menu_click(game, mouse_pos):
                             if getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
                             grabbed = True
+                        elif source == 'container' and container_item and item in container_item.inventory:
+                            container_item.inventory.remove(item)
+                            grabbed = True
 
                         if grabbed:
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
 
                     if source == 'nearby':
-                        game.player.start_action(tr('msg', "Looting"), 1.0, do_grab, xp_reward=0.5)
+                        grab_weight = item.get_total_weight() * weight_multiplier
+                        grab_time = max(0.1, grab_weight * 0.2)
+                        game.player.start_action(tr('msg', "Looting"), grab_time, do_grab, xp_reward=0.5)
                     else:
                         do_grab()
                 else:
                     print("Inventory full.")
-
+                    display_message(tr('msg', "Inventory is full."))
 
             clicked_on_menu = True
             break
@@ -553,6 +663,7 @@ def handle_context_menu_click(game, mouse_pos):
     game.context_menu['active'] = False
     if clicked_on_menu:
         return
+
 
 def handle_right_click(game, mouse_pos):
     clicked_item = None
@@ -797,6 +908,9 @@ def handle_right_click(game, mouse_pos):
             if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
                 options.remove('Use')
 
+        if 'Send all to Inventory' in options:
+            options.remove('Send all to Inventory')
+
         if click_source == 'belt':
             if 'Unequip' not in options: options.append('Unequip')
             options = [o for o in options if o != 'Equip']
@@ -818,7 +932,11 @@ def handle_right_click(game, mouse_pos):
             
             if can_grab:
                 if not getattr(clicked_item, 'liquid', False):
-                    if 'Grab' not in options: options.insert(0, 'Grab') 
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        if 'Grab' in options: options.remove('Grab')
+                        options = ['Grab One', 'Grab Half', 'Grab All'] + options
+                    else:
+                        if 'Grab' not in options: options.insert(0, 'Grab') 
 
             if is_camp and getattr(clicked_item, 'allow_sleep', False):
                 options.append('Sleep')
@@ -833,13 +951,17 @@ def handle_right_click(game, mouse_pos):
                 options = ['Vehicle options', 'Trunk']
             else:
                 options = ['Open'] # Changed from 'Inspect' to 'Open'
-        elif click_source == 'nearby':
+        elif click_source in ['nearby', 'container']:
             if 'Drop' in options: options.remove('Drop')
             if 'Drop one' in options: options.remove('Drop one') 
             if 'Drop all' in options: options.remove('Drop all') 
             if not isinstance(clicked_item, Corpse):
                 if not getattr(clicked_item, 'liquid', False):
-                    if 'Grab' not in options: options.insert(0, 'Grab')
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        if 'Grab' in options: options.remove('Grab')
+                        options = ['Grab One', 'Grab Half', 'Grab All'] + options
+                    else:
+                        if 'Grab' not in options: options.insert(0, 'Grab')
 
         if getattr(clicked_item, 'capacity', 0) and clicked_item.capacity > 0:
             if getattr(clicked_item, 'item_type', '') in ['container', 'cloth']:
@@ -847,5 +969,47 @@ def handle_right_click(game, mouse_pos):
                     options.append('Open')
 
         game.context_menu['options'] = options
+        
+        # --- NEW SUBMENU GENERATION LOGIC ---
+        new_options = []
+        for opt in options:
+            if opt == 'Equip':
+                sub_opts = []
+                item_type = getattr(clicked_item, 'item_type', None)
+                
+                if item_type == 'container':
+                    # Containers go to util slots (or back)
+                    base_slot = getattr(clicked_item, 'slot', None)
+                    if base_slot and base_slot != 'util':
+                        sub_opts.append(base_slot)
+                    else:
+                        sub_opts.extend(['util', 'util2', 'util3'])
+                        
+                elif item_type == 'cloth':
+                    # Clothes go to their specific slot
+                    slot = getattr(clicked_item, 'slot', None)
+                    if slot == 'hand': slot = 'hands'
+                    if slot == 'util':
+                        sub_opts.extend(['util', 'util2', 'util3'])
+                    elif slot:
+                        sub_opts.append(slot)
+                        
+                elif item_type in ('weapon', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
+                    # Items that can go on the belt
+                    if getattr(clicked_item, 'allow_belt', True):
+                         for b_idx in range(len(game.player.belt)):
+                             sub_opts.append(f"belt_{b_idx}")
+                
+                if sub_opts:
+                    new_options.append({'label': 'Equip', 'sub': sub_opts})
+                else:
+                    new_options.append('Equip') # Fallback if no specific sub slots
+            else:
+                new_options.append(opt)
+                
+        game.context_menu['options'] = new_options
+        # ------------------------------------
+
         game.context_menu['rects'] = []
+        game.context_menu['action_map'] = []
         return

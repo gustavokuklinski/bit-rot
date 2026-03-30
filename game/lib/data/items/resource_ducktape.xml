@@ -1,4 +1,4 @@
-<item name="Duck Tape" type="resource" allow_belt="false">
+<item name="Duck Tape" type="resource" allow_belt="false" tip="Use to craft">
     <properties>
         <status value="durability" />
         <load value="1" />

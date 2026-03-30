@@ -284,7 +284,7 @@ class Item:
                 Item.cleanup_disposables(item.inventory, modals, message_func)
 
             # 2. Check if this item itself should be destroyed
-            if getattr(item, 'disposable', False):
+            if getattr(item, 'disposable', False) and not getattr(item, '_drag_locked', False):
                 is_empty = False
                 
                 # Check 'load' for liquids/stackables, fallback to 'inventory' for bags/boxes

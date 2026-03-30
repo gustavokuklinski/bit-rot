@@ -1,4 +1,4 @@
-<item name="Weapon Repair Kit" type="resource" allow_belt="false">
+<item name="Weapon Repair Kit" type="resource" allow_belt="false" tip="Use to craft">
     <properties>
         <status value="durability" />
         <load value="1" />

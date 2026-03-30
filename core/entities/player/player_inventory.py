@@ -106,6 +106,12 @@ class PlayerInventory:
         if not any(slot is None for slot in self.belt):
             display_message(tr('msg', "Belt is full."))
             return False
+            
+        if source_type in ['ground', 'nearby']:
+            if self.current_weight + item.get_total_weight() > self.max_carry_weight:
+                display_message(tr('msg', "Cannot carry anymore weight"))
+                return False
+
         source_inventory = self._get_source_inventory(source_type, container_item)
         if source_inventory is None:
              print(f"Error: Could not find source inventory for {source_type}")
@@ -183,6 +189,11 @@ class PlayerInventory:
             remaining_load = item.load
             is_item_liquid = getattr(item, 'liquid', False)
             
+            if not source_is_on_player and target_is_on_player:
+                if self.current_weight + item.get_total_weight() > self.max_carry_weight:
+                    display_message(tr('msg', "Cannot carry anymore weight"))
+                    return
+
             for target in targets:
                 # [FIX] Skip this target container if liquid flags don't perfectly match
                 target_obj = target.get('obj')

@@ -17,7 +17,7 @@
         <time_start_hr value="6.0" name="Start hour (Default: 6:00)"/>
     </game>
     <map>
-        <map_chunks value="3" name="Map size (Default: 3)"/>
+        <map_chunks value="2" name="Map size (Default: 2)"/>
     </map>
     <player>
         <view_radius value="10" name="View radius tiles (Default: 10)"/>

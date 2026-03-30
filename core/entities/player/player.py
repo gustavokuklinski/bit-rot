@@ -460,9 +460,19 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 if hasattr(item, 'inventory') and item.inventory:
                      Item.cleanup_disposables(item.inventory, game.modals, msg)
                 
-                if getattr(item, 'disposable', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
+                if getattr(item, 'disposable', False) and not getattr(item, '_drag_locked', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
                     close_modal(item)
                     self.belt[i] = None
+                    display_message(f"{tr('msg', 'Discarded empty')} {tr('item', item.name)}.")
+
+        for slot, item in self.clothes.items():
+            if item:
+                if hasattr(item, 'inventory') and item.inventory:
+                     Item.cleanup_disposables(item.inventory, game.modals, msg)
+                
+                if getattr(item, 'disposable', False) and not getattr(item, '_drag_locked', False) and hasattr(item, 'inventory') and len(item.inventory) == 0:
+                    close_modal(item)
+                    self.clothes[slot] = None
                     display_message(f"{tr('msg', 'Discarded empty')} {tr('item', item.name)}.")
 
         if self.is_reloading:

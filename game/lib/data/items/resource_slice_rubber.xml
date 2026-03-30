@@ -1,4 +1,4 @@
-<item name="Slice Rubber" type="resource" allow_belt="false">
+<item name="Slice Rubber" type="resource" allow_belt="false" tip="Use to craft">
     <properties>
         <load min="1" max="4" />
         <weight weight="0.05"/>

@@ -48,10 +48,15 @@ def handle_mouse_up(game, event, mouse_pos):
         modal['is_dragging_map'] = False
 
     if event.button == 1:
+        if game.drag_origin:
+            _, type_orig, *container_info = game.drag_origin
+            if type_orig in ('container', 'nearby') and container_info:
+                container_info[0]._drag_locked = False
+
         dropped_successfully = False
         if game.is_dragging or game.drag_candidate:
             if not game.is_dragging and game.drag_candidate:
-                pass 
+                pass
 
             if game.dragged_item:
                 i_orig, type_orig, *container_info = game.drag_origin
@@ -103,12 +108,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                         
                                         
                                         action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
-                                        game.player.start_action(action_name, 1.0, do_equip_vehicle, xp_reward=0.5)
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2) if is_external_source else 1.0
+                                        game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
                                         
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                     else:
                                         print(f"Cannot place {game.dragged_item.name} in {slot_name} slot.")
+                                        display_message(tr('msg', f"Cannot place {game.dragged_item.name} in {slot_name} slot."))
                                     break
                         if dropped_successfully or (not dropped_successfully and game.dragged_item):
                             break
@@ -116,6 +123,12 @@ def handle_mouse_up(game, event, mouse_pos):
                 if dropped_successfully:
                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                     return 
+
+                def check_player_weight(incoming_item):
+                    if game.player.current_weight + incoming_item.get_total_weight() > game.player.max_carry_weight:
+                        display_message(tr('msg', "Cannot carry anymore weight"))
+                        return False
+                    return True
                
                 # --- Drop on BELT ---
                 for i_target in range(len(game.player.belt)):
@@ -127,6 +140,7 @@ def handle_mouse_up(game, event, mouse_pos):
                         # --- NEW RESTRICTION ---
                         if not getattr(game.dragged_item, 'allow_belt', False):
                             print(f"Cannot place {game.dragged_item.name} on the belt. It is a container-only item.")
+                            display_message(tr('msg', f"Cannot place {game.dragged_item.name} on the belt."))
                             dropped_successfully = False
                             break
                         
@@ -134,6 +148,7 @@ def handle_mouse_up(game, event, mouse_pos):
                         
                         if item_in_slot and check_recursive_containment(game.dragged_item, item_in_slot):
                             print("Cannot drop a container into itself.")
+                            display_message(tr('msg', "Cannot drop a container into itself."))
                             dropped_successfully = False
                             break
                         
@@ -143,6 +158,9 @@ def handle_mouse_up(game, event, mouse_pos):
                             break
 
                         if is_external_source:
+                            if not check_player_weight(game.dragged_item):
+                                dropped_successfully = False
+                                break
                             if item_in_slot is None or item_in_slot.can_stack_with(game.dragged_item):
                                 item_ref = game.dragged_item
                                 # Convert "Campfire on" to "Campfire off" when looting
@@ -164,7 +182,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                         game.player.belt[i_target].load += trans
                                         item_ref.load -= trans
 
-                                game.player.start_action(tr('msg', "Looting"), 1.0, do_belt_loot, xp_reward=0.5)
+                                transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                game.player.start_action(tr('msg', "Looting"), transfer_time, do_belt_loot, xp_reward=0.5)
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
                             else:
@@ -230,6 +249,11 @@ def handle_mouse_up(game, event, mouse_pos):
                                 
                                 # Perform Logic
                                 if target_container:
+                                    if is_external_source and is_container_on_player(target_container, game.player) and not check_player_weight(game.dragged_item):
+                                        dropped_successfully = False
+                                        tab_drop_handled = True
+                                        break
+                                        
                                     # Prevent Recursion
                                     if check_recursive_containment(game.dragged_item, target_container):
                                         print("Recursion detected.")
@@ -259,7 +283,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                              def do_tab_loot():
                                                  target_container.inventory.append(item_ref)
                                         
-                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_loot, xp_reward=0.5)
+                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
                                              game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                              return
                                          else:
@@ -270,6 +295,11 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = False
                                         
                                 elif target_list is not None: # e.g. Main Inventory
+                                    if is_external_source and not check_player_weight(game.dragged_item):
+                                        dropped_successfully = False
+                                        tab_drop_handled = True
+                                        break
+                                        
                                     if getattr(game.dragged_item, 'liquid', False):
                                         print(f"The {game.dragged_item.name} spills and is lost (pockets cannot hold liquid).")
                                         dropped_successfully = True
@@ -289,7 +319,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                              def do_tab_inv_loot():
                                                  target_list.append(item_ref)
                              
-                                             game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_inv_loot, xp_reward=0.5)
+                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_inv_loot, xp_reward=0.5)
                                              game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                              return
                                          else:
@@ -297,6 +328,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                              dropped_successfully = True
                                     else:
                                         print("Inventory is full.")
+                                        display_message(tr('msg', "Inventory is full."))
                                         dropped_successfully = False
                                 
                                 tab_drop_handled = True
@@ -313,10 +345,6 @@ def handle_mouse_up(game, event, mouse_pos):
                     if modal['type'] == 'inventory' and modal['rect'].collidepoint(mouse_pos):
                         
                         if modal.get('active_tab', 'Inventory') == 'Inventory':
-                            
-
-                            
-
                             # Main Inventory Grid
                             if not dropped_successfully:
                                 target_index = -1
@@ -339,6 +367,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                             break
                                         
                                         if is_external_source:
+                                            if not check_player_weight(game.dragged_item):
+                                                dropped_successfully = False
+                                                break
                                             if item_in_slot.can_stack_with(game.dragged_item):
                                                 item_ref = game.dragged_item
                                                 def do_inv_stack():
@@ -347,7 +378,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     item_in_slot.load += trans
                                                     item_ref.load -= trans
 
-                                                game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_stack, xp_reward=0.5)
+                                                transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                                game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_stack, xp_reward=0.5)
                                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                 return
                                             else:
@@ -370,11 +402,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     elif len(game.player.inventory) < game.player.get_total_inventory_slots():
 
                                         if is_external_source:
+                                            if not check_player_weight(game.dragged_item):
+                                                dropped_successfully = False
+                                                break
                                             item_ref = game.dragged_item
                                             def do_inv_loot():
                                                 game.player.inventory.insert(target_index, item_ref)
                                             
-                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_loot, xp_reward=0.5)
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_loot, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -388,11 +424,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = True
                                     else:
                                         if is_external_source:
+                                            if not check_player_weight(game.dragged_item):
+                                                dropped_successfully = False
+                                                break
                                             item_ref = game.dragged_item
                                             def do_inv_append():
                                                 game.player.inventory.append(item_ref)
                               
-                                            game.player.start_action(tr('msg', "Looting"), 1.0, do_inv_append, xp_reward=0.5)
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_append, xp_reward=0.5)
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -428,6 +468,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                         break
                                 
                                 if is_external_source:
+                                    if is_container_on_player(container, game.player) and not check_player_weight(game.dragged_item):
+                                        dropped_successfully = False
+                                        break
                                     can_loot = False
                                     is_stack = False
                                     if target_index != -1 and target_index < len(container.inventory):
@@ -471,7 +514,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     container.inventory.append(item_ref)
                                         
                                       
-                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_container_loot, xp_reward=0.5)
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_container_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -526,6 +570,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                         
                                         target_container = modal.get('container_mapping', {}).get(target_label)
                                         if target_container:
+                                            if is_external_source and is_container_on_player(target_container, game.player) and not check_player_weight(game.dragged_item):
+                                                dropped_successfully = False
+                                                break
                                             if check_recursive_containment(game.dragged_item, target_container):
                                                 print("Recursion detected.")
                                                 dropped_successfully = False
@@ -555,7 +602,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                      def do_tab_loot():
                                                          target_container.inventory.append(item_ref)
                                   
-                                                     game.player.start_action(tr('msg', "Looting"), 1.0, do_tab_loot, xp_reward=0.5)
+                                                     transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                                     game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
                                                      game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                      return
                                                  else:
@@ -595,6 +643,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 dropped_successfully = True; break
 
                                             if is_external_source:
+                                                if not check_player_weight(game.dragged_item):
+                                                    dropped_successfully = False
+                                                    break
                                                 item_in_slot = game.player.clothes.get(slot_name)
                                                 if item_in_slot:
                                                     print("Cannot swap items while equipping from external source.")
@@ -615,7 +666,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 def do_gear_equip():
                                                     game.player.clothes[slot_name] = item_ref
 
-                                                game.player.start_action("Equipping", 1.0, do_gear_equip, xp_reward=0.5)
+                                                transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                                game.player.start_action("Equipping", transfer_time, do_gear_equip, xp_reward=0.5)
                                                 
                                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                                 return
@@ -671,6 +723,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                         break
                                 
                                 if is_external_source:
+                                    if is_container_on_player(container, game.player) and not check_player_weight(game.dragged_item):
+                                        dropped_successfully = False
+                                        break
                                     can_loot = False
                                     is_stack = False
                                     if target_index != -1 and target_index < len(container.inventory):
@@ -706,7 +761,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     container.inventory.append(item_ref)
                                         
                          
-                                        game.player.start_action(tr('msg', "Looting"), 1.0, do_gear_container_loot, xp_reward=0.5)
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_gear_container_loot, xp_reward=0.5)
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                 
@@ -903,7 +959,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                             container.inventory.append(item_ref)
                                 
-                                game.player.start_action(action_name, 1.0, do_timed_action, xp_reward=0.5)
+                                transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                game.player.start_action(action_name, transfer_time, do_timed_action, xp_reward=0.5)
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
 
@@ -1225,9 +1282,11 @@ def handle_mouse_motion(game, event, mouse_pos):
                 elif type_orig == 'container':
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
+                    container_obj._drag_locked = True
                 elif type_orig == 'nearby':
                     container_obj = container_info[0]
                     container_obj.inventory.pop(i_orig)
+                    container_obj._drag_locked = True
                     if getattr(container_obj, 'item_type', '') == 'ground':
                         if item_to_drag in game.items_on_ground:
                             game.items_on_ground.remove(item_to_drag)
