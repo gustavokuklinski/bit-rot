@@ -165,90 +165,148 @@ def handle_context_menu_click(game, mouse_pos):
                 part = option.split(' ')[1].lower()
                 game.player.consume_item(item, source, index, container_item, target_part=part)
                 clicked_on_menu = True
-            elif option.startswith('Add to '):
-                container_name = option[7:]
-                
-                def can_accept_liquid(container):
-                    if not container or not getattr(container, 'allow_liquid', False):
-                        return False
-                    if len(container.inventory) < (container.capacity or 0):
-                        return True
-                    for inv_item in container.inventory:
-                        if hasattr(inv_item, 'can_stack_with') and inv_item.can_stack_with(item):
-                            if getattr(inv_item, 'load', 0) < getattr(inv_item, 'capacity', 1):
-                                return True
-                    return False
 
-                target_container = None
-                for b_item in game.player.belt:
-                    if b_item and b_item.name == container_name and can_accept_liquid(b_item):
-                        target_container = b_item
-                        break
-                if not target_container:
-                    for i_item in game.player.inventory:
-                        if i_item and i_item.name == container_name and can_accept_liquid(i_item):
-                            target_container = i_item
-                            break
-                if not target_container:
-                    for c_item in game.player.clothes.values():
-                        if c_item and c_item.name == container_name and can_accept_liquid(c_item):
-                            target_container = c_item
-                            break
+            elif option == 'Send to':
+                target_container_name = target_sub_slot
                 
-                if target_container:
+                def remove_item_from_src(target_item):
+                    if source == 'inventory':
+                        for idx_val, v in enumerate(game.player.inventory):
+                            if v is target_item: game.player.inventory.pop(idx_val); break
+                    elif source == 'belt':
+                        for idx_val, v in enumerate(game.player.belt):
+                            if v is target_item: game.player.belt[idx_val] = None; break
+                    elif source == 'container' and container_item:
+                        for idx_val, v in enumerate(container_item.inventory):
+                            if v is target_item: container_item.inventory.pop(idx_val); break
+                    elif source == 'nearby' and container_item:
+                        for idx_val, v in enumerate(container_item.inventory):
+                            if v is target_item: 
+                                container_item.inventory.pop(idx_val)
+                                if getattr(container_item, 'item_type', '') == 'ground':
+                                    for g_idx, g_v in enumerate(game.items_on_ground):
+                                        if g_v is target_item: game.items_on_ground.pop(g_idx); break
+                                break
+                    elif source == 'ground':
+                        for idx_val, v in enumerate(game.items_on_ground):
+                            if v is target_item: game.items_on_ground.pop(idx_val); break
+                    elif source == 'gear':
+                        for k, v in game.player.clothes.items():
+                            if v is target_item: game.player.clothes[k] = None; break
+
+                if target_container_name == 'Inventory':
+                    if source == 'inventory':
+                        game.context_menu['active'] = False
+                        return
+                        
+                    if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
+                        display_message(tr('msg', "Cannot carry anymore weight"))
+                        game.context_menu['active'] = False
+                        return
+                        
+                    def do_send_inv():
+                        remove_item_from_src(item)
+                        game.player.inventory.append(item)
+                        game.player.stack_item_in_inventory(item)
+                        
+                    transfer_time = max(0.1, item.get_total_weight() * 0.2)
                     if source in ['nearby', 'ground', 'container', 'container_map']:
-                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
-                            display_message(tr('msg', "Cannot carry anymore weight"))
+                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_inv, xp_reward=0.5)
+                    else:
+                        do_send_inv()
+                        
+                else:
+                    target_container = None
+                    for b_item in game.player.belt:
+                        if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and b_item.name == target_container_name: 
+                            target_container = b_item; break
+                    if not target_container:
+                        for i_item in game.player.inventory:
+                            if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and i_item.name == target_container_name: 
+                                target_container = i_item; break
+                    if not target_container:
+                        for c_item in game.player.clothes.values():
+                            if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and c_item.name == target_container_name: 
+                                target_container = c_item; break
+                            
+                    if target_container:
+                        item_load = getattr(item, 'load', 1)
+                        if item_load is None: item_load = 1
+                        
+                        unit_weight = item.get_total_weight() / max(1, item_load)
+                        avail_weight = float('inf')
+                        
+                        cont_weight = getattr(target_container, 'weight', 0)
+                        if cont_weight is not None and cont_weight > 0:
+                            max_w = cont_weight * 5.0
+                            cur_w = sum(i.get_total_weight() for i in getattr(target_container, 'inventory', []))
+                            avail_weight = max_w - cur_w
+                            
+                        max_qty_by_weight = int(avail_weight // unit_weight) if unit_weight > 0 else item_load
+                        
+                        if max_qty_by_weight <= 0:
+                            display_message(tr('msg', "Container is full by weight."))
                             game.context_menu['active'] = False
                             return
-
-                    def do_add_to_container():
-                        removed_item = None
-                        if source == 'inventory':
-                            if 0 <= index < len(game.player.inventory):
-                                removed_item = game.player.inventory.pop(index)
-                        elif source == 'belt':
-                            if 0 <= index < len(game.player.belt):
-                                removed_item = game.player.belt[index]
-                                game.player.belt[index] = None
-                        elif source == 'container' and container_item:
-                            if 0 <= index < len(container_item.inventory):
-                                removed_item = container_item.inventory.pop(index)
-                        elif source == 'nearby' and container_item:
-                            if 0 <= index < len(container_item.inventory):
-                                removed_item = container_item.inventory.pop(index)
-                                if getattr(container_item, 'item_type', '') == 'ground' and removed_item in game.items_on_ground:
-                                    game.items_on_ground.remove(removed_item)
-                        elif source == 'ground':
-                            if 0 <= index < len(game.items_on_ground):
-                                removed_item = game.items_on_ground.pop(index)
-                        elif source == 'gear':
-                            removed_item = game.player.clothes.get(index)
-                            game.player.clothes[index] = None
-                        
-                        if removed_item:
+                            
+                        def do_send_container():
+                            removed_item = item
+                            qty_to_send = getattr(removed_item, 'load', 1)
+                            if qty_to_send is None: qty_to_send = 1
+                            
+                            if qty_to_send > max_qty_by_weight:
+                                qty_to_send = max_qty_by_weight
+                                
                             stacked = False
                             if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
                                 for inv_item in target_container.inventory:
                                     if inv_item.can_stack_with(removed_item):
-                                        avail = inv_item.capacity - inv_item.load
-                                        trans = min(avail, removed_item.load)
-                                        inv_item.load += trans
-                                        removed_item.load -= trans
-                                        if removed_item.load <= 0:
+                                        i_cap = getattr(inv_item, 'capacity', 1)
+                                        if i_cap is None: i_cap = 1
+                                        i_load = getattr(inv_item, 'load', 1)
+                                        if i_load is None: i_load = 1
+                                        r_load = getattr(removed_item, 'load', 1)
+                                        if r_load is None: r_load = 1
+                                        
+                                        avail = i_cap - i_load
+                                        trans = min(avail, qty_to_send, r_load)
+                                        if trans > 0:
+                                            inv_item.load = i_load + trans
+                                            removed_item.load = r_load - trans
+                                            qty_to_send -= trans
                                             stacked = True
+                                        if qty_to_send <= 0 or removed_item.load <= 0:
                                             break
-                            if not stacked:
-                                target_container.inventory.append(removed_item)
-                            elif removed_item.load > 0:
-                                target_container.inventory.append(removed_item)
-                    
-                    if source in ['nearby', 'ground', 'container', 'container_map']:
+                            
+                            c_cap = getattr(target_container, 'capacity', 0)
+                            if c_cap is None: c_cap = 0
+                            
+                            if qty_to_send > 0 and len(target_container.inventory) < c_cap:
+                                r_load = getattr(removed_item, 'load', 1)
+                                if r_load is None: r_load = 1
+                                
+                                if qty_to_send < r_load:
+                                    new_item = Item.create_from_name(removed_item.name)
+                                    if new_item:
+                                        new_item.load = qty_to_send
+                                        if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
+                                        removed_item.load = r_load - qty_to_send
+                                        target_container.inventory.append(new_item)
+                                else:
+                                    remove_item_from_src(removed_item)
+                                    target_container.inventory.append(removed_item)
+                            elif qty_to_send > 0 and not stacked:
+                                display_message(tr('msg', "Container is full."))
+                                
+                            if hasattr(removed_item, 'load') and removed_item.load is not None and removed_item.load <= 0:
+                                remove_item_from_src(removed_item)
+                                
                         transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                        game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_add_to_container, xp_reward=0.5)
-                    else:
-                        do_add_to_container()
-                
+                        if source in ['nearby', 'ground', 'container', 'container_map']:
+                            game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_container, xp_reward=0.5)
+                        else:
+                            do_send_container()
+                            
                 clicked_on_menu = True
 
             elif option == 'Reload':
@@ -959,16 +1017,40 @@ def handle_right_click(game, mouse_pos):
                 if 'Open' not in options:
                     options.append('Open')
 
-        # --- NEW SUBMENU GENERATION LOGIC ---
+        # Detect if it's a map tile/map container
+        is_maptile = False
+        if isinstance(clicked_item, dict):
+            if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile']:
+                is_maptile = True
+        else:
+            if getattr(clicked_item, 'type', None) in ['maptile', 'maptile_container', 'map_tile']:
+                is_maptile = True
+            if getattr(clicked_item, 'item_type', None) in ['maptile', 'maptile_container', 'map_tile']:
+                is_maptile = True
+                
+        if click_source in ['container_map', 'map_tile']:
+            is_maptile = True
+
+        # Allow "Send to" for ANY valid item, but exclude map objects, corpses, vehicles, camps, etc.
+        item_type = getattr(clicked_item, 'item_type', None)
+        invalid_types = [None, 'vehicle', 'camp', 'map_tile', 'maptile', 'maptile_container']
+        
+        if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
+            if 'Send to' not in options:
+                options.append('Send to')
+
+        # --- SUBMENU GENERATION LOGIC ---
         new_options = []
         for opt in options:
+            if opt.startswith('Add to '): 
+                continue 
+                
             if opt == 'Equip':
                 sub_opts = []
                 replace_map = {}
                 item_type = getattr(clicked_item, 'item_type', None)
                 
                 if item_type == 'container':
-                    # Containers go to util slots (or back)
                     base_slot = getattr(clicked_item, 'slot', None)
                     if base_slot and base_slot != 'util':
                         slots_to_check = [base_slot]
@@ -982,7 +1064,6 @@ def handle_right_click(game, mouse_pos):
                             replace_map[s] = existing.name
                             
                 elif item_type == 'cloth':
-                    # Clothes go to their specific slot
                     slot = getattr(clicked_item, 'slot', None)
                     if slot == 'hand': slot = 'hands'
                     
@@ -999,7 +1080,6 @@ def handle_right_click(game, mouse_pos):
                             replace_map[s] = existing.name
                         
                 elif item_type in ('weapon', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
-                    # Items that can go on the belt
                     if getattr(clicked_item, 'allow_belt', True):
                          for b_idx in range(len(game.player.belt)):
                              slot_str = f"belt_{b_idx}"
@@ -1011,12 +1091,74 @@ def handle_right_click(game, mouse_pos):
                 if sub_opts:
                     new_options.append({'label': 'Equip', 'sub': sub_opts, 'replacing': replace_map})
                 else:
-                    new_options.append('Equip') # Fallback if no specific sub slots
+                    new_options.append('Equip')
+                    
+            elif opt == 'Send to':
+                sub_opts = ['Inventory']
+                
+                # Fetch all valid player containers strictly by item type
+                containers = []
+                for b_item in game.player.belt:
+                    if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
+                        containers.append(b_item)
+                for i_item in game.player.inventory:
+                    if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and getattr(i_item, 'inventory', None) is not None:
+                        containers.append(i_item)
+                for c_item in game.player.clothes.values():
+                    if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and getattr(c_item, 'inventory', None) is not None:
+                        containers.append(c_item)
+                        
+                for c in containers:
+                    if c is clicked_item: continue
+                    
+                    # Liquid validations
+                    if getattr(clicked_item, 'liquid', False) and not getattr(c, 'allow_liquid', False): continue
+                    if getattr(c, 'allow_liquid', False) and not getattr(clicked_item, 'liquid', False): continue
+                    
+                    # SAFE LOAD EXTRACTION
+                    c_item_load = getattr(clicked_item, 'load', 1)
+                    if c_item_load is None: c_item_load = 1
+                    
+                    unit_weight = clicked_item.get_total_weight() / max(1, c_item_load)
+                    avail_weight = float('inf')
+                    
+                    # SAFE WEIGHT EXTRACTION
+                    cont_weight = getattr(c, 'weight', 0)
+                    if cont_weight is not None and cont_weight > 0:
+                        max_w = cont_weight * 5.0
+                        cur_w = sum(i.get_total_weight() for i in getattr(c, 'inventory', []))
+                        avail_weight = max_w - cur_w
+                        
+                    if avail_weight < unit_weight:
+                        continue 
+                        
+                    # Slot validations
+                    can_fit = False
+                    c_cap = getattr(c, 'capacity', 0)
+                    if c_cap is None: c_cap = 0
+                    
+                    if len(c.inventory) < c_cap:
+                        can_fit = True
+                    else:
+                        for i in c.inventory:
+                            i_cap = getattr(i, 'capacity', 1)
+                            if i_cap is None: i_cap = 1
+                            i_load = getattr(i, 'load', 1)
+                            if i_load is None: i_load = 1
+                            
+                            if hasattr(i, 'can_stack_with') and i.can_stack_with(clicked_item) and i_load < i_cap:
+                                can_fit = True
+                                break
+                                
+                    if can_fit and c.name not in sub_opts:
+                        sub_opts.append(c.name)
+                            
+                new_options.append({'label': 'Send to', 'sub': sub_opts})
+                
             else:
                 new_options.append(opt)
                 
         game.context_menu['options'] = new_options
-        # ------------------------------------
 
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []
