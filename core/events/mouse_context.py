@@ -20,7 +20,6 @@ def handle_context_menu_click(game, mouse_pos):
 
     for i, rect in enumerate(game.context_menu['rects']):
         if rect.collidepoint(mouse_pos):
-            # Parse the actual action string (Handles normal strings AND "Equip::util2" submenus)
             raw_option = game.context_menu['action_map'][i]
             
             target_sub_slot = None
@@ -271,12 +270,10 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.items_on_ground[i] = result
                                 break
             
-            # --- FIXED EQUIP BLOCK WITH NESTED TARGETS ---
             elif option == 'Equip':
                 item_type = getattr(item, 'item_type', None)
                 if item_type in ('cloth', 'container'):
                     
-                    # Target submenu slot directly
                     if target_sub_slot:
                         item_slot = target_sub_slot
                     else:
@@ -799,7 +796,6 @@ def handle_right_click(game, mouse_pos):
         if not clicked_item:
             world_pos = game.screen_to_world(mouse_pos)
             for npc in game.npcs:
-                # [MODIFIED] Fallback check also requires the NPC to be friendly and calm
                 if npc.rect.collidepoint(world_pos) and npc.is_friendly and npc.aggro_timer <= 0:
                     clicked_item = npc
                     click_source = 'npc'
@@ -824,7 +820,6 @@ def handle_right_click(game, mouse_pos):
                             clicked_item = vehicle
                             click_source = 'container_map'
                             click_index = 0
-                    # --- NEW: Check if the tile can be opened/closed ---
                     elif tile.get('is_statable'):
                         clicked_item = {
                             'name': tile.get('name', 'Object'), 
@@ -838,7 +833,6 @@ def handle_right_click(game, mouse_pos):
                         clicked_item = {'name': 'Bed', 'type': 'map_tile'}
                         click_source = 'map_tile'
                 else:
-                    # Only show distance warning if they clicked something interactable
                     if tile.get('type') == "maptile_car" or tile.get('is_statable') or tile.get('sleep'):
                         display_message(game, tr('msg', "Too far away to interact."))
 
@@ -854,7 +848,6 @@ def handle_right_click(game, mouse_pos):
     if not clicked_item:
         world_pos = game.screen_to_world(mouse_pos)
         for npc in game.npcs:
-            # Fallback check also requires the NPC to be friendly
             if npc.rect.collidepoint(world_pos) and npc.is_friendly:
                 clicked_item = npc
                 click_source = 'npc'
@@ -877,11 +870,10 @@ def handle_right_click(game, mouse_pos):
             dist_sq = dx*dx + dy*dy
             max_dist_px = TILE_SIZE * 3
             max_dist_px_sq = max_dist_px ** 2
-            dist = dist_sq ** 0.5  # Only compute sqrt for debug display
+            dist = dist_sq ** 0.5
             print(f"DEBUG: NPC Interact - Name: {clicked_item.name}, Friendly: {clicked_item.is_friendly}, Dist: {dist:.1f}/{max_dist_px}")
 
             if dist_sq <= max_dist_px_sq:
-                # Final safety check before providing the Talk option
                 if clicked_item.is_friendly and clicked_item.aggro_timer <= 0:
                     options.append('Talk')
                     if hasattr(clicked_item, 'stop_moving'):
@@ -893,7 +885,6 @@ def handle_right_click(game, mouse_pos):
             options = []
             if clicked_item.get('name') == 'Bed':
                 options.append('Sleep')
-            # --- NEW: Provide contextual Open/Close text based on current state ---
             elif 'state' in clicked_item:
                 if clicked_item['state'] == 'close':
                     options.append('Open door/window')
@@ -950,7 +941,7 @@ def handle_right_click(game, mouse_pos):
             if getattr(clicked_item, 'item_type', '') == 'vehicle':
                 options = ['Vehicle options', 'Trunk']
             else:
-                options = ['Open'] # Changed from 'Inspect' to 'Open'
+                options = ['Open']
         elif click_source in ['nearby', 'container']:
             if 'Drop' in options: options.remove('Drop')
             if 'Drop one' in options: options.remove('Drop one') 
@@ -968,40 +959,57 @@ def handle_right_click(game, mouse_pos):
                 if 'Open' not in options:
                     options.append('Open')
 
-        game.context_menu['options'] = options
-        
         # --- NEW SUBMENU GENERATION LOGIC ---
         new_options = []
         for opt in options:
             if opt == 'Equip':
                 sub_opts = []
+                replace_map = {}
                 item_type = getattr(clicked_item, 'item_type', None)
                 
                 if item_type == 'container':
                     # Containers go to util slots (or back)
                     base_slot = getattr(clicked_item, 'slot', None)
                     if base_slot and base_slot != 'util':
-                        sub_opts.append(base_slot)
+                        slots_to_check = [base_slot]
                     else:
-                        sub_opts.extend(['util', 'util2', 'util3'])
+                        slots_to_check = ['util', 'util2', 'util3']
                         
+                    for s in slots_to_check:
+                        sub_opts.append(s)
+                        existing = game.player.clothes.get(s)
+                        if existing:
+                            replace_map[s] = existing.name
+                            
                 elif item_type == 'cloth':
                     # Clothes go to their specific slot
                     slot = getattr(clicked_item, 'slot', None)
                     if slot == 'hand': slot = 'hands'
+                    
+                    slots_to_check = []
                     if slot == 'util':
-                        sub_opts.extend(['util', 'util2', 'util3'])
+                        slots_to_check = ['util', 'util2', 'util3']
                     elif slot:
-                        sub_opts.append(slot)
+                        slots_to_check = [slot]
+                        
+                    for s in slots_to_check:
+                        sub_opts.append(s)
+                        existing = game.player.clothes.get(s)
+                        if existing:
+                            replace_map[s] = existing.name
                         
                 elif item_type in ('weapon', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
                     # Items that can go on the belt
                     if getattr(clicked_item, 'allow_belt', True):
                          for b_idx in range(len(game.player.belt)):
-                             sub_opts.append(f"belt_{b_idx}")
+                             slot_str = f"belt_{b_idx}"
+                             sub_opts.append(slot_str)
+                             existing = game.player.belt[b_idx]
+                             if existing:
+                                 replace_map[slot_str] = existing.name
                 
                 if sub_opts:
-                    new_options.append({'label': 'Equip', 'sub': sub_opts})
+                    new_options.append({'label': 'Equip', 'sub': sub_opts, 'replacing': replace_map})
                 else:
                     new_options.append('Equip') # Fallback if no specific sub slots
             else:

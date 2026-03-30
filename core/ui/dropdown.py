@@ -74,14 +74,11 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             menu_state['action_map'].append(options[i])
             
     # Handle Submenu drawing
-    # Need to check if mouse is in the submenu rect too to keep the parent highlighted
     active_sub_idx = -1
     
-    # First pass to see if we are in a submenu
     if 'last_hovered_sub' not in menu_state:
         menu_state['last_hovered_sub'] = -1
 
-    # BUG FIX: Ensure the last hovered index isn't stale/out-of-bounds for the current menu
     if menu_state['last_hovered_sub'] >= len(has_sub):
         menu_state['last_hovered_sub'] = -1
 
@@ -96,7 +93,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         sub_options = options[active_sub_idx]['sub']
         
         sub_labels = [tr('context', sub) for sub in sub_options]
-        sub_max_width = max((font.size(label)[0] for label in sub_labels), default=0) + (padding * 2)
+        sub_max_width = max((font.size(label)[0] for label in sub_labels), default=0) + (padding * 2) + 15 # Extra space for *
         sub_height = len(sub_options) * item_height
         
         sub_x = menu_x + max_width
@@ -115,7 +112,6 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         in_parent = parent_rect.collidepoint(mouse_pos)
         
         if not (in_sub or in_parent):
-            # Mouse left both, close submenu
             menu_state['last_hovered_sub'] = -1
         else:
             # Highlight parent if we are in the submenu
@@ -132,10 +128,15 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             surface.blit(sub_s, sub_rect.topleft)
             pygame.draw.rect(surface, WHITE, sub_rect, 1)
             
+            tooltip_info = None
+
             for i, sub_label in enumerate(sub_labels):
                 sub_opt_rect = pygame.Rect(sub_x, sub_y + i * item_height, sub_max_width, item_height)
                 
-                # Add to rects so it can be clicked, mapping to "Parent::Child" action string
+                # Check for replacements
+                raw_sub_id = sub_options[i]
+                replace_name = options[active_sub_idx].get('replacing', {}).get(raw_sub_id)
+
                 menu_state['rects'].append(sub_opt_rect)
                 action_string = f"{options[active_sub_idx]['label']}::{sub_options[i]}"
                 menu_state['action_map'].append(action_string)
@@ -144,6 +145,36 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                 if sub_opt_rect.collidepoint(mouse_pos):
                     pygame.draw.rect(surface, GRAY_80, sub_opt_rect)
                     text_color = YELLOW
+                    # If hovering over an occupied slot, prep the tooltip
+                    if replace_name:
+                        tooltip_info = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", mouse_pos)
                     
                 text_surf = font.render(sub_label, True, text_color)
                 surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
+                
+                # Draw the little red *
+                if replace_name:
+                    ast_surf = font.render("*", True, (255, 100, 100)) # Light Red asterisk
+                    surface.blit(ast_surf, (sub_opt_rect.right - padding - ast_surf.get_width(), sub_opt_rect.y + (item_height - ast_surf.get_height()) // 2))
+
+            # Draw the tooltip on top of everything
+            if tooltip_info:
+                t_text, t_pos = tooltip_info
+                t_surf = font.render(t_text, True, WHITE)
+                t_rect = t_surf.get_rect()
+                t_rect.topleft = (t_pos[0] + 15, t_pos[1] + 15) # Offset below mouse
+                
+                # Clamp tooltip to screen
+                if t_rect.right > GAME_WIDTH:
+                    t_rect.right = t_pos[0] - 5
+                if t_rect.bottom > GAME_HEIGHT:
+                    t_rect.bottom = t_pos[1] - 5
+                    
+                bg_rect = t_rect.inflate(10, 10)
+                
+                # Draw background
+                s_tooltip = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+                s_tooltip.fill((20, 20, 20, 240))
+                surface.blit(s_tooltip, bg_rect.topleft)
+                pygame.draw.rect(surface, WHITE, bg_rect, 1)
+                surface.blit(t_surf, t_rect)
