@@ -227,7 +227,7 @@ class Game:
         self.sound_manager = SoundManager()
         
         if core.data.config.UI_BACKGROUND_MUSIC:
-            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=0.25)
+            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=core.data.config.VOLUME_MUSIC)
 
         self.world_min_x = 0
         self.world_min_y = 0
@@ -389,7 +389,7 @@ class Game:
         self.game_screen.blit(overlay, (0, 0))
 
         # --- FIX: Translated Pause Text ---
-        text = font_14.render(tr('ui', "GAME PAUSED"), True, WHITE)
+        text = font_14.render(tr('ui', "GAME PAUSED AND SAVED"), True, WHITE)
         text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
         self.game_screen.blit(text, text_rect)
 

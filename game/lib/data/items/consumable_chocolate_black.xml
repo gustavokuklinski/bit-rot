@@ -1,4 +1,4 @@
-<item name="Chocolate Black" type="consumable_food" allow_belt="false">
+<item name="Chocolate Black" type="consumable" allow_belt="false">
     <properties>
         <restore status="[food]" value="3" />
         <restore status="[tireness]" value="2" />

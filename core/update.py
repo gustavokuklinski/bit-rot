@@ -425,6 +425,40 @@ def update_game_state(game):
             nearby_zombies = []
             nearby_obstacles = []
 
+        
+        # --- ENTITY SEPARATION (Physics) ---
+        # Keep entities from getting stuck on top of each other
+        for other_entity in nearby_zombies:
+            # Broad Phase: Rect overlap
+            if not getattr(other_entity, 'is_dead', False) and zombie.rect.colliderect(other_entity.rect):
+                
+                # Narrow Phase: Pixel-perfect Mask overlap
+                if hasattr(zombie, 'mask') and hasattr(other_entity, 'mask') and zombie.mask and other_entity.mask:
+                    offset = (other_entity.rect.x - zombie.rect.x, other_entity.rect.y - zombie.rect.y)
+                    if not zombie.mask.overlap(other_entity.mask, offset):
+                        continue # Skip separation if pixels don't touch
+
+                dx = zombie.rect.centerx - other_entity.rect.centerx
+                dy = zombie.rect.centery - other_entity.rect.centery
+                dist = math.hypot(dx, dy)
+                
+                # We can loosen the distance check a bit since the mask confirms they are actually touching
+                if dist < TILE_SIZE: 
+                    push_mag = 1.0 # Gentle repulsive force
+                    
+                    if not hasattr(zombie, 'knockback_velocity') or isinstance(zombie.knockback_velocity, tuple):
+                        zombie.knockback_velocity = [0.0, 0.0]
+                        
+                    if dist > 0:
+                        zombie.knockback_velocity[0] += (dx / dist) * push_mag
+                        zombie.knockback_velocity[1] += (dy / dist) * push_mag
+                    else:
+                        zombie.knockback_velocity[0] += random.uniform(-1.0, 1.0)
+                        zombie.knockback_velocity[1] += random.uniform(-1.0, 1.0)
+                        
+                    zombie.knockback_timer = max(getattr(zombie, 'knockback_timer', 0), 50)
+
+        # Re-fetch knockback velocity after separation calculations
         kb_vel_x = getattr(zombie, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(zombie, 'knockback_velocity', [0, 0])[1]
 
@@ -525,6 +559,37 @@ def update_game_state(game):
             nearby_zombies = []
             nearby_obstacles = []
 
+        # --- ENTITY SEPARATION (Physics) ---
+        for other_entity in nearby_zombies:
+            # Broad Phase: Rect overlap
+            if not getattr(other_entity, 'is_dead', False) and animal.rect.colliderect(other_entity.rect):
+                
+                # Narrow Phase: Pixel-perfect Mask overlap
+                if hasattr(animal, 'mask') and hasattr(other_entity, 'mask') and animal.mask and other_entity.mask:
+                    offset = (other_entity.rect.x - animal.rect.x, other_entity.rect.y - animal.rect.y)
+                    if not animal.mask.overlap(other_entity.mask, offset):
+                        continue # Skip separation if pixels don't touch
+
+                dx = animal.rect.centerx - other_entity.rect.centerx
+                dy = animal.rect.centery - other_entity.rect.centery
+                dist = math.hypot(dx, dy)
+                
+                if dist < TILE_SIZE:
+                    push_mag = 1.0
+                    
+                    if not hasattr(animal, 'knockback_velocity') or isinstance(animal.knockback_velocity, tuple):
+                        animal.knockback_velocity = [0.0, 0.0]
+                        
+                    if dist > 0:
+                        animal.knockback_velocity[0] += (dx / dist) * push_mag
+                        animal.knockback_velocity[1] += (dy / dist) * push_mag
+                    else:
+                        animal.knockback_velocity[0] += random.uniform(-1.0, 1.0)
+                        animal.knockback_velocity[1] += random.uniform(-1.0, 1.0)
+                        
+                    animal.knockback_timer = max(getattr(animal, 'knockback_timer', 0), 50)
+
+        # Re-fetch knockback velocity after separation calculations
         kb_vel_x = getattr(animal, 'knockback_velocity', [0, 0])[0]
         kb_vel_y = getattr(animal, 'knockback_velocity', [0, 0])[1]
 

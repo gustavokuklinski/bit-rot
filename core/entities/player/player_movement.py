@@ -178,11 +178,41 @@ class PlayerMovement:
             speed_mult = 1.0
 
             # 1. Check if over entities (Zombies, NPCs, Animals)
+            # 1. Check if over entities (Zombies, NPCs, Animals)
             entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
             for entity in entities:
+                # Broad phase: Rect collision
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
-                    speed_mult = min(speed_mult, 0.35) # Slow down heavily when walking over entities
-                    break
+                    
+                    # Narrow phase: Pixel-perfect mask collision
+                    if hasattr(self, 'mask') and hasattr(entity, 'mask') and self.mask and entity.mask:
+                        offset = (entity.rect.x - self.rect.x, entity.rect.y - self.rect.y)
+                        if not self.mask.overlap(entity.mask, offset):
+                            continue # Skip push if pixels don't actually touch
+
+                    # Make the player struggle significantly more to walk through them
+                    speed_mult = min(speed_mult, 0.20) 
+                    
+                    # --- PLAYER PUSHES ENTITY (Physics) ---
+                    dx = entity.rect.centerx - self.rect.centerx
+                    dy = entity.rect.centery - self.rect.centery
+                    dist = math.hypot(dx, dy)
+                    
+                    # Drastically reduce push power. 
+                    # They will only slowly inch out of the way, making them feel heavy/strong.
+                    push_power = 0.5 
+                    
+                    if not hasattr(entity, 'knockback_velocity') or isinstance(entity.knockback_velocity, tuple):
+                        entity.knockback_velocity = [0.0, 0.0]
+                        
+                    if dist > 0:
+                        entity.knockback_velocity[0] += (dx / dist) * push_power
+                        entity.knockback_velocity[1] += (dy / dist) * push_power
+                    else:
+                        entity.knockback_velocity[0] += random.choice([-1.0, 1.0]) * push_power
+                        entity.knockback_velocity[1] += random.choice([-1.0, 1.0]) * push_power
+                        
+                    entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 100)
                     
             # 2. Check if over open window
             gx = self.rect.centerx // TILE_SIZE

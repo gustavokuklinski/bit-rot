@@ -29,7 +29,7 @@
     </tab>
 
     <ui>
-        <ui name="GAME PAUSED" translation_ui="JOGO PAUSADO" />
+        <ui name="GAME PAUSED AND SAVED" translation_ui="JOGO PAUSADO E SALVO" />
         <ui name="Continue" translation_ui="Continuar" />
         <ui name="Save Game" translation_ui="Salvar Jogo" />
         <ui name="Load Game" translation_ui="Carregar Jogo" />

@@ -7,7 +7,7 @@ from core.data.config import *
 from core.entities.item.projectile import Projectile
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 from core.entities.item.item_factory import create_item_from_name, generate_random_item
-
+from core.data.localization import tr
 SPRITE_CACHE = {}
 
 class Item:

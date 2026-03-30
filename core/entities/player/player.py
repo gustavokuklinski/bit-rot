@@ -274,24 +274,33 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             if self.stamina < self.max_stamina:
                 self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * game.dt_mult))
             if self.tireness < self.max_tireness:
-                self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * game.dt_mult))
+                # Buffed active resting tiredness recovery so it's noticeable when sitting on a bed
+                self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * 5.0 * game.dt_mult))
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
             
-            # [CHANGED] Fetch sleep multipliers and health regen from XML
-            sleep_restore = 0.5 * game.dt_mult
+            # [FIX] Factor in fast-forwarding speed properly so recovery aligns with passed time
+            ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+            
+            base_sleep_restore = 0.05 * ff_multiplier * game.dt_mult
+            
+            tireness_restore = base_sleep_restore
+            stamina_restore = base_sleep_restore
             
             if is_recovery_tile:
-                sleep_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_sleep_mult', 1.5)
-                sleep_restore *= sleep_mult
+                tire_sleep_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_sleep_mult', 1.5)
+                stam_sleep_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_sleep_mult', 1.5)
+                
+                tireness_restore *= tire_sleep_mult
+                stamina_restore *= stam_sleep_mult
                 
                 # Recover health while sleeping on beds/benches
                 base_health_regen = PROGRESSION_CONFIG.get_stat('health', 'bed_sleep_regen', 0.01)
-                self.health = min(self.max_health, self.health + (base_health_regen * game.dt_mult))
+                self.health = min(self.max_health, self.health + (base_health_regen * ff_multiplier * game.dt_mult))
 
-            self.tireness = min(self.max_tireness, self.tireness + sleep_restore)
-            self.stamina = min(self.max_stamina, self.stamina + sleep_restore)
+            self.tireness = min(self.max_tireness, self.tireness + tireness_restore)
+            self.stamina = min(self.max_stamina, self.stamina + stamina_restore)
 
             if self.tireness >= self.max_tireness:
                 self.tireness = self.max_tireness

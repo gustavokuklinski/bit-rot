@@ -463,8 +463,7 @@ class PlayerActions:
         elif item_type == 'container':
             options.append('Open')
             options.append('Equip')
-            if getattr(item, 'allow_belt', False):
-                options.append('Equip')
+            
                 
         is_liquid = getattr(item, 'liquid', False)
         
