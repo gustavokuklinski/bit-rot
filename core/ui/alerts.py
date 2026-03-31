@@ -2,6 +2,7 @@
 import pygame
 from core.data.config import *
 from core.data.localization import tr
+from core.data.progression_loader import PROGRESSION_CONFIG
 
 _alert_icons = {}
 
@@ -35,29 +36,37 @@ def draw_player_alerts(surface, player):
     active_alerts = []
     
     # Wrapped strings with tr()
-    if player.health <= 50:
+    # Wrapped strings with tr() and dynamic thresholds
+    if player.health <= PROGRESSION_CONFIG.get_stat('health', 'alert_threshold', 50.0):
         active_alerts.append(("ui/hp.png", RED, tr('alert', "You are hurt, use a Medkit.")))
     
-    if player.stamina <= 20:
+    if player.stamina <= PROGRESSION_CONFIG.get_stat('stamina', 'alert_threshold', 20.0):
         active_alerts.append(("ui/stamina.png", GRAY, tr('alert', "You are tired, take a Rest.")))
 
-    if player.water <= 20:
+    if player.water <= PROGRESSION_CONFIG.get_stat('water', 'alert_threshold', 20.0):
         active_alerts.append(("ui/water.png", BLUE, tr('alert', "You are thirsty.")))
 
-    if player.food <= 20:
+    if player.food <= PROGRESSION_CONFIG.get_stat('food', 'alert_threshold', 20.0):
         active_alerts.append(("ui/food.png", GREEN, tr('alert', "You are hungry, try some MRE's.")))
 
-    if player.tireness <= 20:
+    if player.tireness <= PROGRESSION_CONFIG.get_stat('tireness', 'alert_threshold', 20.0):
         active_alerts.append(("ui/tireness.png", (100, 100, 150), tr('alert', "You are feeling sleepy, take a nap.")))
 
-    if player.anxiety >= 30:
+    if player.anxiety >= PROGRESSION_CONFIG.get_stat('anxiety', 'alert_threshold', 30.0):
         active_alerts.append(("ui/axiety.png", (150, 0, 150), tr('alert', "You are anxious, try reading.")))
         
-    if player.infection >= 70: 
+    if player.infection >= PROGRESSION_CONFIG.get_stat('infection', 'alert_threshold', 70.0): 
         active_alerts.append(("ui/infection.png", YELLOW, tr('alert', "Are you feeling sick or infected?")))
 
-    if player.current_weight > player.max_carry_weight:
-        active_alerts.append(("ui/weight.png", (205, 127, 50), tr('alert', "You are carrying too much weight.")))
+    if player.max_carry_weight > 0:
+        weight_ratio = player.current_weight / player.max_carry_weight
+        alert_threshold = PROGRESSION_CONFIG.get_stat('weight', 'alert_threshold', 0.75)
+        
+        if weight_ratio >= alert_threshold:
+            if weight_ratio >= 1.0:
+                active_alerts.append(("ui/weight.png", (205, 127, 50), tr('alert', "You are carrying too much weight.")))
+            else:
+                active_alerts.append(("ui/weight.png", (205, 127, 50), tr('alert', "You are carrying a heavy load.")))
 
     if not active_alerts:
         return None

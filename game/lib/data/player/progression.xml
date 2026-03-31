@@ -45,6 +45,7 @@
             <param name="run_cost_base" value="0.03" />
             <param name="bed_recovery_mult" value="2.0" />
             <param name="melee_cost" value="0.02" /> 
+            <param name="alert_threshold" value="20.0" />
         </stat>
         
         <stat id="tireness">
@@ -55,11 +56,12 @@
             <param name="melee_cost" value="0.0005" /> 
             <param name="bed_recovery_mult" value="1.5" /> 
             <param name="bed_sleep_mult" value="2.5" /> 
+            <param name="alert_threshold" value="20.0" />
         </stat>
 
         <stat id="health">
             <param name="bed_sleep_regen" value="0.1" /> 
-        </stat>
+            <param name="alert_threshold" value="50.0" /> </stat>
 
         <stat id="metabolism">
             <param name="decay_rate_seconds" value="5.0" />
@@ -67,20 +69,32 @@
 
         <stat id="food">
             <param name="decay_amount" value="0.1" />
+            <param name="alert_threshold" value="20.0" />
         </stat>
 
         <stat id="water">
             <param name="decay_amount" value="0.2" />
+            <param name="alert_threshold" value="20.0" />
+        </stat>
+
+        <stat id="weight">
+            <param name="alert_threshold" value="0.75" /> 
+            <param name="penalty_threshold_1" value="0.75" />
+            <param name="penalty_value_1" value="0.75" /> 
+            <param name="penalty_threshold_2" value="1.0" />
+            <param name="penalty_value_2" value="0.5" /> 
         </stat>
         
         <stat id="anxiety">
             <param name="horde_gain" value="0.002" />
             <param name="passive_gain" value="0.001" />
+            <param name="alert_threshold" value="30.0" />
         </stat>
 
         <stat id="infection">
             <param name="passive_gain_on_rain" value="0.002" />
             <param name="death_threshold" value="100.0" />
+            <param name="alert_threshold" value="70.0" /> 
         </stat>
     </stats>
     

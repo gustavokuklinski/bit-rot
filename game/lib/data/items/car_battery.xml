@@ -1,0 +1,9 @@
+<item name="Car Battery" type="car_battery" allow_belt="false">
+    <properties>
+        <status value="battery" />
+        <durability min="1" max="100" />
+        <sprite file="car_battery.png" />
+        <weight weight="4" />
+    </properties>
+    <spawn chance="1" />
+</item> 

@@ -7,6 +7,8 @@
         <item type="resource" min="1" max="2" chance="1.0" />
         <item item="Toolkit" chance="1.0" />
         <item item="Car Engine" chance="1.0" />
+        <item item="Car Battery" chance="1.0" />
+        <item item="Car Tire" chance="1.0" />
         <item item="Motor Repair Kit" chance="1.0" />
         <item item="Fuel Canister" chance="1.0" />
         <item item="Car Key Jeep" chance="1.0" />

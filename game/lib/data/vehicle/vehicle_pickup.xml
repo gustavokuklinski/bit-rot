@@ -16,6 +16,7 @@
     <loot>
         <item item="Car Key Pickup" chance="0.1" />
         <item item="Fuel Canister" chance="0.1" />
+        <item item="Car Battery" chance="0.1" />
         <item item="Powerbank" chance="0.1" />
         <item item="Motor Repair Kit" chance="0.1" />
         <item item="Toolkit" chance="0.3" />

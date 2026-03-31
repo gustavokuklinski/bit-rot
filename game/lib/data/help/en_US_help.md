@@ -12,9 +12,9 @@ THE WORLD IS DEAD. BUSINESS IS BOOMING.
 
 80% of humanity was wiped out in weeks. The Plague didn’t care about borders or bank accounts. But in the middle of the Pacific, one stronghold remains.
 
-You are on the **Next Petrol Archipelago**, a cluster of islands fortified by the last surviving Brazilian energy giants and pharmaceutical distributors. For years, this was the world's battery and its pharmacy—supplying oil and vaccines to a dying globe.
+You are on the Next Petrol Archipelago, a cluster of islands fortified by the last surviving Brazilian energy giants and pharmaceutical distributors. For years, this was the world's battery and its pharmacy—supplying oil and vaccines to a dying globe.
 
-Managed by a fragile alliance of corporate titans: **Rosskrild & Silva (40%)**, **Gethulius (30%)**, and **Exxoil (20%)**. The island were safe. Until they got greedy.
+Managed by a fragile alliance of corporate titans: Rosskrild & Silva (40%), Gethulius (30%), and Exxoil (20%). The island were safe. Until they got greedy.
 
 A military rescue mission brought back "survivors" from the continent. One was asymptomatic. The rest were time bombs. Now, the military facility has fallen, the infection is loose, and the corporate paradise has turned into a tropical hell.
 
@@ -25,8 +25,8 @@ You are a third-party contractor. A fix-it guy. You don't have a clearance level
 You have three objectives. Choose wisely, because the island is listening.
 
 * **DIE:** Succumb to the rot, the rogues, or the island.
-* **DOMINATE:** Build a base, craft weapons, cleanse the woods, and turn this hell into your home.
-* **ESCAPE:** Navigate the corporate web, complete NPC quests, and signal the continent for a rescue that might never come.
+* **DOMINATE:** Turn this hell into your home.
+* **ESCAPE:** Signal the continent for a rescue that might never come.
 
 ---
 
@@ -48,13 +48,13 @@ You have three objectives. Choose wisely, because the island is listening.
 * **M** : Messages - Events happening in game
 * **C** : Crafting - Craft recipes
 * **? or /** : Open Help menu
-* **TAB** : Show/Hide all modals
+* **TAB** : Show/Hide modals
 
 **Mouse**
 
 * **LCTRL / RCTRL / RMB** : Aim Weapon
 * **LMB + Click (while aiming)** : Attack / Shoot / Melee
-* **RMB + Click (on items)** : Context Menu (Equip, Drop, Consume, Reload)
+* **RMB + Click (on items)** : Context Menu
 
 
 ### [ INVENTORY & GEAR ]
@@ -81,19 +81,21 @@ You have three objectives. Choose wisely, because the island is listening.
 
 * **Anxiety**: Being surrounded by hordes of the undead will cause your character to panic. High anxiety drains your Tireness much faster, exhausting you quickly in tense situations.
 
+* **Weight**: Increase your strength chopping tress and using melee weapons to carry more items
+
 
 
 ### [ TIPS ]
 
-* **Permadeath**: This is how you rot. If you die, you lose everything. Play carefully.
+* **Permadeath**: This is how you Rot. If you die, you lose everything. Play carefully.
 
 * **Weather Hazards**: Rain isn't just cosmetic. Standing out in a downpour without thick clothing will cause you to catch a sickness that rapidly increases your Infection level. Layer up to increase your weather protection!
 
 * **Safe Resting**: Not all sleep is equal. Sleeping on a proper bed or bench restores your energy significantly faster than sleeping on the floor and is the only way to slowly regenerate lost health while resting. 
 
-* **Combat Tactics**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina, because fighting while exhausted makes your weapons less effective and drains your energy. 
+* **Combat Tactics**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina and tiredness, because fighting while exhausted makes your weapons less effective and drains your energy. 
 
-* **Vehicles**: Approach a vehicle and press 'E' to enter. Remember to check the motor health, and be aware that running over enemies will damage the car over time!
+* **Vehicles**: Approach a vehicle and press 'E' to enter. Remember to check the motor, and be aware that roadkills will damage the car over time!
 
 * **Crafting & Maintenance**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
 

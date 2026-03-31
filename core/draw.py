@@ -15,7 +15,7 @@ from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby_modal import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_forward_button, draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button, draw_help_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_forward_button, draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button, draw_help_button, draw_slots_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.help_modal import draw_help_modal
 from core.ui.gear_modal import draw_gear_modal
@@ -27,6 +27,7 @@ from core.ui.vehicle_modal import draw_vehicle_modal
 from core.ui.crafting_modal import CraftingModal
 from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
+from core.ui.slots_modal import draw_slots_modal
 from core.systems.utils import get_player_facing_tile, get_targeted_interactable
 from core.data.localization import tr
 
@@ -687,14 +688,20 @@ def draw_game(game):
                     t_tire = tr('tooltip', "Tires")
                     t_key = tr('tooltip', "Key")
                     
-                    tip_text = (
-                        f"{t_enter}\n"
-                        f"{t_engine}\n"
-                        f"{t_rmb}\n\n"
-                        f"{t_mot}: {motor_pct}% | {t_fuel}: {fuel_val} | {t_pow}: {power_val} | {t_tire}: {tires_count}/4 | {t_key}: {key_status}"
-                    )
+                    # Store as structured data so the renderer can insert images
+                    tip_data = {
+                        'type': 'vehicle',
+                        'text_lines': [t_enter, t_engine, t_rmb, ""],
+                        'stats': [
+                            {'icon': 'motor', 'text': t_mot, 'val': f"{motor_pct}%"},
+                            {'icon': 'fuel', 'text': t_fuel, 'val': f"{fuel_val}"},
+                            {'icon': 'power', 'text': t_pow, 'val': f"{power_val}"}, # Will fallback to text since no icon was provided
+                            {'icon': 'tires', 'text': t_tire, 'val': f"{tires_count}/4"},
+                            {'icon': 'key', 'text': t_key, 'val': f"{key_status}"}
+                        ]
+                    }
                     
-                    interactables.append({'rect': obj.rect, 'tip': tip_text})
+                    interactables.append({'rect': obj.rect, 'tip': tip_data})
 
         # 3. Check Tiles (Doors, Windows, Stairs)
         fx, fy = get_player_facing_tile(game)
@@ -742,32 +749,132 @@ def draw_game(game):
             
             if box_rect.collidepoint(mouse_pos):
                 tooltip_to_draw = item['tip']
+
+        # --- CRT FILTER OVERLAY ---
+        # Cached to ensure zero performance hit during the main loop
+        if not hasattr(game, 'crt_overlay') or game.crt_overlay.get_size() != (int(GAME_WIDTH), int(GAME_HEIGHT)):
+            game.crt_overlay = pygame.Surface((int(GAME_WIDTH), int(GAME_HEIGHT)), pygame.SRCALPHA)
+            
+            # 1. Base Phosphor Tint (gives that faint vintage green/blue glow)
+            game.crt_overlay.fill((15, 25, 15, 15))
+            
+            # 2. Authentic Scanlines
+            for y in range(0, int(GAME_HEIGHT), 3):
+                pygame.draw.line(game.crt_overlay, (0, 0, 0, 45), (0, y), (int(GAME_WIDTH), y), 1)
                 
-        # Draw Hover Tooltip
+            # 3. Vignette (Darkened Edges)
+            # Elegant approach: Draw math onto a tiny 32x32 surface, then smoothscale it up!
+            tiny_v = pygame.Surface((32, 32), pygame.SRCALPHA)
+            for y in range(32):
+                for x in range(32):
+                    dx = (x - 15.5) / 15.5
+                    dy = (y - 15.5) / 15.5
+                    dist = (dx*dx + dy*dy)
+                    # Cap opacity at ~160 so the edges aren't pitch black
+                    alpha = min(255, max(0, int(dist * 160))) 
+                    tiny_v.set_at((x, y), (0, 0, 0, alpha))
+            
+            vignette = pygame.transform.smoothscale(tiny_v, (int(GAME_WIDTH), int(GAME_HEIGHT)))
+            game.crt_overlay.blit(vignette, (0, 0))
+
+        # Apply the filter strictly to the game world before UI is drawn
+        game.game_screen.blit(game.crt_overlay, (0, 0))
+                
         if tooltip_to_draw:
-            lines = tooltip_to_draw.split('\n')
-            max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
-            
-            tt_w = max_w + 10
-            tt_h = len(lines) * 20 + 10
-            tt_x, tt_y = mouse_pos[0], mouse_pos[1]
-            
-            if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
-            if tt_y + tt_h > GAME_HEIGHT: tt_y = mouse_pos[1] - tt_h - 5
-            
-            tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
-            
-            # Temporary surface for transparent background
-            tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
-            tip_bg.fill((0, 0, 0, 220))
-            game.game_screen.blit(tip_bg, (tt_x, tt_y))
-            pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
-            
-            curr_y = tt_y + 5
-            for line in lines:
-                ls = font_14.render(line, True, WHITE)
-                game.game_screen.blit(ls, (tt_x + 5, curr_y))
-                curr_y += 20
+            if isinstance(tooltip_to_draw, str):
+                lines = tooltip_to_draw.split('\n')
+                max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
+                
+                tt_w = max_w + 10
+                tt_h = len(lines) * 20 + 10
+                tt_x, tt_y = mouse_pos[0], mouse_pos[1]
+                
+                if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
+                if tt_y + tt_h > GAME_HEIGHT: tt_y = mouse_pos[1] - tt_h - 5
+                
+                tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+                
+                # Temporary surface for transparent background
+                tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+                tip_bg.fill((0, 0, 0, 220))
+                game.game_screen.blit(tip_bg, (tt_x, tt_y))
+                pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
+                
+                curr_y = tt_y + 5
+                for line in lines:
+                    ls = font_14.render(line, True, WHITE)
+                    game.game_screen.blit(ls, (tt_x + 5, curr_y))
+                    curr_y += 20
+                    
+            elif isinstance(tooltip_to_draw, dict) and tooltip_to_draw.get('type') == 'vehicle':
+                # Load and Cache images to prevent loading them every frame
+                if not hasattr(game, 'vehicle_icons'):
+                    game.vehicle_icons = {}
+                    icon_paths = {
+                        'fuel': 'game/lib/sprites/items/car_fuel_unit.png',
+                        'motor': 'game/lib/sprites/items/car_motor.png',
+                        'power': 'game/lib/sprites/items/car_battery.png',
+                        'tires': 'game/lib/sprites/items/car_tire.png',
+                        'key': 'game/lib/sprites/items/car_key_pickup.png'
+                    }
+                    for k, path in icon_paths.items():
+                        try:
+                            game.vehicle_icons[k] = pygame.transform.scale(pygame.image.load(path).convert_alpha(), (16, 16))
+                        except Exception:
+                            game.vehicle_icons[k] = None
+
+                lines = tooltip_to_draw['text_lines']
+                max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
+                
+                # Calculate the width of the dynamic stats line
+                stats_w = 0
+                for stat in tooltip_to_draw['stats']:
+                    icon_img = game.vehicle_icons.get(stat['icon'])
+                    if icon_img:
+                        stats_w += 16 + 4  # 16px icon + spacing
+                    else:
+                        stats_w += font_14.render(stat['text'] + ": ", True, WHITE).get_width()
+                    stats_w += font_14.render(stat['val'], True, WHITE).get_width() + 10
+                
+                max_w = max(max_w, stats_w)
+                
+                tt_w = max_w + 10
+                tt_h = len(lines) * 20 + 20 + 10 # Extra 20 pixels for the stats line
+                tt_x, tt_y = mouse_pos[0], mouse_pos[1]
+                
+                if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
+                if tt_y + tt_h > GAME_HEIGHT: tt_y = mouse_pos[1] - tt_h - 5
+                
+                tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+                
+                tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+                tip_bg.fill((0, 0, 0, 220))
+                game.game_screen.blit(tip_bg, (tt_x, tt_y))
+                pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
+                
+                # Draw main text lines
+                curr_y = tt_y + 5
+                for line in lines:
+                    ls = font_14.render(line, True, WHITE)
+                    game.game_screen.blit(ls, (tt_x + 5, curr_y))
+                    curr_y += 20
+                
+                # Draw inline icons and values
+                curr_x = tt_x + 5
+                for stat in tooltip_to_draw['stats']:
+                    icon_img = game.vehicle_icons.get(stat['icon'])
+                    
+                    if icon_img:
+                        game.game_screen.blit(icon_img, (curr_x, curr_y))
+                        curr_x += 20
+                    else:
+                        text_s = font_14.render(stat['text'] + ": ", True, WHITE)
+                        game.game_screen.blit(text_s, (curr_x, curr_y + 2))
+                        curr_x += text_s.get_width()
+                    
+                    val_s = font_14.render(stat['val'], True, WHITE)
+                    game.game_screen.blit(val_s, (curr_x, curr_y + 2))
+                    curr_x += val_s.get_width() + 10
 
         draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
         alert_tooltip = draw_player_alerts(game.game_screen, game.player)
@@ -798,6 +905,10 @@ def draw_game(game):
         elif modal['type'] == 'nearby':
             buttons = draw_nearby_modal(game.game_screen, game, modal, game.assets, mouse_pos)
             game.modal_buttons.extend(buttons)
+        elif modal['type'] == 'slots':
+            buttons = draw_slots_modal(game.game_screen, game, game.player, modal, game.assets, mouse_pos)
+            game.modal_buttons.extend(buttons)
+
         elif modal['type'] == 'messages':
             result = draw_messages_modal(game.game_screen, game, modal, game.assets)
             if len(result) == 5:
@@ -841,6 +952,7 @@ def draw_game(game):
     game.inventory_button_rect = draw_inventory_button(game.game_screen)
     game.nearby_button_rect = draw_nearby_button(game.game_screen)
     game.gear_button_rect = draw_gear_button(game.game_screen)
+    game.slots_button_rect = draw_slots_button(game.game_screen)
     game.messages_button_rect = draw_messages_button(game.game_screen)
     game.crafting_button_rect = draw_crafting_button(game.game_screen)
     game.help_button_rect = draw_help_button(game.game_screen)
@@ -891,6 +1003,15 @@ def draw_game(game):
                     slot = get_container_slot_rect(modal['position'], i)
                     if slot.collidepoint(game._get_scaled_mouse_pos()):
                         highlighted_rect = slot
+                        highlighted_allowed = (len(cont.inventory) < cont.capacity) or (i < len(cont.inventory))
+                        break
+                if highlighted_rect: break
+            elif modal['type'] == 'slots':
+                for slot_data in modal.get('slot_rects', []):
+                    if slot_data['rect'].collidepoint(game._get_scaled_mouse_pos()):
+                        highlighted_rect = slot_data['rect']
+                        cont = slot_data['container']
+                        i = slot_data['index']
                         highlighted_allowed = (len(cont.inventory) < cont.capacity) or (i < len(cont.inventory))
                         break
                 if highlighted_rect: break
@@ -956,6 +1077,7 @@ def draw_game(game):
             (game.status_button_rect, tr('ui', "Player Status (H)")),
             (game.inventory_button_rect, tr('ui', "Inventory (I)")),
             (game.gear_button_rect, tr('ui', "Gear (G)")),
+            (getattr(game, 'slots_button_rect', None), tr('ui', "Slots Overview (Y)")),
             (game.nearby_button_rect, tr('ui', "Nearby (N)")),
             (game.messages_button_rect, tr('ui', "Messages (M)")),
             (game.crafting_button_rect, tr('ui', "Crafting (C)")),

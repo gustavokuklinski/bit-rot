@@ -187,13 +187,14 @@ class Vehicle:
 
         # 3. Spawn Battery (50% chance)
         if random.random() < VEH_HAS_BATTERY:
-            batt_item = Item.create_from_name("Powerbank")
+            batt_item = Item.create_from_name("Car Battery")
             if batt_item:
-                if hasattr(batt_item, 'capacity') and batt_item.capacity:
+                # Car Battery uses durability, whereas old items might have used capacity/load
+                if hasattr(batt_item, 'durability') and hasattr(batt_item, 'max_durability'):
+                    batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
+                elif hasattr(batt_item, 'capacity') and batt_item.capacity:
                      if hasattr(batt_item, 'load'): 
                         batt_item.load = random.uniform(1.0, float(batt_item.capacity))
-                     elif hasattr(batt_item, 'durability'): 
-                        batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
                 self.equipment['battery'] = batt_item
 
         for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
@@ -501,7 +502,7 @@ class Vehicle:
             
         elif slot == 'battery':
             item_type = getattr(item, 'item_type', None)
-            return item_type in ['battery', 'tool', 'utility'] and (hasattr(item, 'durability') or hasattr(item, 'load'))
+            return item_type in ['car_battery'] and (hasattr(item, 'durability') or hasattr(item, 'load'))
         
         elif slot == 'motor':
             is_motor = getattr(item, 'item_type', None) == 'car_motor' or getattr(item, 'type', None) == 'car_motor'

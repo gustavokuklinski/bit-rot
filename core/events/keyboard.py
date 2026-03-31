@@ -142,6 +142,29 @@ def toggle_crafting_modal(game):
         
         game.modals.append(modal_data)
 
+def toggle_slots_modal(game):
+    slots_modal_exists = False
+    for modal in game.modals:
+        if modal['type'] == 'slots':
+            game.last_modal_positions['slots'] = (modal['rect'].x, modal['rect'].y)
+            game.modals.remove(modal)
+            slots_modal_exists = True
+            break
+    if not slots_modal_exists:
+        new_slots_modal = {
+            'id': uuid.uuid4(),
+            'type': 'slots',
+            'position': game.last_modal_positions.get('slots', (100, 100)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'rect': pygame.Rect(
+                game.last_modal_positions.get('slots', (100, 100))[0],
+                game.last_modal_positions.get('slots', (100, 100))[1],
+                SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT),
+            'minimized': False
+        }
+        game.modals.append(new_slots_modal)
+
 def toggle_help_modal(game):
     help_modal_exists = False
     for modal in game.modals:
@@ -416,6 +439,8 @@ def handle_keyboard_events(game, event):
                 toggle_messages_modal(game)
             if event.key == pygame.K_c:
                 toggle_crafting_modal(game)
+            if event.key == pygame.K_y:
+                toggle_slots_modal(game)
             if event.unicode == '?' or event.key == pygame.K_SLASH:
                 toggle_help_modal(game)
             if event.key == pygame.K_r:

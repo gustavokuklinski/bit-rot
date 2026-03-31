@@ -148,8 +148,12 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Gear': toggle_gear_modal(game)
 
             if option == 'Sleep':
-                print("You go to sleep...")
-                game.player.is_sleeping = True
+                # Prevent micro-sleeping or accidental sleep when fully rested (above 95%)
+                if game.player.tireness >= game.player.max_tireness * 0.95:
+                    display_message(tr('msg', "You are not tired enough to sleep."))
+                else:
+                    print("You go to sleep...")
+                    game.player.is_sleeping = True
             if option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
                     game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
@@ -797,6 +801,15 @@ def handle_right_click(game, mouse_pos):
                 if item and get_container_slot_rect(modal['position'], i).collidepoint(mouse_pos):
                     clicked_item, click_source, click_index, click_container_item = item, 'container', i, container; break
         
+        elif modal['type'] == 'slots':
+            for slot_data in modal.get('slot_rects', []):
+                if slot_data['rect'].collidepoint(mouse_pos):
+                    c = slot_data['container']
+                    i = slot_data['index']
+                    if i < len(c.inventory):
+                        clicked_item, click_source, click_index, click_container_item = c.inventory[i], 'container', i, c
+                        break
+
         elif modal['type'] == 'nearby':
             active_tab_label = modal.get('active_tab')
             active_container = None

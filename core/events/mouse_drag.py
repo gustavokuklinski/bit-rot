@@ -621,7 +621,104 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = True
                                 
                                 if dropped_successfully: break
-                        
+                    
+                    elif modal['type'] == 'slots':
+                        for slot_data in modal.get('slot_rects', []):
+                            if slot_data['rect'].collidepoint(mouse_pos):
+                                target_container = slot_data['container']
+                                target_index = slot_data['index']
+                                
+                                if check_recursive_containment(game.dragged_item, target_container):
+                                    display_message(tr('msg', "Cannot put the container inside itself."))
+                                    dropped_successfully = False
+                                    break
+                                
+                                if getattr(target_container, 'allow_liquid', False) and not getattr(game.dragged_item, 'liquid', False):
+                                    display_message(tr('msg', "Container only accepts liquids."))
+                                    dropped_successfully = False
+                                    break
+                                elif getattr(game.dragged_item, 'liquid', False) and not getattr(target_container, 'allow_liquid', False):
+                                    display_message(tr('msg', "Liquid spills."))
+                                    dropped_successfully = True
+                                    break
+
+                                # Handle Looting from Ground/External
+                                if is_external_source:
+                                    if is_container_on_player(target_container, game.player) and not check_player_weight(game.dragged_item):
+                                        dropped_successfully = False
+                                        break
+                                    
+                                    can_loot = False
+                                    is_stack = False
+                                    if target_index < len(target_container.inventory):
+                                        item_in_slot = target_container.inventory[target_index]
+                                        if item_in_slot.can_stack_with(game.dragged_item):
+                                            can_loot = True; is_stack = True
+                                        else:
+                                            display_message(tr('msg', "Cannot swap while looting."))
+                                            dropped_successfully = False
+                                            break
+                                    elif len(target_container.inventory) < (target_container.capacity or 0):
+                                        if not check_container_weight_limit(target_container, game.dragged_item):
+                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            dropped_successfully = False
+                                        else:
+                                            can_loot = True
+
+                                    if can_loot:
+                                        item_ref = game.dragged_item
+                                        item_ref.rect.center = game.player.rect.center
+                                        if item_ref not in game.items_on_ground:
+                                            game.items_on_ground.append(item_ref)
+
+                                        def do_slots_container_loot():
+                                            if item_ref in game.items_on_ground:
+                                                game.items_on_ground.remove(item_ref)
+                                            if is_stack:
+                                                item_in_dst = target_container.inventory[target_index]
+                                                avail = item_in_dst.capacity - item_in_dst.load
+                                                trans = min(avail, item_ref.load)
+                                                item_in_dst.load += trans
+                                                item_ref.load -= trans
+                                            else:
+                                                if target_index <= len(target_container.inventory):
+                                                    target_container.inventory.insert(target_index, item_ref)
+                                                else:
+                                                    target_container.inventory.append(item_ref)
+                                        
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_slots_container_loot, xp_reward=0.5)
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+                                
+                                # Internal Drag Drop (Immediate)
+                                if target_index < len(target_container.inventory):
+                                    item_in_slot = target_container.inventory[target_index]
+                                    if item_in_slot.can_stack_with(game.dragged_item):
+                                        available = item_in_slot.capacity - item_in_slot.load
+                                        transfer = min(available, game.dragged_item.load)
+                                        item_in_slot.load += transfer
+                                        game.dragged_item.load -= transfer
+                                        if game.dragged_item.load <= 0: dropped_successfully = True
+                                    else:
+                                        if not check_container_weight_limit(target_container, game.dragged_item, item_in_slot):
+                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            dropped_successfully = False
+                                        else:
+                                            item_to_swap = target_container.inventory.pop(target_index)
+                                            target_container.inventory.insert(target_index, game.dragged_item)
+                                            game.dragged_item = item_to_swap
+                                            dropped_successfully = False
+                                else:
+                                    if not check_container_weight_limit(target_container, game.dragged_item):
+                                        display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                        dropped_successfully = False
+                                    else:
+                                        target_container.inventory.insert(target_index, game.dragged_item)
+                                        dropped_successfully = True
+                                
+                                break
+
                     elif modal['type'] == 'gear' and modal['rect'].collidepoint(mouse_pos):
                         if not dropped_successfully and 'tab_rects' in modal:
                             for i, tab_rect in enumerate(modal.get('tab_rects', [])):
@@ -1534,6 +1631,18 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                             game.drag_start_pos = mouse_pos
                             game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                             return 
+
+    elif modal['type'] == 'slots':
+        for slot_data in modal.get('slot_rects', []):
+            if slot_data['rect'].collidepoint(mouse_pos):
+                c = slot_data['container']
+                i = slot_data['index']
+                if i < len(c.inventory):
+                    item = c.inventory[i]
+                    game.drag_candidate = (item, (i, 'container', c))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_data['rect'].x, mouse_pos[1] - slot_data['rect'].y)
+                    return
 
     elif modal['type'] == 'gear':
         active_tab = modal.get('active_tab', 'Gear')

@@ -10,6 +10,7 @@ _crafting_img = None
 _pause_img = None
 _forward_img = None
 _help_img = None
+_slots_img = None
 
 def draw_pause_button(surface):
     global _pause_img
@@ -87,6 +88,21 @@ def draw_gear_button(surface):
     surface.blit(_gear_img, button_gear_rect)
     return button_gear_rect
 
+def draw_slots_button(surface):
+    global _slots_img
+    if _slots_img is None:
+        try:
+            _slots_img = pygame.image.load(SPRITE_PATH + 'ui/slots.png').convert_alpha()
+            _slots_img = pygame.transform.scale(_slots_img, (40, 40))
+        except pygame.error:
+            _slots_img = pygame.Surface((40, 40), pygame.SRCALPHA)
+            _slots_img.fill(GRAY)
+            
+    # Position: 190 (Gear is at 140 + 40 height + 10 gap)
+    button_slots_rect = pygame.Rect(10, 190, 40, 40)
+    surface.blit(_slots_img, button_slots_rect)
+    return button_slots_rect
+
 def draw_nearby_button(surface):
     global _nearby_img
     if _nearby_img is None:
@@ -98,7 +114,7 @@ def draw_nearby_button(surface):
             _nearby_img.fill(GRAY)
             
     # Previous: 145. New: 200 (Gear 130+60=190 + 10 gap)
-    button_nearby_rect = pygame.Rect(10, 190, 40, 40)
+    button_nearby_rect = pygame.Rect(10, 240, 40, 40)
     surface.blit(_nearby_img, button_nearby_rect)
     return button_nearby_rect
 
@@ -114,7 +130,7 @@ def draw_messages_button(surface):
             _message_img.fill(GRAY)
     
     # Previous: 200. New: 270 (Nearby 200+60=260 + 10 gap)
-    button_messages_rect = pygame.Rect(10, 240, 40, 40) 
+    button_messages_rect = pygame.Rect(10, 290, 40, 40)
     surface.blit(_message_img, button_messages_rect)
     return button_messages_rect
 
@@ -131,7 +147,7 @@ def draw_crafting_button(surface):
             pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1) # Simple icon
             
     # Position: 260 (Messages 210 + 40 + 10 gap)
-    button_rect = pygame.Rect(10, 290, 40, 40)
+    button_rect = pygame.Rect(10, 340, 40, 40)
     surface.blit(_crafting_img, button_rect)
     return button_rect
 
@@ -146,6 +162,6 @@ def draw_help_button(surface):
             _help_img.fill(GRAY)
             
     # Position: 340 (Crafting 290 + 40 + 10 gap)
-    button_rect = pygame.Rect(10, 340, 40, 40)
+    button_rect = pygame.Rect(10, 390, 40, 40)
     surface.blit(_help_img, button_rect)
     return button_rect

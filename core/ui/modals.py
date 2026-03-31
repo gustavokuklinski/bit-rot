@@ -47,6 +47,8 @@ class BaseModal:
             return HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT
         elif self.modal['type'] == 'npc_dialog':
             return NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT
+        elif self.modal['type'] == 'slots':
+            return SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT
         return 300, 300
 
     def draw_header(self):

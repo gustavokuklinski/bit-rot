@@ -8,7 +8,7 @@ from core.entities.item.item import Item
 from core.ui.inventory_modal import get_belt_hud_slot_rect
 from core.ui.npc_dialog_modal import get_npc_dialog_option_rect
 from core.messages import display_message
-from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause, toggle_help_modal
+from core.events.keyboard import toggle_messages_modal, toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal, toggle_crafting_modal, toggle_pause, toggle_help_modal, toggle_slots_modal
 # Imports from split files
 from core.events.mouse_context import handle_context_menu_click, handle_right_click
 from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion, handle_left_click_drag_candidate
@@ -289,11 +289,13 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_nearby_modal(game); return
         if game.gear_button_rect and game.gear_button_rect.collidepoint(mouse_pos):
             toggle_gear_modal(game); return
+        if game.slots_button_rect and game.slots_button_rect.collidepoint(mouse_pos):
+            toggle_slots_modal(game); return
         if game.messages_button_rect and game.messages_button_rect.collidepoint(mouse_pos):
             toggle_messages_modal(game); return
         if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
             toggle_crafting_modal(game); return
-        if getattr(game, 'help_button_rect', None) and game.help_button_rect.collidepoint(mouse_pos): # <--- ADD THIS
+        if game.help_button_rect and game.help_button_rect.collidepoint(mouse_pos): # <--- ADD THIS
             toggle_help_modal(game); return
 
         for i, item in enumerate(game.player.belt):
@@ -330,7 +332,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 topmost_modal['crafting_scroll_offset'] = min(max_scroll, offset + 1)
             return
 
-        if topmost_modal and topmost_modal['type'] in ['text', 'help']:
+        if topmost_modal and topmost_modal['type'] in ['text', 'help', 'slots']:
             offset = topmost_modal.get('scroll_offset_y', 0)
             max_scroll = topmost_modal.get('max_scroll_offset', 0)
             
