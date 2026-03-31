@@ -737,7 +737,7 @@ def load_game(game, save_folder_name):
                 game.containers.append(vehicle)
                 game.obstacles.append(vehicle.rect)
 
-        game.game_state = 'PLAYING'
+        #game.game_state = 'PLAYING'
         game.logger.info("Game loaded successfully!")
 
     except Exception as e:
