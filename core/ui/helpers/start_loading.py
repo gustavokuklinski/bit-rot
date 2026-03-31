@@ -86,7 +86,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                     })
                     current_tab['curr_y'] += title_surf.get_height() + 25
 
-                # Rule C: Lists (* or -) 
                 elif line.startswith("* ") or line.startswith("- "):
                     bold_match = re.search(r'^[\*\-]\s+\*\*(.*?)\*\*(.*)', line)
                     if bold_match:
@@ -99,7 +98,11 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                         font_14.set_bold(False)
                         
                         current_tab['layout'].append({'type': 'text', 'surf': key_surf, 'pos': (30, current_tab['curr_y'])})
-                        desc_x = 30 + key_surf.get_width() + 5
+                        
+                        # --- ALIGNMENT FIX ---
+                        ALIGN_X = 240
+                        desc_x = 30 + max(ALIGN_X, key_surf.get_width() + 15)
+                        
                         wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
                         
                         temp_y = current_tab['curr_y']
@@ -125,14 +128,42 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                         clean_path = img_path.group(1).strip()
                         if os.path.exists(clean_path):
                             try:
-                                loaded_img = pygame.image.load(clean_path).convert_alpha()
-                                img_w, img_h = loaded_img.get_size()
-                                scale_factor = usable_w / img_w
-                                new_h = int(img_h * scale_factor)
-                                scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
-                                
-                                current_tab['layout'].append({'type': 'image', 'surf': scaled_img, 'pos': (15, current_tab['curr_y'])})
-                                current_tab['curr_y'] += new_h + 15 
+                                if clean_path.lower().endswith('.gif'):
+                                    pil_img = Image.open(clean_path)
+                                    frames = []
+                                    durations = []
+                                    
+                                    for frame_idx in range(pil_img.n_frames):
+                                        pil_img.seek(frame_idx)
+                                        frame_rgba = pil_img.convert("RGBA")
+                                        frame_data = frame_rgba.tobytes()
+                                        img_w, img_h = frame_rgba.size
+                                        
+                                        pg_img = pygame.image.fromstring(frame_data, (img_w, img_h), "RGBA").convert_alpha()
+                                        
+                                        scale_factor = usable_w / img_w
+                                        new_h = int(img_h * scale_factor)
+                                        scaled_img = pygame.transform.smoothscale(pg_img, (usable_w, new_h))
+                                        
+                                        frames.append(scaled_img)
+                                        durations.append(pil_img.info.get('duration', 100))
+                                        
+                                    current_tab['layout'].append({
+                                        'type': 'gif', 'frames': frames, 'durations': durations,
+                                        'current_frame': 0, 'last_update': pygame.time.get_ticks(),
+                                        'pos': (15, current_tab['curr_y'])
+                                    })
+                                    current_tab['curr_y'] += frames[0].get_height() + 15
+                                    
+                                else:
+                                    loaded_img = pygame.image.load(clean_path).convert_alpha()
+                                    img_w, img_h = loaded_img.get_size()
+                                    scale_factor = usable_w / img_w
+                                    new_h = int(img_h * scale_factor)
+                                    scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
+                                    
+                                    current_tab['layout'].append({'type': 'image', 'surf': scaled_img, 'pos': (15, current_tab['curr_y'])})
+                                    current_tab['curr_y'] += new_h + 15 
                             except Exception as e:
                                 print(f"[Loading Screen] Error loading image {clean_path}: {e}")
 

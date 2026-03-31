@@ -751,34 +751,36 @@ def draw_game(game):
                 tooltip_to_draw = item['tip']
 
         # --- CRT FILTER OVERLAY ---
-        # Cached to ensure zero performance hit during the main loop
-        if not hasattr(game, 'crt_overlay') or game.crt_overlay.get_size() != (int(GAME_WIDTH), int(GAME_HEIGHT)):
-            game.crt_overlay = pygame.Surface((int(GAME_WIDTH), int(GAME_HEIGHT)), pygame.SRCALPHA)
-            
-            # 1. Base Phosphor Tint (gives that faint vintage green/blue glow)
-            game.crt_overlay.fill((15, 25, 15, 15))
-            
-            # 2. Authentic Scanlines
-            for y in range(0, int(GAME_HEIGHT), 3):
-                pygame.draw.line(game.crt_overlay, (0, 0, 0, 45), (0, y), (int(GAME_WIDTH), y), 1)
+        # Only draw if enabled in the settings
+        if getattr(core.data.config, 'UI_CRT_FILTER', True):
+            # Cached to ensure zero performance hit during the main loop
+            if not hasattr(game, 'crt_overlay') or game.crt_overlay.get_size() != (int(GAME_WIDTH), int(GAME_HEIGHT)):
+                game.crt_overlay = pygame.Surface((int(GAME_WIDTH), int(GAME_HEIGHT)), pygame.SRCALPHA)
                 
-            # 3. Vignette (Darkened Edges)
-            # Elegant approach: Draw math onto a tiny 32x32 surface, then smoothscale it up!
-            tiny_v = pygame.Surface((32, 32), pygame.SRCALPHA)
-            for y in range(32):
-                for x in range(32):
-                    dx = (x - 15.5) / 15.5
-                    dy = (y - 15.5) / 15.5
-                    dist = (dx*dx + dy*dy)
-                    # Cap opacity at ~160 so the edges aren't pitch black
-                    alpha = min(255, max(0, int(dist * 160))) 
-                    tiny_v.set_at((x, y), (0, 0, 0, alpha))
-            
-            vignette = pygame.transform.smoothscale(tiny_v, (int(GAME_WIDTH), int(GAME_HEIGHT)))
-            game.crt_overlay.blit(vignette, (0, 0))
+                # 1. Base Phosphor Tint (gives that faint vintage green/blue glow)
+                game.crt_overlay.fill((15, 25, 15, 15))
+                
+                # 2. Authentic Scanlines
+                for y in range(0, int(GAME_HEIGHT), 3):
+                    pygame.draw.line(game.crt_overlay, (0, 0, 0, 45), (0, y), (int(GAME_WIDTH), y), 1)
+                    
+                # 3. Vignette (Darkened Edges)
+                # Elegant approach: Draw math onto a tiny 32x32 surface, then smoothscale it up!
+                tiny_v = pygame.Surface((32, 32), pygame.SRCALPHA)
+                for y in range(32):
+                    for x in range(32):
+                        dx = (x - 15.5) / 15.5
+                        dy = (y - 15.5) / 15.5
+                        dist = (dx*dx + dy*dy)
+                        # Cap opacity at ~160 so the edges aren't pitch black
+                        alpha = min(255, max(0, int(dist * 160))) 
+                        tiny_v.set_at((x, y), (0, 0, 0, alpha))
+                
+                vignette = pygame.transform.smoothscale(tiny_v, (int(GAME_WIDTH), int(GAME_HEIGHT)))
+                game.crt_overlay.blit(vignette, (0, 0))
 
-        # Apply the filter strictly to the game world before UI is drawn
-        game.game_screen.blit(game.crt_overlay, (0, 0))
+            # Apply the filter strictly to the game world before UI is drawn
+            game.game_screen.blit(game.crt_overlay, (0, 0))
                 
         if tooltip_to_draw:
             if isinstance(tooltip_to_draw, str):

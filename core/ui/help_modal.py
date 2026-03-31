@@ -96,7 +96,12 @@ def draw_help_modal(surface, game, modal, assets):
                             'bottom_y': current_tab['curr_y'] + key_surf.get_height()
                         })
                         
-                        desc_x = 15 + key_surf.get_width() + 5
+                        # --- ALIGNMENT FIX ---
+                        # Enforce a fixed column start for the description to create a "table" look.
+                        # 240 pixels is usually wide enough to cover most of your command keys.
+                        ALIGN_X = 240 
+                        desc_x = 15 + max(ALIGN_X, key_surf.get_width() + 15)
+                        
                         wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
                         
                         temp_y = current_tab['curr_y']

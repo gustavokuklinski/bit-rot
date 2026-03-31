@@ -232,7 +232,7 @@ def handle_mouse_down(game, event, mouse_pos):
                              
                              # Fix: Provide fallback tabs for Vehicle modal if 'tabs_data' isn't natively populated on the dictionary
                              if not tabs_data and topmost_modal['type'] == 'vehicle':
-                                 tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}]
+                                 tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}, {'label': 'Seats'}]
                                  
                              if i < len(tabs_data):
                                  topmost_modal['active_tab'] = tabs_data[i]['label']

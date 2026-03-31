@@ -51,7 +51,7 @@ MESSAGES_MODAL_HEIGHT = 250
 TEXT_MODAL_WIDTH = 300
 TEXT_MODAL_HEIGHT = 300
 VEHICLE_MODAL_WIDTH = 400
-VEHICLE_MODAL_HEIGHT = 300
+VEHICLE_MODAL_HEIGHT = 230
 MOBILE_MODAL_WIDTH = 250
 MOBILE_MODAL_HEIGHT = 350
 CRAFTING_MODAL_WIDTH = 700
@@ -122,6 +122,7 @@ VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
 UI_SHOW_TUTORIAL_DEFAULT = True
+UI_CRT_FILTER = True
 ANIMAL_SPAWN_COUNT = 0
 ANIMAL_RESPAWN_TIMER_MS = 0
 
@@ -151,7 +152,7 @@ def load_settings(preset="default"):
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
-    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT
+    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, UI_CRT_FILTER
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
@@ -241,6 +242,12 @@ def load_settings(preset="default"):
         val_tutorial = ui_config.find('ui_show_tutorial_default')
         UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
 
+        val_crt = ui_config.find('crt_filter')
+        if val_crt is not None:
+            UI_CRT_FILTER = str(val_crt.get('value')).lower() == 'true'
+        else:
+            UI_CRT_FILTER = True
+            
         val_lang = ui_config.find('language')
         if val_lang is not None:
             GAME_LANGUAGE = val_lang.get('value', 'en_US')

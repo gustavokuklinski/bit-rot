@@ -2,8 +2,9 @@
 <config>
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
-        <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay"/>
-        <language value="en_US" name="Language"/>
+        <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
+        <language value="en_US" name="Language (Default: en_US)"/>
+        <crt_filter value="true" name="CRT filter (Default: True)"/>
     </ui>
     <audio>
         <volume_music value="0.25" name="Music Volume"/>
@@ -34,9 +35,9 @@
         <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk (Default: 5)"/>
         <has_fuel_chance value="0.25" name="Car Fuel chance (Default: Low)"/>
         <has_key_chance value="0.25" name="Car Key chance (Default: Low)"/>
-        <has_motor_chance value="1.0" name="Car Motor chance (Default: Low)"/>
-        <has_battery_chance value="0.25" name="Car Battery chance (Default: Low)"/>
-        <has_tires_chance value="1.0" name="Car Tires chance (Default: Balanced)"/>
+        <has_motor_chance value="1.0" name="Car Motor chance (Default: Extreme High)"/>
+        <has_battery_chance value="0.75" name="Car Battery chance (Default: High)"/>
+        <has_tires_chance value="1.0" name="Car Tires chance (Default: Extreme High)"/>
     </vehicle>
     <animal>
         <animal_spawn_per_chunk value="10" name="Max Animal spawn on chunk (Default: 10)"/>

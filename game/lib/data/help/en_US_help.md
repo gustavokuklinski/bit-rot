@@ -2,7 +2,8 @@
 **=== Bit Rot Survival Guide ===**
 
 Welcome to the Survivor Guide! Use the tabs to navigate over this.
-You can get back to this Help everytime during gameplay by pressing: **?** or **/**.
+You can get back to this Help everytime during gameplay by pressing: ? or /.
+Press F11 to toggle Fullscreen at anytime.
 
 ---
 
@@ -56,16 +57,17 @@ You have three objectives. Choose wisely, because the island is listening.
 * **LMB + Click (while aiming)** : Attack / Shoot / Melee
 * **RMB + Click (on items)** : Context Menu
 
+![Drag Drop](./game/lib/sprites/help/drag_drop.gif)
 
 ### [ INVENTORY & GEAR ]
 
 * **Managing Items**: Left-click and hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
 
-* **Quick Access Belt**: Drop essential tools or weapons into your Belt slots to quickly equip them using keys **1-5**.
+* **Quick Access Belt**: Drop essential tools or weapons into your Belt slots to quickly equip them using keys 1-5.
 
 * **Gear & Armor**: Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 
-* **Carry Weight**: Keep a close eye on your total weight! Carrying more than your maximum capacity makes you over-encumbered. This will drastically increase your stamina drain when running and will slowly drain your health over time. 
+* **Carry Weight**: Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
 
 ### [ PLAYER STATUS ]
 
@@ -75,13 +77,15 @@ You have three objectives. Choose wisely, because the island is listening.
 
 * **Hunger & Thirst**: Scavenge for food and water to stay alive. Dropping below 20% in either stat causes starvation or dehydration, which continuously saps your health. 
 
-* **Tireness**: Your wakefulness naturally depletes, draining even faster at night or when your stamina is completely empty. If your Tireness reaches zero, you will pass out on the spot! Find a safe place to sleep to restore it.
+* **Tireness**: Your wakefulness works naturally depletes. If your Tireness reaches zero, you will pass out on the spot! Find a safe place to sleep to restore it.
 
 * **Infection**: A lethal, progressive condition contracted from zombie bites or exposure to freezing rain. Once infected, it acts like a virus—slowly worsening over time, draining your health every second, and severely limiting your stamina. Reaching 100% infection means irreversible zombification.
 
 * **Anxiety**: Being surrounded by hordes of the undead will cause your character to panic. High anxiety drains your Tireness much faster, exhausting you quickly in tense situations.
 
-* **Weight**: Increase your strength chopping tress and using melee weapons to carry more items
+* **Defence**: Use good durability clothes, they are your shield over weather, zombies and hostiles. 
+
+* **Weight**: Increase your strength chopping tress and using melee weapons to carry more items.
 
 
 
@@ -100,5 +104,3 @@ You have three objectives. Choose wisely, because the island is listening.
 * **Crafting & Maintenance**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
 
 * **Lighting**: Turn on the Mobile in your inventory or belt to see clearly at night, but be aware that light might attract unwanted attention.
-
-* **Defence**: Your clothes work like a shield! Be protected.
