@@ -17,7 +17,7 @@
         <item item="Leather Black Pants" chance="1.0" />
         
         <item item="Sewing Kit" chance="1.0" />
-        <item type="backpack" min="1" max="2" chance="1.0" />
+        <item type="container" min="0" max="5" chance="1.0" />
         <item type="utility" min="1" max="6" chance="1.0" />
     </loot>
 </map>

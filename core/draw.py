@@ -783,7 +783,7 @@ def draw_game(game):
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
         if modal['type'] == 'status':
-            buttons = draw_status_modal(game.game_screen, game.player, modal, game.assets, game.zombies_killed, mouse_pos)
+            buttons = draw_status_modal(game.game_screen, game.player, modal, game.assets, game.zombies_killed, mouse_pos, game)
             game.modal_buttons.extend(buttons)
         elif modal['type'] == 'inventory':
             tooltip, *buttons = draw_inventory_modal(game.game_screen, game, game.player, modal, game.assets, game._get_scaled_mouse_pos())

@@ -169,16 +169,17 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Send to':
                 target_container_name = target_sub_slot
                 
+                # --- FIX 1: TOCTOU BUG (Return True on success, False if already gone) ---
                 def remove_item_from_src(target_item):
                     if source == 'inventory':
                         for idx_val, v in enumerate(game.player.inventory):
-                            if v is target_item: game.player.inventory.pop(idx_val); break
+                            if v is target_item: game.player.inventory.pop(idx_val); return True
                     elif source == 'belt':
                         for idx_val, v in enumerate(game.player.belt):
-                            if v is target_item: game.player.belt[idx_val] = None; break
+                            if v is target_item: game.player.belt[idx_val] = None; return True
                     elif source == 'container' and container_item:
                         for idx_val, v in enumerate(container_item.inventory):
-                            if v is target_item: container_item.inventory.pop(idx_val); break
+                            if v is target_item: container_item.inventory.pop(idx_val); return True
                     elif source == 'nearby' and container_item:
                         for idx_val, v in enumerate(container_item.inventory):
                             if v is target_item: 
@@ -186,13 +187,14 @@ def handle_context_menu_click(game, mouse_pos):
                                 if getattr(container_item, 'item_type', '') == 'ground':
                                     for g_idx, g_v in enumerate(game.items_on_ground):
                                         if g_v is target_item: game.items_on_ground.pop(g_idx); break
-                                break
+                                return True
                     elif source == 'ground':
                         for idx_val, v in enumerate(game.items_on_ground):
-                            if v is target_item: game.items_on_ground.pop(idx_val); break
+                            if v is target_item: game.items_on_ground.pop(idx_val); return True
                     elif source == 'gear':
                         for k, v in game.player.clothes.items():
-                            if v is target_item: game.player.clothes[k] = None; break
+                            if v is target_item: game.player.clothes[k] = None; return True
+                    return False
 
                 if target_container_name == 'Inventory':
                     if source == 'inventory':
@@ -205,9 +207,10 @@ def handle_context_menu_click(game, mouse_pos):
                         return
                         
                     def do_send_inv():
-                        remove_item_from_src(item)
-                        game.player.inventory.append(item)
-                        game.player.stack_item_in_inventory(item)
+                        # Protects against 2nd delayed click firing and duplicating an item
+                        if remove_item_from_src(item):
+                            game.player.inventory.append(item)
+                            game.player.stack_item_in_inventory(item)
                         
                     transfer_time = max(0.1, item.get_total_weight() * 0.2)
                     if source in ['nearby', 'ground', 'container', 'container_map']:
@@ -217,6 +220,7 @@ def handle_context_menu_click(game, mouse_pos):
                         
                 else:
                     target_container = None
+                    # --- FIX 4: RESOLVE BY ID ---
                     for b_item in game.player.belt:
                         if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and b_item.name == target_container_name: 
                             target_container = b_item; break
@@ -293,8 +297,9 @@ def handle_context_menu_click(game, mouse_pos):
                                         removed_item.load = r_load - qty_to_send
                                         target_container.inventory.append(new_item)
                                 else:
-                                    remove_item_from_src(removed_item)
-                                    target_container.inventory.append(removed_item)
+                                    # Protects against TOCTOU duplication
+                                    if remove_item_from_src(removed_item):
+                                        target_container.inventory.append(removed_item)
                             elif qty_to_send > 0 and not stacked:
                                 display_message(tr('msg', "Container is full."))
                                 
@@ -1033,7 +1038,7 @@ def handle_right_click(game, mouse_pos):
 
         # Allow "Send to" for ANY valid item, but exclude map objects, corpses, vehicles, camps, etc.
         item_type = getattr(clicked_item, 'item_type', None)
-        invalid_types = [None, 'vehicle', 'camp', 'map_tile', 'maptile', 'maptile_container']
+        invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container']
         
         if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
             if 'Send to' not in options:
@@ -1150,8 +1155,10 @@ def handle_right_click(game, mouse_pos):
                                 can_fit = True
                                 break
                                 
-                    if can_fit and c.name not in sub_opts:
-                        sub_opts.append(c.name)
+                    if can_fit:
+                        c_label = f"{c.name}"
+                        if c_label not in sub_opts:
+                            sub_opts.append(c_label)
                             
                 new_options.append({'label': 'Send to', 'sub': sub_opts})
                 
@@ -1163,3 +1170,4 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []
         return
+        

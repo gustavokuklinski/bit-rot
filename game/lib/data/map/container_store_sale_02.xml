@@ -7,5 +7,6 @@
         <item type="resource" min="1" max="5" chance="1.0" />
         <item type="utility" min="1" max="5" chance="1.0" />
         <item type="weapon_melee" min="1" max="5" chance="1.0" />
+        <item type="container" min="0" max="2" chance="1.0" />
     </loot>
 </map>

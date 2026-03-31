@@ -6,7 +6,7 @@ from core.ui.status_status_tab import draw_status_tab
 from core.ui.status_health_tab import draw_health_tab
 from core.ui.status_record_tab import draw_record_tab
 
-def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos):
+def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos, game=None):
     base_modal = BaseModal(surface, modal, assets, "Player Status (H)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
@@ -30,7 +30,7 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos)
         draw_status_tab(surface, player, modal, assets, zombies_killed)
     
     elif modal['active_tab'] == 'Health':
-        draw_health_tab(surface, player, modal, assets)
+        draw_health_tab(surface, player, modal, assets, game)
     
     elif modal['active_tab'] == 'Record':
         draw_record_tab(surface, player, modal, assets, mouse_pos)

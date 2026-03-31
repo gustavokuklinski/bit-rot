@@ -97,7 +97,17 @@ def handle_mouse_up(game, event, mouse_pos):
                                     valid_drop = vehicle.can_equip(game.dragged_item, slot_name)
                                     if valid_drop:
                                         item_ref = game.dragged_item
+                                        
+                                        # --- FIX 2: VOID DROP PROTECTION ---
+                                        item_ref.rect.center = game.player.rect.center
+                                        if item_ref not in game.items_on_ground:
+                                            game.items_on_ground.append(item_ref)
+                                        
                                         def do_equip_vehicle():
+                                            # Clean it up from the floor once the action finishes successfully
+                                            if item_ref in game.items_on_ground:
+                                                game.items_on_ground.remove(item_ref)
+                                                
                                             old_item = vehicle.add_equipment(item_ref, slot_name)
                                             if old_item:
                                                 if len(game.player.inventory) < game.player.get_total_inventory_slots():
@@ -172,7 +182,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                         item_ref = new_item
                                         print("Campfire extinguished when picked up.")
                                         display_message(tr('msg', "Campfire extinguished when picked up."))
+                                        
+                                item_ref.rect.center = game.player.rect.center
+                                if item_ref not in game.items_on_ground:
+                                    game.items_on_ground.append(item_ref)
+
                                 def do_belt_loot():
+                                    if item_ref in game.items_on_ground:
+                                        game.items_on_ground.remove(item_ref)
+                                        
                                     if game.player.belt[i_target] is None:
                                         game.player.belt[i_target] = item_ref
                                         item_ref.in_belt = True
@@ -262,34 +280,42 @@ def handle_mouse_up(game, event, mouse_pos):
                                         print("Container only accepts liquids.")
                                         dropped_successfully = False
                                     elif getattr(game.dragged_item, 'liquid', False) and not getattr(target_container, 'allow_liquid', False):
-                                         print("Liquid spills.")
-                                         dropped_successfully = True
+                                        print("Liquid spills.")
+                                        dropped_successfully = True
                                     elif len(target_container.inventory) < (target_container.capacity or 0):
-                                         if not check_container_weight_limit(target_container, game.dragged_item):
-                                             print(f"{target_container.name} cannot carry that much weight.")
-                                             display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
-                                             dropped_successfully = False
-                                         elif is_external_source:
-                                             item_ref = game.dragged_item
-                                             # Convert "Campfire on" to "Campfire off" when looting
-                                             if item_ref.name == "Campfire on":
-                                                 new_item = Item.create_from_name("Campfire off")
-                                                 if new_item:
-                                                     new_item.durability = item_ref.durability
-                                                     new_item.load = item_ref.load
-                                                     item_ref = new_item
-                                                     print("Campfire extinguished when picked up.")
-                                                     display_message(tr('msg', "Campfire extinguished when picked up."))
-                                             def do_tab_loot():
-                                                 target_container.inventory.append(item_ref)
+                                        if not check_container_weight_limit(target_container, game.dragged_item):
+                                            print(f"{target_container.name} cannot carry that much weight.")
+                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            dropped_successfully = False
+                                        elif is_external_source:
+                                            item_ref = game.dragged_item
+                                            # Convert "Campfire on" to "Campfire off" when looting
+                                            if item_ref.name == "Campfire on":
+                                                new_item = Item.create_from_name("Campfire off")
+                                                if new_item:
+                                                    new_item.durability = item_ref.durability
+                                                    new_item.load = item_ref.load
+                                                    item_ref = new_item
+                                                    print("Campfire extinguished when picked up.")
+                                                    display_message(tr('msg', "Campfire extinguished when picked up."))
+                                                     
+                                            item_ref.rect.center = game.player.rect.center
+                                            if item_ref not in game.items_on_ground:
+                                                game.items_on_ground.append(item_ref)
+
+                                            def do_tab_loot():
+                                                if item_ref in game.items_on_ground:
+                                                    game.items_on_ground.remove(item_ref)
+                                                     
+                                                target_container.inventory.append(item_ref)
                                         
-                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
-                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
-                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                             return
-                                         else:
-                                             target_container.inventory.append(game.dragged_item)
-                                             dropped_successfully = True
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+                                        else:
+                                            target_container.inventory.append(game.dragged_item)
+                                            dropped_successfully = True
                                     else:
                                         print(f"{target_container.name} is full.")
                                         dropped_successfully = False
@@ -305,25 +331,32 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = True
                                         
                                     if len(target_list) < game.player.get_total_inventory_slots():
-                                         if is_external_source:
-                                             item_ref = game.dragged_item
-                                             # Convert "Campfire on" to "Campfire off" when looting
-                                             if item_ref.name == "Campfire on":
-                                                 new_item = Item.create_from_name("Campfire off")
-                                                 if new_item:
-                                                     new_item.durability = item_ref.durability
-                                                     new_item.load = item_ref.load
-                                                     item_ref = new_item
-                                                     print("Campfire extinguished when picked up.")
-                                                     display_message(tr('msg', "Campfire extinguished when picked up."))
-                                             def do_tab_inv_loot():
-                                                 target_list.append(item_ref)
+                                        if is_external_source:
+                                            item_ref = game.dragged_item
+                                            # Convert "Campfire on" to "Campfire off" when looting
+                                            if item_ref.name == "Campfire on":
+                                                new_item = Item.create_from_name("Campfire off")
+                                                if new_item:
+                                                    new_item.durability = item_ref.durability
+                                                    new_item.load = item_ref.load
+                                                    item_ref = new_item
+                                                    print("Campfire extinguished when picked up.")
+                                                    display_message(tr('msg', "Campfire extinguished when picked up."))
+                                            item_ref.rect.center = game.player.rect.center
+                                            if item_ref not in game.items_on_ground:
+                                                game.items_on_ground.append(item_ref)
+
+                                            def do_tab_inv_loot():
+                                                if item_ref in game.items_on_ground:
+                                                    game.items_on_ground.remove(item_ref)
+                                                     
+                                                target_list.append(item_ref)
                              
-                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
-                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_inv_loot, xp_reward=0.5)
-                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                             return
-                                         else:
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_inv_loot, xp_reward=0.5)
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+                                        else:
                                              target_list.append(game.dragged_item)
                                              dropped_successfully = True
                                     else:
@@ -372,7 +405,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 break
                                             if item_in_slot.can_stack_with(game.dragged_item):
                                                 item_ref = game.dragged_item
+
+                                                item_ref.rect.center = game.player.rect.center
+                                                if item_ref not in game.items_on_ground:
+                                                    game.items_on_ground.append(item_ref)
+
                                                 def do_inv_stack():
+                                                    if item_ref in game.items_on_ground:
+                                                        game.items_on_ground.remove(item_ref)
+                                                        
                                                     avail = item_in_slot.capacity - item_in_slot.load
                                                     trans = min(avail, item_ref.load)
                                                     item_in_slot.load += trans
@@ -406,7 +447,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 dropped_successfully = False
                                                 break
                                             item_ref = game.dragged_item
+
+                                            item_ref.rect.center = game.player.rect.center
+                                            if item_ref not in game.items_on_ground:
+                                                game.items_on_ground.append(item_ref)
+
                                             def do_inv_loot():
+                                                if item_ref in game.items_on_ground:
+                                                    game.items_on_ground.remove(item_ref)
+                                                    
                                                 game.player.inventory.insert(target_index, item_ref)
                                             
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -428,7 +477,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 dropped_successfully = False
                                                 break
                                             item_ref = game.dragged_item
+
+                                            item_ref.rect.center = game.player.rect.center
+                                            if item_ref not in game.items_on_ground:
+                                                game.items_on_ground.append(item_ref)
+
                                             def do_inv_append():
+                                                if item_ref in game.items_on_ground:
+                                                    game.items_on_ground.remove(item_ref)
+                                                    
                                                 game.player.inventory.append(item_ref)
                               
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -500,7 +557,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 item_ref = new_item
                                                 print("Campfire extinguished when picked up.")
                                                 display_message(tr('msg', "Campfire extinguished when picked up."))
+                                        item_ref.rect.center = game.player.rect.center
+                                        if item_ref not in game.items_on_ground:
+                                            game.items_on_ground.append(item_ref)
+
                                         def do_container_loot():
+                                            if item_ref in game.items_on_ground:
+                                                game.items_on_ground.remove(item_ref)
+                                                
                                             if is_stack:
                                                 item_in_dst = container.inventory[target_index]
                                                 avail = item_in_dst.capacity - item_in_dst.load
@@ -599,7 +663,16 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                                  if is_external_source:
                                                      item_ref = game.dragged_item
+                                                     
+                                                     # --- FIX 2: VOID DROP PROTECTION ---
+                                                     item_ref.rect.center = game.player.rect.center
+                                                     if item_ref not in game.items_on_ground:
+                                                         game.items_on_ground.append(item_ref)
+
                                                      def do_tab_loot():
+                                                         if item_ref in game.items_on_ground:
+                                                             game.items_on_ground.remove(item_ref)
+                                                             
                                                          target_container.inventory.append(item_ref)
                                   
                                                      transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -663,7 +736,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                                         item_ref = new_item
                                                         print("Campfire extinguished when picked up.")
                                                         display_message(tr('msg', "Campfire extinguished when picked up."))
+
+                                                item_ref.rect.center = game.player.rect.center
+                                                if item_ref not in game.items_on_ground:
+                                                    game.items_on_ground.append(item_ref)
+
                                                 def do_gear_equip():
+                                                    if item_ref in game.items_on_ground:
+                                                        game.items_on_ground.remove(item_ref)
+                                                        
                                                     game.player.clothes[slot_name] = item_ref
 
                                                 transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -747,7 +828,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                     
                                     if can_loot:
                                         item_ref = game.dragged_item
+                                        # --- FIX 2: VOID DROP PROTECTION ---
+                                        item_ref.rect.center = game.player.rect.center
+                                        if item_ref not in game.items_on_ground:
+                                            game.items_on_ground.append(item_ref)
+
                                         def do_gear_container_loot():
+                                            if item_ref in game.items_on_ground:
+                                                game.items_on_ground.remove(item_ref)
+                                                
                                             if is_stack:
                                                 item_in_dst = container.inventory[target_index]
                                                 avail = item_in_dst.capacity - item_in_dst.load
@@ -944,7 +1033,16 @@ def handle_mouse_up(game, event, mouse_pos):
 
                             if can_action:
                                 item_ref = game.dragged_item
+                                
+                                # --- FIX 2: VOID DROP PROTECTION ---
+                                item_ref.rect.center = game.player.rect.center
+                                if item_ref not in game.items_on_ground:
+                                    game.items_on_ground.append(item_ref)
+
                                 def do_timed_action():
+                                    if item_ref in game.items_on_ground:
+                                        game.items_on_ground.remove(item_ref)
+                                        
                                     if is_stack and target_index < len(container.inventory):
                                         item_in_dst = container.inventory[target_index]
                                         avail = item_in_dst.capacity - item_in_dst.load
@@ -1256,6 +1354,12 @@ def handle_mouse_motion(game, event, mouse_pos):
             if hasattr(item_to_drag, 'is_stackable') and item_to_drag.is_stackable() and item_to_drag.load > 1 and is_splitting:
                 item_to_drag.load -= 1
                 new_item = Item.create_from_name(item_to_drag.name)
+
+                if not new_item:
+                    item_to_drag.load += 1
+                    game.drag_candidate = None
+                    return
+
                 new_item.load = 1
                 new_item.durability = item_to_drag.durability
                 game.dragged_item = new_item
