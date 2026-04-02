@@ -1,0 +1,12 @@
+<item name="Suitcase" type="container" allow_belt="false">
+    <properties>
+        <capacity value="3" />
+        <weight weight="1.0" reduction="50%" />
+        <sprite file="container_suitcase.png" />
+    </properties>
+    <loot>
+        <item name="Money WBRL" chance="1.0" />
+        <item name="Laptop" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</item>

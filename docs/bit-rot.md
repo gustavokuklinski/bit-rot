@@ -11,7 +11,12 @@ There's a Military facility working on vaccine distribution and security of the 
 On a rescue mission they get an assynthomatic survivor and some people from the continent
 They get infected
 The island become a hell.
-You have three missions: 1. Die, 2. Get the island safe, 3. Contact the continent for a rescure
+
+You have three missions: 
+- 1. Die
+- 2. Get the island safe
+- 3. Contact the continent for a rescure
+
 You you are at your own.
 
 The player will have to survive the plague and rogues.
@@ -37,6 +42,10 @@ Disk: 500MB
 **External resources**
 Software:
     - Python
+        - pygame-ce
+        - numpy
+        - faker
+        - Nuitka
     - Pygame-CE
     - GIMP
 

@@ -1,16 +1,89 @@
 <?xml version='1.0' encoding='utf-8'?>
 <npc_dialog>
     <node id="greeting" x="65" y="120">
-        <options player_question="How's it going?" npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." priority="100" />
-        <options player_question="You look like you've been through hell." npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." priority="50" req_level="[lucky:1]" gain_xp="[lucky:50]" />
+        <options 
+            player_question="How's it going?" 
+            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
+            priority="50"
+            gain_xp="[lucky:1]" />
+
+        <options 
+            player_question="You look like you've been through hell." 
+            npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." 
+            priority="50" 
+            req_level="[lucky:1]" 
+            gain_xp="[lucky:50]" />
     </node>
+
     <node id="tips" x="443" y="140">
-        <options player_question="How do I stay alive out here?" npc_answer="Here's a map. This may save you." priority="10" req_level="[lucky:2]" gain_xp="[lucky:20]" dialog_type="once" award_item="[Island Map]" />
-        <options player_question="Any way to get around faster?" npc_answer="Exxoil left keys in all their jeeps. Same ignition. Corporate cost-cutting. Try these—they might work." priority="10" req_level="[lucky:3]" gain_xp="[lucky:50]" dialog_type="once" award_item="[Car Key Jeep]" />
+        <options 
+            player_question="How do I stay alive out here?" 
+            npc_answer="Here's a map. This may save you." 
+            priority="10" 
+            req_level="[lucky:2]" 
+            gain_xp="[lucky:5]" 
+            dialog_type="once" 
+            award_item="[Island Map]" />
+
+        <options 
+            player_question="Any way to get around faster?" 
+            npc_answer="Exxoil left keys in all their jeeps. Same ignition. Corporate cost-cutting. Try these—they might work." 
+            priority="10" req_level="[lucky:3]" 
+            gain_xp="[lucky:5]" 
+            dialog_type="once" 
+            award_item="[Car Key Jeep]" />
+        
+        <options 
+            player_question="The tool here looks like garbage!" 
+            npc_answer="The main engineer of the Island build everything upon Blueprints, you can scavange for them. I have some, take it son..." 
+            priority="10" req_level="[lucky:3]" 
+            gain_xp="[lucky:5]" 
+            dialog_type="once" 
+            award_item="[Blueprint]" />
     </node>
+
     <node id="lore_branch" x="779" y="133">
-        <options player_question="What happened to the continent?" npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." priority="20" gain_xp="[lucky:50]" />
-        <options player_question="Why did the helicopters leave us?" npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." priority="19" gain_xp="[lucky:50]" />
+        <options 
+            player_question="I've heard a helicopter landed with survivors, is this true?" 
+            npc_answer="Sim... sí...yes? They brought the disgrace to us, some asymphomatic from the continent, it becomes a hell after them! cof...cof..." 
+            priority="10" 
+            gain_xp="[lucky:50]" />
+
+        <options 
+            player_question="What happened to the continent?" 
+            npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." 
+            priority="10" 
+            gain_xp="[lucky:50]" />
+
+        <options 
+            player_question="Why did the helicopters leave us?" 
+            npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." 
+            priority="10"
+            gain_xp="[lucky:50]" />
+    </node>
+
+    <node id="quest_branch" x="779" y="133">
+        <options 
+            player_question="Hello, Hola, Olá!? sir..." 
+            npc_answer="What are you with this cloth! Haha... Yeah, you can be useful to get us out of this shit. But everything have a toll, criança. Try to find the Suitcase and get a reward. You hand delivery to anyone who knows what I'm talking about. I just want to get out of here as soon as possible." 
+            rqst_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]" 
+            priority="10" 
+            gain_xp="[lucky:100]" 
+            dialog_type="once"
+            unlock_flag="Find the Suitcase" />
+    </node>
+
+    <node id="Find the Suitcase">
+        <options
+            player_question="Have you head about some specific... I mean, wish?" 
+            npc_answer="Oh! You found it! Well, we have winning days and days to lose. You're disposable hehehe!"
+            rqst_item="[Suitcase]"
+            req_item="[Suitcase]"
+            npc_state_friendly="false"
+            npc_state_static="false"
+            gain_xp="[lucky:1000]"
+            dialog_type="once" 
+            complete_flag="Find the Suitcase" />
     </node>
 
 </npc_dialog>

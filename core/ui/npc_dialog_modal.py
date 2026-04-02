@@ -1,4 +1,3 @@
-# core/ui/npc_dialog_modal.py
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
@@ -7,16 +6,57 @@ from core.data.localization import tr
 COL_1_WIDTH = 180  
 PADDING = 20
 
-def get_npc_dialog_option_rect(modal_pos, index):
+# --- [NEW] Reusable Line Wrapper ---
+def get_wrapped_lines(text, font, max_width):
+    """Breaks a string into multiple lines to fit within a specific pixel width."""
+    words = str(text).split(' ')
+    lines = []
+    current_line = []
+    
+    for word in words:
+        current_line.append(word)
+        test_surf = font.render(' '.join(current_line), True, WHITE)
+        if test_surf.get_width() > max_width:
+            if len(current_line) > 1: # Avoid infinite loop on giant single words
+                current_line.pop()
+                lines.append(' '.join(current_line))
+                current_line = [word]
+                
+    if current_line:
+        lines.append(' '.join(current_line))
+    return lines
+
+
+def get_npc_dialog_option_rect(modal_pos, index, dialogs):
     x, y = modal_pos
     start_x = x + COL_1_WIDTH + PADDING
     start_y = y + 45 
-    item_height = 30
     option_width = NPC_DIALOG_MODAL_WIDTH - COL_1_WIDTH - PADDING - 20
-    return pygame.Rect(start_x, start_y + (index * item_height), option_width, item_height)
+    
+    extra_y = 0
+    last_node = None
+    if dialogs:
+        for j in range(index + 1):
+            node_id = dialogs[j].get('node_id')
+            if node_id != last_node:
+                extra_y += 25  # Add 25px space for every new title header
+                last_node = node_id
+            
+            # [NEW] Dynamically add height based on how many lines the PREVIOUS items used
+            if j < index:
+                q_text = f"- {dialogs[j]['q']}"
+                lines = get_wrapped_lines(q_text, font, option_width - 20)
+                extra_y += max(30, len(lines) * 20 + 10)
+                
+    # [NEW] Calculate CURRENT item's dynamic height
+    current_q_text = f"- {dialogs[index]['q']}"
+    current_lines = get_wrapped_lines(current_q_text, font, option_width - 20)
+    current_height = max(30, len(current_lines) * 20 + 10)
+                
+    return pygame.Rect(start_x, start_y + extra_y, option_width, current_height)
+
 
 def draw_npc_dialog_modal(surface, modal, game):
-    # Added translation for modal title
     title_str = f"{tr('modal', 'Talking to:')} {modal['npc'].name}"
     base = BaseModal(surface, modal, game.assets, title_str)
     base.draw_base()
@@ -52,7 +92,6 @@ def draw_npc_dialog_modal(surface, modal, game):
     line_height = 20
     stats_x = x + 20
     
-    # Translated Stats
     stats = [
         f"{tr('dialog', 'Name:')} {npc.name}",
         f"{tr('dialog', 'HP:')} {npc.health}/{npc.max_health}",
@@ -65,50 +104,67 @@ def draw_npc_dialog_modal(surface, modal, game):
     col2_x = x + COL_1_WIDTH + PADDING
     active_index = modal.get('active_dialog_index', -1)
     dialogs = modal.get('dialogs', [])
+    text_area_width = width - COL_1_WIDTH - PADDING - 20
 
     if active_index == -1:
         instruction = font.render("", True, GRAY_80)
         surface.blit(instruction, (col2_x, y + 50))
         
         mouse_pos = pygame.mouse.get_pos()
+        last_node = None
         
         for i, option in enumerate(dialogs):
-            rect = get_npc_dialog_option_rect((x, y), i)
+            rect = get_npc_dialog_option_rect((x, y), i, dialogs)
+            node_id = option.get('node_id')
+            
+            if node_id != last_node:
+                title_map = {
+                    'greeting': 'Greeting',
+                    'tips': 'Tips',
+                    'lore_branch': 'Lore',
+                    'quest_branch': 'Quest'
+                }
+                raw_title = title_map.get(node_id, node_id.replace('_', ' ').title())
+                title_str = tr('dialog', raw_title)
+                
+                title_surf = font.render(title_str, True, (170, 170, 170)) 
+                surface.blit(title_surf, (col2_x, rect.y - 22))
+                last_node = node_id
+                
             is_hovered = rect.collidepoint(mouse_pos)
             color = YELLOW if is_hovered else WHITE
-            q_text = font.render(f"- {option['q']}", True, color)
-            surface.blit(q_text, (rect.x, rect.y + 5))
+            
+            # --- [NEW] Draw wrapped text for the clickable options ---
+            q_text_str = f"- {option['q']}"
+            lines = get_wrapped_lines(q_text_str, font, rect.width - 20)
+            
+            for line_idx, line in enumerate(lines):
+                q_line_surf = font.render(line, True, color)
+                surface.blit(q_line_surf, (rect.x + 10, rect.y + 5 + (line_idx * 20)))
             
     else:
         selected_opt = dialogs[active_index]
         
-        # Translated Question Label
-        q_text = font.render(f"{tr('dialog', 'You:')} {selected_opt['q']}", True, GRAY)
-        surface.blit(q_text, (col2_x, y + 50))
+        # --- [NEW] Wrap the player's question in the active view ---
+        q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
+        q_lines = get_wrapped_lines(q_text_str, font, text_area_width)
         
+        q_start_y = y + 50
+        for i, line in enumerate(q_lines):
+            line_surf = font.render(line, True, GRAY)
+            surface.blit(line_surf, (col2_x, q_start_y + (i * 20)))
+        
+        # --- [CHANGED] Dynamically push the answer text down ---
         a_text_str = f"{npc.name}: {selected_opt['a']}"
-        words = a_text_str.split(' ')
-        lines = []
-        current_line = []
-        text_area_width = width - COL_1_WIDTH - PADDING - 20
+        a_lines = get_wrapped_lines(a_text_str, font, text_area_width)
         
-        for word in words:
-            current_line.append(word)
-            test_surf = font.render(' '.join(current_line), True, WHITE)
-            if test_surf.get_width() > text_area_width:
-                current_line.pop()
-                lines.append(' '.join(current_line))
-                current_line = [word]
-        lines.append(' '.join(current_line))
-        
-        start_text_y = y + 80
-        for i, line in enumerate(lines):
+        start_text_y = q_start_y + (len(q_lines) * 20) + 10
+        for i, line in enumerate(a_lines):
             line_surf = font.render(line, True, WHITE)
             surface.blit(line_surf, (col2_x, start_text_y + (i * 20)))
             
-        # Translated Back Hint
         back_hint = font.render(tr('dialog', "[Click anywhere to go back]"), True, YELLOW)
-        hint_y = max(start_text_y + (len(lines) * 20) + 20, y + height - 30)
+        hint_y = max(start_text_y + (len(a_lines) * 20) + 20, y + height - 30)
         surface.blit(back_hint, (col2_x, hint_y))
 
     return close_button, minimize_button

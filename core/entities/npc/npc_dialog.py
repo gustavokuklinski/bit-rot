@@ -49,6 +49,9 @@ class NPCDialog:
                         
                         award_item = opt.get('award_item')
                         req_item = opt.get('req_item')
+                        rqst_item = opt.get('rqst_item')
+                        complete_flag = opt.get('complete_flag')
+                        
 
                         NPCDialog.NPC_DIALOGS[node_id].append({
                             'q': question, 
@@ -58,6 +61,8 @@ class NPCDialog:
                             'npc_state_friendly': npc_state_friendly,
                             'npc_state_static': npc_state_static,
                             'award_item': award_item,
+                            'rqst_item': rqst_item,
+                            'complete_flag': complete_flag,
                             'req_item': req_item,
                             'req_level': req_level,
                             'gain_xp': gain_xp,
@@ -80,10 +85,13 @@ class NPCDialog:
         options = []
         
         # 1. Define Mandatory Nodes
-        mandatory_nodes = {"greeting", "tips", "lore_branch"}
+        mandatory_nodes = {"greeting", "tips", "lore_branch","quest_branch"}
         
         # 2. Determine Active Nodes (Mandatory + Unlocked)
         active_nodes = mandatory_nodes.union(self.dialog_flags)
+
+        if hasattr(self.game.player, 'quests') and self.game.player.quests:
+            active_nodes.update(self.game.player.quests)
         
         # Sort the nodes
         sorted_nodes = sorted(list(active_nodes))
@@ -111,15 +119,30 @@ class NPCDialog:
                             continue
                     except: pass
                 
+                def player_has_item(item_name):
+                    # Check Inventory
+                    if any(i and i.name == item_name for i in self.game.player.inventory): return True
+                    # Check Belt
+                    if any(i and i.name == item_name for i in self.game.player.belt): return True
+                    # Check Clothes/Gear
+                    if any(i and i.name == item_name for i in self.game.player.clothes.values()): return True
+                    return False
+
                 # --- [NEW] Check req_item for Quest Turn-ins ---
                 req_item = opt.get('req_item')
                 if req_item:
-                    # Strip the brackets to check raw name
-                    item_name = req_item.replace('[', '').replace(']', '')
-                    # Validate against player inventory
-                    has_item = any(i.name == item_name for i in self.game.player.inventory)
-                    if not has_item:
-                        continue # Hide option if player doesn't have the item
+                    item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',')]
+                    if not all(player_has_item(name) for name in item_names):
+                        continue
+
+                # --- [NEW] Check rqst_item (Possession Requirement) ---
+                rqst_item = opt.get('rqst_item')
+                if rqst_item:
+                    item_names = [i.strip() for i in rqst_item.replace('[', '').replace(']', '').split(',')]
+                    
+                    # CHANGED: Use any() instead of all() so the player only needs ONE of the listed items
+                    if not any(player_has_item(name) for name in item_names):
+                        continue
                 
                 valid_options.append(opt)
 
@@ -157,3 +180,9 @@ class NPCDialog:
         if node_id:
             self.dialog_flags.add(node_id)
             print(f"NPC Dialog unlocked: {node_id}")
+            
+            # CHANGED: Removed the .startswith("quest_") requirement
+            # Now ANY unlock_flag you define in XML gets properly tracked on the Player ID!
+            if hasattr(self.game.player, 'quests'):
+                if node_id not in self.game.player.quests:
+                    self.game.player.quests.append(node_id)

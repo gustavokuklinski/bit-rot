@@ -49,6 +49,7 @@ class Item:
         self.fuel_type = fuel_type
 
         self.text = text
+        self.original_text = text
         self.attribute_modifiers = attribute_modifiers if attribute_modifiers is not None else {} 
         self.sounds = sounds if sounds is not None else {}
 
@@ -95,6 +96,34 @@ class Item:
             
         return total
 
+    def update_dynamic_text(self, player):
+        """Replaces placeholders in the item's original text dynamically."""
+        if self.original_text and ("[PLAYER" in self.original_text or "[LIST" in self.original_text):
+            text = self.original_text
+            text = text.replace("[PLAYER NAME]", str(getattr(player, 'name', 'Unknown')))
+            text = text.replace("[PLAYER SEX]", str(getattr(player, 'sex', 'Unknown')))
+            
+            traits = getattr(player, 'traits', [])
+            traits_list = "\n                - ".join(traits) if traits else "None"
+            text = text.replace("[LIST TO TRAITS]", traits_list)
+            
+            quests = getattr(player, 'quests', [])
+            completed = getattr(player, 'completed_quests', [])
+            
+            quest_strings = []
+            for q in quests:
+                status = "(Completed)" if q in completed else "(Open)"
+                quest_strings.append(f"{q} {status}")
+                
+            quests_list = "\n                - ".join(quest_strings) if quest_strings else "None"
+            text = text.replace("[LIST OF QUEST]", quests_list)
+            
+            recipes = getattr(player, 'known_recipes', [])
+            recipes_list = "\n                - ".join(recipes) if recipes else "None"
+            text = text.replace("[LIST TO RECIPES]", recipes_list)
+            
+            self.text = text
+
     def to_dict(self):
         """Serializes the item's dynamic state to a dictionary."""
         data = {
@@ -109,7 +138,7 @@ class Item:
             data['in_belt'] = self.in_belt
 
         if self.text is not None:
-            data['text'] = self.text
+            data['text'] = getattr(self, 'original_text', self.text)
 
         if getattr(self, 'tip', None) is not None:
             data['tip'] = self.tip
@@ -131,7 +160,9 @@ class Item:
         if 'state' in data: item.state = data['state']
         if 'in_belt' in data: item.in_belt = data['in_belt']
 
-        if 'text' in data: item.text = data['text']
+        if 'text' in data: 
+            item.text = data['text']
+            item.original_text = data['text']
         
         if 'color' in data: 
             item.color = tuple(data['color'])

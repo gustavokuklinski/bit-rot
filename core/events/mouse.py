@@ -47,7 +47,10 @@ def handle_mouse_down(game, event, mouse_pos):
                         # Logic: Clicking a question
                         dialogs = topmost_modal.get('dialogs', [])
                         for i in range(len(dialogs)):
-                            rect = get_npc_dialog_option_rect(topmost_modal['position'], i)
+                            
+                            # --- CHANGED: Pass `dialogs` as the 3rd argument ---
+                            rect = get_npc_dialog_option_rect(topmost_modal['position'], i, dialogs)
+                            
                             if rect.collidepoint(mouse_pos):
                                 topmost_modal['active_dialog_index'] = i
                                 
@@ -77,6 +80,50 @@ def handle_mouse_down(game, event, mouse_pos):
                                         dialog_key = f"{node_id}_{q_text}"
                                         if dialog_key not in game.player.dialog_history:
                                             game.player.dialog_history.append(dialog_key)
+
+                                # --- [NEW] 1.3 Consume req_item ---
+                                req_item_raw = selected_opt.get('req_item')
+                                if req_item_raw:
+                                    cleaned_req = req_item_raw.replace('[', '').replace(']', '')
+                                    items_to_remove = [name.strip() for name in cleaned_req.split(',')]
+                                    
+                                    for item_name in items_to_remove:
+                                        removed = False
+                                        # 1. Try removing from Inventory
+                                        for idx, inv_item in enumerate(game.player.inventory):
+                                            if inv_item and inv_item.name == item_name:
+                                                game.player.inventory.pop(idx)
+                                                removed = True
+                                                break
+                                        
+                                        # 2. Try removing from Belt
+                                        if not removed:
+                                            for idx, belt_item in enumerate(game.player.belt):
+                                                if belt_item and belt_item.name == item_name:
+                                                    game.player.belt[idx] = None
+                                                    removed = True
+                                                    break
+                                                    
+                                        # 3. Try removing from Gear
+                                        if not removed:
+                                            for slot, cloth_item in game.player.clothes.items():
+                                                if cloth_item and cloth_item.name == item_name:
+                                                    game.player.clothes[slot] = None
+                                                    removed = True
+                                                    break
+                                        
+                                        if removed:
+                                            display_message(game, f"- {item_name}")
+                                
+                                complete_flag = selected_opt.get('complete_flag')
+
+                                if complete_flag:
+                                    # Ensure the list exists just in case of old save files
+                                    if not hasattr(game.player, 'completed_quests'):
+                                        game.player.completed_quests = []
+                                        
+                                    if complete_flag not in game.player.completed_quests:
+                                        game.player.completed_quests.append(complete_flag)
 
                                 # [CHANGED] 2. Handle State Changes
                                 npc_ref = topmost_modal['npc']

@@ -62,7 +62,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
-        
+        self.quests = data.get('quests', [])
+        self.completed_quests = data.get('completed_quests', [])
         self.known_recipes = data.get('known_recipes', [])
         self.dialog_history = data.get('dialog_history', [])
 
@@ -392,7 +393,17 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 water_item, source, index, container = self.find_water_to_auto_drink()
                 if water_item:
                     self.consume_item(water_item, source, index, container, is_auto_drink=True, game=game)
-        
+
+            def _update_items_text(items):
+                for item in items:
+                    if item:
+                        if hasattr(item, 'update_dynamic_text'):
+                            item.update_dynamic_text(self)
+                        if hasattr(item, 'inventory') and item.inventory:
+                            _update_items_text(item.inventory)
+                            
+            _update_items_text(self.inventory + self.belt + list(self.clothes.values()))
+
         # --- Overweight Logic ---
         overweight_ratio = 0
         if self.max_carry_weight > 0:
