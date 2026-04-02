@@ -2,8 +2,11 @@
 **=== Bit Rot Survival Guide ===**
 
 Welcome to the Survivor Guide! Use the tabs to navigate over this.
-You can get back to this Help everytime during gameplay by pressing: ? or /.
-Press F11 to toggle Fullscreen at anytime.
+
+**Tips** 
+- You can get back to this Help everytime during gameplay by pressing: ? or /.
+- Complete your first quest talking to a NPC
+- Press F11 to toggle Fullscreen at anytime.
 
 ---
 
@@ -103,4 +106,4 @@ You have three objectives. Choose wisely, because the island is listening.
 
 * **Crafting & Maintenance**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
 
-* **Lighting**: Turn on the Mobile in your inventory or belt to see clearly at night, but be aware that light might attract unwanted attention.
+* **Mobile**: Turn on the Mobile in your inventory or belt to see clearly at night, but be aware that light might attract unwanted attention. Also use the minimap to see where are the quest items.
