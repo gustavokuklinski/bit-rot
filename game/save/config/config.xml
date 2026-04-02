@@ -45,8 +45,8 @@
     </animal>
     <npc>
         <npc_spawn_per_chunk value="50" name="Max NPC spawn on chunk (Default: 10)"/>
-        <static_percent value="0.40" name="Static NPC percentage (Default: 0.40)"/>
-        <hostile_percent value="0.60" name="Hostile NPC percentage (Default: 0.60)"/>
+        <static_percent value="1.40" name="Static NPC percentage (Default: 0.40)"/>
+        <hostile_percent value="0.00" name="Hostile NPC percentage (Default: 0.60)"/>
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 10)"/>

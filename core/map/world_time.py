@@ -198,9 +198,23 @@ class WorldTime:
         self.game.player_view_radius = self.lerp(self.night_radius, self.day_radius, fade)
         self.current_ambient_light = self.lerp(self.night_ambient, self.day_ambient, fade)
 
+        # Calculate how long one in-game hour is in milliseconds
+        one_hour_ms = self.day_length_ms / 24.0
+
         if self.weather == 'RAIN':
             self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.70)
             self.game.player_view_radius *= 0.90 
+        elif self.weather == 'CLEAR' and self.weather_timer <= one_hour_ms:
+            # Progressively darken as the storm approaches
+            # progress goes from 0.0 (exactly 1 hour away) to 1.0 (rain is starting right now)
+            progress = 1.0 - (self.weather_timer / one_hour_ms)
+            
+            # Smoothly interpolate towards the RAIN multipliers (0.70 for light, 0.90 for view)
+            storm_light_factor = self.lerp(1.0, 0.70, progress)
+            storm_view_factor = self.lerp(1.0, 0.90, progress)
+            
+            self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * storm_light_factor)
+            self.game.player_view_radius *= storm_view_factor
 
         # --- TRANSITION LOGIC ---
         if self.state != self._last_state:

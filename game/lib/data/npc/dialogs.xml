@@ -64,8 +64,8 @@
 
     <node id="quest_branch" x="779" y="133">
         <options 
-            player_question="Hello, Hola, Olá!? sir..." 
-            npc_answer="What are you with this cloth! Haha... Yeah, you can be useful to get us out of this shit. But everything have a toll, criança. Try to find the Suitcase and get a reward. You hand delivery to anyone who knows what I'm talking about. I just want to get out of here as soon as possible." 
+            player_question="Hey. You look like someone who knows a way off this rock. I'm... between contractors." 
+            npc_answer="WHa! Look at you – rags and desperation. Perfect. Listen, criança. I need a mule. There's a suitcase – old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?"
             rqst_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]" 
             priority="10" 
             gain_xp="[lucky:100]" 
@@ -75,8 +75,8 @@
 
     <node id="Find the Suitcase">
         <options
-            player_question="Have you head about some specific... I mean, wish?" 
-            npc_answer="Oh! You found it! Well, we have winning days and days to lose. You're disposable hehehe!"
+            player_question="I got your suitcase. The one with the brass locks. Now talk – what's my cut?" 
+            npc_answer="Well, well. The scarecrow delivers. Here's your payment. Don't spend it all in one grave. Some days you win, some days you lose. Today you're just... disposable. Hehehe. Now get lost before I decide you're worth more as bait."
             rqst_item="[Suitcase]"
             req_item="[Suitcase]"
             npc_state_friendly="false"

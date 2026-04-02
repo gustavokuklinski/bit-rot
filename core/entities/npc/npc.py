@@ -137,7 +137,31 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.stuck_timer = 0
         self.stuck_angle = 0
 
+        # --- [NEW] 1. Set Defaults for Freshly Spawned NPCs ---
         self.dialog_flags = set()
+        self.special_dialogs = []
+
+        # --- 2. Optional Data Overrides (for loading saves) ---
+        # Note: Check if your parameter is named 'data' or 'save_data' at the top of __init__
+        # We will use locals() to safely grab whichever one exists so it never crashes!
+        loaded_data = locals().get('data', locals().get('save_data', None))
+
+        if loaded_data:
+            self.health = loaded_data.get('health', self.max_health)
+            self.state = loaded_data.get('state', 'idle')
+            
+            if 'inventory' in loaded_data:
+                self.inventory = [item_factory.create_item_from_dict(i_data) for i_data in loaded_data['inventory']]
+            if 'belt' in loaded_data:
+                self.belt = [item_factory.create_item_from_dict(i_data) if i_data else None for i_data in loaded_data['belt']]
+            if 'clothes' in loaded_data:
+                self.clothes = {}
+                for slot, c_data in loaded_data['clothes'].items():
+                    self.clothes[slot] = item_factory.create_item_from_dict(c_data) if c_data else None
+                    
+            # --- [NEW] 3. Load Saved Memories if they exist ---
+            self.dialog_flags = set(loaded_data.get('dialog_flags', []))
+            self.special_dialogs = loaded_data.get('special_dialogs', [])
 
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
@@ -257,6 +281,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         else:
             self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
             self.mask.fill()
+
+
 
     def update(self, game):
         obstacles = game.obstacles

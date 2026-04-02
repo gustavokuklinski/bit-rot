@@ -34,6 +34,7 @@ from core.systems.utils import (
 )
 from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
+from core.map.world_time import WorldTime
 
 class Game:
     def __init__(self):
@@ -259,6 +260,8 @@ class Game:
         
         self.is_fast_forwarding = False
         self.fast_forward_speed = 50.0
+
+        self.world_time = WorldTime(self)
 
     def save_game(self):
         return save_game(self)
