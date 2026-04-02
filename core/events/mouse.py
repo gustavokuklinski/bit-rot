@@ -57,122 +57,130 @@ def handle_mouse_down(game, event, mouse_pos):
                         active_index = topmost_modal.get('active_dialog_index', -1)
                         if active_index == -1:
                             dialogs = topmost_modal.get('dialogs', [])
-                            for i in range(len(dialogs)):
-                                rect = get_npc_dialog_option_rect(topmost_modal['position'], i, dialogs)
-                                if rect.collidepoint(mouse_pos):
-                                    topmost_modal['active_dialog_index'] = i
-                                    
-                                    selected_opt = dialogs[i]
-                                    npc_ref = topmost_modal['npc']
-                                    
-                                    # --- [NEW] ANTI-EXPLOIT CHECK ---
-                                    is_once = selected_opt.get('dialog_type') == 'once'
-                                    node_id = selected_opt.get('node_id')
-                                    q_text = selected_opt.get('q')
-                                    dialog_key = f"{node_id}_{q_text}"
-                                    
-                                    if is_once and dialog_key in game.player.dialog_history:
-                                        display_message(game, f"[NPC] {npc_ref.name}: You were already awarded")
-                                    else:
-                                        # [NEW] Handle Memory Saving
-                                        if is_once and node_id and q_text:
-                                            game.player.dialog_history.append(dialog_key)
-                                                
-                                            # Store onto Global Player Journal
-                                            if not hasattr(game.player, 'special_dialogs'):
-                                                game.player.special_dialogs = []
-                                            
-                                            already_saved = any(d['q'] == q_text for d in game.player.special_dialogs)
-                                            if not already_saved:
-                                                game.player.special_dialogs.append({
-                                                    'q': q_text,
-                                                    'a': selected_opt.get('a', ''),
-                                                    'npc_name': npc_ref.name  # Save the speaker's name globally!
-                                                })
-                                                
-                                        # --- Process Unlocks, Awards, and Consumables ---
+                            scroll_offset_y = topmost_modal.get('scroll_offset_y', 0)
+                            
+                            # [NEW] Ensure click happens within the content viewport, not out of bounds
+                            content_y = topmost_modal.get('tab_rects', [pygame.Rect(0,0,0,0)])[0].bottom + 15
+                            
+                            if mouse_pos[1] >= content_y:
+                                for i in range(len(dialogs)):
+                                    # [MODIFIED] Pass the scroll offset!
+                                    rect = get_npc_dialog_option_rect(topmost_modal['position'], i, dialogs, scroll_offset_y)
+                                    if rect.collidepoint(mouse_pos):
+                                        topmost_modal['active_dialog_index'] = i
+                                        topmost_modal['scroll_offset_y'] = 0 # Reset offset for the next view
                                         
-                                        # 1. Unlock future dialog nodes
-                                        if selected_opt.get('unlock_flag'):
-                                            npc_ref.unlock_node(selected_opt['unlock_flag'])
+                                        selected_opt = dialogs[i]
+                                        npc_ref = topmost_modal['npc']
+                                        
+                                        # --- [NEW] ANTI-EXPLOIT CHECK ---
+                                        is_once = selected_opt.get('dialog_type') == 'once'
+                                        node_id = selected_opt.get('node_id')
+                                        q_text = selected_opt.get('q')
+                                        dialog_key = f"{node_id}_{q_text}"
+                                        
+                                        if is_once and dialog_key in game.player.dialog_history:
+                                            display_message(game, f"[NPC] {npc_ref.name}: You were already awarded")
+                                        else:
+                                            # [NEW] Handle Memory Saving
+                                            if is_once and node_id and q_text:
+                                                game.player.dialog_history.append(dialog_key)
+                                                    
+                                                # Store onto Global Player Journal
+                                                if not hasattr(game.player, 'special_dialogs'):
+                                                    game.player.special_dialogs = []
+                                                
+                                                already_saved = any(d['q'] == q_text for d in game.player.special_dialogs)
+                                                if not already_saved:
+                                                    game.player.special_dialogs.append({
+                                                        'q': q_text,
+                                                        'a': selected_opt.get('a', ''),
+                                                        'npc_name': npc_ref.name  # Save the speaker's name globally!
+                                                    })
+                                                    
+                                            # --- Process Unlocks, Awards, and Consumables ---
                                             
-                                        # 2. Consume Quest Items (if required)
-                                        if selected_opt.get('req_item'):
-                                            item_names = [i.strip() for i in selected_opt['req_item'].replace('[', '').replace(']', '').split(',')]
-                                            for i_name in item_names:
-                                                # Try removing from inventory
-                                                removed = False
-                                                for idx, slot in enumerate(game.player.inventory):
-                                                    if slot and slot.name == i_name:
-                                                        item_to_give = game.player.inventory.pop(idx) # Properly remove from list
-                                                        npc_ref.inventory.append(item_to_give) # Transfer item to NPC
-                                                        removed = True
-                                                        break
-                                                # If not in inventory, check the belt
-                                                if not removed:
-                                                    for idx, slot in enumerate(game.player.belt):
+                                            # 1. Unlock future dialog nodes
+                                            if selected_opt.get('unlock_flag'):
+                                                npc_ref.unlock_node(selected_opt['unlock_flag'])
+                                                
+                                            # 2. Consume Quest Items (if required)
+                                            if selected_opt.get('req_item'):
+                                                item_names = [i.strip() for i in selected_opt['req_item'].replace('[', '').replace(']', '').split(',')]
+                                                for i_name in item_names:
+                                                    # Try removing from inventory
+                                                    removed = False
+                                                    for idx, slot in enumerate(game.player.inventory):
                                                         if slot and slot.name == i_name:
-                                                            item_to_give = game.player.belt[idx]
-                                                            game.player.belt[idx] = None
-                                                            item_to_give.in_belt = False
-                                                            # Unequip if it was in the hands
-                                                            if game.player.active_weapon == item_to_give:
-                                                                game.player.active_weapon = None
+                                                            item_to_give = game.player.inventory.pop(idx) # Properly remove from list
                                                             npc_ref.inventory.append(item_to_give) # Transfer item to NPC
+                                                            removed = True
                                                             break
+                                                    # If not in inventory, check the belt
+                                                    if not removed:
+                                                        for idx, slot in enumerate(game.player.belt):
+                                                            if slot and slot.name == i_name:
+                                                                item_to_give = game.player.belt[idx]
+                                                                game.player.belt[idx] = None
+                                                                item_to_give.in_belt = False
+                                                                # Unequip if it was in the hands
+                                                                if game.player.active_weapon == item_to_give:
+                                                                    game.player.active_weapon = None
+                                                                npc_ref.inventory.append(item_to_give) # Transfer item to NPC
+                                                                break
 
-                                        # 3. Award Item(s) to Player
-                                        if selected_opt.get('award_item'):
-                                            item_names = [i.strip() for i in selected_opt['award_item'].replace('[', '').replace(']', '').split(',')]
-                                            for i_name in item_names:
-                                                new_item = Item.create_from_name(i_name)
-                                                if new_item:
-                                                    placed = False
-                                                    if len(game.player.inventory) < game.player.base_inventory_slots:
-                                                        game.player.inventory.append(new_item)
-                                                        placed = True
-                                                    if not placed:
-                                                        new_item.rect.center = game.player.rect.center
-                                                        game.items_on_ground.append(new_item)
-                                                    display_message(game, f"{tr('msg', 'Received')}: {i_name}")
+                                            # 3. Award Item(s) to Player
+                                            if selected_opt.get('award_item'):
+                                                item_names = [i.strip() for i in selected_opt['award_item'].replace('[', '').replace(']', '').split(',')]
+                                                for i_name in item_names:
+                                                    new_item = Item.create_from_name(i_name)
+                                                    if new_item:
+                                                        placed = False
+                                                        if len(game.player.inventory) < game.player.base_inventory_slots:
+                                                            game.player.inventory.append(new_item)
+                                                            placed = True
+                                                        if not placed:
+                                                            new_item.rect.center = game.player.rect.center
+                                                            game.items_on_ground.append(new_item)
+                                                        display_message(game, f"{tr('msg', 'Received')}: {i_name}")
 
-                                        # --- 4. Quest Completion ---
-                                        if selected_opt.get('complete_flag'):
-                                            comp_flag = selected_opt['complete_flag']
-                                            if hasattr(game.player, 'quests') and comp_flag in game.player.quests:
-                                                game.player.quests.remove(comp_flag)
-                                                if not hasattr(game.player, 'completed_quests'):
-                                                    game.player.completed_quests = []
-                                                game.player.completed_quests.append(comp_flag)
-                                                display_message(game, f"{tr('msg', 'Quest Completed')}: {comp_flag}")
+                                            # --- 4. Quest Completion ---
+                                            if selected_opt.get('complete_flag'):
+                                                comp_flag = selected_opt['complete_flag']
+                                                if hasattr(game.player, 'quests') and comp_flag in game.player.quests:
+                                                    game.player.quests.remove(comp_flag)
+                                                    if not hasattr(game.player, 'completed_quests'):
+                                                        game.player.completed_quests = []
+                                                    game.player.completed_quests.append(comp_flag)
+                                                    display_message(game, f"{tr('msg', 'Quest Completed')}: {comp_flag}")
 
-                                        # --- 5. Gain XP ---
-                                        if selected_opt.get('gain_xp'):
-                                            xp_str = selected_opt['gain_xp'].replace('[', '').replace(']', '')
-                                            if ':' in xp_str:
-                                                attr, amt = xp_str.split(':', 1)
-                                                try:
-                                                    game.player.progression.add_xp(game.player, attr.strip(), int(amt))
-                                                    #display_message(game, f"+{amt} {attr.capitalize()} XP")
-                                                except ValueError:
-                                                    pass
+                                            # --- 5. Gain XP ---
+                                            if selected_opt.get('gain_xp'):
+                                                xp_str = selected_opt['gain_xp'].replace('[', '').replace(']', '')
+                                                if ':' in xp_str:
+                                                    attr, amt = xp_str.split(':', 1)
+                                                    try:
+                                                        game.player.progression.add_xp(game.player, attr.strip(), int(amt))
+                                                        #display_message(game, f"+{amt} {attr.capitalize()} XP")
+                                                    except ValueError:
+                                                        pass
 
-                                        # --- 6. NPC State Changes ---
-                                        if selected_opt.get('npc_state_friendly') is not None:
-                                            npc_ref.is_friendly = str(selected_opt['npc_state_friendly']).lower() == 'true'
-                                            if not npc_ref.is_friendly:
-                                                npc_ref.state = 'chasing'
-                                                npc_ref.aggro_timer = 5000
-                                                npc_ref.current_attacker = game.player
+                                            # --- 6. NPC State Changes ---
+                                            if selected_opt.get('npc_state_friendly') is not None:
+                                                npc_ref.is_friendly = str(selected_opt['npc_state_friendly']).lower() == 'true'
+                                                if not npc_ref.is_friendly:
+                                                    npc_ref.state = 'chasing'
+                                                    npc_ref.aggro_timer = 5000
+                                                    npc_ref.current_attacker = game.player
 
-                                        if selected_opt.get('npc_state_static') is not None:
-                                            npc_ref.is_static = str(selected_opt['npc_state_static']).lower() == 'true'
-                                            if not npc_ref.is_static:
-                                                npc_ref.state = 'wandering'
-                                    
-                                    # Refresh the dialog options list immediately so the used 'once' dialog vanishes 
-                                    # topmost_modal['dialogs'] = npc_ref.get_dialog_options()
-                                    break
+                                            if selected_opt.get('npc_state_static') is not None:
+                                                npc_ref.is_static = str(selected_opt['npc_state_static']).lower() == 'true'
+                                                if not npc_ref.is_static:
+                                                    npc_ref.state = 'wandering'
+                                        
+                                        # Refresh the dialog options list immediately so the used 'once' dialog vanishes 
+                                        # topmost_modal['dialogs'] = npc_ref.get_dialog_options()
+                                        break
                         else:
                             topmost_modal['active_dialog_index'] = -1
                             

@@ -417,7 +417,14 @@ def load_game(game, save_folder_name):
                     game.player.clothes[slot] = Item.create_from_name(item_data)
             else:
                 game.player.clothes[slot] = None
-
+        
+        game.player.quests = player_data.get('quests', [])
+        game.player.completed_quests = player_data.get('completed_quests', [])
+        # If your game code strictly requires dialog_history to be a set, use set(player_data.get('dialog_history', [])) here instead. 
+        # But lists work fine natively with `in` checks.
+        game.player.dialog_history = player_data.get('dialog_history', [])
+        game.player.special_dialogs = player_data.get('special_dialogs', [])
+        
         with open(os.path.join(save_path, "world.rot"), "r") as f:
             world_data = json.load(f)
         

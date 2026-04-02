@@ -26,10 +26,10 @@ def get_wrapped_lines(text, font, max_width):
         lines.append(' '.join(current_line))
     return lines
 
-def get_npc_dialog_option_rect(modal_pos, index, dialogs):
+def get_npc_dialog_option_rect(modal_pos, index, dialogs, scroll_offset_y=0):
     x, y = modal_pos
     start_x = x + COL_1_WIDTH + PADDING
-    start_y = y + 80  # [CHANGED] Shifted downwards to accommodate Tabs
+    start_y = y + 80 - scroll_offset_y  # Subtract the offset so it scrolls up
     option_width = NPC_DIALOG_MODAL_WIDTH - COL_1_WIDTH - PADDING - 20
     
     extra_y = 0
@@ -142,11 +142,32 @@ def draw_npc_dialog_modal(surface, modal, game):
             active_index = -1
             modal['active_dialog_index'] = -1
             
+        # Determine scrollbar viewport
+        viewport_height = height - (content_y - y) - PADDING
+            
         if active_index == -1:
             mouse_pos = pygame.mouse.get_pos()
+            
+            # --- Calculate Total Height for Scrollbar ---
+            total_height = 0
+            if dialogs:
+                last_rect = get_npc_dialog_option_rect((x, y), len(dialogs) - 1, dialogs, 0)
+                total_height = last_rect.bottom - (y + 80)
+                
+            max_scroll = max(0, total_height - viewport_height)
+            modal['max_scroll_offset'] = max_scroll
+            scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
+            modal['scroll_offset_y'] = scroll_offset_y
+
+            # --- Apply Surface Clipping ---
+            clip_rect = pygame.Rect(col2_x, content_y, text_area_width + 15, viewport_height)
+            original_clip = surface.get_clip()
+            surface.set_clip(clip_rect)
+
             last_node = None
             for i, option in enumerate(dialogs):
-                rect = get_npc_dialog_option_rect((x, y), i, dialogs)
+                # Pass scroll_offset_y here!
+                rect = get_npc_dialog_option_rect((x, y), i, dialogs, scroll_offset_y)
                 node_id = option.get('node_id')
                 
                 if node_id != last_node:
@@ -167,27 +188,73 @@ def draw_npc_dialog_modal(surface, modal, game):
                 for line_idx, line in enumerate(lines):
                     q_line_surf = font.render(line, True, color)
                     surface.blit(q_line_surf, (rect.x + 10, rect.y + 5 + (line_idx * 20)))
+
+            # Restore original clip so we don't mess up other rendering
+            surface.set_clip(original_clip)
+            
+            # --- Draw the visible Scrollbar ---
+            if max_scroll > 0:
+                bar_w = 8
+                bar_x = col2_x + text_area_width + 2
+                bar_y = content_y
+                bar_h = viewport_height
+                pygame.draw.rect(surface, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
+                
+                handle_h = max(20, (viewport_height / total_height) * bar_h)
+                handle_y = bar_y + (scroll_offset_y / max_scroll) * (bar_h - handle_h)
+                handle_rect = pygame.Rect(bar_x, handle_y, bar_w, handle_h)
+                pygame.draw.rect(surface, GRAY_60, handle_rect)
+                modal['scrollbar_handle_rect'] = handle_rect
                 
         else:
             selected_opt = dialogs[active_index]
             q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
             q_lines = get_wrapped_lines(q_text_str, font, text_area_width)
             
-            for i, line in enumerate(q_lines):
-                line_surf = font.render(line, True, GRAY)
-                surface.blit(line_surf, (col2_x, content_y + (i * 20)))
-            
             a_text_str = f"{npc.name}: {selected_opt['a']}"
             a_lines = get_wrapped_lines(a_text_str, font, text_area_width)
             
-            start_text_y = content_y + (len(q_lines) * 20) + 10
+            # --- Calculate Total Height for Scrollbar ---
+            total_height = (len(q_lines) * 20) + 10 + (len(a_lines) * 20) + 40
+            max_scroll = max(0, total_height - viewport_height)
+            modal['max_scroll_offset'] = max_scroll
+            scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
+            modal['scroll_offset_y'] = scroll_offset_y
+            
+            clip_rect = pygame.Rect(col2_x, content_y, text_area_width + 15, viewport_height)
+            original_clip = surface.get_clip()
+            surface.set_clip(clip_rect)
+            
+            draw_y = content_y - scroll_offset_y
+            
+            for i, line in enumerate(q_lines):
+                line_surf = font.render(line, True, GRAY)
+                surface.blit(line_surf, (col2_x, draw_y + (i * 20)))
+            
+            start_text_y = draw_y + (len(q_lines) * 20) + 10
             for i, line in enumerate(a_lines):
                 line_surf = font.render(line, True, WHITE)
                 surface.blit(line_surf, (col2_x, start_text_y + (i * 20)))
                 
             back_hint = font.render(tr('dialog', "[Click anywhere to go back]"), True, YELLOW)
-            hint_y = max(start_text_y + (len(a_lines) * 20) + 20, y + height - 30)
+            hint_y = start_text_y + (len(a_lines) * 20) + 20
             surface.blit(back_hint, (col2_x, hint_y))
+            
+            surface.set_clip(original_clip)
+            
+            # --- Draw Scrollbar ---
+            if max_scroll > 0:
+                bar_w = 8
+                bar_x = col2_x + text_area_width + 2
+                bar_y = content_y
+                bar_h = viewport_height
+                pygame.draw.rect(surface, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
+                
+                handle_h = max(20, (viewport_height / total_height) * bar_h)
+                handle_y = bar_y + (scroll_offset_y / max_scroll) * (bar_h - handle_h)
+                handle_rect = pygame.Rect(bar_x, handle_y, bar_w, handle_h)
+                pygame.draw.rect(surface, GRAY_60, handle_rect)
+                modal['scrollbar_handle_rect'] = handle_rect
 
     elif active_tab == 1:
         draw_special_dialogs_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)

@@ -71,6 +71,11 @@ def save_game(game):
             "inventory": [item.to_dict() if hasattr(item, 'to_dict') else item for item in game.player.inventory if item],
             "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in game.player.belt],
             "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item)) if item else None for slot, item in game.player.clothes.items()},
+
+            "quests": getattr(game.player, 'quests', []),
+            "completed_quests": getattr(game.player, 'completed_quests', []),
+            "dialog_history": list(getattr(game.player, 'dialog_history', [])),
+            "special_dialogs": getattr(game.player, 'special_dialogs', [])
         }
 
         with open(os.path.join(save_path, "host.rot"), "w") as f:
