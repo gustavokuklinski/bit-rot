@@ -264,4 +264,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         if fits:
                             new_item.inventory.append(loot_item)
     
+    if template.get('type') == 'quest':
+        new_item.spawn_amount_global = template.get('spawn_amount_global', 1)
+        new_item.spawn_maptile = template.get('spawn_maptile', [])
+        new_item.spawn_layer = template.get('spawn_layer', [])
+    
     return new_item

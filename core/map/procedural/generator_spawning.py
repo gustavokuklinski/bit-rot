@@ -231,6 +231,72 @@ class ProceduralGeneratorSpawning:
             
         print(f"  > Vehicle Scatter: Placed {count_to_spawn} vehicles on Roads/Paths.")
     
+
+    def _scatter_quest_items(self, layers, mask, w, h, current_layer):
+        """
+        Dynamically distributes 'quest' type items across the map based on XML constraints.
+        """
+        from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
+        
+        if not ITEM_TEMPLATES:
+            load_item_templates_data()
+            
+        # [NEW] Track spawned items globally across layers (L1 and L2)
+        if not hasattr(self, 'quest_items_spawned'):
+            self.quest_items_spawned = {}
+            
+        for item_name, data in ITEM_TEMPLATES.items():
+            if data.get('type') != 'quest':
+                continue
+            
+            # 1. Enforce Layer constraint
+            allowed_layers = data.get('spawn_layer', [])
+            if allowed_layers and current_layer not in allowed_layers:
+                continue
+            
+            max_spawn = data.get('spawn_amount_global', 1)
+            spawned_so_far = self.quest_items_spawned.get(item_name, 0)
+            remaining_to_spawn = max_spawn - spawned_so_far
+            
+            # Stop trying if we've already hit the global limit on a previous layer
+            if remaining_to_spawn <= 0:
+                continue
+                
+            allowed_tiles = data.get('spawn_maptile', [])
+            valid_spots = []
+            
+            # 2. Scan map for valid maptiles/containers
+            for y in range(h):
+                for x in range(w):
+                    # Only spawn on empty spawn tiles
+                    if layers['spawn'][y][x] != ' ': 
+                        continue
+                    
+                    ground_tile = layers['ground'][y][x]
+                    base_tile = layers['base'][y][x]
+                    
+                    # Match tile names against allowed XML maptiles directly!
+                    if allowed_tiles:
+                        if any(t in ground_tile for t in allowed_tiles) or any(t in base_tile for t in allowed_tiles):
+                            valid_spots.append((x, y))
+                    else:
+                        # Fallback if XML doesn't specify a spawn_maptile
+                        # You could add logic here to allow them to spawn on generic interior floors
+                        pass
+                        
+            # 3. Scatter up to the global limit
+            if valid_spots:
+                chosen_spots = random.sample(valid_spots, min(remaining_to_spawn, len(valid_spots)))
+                for cx, cy in chosen_spots:
+                    layers['spawn'][cy][cx] = f"QI_{item_name}"
+                
+                # Update global tracker
+                self.quest_items_spawned[item_name] = spawned_so_far + len(chosen_spots)
+                print(f"  > Quest Scatter [Layer {current_layer}]: Placed {len(chosen_spots)} '{item_name}' (Total: {self.quest_items_spawned[item_name]}/{max_spawn}).")
+            else:
+                # [FIX] Always print an output so you know it attempted to spawn the item
+                print(f"  > Quest Scatter [Layer {current_layer}]: Placed 0 '{item_name}'. (No valid '{allowed_tiles}' spots generated on this map layer)")
+
     def _scatter_animals(self, layers, mask, w, h):
         """
         [NEW] Scatter Animals ('ANM') based on ANIMAL_SPAWN_COUNT.

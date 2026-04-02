@@ -4,9 +4,11 @@ import pygame
 import math
 import os
 import re
+import time
 from core.data.config import *
 from core.ui.modals import BaseModal
 from core.map.map_loader import load_map_from_file
+from core.entities.npc.npc_dialog import NPCDialog
 
 # Define colors for the minimap
 MINIMAP_COLORS = {
@@ -222,7 +224,7 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     # Distinct cache keys prevent overwriting between Map Item and Mobile tabs
     cache_key = 'cached_minimap_full' if full_map else 'cached_minimap_chunk'
     
-    # [NEW] Check for layer changes AND chunk map file changes
+    # Check for layer changes AND chunk map file changes
     needs_update = False
     if cache_key not in modal:
         needs_update = True
@@ -237,8 +239,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
         modal['cached_map_file'] = current_map_file
 
     cached_surf = modal.get(cache_key)
-
-    cached_surf = modal.get(cache_key)
     
     if cached_surf:
         map_zoom = int(modal['map_zoom'])
@@ -248,14 +248,17 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
         player_grid_y = game.player.rect.centery // TILE_SIZE
 
         # Offset the player's grid tile if we are on the full map stitched grid
+        gx_offset, gy_offset = 0, 0
         if full_map and not getattr(game, 'is_giant_map', False):
             current_map = game.map_manager.current_map_filename
             match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map)
             if match:
                 gx, gy = int(match.group(1)), int(match.group(2))
                 chunk_size = getattr(game, 'CHUNK_SIZE', 32)
-                player_grid_x += (gx * chunk_size)
-                player_grid_y += (gy * chunk_size)
+                gx_offset = (gx * chunk_size)
+                gy_offset = (gy * chunk_size)
+                player_grid_x += gx_offset
+                player_grid_y += gy_offset
 
         tiles_in_view_w = map_area_rect.width / map_zoom
         tiles_in_view_h = map_area_rect.height / map_zoom
@@ -296,6 +299,66 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
         if map_area_rect.collidepoint(player_rect.center):
             pygame.draw.rect(surface, MINIMAP_PLAYER_COLOR, player_rect, 0)
             pygame.draw.rect(surface, (0, 0, 0), player_rect, 1)
+
+        # --- [NEW] Draw Dynamic Quest Markers ---
+        if hasattr(game.player, 'quests'):
+            if NPCDialog.NPC_DIALOGS is None:
+                NPCDialog.load_dialogs()
+                
+            active_req_items = set()
+            
+            # 1. Identify which items the player is tasked to find
+            for node_id in game.player.quests:
+                options = NPCDialog.NPC_DIALOGS.get(node_id, [])
+                for opt in options:
+                    dialog_key = f"{node_id}_{opt['q']}"
+                    # If this specific dialog option has NOT been spoken/concluded yet
+                    if dialog_key not in getattr(game.player, 'dialog_history', []):
+                        req_item = opt.get('req_item')
+                        if req_item:
+                            item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',')]
+                            active_req_items.update(item_names)
+            
+            if active_req_items:
+                quest_locations = []
+                
+                # 2. Scan world items and containers for the active quest requirements
+                for item in getattr(game, 'items_on_ground', []) + getattr(game, 'visible_items', []):
+                    if item.name in active_req_items:
+                        quest_locations.append((item.rect.centerx, item.rect.centery))
+                
+                for container in getattr(game, 'containers', []) + getattr(game, 'visible_containers', []):
+                    if hasattr(container, 'inventory'):
+                        for item in container.inventory:
+                            if item and item.name in active_req_items:
+                                quest_locations.append((container.rect.centerx, container.rect.centery))
+                                break # Prevent overlapping markers for the same container
+                
+                # 3. Draw the markers dynamically over the map
+                pulse = (math.sin(time.time() * 5) + 1) / 2 # Generates a smooth 0.0 to 1.0 pulse wave
+
+                for qx, qy in quest_locations:
+                    q_grid_x = (qx // TILE_SIZE) + gx_offset
+                    q_grid_y = (qy // TILE_SIZE) + gy_offset
+                    
+                    screen_q_x = map_area_rect.x + (q_grid_x - src_x) * map_zoom
+                    screen_q_y = map_area_rect.y + (q_grid_y - src_y) * map_zoom
+                    
+                    q_center_x = screen_q_x + (map_zoom / 2)
+                    q_center_y = screen_q_y + (map_zoom / 2)
+                    
+                    if map_area_rect.collidepoint(q_center_x, q_center_y):
+                        # Pulsating marker base
+                        marker_radius = max(6, int(map_zoom)) + (pulse * 3)
+                        pygame.draw.circle(surface, (255, 215, 0), (int(q_center_x), int(q_center_y)), int(marker_radius))
+                        pygame.draw.circle(surface, (0, 0, 0), (int(q_center_x), int(q_center_y)), int(marker_radius), 1)
+                        
+                        # Add the '!' in the center
+                        if 'font_14' in globals():
+                            excl_surf = font_14.render("!", True, (0, 0, 0))
+                            excl_rect = excl_surf.get_rect(center=(int(q_center_x), int(q_center_y)))
+                            surface.blit(excl_surf, excl_rect)
+
 
     # --- 5. Draw Zoom Buttons ---
     button_y = map_area_rect.bottom + 10

@@ -30,9 +30,30 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
         allow_belt_str = root.attrib.get('allow_belt', 'false')
         allow_belt = (allow_belt_str.lower() == 'true')
 
+        spawn_amount_str = root.attrib.get('spawn_amount_global', '1')
+        spawn_amount_global = int(spawn_amount_str)
+
+        spawn_maptile_str = root.attrib.get('spawn_maptile')
+        spawn_maptile = [t.strip() for t in spawn_maptile_str.replace('[', '').replace(']', '').split(',')] if spawn_maptile_str else []
+
+        spawn_layer_str = root.attrib.get('spawn_layer')
+        spawn_layer = [int(t.strip()) for t in spawn_layer_str.replace('[', '').replace(']', '').split(',')] if spawn_layer_str else []
+
         state = root.attrib.get('state')
         tip = root.attrib.get('tip')
-        template = {'type': ttype, 'properties': {}, 'state': state, 'disposable': disposable, 'liquid': liquid, 'allow_liquid': allow_liquid, 'allow_belt': allow_belt, 'tip': tip}
+        template = {
+            'type': ttype, 
+            'properties': {}, 
+            'state': state, 
+            'disposable': disposable, 
+            'liquid': liquid, 
+            'allow_liquid': allow_liquid, 
+            'allow_belt': allow_belt, 
+            'tip': tip,
+            'spawn_amount_global': spawn_amount_global,
+            'spawn_maptile': spawn_maptile,            
+            'spawn_layer': spawn_layer                 
+        }
 
         props_node = root.find('properties')
         if props_node is not None:

@@ -495,6 +495,10 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         print("Scattering Animals (L1)...")
         self._scatter_animals(global_layers, None, global_tiles_w, global_tiles_h)
         
+        print("Scattering Quest Items (L1)...")
+        if hasattr(self, '_scatter_quest_items'):
+            self._scatter_quest_items(global_layers, None, global_tiles_w, global_tiles_h, 1)
+
         # Re-render L1 heat map to show vehicles AND animals
         self._render_full_map_to_surface(full_map_surface, heat_map_surface, global_layers)
         
@@ -534,6 +538,9 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 
                 if hasattr(self, '_scatter_animals'):
                     self._scatter_animals(chunk_layers_l2, chunk_mask_l2, c_w, c_h)
+
+                if hasattr(self, '_scatter_quest_items'):
+                    self._scatter_quest_items(chunk_layers_l2, chunk_mask_l2, c_w, c_h, 2)
 
                 # Paste fully processed chunk back into the global_layers_l2 matrix for map preview/rendering
                 for layer_key, layer_grid in chunk_layers_l2.items():

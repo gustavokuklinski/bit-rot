@@ -2,9 +2,9 @@
     name="Laptop" 
     type="quest" 
     allow_belt="false"
-    tip="This item is used for quest" 
+    tip="Research can be tradeable"
     spawn_amount_global="10"
-    spawn_maptile_type="house_small_library"
+    spawn_maptile="[house_small_library]"
     spawn_layer="[1, 2]">
     <properties>
         <weight weight="1.5" />

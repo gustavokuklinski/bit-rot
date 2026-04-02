@@ -190,7 +190,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
 
     # 3. Process Spawn Layer (P, Z, NPC, and Specific Items)
     possible_player_spawns = []
-    
+    quest_item_spawns = []
     # Ensure ITEM_TEMPLATES is loaded for item checking
     if not ITEM_TEMPLATES:
         load_item_templates_data()
@@ -227,6 +227,12 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     pass
                 elif char == 'ANM':
                     pass
+                elif char.startswith('QI_'): 
+                    item_name = char[3:].strip()
+                    if item_name in ITEM_TEMPLATES:
+                        quest_item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, item_name))
+                    else:
+                        print(f"Warning: Quest item '{item_name}' not found in templates.")
                 else:
                     # [UPDATED] Clean up state tags like ' on' and ' off' to verify base item names
                     base_name = char.replace(' on', '').replace(' off', '').strip()
@@ -290,6 +296,30 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     roof_renderables.append((tile_def['image'], rect, (x, y)))
                 else:
                     print(f"Warning: Undefined roof tile character '{char}' at ({x},{y}).")
+
+    for qx, qy, qname in quest_item_spawns:
+        q_rect = pygame.Rect(qx, qy, TILE_SIZE, TILE_SIZE)
+        placed = False
+        
+        for container in containers:
+            # If a container shares this exact tile location
+            if container.rect.colliderect(q_rect):
+                q_item = Item.create_from_name(qname)
+                if q_item:
+                    # Push it into the container's inventory
+                    if hasattr(container, 'inventory'):
+                        container.inventory.append(q_item)
+                    elif hasattr(container, 'items'): # Fallback structure
+                        container.items.append(q_item)
+                        
+                placed = True
+                print(f"  > Injected quest item '{qname}' into container '{container.name}' at ({qx}, {qy})")
+                break
+        
+        # Fallback: if the container was destroyed or missing, safely drop it on the ground
+        if not placed:
+            item_spawns.append((qx, qy, qname))
+            print(f"  > Dropped quest item '{qname}' on ground at ({qx}, {qy}) (Container not found)")
 
     if not player_spawn:
         print("Warning: No player spawn ('P') defined in spawn layer.")

@@ -5,6 +5,7 @@ from core.ui.tabs import Tabs
 from core.ui.status_status_tab import draw_status_tab
 from core.ui.status_health_tab import draw_health_tab
 from core.ui.status_record_tab import draw_record_tab
+from core.ui.status_quests_tab import draw_quests_tab # [NEW] Import the new tab
 
 def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos, game=None):
     base_modal = BaseModal(surface, modal, assets, "Player Status (H)")
@@ -18,7 +19,8 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     tabs_data = [
         {'label': 'Health', 'icon_path': SPRITE_PATH + 'ui/hp.png'},
         {'label': 'Status', 'icon_path': SPRITE_PATH + 'ui/status.png'},
-        {'label': 'Record', 'icon_path': SPRITE_PATH + 'ui/xp.png'}
+        {'label': 'Record', 'icon_path': SPRITE_PATH + 'ui/xp.png'},
+        {'label': 'Quests', 'icon_path': SPRITE_PATH + 'ui/quest.png'} # [NEW] Added Quests tab
     ]
 
     modal['tabs_data'] = tabs_data
@@ -34,5 +36,8 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     
     elif modal['active_tab'] == 'Record':
         draw_record_tab(surface, player, modal, assets, mouse_pos)
+        
+    elif modal['active_tab'] == 'Quests': # [NEW] Route to quests drawing function
+        draw_quests_tab(surface, player, modal, assets, mouse_pos)
 
     return close_button, minimize_button

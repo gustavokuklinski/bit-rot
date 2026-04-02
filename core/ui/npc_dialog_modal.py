@@ -136,6 +136,12 @@ def draw_npc_dialog_modal(surface, modal, game):
 
     if active_tab == 0:
         active_index = modal.get('active_dialog_index', -1)
+        
+        # [FIX 2] Prevent crash if a new NPC has fewer dialogs than the previous one
+        if active_index >= len(dialogs):
+            active_index = -1
+            modal['active_dialog_index'] = -1
+            
         if active_index == -1:
             mouse_pos = pygame.mouse.get_pos()
             last_node = None
