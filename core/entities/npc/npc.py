@@ -9,6 +9,7 @@ from core.entities.zombie.zombie import Zombie
 from core.messages import display_message
 from core.data.config import *
 from faker import Faker
+from core.entities.npc.npc_dialog import NPCDialog
 
 # Mixins
 from core.entities.npc.npc_data import NPCData
@@ -26,6 +27,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
     def __init__(self, x, y, game, is_static=False, layer=None):
         if not NPCData.NPC_TEMPLATES:
             NPCData.load_templates()
+            
+        if NPCDialog.NPC_DIALOGS is None:
+            NPCDialog.load_dialogs(game)
 
         if NPCData.NPC_TEMPLATES:
             available_templates = []

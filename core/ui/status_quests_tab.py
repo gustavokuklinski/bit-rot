@@ -1,12 +1,13 @@
 import pygame
 import os
+import json
 import xml.etree.ElementTree as ET
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
 from core.entities.item.item import Item
 from core.data.localization import tr
+from core.entities.npc.npc_dialog import NPCDialog # [NEW] Import to access the file path
 
-# Module-level cache to parse the XML only once
 _QUESTS_CACHE = None
 
 def load_quests():
@@ -16,65 +17,83 @@ def load_quests():
         
     _QUESTS_CACHE = []
     
-    # Check for dialogs.xml, fallback to dialog.xml just in case
+    # 1. Load Standard Handcrafted Quests from XML
     dialogs_path = os.path.join(DATA_PATH, 'npc/dialogs.xml')
-    if not os.path.exists(dialogs_path):
-        if not os.path.exists(dialogs_path):
-            print(f"Warning: Could not find dialogs.xml at {DATA_PATH}")
-            return _QUESTS_CACHE
-        
-    try:
-        tree = ET.parse(dialogs_path)
-        root = tree.getroot()
-        
-        # Use .iter('node') to safely find all <node> elements regardless of XML nesting depth
-        for node in root.iter('node'):
-            node_id = node.get('id', '')
-            
-            # Case-insensitive check just in case it's written as "quest:" or "Quest:"
-            if node_id.lower().startswith('quest:'):
-                # Safely slice off the prefix (6 characters) and strip whitespace
-                quest_name = node_id[6:].strip() 
-                
-                raw_item_str = None
-                tip = "No tip provided"
-                complete_flag = quest_name
-                
-                # Iterate over ALL option tags in the node.
-                for options in node.findall('options') + node.findall('option'):
-                    if options.get('rqst_item'):
-                        raw_item_str = options.get('rqst_item')
-                    elif not raw_item_str and options.get('award_item'):
-                        raw_item_str = options.get('award_item')
+    if os.path.exists(dialogs_path):
+        try:
+            tree = ET.parse(dialogs_path)
+            root = tree.getroot()
+            for node in root.iter('node'):
+                node_id = node.get('id', '')
+                if node_id.lower().startswith('quest:'):
+                    quest_name = node_id[6:].strip() 
+                    raw_item_str = None
+                    tip = "No tip provided"
+                    complete_flag = quest_name
+                    
+                    for options in node.findall('options') + node.findall('option'):
+                        if options.get('rqst_item'): raw_item_str = options.get('rqst_item')
+                        elif not raw_item_str and options.get('award_item'): raw_item_str = options.get('award_item')
+                        if options.get('tip'): tip = options.get('tip')
+                        if options.get('complete_flag'): complete_flag = options.get('complete_flag').strip()
                         
-                    if options.get('tip'):
-                        tip = options.get('tip')
+                    rqst_item = None
+                    if raw_item_str:
+                        cleaned_str = raw_item_str.replace('[', '').replace(']', '')
+                        rqst_item = cleaned_str.split(',')[0].strip()
                         
-                    if options.get('complete_flag'):
-                        complete_flag = options.get('complete_flag').strip()
+                    item = Item.create_from_name(rqst_item) if rqst_item else None
+                        
+                    _QUESTS_CACHE.append({
+                        'node_id': node_id,  
+                        'name': quest_name,
+                        'rqst_item_name': rqst_item,
+                        'item_obj': item,
+                        'tip': tip,
+                        'complete_flag': complete_flag
+                    })
+        except Exception as e:
+            print(f"Error loading quests from dialogs.xml: {e}")
+
+    # 2. Load Procedural Quests directly from the dynamic quests.rot
+    # Rely on the path securely resolved by NPCDialog
+    quests_rot_path = NPCDialog.QUESTS_FILE_PATH
+    
+    if quests_rot_path and os.path.exists(quests_rot_path):
+        try:
+            with open(quests_rot_path, 'r') as f:
+                proc_data = json.load(f)
+                
+            for node_id, options in proc_data.get("nodes", {}).items():
+                if not any(q['node_id'] == node_id for q in _QUESTS_CACHE):
+                    quest_name = node_id[6:].strip().replace("_", " ") 
                     
-                rqst_item = None
-                if raw_item_str:
-                    # Strip the '[' and ']' brackets, and just take the first item if there are multiple
-                    cleaned_str = raw_item_str.replace('[', '').replace(']', '')
-                    rqst_item = cleaned_str.split(',')[0].strip()
+                    raw_item_str = None
+                    tip = "Bring the requested supplies to a survivor."
+                    complete_flag = node_id
                     
-                # Create a dummy item just to cache the sprite inside the Item class
-                item = None
-                if rqst_item:
-                    item = Item.create_from_name(rqst_item)
+                    for opt in options:
+                        if opt.get('rqst_item'): raw_item_str = opt.get('rqst_item')
+                        elif not raw_item_str and opt.get('award_item'): raw_item_str = opt.get('award_item')
                     
-                _QUESTS_CACHE.append({
-                    'node_id': node_id,  
-                    'name': quest_name,
-                    'rqst_item_name': rqst_item,
-                    'item_obj': item,
-                    'tip': tip,
-                    'complete_flag': complete_flag
-                })
-    except Exception as e:
-        print(f"Error loading quests from dialogs.xml: {e}")
-        
+                    rqst_item = None
+                    if raw_item_str:
+                        cleaned_str = raw_item_str.replace('[', '').replace(']', '')
+                        rqst_item = cleaned_str.split(',')[0].strip()
+                    
+                    item = Item.create_from_name(rqst_item) if rqst_item else None
+                    
+                    _QUESTS_CACHE.append({
+                        'node_id': node_id,
+                        'name': quest_name,
+                        'rqst_item_name': rqst_item,
+                        'item_obj': item,
+                        'tip': tip,
+                        'complete_flag': complete_flag
+                    })
+        except Exception as e:
+            print(f"Error loading quests from {quests_rot_path}: {e}")
+
     return _QUESTS_CACHE
 
 

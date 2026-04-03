@@ -66,6 +66,14 @@
     <!-- Begin Quests -->
     <node id="quest_branch" x="779" y="133">
         <options 
+            player_question="I have my ID, how to get faster to the helipoint?" 
+            npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here."
+            rqst_item="[ID]" 
+            priority="100" 
+            gain_xp="[lucky:100]" 
+            dialog_type="once"
+            unlock_flag="Quest: Mobile phone" />
+        <options 
             player_question="Hey. You look like someone who knows a way off this rock. I'm... between contractors." 
             npc_answer="WHa! Look at you – rags and desperation. Perfect. Listen, criança. I need a mule. There's a suitcase – old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?"
             rqst_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]" 
@@ -73,14 +81,6 @@
             gain_xp="[lucky:100]" 
             dialog_type="once"
             unlock_flag="Quest: Find the Suitcase" />
-        <options 
-            player_question="I have my ID, how to get faster to the helipoint?" 
-            npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here."
-            rqst_item="[ID]" 
-            priority="10" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once"
-            unlock_flag="Quest: Mobile phone" />
         <options 
             player_question="I think I have something that may interest you..." 
             npc_answer="Have you found the suitcase? Is there a laptop inside of it? This is research and it's valuable!"
@@ -95,27 +95,11 @@
             priority="10" 
             gain_xp="[lucky:100]"
             dialog_type="once"
-            unlock_flag="Harddrive" />
+            unlock_flag="Quest: Harddrive" />
         <options 
             player_question="Do you know anything about the files?" 
             npc_answer="I'm trying to get alive here, but people are talking about pharmas trying to stole some shit."
             priority="10" 
-            gain_xp="[lucky:100]"
-            dialog_type="once"
-            unlock_flag="Pendrive" />
-    </node>
-    <node id="Harddrive">
-        <options
-            player_question="Not yet around here..." 
-            npc_answer="I've heard people are trying to get information about the Vaccine recipe. We have some samples, but we need the recipe to reproduce it before is too late."
-            gain_xp="[lucky:100]"
-            dialog_type="once"
-            unlock_flag="Quest: Harddrive" />
-    </node>
-    <node id="Pendrive">
-        <options
-            player_question="Pharmas? We already produce Vaccines here!" 
-            npc_answer="Yeah, but they place some spys around here. If you find, deliver to a trusted person."
             gain_xp="[lucky:100]"
             dialog_type="once"
             unlock_flag="Quest: Pendrive" />

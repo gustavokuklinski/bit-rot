@@ -5,6 +5,7 @@ from datetime import datetime
 from core.entities.vehicle.vehicle import Vehicle
 from core.entities.animal.animal import Animal
 from core.data.config import MAP_DIR
+from core.entities.npc.npc_dialog import NPCDialog
 
 def save_game(game):
     if game.current_save_folder_name:
@@ -313,6 +314,22 @@ def save_game(game):
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)
+
+
+        
+        if NPCDialog.NPC_DIALOGS is None:
+            NPCDialog.load_dialogs(game)
+
+        quests_dst = os.path.join(save_path, "quests.rot")
+        if NPCDialog.NPC_DIALOGS:
+            proc_triggers = [opt for opt in NPCDialog.NPC_DIALOGS.get("quest_branch", []) if "Proc_" in str(opt.get('unlock_flag', ''))]
+            proc_nodes = {node_id: options for node_id, options in NPCDialog.NPC_DIALOGS.items() if str(node_id).startswith("Quest: Proc_")}
+            
+            try:
+                with open(quests_dst, "w") as f:
+                    json.dump({"triggers": proc_triggers, "nodes": proc_nodes}, f, indent=4)
+            except Exception as e:
+                game.logger.info(f"Error saving quests.rot: {e}")
 
         game.logger.info("Game saved successfully!")
         return True
