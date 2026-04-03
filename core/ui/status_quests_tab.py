@@ -16,7 +16,8 @@ def load_quests():
         return _QUESTS_CACHE
         
     _QUESTS_CACHE = []
-    
+   
+
     # 1. Load Standard Handcrafted Quests from XML
     dialogs_path = os.path.join(DATA_PATH, 'npc/dialogs.xml')
     if os.path.exists(dialogs_path):

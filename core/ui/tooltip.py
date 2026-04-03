@@ -262,6 +262,17 @@ def draw_tooltip(surface, item, pos):
     width = max(line.get_width() for line in rendered_lines) + 20
     height = sum(line.get_height() for line in rendered_lines) + 20
     
+    # --- ELEGANT JOYSTICK FIX ---
+    # Add a slight offset so the tooltip doesn't cover the slot the cursor is snapped to
+    tt_x = pos[0] + 15
+    tt_y = pos[1] + 15
+    
+    # Flip the tooltip to the opposite side of the cursor if it goes off-screen
+    if tt_x + width > GAME_WIDTH:
+        tt_x = pos[0] - width - 5
+    if tt_y + height > GAME_HEIGHT:
+        tt_y = pos[1] - height - 5
+
     tooltip_rect = pygame.Rect(pos[0], pos[1], width, height)
     
     # Adjust position to keep tooltip on screen

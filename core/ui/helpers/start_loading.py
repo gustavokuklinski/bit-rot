@@ -199,6 +199,13 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
     tab_y = box_rect.top + padding_y
     mouse_buttons = pygame.mouse.get_pressed()
     
+    # ---> FIX: Detect synthetic clicks from the event queue injected by Joystick <---
+    clicked = False
+    if events is not None:
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
+                clicked = True
+    
     # Grab the current Tab data
     active_tab_idx = HELP_CACHE.get('active_tab', 0)
     tabs = HELP_CACHE.get('tabs', [])
@@ -226,10 +233,12 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                 tab_rect = tab_rects[i]
                 is_hovered = tab_rect.collidepoint(mouse_pos)
                 
-                if is_hovered and mouse_buttons[0]:
+                # ---> FIX: Allow joystick 'clicked' state to trigger tab switches
+                if is_hovered and (mouse_buttons[0] or clicked):
                     HELP_CACHE['active_tab'] = i
                     HELP_CACHE['scroll_y'] = 0.0 # Reset scroll on tab swap!
                     HELP_CACHE['is_dragging'] = False
+                    clicked = False # Consume the click so it doesn't trigger other things
                     
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1)
@@ -266,7 +275,8 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
     if max_scroll > 0:
         handle_height = max(40.0, track_h * (track_h / max(1.0, float(active_tab['total_h']))))
         
-        if mouse_buttons[0]:
+        # ---> FIX: Allow joystick 'clicked' state to grab scrollbar handle
+        if mouse_buttons[0] or clicked:
             if not HELP_CACHE['is_dragging']:
                 handle_pos_ratio = HELP_CACHE['scroll_y'] / max_scroll if max_scroll > 0 else 0
                 handle_y = scrollbar_area_rect.top + (track_h - handle_height) * handle_pos_ratio

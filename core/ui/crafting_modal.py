@@ -67,6 +67,9 @@ class CraftingModal(BaseModal):
         self.selected_ingredients = {} 
         self.selected_target = None 
         self.dropdown_just_closed = False
+        
+        # ---> FIX: Memory flag to catch synthetic Joystick events <---
+        self._force_click = False
 
         self.tab_handlers = {
             tr('tab', "Known Recipes"): CraftingKnowRecipesTab(self),
@@ -79,8 +82,11 @@ class CraftingModal(BaseModal):
         mouse_pos = self.game._get_scaled_mouse_pos()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
+            # Ensure we only process Left Clicks (Hardware or Synthetic Joystick)
+            is_left_click = getattr(event, 'button', 1) == 1
+            
             if self.dropdown_state.get('active'):
-                if 'rects' in self.dropdown_state:
+                if is_left_click and 'rects' in self.dropdown_state:
                     for i, rect in enumerate(self.dropdown_state['rects']):
                         if rect.collidepoint(mouse_pos):
                             item_id = self.dropdown_state['items'][i]
@@ -94,11 +100,11 @@ class CraftingModal(BaseModal):
                 self.dropdown_just_closed = True
                 return True 
 
-            if self.tabs_manager.check_click(mouse_pos):
+            if is_left_click and self.tabs_manager.check_click(mouse_pos):
                 self.modal['crafting_scroll_offset'] = 0 
                 return True
             
-            if self.search_rect:
+            if is_left_click and self.search_rect:
                 if self.search_rect.collidepoint(mouse_pos):
                     self.search_active = True
                     pygame.key.set_repeat(500, 50) 
@@ -106,6 +112,10 @@ class CraftingModal(BaseModal):
                 else:
                     self.search_active = False
                     pygame.key.set_repeat() 
+                    
+            # ---> FIX: If the click wasn't consumed by UI elements above, flag it for the drawing loop <---
+            if is_left_click:
+                self._force_click = True
         
         elif event.type == pygame.KEYDOWN and self.search_active:
             if event.key == pygame.K_BACKSPACE:
@@ -244,8 +254,12 @@ class CraftingModal(BaseModal):
             close_btn, min_btn = self.get_buttons()
             return None, close_btn, min_btn
 
-        mouse_pos = pygame.mouse.get_pos()
-        click = pygame.mouse.get_pressed()[0]
+        # ---> FIX: Read dynamically scaled screen coordinates for UI matching <---
+        mouse_pos = self.game._get_scaled_mouse_pos() if hasattr(self.game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+        
+        # ---> FIX: Check both hardware physical clicks and the joystick flag <---
+        click = pygame.mouse.get_pressed()[0] or getattr(self, '_force_click', False)
+        self._force_click = False # Consume flag
 
         if getattr(self, 'dropdown_just_closed', False):
             if not click: self.dropdown_just_closed = False

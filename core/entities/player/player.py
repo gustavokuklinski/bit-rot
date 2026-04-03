@@ -32,6 +32,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.vx = 0
         self.vy = 0
         self.is_running = False
+        self.is_moving = False # Safety initialization
         self.color = BLUE
 
         data = player_data or {}
@@ -228,8 +229,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.chat_text = None
 
         keys = pygame.key.get_pressed()
-        has_input = keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]
-        is_moving = has_input and (self.vehicle is None)
+        
+        # ---> FIX: Instead of hardcoding WASD keys, we now respect the true 'is_moving' 
+        #           flag pushed by input.py which handles both Keyboard AND Joystick! <---
+        is_moving = getattr(self, 'is_moving', False) and (self.vehicle is None)
 
         if is_moving:
             self.is_resting = False
@@ -267,8 +270,16 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             total_drain = (tireness_drain + stamina_penalty) * game.dt_mult
             self.tireness = max(0.0, self.tireness - total_drain)
 
+            # Consume stamina while running, and regenerate when walking/idle
+            if is_moving and self.is_running:
+                stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
+                self.stamina = max(0.0, self.stamina - (stamina_drain * game.dt_mult))
+            else:
+                if self.stamina < self.max_stamina:
+                    self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * game.dt_mult))
+
         if not self.is_sleeping and is_active_resting:
-            # [CHANGED] Fetch multipliers from XML dynamically
+            # Fetch multipliers from XML dynamically
             stam_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             tire_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             
@@ -281,7 +292,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if self.is_sleeping:
             game.is_fast_forwarding = True
             
-            # [FIX] Factor in fast-forwarding speed properly so recovery aligns with passed time
+            # Factor in fast-forwarding speed properly so recovery aligns with passed time
             ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
             
             base_sleep_restore = 0.05 * ff_multiplier * game.dt_mult
@@ -310,7 +321,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 display_message(tr('msg', "You wake up refreshed."))
 
         mouse_buttons = pygame.mouse.get_pressed()
-        is_aiming = keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL]
+        is_aiming = getattr(self, 'is_aiming', False) # ---> FIX: Respect joystick aiming
         is_firing = mouse_buttons[0]
 
         if not self.is_sleeping and is_aiming and is_firing:
@@ -372,7 +383,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         decay_rate = PROGRESSION_CONFIG.get_stat('metabolism', 'decay_rate_seconds', 5.0)
         
-        # FIXED TYPO: Removed the extra "- current_time" so the math evaluates correctly in seconds
         if current_time - self.last_decay_time >= decay_rate:
             water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
             food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
@@ -467,9 +477,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             
             if actual_rain_infection > 0:
                 self.infection = min(100.0, self.infection + actual_rain_infection)
-
-        
-
 
         def msg(text):
             display_message(text)

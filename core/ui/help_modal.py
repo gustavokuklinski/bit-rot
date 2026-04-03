@@ -7,7 +7,28 @@ from core.ui.modals import BaseModal
 from core.ui.text_modal import wrap_text
 from core.data.localization import tr
 
+class HelpModalInstance:
+    """Lightweight event handler to catch synthetic joystick clicks for Tabs"""
+    def __init__(self, modal, game):
+        self.modal = modal
+        self.game = game
+        
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
+            m_pos = self.game._get_scaled_mouse_pos() if hasattr(self.game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+            tab_rects = self.modal.get('tab_rects', [])
+            for i, rect in enumerate(tab_rects):
+                if rect.collidepoint(m_pos):
+                    self.modal['active_help_tab'] = i
+                    self.modal['scroll_offset_y'] = 0
+                    return True
+        return False
+
 def draw_help_modal(surface, game, modal, assets):
+    # Ensure event listener is attached to catch synthetic UI events from joystick or mouse.py
+    if 'instance' not in modal:
+        modal['instance'] = HelpModalInstance(modal, game)
+
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial (?)"))
     base_modal.draw_base()
     close_button, minimize_button = base_modal.get_buttons()
@@ -20,8 +41,6 @@ def draw_help_modal(surface, game, modal, assets):
     content_y_start = base_modal.modal_y + base_modal.header_h + padding
     content_width = modal['rect'].width - (padding * 2) - 15 
     
-    # We will adjust content height later after we draw the tabs!
-
     # --- Miniature RAW Markdown Engine w/ TABS ---
     current_lang = getattr(config_module, 'GAME_LANGUAGE', 'en_US')
     
@@ -51,7 +70,6 @@ def draw_help_modal(surface, game, modal, assets):
                     current_tab['curr_y'] += 10
                     continue
                     
-                # --- NEW: TAB SEPARATOR (### Header) ---
                 if line.startswith("### "):
                     tab_title = line[4:].strip().replace("**", "").replace("[", "").replace("]", "").strip()
                     
@@ -62,7 +80,6 @@ def draw_help_modal(surface, game, modal, assets):
                         current_tab = {'title': tab_title, 'layout': [], 'curr_y': 0, 'total_h': 0}
                         tabs.append(current_tab)
 
-                # Rule A: Main Title (# Title)
                 elif line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
                     
@@ -78,7 +95,6 @@ def draw_help_modal(surface, game, modal, assets):
                     })
                     current_tab['curr_y'] += title_surf.get_height() + 25
 
-                # Rule C: Lists (* or -)
                 elif line.startswith("* ") or line.startswith("- "):
                     bold_match = re.search(r'^[\*\-]\s+\*\*(.*?)\*\*(.*)', line)
                     if bold_match:
@@ -96,9 +112,6 @@ def draw_help_modal(surface, game, modal, assets):
                             'bottom_y': current_tab['curr_y'] + key_surf.get_height()
                         })
                         
-                        # --- ALIGNMENT FIX ---
-                        # Enforce a fixed column start for the description to create a "table" look.
-                        # 240 pixels is usually wide enough to cover most of your command keys.
                         ALIGN_X = 240 
                         desc_x = 15 + max(ALIGN_X, key_surf.get_width() + 15)
                         
@@ -126,7 +139,6 @@ def draw_help_modal(surface, game, modal, assets):
                             current_tab['curr_y'] += font_14.get_height() + 4
                     current_tab['curr_y'] += 6
 
-                # Rule E: Images (![alt](path))
                 elif line.startswith("![") and "](" in line and line.endswith(")"):
                     img_path = re.search(r'\((.*?)\)', line)
                     if img_path:
@@ -147,7 +159,6 @@ def draw_help_modal(surface, game, modal, assets):
                             except Exception as e:
                                 print(f"[Help Modal] Error loading image {clean_path}: {e}")
 
-                # Rule D: Normal Paragraph Text
                 else:
                     p_txt = line.replace("**", "")
                     wrapped = wrap_text(p_txt, usable_w - 30, font_14)
@@ -175,8 +186,15 @@ def draw_help_modal(surface, game, modal, assets):
     # --- Draw Tabs Header ---
     tab_h = 30
     tab_y = content_y_start
-    mouse_pos = pygame.mouse.get_pos()
-    mouse_buttons = pygame.mouse.get_pressed()
+    
+    # ---> FIX 1: Read dynamically scaled screen coordinates for correct UI hover matching
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+    
+    # ---> FIX 2: Safely capture the joystick 'Left Trigger' as a native UI click
+    is_clicking = pygame.mouse.get_pressed()[0]
+    if hasattr(game, 'joystick_handler') and game.joystick_handler:
+        if getattr(game.joystick_handler, 'lt_pressed', False):
+            is_clicking = True
     
     active_tab_idx = modal.get('active_help_tab', 0)
     tabs = modal.get('help_tabs', [])
@@ -196,6 +214,9 @@ def draw_help_modal(surface, game, modal, assets):
             tab_rect = pygame.Rect(current_x, tab_y, tab_width, tab_h)
             tab_rects.append(tab_rect)
             current_x += tab_width
+            
+        # ---> FIX 3: Push the tab rects so Joystick can magnetically snap to them!
+        modal['tab_rects'] = tab_rects
 
         # 2. Draw Inactive Tabs
         for i, tab in enumerate(tabs):
@@ -203,13 +224,12 @@ def draw_help_modal(surface, game, modal, assets):
                 tab_rect = tab_rects[i]
                 is_hovered = tab_rect.collidepoint(mouse_pos)
                 
-                # Input handling
-                if is_hovered and mouse_buttons[0]:
+                if is_hovered and is_clicking:
                     modal['active_help_tab'] = i
                     modal['scroll_offset_y'] = 0 # Reset scroll
                     
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
-                pygame.draw.rect(surface, WHITE, tab_rect, 1) # Normal Border
+                pygame.draw.rect(surface, WHITE, tab_rect, 1) 
                 
                 tab_text = font_14.render(tab['title'], True, WHITE)
                 text_rect = tab_text.get_rect(center=tab_rect.center)
@@ -219,7 +239,7 @@ def draw_help_modal(surface, game, modal, assets):
         if active_tab_idx < total_tabs:
             tab_rect = tab_rects[active_tab_idx]
             pygame.draw.rect(surface, GRAY_60, tab_rect)
-            pygame.draw.rect(surface, WHITE, tab_rect, 1) # Normal Border
+            pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
             tab_text = font_14.render(tabs[active_tab_idx]['title'], True, WHITE)
             text_rect = tab_text.get_rect(center=tab_rect.center)

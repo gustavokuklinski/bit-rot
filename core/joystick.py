@@ -10,11 +10,11 @@ BTN_A = 0
 BTN_B = 1
 BTN_X = 2
 BTN_Y = 3
-BTN_LB = 4  # Used for Zoom Out (-)
-BTN_RB = 5  # Used for Zoom In (+)
-BTN_SELECT = 6 # Fast Forward
-BTN_START = 7  # Pause
-BTN_L3 = 8
+BTN_LB = 4  # Used for Zoom Out (-) / Prev Tab
+BTN_RB = 5  # Used for Zoom In (+) / Next Tab
+BTN_SELECT = 6 # Fast Forward Time
+BTN_START = 7  # Toggle Modals (TAB behavior)
+BTN_L3 = 8     # Pause Game
 BTN_R3 = 9
 
 # ---------------------------------------------------------
@@ -48,6 +48,14 @@ class JoystickHandler:
         self.deadzone = 0.2
         self.last_snap_time = 0
         
+        # Logical Navigation Memory for Context Menus
+        self.c_main_idx = None 
+        self.c_sub_idx = -1
+        
+        # Combo state tracking
+        self.y_pressed = False
+        self.b_pressed = False
+        
         self.set_xbox_controller(logger)
 
     def set_xbox_controller(self, logger):
@@ -77,80 +85,59 @@ class JoystickHandler:
             self.set_xbox_controller(logger)
 
     def get_all_ui_slots(self, game):
-        """Dynamically fetches all active slot rects from HUD and Modals for cursor snapping"""
+        """Dynamically fetches active window control rects for cursor snapping"""
         
-        # ---> NEW: Context Menu (Highest Z-Index Priority) <---
-        # If the context menu is active, ONLY return its rects. 
-        # This isolates the cursor, preventing it from snapping to background UI slots.
         if getattr(game, 'context_menu', {}).get('active', False):
             return game.context_menu.get('rects', [])
             
-            
         rects = []
-        # Always add the persistent bottom HUD belt
-        #for i in range(5):
-        #    rects.append(get_belt_hud_slot_rect(i))
             
-        for modal in game.modals:
-            if modal.get('minimized'): continue
-            
-            # Include Tabs as Snap Targets so player can click/drop on them
-            if 'tab_rects' in modal:
-                rects.extend(modal['tab_rects'])
-            
-            m_type = modal.get('type')
-            m_pos = modal.get('position', (0,0))
-            
-            if m_type == 'inventory':
-                if modal.get('active_tab', 'Inventory') == 'Inventory':
-                    for i in range(10): rects.append(get_inventory_slot_rect(i, m_pos))
-                    for i in range(5): rects.append(get_belt_slot_rect_in_modal(i, m_pos))
-                elif modal.get('active_tab') in modal.get('container_mapping', {}):
-                    container = modal['container_mapping'][modal['active_tab']]
-                    p_calc = (modal.get('rect', pygame.Rect(m_pos,(0,0))).x, modal.get('rect', pygame.Rect(m_pos,(0,0))).y + 40)
-                    for i in range(container.capacity or 0): rects.append(get_container_slot_rect(p_calc, i))
-            
-            elif m_type == 'container':
-                container = modal.get('item')
-                if container:
-                    for i in range(container.capacity or 0): rects.append(get_container_slot_rect(m_pos, i))
-                    
-            elif m_type == 'nearby':
-                active_tab_label = modal.get('active_tab')
-                active_container = None
-                for tab_data in modal.get('tabs_data', []):
-                    if tab_data['label'] == active_tab_label:
-                        active_container = tab_data['container']
-                        break
-                if active_container and modal.get('content_rect'):
-                    for i in range(active_container.capacity or 0):
-                        rects.append(get_container_slot_rect(modal['content_rect'].topleft, i))
-                        
-            elif m_type == 'gear':
-                active_tab = modal.get('active_tab', 'Gear')
-                if active_tab == 'Gear' and 'gear_slot_rects' in modal:
-                    rects.extend(modal['gear_slot_rects'].values())
-                elif active_tab in modal.get('container_mapping', {}):
-                    container = modal['container_mapping'][active_tab]
-                    p_calc = (modal.get('rect', pygame.Rect(m_pos,(0,0))).x, modal.get('rect', pygame.Rect(m_pos,(0,0))).y + 40)
-                    for i in range(container.capacity or 0): rects.append(get_container_slot_rect(p_calc, i))
-                    
-            elif m_type == 'vehicle' and modal.get('active_tab') == 'Mechanics':
-                if 'equipment_rects' in modal:
-                    rects.extend(modal['equipment_rects'].values())
-                    
-            elif m_type == 'slots':
-                for slot_data in modal.get('slot_rects', []):
-                    rects.append(slot_data['rect'])
+        if hasattr(game, 'modal_buttons'):
+            for b in game.modal_buttons:
+                if b:
+                    if isinstance(b, pygame.Rect): rects.append(b)
+                    elif isinstance(b, dict) and 'rect' in b: rects.append(b['rect'])
                     
         return rects
+
+    def _set_mouse_pos_scaled(self, game, logic_x, logic_y):
+        """Calculates exact letterbox scaling offsets to permanently prevent Tooltip desynchronization"""
+        phys_x, phys_y = logic_x, logic_y
+        
+        if hasattr(game, 'game_screen') and pygame.display.get_surface():
+            display_surf = pygame.display.get_surface()
+            
+            if game.game_screen is not display_surf:
+                phys_w, phys_h = display_surf.get_size()
+                log_w, log_h = game.game_screen.get_size()
+                
+                if log_w > 0 and log_h > 0:
+                    scale = min(phys_w / log_w, phys_h / log_h)
+                    scaled_w = int(log_w * scale)
+                    scaled_h = int(log_h * scale)
+                    
+                    offset_x = (phys_w - scaled_w) // 2
+                    offset_y = (phys_h - scaled_h) // 2
+                    
+                    phys_x = (logic_x * scale) + offset_x
+                    phys_y = (logic_y * scale) + offset_y
+
+        pygame.mouse.set_pos((int(phys_x), int(phys_y)))
+        pygame.event.post(pygame.event.Event(
+            pygame.MOUSEMOTION, 
+            {'pos': (int(logic_x), int(logic_y)), 'rel': (0, 0), 'buttons': pygame.mouse.get_pressed()}
+        ))
 
     def update_cursor(self, game):
         """Updates mouse position using Free Cursor or UI Snap Logic"""
         if not self.active_controller:
             return
 
-        self.last_game_ref = game # Save reference for process_event mapping
+        self.last_game_ref = game 
+        
+        if not getattr(game, 'context_menu', {}).get('active', False):
+            self.c_main_idx = None 
+
         joy = self.active_controller
         
         if joy.get_numaxes() >= 4:
@@ -161,10 +148,21 @@ class JoystickHandler:
             if abs(ry) < self.deadzone: ry = 0
 
             if rx != 0 or ry != 0:
-                mx, my = pygame.mouse.get_pos()
-                ui_rects = self.get_all_ui_slots(game)
+                self.c_main_idx = None 
                 
-                # Check if cursor is currently locked to a UI Slot
+                if hasattr(game, '_get_scaled_mouse_pos'):
+                    mx, my = game._get_scaled_mouse_pos()
+                else:
+                    mx, my = pygame.mouse.get_pos()
+                    
+                is_aiming = False
+                if joy.get_numaxes() > AXIS_RT and joy.get_axis(AXIS_RT) > 0.0:
+                    is_aiming = True
+                elif hasattr(game, 'player') and getattr(game.player, 'is_aiming', False):
+                    is_aiming = True
+                    
+                ui_rects = [] if is_aiming else self.get_all_ui_slots(game)
+                
                 current_slot = None
                 for r in ui_rects:
                     if r.collidepoint((mx, my)):
@@ -175,9 +173,7 @@ class JoystickHandler:
                 is_snapping = False
                 
                 if current_slot:
-                    # SNAP GRID NAVIGATION
-                    if current_time - self.last_snap_time > 0.2: # 200ms jump cooldown
-                        # Establish primary direction vector
+                    if current_time - self.last_snap_time > 0.2: 
                         dx = 1 if rx > 0 else -1 if rx < 0 else 0
                         dy = 1 if ry > 0 else -1 if ry < 0 else 0
                         if abs(rx) > abs(ry): dy = 0
@@ -188,7 +184,6 @@ class JoystickHandler:
                         cx, cy = current_slot.center
                         target_angle = math.atan2(dy, dx)
                         
-                        # Find the closest adjacent slot in the pushed direction
                         for r in ui_rects:
                             if r == current_slot: continue
                             tx, ty = r.center
@@ -197,26 +192,21 @@ class JoystickHandler:
                             diff = abs(angle - target_angle)
                             if diff > math.pi: diff = 2 * math.pi - diff
                             
-                            if diff < math.pi / 4: # Fall within a 45 degree cone
-                                dist = math.hypot(tx - cx, ty - cy)
-                                if dist < best_dist:
-                                    best_dist = dist
-                                    best_rect = r
+                            if diff < math.pi / 4:
+                                gap_x = max(0, abs(tx - cx) - (current_slot.width + r.width) / 2)
+                                gap_y = max(0, abs(ty - cy) - (current_slot.height + r.height) / 2)
+                                gap = math.hypot(gap_x, gap_y)
+                                
+                                if gap <= 35:
+                                    dist = math.hypot(tx - cx, ty - cy)
+                                    if dist < best_dist:
+                                        best_dist = dist
+                                        best_rect = r
                         
-                        # Snap!
                         if best_rect:
-                            pygame.mouse.set_pos(best_rect.center)
+                            self._set_mouse_pos_scaled(game, best_rect.centerx, best_rect.centery)
                             self.last_snap_time = current_time
-                            
-                            motion_event = pygame.event.Event(
-                                pygame.MOUSEMOTION, 
-                                {'pos': best_rect.center, 'rel': (best_rect.centerx - cx, best_rect.centery - cy), 'buttons': pygame.mouse.get_pressed()}
-                            )
-                            pygame.event.post(motion_event)
                         else:
-                            # ---> NEW: EXIT PLAN <---
-                            # We pushed the stick, but no adjacent slot was found. 
-                            # Break the lock by throwing the cursor outside the slot's bounds!
                             escape_x, escape_y = mx, my
                             if dx > 0: escape_x = current_slot.right + 15
                             elif dx < 0: escape_x = current_slot.left - 15
@@ -224,39 +214,47 @@ class JoystickHandler:
                             if dy > 0: escape_y = current_slot.bottom + 15
                             elif dy < 0: escape_y = current_slot.top - 15
                             
-                            # Constrain to screen bounds so we don't trap the cursor off-screen
-                            screen_w, screen_h = pygame.display.get_surface().get_size()
+                            screen_w, screen_h = game.game_screen.get_size() if hasattr(game, 'game_screen') else pygame.display.get_surface().get_size()
                             escape_x = max(0, min(escape_x, screen_w))
                             escape_y = max(0, min(escape_y, screen_h))
                             
-                            pygame.mouse.set_pos((escape_x, escape_y))
+                            self._set_mouse_pos_scaled(game, escape_x, escape_y)
                             self.last_snap_time = current_time
-                    is_snapping = True # Suppress free moving while locked in a slot
+                            
+                    is_snapping = True
                 
                 if not is_snapping:
-                    # FREE CURSOR NAVIGATION
-                    screen_w, screen_h = pygame.display.get_surface().get_size()
+                    screen_w, screen_h = game.game_screen.get_size() if hasattr(game, 'game_screen') else pygame.display.get_surface().get_size()
                     new_x = max(0, min(mx + int(rx * self.cursor_speed), screen_w))
                     new_y = max(0, min(my + int(ry * self.cursor_speed), screen_h))
                     
-                    # Check if free cursor collided with a slot to instantly snap/lock into it
                     entered_slot = None
                     for r in ui_rects:
-                        if r.collidepoint((new_x, new_y)):
+                        if r.inflate(20, 20).collidepoint((new_x, new_y)):
                             entered_slot = r
                             break
                     
                     if entered_slot:
-                        pygame.mouse.set_pos(entered_slot.center)
-                        new_x, new_y = entered_slot.center
+                        self._set_mouse_pos_scaled(game, entered_slot.centerx, entered_slot.centery)
                     else:
-                        pygame.mouse.set_pos((new_x, new_y))
+                        self._set_mouse_pos_scaled(game, new_x, new_y)
 
-                    motion_event = pygame.event.Event(
-                        pygame.MOUSEMOTION, 
-                        {'pos': (new_x, new_y), 'rel': (rx * self.cursor_speed, ry * self.cursor_speed), 'buttons': pygame.mouse.get_pressed()}
-                    )
-                    pygame.event.post(motion_event)
+            # Make Hovered Modal Active (Bring to Front)
+            if hasattr(game, 'modals') and game.modals:
+                if hasattr(game, '_get_scaled_mouse_pos'):
+                    logic_x, logic_y = game._get_scaled_mouse_pos()
+                else:
+                    logic_x, logic_y = pygame.mouse.get_pos()
+                    
+                hovered_modal = None
+                for m in reversed(game.modals):
+                    if m.get('rect') and m['rect'].collidepoint((logic_x, logic_y)):
+                        hovered_modal = m
+                        break
+                        
+                if hovered_modal and game.modals[-1] != hovered_modal:
+                    game.modals.remove(hovered_modal)
+                    game.modals.append(hovered_modal)
 
     def get_movement_axes(self):
         """Returns Left Analog Stick X and Y for free player movement"""
@@ -276,114 +274,290 @@ class JoystickHandler:
         return lx, ly
 
     def get_action_states(self):
-        """Returns boolean states for running (A) and aiming (LT)"""
+        """Returns boolean states for running (A) and aiming (RT)"""
         if not self.active_controller:
             return False, False
         
         joy = self.active_controller
         
-        # A Pressed to Run (Button 0)
         is_running = joy.get_button(BTN_A)
             
-        # LT Pressed to Aim
         is_aiming = False
-        if joy.get_numaxes() > AXIS_LT:
-            is_aiming = joy.get_axis(AXIS_LT) > 0.0
+        if joy.get_numaxes() > AXIS_RT:
+            is_aiming = joy.get_axis(AXIS_RT) > 0.0
             
         return is_running, is_aiming
 
     def process_event(self, event):
         """Translates joystick hardware events into standard keyboard/mouse events"""
         
-        # ---> Handle Triggers (Axes) for Shooting (RT) and UI Drag Drop Toggle <---
         if event.type == pygame.JOYAXISMOTION:
-            if event.axis == AXIS_RT:
+            if event.axis == AXIS_LT: 
                 mouse_pos = pygame.mouse.get_pos()
                 game = getattr(self, 'last_game_ref', None)
                 
                 is_holding_item = False
-                in_ui_slot = False
+                in_ui_bounds = False
                 
                 if game:
                     is_holding_item = getattr(game, 'is_dragging', False) or getattr(game, 'drag_candidate', None) is not None
                     
-                    # Auto-sync out-of-bounds drops
                     if not is_holding_item:
-                        self.ui_drag_held = False 
+                        self.is_toggle_dragging = False 
                     
-                    ui_rects = self.get_all_ui_slots(game)
-                    in_ui_slot = any(r.collidepoint(mouse_pos) for r in ui_rects)
+                    for m in getattr(game, 'modals', []):
+                        if m.get('rect') and m['rect'].collidepoint(mouse_pos):
+                            in_ui_bounds = True
+                            break
+                            
+                    if not in_ui_bounds:
+                        for i in range(5):
+                            if get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+                                in_ui_bounds = True
+                                break
+                                
+                    if not in_ui_bounds and getattr(game, 'context_menu', {}).get('active', False):
+                        in_ui_bounds = True
 
-                # Trigger Pulled
-                if event.value > 0.5 and not getattr(self, 'rt_pressed', False):
-                    self.rt_pressed = True
+                if event.value > 0.5 and not getattr(self, 'lt_pressed', False):
+                    self.lt_pressed = True
+                    self.lt_press_time = time.time()
+                    self.lt_action_was_ui = in_ui_bounds or is_holding_item
                     
-                    if in_ui_slot or is_holding_item:
-                        # UI TOGGLE MODE: Click to Grab, Click to Drop
-                        if not getattr(self, 'ui_drag_held', False):
-                            self.ui_drag_held = True
-                            pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
-                        else:
-                            self.ui_drag_held = False
+                    if self.lt_action_was_ui:
+                        if getattr(self, 'is_toggle_dragging', False):
+                            self.is_toggle_dragging = False
                             pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
+                            self.lt_handled_drop = True 
+                        else:
+                            self.lt_handled_drop = False
+                            pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
                     else:
-                        # WORLD SHOOTING (Standard press and hold)
                         pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
 
-                # Trigger Released
-                elif event.value <= 0.5 and getattr(self, 'rt_pressed', False):
-                    self.rt_pressed = False
-                    # Only release the mouse click if we are NOT using the UI Toggle functionality
-                    if not getattr(self, 'ui_drag_held', False):
+                elif event.value <= 0.5 and getattr(self, 'lt_pressed', False):
+                    self.lt_pressed = False
+                    held_duration = time.time() - getattr(self, 'lt_press_time', 0)
+                    
+                    if getattr(self, 'lt_action_was_ui', False):
+                        if not getattr(self, 'lt_handled_drop', False):
+                            if held_duration < 0.25:
+                                self.is_toggle_dragging = True
+                            else:
+                                self.is_toggle_dragging = False
+                                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
+                    else:
                         pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
 
         elif event.type == pygame.JOYBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+            game = getattr(self, 'last_game_ref', None)
             
-            # ---> Y: Interact (Sends K_e to trigger native interaction logic)
+            # ---> Y Button: Strictly Interact (No Modal Closing) <---
             if event.button == BTN_Y: 
+                self.y_pressed = True
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_e, 'unicode': 'e'}))
-            
-            # ---> B: Context Menu (Right Click)
+                    
             elif event.button == BTN_B: 
+                self.b_pressed = True
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
-
-            # ---> X: Reload (Sends K_r)
             elif event.button == BTN_X: 
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_r, 'unicode': 'r'}))
             
-            # ---> Start: Pause Game (F2)
-            elif event.button == BTN_START: 
+            # ---> BTN 8 (L3): Pause Game (F2) <---
+            elif event.button == BTN_L3: 
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_F2, 'unicode': ''}))
+            
+            # ---> BTN 7 (START): Toggle Modals (TAB) <---
+            elif event.button == BTN_START: 
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_TAB, 'unicode': '\t'}))
                 
-            # ---> Select: Fast Forward (Tab / f)
+            # ---> BTN 6 (SELECT): Fast Forward (F) <---
             elif event.button == BTN_SELECT: 
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_TAB, 'unicode': ''}))
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_f, 'unicode': 'f'}))
                 
-            # ---> LB (-): Zoom Out
-            elif event.button == BTN_LB: 
-                pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': -1, 'x': 0}))
+            elif event.button in (BTN_LB, BTN_RB):
+                handled_tab = False
                 
-            # ---> RB (+): Zoom In
-            elif event.button == BTN_RB: 
-                pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': 1, 'x': 0}))
+                if game:
+                    logic_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else mouse_pos
+                    
+                    target_modal = None
+                    for m in reversed(getattr(game, 'modals', [])):
+                        if m.get('rect') and m['rect'].collidepoint(logic_pos):
+                            target_modal = m
+                            break
+                            
+                    if target_modal:
+                        tabs_data = target_modal.get('tabs_data') or target_modal.get('help_tabs')
+                        
+                        if tabs_data:
+                            active_key = None
+                            current_val = None
+                            
+                            if 'active_tab' in target_modal:
+                                active_key = 'active_tab'
+                                current_val = target_modal['active_tab']
+                            elif 'active_help_tab' in target_modal:
+                                active_key = 'active_help_tab'
+                                current_val = target_modal['active_help_tab']
+                                
+                            if active_key is not None:
+                                current_idx = 0
+                                for i, t in enumerate(tabs_data):
+                                    label = t.get('label') or t.get('title')
+                                    if current_val == label or current_val == i:
+                                        current_idx = i
+                                        break
+                                        
+                                if event.button == BTN_RB:
+                                    current_idx = (current_idx + 1) % len(tabs_data)
+                                else:
+                                    current_idx = (current_idx - 1) % len(tabs_data)
+                                    
+                                next_tab = tabs_data[current_idx]
+                                
+                                if isinstance(current_val, str):
+                                    target_modal[active_key] = next_tab.get('label') or next_tab.get('title')
+                                else:
+                                    target_modal[active_key] = current_idx
+                                    
+                                if 'scroll_offset_y' in target_modal: target_modal['scroll_offset_y'] = 0
+                                if 'crafting_scroll_offset' in target_modal: target_modal['crafting_scroll_offset'] = 0
+                                if 'inventory_scroll' in target_modal: target_modal['inventory_scroll'] = 0
+                                
+                                handled_tab = True
+                                
+                if not handled_tab:
+                    if event.button == BTN_LB: 
+                        pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': -1, 'x': 0}))
+                    elif event.button == BTN_RB: 
+                        pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': 1, 'x': 0}))
 
         elif event.type == pygame.JOYBUTTONUP:
             mouse_pos = pygame.mouse.get_pos()
             
-            # Release Context Menu
             if event.button == BTN_B: 
+                self.b_pressed = False
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
-            # Release Interact
             elif event.button == BTN_Y: 
+                self.y_pressed = False
                 pygame.event.post(pygame.event.Event(pygame.KEYUP, {'key': pygame.K_e, 'unicode': 'e'}))
                 
         elif event.type == pygame.JOYHATMOTION:
             x, y = event.value
             mouse_pos = pygame.mouse.get_pos()
+            game = getattr(self, 'last_game_ref', None)
             
-            # Up / Down for scrolling or moving vertically in Context Menus
+            if x != 0 or y != 0:
+                if getattr(self, 'y_pressed', False):
+                    if y == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_h, 'unicode': 'h'})) # Status
+                    elif y == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_g, 'unicode': 'g'})) # Gear
+                    elif x == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_i, 'unicode': 'i'})) # Inventory
+                    elif x == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_n, 'unicode': 'n'})) # Nearby
+                    return 
+                    
+                if getattr(self, 'b_pressed', False):
+                    if y == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_m, 'unicode': 'm'})) # Messages
+                    elif y == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_c, 'unicode': 'c'})) # Crafting
+                    elif x == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_m, 'unicode': 'm'})) # Messages
+                    elif x == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_SLASH, 'unicode': '?'})) # Help
+                    return 
+            
+            if game and getattr(game, 'context_menu', {}).get('active', False):
+                options = game.context_menu.get('options', [])
+                if options and (x != 0 or y != 0):
+                    rects = game.context_menu.get('rects', [])
+                    action_map = game.context_menu.get('action_map', [])
+                    
+                    if self.c_main_idx is None:
+                        self.c_main_idx = 0
+                        self.c_sub_idx = -1
+                        logic_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else mouse_pos
+                        
+                        for i, r in enumerate(rects):
+                            if r.collidepoint(logic_pos):
+                                action = action_map[i]
+                                if "::" in action:
+                                    parent_label, sub_name = action.split("::")
+                                    for m_i, opt in enumerate(options):
+                                        if isinstance(opt, dict) and opt['label'] == parent_label:
+                                            self.c_main_idx = m_i
+                                            if sub_name in opt['sub']: self.c_sub_idx = opt['sub'].index(sub_name)
+                                            break
+                                else:
+                                    for m_i, opt in enumerate(options):
+                                        if not isinstance(opt, dict) and opt == action:
+                                            self.c_main_idx = m_i
+                                            break
+                                break
+
+                    if self.c_main_idx >= len(options): self.c_main_idx = 0
+
+                    if y == 1: # Up
+                        if self.c_sub_idx != -1:
+                            self.c_sub_idx -= 1
+                            if self.c_sub_idx < 0: self.c_sub_idx = len(options[self.c_main_idx]['sub']) - 1
+                        else:
+                            self.c_main_idx -= 1
+                            if self.c_main_idx < 0: self.c_main_idx = len(options) - 1
+                    elif y == -1: # Down
+                        if self.c_sub_idx != -1:
+                            self.c_sub_idx += 1
+                            if self.c_sub_idx >= len(options[self.c_main_idx]['sub']): self.c_sub_idx = 0
+                        else:
+                            self.c_main_idx += 1
+                            if self.c_main_idx >= len(options): self.c_main_idx = 0
+                            
+                    elif x == 1: # Right
+                        if self.c_sub_idx == -1 and isinstance(options[self.c_main_idx], dict):
+                            self.c_sub_idx = 0 
+                    elif x == -1: # Left
+                        if self.c_sub_idx != -1:
+                            self.c_sub_idx = -1
+
+                    target_rect = None
+                    
+                    if self.c_sub_idx != -1:
+                        target_action = f"{options[self.c_main_idx]['label']}::{options[self.c_main_idx]['sub'][self.c_sub_idx]}"
+                        for i, action in enumerate(action_map):
+                            if action == target_action:
+                                target_rect = rects[i]
+                                break
+                    else:
+                        target_opt = options[self.c_main_idx]
+                        if isinstance(target_opt, dict):
+                            main_x, menu_y = None, None
+                            for i, action in enumerate(action_map):
+                                if "::" not in action:
+                                    main_x = rects[i].x
+                                    for opt_i, opt in enumerate(options):
+                                        if not isinstance(opt, dict) and opt == action:
+                                            menu_y = rects[i].y - (opt_i * 25)
+                                            break
+                                    if main_x is not None and menu_y is not None:
+                                        break
+                                        
+                            if main_x is None or menu_y is None:
+                                base_x, base_y = game.context_menu.get('position', (0,0))
+                                surf = getattr(game, 'game_screen', pygame.display.get_surface())
+                                if surf:
+                                    screen_h = surf.get_height()
+                                    if base_y + (len(options) * 25) > screen_h:
+                                        base_y -= (len(options) * 25)
+                                    main_x, menu_y = base_x, base_y
+                                    
+                            target_rect = pygame.Rect(main_x, menu_y + self.c_main_idx * 25, 100, 25)
+                        else:
+                            for i, action in enumerate(action_map):
+                                if action == target_opt:
+                                    target_rect = rects[i]
+                                    break
+
+                    if target_rect:
+                        self._set_mouse_pos_scaled(game, target_rect.centerx, target_rect.centery)
+                return 
+
             if y == 1: # Up
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_UP, 'unicode': ''}))
                 pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': 1, 'x': 0, 'from_dpad': True})) 
@@ -393,7 +567,6 @@ class JoystickHandler:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': -1, 'x': 0, 'from_dpad': True})) 
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 5}))
                 
-            # ---> Left / Right for Belt Selection (Slots 1 to 5)
             if x != 0:
                 current_index = getattr(self, 'belt_index', -1)
                 if x == -1: # Left

@@ -104,7 +104,7 @@ class NPCDialog:
 
                 unique_combinations = set()
                 
-                for _ in range(100):
+                for _ in range(20):
                     pq = f"{pick_frag(fragments['hail'], 'p')} {pick_frag(fragments['context'], 'p')} {pick_frag(fragments['end'], 'p')}".strip()
                     na = f"{pick_frag(fragments['hail'], 'n')} {pick_frag(fragments['context'], 'n')} {pick_frag(fragments['end'], 'n')}".strip()
                     

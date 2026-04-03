@@ -371,7 +371,9 @@ def handle_mouse_down(game, event, mouse_pos):
             if modal['rect'].collidepoint(mouse_pos):
                 topmost_modal = modal
                 break
-        
+        if topmost_modal:
+            # Button 4 is scroll UP (positive dy), Button 5 is scroll DOWN (negative dy)
+            topmost_modal['scroll_dy'] = 1 if event.button == 4 else -1
         if topmost_modal and topmost_modal['type'] == 'crafting':
             offset = topmost_modal.get('crafting_scroll_offset', 0)
             total = topmost_modal.get('crafting_total_items', 0)

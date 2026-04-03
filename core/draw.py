@@ -799,7 +799,10 @@ def draw_game(game):
                 
                 tt_w = max_w + 10
                 tt_h = len(lines) * 20 + 10
-                tt_x, tt_y = mouse_pos[0], mouse_pos[1]
+                
+                # --- ELEGANT JOYSTICK FIX ---
+                tt_x = mouse_pos[0] + 15
+                tt_y = mouse_pos[1] + 15
                 
                 if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
                 if tt_y + tt_h > GAME_HEIGHT: tt_y = mouse_pos[1] - tt_h - 5
