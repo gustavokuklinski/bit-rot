@@ -7,9 +7,9 @@
         <crt_filter value="true" name="CRT filter (Default: True)"/>
     </ui>
     <audio>
-        <volume_music value="0.25" name="Music Volume"/>
-        <volume_background value="1.0" name="Background Volume"/>
-        <volume_atmospheric value="1.0" name="Atmospheric Volume"/>
+        <volume_music value="0.0" name="Music Volume"/>
+        <volume_background value="0.0" name="Background Volume"/>
+        <volume_atmospheric value="0.0" name="Atmospheric Volume"/>
     </audio>
     <game>
         <time_daylength value="900000" name="Day length (Default: 15 minutes)"/>
@@ -40,7 +40,7 @@
         <has_tires_chance value="1.0" name="Car Tires chance (Default: Extreme High)"/>
     </vehicle>
     <animal>
-        <animal_spawn_per_chunk value="10" name="Max Animal spawn on chunk (Default: 10)"/>
+        <animal_spawn_per_chunk value="0" name="Max Animal spawn on chunk (Default: 10)"/>
         <animal_respawn_ms_timer value="30000" name="Animal respawn (Default: 30000)"/>
     </animal>
     <npc>

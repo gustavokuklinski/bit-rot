@@ -172,8 +172,13 @@ def draw_npc_dialog_modal(surface, modal, game):
                 
                 if node_id != last_node:
                     title_map = {
-                        'greeting': 'Greeting', 'tips': 'Tips',
-                        'lore_branch': 'Lore', 'quest_branch': 'Quest'
+
+                        'greeting': 'Greeting', 
+                        'small_talk': 'Small Talk', # Explicitly added!
+                        'tips': 'Tips',
+                        'lore_branch': 'Gossip',    # Your custom Lore name
+                        'quest_branch': 'Quest'
+                    
                     }
                     raw_title = title_map.get(node_id, node_id.replace('_', ' ').title())
                     title_surf = font.render(tr('dialog', raw_title), True, (170, 170, 170)) 
