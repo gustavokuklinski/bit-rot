@@ -361,7 +361,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                     return
             
-        if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL] or pygame.mouse.get_pressed()[2]):
+        if getattr(game.player, 'is_aiming', False):
             handle_attack(game, mouse_pos)
             return
 

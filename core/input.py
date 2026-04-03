@@ -45,16 +45,14 @@ def handle_movement(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     
-    # --- [MODIFIED] Dynamic Speed Calculation using XML Config ---
+    # --- Dynamic Speed Calculation using XML Config ---
     base_move_speed = core.data.config.PLAYER_SPEED
     speed_multiplier = 1.0
 
-    # Iterate over player traits and apply 'PLAYER_SPEED' modifiers defined in XML
     if game.player:
         for trait_id in game.player.traits:
             t_def = TRAIT_DEFINITIONS.get(trait_id)
             if t_def and 'config_modifiers' in t_def:
-                # Look for a modifier specifically for PLAYER_SPEED
                 mod = t_def['config_modifiers'].get('PLAYER_SPEED')
                 if mod is not None:
                     speed_multiplier *= mod
@@ -62,11 +60,19 @@ def handle_movement(game):
     final_base_speed = base_move_speed * speed_multiplier
     current_speed = 0
 
-    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
+    # ---> 1. FETCH JOYSTICK DATA <---
+    joy_lx, joy_ly = 0, 0
+    joy_run, joy_aim = False, False
+    if hasattr(game, 'joystick_handler'):
+        joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
+        joy_run, joy_aim = game.joystick_handler.get_action_states()
+
+    # ---> 2. APPLY JOYSTICK STATES TO PLAYER <---
+    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
     game.player.is_running = is_running
 
-    # Use Left CTRL, Right CTRL, or Right Mouse Button (index 2) to aim
-    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
+    # Use Left CTRL, Right CTRL, Right Mouse Button (index 2) or Triggers to aim
+    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim)
 
     if game.player.stamina <= 0:
         current_speed = final_base_speed / 3
@@ -77,40 +83,69 @@ def handle_movement(game):
     else:
         current_speed = final_base_speed / 2
 
-    dx, dy = 0, 0
-    if keys[pygame.K_w] or keys[pygame.K_UP]:
-        dy -= 1
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        dy += 1
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        dx -= 1
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        dx += 1
-
-    new_facing = None
-    if dx > 0: 
-        new_facing = (1, 0)
-    elif dx < 0: 
-        new_facing = (-1, 0)
-    elif dy > 0: 
-        new_facing = (0, 1)
-    elif dy < 0: 
-        new_facing = (0, -1)
+    # ---------------------------------------------------------
+    # MOVEMENT LOGIC: SEPARATE KEYBOARD AND JOYSTICK MATH
+    # ---------------------------------------------------------
     
-    if new_facing is not None and new_facing != game.player.facing_direction:
-        game.player.facing_direction = new_facing
+    # 3. Read Keyboard Input
+    kb_dx, kb_dy = 0, 0
+    if keys[pygame.K_w] or keys[pygame.K_UP]: kb_dy -= 1
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]: kb_dy += 1
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]: kb_dx -= 1
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]: kb_dx += 1
 
-    if dx != 0 and dy != 0:
-        dx /= math.sqrt(2)
-        dy /= math.sqrt(2)
+    dx, dy = 0, 0
 
+    # 4. Apply the correct Math based on the input device
+    if kb_dx != 0 or kb_dy != 0:
+        # Keyboard was pressed: Apply the 1.414 division to prevent diagonal speed boosting
+        dx, dy = kb_dx, kb_dy
+        if dx != 0 and dy != 0:
+            dx /= math.sqrt(2)
+            dy /= math.sqrt(2)
+    else:
+        # Joystick is being used: The hardware already outputs a perfect circle
+        dx, dy = joy_lx, joy_ly
+        
+        magnitude = math.sqrt(dx**2 + dy**2)
+        if magnitude > 1.0:
+            dx /= magnitude
+            dy /= magnitude
+            
+        # BOOST JOYSTICK SPEED (25% faster than Keyboard)
+        dx *= 1.25
+        dy *= 1.25
+
+    # 5. Smooth Facing Direction
+    if abs(dx) > 0.15 or abs(dy) > 0.15:
+        new_facing = None
+        if abs(dx) > abs(dy): 
+            new_facing = (1, 0) if dx > 0 else (-1, 0)
+        else: 
+            new_facing = (0, 1) if dy > 0 else (0, -1)
+        
+        if new_facing is not None and new_facing != game.player.facing_direction:
+            game.player.facing_direction = new_facing
+
+    # 6. TELL THE ANIMATION ENGINE WE ARE MOVING
+    if dx != 0 or dy != 0:
+        game.player.is_moving = True
+    else:
+        game.player.is_moving = False
+
+    # 7. Apply Final Velocity
     game.player.vx = dx * current_speed
     game.player.vy = dy * current_speed
 
 def handle_input(game):
+    if hasattr(game, 'joystick_handler'):
+        game.joystick_handler.update_cursor(game)
 
     mouse_pos = game._get_scaled_mouse_pos()
     for event in pygame.event.get():
+        if hasattr(game, 'joystick_handler'):
+            game.joystick_handler.process_event(event)
+
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
@@ -120,7 +155,7 @@ def handle_input(game):
             # Optimization: Check if mouse is colliding with any visible modal
             is_over_modal = False
             topmost_modal = None
-            
+
             # Find topmost modal under mouse
             for modal in reversed(game.modals):
                 if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
@@ -129,12 +164,12 @@ def handle_input(game):
                     break
             
             if not is_over_modal:
-                 # Only zoom if mouse is NOT over any modal
-                if event.y > 0:
-                    game.zoom_level += 0.1
-                elif event.y < 0:
-                    game.zoom_level -= 0.1
-                game.zoom_level = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
+                if not getattr(event, 'from_dpad', False):
+                    if event.y > 0:
+                        game.zoom_level += 0.1
+                    elif event.y < 0:
+                        game.zoom_level -= 0.1
+                    game.zoom_level = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
             else:
                 # Handle scrolling for the topmost modal ONLY
                 modal = topmost_modal

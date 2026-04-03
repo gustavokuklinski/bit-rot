@@ -61,8 +61,18 @@ def draw_game(game):
 
     mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
+
+    joy_lx, joy_ly = 0, 0
+    joy_run, joy_aim = False, False
+    if hasattr(game, 'joystick_handler'):
+        joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
+        joy_run, joy_aim = game.joystick_handler.get_action_states()
+
+    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
+    game.player.is_running = is_running
+
     # Fixed typo and added right-click (mouse_buttons[2]) detection for panning
-    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2])
+    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim)
 
     target_pan_x = 0
     target_pan_y = 0

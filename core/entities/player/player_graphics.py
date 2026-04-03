@@ -84,6 +84,18 @@ class PlayerGraphics:
         wiggle_y = 0
         draw_angle = getattr(self, 'walk_anim_angle', 0)
 
+        if getattr(self, 'is_moving', False): 
+            phase_shift = id(self) % 1000
+            current_time = pygame.time.get_ticks()
+            
+            # INCREASE PROCEDURAL ANIMATION SPEED WHEN RUNNING
+            anim_mult = 1.6 if getattr(self, 'is_running', False) else 1.0
+            
+            # Vertical positional bounce
+            wiggle_y = int(math.sin(current_time * (0.015 * anim_mult) + phase_shift) * 2)
+            # Add rotation desynchronization
+            draw_angle += math.sin(current_time * (0.01 * anim_mult) + phase_shift) * 5
+            
         if draw_angle != 0:
             phase_shift = id(self) % 1000
             current_time = pygame.time.get_ticks()

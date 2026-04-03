@@ -1362,7 +1362,10 @@ def handle_mouse_motion(game, event, mouse_pos):
         game.player.aim_angle = math.atan2(-dy, dx) 
 
 
-    game.hovered_item = find_item_at_pos(game, mouse_pos)
+    if getattr(game, 'context_menu', {}).get('active', False):
+        game.hovered_item = None
+    else:
+        game.hovered_item = find_item_at_pos(game, mouse_pos)
 
     game.hovered_container = None
 

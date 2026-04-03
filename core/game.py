@@ -35,9 +35,11 @@ from core.systems.utils import (
 from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
+from core.joystick import JoystickHandler
 
 class Game:
     def __init__(self):
+        
         os.environ['SDL_RENDER_SCALE_QUALITY'] = '1'
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
@@ -57,7 +59,7 @@ class Game:
         self.logger = GameLogger()
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
         self.logger.info("Initializing Rot Engine...")
-
+        self.joystick_handler = JoystickHandler(logger=self.logger)
         try:
             # 1. Load the cursor graphic
             cursor_surface = pygame.image.load("./game/lib/sprites/ui/cursor.png").convert_alpha()
@@ -419,6 +421,9 @@ class Game:
         draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
 
         for event in pygame.event.get():
+            if hasattr(self, 'joystick_handler'):
+                self.joystick_handler.process_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
@@ -442,6 +447,9 @@ class Game:
         self.logger.info("Entering Main Game Loop")
         try:
             while self.running:
+                if hasattr(self, 'joystick_handler'):
+                    self.joystick_handler.update_cursor(self)
+
                 if self.game_state == 'MENU':
                     self.run_menu()
                 elif self.game_state == 'LOAD_GAME_MENU':
@@ -473,6 +481,9 @@ class Game:
         
         # FIX: Check for QUIT globally so the window can be closed even while loading
         for event in events:
+            if hasattr(self, 'joystick_handler'):
+                self.joystick_handler.process_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
                 return
@@ -537,6 +548,9 @@ class Game:
 
         # 3. Handle Clicks and Scrolling Events
         for event in pygame.event.get():
+            if hasattr(self, 'joystick_handler'):
+                self.joystick_handler.process_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
                 return
@@ -673,6 +687,10 @@ class Game:
             self.load_game_state['scroll_drag_start_y'] = 0
 
         for event in pygame.event.get():
+
+            if hasattr(self, 'joystick_handler'):
+                self.joystick_handler.process_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
                 return
@@ -761,6 +779,9 @@ class Game:
         menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
+            if hasattr(self, 'joystick_handler'):
+                self.joystick_handler.process_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
                 return
@@ -1072,7 +1093,8 @@ class Game:
         
         draw_game(self)
 
-        if self.hovered_item:
+        # --- CHANGED: Prevent tooltip rendering if Context Menu is active ---
+        if self.hovered_item and not self.context_menu.get('active', False):
             mouse_pos = self._get_scaled_mouse_pos()
             draw_tooltip(self.game_screen, self.hovered_item, mouse_pos)
 
