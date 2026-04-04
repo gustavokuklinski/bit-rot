@@ -76,6 +76,7 @@ def _load_stat_icons():
 
 
 def _draw_player_build_screen(game, state, mouse_pos):
+    
     """Draws the three-column layout and returns clickable rects."""
     
     clickable_rects = {
@@ -97,7 +98,12 @@ def _draw_player_build_screen(game, state, mouse_pos):
     _load_stat_icons()
     icon_padding = 24
 
-    col1_x = 170
+    center_offset_x = (GAME_WIDTH - 1280) // 2
+    center_offset_y = (GAME_HEIGHT - 720) // 2
+    
+    col1_x = 170 + center_offset_x
+    base_y = 30 + center_offset_y
+    
     col1_width = 270
     col2_x = col1_x + col1_width + 20
     col2_width = 225
@@ -109,7 +115,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     padding = 10
     
     # --- Column 1, Block 1: Preset Management Panel ---
-    preset_rect = pygame.Rect(col1_x, 30, col1_width, 260)
+    preset_rect = pygame.Rect(col1_x, base_y, col1_width, 260)
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -270,7 +276,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
             y_offset += 35
     
     # --- Column 2: Available Traits (Middle-Left) ---
-    prof_rect = pygame.Rect(col2_x, 30, col2_width, 160)
+    prof_rect = pygame.Rect(col2_x, base_y, col2_width, 160)
     prof_header_rect = pygame.Rect(prof_rect.x, prof_rect.y, prof_rect.width, header_height)
     prof_body_rect = pygame.Rect(prof_rect.x, prof_rect.y + header_height, prof_rect.width, prof_rect.height - header_height)
     
@@ -395,7 +401,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else: state['traits_scrollbar_handle_rect'] = None
 
     # --- Column 3: Chosen Traits ---
-    chosen_rect = pygame.Rect(col3_x, 30, col3_width, 640)
+    chosen_rect = pygame.Rect(col3_x, base_y, col3_width, 640)
     header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
     body_rect = pygame.Rect(chosen_rect.x, chosen_rect.y + header_height, chosen_rect.width, chosen_rect.height - header_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
@@ -474,7 +480,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         state['chosen_scrollbar_handle_rect'] = None
 
     # --- Column 4 ---
-    sprite_rect_container = pygame.Rect(col4_x, 30, col4_width, 310)
+    sprite_rect_container = pygame.Rect(col4_x, base_y, col4_width, 310)
     pygame.draw.rect(game.game_screen, (30, 30, 30), sprite_rect_container)
     pygame.draw.rect(game.game_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     if state.get('player_sprite_large'):
@@ -1056,9 +1062,18 @@ def run_player_setup(game):
     
     sidebar_width = 150
     btn_h = 40
-    player_btn = pygame.Rect(10, 30, sidebar_width, btn_h)
-    settings_btn = pygame.Rect(10, 90, sidebar_width, btn_h)
-    back_btn = pygame.Rect(10, GAME_HEIGHT - 91, sidebar_width, btn_h)
+    
+    # Calculate both X and Y center offsets
+    center_offset_x = (GAME_WIDTH - 1280) // 2
+    center_offset_y = (GAME_HEIGHT - 720) // 2
+    
+    # Shift the X coordinate by the offset so they stay attached to the columns
+    base_x = 10 + center_offset_x
+    base_y = 30 + center_offset_y
+    
+    player_btn = pygame.Rect(base_x, base_y, sidebar_width, btn_h)
+    settings_btn = pygame.Rect(base_x, base_y + 60, sidebar_width, btn_h)
+    back_btn = pygame.Rect(base_x, GAME_HEIGHT - 91 - center_offset_y, sidebar_width, btn_h)
 
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)

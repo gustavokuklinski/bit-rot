@@ -36,66 +36,11 @@ def get_belt_hud_slot_rect(i):
     x = start_x + i * (slot_size + gap)
     return pygame.Rect(x, start_y, slot_size, slot_size)
 
-def draw_belt_hud(surface, game, player, mouse_pos):
-    """Draws the always-visible belt HUD at the bottom of the screen."""
-    for i in range(5):
-        slot_rect = get_belt_hud_slot_rect(i)
-        
-        pygame.draw.rect(surface, (GRAY_40), slot_rect, 0, 3)
-        
-        item = player.belt[i]
-        if item and player.active_weapon and item.id == player.active_weapon.id:
-            pygame.draw.rect(surface, YELLOW, slot_rect, 2, 3)
-        else:
-            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-
-        # Draw Hotkey Number (Inside, Gray)
-        num_text = font_14.render(str(i + 1), True, GRAY)
-        surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
-
-        if item:
-            try:
-                if item.image:
-                    thumb = pygame.transform.scale(item.image, (slot_rect.width - 8, slot_rect.height - 8))
-                    thumb_rect = thumb.get_rect(center=slot_rect.center)
-                    surface.blit(thumb, thumb_rect)
-                else:
-                    pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-            except Exception:
-                pass
-            
-            # Durability Bar
-            if item.durability is not None and item.max_durability > 0:
-                max_dur = item.max_durability
-                cur_dur = max(0, item.durability)
-                pct = cur_dur / max_dur
-                bar_w, bar_h = slot_rect.width - 10, 3
-                bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
-                col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
-                pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
-                if pct > 0: pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
-
-            # Stack/Ammo Count (With Shadow)
-            show_count = False
-            if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
-                show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged'] and item.load is not None:
-                show_count = True
-
-            if show_count:
-                draw_text_shadow(
-                    surface, 
-                    font_14, 
-                    str(int(item.load)), 
-                    WHITE, 
-                    (slot_rect.right - 3, slot_rect.bottom - 1), 
-                    align='bottomright'
-                )
 
 # --- Inventory Tab Helper ---
 
 
-def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
+def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_modal):
     # [CHANGED] Set slot count to 10
     INVENTORY_SLOTS = 10 
 
@@ -104,6 +49,26 @@ def _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal):
         slot_rect = get_inventory_slot_rect(i, modal['position'])
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+
+        # Default colors
+        bg_color = GRAY_40
+        border_color = GRAY
+        border_width = 1
+        
+        # --- NEW: Dynamic Drag & Hover Highlighting ---
+        hovered = slot_rect.collidepoint(mouse_pos)
+        if hovered:
+            bg_color = GRAY_60
+            if game and game.dragged_item:
+                # Assuming valid placement (expand this if you have specific restrictions)
+                border_color = GREEN 
+                border_width = 2
+            else:
+                border_color = WHITE
+                
+        pygame.draw.rect(surface, bg_color, slot_rect, 0, 3)
+        pygame.draw.rect(surface, border_color, slot_rect, border_width, 3)
+        # ----------------------------------------------
 
         item = player.inventory[i] if i < len(player.inventory) else None
 
@@ -294,7 +259,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     # --- 3. RENDER CONTENT ---
     active_label = modal['active_tab']
     if active_label == 'Inventory':
-        _draw_inventory_tab(surface, player, modal, assets, mouse_pos, base_modal)
+        _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_modal)
     elif active_label in container_mapping:
         # Use the generic container drawer for any detected container
         _draw_container_tab(surface, game, player, modal, mouse_pos, container_mapping[active_label])

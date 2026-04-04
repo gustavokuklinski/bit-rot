@@ -10,7 +10,7 @@ from core.entities.npc.npc import NPC
 from core.entities.animal.animal import Animal
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
-from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal, draw_belt_hud, get_belt_hud_slot_rect
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal # draw_belt_hud get_belt_hud_slot_rect
 from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -891,7 +891,7 @@ def draw_game(game):
                     game.game_screen.blit(val_s, (curr_x, curr_y + 2))
                     curr_x += val_s.get_width() + 10
 
-        draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
+        #draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos())
         alert_tooltip = draw_player_alerts(game.game_screen, game.player)
         if alert_tooltip:
              game.hovered_item = alert_tooltip
@@ -1033,13 +1033,13 @@ def draw_game(game):
             elif modal['type'] == 'messages':
                 pass
 
-        if not highlighted_rect:
-            for i in range(5):
-                slot = get_belt_hud_slot_rect(i)
-                if slot.collidepoint(game._get_scaled_mouse_pos()):
-                    highlighted_rect = slot
-                    highlighted_allowed = (preview_item.item_type)
-                    break
+        #if not highlighted_rect:
+        #    for i in range(5):
+        #        slot = get_belt_hud_slot_rect(i)
+        #        if slot.collidepoint(game._get_scaled_mouse_pos()):
+        #            highlighted_rect = slot
+        #            highlighted_allowed = (preview_item.item_type)
+        #            break
 
         if highlighted_rect:
             overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)

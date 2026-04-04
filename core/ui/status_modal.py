@@ -20,7 +20,7 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
         {'label': 'Health', 'icon_path': SPRITE_PATH + 'ui/hp.png'},
         {'label': 'Status', 'icon_path': SPRITE_PATH + 'ui/status.png'},
         {'label': 'Record', 'icon_path': SPRITE_PATH + 'ui/xp.png'},
-        {'label': 'Quests', 'icon_path': SPRITE_PATH + 'ui/quest.png'} # [NEW] Added Quests tab
+        {'label': 'Quests', 'icon_path': SPRITE_PATH + 'ui/quest.png'}
     ]
 
     modal['tabs_data'] = tabs_data

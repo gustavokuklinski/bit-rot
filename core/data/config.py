@@ -34,26 +34,26 @@ GRAY_40 = (40, 40, 40)
 GRAY_80 = (80, 80, 80)
 
 INVENTORY_MODAL_WIDTH = 244
-INVENTORY_MODAL_HEIGHT = 235
-STATUS_MODAL_WIDTH = 230 
+INVENTORY_MODAL_HEIGHT = 250
+STATUS_MODAL_WIDTH = 244
 STATUS_MODAL_HEIGHT = 360
 
 # Unified Modal Widths (Matched to 5-slot 40px grid)
 NEARBY_MODAL_WIDTH = 244
-NEARBY_MODAL_HEIGHT = 225
+NEARBY_MODAL_HEIGHT = 250
 CONTAINER_MODAL_WIDTH = 244
 CONTAINER_MODAL_HEIGHT = 250
 GEAR_MODAL_WIDTH = 244
 GEAR_MODAL_HEIGHT = 250
+MOBILE_MODAL_WIDTH = 244
+MOBILE_MODAL_HEIGHT = 300
 
-MESSAGES_MODAL_WIDTH = 470
+MESSAGES_MODAL_WIDTH = 500
 MESSAGES_MODAL_HEIGHT = 250
 TEXT_MODAL_WIDTH = 300
 TEXT_MODAL_HEIGHT = 300
 VEHICLE_MODAL_WIDTH = 400
 VEHICLE_MODAL_HEIGHT = 230
-MOBILE_MODAL_WIDTH = 250
-MOBILE_MODAL_HEIGHT = 350
 CRAFTING_MODAL_WIDTH = 700
 CRAFTING_MODAL_HEIGHT = 560
 MAP_MODAL_WIDTH = 950
@@ -66,11 +66,8 @@ SLOTS_MODAL_WIDTH = 255
 SLOTS_MODAL_HEIGHT = 520
 
 FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
-
-font = pygame.font.Font(FONT_FACE, 14)
-font_14 = pygame.font.Font(FONT_FACE, 14)
-font_xl = pygame.font.Font(FONT_FACE, 16)
-font_xxl = pygame.font.Font(FONT_FACE, 24)
+font = None
+font_14 = None
 
 TILE_SIZE = 16
 
@@ -123,6 +120,9 @@ MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
 UI_SHOW_TUTORIAL_DEFAULT = True
 UI_CRT_FILTER = True
+RESOLUTION = "1280x720"
+WINDOW_MODE = "fullscreen"
+UI_SCALE = 1
 ANIMAL_SPAWN_COUNT = 0
 ANIMAL_RESPAWN_TIMER_MS = 0
 
@@ -138,6 +138,8 @@ def generate_random_seed(chunks=None):
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 def load_settings(preset="default"):
+    global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
+    global font, font_14
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
     global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
@@ -152,7 +154,7 @@ def load_settings(preset="default"):
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
-    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, UI_CRT_FILTER
+    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, UI_CRT_FILTER, RESOLUTION, WINDOW_MODE
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
@@ -242,6 +244,36 @@ def load_settings(preset="default"):
         val_tutorial = ui_config.find('ui_show_tutorial_default')
         UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
 
+        RESOLUTION = ui_config.find('resolution').get('value')
+        WINDOW_MODE = ui_config.find('window_mode').get('value')
+
+        if RESOLUTION.lower() == "max":
+            GAME_WIDTH = infoObject.current_w
+            GAME_HEIGHT = infoObject.current_h
+        else:
+            try:
+                parts = RESOLUTION.split('x')
+                GAME_WIDTH = int(parts[0])
+                GAME_HEIGHT = int(parts[1])
+            except (ValueError, IndexError):
+                GAME_WIDTH = 1280
+                GAME_HEIGHT = 720
+        
+        UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
+        RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
+
+        # --- 3. Lock-in the True Font Render right here ---
+        try:
+            font     = pygame.font.Font(FONT_FACE, max(1, int(14 * RESOLUTION_VALUE)))
+            font_14  = pygame.font.Font(FONT_FACE, max(1, int(14 * RESOLUTION_VALUE)))
+        except Exception as e:
+            print(f"Font Error: {e}. Falling back to default system font.")
+            font     = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
+            font_14  = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
+
+
+        UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
+
         val_crt = ui_config.find('crt_filter')
         if val_crt is not None:
             UI_CRT_FILTER = str(val_crt.get('value')).lower() == 'true'
@@ -315,5 +347,6 @@ try:
         GAME_VERSION = f.read().strip()
 except:
     GAME_VERSION = "0.0.1"
+
 
 load_settings()

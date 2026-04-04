@@ -148,12 +148,42 @@ def draw_npc_dialog_modal(surface, modal, game):
         if active_index == -1:
             mouse_pos = pygame.mouse.get_pos()
             
-            # --- Calculate Total Height for Scrollbar ---
-            total_height = 0
-            if dialogs:
-                last_rect = get_npc_dialog_option_rect((x, y), len(dialogs) - 1, dialogs, 0)
-                total_height = last_rect.bottom - (y + 80)
+            # --- [OPTIMIZATION] Cache Layout and Wrapped Lines ---
+            opt_width = text_area_width - 20
+            cache_key = f"dialog_list_{id(dialogs)}_{opt_width}"
+            
+            if modal.get('dialog_list_cache_key') != cache_key:
+                total_height = 0
+                layout_data = []
+                last_node = None
                 
+                for option in dialogs:
+                    node_id = option.get('node_id')
+                    extra_y = 0
+                    if node_id != last_node:
+                        extra_y = 25
+                        last_node = node_id
+                        
+                    q_text_str = f"- {option['q']}"
+                    lines = get_wrapped_lines(q_text_str, font, opt_width)
+                    current_height = max(30, len(lines) * 20 + 10)
+                    
+                    layout_data.append({
+                        'y_offset': total_height + extra_y,
+                        'height': current_height,
+                        'lines': lines,
+                        'node_id': node_id,
+                        'is_new_node': extra_y > 0
+                    })
+                    total_height += extra_y + current_height
+                    
+                modal['dialog_list_cache_key'] = cache_key
+                modal['dialog_list_layout'] = layout_data
+                modal['dialog_total_height'] = total_height
+
+            total_height = modal['dialog_total_height']
+            layout_data = modal['dialog_list_layout']
+            
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
             scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
@@ -164,33 +194,28 @@ def draw_npc_dialog_modal(surface, modal, game):
             original_clip = surface.get_clip()
             surface.set_clip(clip_rect)
 
-            last_node = None
             for i, option in enumerate(dialogs):
-                # Pass scroll_offset_y here!
-                rect = get_npc_dialog_option_rect((x, y), i, dialogs, scroll_offset_y)
-                node_id = option.get('node_id')
+                lay = layout_data[i]
+                start_x = x + COL_1_WIDTH + PADDING
+                start_y = y + 80 - scroll_offset_y + lay['y_offset']
+                rect = pygame.Rect(start_x, start_y, opt_width, lay['height'])
                 
-                if node_id != last_node:
+                if lay['is_new_node']:
                     title_map = {
-
                         'greeting': 'Greeting', 
-                        'small_talk': 'Small Talk', # Explicitly added!
+                        'small_talk': 'Small Talk',
                         'tips': 'Tips',
-                        'lore_branch': 'Gossip',    # Your custom Lore name
+                        'lore_branch': 'Gossip',
                         'quest_branch': 'Quest'
-                    
                     }
-                    raw_title = title_map.get(node_id, node_id.replace('_', ' ').title())
+                    raw_title = title_map.get(lay['node_id'], lay['node_id'].replace('_', ' ').title())
                     title_surf = font.render(tr('dialog', raw_title), True, (170, 170, 170)) 
                     surface.blit(title_surf, (col2_x, rect.y - 22))
-                    last_node = node_id
                     
                 is_hovered = rect.collidepoint(mouse_pos)
                 color = YELLOW if is_hovered else WHITE
-                q_text_str = f"- {option['q']}"
-                lines = get_wrapped_lines(q_text_str, font, rect.width - 20)
                 
-                for line_idx, line in enumerate(lines):
+                for line_idx, line in enumerate(lay['lines']):
                     q_line_surf = font.render(line, True, color)
                     surface.blit(q_line_surf, (rect.x + 10, rect.y + 5 + (line_idx * 20)))
 
@@ -213,14 +238,27 @@ def draw_npc_dialog_modal(surface, modal, game):
                 
         else:
             selected_opt = dialogs[active_index]
-            q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
-            q_lines = get_wrapped_lines(q_text_str, font, text_area_width)
             
-            a_text_str = f"{npc.name}: {selected_opt['a']}"
-            a_lines = get_wrapped_lines(a_text_str, font, text_area_width)
+            # --- [OPTIMIZATION] Cache Active Dialog Text Wrapping ---
+            cache_key = f"dialog_active_{id(selected_opt)}_{text_area_width}"
+            if modal.get('dialog_active_cache_key') != cache_key:
+                q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
+                q_lines = get_wrapped_lines(q_text_str, font, text_area_width)
+                
+                a_text_str = f"{npc.name}: {selected_opt['a']}"
+                a_lines = get_wrapped_lines(a_text_str, font, text_area_width)
+                
+                total_height = (len(q_lines) * 20) + 10 + (len(a_lines) * 20) + 40
+                
+                modal['dialog_active_cache_key'] = cache_key
+                modal['dialog_active_q_lines'] = q_lines
+                modal['dialog_active_a_lines'] = a_lines
+                modal['dialog_active_total_height'] = total_height
+
+            q_lines = modal['dialog_active_q_lines']
+            a_lines = modal['dialog_active_a_lines']
+            total_height = modal['dialog_active_total_height']
             
-            # --- Calculate Total Height for Scrollbar ---
-            total_height = (len(q_lines) * 20) + 10 + (len(a_lines) * 20) + 40
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
             scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))

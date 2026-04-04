@@ -22,6 +22,8 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     # 2. Add tabs for clothes with capacity (e.g. Vests, Cargo Pants)
     if hasattr(player, 'clothes'):
         for slot, item in player.clothes.items():
+            
+
             # Check if item exists and acts as a container
             if item and hasattr(item, 'capacity') and item.capacity and item.capacity > 0:
                  if hasattr(item, 'inventory'):
@@ -82,6 +84,7 @@ def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
 
 # Helper function to get rects for the 'Gear' tab
 def get_gear_slot_rects(modal_position, modal_width=GEAR_MODAL_WIDTH):
+
     modal_x, modal_y = modal_position
     slot_size = 40 
     gap = 6        
@@ -153,5 +156,26 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
                     surface.blit(thumb, thumb_rect)
                 else:
                     pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+                
+                # --- NEW: Durability Bar ---
+                # Safely get the attributes and ensure they are actually numbers, not None
+                durability = getattr(item, 'durability', None)
+                max_durability = getattr(item, 'max_durability', None)
+                
+                if durability is not None and max_durability is not None and max_durability > 0:
+                    # Your exact standard durability algorithm
+                    max_dur = max_durability
+                    cur_dur = max(0, durability)
+                    pct = cur_dur / max_dur
+                    bar_w, bar_h = slot_rect.width - 10, 3
+                    bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
+                    
+                    col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
+                    
+                    pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
+                    if pct > 0: 
+                        pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
+                # ---------------------------
+                # ---------------------------
             except Exception as e:
                 print(f"Error drawing gear item {tr('item', item.name)}: {e}")

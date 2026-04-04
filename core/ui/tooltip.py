@@ -3,7 +3,7 @@ from core.data.config import *
 from core.data.recipe_manager import RecipeManager
 from core.data.localization import tr
 
-def draw_tooltip(surface, item, pos):
+def draw_tooltip(surface, item, pos, parent_rect=None):
     if not item:
         return
 
@@ -262,24 +262,42 @@ def draw_tooltip(surface, item, pos):
     width = max(line.get_width() for line in rendered_lines) + 20
     height = sum(line.get_height() for line in rendered_lines) + 20
     
-    # --- ELEGANT JOYSTICK FIX ---
-    # Add a slight offset so the tooltip doesn't cover the slot the cursor is snapped to
-    tt_x = pos[0] + 15
-    tt_y = pos[1] + 15
-    
-    # Flip the tooltip to the opposite side of the cursor if it goes off-screen
-    if tt_x + width > GAME_WIDTH:
-        tt_x = pos[0] - width - 5
-    if tt_y + height > GAME_HEIGHT:
-        tt_y = pos[1] - height - 5
+    if parent_rect:
+        # --- NEW: Static Modal Anchor Logic ---
+        # Align to the Left of the modal
+        tt_x = parent_rect.left - width - 5
+        tt_y = parent_rect.top
+        
+        # Failsafe: If no room on the left edge of the screen, flip to the Right side
+        if tt_x < 0:
+            tt_x = parent_rect.right + 5
+            
+        # Failsafe: Keep it from bleeding off the bottom of the screen
+        if tt_y + height > GAME_HEIGHT:
+            tt_y = GAME_HEIGHT - height - 5
+            
+    else:
+        # --- EXISTING: Cursor Follow Logic ---
+        tt_x = pos[0] + 15
+        tt_y = pos[1] + 15
+        
+        if tt_x + width > GAME_WIDTH:
+            tt_x = pos[0] - width - 5
+        if tt_y + height > GAME_HEIGHT:
+            tt_y = pos[1] - height - 5
 
-    tooltip_rect = pygame.Rect(pos[0], pos[1], width, height)
+    # FIX: Use the calculated tt_x and tt_y instead of hardcoded pos[0] and pos[1]
+    tooltip_rect = pygame.Rect(tt_x, tt_y, width, height)
     
-    # Adjust position to keep tooltip on screen
+    # Final safety net to keep it strictly on-screen globally
     if tooltip_rect.right > GAME_WIDTH:
         tooltip_rect.right = GAME_WIDTH
     if tooltip_rect.bottom > GAME_HEIGHT:
         tooltip_rect.bottom = GAME_HEIGHT
+    if tooltip_rect.left < 0:
+        tooltip_rect.left = 0
+    if tooltip_rect.top < 0:
+        tooltip_rect.top = 0
 
     pygame.draw.rect(surface, (0, 0, 0, 220), tooltip_rect) # Slightly darker opacity
     pygame.draw.rect(surface, WHITE, tooltip_rect, 1)

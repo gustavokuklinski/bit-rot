@@ -62,29 +62,45 @@ You have three objectives. Choose wisely, because the island is listening.
 
 **Controller (Xbox-like)**
 
-* **A Button (BTN_A)** : Hold to Run/Sprint.
-* **B Button (BTN_B)** : Open Context Menus (Right Click).
-* **X Button (BTN_X)** : Reload Weapon.
-* **Y Button (BTN_Y)** : Interact / Pick Up Items.
-* **LB (Left Bumper)** : Zoom Out camera.
-* **RB (Right Bumper)** : Zoom In camera.
-* **Start** : Pause Game.
-* **Select** : Fast Forward Time.
-* **Left Analog** : Move your character.
-* **Right Analog** : Move the UI Cursor (Automatically snaps to items in menus).
-* **LT (Left Trigger)** : Shoot Weapon / Attack. When in menus, acts as Left Click to drag, drop, and grab items!
-* **RT (Right Trigger)** : Hold to Aim your weapon. (Also automatically disables cursor snapping so you can free-aim smoothly).
-* **Up / Down** : Navigate up and down through Context Menu options, OR scroll up and down inside menus like Crafting and Inventory.
-* **Left / Right** : Quickly select active items on your Quick Belt (Slots 1 through 5).
+* **A:** Run 
+* **B:** Context menu
+* **X:** Reload
+* **Y:** Interact
+* **LB:** Zoom Out / Previous Tab / Scroll Up
+* **RB:** Zoom In / Next Tab / Scroll Down
+* **LT:** Left-Click (Mouse Button 1) / Drag & Drop items
+* **RT:** Aim Weapon
+* **Left Stick:** Player Movement
+* **Right Stick:** Move Cursor / Snap to UI elements
 
-### [ INVENTORY & GEAR ]
+* **L3:** Pause Game
+* **Select:** Fast Forward Time
+* **Start:** Toggle Modals
+
+Dpad
+* **Up:** Scroll Up / Arrow Up / Navigate up in Context Menu
+* **Down:** Scroll Down / Arrow Down / Navigate down in Context Menu
+* **Left:** Cycle Belt Slot Left (Keys 1-5)
+* **Right:** Cycle Belt Slot Right (Keys 5-1)
+
+Keybinds
+* **Y + Up:** Open/Close Status Modal
+* **Y + Down:** Open/Close Gear Modal
+* **Y + Left:** Open/Close Inventory Modal
+* **Y + Right:** Open/Close Nearby Modal
+* **B + Up:** Open/Close Messages Modal
+* **B + Down:** Open/Close Crafting Modal
+* **B + Left:** Open/Close Messages Modal
+* **B + Right:** Open/Close Help Modal
+
+### [ INVENTORY ]
 
 * **Managing Items** : Left-click and hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
 * **Quick Access Belt** : Drop essential tools or weapons into your Belt slots to quickly equip them using keys 1-5.
 * **Gear & Armor** : Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 * **Carry Weight** : Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
 
-### [ PLAYER STATUS ]
+### [ STATUS ]
 
 * **Health**: Your life force. It drops from physical attacks, starvation, dehydration, severe infection, or carrying too much weight. Use medical supplies or sleep on a proper bed to recover.
 

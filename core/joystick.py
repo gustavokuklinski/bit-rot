@@ -44,7 +44,7 @@ class JoystickHandler:
         self.active_controller = None
         
         # ---> INCREASED SENSITIVITY <---
-        self.cursor_speed = 24.0 
+        self.cursor_speed = 12.0 
         self.deadzone = 0.2
         self.last_snap_time = 0
         
@@ -130,23 +130,39 @@ class JoystickHandler:
 
     def update_cursor(self, game):
         """Updates mouse position using Free Cursor or UI Snap Logic"""
-        if not self.active_controller:
-            return
-
         self.last_game_ref = game 
         
         if not getattr(game, 'context_menu', {}).get('active', False):
             self.c_main_idx = None 
 
-        joy = self.active_controller
+        # ---------------------------------------------------------
+        # UNIFIED SNAP CURSOR (Keyboard Arrows & Joystick)
+        # ---------------------------------------------------------
+        keys = pygame.key.get_pressed()
+        rx, ry = 0.0, 0.0
         
-        if joy.get_numaxes() >= 4:
-            rx = joy.get_axis(AXIS_RX)
-            ry = joy.get_axis(AXIS_RY)
+        # 1. Read Keyboard Arrows natively into analog values
+        if keys[pygame.K_LEFT]:  rx -= 1.0
+        if keys[pygame.K_RIGHT]: rx += 1.0
+        if keys[pygame.K_UP]:    ry -= 1.0
+        if keys[pygame.K_DOWN]:  ry += 1.0
+        
+        # Normalize diagonal keyboard movement
+        if rx != 0 and ry != 0:
+            length = math.hypot(rx, ry)
+            rx /= length
+            ry /= length
 
-            if abs(rx) < self.deadzone: rx = 0
-            if abs(ry) < self.deadzone: ry = 0
+        # 2. Read Joystick (Overrides keyboard if actively past deadzone)
+        joy_numaxes = 4 if not self.active_controller else self.active_controller.get_numaxes()
+        if self.active_controller and joy_numaxes >= 4:
+            j_rx = self.active_controller.get_axis(AXIS_RX)
+            j_ry = self.active_controller.get_axis(AXIS_RY)
+            if abs(j_rx) >= self.deadzone: rx = j_rx
+            if abs(j_ry) >= self.deadzone: ry = j_ry
 
+        # 3. Process identical snap physics for both inputs
+        if joy_numaxes >= 4:
             if rx != 0 or ry != 0:
                 self.c_main_idx = None 
                 
@@ -291,6 +307,28 @@ class JoystickHandler:
     def process_event(self, event):
         """Translates joystick hardware events into standard keyboard/mouse events"""
         
+        # --- GLOBAL KEYBOARD CLICK INTERCEPTION ---
+        # --- GLOBAL KEYBOARD CLICK INTERCEPTION ---
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                game = getattr(self, 'last_game_ref', None)
+                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
+            elif event.key == pygame.K_RALT: # ALT GR for Right Click
+                game = getattr(self, 'last_game_ref', None)
+                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
+                
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                game = getattr(self, 'last_game_ref', None)
+                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
+            elif event.key == pygame.K_RALT:
+                game = getattr(self, 'last_game_ref', None)
+                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
+
         if event.type == pygame.JOYAXISMOTION:
             if event.axis == AXIS_LT: 
                 mouse_pos = pygame.mouse.get_pos()
@@ -310,11 +348,7 @@ class JoystickHandler:
                             in_ui_bounds = True
                             break
                             
-                    if not in_ui_bounds:
-                        for i in range(5):
-                            if get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
-                                in_ui_bounds = True
-                                break
+                    
                                 
                     if not in_ui_bounds and getattr(game, 'context_menu', {}).get('active', False):
                         in_ui_bounds = True

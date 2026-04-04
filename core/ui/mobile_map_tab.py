@@ -302,40 +302,50 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
 
         # --- [NEW] Draw Dynamic Quest Markers ---
         if hasattr(game.player, 'quests'):
-            if NPCDialog.NPC_DIALOGS is None:
-                NPCDialog.load_dialogs()
+            
+            # --- [OPTIMIZATION] Throttle Heavy Item Scanning to 1.5 seconds ---
+            current_t = time.time()
+            if 'quest_markers_cache_time' not in modal or current_t - modal['quest_markers_cache_time'] > 1.5:
+                modal['quest_markers_cache_time'] = current_t
                 
-            active_req_items = set()
-            
-            # 1. Identify which items the player is tasked to find
-            for node_id in game.player.quests:
-                options = NPCDialog.NPC_DIALOGS.get(node_id, [])
-                for opt in options:
-                    dialog_key = f"{node_id}_{opt['q']}"
-                    # If this specific dialog option has NOT been spoken/concluded yet
-                    if dialog_key not in getattr(game.player, 'dialog_history', []):
-                        req_item = opt.get('req_item')
-                        if req_item:
-                            item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',')]
-                            active_req_items.update(item_names)
-            
-            if active_req_items:
+                if NPCDialog.NPC_DIALOGS is None:
+                    NPCDialog.load_dialogs()
+                    
+                active_req_items = set()
+                
+                # 1. Identify which items the player is tasked to find
+                for node_id in game.player.quests:
+                    options = NPCDialog.NPC_DIALOGS.get(node_id, [])
+                    for opt in options:
+                        dialog_key = f"{node_id}_{opt['q']}"
+                        if dialog_key not in getattr(game.player, 'dialog_history', []):
+                            req_item = opt.get('req_item')
+                            if req_item:
+                                item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',')]
+                                active_req_items.update(item_names)
+                
                 quest_locations = []
-                
-                # 2. Scan world items and containers for the active quest requirements
-                for item in getattr(game, 'items_on_ground', []) + getattr(game, 'visible_items', []):
-                    if item.name in active_req_items:
-                        quest_locations.append((item.rect.centerx, item.rect.centery))
-                
-                for container in getattr(game, 'containers', []) + getattr(game, 'visible_containers', []):
-                    if hasattr(container, 'inventory'):
-                        for item in container.inventory:
-                            if item and item.name in active_req_items:
-                                quest_locations.append((container.rect.centerx, container.rect.centery))
-                                break # Prevent overlapping markers for the same container
-                
+                if active_req_items:
+                    # 2. Scan world items and containers
+                    for item in getattr(game, 'items_on_ground', []) + getattr(game, 'visible_items', []):
+                        if item.name in active_req_items:
+                            quest_locations.append((item.rect.centerx, item.rect.centery))
+                    
+                    for container in getattr(game, 'containers', []) + getattr(game, 'visible_containers', []):
+                        if hasattr(container, 'inventory'):
+                            for item in container.inventory:
+                                if item and item.name in active_req_items:
+                                    quest_locations.append((container.rect.centerx, container.rect.centery))
+                                    break 
+                                    
+                modal['cached_quest_locations'] = quest_locations
+
+            # Retrieve from cache
+            quest_locations = modal.get('cached_quest_locations', [])
+            
+            if quest_locations:
                 # 3. Draw the markers dynamically over the map
-                pulse = (math.sin(time.time() * 5) + 1) / 2 # Generates a smooth 0.0 to 1.0 pulse wave
+                pulse = (math.sin(time.time() * 5) + 1) / 2 # Smooth 60fps pulse
 
                 for qx, qy in quest_locations:
                     q_grid_x = (qx // TILE_SIZE) + gx_offset

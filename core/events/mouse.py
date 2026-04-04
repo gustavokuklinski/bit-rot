@@ -350,16 +350,7 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.help_button_rect and game.help_button_rect.collidepoint(mouse_pos): # <--- ADD THIS
             toggle_help_modal(game); return
 
-        for i, item in enumerate(game.player.belt):
-            slot_rect = get_belt_hud_slot_rect(i)
-            if slot_rect.collidepoint(mouse_pos):
-                if item:
-                    if game.player.action_timer > 0:
-                        return
-                    game.drag_candidate = (item, (i, 'belt'))
-                    game.drag_start_pos = mouse_pos
-                    game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                    return
+        
             
         if getattr(game.player, 'is_aiming', False):
             handle_attack(game, mouse_pos)

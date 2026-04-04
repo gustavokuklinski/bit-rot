@@ -344,6 +344,7 @@ def process_chat_command(game, text):
 
 
 def handle_keyboard_events(game, event):
+
     if event.type == pygame.KEYDOWN:
         # [UPDATED] Toggle UI Visibility with TAB (Close/Restore Logic)
         if event.key == pygame.K_TAB:

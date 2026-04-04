@@ -221,7 +221,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     if self.action_xp_reward > 0:
                         self.progression.add_xp(self, self.action_xp_attr, self.action_xp_reward)
                 self.action_name = ""
-            return False
+            #return False
 
         if self.chat_timer > 0:
             self.chat_timer -= game.dt_mult
@@ -264,19 +264,21 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         stamina_regen = PROGRESSION_CONFIG.get_stat('stamina', 'regen_base', 0.02)
         tireness_recovery = PROGRESSION_CONFIG.get_stat('tireness', 'day_recovery', 0.001)
 
+        ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
+
         if not self.is_sleeping and not is_active_resting:
             # Apply stamina penalty to tireness if stamina is depleted
             stamina_penalty = abs(PROGRESSION_CONFIG.get_stat('tireness', 'stamina_penalty', -0.005)) if self.stamina <= 0 else 0
-            total_drain = (tireness_drain + stamina_penalty) * game.dt_mult
+            total_drain = (tireness_drain + stamina_penalty) * ff_multiplier * game.dt_mult
             self.tireness = max(0.0, self.tireness - total_drain)
 
             # Consume stamina while running, and regenerate when walking/idle
             if is_moving and self.is_running:
                 stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
-                self.stamina = max(0.0, self.stamina - (stamina_drain * game.dt_mult))
+                self.stamina = max(0.0, self.stamina - (stamina_drain * ff_multiplier * game.dt_mult))
             else:
                 if self.stamina < self.max_stamina:
-                    self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * game.dt_mult))
+                    self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * ff_multiplier * game.dt_mult))
 
         if not self.is_sleeping and is_active_resting:
             # Fetch multipliers from XML dynamically
@@ -284,10 +286,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             tire_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             
             if self.stamina < self.max_stamina:
-                self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * game.dt_mult))
+                self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * ff_multiplier * game.dt_mult))
             if self.tireness < self.max_tireness:
                 # Buffed active resting tiredness recovery so it's noticeable when sitting on a bed
-                self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * 5.0 * game.dt_mult))
+                self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * 5.0 * ff_multiplier * game.dt_mult))
 
         if self.is_sleeping:
             game.is_fast_forwarding = True

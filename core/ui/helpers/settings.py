@@ -1,5 +1,7 @@
 # core/ui/helpers/settings.py
 import pygame
+import sys
+import os
 import core.data.config
 from core.data.config import *
 from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
@@ -37,7 +39,13 @@ def _get_friendly_value_display(key, value):
     return ""
 
 def _draw_settings_screen(game, state, mouse_pos):
-    col_start_x = 170 
+    # Calculate dynamic centering offset based on base 1280x720 resolution
+    center_offset_x = (GAME_WIDTH - 1280) // 2
+    center_offset_y = (GAME_HEIGHT - 720) // 2
+    
+    col_start_x = 170 + center_offset_x
+    base_y = 30 + center_offset_y
+    
     col_width = 350
     header_height = 30
     border_radius = 4
@@ -54,7 +62,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     }
 
     # Control Panel
-    control_rect = pygame.Rect(col_start_x, 30, col_width - 100, 100)
+    control_rect = pygame.Rect(col_start_x, base_y, col_width - 100, 180)
     control_header = pygame.Rect(control_rect.x, control_rect.y, control_rect.width, header_height)
     control_body = pygame.Rect(control_rect.x, control_rect.y + header_height, control_rect.width, control_rect.height - header_height)
 
@@ -66,17 +74,27 @@ def _draw_settings_screen(game, state, mouse_pos):
 
     btn_w = 120
     apply_rect = pygame.Rect(0, 0, btn_w, 35)
-    apply_rect.center = control_body.center
+    
+    # Shift the button slightly up from the center to make room for the text
+    apply_rect.centerx = control_body.centerx
+    apply_rect.centery = control_body.centery - 8
     
     pygame.draw.rect(game.game_screen, BTN_BLUE, apply_rect, border_radius=4)
     apply_txt = font.render(tr('ui', "Apply"), True, WHITE)
     game.game_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
     clickable_rects['apply_settings'] = apply_rect
 
+    # --- NEW: Restart Warning Text ---
+    # Renders perfectly centered underneath the Apply button
+    warning_text = font_14.render(tr('ui', "Requires a restart to apply."), True, GRAY)
+    warning_x = control_body.centerx - (warning_text.get_width() // 2)
+    warning_y = apply_rect.bottom + 5
+    game.game_screen.blit(warning_text, (warning_x, warning_y + 20))
+
     # Settings List
     settings_area_x = col_start_x + col_width
     settings_area_w = 830
-    settings_rect = pygame.Rect(settings_area_x - 87, 30, settings_area_w, 660)
+    settings_rect = pygame.Rect(settings_area_x - 87, base_y, settings_area_w, 660)
     
     settings_header = pygame.Rect(settings_rect.x, settings_rect.y, settings_rect.width, header_height)
     settings_body = pygame.Rect(settings_rect.x, settings_rect.y + header_height, settings_rect.width, settings_rect.height - header_height)
@@ -146,7 +164,8 @@ def _draw_settings_screen(game, state, mouse_pos):
                 is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay']) or ('volume' in key)
                 is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
                 is_language_cycle = (key == 'language')
-                is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle
+                is_display_cycle = (key in ['resolution', 'window_mode']) # <--- NEW
+                is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle or is_display_cycle
 
                 lbl = font_14.render(display_label + ":", True, WHITE)
                 sub.blit(lbl, (0, y_off + 12)) 
@@ -183,6 +202,13 @@ def _draw_settings_screen(game, state, mouse_pos):
                     
                     if is_language_cycle:
                         label = str(val)
+                    elif is_display_cycle: # <--- NEW DISPLAY FORMATTING
+                        if key == 'resolution' and str(val).lower() == 'max':
+                            label = tr('ui', "Native (Max)")
+                        elif key == 'window_mode':
+                            label = tr('ui', str(val).capitalize())
+                        else:
+                            label = str(val)
                     else:
                         try:
                             current_val_float = float(val)
@@ -290,7 +316,11 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             preset_name = state.get('selected_config_preset', 'config')
             save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
             core.data.config.load_settings(preset_name)
-
+            pygame.quit()
+        
+            # 3. Seamlessly reboot the Python process from scratch
+            # This forces config.py to re-evaluate the new max screen size and font scale
+            os.execv(sys.executable, ['python'] + sys.argv)
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.set_volume(0.5 * core.data.config.VOLUME_MUSIC)
 
@@ -347,6 +377,42 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             clicked_input = True
                             break
 
+                        elif key == 'resolution':
+                            # 1. Ask the hardware what it supports (returns largest to smallest)
+                            modes = pygame.display.list_modes()
+                            
+                            if modes == -1 or not modes:
+                                # Failsafe in case of weird virtual displays or headless servers
+                                res_list = ['1280x720', '1920x1080', 'max']
+                            else:
+                                # 2. Filter out tiny resolutions, format as "WxH", and reverse so it counts up
+                                res_list = [f"{w}x{h}" for w, h in reversed(modes) if w >= 1280 and h >= 720]
+                                
+                                # 3. Remove duplicates (some OSs return duplicates for different refresh rates)
+                                res_list = list(dict.fromkeys(res_list))
+                                
+                                # 4. Always ensure "max" is the final option
+                                res_list.append('max')
+
+                            current_val = str(setting_obj['value']).lower()
+                            idx = res_list.index(current_val) if current_val in res_list else 0
+                            new_val = res_list[(idx + 1) % len(res_list)]
+                            
+                            state['settings_data'][block][key]['value'] = new_val
+                            clicked_input = True
+                            break
+                            
+                        elif key == 'window_mode':
+                            modes = ['windowed', 'fullscreen']
+                            current_val = str(setting_obj['value']).lower()
+                            idx = modes.index(current_val) if current_val in modes else 0
+                            new_val = modes[(idx + 1) % len(modes)]
+                            
+                            state['settings_data'][block][key]['value'] = new_val
+                            clicked_input = True
+                            break
+
+                        # Math options only trigger if the above breaks didn't fire
                         try:
                             current_val = float(setting_obj['value'])
                         except ValueError:

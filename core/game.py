@@ -43,11 +43,17 @@ class Game:
         os.environ['SDL_RENDER_SCALE_QUALITY'] = '1'
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
+
+        # The global GAME_WIDTH and GAME_HEIGHT were already calculated 
+        # flawlessly by config.py before this file was even imported!
+        display_flags = pygame.SCALED | pygame.DOUBLEBUF
         
-        initial_w = int(GAME_WIDTH)
-        initial_h = int(GAME_HEIGHT)
+        if WINDOW_MODE.lower() == "fullscreen":
+            display_flags |= pygame.FULLSCREEN
+        else:
+            display_flags |= pygame.RESIZABLE
         
-        self.game_screen = pygame.display.set_mode((initial_w, initial_h), pygame.SCALED | pygame.RESIZABLE | pygame.DOUBLEBUF, vsync=1)
+        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags, vsync=1)
         
         pygame.display.set_caption("Bit Rot")
         try:
@@ -145,18 +151,20 @@ class Game:
         self.modals = []
         self.saved_modals = [] 
 
+        right_panel_x = GAME_WIDTH - 246
+        messages_panel_y = GAME_HEIGHT - 256
         self.last_modal_positions = {
             'status': (65, 3),
-            'inventory': (1034, 256),
-            'gear': (1034, 3),
+            'inventory': (right_panel_x - 256, messages_panel_y - 3),
+            'gear': (right_panel_x, 3),
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'nearby': (1034, 494),
-            'messages': (3, 460),
+            'nearby': (right_panel_x, messages_panel_y - 3),
+            'messages': (3, messages_panel_y),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100),
             'help': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2),
-            'slots': (720, 3)
+            'slots': (right_panel_x - 246, 3)
         }
 
         if UI_SHOW_TUTORIAL_DEFAULT:
