@@ -172,6 +172,7 @@ class JoystickHandler:
                     mx, my = pygame.mouse.get_pos()
                     
                 is_aiming = False
+                joy = self.active_controller
                 if joy.get_numaxes() > AXIS_RT and joy.get_axis(AXIS_RT) > 0.0:
                     is_aiming = True
                 elif hasattr(game, 'player') and getattr(game.player, 'is_aiming', False):
