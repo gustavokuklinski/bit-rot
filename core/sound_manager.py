@@ -171,6 +171,15 @@ class SoundManager:
         Plays background music using pygame.mixer.music (streaming).
         """
         try:
+            # ---> NEW: Force absolute path for Android <---
+            # Strip './' if the caller included it to prevent path joining issues
+            if path.startswith('./'):
+                path = path[2:]
+                
+            # If the path isn't already absolute, make it absolute using BASE_DIR
+            if not os.path.isabs(path):
+                path = os.path.join(core.data.config.BASE_DIR, path)
+
             if os.path.exists(path):
                 pygame.mixer.music.load(path)
                 

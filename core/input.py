@@ -63,9 +63,21 @@ def handle_movement(game):
     # ---> 1. FETCH JOYSTICK DATA <---
     joy_lx, joy_ly = 0, 0
     joy_run, joy_aim = False, False
-    if hasattr(game, 'joystick_handler'):
+    
+    # Check Hardware Joystick first
+    if getattr(game, 'joystick_handler', None):
         joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
         joy_run, joy_aim = game.joystick_handler.get_action_states()
+
+    # Override with Mobile Virtual Controller if active
+    if hasattr(game, 'virtual_controller') and game.virtual_controller.enabled:
+        # Only override if the virtual analog is actually being touched
+        if game.virtual_controller.joy_touch_id is not None:
+            joy_lx = game.virtual_controller.dx
+            joy_ly = game.virtual_controller.dy
+        
+        joy_run = joy_run or game.virtual_controller.btn_run['state']
+        joy_aim = joy_aim or game.virtual_controller.btn_aim['state']
 
     # ---> 2. APPLY JOYSTICK STATES TO PLAYER <---
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
@@ -138,13 +150,16 @@ def handle_movement(game):
     game.player.vy = dy * current_speed
 
 def handle_input(game):
-    if hasattr(game, 'joystick_handler'):
+    if getattr(game, 'joystick_handler', None):
         game.joystick_handler.update_cursor(game)
 
     mouse_pos = game._get_scaled_mouse_pos()
     for event in pygame.event.get():
-        if hasattr(game, 'joystick_handler'):
+        if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
+
+        if getattr(game, 'virtual_controller', None):
+            game.virtual_controller.process_event(event, game)
 
         if event.type == pygame.QUIT:
             pygame.quit()

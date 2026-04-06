@@ -60,3 +60,9 @@ $ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./game/icons/favic
 $ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns --output-dir=./build editor.py # Compile the editor
 ```
 After finish, open a terminal and type: ```xattr -cr bitrot.app```
+
+**Android**
+```shell
+$ buildozer -v android debug # Build APK to ./bin/
+$ buildozer -v android debug deploy run logcat -s "python" # Send the APK to Device and get the full log
+```

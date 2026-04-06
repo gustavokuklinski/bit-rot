@@ -2,8 +2,19 @@
 import pygame
 import xml.etree.ElementTree as ET
 import os
+import platform
 import subprocess
 import uuid
+
+def get_writable_dir():
+    """Returns a safe, writable directory for saves and configs on any platform."""
+    if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
+        # Running on Android - Use Pygame-CE's internal private storage
+        # Replace 'org.test.myapp' with your actual package.domain and package.name from buildozer.spec
+        return os.environ.get('ANDROID_PRIVATE', '/data/org.bit.rot/files')
+    else:
+        # Running on PC - Use the standard local directory
+        return os.path.abspath(".")
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -12,10 +23,13 @@ GAME_OFFSET_X = 0
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
-MAP_DIR = "./game/lib/map/" 
-DATA_PATH = "./game/lib/data/" 
-SPRITE_PATH = "./game/lib/sprites/" 
-SOUND_PATH = "./game/lib/sfx/" 
+BASE_DIR = os.path.abspath(".")
+
+MAP_DIR = os.path.join(BASE_DIR, "game", "lib", "map") + os.sep
+DATA_PATH = os.path.join(BASE_DIR, "game", "lib", "data") + os.sep
+SPRITE_PATH = os.path.join(BASE_DIR, "game", "lib", "sprites") + os.sep
+SOUND_PATH = os.path.join(BASE_DIR, "game", "lib", "sfx") + os.sep
+FONT_FACE = os.path.join(BASE_DIR, "game", "lib", "font", "Oxanium-Regular.ttf")
 
 # Colors
 TRANSPARENT = (0, 0, 0, 0)
@@ -65,7 +79,6 @@ HELP_MODAL_HEIGHT = 570
 SLOTS_MODAL_WIDTH = 255
 SLOTS_MODAL_HEIGHT = 520
 
-FONT_FACE = "./game/lib/font/Oxanium-Regular.ttf"
 font = None
 font_14 = None
 
@@ -138,6 +151,16 @@ def generate_random_seed(chunks=None):
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 def load_settings(preset="default"):
+    writable_root = get_writable_dir()
+    filepath = os.path.join(writable_root, "game", "save", "config", f"{preset}.xml")
+    
+    if not os.path.exists(filepath):
+        print(f"Modified config not found. Loading default from read-only assets.")
+        # Fallback to the bundled, read-only default file
+        filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
+        if not os.path.exists(filepath):
+            filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
+
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
     global font, font_14
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
@@ -309,10 +332,18 @@ def load_settings(preset="default"):
 def save_language_to_config(lang_code, preset="config"):
     global GAME_LANGUAGE
     GAME_LANGUAGE = lang_code
-    filepath = f'./game/save/config/{preset}.xml'
+    writable_root = get_writable_dir()
+    config_dir = os.path.join(writable_root, "game", "save", "config")
+    os.makedirs(config_dir, exist_ok=True) # Create folders if they don't exist
     
+    filepath = os.path.join(config_dir, f"{preset}.xml")
+    
+    # If the file doesn't exist in the writable dir yet, copy the default one over first
     if not os.path.exists(filepath):
-        return
+        bundled_path = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
+        if os.path.exists(bundled_path):
+            import shutil
+            shutil.copy(bundled_path, filepath)
         
     try:
         tree = ET.parse(filepath)

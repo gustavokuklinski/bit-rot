@@ -2,6 +2,7 @@ import pygame
 from core.data.config import *
 from datetime import datetime
 from core.data.localization import tr
+from core.data.config import BASE_DIR
 
 _logo_img = None
 
@@ -32,7 +33,8 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
     global _logo_img
     try:
         if _logo_img is None:
-            _logo_img = pygame.image.load('./game/icons/logo.png').convert_alpha()
+            logo_path = os.path.join(BASE_DIR, 'game', 'icons', 'logo.png')
+            _logo_img = pygame.image.load(logo_path).convert_alpha()
             logo_w = 500
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))
             _logo_img = pygame.transform.scale(_logo_img, (logo_w, logo_h))

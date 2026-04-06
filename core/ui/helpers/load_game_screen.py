@@ -7,7 +7,7 @@ from core.data.localization import tr
 
 def get_save_files():
     """Scans the save directory and returns a sorted list of save folders (newest first)."""
-    save_dir = os.path.join("game", "save", "game")
+    save_dir = os.path.join(get_writable_dir(), "game", "save", "game")
     if not os.path.exists(save_dir):
         return []
     
@@ -45,7 +45,7 @@ def get_save_files():
 
 def delete_save(filename):
     """Deletes a specific save folder."""
-    path = os.path.join("game", "save", "game", filename)
+    path = os.path.join(get_writable_dir(), "game", "save", "game")
     try:
         if os.path.exists(path):
             shutil.rmtree(path)

@@ -217,7 +217,8 @@ class PlayerActions:
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                display_message(f"{tr('msg', 'Cannot turn on')} {tr('item', item.name)}{tr('msg', ", it's out of power.")}")
+                
+                display_message(f"{tr('msg', 'Cannot turn on')} {tr('item', item.name)}{tr('msg', ', it´s out of power.')}")
                 return
 
             # Check Requirements (Lighters/Matches) for ignition

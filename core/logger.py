@@ -2,9 +2,13 @@ import os
 import logging
 import traceback
 from datetime import datetime
+from core.data.config import get_writable_dir
 
 class GameLogger:
-    def __init__(self, log_dir="game/logs"):
+    def __init__(self, log_dir=None):
+        if log_dir is None:
+            log_dir = os.path.join(get_writable_dir(), "game", "logs")
+            
         self.log_dir = log_dir
         self.logger = None
         self._setup_logger()

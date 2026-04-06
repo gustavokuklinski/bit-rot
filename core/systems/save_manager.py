@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from core.entities.vehicle.vehicle import Vehicle
 from core.entities.animal.animal import Animal
-from core.data.config import MAP_DIR
+from core.data.config import MAP_DIR, get_writable_dir
 from core.entities.npc.npc_dialog import NPCDialog
 
 def save_game(game):
@@ -15,7 +15,7 @@ def save_game(game):
         save_name = f"save_{timestamp}"
         game.current_save_folder_name = save_name
 
-    save_path = os.path.join("game", "save", "game", save_name)
+    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_name)
     game.logger.info(f"Saving game to {save_path}...")
 
     try:

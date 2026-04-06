@@ -34,6 +34,8 @@ from core.data.localization import tr
 def draw_game(game):
     # Clear the main screen
     game.game_screen.fill(PANEL_COLOR)
+    if hasattr(game, 'virtual_controller') and game.virtual_controller.enabled:
+        game.virtual_controller.draw(game.game_screen)
 
     # World Rendering with Pixelated Zoom
     zoom = getattr(game, 'zoom_level', 1.0)
@@ -64,7 +66,7 @@ def draw_game(game):
 
     joy_lx, joy_ly = 0, 0
     joy_run, joy_aim = False, False
-    if hasattr(game, 'joystick_handler'):
+    if getattr(game, 'joystick_handler', None):
         joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
         joy_run, joy_aim = game.joystick_handler.get_action_states()
 
@@ -1164,3 +1166,6 @@ def draw_game(game):
             fps_surface = font.render(fps_text, True, (255, 255, 255))
             fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
             game.game_screen.blit(fps_surface, fps_rect)
+    
+    if hasattr(game, 'virtual_controller') and getattr(game.virtual_controller, 'enabled', False):
+        game.virtual_controller.draw(game.game_screen)

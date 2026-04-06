@@ -17,7 +17,10 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
 
     if hasattr(item, 'require') and item.require:
         reqs = item.require if isinstance(item.require, list) else [item.require]
-        lines.append(f"{tr('tooltip', 'Requires:')} {f' {tr('tooltip', 'or')} '.join(reqs)}")
+        
+        # Extract the localized 'or' separator to keep the f-string clean
+        or_separator = f" {tr('tooltip', 'or')} "
+        lines.append(f"{tr('tooltip', 'Requires:')} {or_separator.join(reqs)}")
 
     if getattr(item, 'fuel_type', None):
         raw_fuel = item.fuel_type

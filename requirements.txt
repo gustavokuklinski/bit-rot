@@ -3,3 +3,7 @@ Nuitka
 faker
 numpy
 pygbag
+
+buildozer
+setuptools
+cython==0.29.34

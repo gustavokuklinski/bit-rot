@@ -127,7 +127,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         should_initial_save = True
     game.current_save_folder_name = save_name
     
-    save_path = os.path.join("game", "save", "game", save_name)
+    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_name)
     map_path = os.path.join(save_path, "map")
     
     try:
@@ -358,7 +358,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         save_game(game)
 
 def load_game(game, save_folder_name):
-    save_path = os.path.join("game", "save", "game", save_folder_name)
+    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_folder_name)
     map_path = os.path.join(save_path, "map")
     
     game.logger.info(f"Loading game from {save_path}...")

@@ -11,8 +11,10 @@ from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
 from core.data.localization import tr
+
 class MapManager:
-    def __init__(self, game, map_folder='./game/lib/map'):
+    def __init__(self, game, map_folder=f"{os.path.join(BASE_DIR, 'game', 'lib', 'map')}"):
+        
         self.game = game
         self.map_folder = map_folder
         self.current_map_filename = 'map_L1_world_map.csv' 

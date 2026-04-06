@@ -3,6 +3,7 @@ import asyncio
 import uuid
 import glob
 import os
+import platform
 import math
 import threading
 import core.data.config
@@ -35,7 +36,8 @@ from core.systems.utils import (
 from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
-from core.joystick import JoystickHandler
+from core.events.joystick import JoystickHandler
+from core.events.virtual_controller import VirtualController
 
 class Game:
     def __init__(self):
@@ -65,10 +67,23 @@ class Game:
         self.logger = GameLogger()
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
         self.logger.info("Initializing Rot Engine...")
-        self.joystick_handler = JoystickHandler(logger=self.logger)
+        
+        self.virtual_controller = VirtualController()
+        
+        if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
+            # Running on Android: Enable Virtual UI, Disable Physical Joystick
+            self.virtual_controller.enabled = True
+            self.joystick_handler = None 
+            self.logger.info("Android detected: Virtual Controller enabled.")
+        else:
+            # Running on PC: Enable Physical Joystick, Disable Virtual UI
+            self.virtual_controller.enabled = False
+            self.joystick_handler = JoystickHandler(logger=self.logger)
+            self.logger.info("PC detected: Hardware Joystick enabled.")
+
         try:
             # 1. Load the cursor graphic
-            cursor_surface = pygame.image.load("./game/lib/sprites/ui/cursor.png").convert_alpha()
+            cursor_surface = pygame.image.load(SPRITE_PATH + 'ui/cursor.png').convert_alpha()
             
             # 2. Create the cursor object 
             # The (0, 0) tuple is the "hotspot" (the exact pixel on the image where the click registers - usually top-left)
@@ -273,6 +288,8 @@ class Game:
 
         self.world_time = WorldTime(self)
 
+    
+
     def save_game(self):
         return save_game(self)
 
@@ -429,8 +446,10 @@ class Game:
         draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
 
         for event in pygame.event.get():
-            if hasattr(self, 'joystick_handler'):
+            if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
+            
+            self.virtual_controller.process_event(event, self)
 
             if event.type == pygame.QUIT:
                 self.running = False
@@ -455,7 +474,7 @@ class Game:
         self.logger.info("Entering Main Game Loop")
         try:
             while self.running:
-                if hasattr(self, 'joystick_handler'):
+                if getattr(self, 'joystick_handler', None):
                     self.joystick_handler.update_cursor(self)
 
                 if self.game_state == 'MENU':
@@ -489,7 +508,7 @@ class Game:
         
         # FIX: Check for QUIT globally so the window can be closed even while loading
         for event in events:
-            if hasattr(self, 'joystick_handler'):
+            if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
             if event.type == pygame.QUIT:
@@ -527,7 +546,7 @@ class Game:
                         
     def run_menu(self):
         mouse_pos = self._get_scaled_mouse_pos()
-        save_dir = os.path.join("game", "save", "game")
+        save_dir = os.path.join(get_writable_dir(), "game", "save", "game")
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
@@ -556,7 +575,7 @@ class Game:
 
         # 3. Handle Clicks and Scrolling Events
         for event in pygame.event.get():
-            if hasattr(self, 'joystick_handler'):
+            if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
             if event.type == pygame.QUIT:
@@ -696,7 +715,7 @@ class Game:
 
         for event in pygame.event.get():
 
-            if hasattr(self, 'joystick_handler'):
+            if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
             if event.type == pygame.QUIT:
@@ -787,7 +806,7 @@ class Game:
         menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
 
         for event in pygame.event.get():
-            if hasattr(self, 'joystick_handler'):
+            if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
             if event.type == pygame.QUIT:
