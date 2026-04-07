@@ -6,10 +6,9 @@ from core.data.config import *
 from core.data.localization import tr
 from core.ui.text_modal import wrap_text
 
-# Global cache to prevent re-parsing the MD every frame and maintain scroll state
 HELP_CACHE = {
-    'tabs': [],          # <-- NEW: Replaces 'layout' with a list of Tabs
-    'active_tab': 0,     # <-- NEW: Tracks the currently viewed Tab
+    'tabs': [],          
+    'active_tab': 0,     
     'lang': None,
     'box_w': 0,
     'scroll_y': 0.0,
@@ -18,28 +17,32 @@ HELP_CACHE = {
     'drag_start_scroll': 0
 }
 
-def draw_loading_screen(surface, is_done, mouse_pos, events=None):
+def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_help=False):
     global HELP_CACHE
     
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
+    center_offset_x = (GAME_WIDTH - S(1280)) // 2
+    center_offset_y = (GAME_HEIGHT - S(720)) // 2
+
     surface.fill(DARK_GRAY)
     w, h = surface.get_size()
-    center_x, center_y = w // 2, h // 2
+    center_x = w // 2
     current_time = pygame.time.get_ticks()
 
-    box_w = 900
-    box_h = int(h * 0.65)
+    box_w = S(900)
+    box_h = S(468)
     box_rect = pygame.Rect(0, 0, box_w, box_h)
-    box_rect.center = (center_x, center_y - 40)
-    padding_y = 20 
+    box_rect.center = (center_x, center_offset_y + S(320))
+    padding_y = S(20) 
 
     current_lang = getattr(config_module, 'GAME_LANGUAGE', 'en_US')
 
-    # --- 1. DYNAMIC TAB PARSING ENGINE ---
     if HELP_CACHE['lang'] != current_lang or HELP_CACHE['box_w'] != box_w:
         tabs = []
         
-        # Start with a default "Guide" tab in case there is text/images before the first ###
-        current_tab = {'title': 'Home', 'layout': [], 'curr_y': 10, 'total_h': 0}
+        current_tab = {'title': 'Home', 'layout': [], 'curr_y': S(10), 'total_h': 0}
         tabs.append(current_tab)
         
         if current_lang == "en_US":
@@ -54,28 +57,23 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             with open(target_path, "r", encoding="utf-8") as f:
                 md_lines = f.readlines()
                 
-            usable_w = box_w - 40
+            usable_w = box_w - S(40)
             
             for line in md_lines:
                 line = line.strip()
                 if not line:
-                    current_tab['curr_y'] += 10
+                    current_tab['curr_y'] += S(10)
                     continue
 
-                # --- NEW: TAB SEPARATOR (### Header) ---
                 if line.startswith("### "):
-                    # Clean up the title format (e.g. "### [ COMMANDS ]" -> "COMMANDS")
                     tab_title = line[4:].strip().replace("**", "").replace("[", "").replace("]", "").strip()
-                    
-                    # If our default 'Guide' tab is empty, just rename it. Otherwise, create a new Tab.
-                    if current_tab['curr_y'] <= 15 and not current_tab['layout']:
+                    if current_tab['curr_y'] <= S(15) and not current_tab['layout']:
                         current_tab['title'] = tab_title
                     else:
-                        current_tab['total_h'] = current_tab['curr_y'] # Seal the previous tab
-                        current_tab = {'title': tab_title, 'layout': [], 'curr_y': 15, 'total_h': 0}
+                        current_tab['total_h'] = current_tab['curr_y'] 
+                        current_tab = {'title': tab_title, 'layout': [], 'curr_y': S(15), 'total_h': 0}
                         tabs.append(current_tab)
 
-                # Rule A: Main Title
                 elif line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
                     title_surf = font_14.render(title_txt, True, WHITE)
@@ -84,7 +82,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                         'surf': title_surf, 
                         'pos': ((box_w//2) - (title_surf.get_width()//2), current_tab['curr_y'])
                     })
-                    current_tab['curr_y'] += title_surf.get_height() + 25
+                    current_tab['curr_y'] += title_surf.get_height() + S(25)
 
                 elif line.startswith("* ") or line.startswith("- "):
                     bold_match = re.search(r'^[\*\-]\s+\*\*(.*?)\*\*(.*)', line)
@@ -97,31 +95,29 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                         key_surf = font_14.render(key_txt, True, WHITE)
                         font_14.set_bold(False)
                         
-                        current_tab['layout'].append({'type': 'text', 'surf': key_surf, 'pos': (30, current_tab['curr_y'])})
+                        current_tab['layout'].append({'type': 'text', 'surf': key_surf, 'pos': (S(30), current_tab['curr_y'])})
                         
-                        # --- ALIGNMENT FIX ---
-                        ALIGN_X = 240
-                        desc_x = 30 + max(ALIGN_X, key_surf.get_width() + 15)
+                        ALIGN_X = S(240)
+                        desc_x = S(30) + max(ALIGN_X, key_surf.get_width() + S(15))
                         
-                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - S(15), font_14)
                         
                         temp_y = current_tab['curr_y']
                         for w_line in wrapped:
                             l_surf = font_14.render(w_line, True, WHITE)
                             current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y)})
-                            temp_y += font_14.get_height() + 4
+                            temp_y += font_14.get_height() + S(4)
                             
-                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_14.get_height() + 4, temp_y) + 6
+                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_14.get_height() + S(4), temp_y) + S(6)
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
-                        wrapped = wrap_text(i_txt, usable_w - 30, font_14)
+                        wrapped = wrap_text(i_txt, usable_w - S(30), font_14)
                         for w_line in wrapped:
                             l_surf = font_14.render(w_line, True, WHITE)
-                            current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (30, current_tab['curr_y'])})
-                            current_tab['curr_y'] += font_14.get_height() + 4
-                        current_tab['curr_y'] += 6
+                            current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (S(30), current_tab['curr_y'])})
+                            current_tab['curr_y'] += font_14.get_height() + S(4)
+                        current_tab['curr_y'] += S(6)
 
-                # Rule E: Images (![alt](path))
                 elif line.startswith("![") and "](" in line and line.endswith(")"):
                     img_path = re.search(r'\((.*?)\)', line)
                     if img_path:
@@ -151,33 +147,32 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                                     current_tab['layout'].append({
                                         'type': 'gif', 'frames': frames, 'durations': durations,
                                         'current_frame': 0, 'last_update': pygame.time.get_ticks(),
-                                        'pos': (15, current_tab['curr_y'])
+                                        'pos': (S(15), current_tab['curr_y'])
                                     })
-                                    current_tab['curr_y'] += frames[0].get_height() + 15
+                                    current_tab['curr_y'] += frames[0].get_height() + S(15)
                                     
                                 else:
                                     loaded_img = pygame.image.load(clean_path).convert_alpha()
                                     img_w, img_h = loaded_img.get_size()
-                                    scale_factor = usable_w / img_w
-                                    new_h = int(img_h * scale_factor)
+                                    img_scale = usable_w / img_w
+                                    new_h = int(img_h * img_scale)
                                     scaled_img = pygame.transform.smoothscale(loaded_img, (usable_w, new_h))
                                     
-                                    current_tab['layout'].append({'type': 'image', 'surf': scaled_img, 'pos': (15, current_tab['curr_y'])})
-                                    current_tab['curr_y'] += new_h + 15 
+                                    current_tab['layout'].append({'type': 'image', 'surf': scaled_img, 'pos': (S(15), current_tab['curr_y'])})
+                                    current_tab['curr_y'] += new_h + S(15)
                             except Exception as e:
                                 print(f"[Loading Screen] Error loading image {clean_path}: {e}")
 
-                # Rule D: Normal Paragraph Text
                 else:
                     p_txt = line.replace("**", "")
-                    wrapped = wrap_text(p_txt, usable_w - 30, font_14)
+                    wrapped = wrap_text(p_txt, usable_w - S(30), font_14)
                     for w_line in wrapped:
                         l_surf = font_14.render(w_line, True, WHITE)
-                        current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y'])})
-                        current_tab['curr_y'] += font_14.get_height() + 4
-                    current_tab['curr_y'] += 6
+                        current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (S(15), current_tab['curr_y'])})
+                        current_tab['curr_y'] += font_14.get_height() + S(4)
+                    current_tab['curr_y'] += S(6)
 
-            current_tab['total_h'] = current_tab['curr_y'] # Seal the final tab
+            current_tab['total_h'] = current_tab['curr_y']
             
             HELP_CACHE['tabs'] = tabs
             HELP_CACHE['lang'] = current_lang
@@ -190,23 +185,19 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             print(f"[Loading Screen] Error loading {target_path}: {e}")
             HELP_CACHE['lang'] = current_lang
 
-    # --- 2. DRAW BACKGROUND ---
     pygame.draw.rect(surface, (30, 30, 30), box_rect, border_radius=10)
     pygame.draw.rect(surface, (100, 100, 100), box_rect, width=2, border_radius=10)
 
-    # --- 3. DRAW TABS BUTTONS ---
-    tab_h = 35
+    tab_h = S(35)
     tab_y = box_rect.top + padding_y
     mouse_buttons = pygame.mouse.get_pressed()
     
-    # ---> FIX: Detect synthetic clicks from the event queue injected by Joystick <---
     clicked = False
     if events is not None:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
                 clicked = True
     
-    # Grab the current Tab data
     active_tab_idx = HELP_CACHE.get('active_tab', 0)
     tabs = HELP_CACHE.get('tabs', [])
     active_tab = tabs[active_tab_idx] if tabs else {'layout': [], 'total_h': 0}
@@ -217,7 +208,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
         total_w = box_rect.width - (padding_y * 2)
         tab_rects = []
 
-        # 1. Calculate Rects First
         for i in range(total_tabs):
             tab_width = total_w // total_tabs
             if i < total_w % total_tabs:
@@ -227,18 +217,16 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             tab_rects.append(tab_rect)
             current_x += tab_width
 
-        # 2. Draw Inactive Tabs
         for i, tab in enumerate(tabs):
             if i != active_tab_idx:
                 tab_rect = tab_rects[i]
                 is_hovered = tab_rect.collidepoint(mouse_pos)
                 
-                # ---> FIX: Allow joystick 'clicked' state to trigger tab switches
                 if is_hovered and (mouse_buttons[0] or clicked):
                     HELP_CACHE['active_tab'] = i
-                    HELP_CACHE['scroll_y'] = 0.0 # Reset scroll on tab swap!
+                    HELP_CACHE['scroll_y'] = 0.0 
                     HELP_CACHE['is_dragging'] = False
-                    clicked = False # Consume the click so it doesn't trigger other things
+                    clicked = False 
                     
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1)
@@ -247,7 +235,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
-        # 3. Draw Active Tab (On Top)
         if active_tab_idx < total_tabs:
             tab_rect = tab_rects[active_tab_idx]
             pygame.draw.rect(surface, GRAY_60, tab_rect)
@@ -257,8 +244,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             text_rect = tab_text.get_rect(center=tab_rect.center)
             surface.blit(tab_text, text_rect)
 
-    # --- 4. SCROLL LOGIC (Only maps to Active Tab Height) ---
-    content_y_start = tab_y + tab_h + 10
+    content_y_start = tab_y + tab_h + S(10)
     clip_h = box_rect.bottom - content_y_start - padding_y
     max_scroll = max(0, active_tab['total_h'] - clip_h)
     
@@ -267,22 +253,21 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
     if events is not None:
         for event in events:
             if event.type == pygame.MOUSEWHEEL:
-                HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - (event.y * 35), max_scroll))
+                HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - (event.y * S(35)), max_scroll))
 
     track_h = clip_h
-    scrollbar_area_rect = pygame.Rect(box_rect.right - 20, content_y_start, 10, track_h)
+    scrollbar_area_rect = pygame.Rect(box_rect.right - S(20), content_y_start, S(10), track_h)
     
     if max_scroll > 0:
         handle_height = max(40.0, track_h * (track_h / max(1.0, float(active_tab['total_h']))))
         
-        # ---> FIX: Allow joystick 'clicked' state to grab scrollbar handle
         if mouse_buttons[0] or clicked:
             if not HELP_CACHE['is_dragging']:
                 handle_pos_ratio = HELP_CACHE['scroll_y'] / max_scroll if max_scroll > 0 else 0
                 handle_y = scrollbar_area_rect.top + (track_h - handle_height) * handle_pos_ratio
                 scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
                 
-                hitbox = scrollbar_handle_rect.inflate(20, 0)
+                hitbox = scrollbar_handle_rect.inflate(S(20), 0)
                 
                 if hitbox.collidepoint(mouse_pos):
                     HELP_CACHE['is_dragging'] = True
@@ -309,7 +294,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
     else:
         HELP_CACHE['scroll_y'] = 0.0
 
-    # --- 5. RENDER TAB CONTENT ---
     actual_scroll = int(HELP_CACHE['scroll_y'])
     clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
     
@@ -327,11 +311,10 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
     except ValueError:
         pass 
 
-    # --- 6. BOTTOM SECTION (Progress Bar / Start Button) ---
     if not is_done:
-        bar_w, bar_h = 600, 25
+        bar_w, bar_h = S(600), S(25)
         bar_bg_rect = pygame.Rect(0, 0, bar_w, bar_h)
-        bar_bg_rect.center = (center_x, h - 80)
+        bar_bg_rect.center = (center_x, center_offset_y + S(640))
                
         loading_text = font_14.render(tr('ui', "Loading..."), True, WHITE)
         loading_rect = loading_text.get_rect(center=bar_bg_rect.center)
@@ -339,9 +322,9 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
         return None
         
     else:
-        btn_w, btn_h = 400, 50
+        btn_w, btn_h = S(400), S(50)
         btn_rect = pygame.Rect(0, 0, btn_w, btn_h)
-        btn_rect.center = (center_x, h - 80)
+        btn_rect.center = (center_x, center_offset_y + S(640))
         
         is_hovered = btn_rect.collidepoint(mouse_pos)
         bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
@@ -349,7 +332,8 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None):
             
         pygame.draw.rect(surface, bg_color, btn_rect, border_radius=6)
         
-        btn_text = font_14.render(tr('ui', "Click to start"), True, text_color)
+        btn_text_str = tr('ui', "Back") if is_main_menu_help else tr('ui', "Click to start")
+        btn_text = font_14.render(btn_text_str, True, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
         surface.blit(btn_text, text_rect)
         

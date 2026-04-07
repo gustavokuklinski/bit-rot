@@ -34,7 +34,6 @@ CLOTHING_COLORS = [
     (128, 128, 128)  # Gray
 ]
 
-# --- CENTRALIZED CONFIG FOR COLORABLE ITEMS ---
 VALID_COLOR_ITEMS = {
     'hair': ['Bald','Mowalk','Cut','Crew','Long'],
     'arms': ['Jacket'],
@@ -44,19 +43,18 @@ VALID_COLOR_ITEMS = {
 }
  
 def _load_stat_icons():
-    """Loads all stat and skill icons into a global cache."""
-    if _stat_icons_cache: # Don't reload
+    if _stat_icons_cache: 
         return
-
-    icon_size = (20, 20) # A bit smaller than the line height
+    
+    scale = UI_SCALE
+    icon_size = (int(20 * scale), int(20 * scale)) 
     icon_files = {
-        # Stats
         "health": SPRITE_PATH + "ui/hp.png",
         "stamina": SPRITE_PATH + "ui/stamina.png",
         "water": SPRITE_PATH + "ui/water.png",
         "food": SPRITE_PATH + "ui/food.png",
-        "anxiety": SPRITE_PATH + "ui/axiety.png", # Assuming 'anxiety.png'
-        "tireness": SPRITE_PATH + "ui/tireness.png", # Assuming 'tireness.png'
+        "anxiety": SPRITE_PATH + "ui/axiety.png", 
+        "tireness": SPRITE_PATH + "ui/tireness.png", 
         "infection": SPRITE_PATH + "ui/infection.png",
         "defence": SPRITE_PATH + "ui/defence.png",
         "weight": SPRITE_PATH + "ui/weight.png",
@@ -77,8 +75,6 @@ def _load_stat_icons():
 
 def _draw_player_build_screen(game, state, mouse_pos):
     
-    """Draws the three-column layout and returns clickable rects."""
-    
     clickable_rects = {
         "add_trait": [], 
         "remove_trait": [],
@@ -92,30 +88,34 @@ def _draw_player_build_screen(game, state, mouse_pos):
         "load_dropdown_options": [],          
         "random_button": None
     }
-    header_height = 30
-    border_radius = 4
+    
+    # Mathematical native scaling function 
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
+    header_height = S(30)
+    border_radius = S(4)
 
     _load_stat_icons()
-    icon_padding = 24
+    icon_padding = S(24)
 
-    center_offset_x = (GAME_WIDTH - 1280) // 2
-    center_offset_y = (GAME_HEIGHT - 720) // 2
+    center_offset_x = (GAME_WIDTH - S(1280)) // 2
+    center_offset_y = (GAME_HEIGHT - S(720)) // 2
     
-    col1_x = 170 + center_offset_x
-    base_y = 30 + center_offset_y
+    col1_x = S(170) + center_offset_x
+    base_y = S(30) + center_offset_y
     
-    col1_width = 270
-    col2_x = col1_x + col1_width + 20
-    col2_width = 225
-    col3_x = col2_x + col2_width + 20
-    col3_width = 225
-    col4_x = col3_x + col3_width + 20
-    col4_width = 275
+    col1_width = S(270)
+    col2_x = col1_x + col1_width + S(20)
+    col2_width = S(225)
+    col3_x = col2_x + col2_width + S(20)
+    col3_width = S(225)
+    col4_x = col3_x + col3_width + S(20)
+    col4_width = S(275)
 
-    padding = 10
+    padding = S(10)
     
-    # --- Column 1, Block 1: Preset Management Panel ---
-    preset_rect = pygame.Rect(col1_x, base_y, col1_width, 260)
+    preset_rect = pygame.Rect(col1_x, base_y, col1_width, S(260))
 
     preset_header_rect = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body_rect = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -123,59 +123,56 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), preset_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, preset_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, preset_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Preset"), True, WHITE), (preset_header_rect.x + 10, preset_header_rect.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Preset"), True, WHITE), (preset_header_rect.x + S(10), preset_header_rect.y + S(7)))
 
-    # 1. Name Input
-    game.game_screen.blit(font.render(tr('ui', "Player Name:"), True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + 10))
-    name_input_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 35, preset_body_rect.width - padding*2, 30)
+    game.game_screen.blit(font.render(tr('ui', "Player Name:"), True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + S(10)))
+    name_input_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + S(35), preset_body_rect.width - padding*2, S(30))
     pygame.draw.rect(game.game_screen, (50, 50, 50), name_input_rect)
     pygame.draw.rect(game.game_screen, WHITE, name_input_rect, 1)
     
     name_text = state.get('player_name', tr('ui', "Survivor"))
     text_surf = font.render(name_text, True, WHITE)
-    game.game_screen.blit(text_surf, (name_input_rect.x + 5, name_input_rect.y + 5))
+    game.game_screen.blit(text_surf, (name_input_rect.x + S(5), name_input_rect.y + S(5)))
     
     if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
-        cursor_x = name_input_rect.x + 5 + text_surf.get_width()
-        pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_input_rect.y + 5), (cursor_x, name_input_rect.bottom - 5), 2)
+        cursor_x = name_input_rect.x + S(5) + text_surf.get_width()
+        pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_input_rect.y + S(5)), (cursor_x, name_input_rect.bottom - S(5)), S(2))
     
     clickable_rects['name_input'] = name_input_rect
 
-    # 2. Buttons
-    buttons_y = preset_body_rect.y + 80
-    btn_width = 80
+    buttons_y = preset_body_rect.y + S(80)
+    btn_width = S(80)
     btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
     
-    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, buttons_y, btn_width, 30)
+    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Save"), True, WHITE), (save_btn_rect.x + 20, save_btn_rect.y + 5))
+    game.game_screen.blit(font.render(tr('ui', "Save"), True, WHITE), (save_btn_rect.x + S(20), save_btn_rect.y + S(5)))
     clickable_rects['save_button'] = save_btn_rect
     
-    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
+    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Random"), True, WHITE), (random_btn_rect.x + 10, random_btn_rect.y + 5))
+    game.game_screen.blit(font.render(tr('ui', "Random"), True, WHITE), (random_btn_rect.x + S(10), random_btn_rect.y + S(5)))
     clickable_rects['random_button'] = random_btn_rect
 
-    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, 30)
+    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Delete"), True, WHITE), (delete_btn_rect.x + 15, delete_btn_rect.y + 5))
+    game.game_screen.blit(font.render(tr('ui', "Delete"), True, WHITE), (delete_btn_rect.x + S(15), delete_btn_rect.y + S(5)))
     clickable_rects['delete_button'] = delete_btn_rect
     
-    # 3. Load Preset Dropdown
-    load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + 125, preset_body_rect.width - padding*2, 30)
+    load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + S(125), preset_body_rect.width - padding*2, S(30))
     clickable_rects['load_dropdown_button'] = load_dd_rect
     pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
     pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
     selected_preset = state.get('selected_preset', "None")
-    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + 5, load_dd_rect.y + 5))
-    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - 15, load_dd_rect.y + 10), (load_dd_rect.right - 5, load_dd_rect.y + 10), (load_dd_rect.right - 10, load_dd_rect.y + 15)])
+    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + S(5), load_dd_rect.y + S(5)))
+    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - S(15), load_dd_rect.y + S(10)), (load_dd_rect.right - S(5), load_dd_rect.y + S(10)), (load_dd_rect.right - S(10), load_dd_rect.y + S(15))])
     
-    sex_y = load_dd_rect.bottom + 10
+    sex_y = load_dd_rect.bottom + S(10)
     game.game_screen.blit(font.render(tr('ui', "Sex:"), True, WHITE), (preset_body_rect.x + padding, sex_y))
     
     sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
-    male_btn_rect = pygame.Rect(preset_body_rect.x + padding, sex_y + 25, sex_btn_width, 30)
-    female_btn_rect = pygame.Rect(male_btn_rect.right + padding, sex_y + 25, sex_btn_width, 30)
+    male_btn_rect = pygame.Rect(preset_body_rect.x + padding, sex_y + S(25), sex_btn_width, S(30))
+    female_btn_rect = pygame.Rect(male_btn_rect.right + padding, sex_y + S(25), sex_btn_width, S(30))
     
     current_sex = state['base_data'].get('sex', 'Male')
     
@@ -185,7 +182,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, male_btn_rect, 1, border_radius=3)
-    game.game_screen.blit(font.render(tr('ui', "Male"), True, WHITE), (male_btn_rect.centerx - 20, male_btn_rect.y + 5))
+    game.game_screen.blit(font.render(tr('ui', "Male"), True, WHITE), (male_btn_rect.centerx - S(20), male_btn_rect.y + S(5)))
     
     if current_sex == 'Female':
         pygame.draw.rect(game.game_screen, (80, 80, 80), female_btn_rect, 0, border_radius=3)
@@ -193,12 +190,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, female_btn_rect, 1, border_radius=3)
-    game.game_screen.blit(font.render(tr('ui', "Female"), True, WHITE), (female_btn_rect.centerx - 28, female_btn_rect.y + 5))
+    game.game_screen.blit(font.render(tr('ui', "Female"), True, WHITE), (female_btn_rect.centerx - S(28), female_btn_rect.y + S(5)))
     
     clickable_rects['sex_buttons'] = {'Male': male_btn_rect, 'Female': female_btn_rect}
  
-    # --- Column 1, Block 2: Gear Selection ---
-    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + 20, col1_width, 360) 
+    gear_rect = pygame.Rect(col1_x, preset_rect.bottom + S(20), col1_width, S(360)) 
 
     gear_header_rect = pygame.Rect(gear_rect.x, gear_rect.y, gear_rect.width, header_height)
     gear_body_rect = pygame.Rect(gear_rect.x, gear_rect.y + header_height, gear_rect.width, gear_rect.height - header_height)
@@ -206,13 +202,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), gear_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, gear_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, gear_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Clothes"), True, WHITE), (gear_header_rect.x + 10, gear_header_rect.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Clothes"), True, WHITE), (gear_header_rect.x + S(10), gear_header_rect.y + S(7)))
 
     gear_content_rect = pygame.Rect(
         gear_rect.x + padding,
-        gear_rect.y + 40, 
+        gear_rect.y + S(40), 
         gear_rect.width - (padding * 2),
-        gear_rect.height - (padding * 2) - 30
+        gear_rect.height - (padding * 2) - S(30)
     )
 
     drawable_gear_rect = game.game_screen.get_rect().clip(gear_content_rect)
@@ -220,9 +216,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     if drawable_gear_rect.width > 0 and drawable_gear_rect.height > 0:
         gear_content_surface = game.game_screen.subsurface(drawable_gear_rect)
         gear_content_surface.fill((30, 30, 30))
-        label_width = 50
-        color_btn_w = 25
-        base_cycle_width = col1_width - label_width - (padding * 3) - 10
+        label_width = S(50)
+        color_btn_w = S(25)
+        base_cycle_width = col1_width - label_width - (padding * 3) - S(10)
         y_offset = 0
         
         for slot_name in state['clothes_slots']:
@@ -231,19 +227,18 @@ def _draw_player_build_screen(game, state, mouse_pos):
             
             cycle_width = base_cycle_width
             if show_color_box:
-                cycle_width -= (color_btn_w + 5)
+                cycle_width -= (color_btn_w + S(5))
             
-            cycle_rect_abs = pygame.Rect(gear_content_rect.x + label_width + (padding * 2), gear_content_rect.y + y_offset, cycle_width, 25)
+            cycle_rect_abs = pygame.Rect(gear_content_rect.x + label_width + (padding * 2), gear_content_rect.y + y_offset, cycle_width, S(25))
             
             if cycle_rect_abs.bottom > gear_content_rect.top and cycle_rect_abs.top < gear_content_rect.bottom:
-                gear_content_surface.blit(font.render(f"{tr('ui', slot_name.capitalize())}:", True, WHITE), (0, y_offset + 5))
+                gear_content_surface.blit(font.render(f"{tr('ui', slot_name.capitalize())}:", True, WHITE), (0, y_offset + S(5)))
                 
-                cycle_rect_rel = pygame.Rect(cycle_rect_abs.x - gear_content_rect.x, y_offset, cycle_width, 25)
+                cycle_rect_rel = pygame.Rect(cycle_rect_abs.x - gear_content_rect.x, y_offset, cycle_width, S(25))
                 
                 hovered = cycle_rect_abs.collidepoint(mouse_pos)
                 bg_color = (70, 70, 70) if hovered else (50, 50, 50)
                 
-                # Draw cycle button box
                 pygame.draw.rect(gear_content_surface, bg_color, cycle_rect_rel, border_radius=3)
                 pygame.draw.rect(gear_content_surface, WHITE, cycle_rect_rel, 1, border_radius=3)
                 
@@ -257,15 +252,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 text_y = cycle_rect_rel.y + (cycle_rect_rel.height - text.get_height()) // 2
                 gear_content_surface.blit(text, (text_x, text_y))
                 
-                # Draw cycle arrows on sides
-                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.right - 8, cycle_rect_rel.centery), (cycle_rect_rel.right - 14, cycle_rect_rel.centery - 4), (cycle_rect_rel.right - 14, cycle_rect_rel.centery + 4)])
-                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.x + 8, cycle_rect_rel.centery), (cycle_rect_rel.x + 14, cycle_rect_rel.centery - 4), (cycle_rect_rel.x + 14, cycle_rect_rel.centery + 4)])
+                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.right - S(8), cycle_rect_rel.centery), (cycle_rect_rel.right - S(14), cycle_rect_rel.centery - S(4)), (cycle_rect_rel.right - S(14), cycle_rect_rel.centery + S(4))])
+                pygame.draw.polygon(gear_content_surface, WHITE, [(cycle_rect_rel.x + S(8), cycle_rect_rel.centery), (cycle_rect_rel.x + S(14), cycle_rect_rel.centery - S(4)), (cycle_rect_rel.x + S(14), cycle_rect_rel.centery + S(4))])
                 
                 clickable_rects['gear_cycle_buttons'][slot_name] = cycle_rect_abs
                 
                 if show_color_box:
-                    color_rect_abs = pygame.Rect(cycle_rect_abs.right + 5, cycle_rect_abs.y, color_btn_w, 25)
-                    color_rect_rel = pygame.Rect(cycle_rect_rel.right + 5, y_offset, color_btn_w, 25)
+                    color_rect_abs = pygame.Rect(cycle_rect_abs.right + S(5), cycle_rect_abs.y, color_btn_w, S(25))
+                    color_rect_rel = pygame.Rect(cycle_rect_rel.right + S(5), y_offset, color_btn_w, S(25))
                     current_color = state['clothes_colors'].get(slot_name, (255, 255, 255))
                     
                     pygame.draw.rect(gear_content_surface, current_color, color_rect_rel, border_radius=3)
@@ -273,21 +267,20 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     
                     clickable_rects['slot_color_buttons'][slot_name] = color_rect_abs
                 
-            y_offset += 35
+            y_offset += S(35)
     
-    # --- Column 2: Available Traits (Middle-Left) ---
-    prof_rect = pygame.Rect(col2_x, base_y, col2_width, 160)
+    prof_rect = pygame.Rect(col2_x, base_y, col2_width, S(160))
     prof_header_rect = pygame.Rect(prof_rect.x, prof_rect.y, prof_rect.width, header_height)
     prof_body_rect = pygame.Rect(prof_rect.x, prof_rect.y + header_height, prof_rect.width, prof_rect.height - header_height)
     
     pygame.draw.rect(game.game_screen, (30, 30, 30), prof_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, prof_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, prof_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Available Professions"), True, WHITE), (prof_header_rect.x + 10, prof_header_rect.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Available Professions"), True, WHITE), (prof_header_rect.x + S(10), prof_header_rect.y + S(7)))
     
-    prof_content_rect = pygame.Rect(prof_rect.x + padding, prof_rect.y + header_height + padding, prof_rect.width - (padding * 2) - 10, prof_rect.height - header_height - (padding * 2))
+    prof_content_rect = pygame.Rect(prof_rect.x + padding, prof_rect.y + header_height + padding, prof_rect.width - (padding * 2) - S(10), prof_rect.height - header_height - (padding * 2))
     state['prof_content_rect'] = prof_content_rect
-    line_height = 35
+    line_height = S(35)
     
     total_prof_items = len(state.get('available_professions', []))
     total_prof_text_height = total_prof_items * line_height
@@ -304,10 +297,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
         prof_surface.fill((30, 30, 30))
         y_off = 0 - prof_scroll_y
         for p_id in state.get('available_professions', []):
-            row_rect_rel = pygame.Rect(0, y_off, prof_content_rect.width, 30)
-            row_rect_abs = pygame.Rect(prof_content_rect.x, prof_content_rect.y + y_off, prof_content_rect.width, 30)
-            add_btn_rect_rel = pygame.Rect(row_rect_rel.right - 25, row_rect_rel.y, 25, 25)
-            add_btn_rect_abs = pygame.Rect(prof_content_rect.x + add_btn_rect_rel.x, prof_content_rect.y + add_btn_rect_rel.y, 25, 25)
+            row_rect_rel = pygame.Rect(0, y_off, prof_content_rect.width, S(30))
+            row_rect_abs = pygame.Rect(prof_content_rect.x, prof_content_rect.y + y_off, prof_content_rect.width, S(30))
+            add_btn_rect_rel = pygame.Rect(row_rect_rel.right - S(25), row_rect_rel.y, S(25), S(25))
+            add_btn_rect_abs = pygame.Rect(prof_content_rect.x + add_btn_rect_rel.x, prof_content_rect.y + add_btn_rect_rel.y, S(25), S(25))
             
             if row_rect_rel.bottom > 0 and row_rect_rel.top < prof_content_rect.height:
                 if row_rect_abs.collidepoint(mouse_pos): hovered_trait_id = p_id
@@ -318,16 +311,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
                 
                 prof_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
-                prof_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
+                prof_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + S(5), row_rect_rel.y))
                 pygame.draw.rect(prof_surface, GREEN, add_btn_rect_rel, border_radius=4)
-                prof_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
+                prof_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
                 
             clickable_rects["add_trait"].append((p_id, add_btn_rect_abs))
             y_off += line_height
 
     if total_prof_text_height > prof_content_rect.height:
-        scroll_rect = pygame.Rect(prof_content_rect.right + 2, prof_content_rect.top, 8, prof_content_rect.height)
-        handle_h = max(10, prof_content_rect.height * (prof_content_rect.height / total_prof_text_height))
+        scroll_rect = pygame.Rect(prof_content_rect.right + S(2), prof_content_rect.top, S(8), prof_content_rect.height)
+        handle_h = max(S(10), prof_content_rect.height * (prof_content_rect.height / total_prof_text_height))
         handle_pos = 0 if prof_max_scroll <= 0 else prof_scroll_y / prof_max_scroll
         handle_y = scroll_rect.top + (prof_content_rect.height - handle_h) * handle_pos
         prof_handle_rect = pygame.Rect(scroll_rect.left, handle_y, scroll_rect.width, handle_h)
@@ -335,17 +328,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
         state['prof_scrollbar_handle_rect'] = prof_handle_rect
     else: state['prof_scrollbar_handle_rect'] = None
 
-    # --- Column 2B: Available Traits (Bottom 75%) ---
-    available_rect = pygame.Rect(col2_x, prof_rect.bottom + 20, col2_width, 640 - 160 - 20)
+    available_rect = pygame.Rect(col2_x, prof_rect.bottom + S(20), col2_width, S(640 - 160 - 20))
     
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, available_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Available Traits"), True, WHITE), (avail_header_rect.x + 10, avail_header_rect.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Available Traits"), True, WHITE), (avail_header_rect.x + S(10), avail_header_rect.y + S(7)))
     
-    traits_content_rect = pygame.Rect(available_rect.x + padding, available_rect.y + header_height + padding, available_rect.width - (padding * 2) - 10, available_rect.height - header_height - (padding * 2))
+    traits_content_rect = pygame.Rect(available_rect.x + padding, available_rect.y + header_height + padding, available_rect.width - (padding * 2) - S(10), available_rect.height - header_height - (padding * 2))
     state['traits_content_rect'] = traits_content_rect
     
     state['traits_line_height'] = line_height
@@ -366,10 +358,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     y_offset = 0 - scroll_offset_y
     if content_surface:
         for i, trait_name in enumerate(state['available_traits']):
-            row_rect_rel = pygame.Rect(0, y_offset, traits_content_rect.width, 30)
-            row_rect_abs = pygame.Rect(traits_content_rect.x, traits_content_rect.y + y_offset, traits_content_rect.width, 30)
-            add_btn_rect_rel = pygame.Rect(row_rect_rel.right - 25, row_rect_rel.y, 25, 25)
-            add_btn_rect_abs = pygame.Rect(traits_content_rect.x + add_btn_rect_rel.x, traits_content_rect.y + add_btn_rect_rel.y, 25, 25)
+            row_rect_rel = pygame.Rect(0, y_offset, traits_content_rect.width, S(30))
+            row_rect_abs = pygame.Rect(traits_content_rect.x, traits_content_rect.y + y_offset, traits_content_rect.width, S(30))
+            add_btn_rect_rel = pygame.Rect(row_rect_rel.right - S(25), row_rect_rel.y, S(25), S(25))
+            add_btn_rect_abs = pygame.Rect(traits_content_rect.x + add_btn_rect_rel.x, traits_content_rect.y + add_btn_rect_rel.y, S(25), S(25))
             
             if row_rect_rel.bottom > 0 and row_rect_rel.top < traits_content_rect.height:
                 if row_rect_abs.collidepoint(mouse_pos):
@@ -381,18 +373,18 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
                 
                 content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
-                content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + 5, row_rect_rel.y))
+                content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + S(5), row_rect_rel.y))
                 pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel, border_radius=4)
-                content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + 7, add_btn_rect_rel.y + 2))
+                content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
                 
             clickable_rects["add_trait"].append((trait_name, add_btn_rect_abs))
             y_offset += line_height
 
     if total_text_height > visible_height:
         scrollbar_area_height = traits_content_rect.height
-        scrollbar_area_rect = pygame.Rect(traits_content_rect.right + 2, traits_content_rect.top, 8, scrollbar_area_height)
+        scrollbar_area_rect = pygame.Rect(traits_content_rect.right + S(2), traits_content_rect.top, S(8), scrollbar_area_height)
         handle_height_ratio = visible_height / total_text_height
-        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
+        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
         handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
         traits_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
@@ -400,14 +392,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
         state['traits_scrollbar_handle_rect'] = traits_scrollbar_handle_rect
     else: state['traits_scrollbar_handle_rect'] = None
 
-    # --- Column 3: Chosen Traits ---
-    chosen_rect = pygame.Rect(col3_x, base_y, col3_width, 640)
+    chosen_rect = pygame.Rect(col3_x, base_y, col3_width, S(640))
     header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
     body_rect = pygame.Rect(chosen_rect.x, chosen_rect.y + header_height, chosen_rect.width, chosen_rect.height - header_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Chosen Traits"), True, WHITE), (header_rect.x + 10, header_rect.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Chosen Traits"), True, WHITE), (header_rect.x + S(10), header_rect.y + S(7)))
     total_cost = sum(TRAIT_DEFINITIONS.get(t, {}).get('cost', 0) for t in state['chosen_traits'])
     state['total_trait_cost'] = total_cost
     
@@ -419,10 +410,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
     game.game_screen.blit(cost_surf, cost_rect)
     
-    chosen_content_rect = pygame.Rect(chosen_rect.x + padding, chosen_rect.y + header_height + padding, chosen_rect.width - (padding * 2) - 10, chosen_rect.height - header_height - (padding * 2))
+    chosen_content_rect = pygame.Rect(chosen_rect.x + padding, chosen_rect.y + header_height + padding, chosen_rect.width - (padding * 2) - S(10), chosen_rect.height - header_height - (padding * 2))
     state['chosen_content_rect'] = chosen_content_rect 
 
-    line_height = 35
+    line_height = S(35)
     total_items = len(state['chosen_traits'])
     total_text_height = total_items * line_height
     visible_height = chosen_content_rect.height
@@ -444,31 +435,30 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     if content_surface:
         for i, trait_name in enumerate(state['chosen_traits']):
-            row_rect_rel = pygame.Rect(0, y_offset, chosen_content_rect.width, 30)
-            row_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, chosen_content_rect.width, 30)
+            row_rect_rel = pygame.Rect(0, y_offset, chosen_content_rect.width, S(30))
+            row_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, chosen_content_rect.width, S(30))
             
-            remove_btn_rect_rel = pygame.Rect(0, row_rect_rel.y, 25, 25)
-            remove_btn_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, 25, 25)
+            remove_btn_rect_rel = pygame.Rect(0, row_rect_rel.y, S(25), S(25))
+            remove_btn_rect_abs = pygame.Rect(chosen_content_rect.x, chosen_content_rect.y + y_offset, S(25), S(25))
 
             if row_rect_rel.bottom > 0 and row_rect_rel.top < chosen_content_rect.height:
                 if row_rect_abs.collidepoint(mouse_pos):
                     hovered_trait_id = trait_name
                 pygame.draw.rect(content_surface, RED, remove_btn_rect_rel, border_radius=4)
-                content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + 7, remove_btn_rect_rel.y + 2))
+                content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + S(7), remove_btn_rect_rel.y + S(2)))
                 
-                # Look up the actual name from TRAIT_DEFINITIONS, fallback to capitalized ID
                 display_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
-                content_surface.blit(font.render(tr('trait', display_name), True, WHITE), (remove_btn_rect_rel.right + 10, row_rect_rel.y))
+                content_surface.blit(font.render(tr('trait', display_name), True, WHITE), (remove_btn_rect_rel.right + S(10), row_rect_rel.y))
 
             clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
-            y_offset += 35
+            y_offset += S(35)
             
     if total_text_height > visible_height:
         scrollbar_area_height = chosen_content_rect.height
-        scrollbar_area_rect = pygame.Rect(chosen_content_rect.right + 2, chosen_content_rect.top, 8, scrollbar_area_height)
+        scrollbar_area_rect = pygame.Rect(chosen_content_rect.right + S(2), chosen_content_rect.top, S(8), scrollbar_area_height)
         
         handle_height_ratio = visible_height / total_text_height
-        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
+        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
         
         handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
@@ -479,8 +469,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         state['chosen_scrollbar_handle_rect'] = None
 
-    # --- Column 4 ---
-    sprite_rect_container = pygame.Rect(col4_x, base_y, col4_width, 310)
+    sprite_rect_container = pygame.Rect(col4_x, base_y, col4_width, S(310))
     pygame.draw.rect(game.game_screen, (30, 30, 30), sprite_rect_container)
     pygame.draw.rect(game.game_screen, WHITE, sprite_rect_container, 1,border_top_left_radius=4, border_top_right_radius=4,border_bottom_left_radius=4, border_bottom_right_radius=4)
     if state.get('player_sprite_large'):
@@ -510,19 +499,17 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     else:
                         game.game_screen.blit(clothing_img, sprite_rect)
 
-    stats_rect = pygame.Rect(col4_x, sprite_rect_container.bottom + 20, col4_width, 240)
+    stats_rect = pygame.Rect(col4_x, sprite_rect_container.bottom + S(20), col4_width, S(240))
     stats_header_rect = pygame.Rect(stats_rect.x, stats_rect.y, stats_rect.width, header_height)
     stats_body_rect = pygame.Rect(stats_rect.x, stats_rect.y + header_height, stats_rect.width, stats_rect.height - header_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30), stats_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, stats_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, stats_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Current Stats"), True, WHITE), (stats_header_rect.x + 10, stats_header_rect.y + 7))
-    stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + 40, stats_rect.width - (padding * 2) - 10, stats_rect.height - (padding * 2) - 30)
+    game.game_screen.blit(font.render(tr('ui', "Current Stats"), True, WHITE), (stats_header_rect.x + S(10), stats_header_rect.y + S(7)))
+    stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + S(40), stats_rect.width - (padding * 2) - S(10), stats_rect.height - (padding * 2) - S(30))
     state['stats_content_rect'] = stats_content_rect
 
     current_stats = state['base_data']['stats'].copy()
-    current_attrs = state['base_data']['attributes'].copy()
-
     current_attrs = {k: (v.copy() if isinstance(v, dict) else v) for k, v in state['base_data']['attributes'].items()}
 
     display_modifiers = {}
@@ -569,7 +556,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     state['final_stats'] = current_stats
     state['final_attrs'] = current_attrs
-    line_height = 25
+    line_height = S(25)
     state['stats_line_height'] = line_height
     total_items = len(current_stats) + len(current_attrs)
     total_text_height = total_items * line_height
@@ -594,36 +581,28 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 text_surf = font.render(f"{tr('ui', 'Defence')}", True, WHITE)
                 val_surf = font.render(f"{int(value)}%", True, WHITE)
                 
-                content_surface.blit(text_surf, (text_x, y_offset + 3))
-                content_surface.blit(val_surf, (text_x + 100, y_offset + 3)) # Aligned to 100px
+                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
+                content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
                 y_offset += line_height
                 continue
                 
             elif stat == 'weight':
                 text_surf = font.render(f"{tr('ui', 'Weight')}", True, WHITE)
-                
-                # Calculate Max Weight dynamically based on chosen traits and base strength
                 str_val = current_attrs.get('strength', 5)
                 str_level = str_val.get('level', 5) if isinstance(str_val, dict) else int(str_val)
                 final_str = str_level + level_modifiers.get('strength', 0)
-                
-                # NOTE: Adjust the '10.0 + final_str' math below to perfectly match 
-                # whatever formula you use in player.max_carry_weight!
                 max_wgt = state['base_data'].get('max_carry_weight', 10.0 + final_str)
                 
                 val_surf = font.render(f"{value:.2f} / {max_wgt:.2f}", True, WHITE)
                 
-                content_surface.blit(text_surf, (text_x, y_offset + 3))
-                content_surface.blit(val_surf, (text_x + 100, y_offset + 3)) # Aligned to 100px
+                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
+                content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
                 y_offset += line_height
                 continue
 
             base_value = state['base_data']['stats'].get(stat, 100.0)
-
             trait_mod = display_modifiers.get(stat, 0)
-            
             stat_name_str = f"{tr('ui', stat.capitalize())}"
-            
             trait_str = f"{int(trait_mod):+}% {tr('ui', 'Rate')}"
             
             mod_color = WHITE
@@ -634,10 +613,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
             
             if trait_mod != 0:
                 mod_surf = font.render(f"{trait_str}", True, mod_color)
-                content_surface.blit(text_surf, (text_x, y_offset + 3))
-                content_surface.blit(mod_surf, (text_x + 100, y_offset + 3))
+                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
+                content_surface.blit(mod_surf, (text_x + S(100), y_offset + S(3)))
             else:
-                content_surface.blit(text_surf, (text_x, y_offset + 3))
+                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
                 
             y_offset += line_height
 
@@ -659,27 +638,27 @@ def _draw_player_build_screen(game, state, mouse_pos):
             stat_name_str = f"{tr('ui', attr.capitalize())}"
             
             text_surf = font.render(f"{stat_name_str}", True, WHITE)
-            content_surface.blit(text_surf, (text_x, y_offset + 3))
+            content_surface.blit(text_surf, (text_x, y_offset + S(3)))
             
-            current_draw_x = text_x + 100
+            current_draw_x = text_x + S(100)
             
             if lvl_mod > 0:
                 lvl_surf = font.render(f"+{lvl_mod} {tr('ui', 'Level')}", True, (100, 255, 100)) 
-                content_surface.blit(lvl_surf, (current_draw_x, y_offset + 3))
-                current_draw_x += lvl_surf.get_width() + 8
+                content_surface.blit(lvl_surf, (current_draw_x, y_offset + S(3)))
+                current_draw_x += lvl_surf.get_width() + S(8)
             
             if xp_mod != 0:
                 mod_color = (100, 255, 100) if xp_mod > 0 else (255, 100, 100)
                 mod_surf = font.render(f"{int(xp_mod):+}% {tr('ui', 'XP')}", True, mod_color)
-                content_surface.blit(mod_surf, (current_draw_x, y_offset + 3))
+                content_surface.blit(mod_surf, (current_draw_x, y_offset + S(3)))
             
             y_offset += line_height
 
     if total_text_height > visible_height:
         scrollbar_area_height = stats_content_rect.height
-        scrollbar_area_rect = pygame.Rect(stats_content_rect.right + 2, stats_content_rect.top, 8, scrollbar_area_height)
+        scrollbar_area_rect = pygame.Rect(stats_content_rect.right + S(2), stats_content_rect.top, S(8), scrollbar_area_height)
         handle_height_ratio = visible_height / total_text_height
-        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
+        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
         handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
         handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
         stats_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
@@ -687,12 +666,12 @@ def _draw_player_build_screen(game, state, mouse_pos):
         state['stats_scrollbar_handle_rect'] = stats_scrollbar_handle_rect
     else: state['stats_scrollbar_handle_rect'] = None
 
-    start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + 20, col4_width, 70)
+    start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + S(20), col4_width, S(70))
     is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)
     if is_balanced:
         pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
-            pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-4, -4), border_radius=border_radius)
+            pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
         start_text = font_14.render(tr('ui', "START GAME"), True, WHITE)
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
@@ -704,10 +683,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     active_preset_dropdown = state.get('preset_dropdown_active', False)
     
-    # 3. Preset List
     if active_preset_dropdown:
         options = state.get('preset_list', ["None"])
-        option_height = 25
+        option_height = S(25)
         list_height = len(options) * option_height
         list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom, load_dd_rect.width, list_height)
         pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
@@ -717,7 +695,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         for option_name in options:
             option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
             if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
-            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + 5, option_rect.y + 2))
+            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + S(5), option_rect.y + S(2)))
             clickable_rects["load_dropdown_options"].append((option_name, option_rect))
             y_offset += option_height
 
@@ -774,20 +752,22 @@ def _update_available_traits(state):
     state['available_professions'] = sorted(valid_profs, key=lambda t: all_defs[t].get('name', t))
     state['available_traits'] = pos_traits + neg_traits
 
-
 def handle_player_events(game, state, event, mouse_pos, clickable_rects):
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
     if event.type == pygame.MOUSEWHEEL:
         stats_rect = state.get('stats_content_rect')
         chosen_rect = state.get('chosen_content_rect')
         
         if state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
-             state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * 70, state.get('traits_max_scroll', 0)))
+             state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * S(70), state.get('traits_max_scroll', 0)))
         elif state.get('prof_content_rect') and state['prof_content_rect'].collidepoint(mouse_pos):
-             state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) - event.y * 70, state.get('prof_max_scroll', 0)))
+             state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) - event.y * S(70), state.get('prof_max_scroll', 0)))
         elif stats_rect and stats_rect.collidepoint(mouse_pos):
-             state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * 50, state.get('stats_max_scroll', 0)))
+             state['stats_scroll_offset_y'] = max(0, min(state['stats_scroll_offset_y'] - event.y * S(50), state.get('stats_max_scroll', 0)))
         elif chosen_rect and chosen_rect.collidepoint(mouse_pos):
-             state['chosen_scroll_offset_y'] = max(0, min(state['chosen_scroll_offset_y'] - event.y * 70, state.get('chosen_max_scroll', 0)))
+             state['chosen_scroll_offset_y'] = max(0, min(state['chosen_scroll_offset_y'] - event.y * S(70), state.get('chosen_max_scroll', 0)))
 
     elif event.type == pygame.KEYDOWN:
         if state.get('name_input_active'):
@@ -961,9 +941,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             if track_height > 0:
                  state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) + (mouse_delta_y * (state['prof_max_scroll'] / track_height)), state['prof_max_scroll']))
 
-
 def run_player_setup(game):
-    # Initialize state on the game object the first time
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
     if 'base_data' not in game.player_setup_state:
         state = game.player_setup_state
         try:
@@ -980,8 +961,8 @@ def run_player_setup(game):
         state['final_stats'] = state['base_data']['stats'].copy()
         state['final_attrs'] = state['base_data']['attributes'].copy()
         
-        state['stats_scroll_offset_y'] = 0; state['stats_content_rect'] = None; state['stats_line_height'] = 25; state['stats_max_scroll'] = 0
-        state['traits_scroll_offset_y'] = 0; state['traits_content_rect'] = None; state['traits_line_height'] = 35; state['traits_max_scroll'] = 0
+        state['stats_scroll_offset_y'] = 0; state['stats_content_rect'] = None; state['stats_line_height'] = S(25); state['stats_max_scroll'] = 0
+        state['traits_scroll_offset_y'] = 0; state['traits_content_rect'] = None; state['traits_line_height'] = S(35); state['traits_max_scroll'] = 0
         state['chosen_scroll_offset_y'] = 0; state['chosen_content_rect'] = None; state['chosen_max_scroll'] = 0; state['is_dragging_chosen_scrollbar'] = False; state['chosen_scroll_drag_last_y'] = 0
         
         state['is_dragging_stats_scrollbar'] = False; state['stats_scroll_drag_last_y'] = 0
@@ -999,7 +980,6 @@ def run_player_setup(game):
 
         for item_name, template in ITEM_TEMPLATES.items():
             if template.get('type') == 'cloth':
-                
                 if not template.get('builder', False):
                     continue
 
@@ -1013,16 +993,16 @@ def run_player_setup(game):
                         try:
                             path = SPRITE_PATH + "clothes/" + sprite_file
                             img = pygame.image.load(path).convert_alpha()
-                            state['clothing_sprites'][item_name] = pygame.transform.scale(img, (256, 256))
+                            state['clothing_sprites'][item_name] = pygame.transform.scale(img, (S(256), S(256)))
                         except Exception as e: print(f"Error loading cloth: {e}")
         for slot in state['available_clothes']: state['available_clothes'][slot].insert(0, "None")
 
         try:
             sprite_path = state['base_data']['visuals']['sprite']
             sprite_img = pygame.image.load(SPRITE_PATH + sprite_path).convert_alpha()
-            state['player_sprite_large'] = pygame.transform.scale(sprite_img, (256, 256))
+            state['player_sprite_large'] = pygame.transform.scale(sprite_img, (S(256), S(256)))
         except Exception:
-            state['player_sprite_large'] = pygame.Surface((256, 256), pygame.SRCALPHA); state['player_sprite_large'].fill(BLUE)
+            state['player_sprite_large'] = pygame.Surface((S(256), S(256)), pygame.SRCALPHA); state['player_sprite_large'].fill(BLUE)
 
         state['player_name'] = fake.name()
         state['name_input_active'] = False
@@ -1060,34 +1040,31 @@ def run_player_setup(game):
     
     game.game_screen.fill(DARK_GRAY)
     
-    sidebar_width = 150
-    btn_h = 40
+    sidebar_width = S(150)
+    btn_h = S(40)
     
-    # Calculate both X and Y center offsets
-    center_offset_x = (GAME_WIDTH - 1280) // 2
-    center_offset_y = (GAME_HEIGHT - 720) // 2
+    center_offset_x = (GAME_WIDTH - S(1280)) // 2
+    center_offset_y = (GAME_HEIGHT - S(720)) // 2
     
-    # Shift the X coordinate by the offset so they stay attached to the columns
-    base_x = 10 + center_offset_x
-    base_y = 30 + center_offset_y
+    base_x = S(10) + center_offset_x
+    base_y = S(30) + center_offset_y
     
     player_btn = pygame.Rect(base_x, base_y, sidebar_width, btn_h)
-    settings_btn = pygame.Rect(base_x, base_y + 60, sidebar_width, btn_h)
-    back_btn = pygame.Rect(base_x, GAME_HEIGHT - 91 - center_offset_y, sidebar_width, btn_h)
+    settings_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
+    back_btn = pygame.Rect(base_x, GAME_HEIGHT - S(91) - center_offset_y, sidebar_width, btn_h)
 
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
     pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
-    game.game_screen.blit(font.render(tr('tab', "Player"), True, WHITE), (player_btn.x + 10, player_btn.y + 10))
+    game.game_screen.blit(font.render(tr('tab', "Player"), True, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
     pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
-    game.game_screen.blit(font.render(tr('tab', "Settings"), True, WHITE), (settings_btn.x + 10, settings_btn.y + 10))
+    game.game_screen.blit(font.render(tr('tab', "Settings"), True, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
 
     b_col = GRAY_80
     pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
   
-    # Center text
     back_txt = font.render(tr('ui', "Back"), True, WHITE)
     txt_rect = back_txt.get_rect(center=back_btn.center)
     game.game_screen.blit(back_txt, txt_rect)
@@ -1125,7 +1102,6 @@ def run_player_setup(game):
     game._update_screen()
 
 def _load_presets(state):
-    """Loads all .xml preset files from the save/player directory."""
     preset_dir = "./game/save/player"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
@@ -1140,7 +1116,6 @@ def _load_presets(state):
     state['preset_list'] = presets
 
 def _save_preset(state):
-    """Saves the current traits and clothes to an XML file."""
     player_name = state.get('player_name')
     if not player_name or player_name == "Survivor" or player_name == tr('ui', 'Survivor'):
         print("Cannot save preset with default name.")
@@ -1180,7 +1155,6 @@ def _save_preset(state):
         print(f"Error saving preset: {e}")
 
 def _load_preset(state):
-    """Loads traits and clothes from a selected preset file."""
     preset_name = state.get('selected_preset')
     if not preset_name or preset_name == "None":
         return
@@ -1228,7 +1202,6 @@ def _load_preset(state):
         print(f"Error parsing preset file {filepath}: {e}")
 
 def _delete_preset(state):
-    """Deletes the currently selected preset file."""
     preset_name = state.get('selected_preset')
     if not preset_name or preset_name == "None":
         print("No preset selected to delete.")
@@ -1261,14 +1234,12 @@ def _randomize_character(state):
     
     new_traits = []
     
-    # Pick 1 Profession
     if all_profs:
         chosen_prof = random.choice(all_profs)
         new_traits.append(chosen_prof)
         disabled_ids = state['all_traits'][chosen_prof].get('conflicts', [])
         all_traits = [t for t in all_traits if t not in disabled_ids]
     
-    # Randomize Traits
     pos_traits = [t for t in all_traits if state['all_traits'][t]['cost'] > 0]
     neg_traits = [t for t in all_traits if state['all_traits'][t]['cost'] < 0]
     
@@ -1281,7 +1252,6 @@ def _randomize_character(state):
     state['chosen_traits'] = new_traits
     _update_available_traits(state)
     
-    # 3. Randomize Clothes
     available_clothes = state['available_clothes']
     chosen_clothes = {}
     available_colors = list(CLOTHING_COLORS)

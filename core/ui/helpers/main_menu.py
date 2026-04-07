@@ -1,4 +1,3 @@
-# core/ui/helpers/main_menu.py
 import pygame
 import os
 import xml.etree.ElementTree as ET
@@ -9,10 +8,9 @@ from core.data.localization import tr
 
 _logo_img = None
 _language_cache = None
-_help_img_menu = None # NEW: Cache for the help button image
+_help_img_menu = None
 
 def get_available_languages():
-    """Parses the languages XML and caches the flags."""
     global _language_cache
     if _language_cache is not None:
         return _language_cache
@@ -40,26 +38,23 @@ def get_available_languages():
         except Exception as e:
             print(f"Error parsing languages.xml: {e}")
     
-    # Elegant fallback just in case the XML isn't created yet
     if not _language_cache:
         _language_cache = [
             {'name': 'en_US', 'sprite_path': os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'lang_en.png'), 'wip': False, 'img': None},
             {'name': 'pt_BR', 'sprite_path': os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'lang_pt_BR.png'), 'wip': True, 'img': None}
         ]
             
-    # Load and scale images into memory
     for lang in _language_cache:
         try:
             if os.path.exists(lang['sprite_path']):
                 img = pygame.image.load(lang['sprite_path']).convert_alpha()
-                lang['img'] = pygame.transform.scale(img, (32, 24))
+                lang['img'] = pygame.transform.scale(img, (int(32 * UI_SCALE), int(24 * UI_SCALE)))
         except Exception:
             pass
             
     return _language_cache
 
 def draw_btn(surface, rect, text, mouse_pos, enabled=True):
-    """Helper to draw a standardized menu button."""
     is_hovered = rect.collidepoint(mouse_pos)
     
     if not enabled:
@@ -76,6 +71,12 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
     surface.blit(txt_surf, txt_rect)
 
 def draw_menu(screen, mouse_pos, has_save=False):
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
+    center_offset_x = (GAME_WIDTH - S(1280)) // 2
+    center_offset_y = (GAME_HEIGHT - S(720)) // 2
+
     global _logo_img, _help_img_menu
     screen.fill(DARK_GRAY)
 
@@ -83,36 +84,36 @@ def draw_menu(screen, mouse_pos, has_save=False):
         if _logo_img is None:
             logo_path = os.path.join(BASE_DIR, 'game', 'icons', 'logo.png')
             _logo_img = pygame.image.load(logo_path).convert_alpha()
-            target_w = 500
+            target_w = S(500)
             scale_factor = target_w / _logo_img.get_width()
             target_h = int(_logo_img.get_height() * scale_factor)
             _logo_img = pygame.transform.scale(_logo_img, (target_w, target_h))
     except Exception:
         _logo_img = None
         
-    # --- NEW: Load Help Button Image ---
     try:
         if _help_img_menu is None:
             help_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'help.png')
             _help_img_menu = pygame.image.load(help_path).convert_alpha()
-            _help_img_menu = pygame.transform.scale(_help_img_menu, (32, 32))
+            _help_img_menu = pygame.transform.scale(_help_img_menu, (S(32), S(32)))
     except Exception as e:
-        print(f"Could not load help image: {e}")
+        pass
+
+    center_x = GAME_WIDTH // 2
 
     if _logo_img:
-        logo_rect = _logo_img.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.3))
+        logo_rect = _logo_img.get_rect(center=(center_x, center_offset_y + S(216)))
         screen.blit(_logo_img, logo_rect)
     else:
         title_text = font_14.render("Bit Rot", True, RED)
-        title_rect = title_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT * 0.25))
+        title_rect = title_text.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(title_text, title_rect)
 
-    btn_width = 400
-    btn_height = 50
-    spacing = 20
+    btn_width = S(400)
+    btn_height = S(50)
+    spacing = S(20)
     
-    center_x = GAME_WIDTH // 2
-    start_y = GAME_HEIGHT * 0.55 
+    start_y = center_offset_y + S(396) 
 
     load_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
     draw_btn(screen, load_rect, tr('ui', "Load Game"), mouse_pos, enabled=has_save)
@@ -130,86 +131,69 @@ def draw_menu(screen, mouse_pos, has_save=False):
     current_year = datetime.now().year
     footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
     footer_text = font_14.render(footer_str, True, (100, 100, 100))
-    footer_rect = footer_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT - 20))
+    footer_rect = footer_text.get_rect(center=(center_x, center_offset_y + S(700)))
     screen.blit(footer_text, footer_rect)
 
-    # --- NEW: Help Button Rendering ---
     help_rect = None
     if _help_img_menu:
-        # Create a padded square button on the bottom left
-        help_bg_rect = pygame.Rect(0, 0, 48, 48)
-        help_bg_rect.bottomleft = (20, GAME_HEIGHT - 20) # Align left with 20px padding
+        help_bg_rect = pygame.Rect(0, 0, S(48), S(48))
+        help_bg_rect.bottomleft = (center_offset_x + S(20), center_offset_y + S(700)) 
         
         is_hovered_help = help_bg_rect.collidepoint(mouse_pos)
         bg_color = (80, 80, 80) if is_hovered_help else (60, 60, 60)
         
-        # Draw the button background and border
         pygame.draw.rect(screen, bg_color, help_bg_rect, border_radius=6)
         pygame.draw.rect(screen, (40, 40, 40), help_bg_rect, width=1, border_radius=6)
         
-        # Center the help icon inside the padded background
         img_rect = _help_img_menu.get_rect(center=help_bg_rect.center)
         screen.blit(_help_img_menu, img_rect)
         
-        help_rect = help_bg_rect # Assign to return variable
+        help_rect = help_bg_rect 
 
-    # --- Language Flags Rendering ---
     langs = get_available_languages()
     flag_rects = []
     
-    flag_x = GAME_WIDTH - 20
-    flag_y = 20
+    flag_x = center_offset_x + S(1260)
+    flag_y = center_offset_y + S(20)
     hovered_wip = False
     
     for lang in reversed(langs):
         if lang['img']:
-            # Create a button-like background rect around the flag (adds padding)
-            bg_rect = pygame.Rect(0, 0, lang['img'].get_width() + 16, lang['img'].get_height() + 12)
+            bg_rect = pygame.Rect(0, 0, lang['img'].get_width() + S(16), lang['img'].get_height() + S(12))
             bg_rect.topright = (flag_x, flag_y)
             
-            # Center the flag image inside the background rect
             rect = lang['img'].get_rect(center=bg_rect.center)
             
             is_hovered = bg_rect.collidepoint(mouse_pos)
             is_selected = (lang['name'] == core.data.config.GAME_LANGUAGE)
             
-            # Background color matches the main menu buttons
             bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
             
-            # Draw the rounded button background
             pygame.draw.rect(screen, bg_color, bg_rect, border_radius=6)
             
-            # Draw the border (gray if selected, otherwise dark)
             if is_selected:
                 pygame.draw.rect(screen, (150, 150, 150), bg_rect, width=2, border_radius=6)
             else:
                 pygame.draw.rect(screen, (40, 40, 40), bg_rect, width=1, border_radius=6)
                 
-            # Draw the flag image over the center
             screen.blit(lang['img'], rect)
-            
-            # Use the larger bg_rect for the clickable area
             flag_rects.append({'rect': bg_rect, 'name': lang['name']})
             
             if bg_rect.collidepoint(mouse_pos) and lang['wip']:
                 hovered_wip = True
                 
-            flag_x -= (bg_rect.width + 15)
+            flag_x -= (bg_rect.width + S(15))
             
-    # Draw WIP Tooltip if hovering
     if hovered_wip:
         wip_text = "Some translations may be incomplete"
         tooltip_text = font_14.render(wip_text, True, WHITE)
-        # Shifted slightly lower (+45 instead of +35) to account for the new padded button
-        tooltip_rect = tooltip_text.get_rect(topright=(GAME_WIDTH - 20, flag_y + 45))
-        bg_rect = tooltip_rect.inflate(10, 10)
+        tooltip_rect = tooltip_text.get_rect(topright=(center_offset_x + S(1260), flag_y + S(45)))
+        bg_rect = tooltip_rect.inflate(S(10), S(10))
         
-        # Transparent background for tooltip
         s = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
         s.fill((0, 0, 0, 220))
         screen.blit(s, bg_rect.topleft)
         pygame.draw.rect(screen, WHITE, bg_rect, 1)
         screen.blit(tooltip_text, tooltip_rect)
 
-    # Note: Returning `help_rect` appended as the last item.
     return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect

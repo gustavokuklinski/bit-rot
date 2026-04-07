@@ -1,6 +1,6 @@
 import pygame
 import math
-from core.data.config import GAME_WIDTH, GAME_HEIGHT, SPRITE_PATH
+from core.data.config import GAME_WIDTH, GAME_HEIGHT, SPRITE_PATH, GAME_OFFSET_X
 
 class VirtualController:
     def __init__(self):
@@ -23,23 +23,17 @@ class VirtualController:
         self.dx = 0.0
         self.dy = 0.0
         
-        self.right_stick_pos = [self.r_cx, self.r_cy]
-        self.right_touch_id = None
-        self.right_dx = 0.0
-        self.right_dy = 0.0
-        
         self.idle_alpha = 90    
         self.active_alpha = 220 
         
         btn_r = 30 
         
-        # --- ERGONOMIC MOBILE REORGANIZATION (LEFT SIDE) ---
+        # --- ERGONOMIC MOBILE REORGANIZATION ---
         self.btn_click = {'rect': pygame.Rect(self.l_cx + 110, self.l_cy - 70 - btn_r, btn_r*2, btn_r*2), 'pressed': False, 'touch_id': None, 'color': (150, 50, 50, self.idle_alpha), 'label': 'SHOT'}
         self.btn_interact = {'rect': pygame.Rect(self.l_cx + 110, self.l_cy + 10 - btn_r, btn_r*2, btn_r*2), 'pressed': False, 'touch_id': None, 'color': (50, 150, 50, self.idle_alpha), 'label': 'INT'}
+        
         self.btn_run = {'rect': pygame.Rect(self.r_cx - 130 - btn_r, self.r_cy - btn_r, btn_r*2, btn_r*2), 'state': False, 'previous_state': False, 'auto_active': False, 'color': (100, 100, 100, self.idle_alpha), 'label': 'RUN'}
-
-        # --- HIDDEN STATE: Prevents crash in core/game.py patched_mouse_get_pressed ---
-        self.btn_aim = {'state': False} 
+        self.btn_aim = {'rect': pygame.Rect(self.r_cx - btn_r, self.r_cy - btn_r, btn_r*2, btn_r*2), 'pressed': False, 'state': False, 'touch_id': None, 'color': (200, 100, 50, self.idle_alpha), 'label': 'AIM'}
 
         self.cursor_img = None
         self.is_playing = False 
@@ -49,27 +43,38 @@ class VirtualController:
         self.ui_pressed = False
 
     def _do_auto_aim(self, game):
-        """Finds the closest zombie and snaps the virtual cursor to it."""
-        if not hasattr(game, 'active_zombies') or not game.player:
+        """Finds the closest target and perfectly snaps the cursor to it using Camera Projection."""
+        if not game.player:
             return
             
-        closest_zombie = None
+        closest_target = None
         closest_dist = float('inf')
         px, py = game.player.rect.center
         
-        for z in game.active_zombies:
-            if getattr(z, 'is_dead', False): continue
-            dx = z.rect.centerx - px
-            dy = z.rect.centery - py
+        potential_targets = []
+        potential_targets.extend(getattr(game, 'active_zombies', []))
+        potential_targets.extend(getattr(game, 'active_animals', []))
+        potential_targets.extend(getattr(game, 'active_npcs', []))
+        
+        for target in potential_targets:
+            if getattr(target, 'is_dead', False): continue
+            if getattr(target, 'is_friendly', False) and getattr(target, 'aggro_timer', 0) <= 0: continue
+
+            dx = target.rect.centerx - px
+            dy = target.rect.centery - py
             dist = math.hypot(dx, dy)
+            
             if dist < 600 and dist < closest_dist: 
                 closest_dist = dist
-                closest_zombie = z
+                closest_target = target
                 
-        if closest_zombie:
-            screen_cx, screen_cy = GAME_WIDTH // 2, GAME_HEIGHT // 2
-            self.v_mouse_x = screen_cx + (closest_zombie.rect.centerx - px)
-            self.v_mouse_y = screen_cy + (closest_zombie.rect.centery - py)
+        if closest_target:
+            zoom = getattr(game, 'zoom_level', 1.0)
+            offset_x = getattr(game, 'offset_x', 0)
+            offset_y = getattr(game, 'offset_y', 0)
+            
+            self.v_mouse_x = (closest_target.rect.centerx + offset_x) * zoom + GAME_OFFSET_X
+            self.v_mouse_y = (closest_target.rect.centery + offset_y) * zoom
             
             self.v_mouse_x = max(0, min(GAME_WIDTH, self.v_mouse_x))
             self.v_mouse_y = max(0, min(GAME_HEIGHT, self.v_mouse_y))
@@ -120,34 +125,40 @@ class VirtualController:
                         self.btn_interact['color'] = (100, 255, 100, self.active_alpha)
                         pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e, unicode='e'))
                         is_controller = True
-                    
-                    elif math.hypot(x - self.l_cx, y - self.l_cy) < self.joy_base_radius * 2.5:
-                        self.left_touch_id = touch_id
-                        self._update_stick('left', x, y)
-                        is_controller = True
                         
-                    elif math.hypot(x - self.r_cx, y - self.r_cy) < self.joy_base_radius * 2.5:
-                        self.right_touch_id = touch_id
-                        self._update_stick('right', x, y)
-                        
-                        self.btn_aim['state'] = True # Feed the hook in game.py!
+                    elif self.btn_aim['rect'].collidepoint(x, y):
+                        self.btn_aim['pressed'] = True
+                        self.btn_aim['touch_id'] = touch_id
+                        self.btn_aim['color'] = (255, 150, 50, self.active_alpha)
+                        self.btn_aim['state'] = True 
                         
                         self._do_auto_aim(game)
                         pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': (int(self.v_mouse_x), int(self.v_mouse_y)), 'button': 3, 'injected': True}))
                         is_controller = True
+                    
+                    elif math.hypot(x - self.l_cx, y - self.l_cy) <= self.joy_base_radius:
+                        self.left_touch_id = touch_id
+                        self._update_stick('left', x, y)
+                        is_controller = True
 
+                # ====================================================
+                # IF FREE TOUCH -> Native UI interaction
+                # ====================================================
                 if not is_controller:
                     self.ui_touches[touch_id] = {'start_time': pygame.time.get_ticks(), 'moved': False, 'start_pos': (x, y)}
                     self.v_mouse_x = x
                     self.v_mouse_y = y
                     self.ui_pressed = True
+                    
+                    # --- CRITICAL UI BUG FIX: Hover Injection ---
+                    # Post a MOUSEMOTION instantly before MOUSEBUTTONDOWN to force Buttons.py 
+                    # to acknowledge the cursor is on top of them.
+                    pygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (int(x), int(y)), 'rel': (0, 0), 'buttons': (0,0,0), 'injected': True}))
                     pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': (int(x), int(y)), 'button': 1, 'injected': True}))
 
             elif event.type == pygame.FINGERMOTION:
                 if self.is_playing and touch_id == self.left_touch_id:
                     self._update_stick('left', x, y)
-                elif self.is_playing and touch_id == self.right_touch_id:
-                    self._update_stick('right', x, y)
                 elif touch_id in self.ui_touches:
                     self.v_mouse_x = x
                     self.v_mouse_y = y
@@ -170,6 +181,13 @@ class VirtualController:
                         self.btn_interact['touch_id'] = None
                         self.btn_interact['color'] = (50, 150, 50, self.idle_alpha)
                         pygame.event.post(pygame.event.Event(pygame.KEYUP, key=pygame.K_e, unicode='e'))
+                        
+                    if touch_id == self.btn_aim.get('touch_id'):
+                        self.btn_aim['pressed'] = False
+                        self.btn_aim['touch_id'] = None
+                        self.btn_aim['color'] = (200, 100, 50, self.idle_alpha)
+                        self.btn_aim['state'] = False 
+                        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': (int(self.v_mouse_x), int(self.v_mouse_y)), 'button': 3, 'injected': True}))
 
                     if touch_id == self.left_touch_id:
                         self.left_touch_id = None
@@ -180,21 +198,14 @@ class VirtualController:
                             self.btn_run['auto_active'] = False
                             self.btn_run['state'] = self.btn_run.get('previous_state', False)
                             self.btn_run['color'] = (100, 200, 100, self.active_alpha) if self.btn_run['state'] else (100, 100, 100, self.idle_alpha)
-                    
-                    if touch_id == self.right_touch_id:
-                        self.right_touch_id = None
-                        self.right_stick_pos = [self.r_cx, self.r_cy]
-                        self.right_dx, self.right_dy = 0.0, 0.0
-                        
-                        self.btn_aim['state'] = False # Reset the hook!
-                        
-                        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': (int(self.v_mouse_x), int(self.v_mouse_y)), 'button': 3, 'injected': True}))
 
                 if touch_id in self.ui_touches:
                     self.v_mouse_x = x
                     self.v_mouse_y = y
                     self.ui_pressed = False
                     
+                    # Update hover release state cleanly
+                    pygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (int(x), int(y)), 'rel': (0, 0), 'buttons': (0,0,0), 'injected': True}))
                     pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': (int(x), int(y)), 'button': 1, 'injected': True}))
                     
                     if not self.ui_touches[touch_id]['moved']:
@@ -218,23 +229,19 @@ class VirtualController:
         if side == 'left':
             center = (self.l_cx, self.l_cy)
             stick = self.left_stick_pos
-        else:
-            center = (self.r_cx, self.r_cy)
-            stick = self.right_stick_pos
             
-        dist = math.hypot(x - center[0], y - center[1])
-        angle = math.atan2(y - center[1], x - center[0])
-        
-        if dist > self.joy_base_radius:
-            dist = self.joy_base_radius
+            dist = math.hypot(x - center[0], y - center[1])
+            angle = math.atan2(y - center[1], x - center[0])
             
-        stick[0] = center[0] + math.cos(angle) * dist
-        stick[1] = center[1] + math.sin(angle) * dist
-        
-        norm_dx = (stick[0] - center[0]) / self.joy_base_radius
-        norm_dy = (stick[1] - center[1]) / self.joy_base_radius
-        
-        if side == 'left':
+            if dist > self.joy_base_radius:
+                dist = self.joy_base_radius
+                
+            stick[0] = center[0] + math.cos(angle) * dist
+            stick[1] = center[1] + math.sin(angle) * dist
+            
+            norm_dx = (stick[0] - center[0]) / self.joy_base_radius
+            norm_dy = (stick[1] - center[1]) / self.joy_base_radius
+            
             self.dx = norm_dx
             self.dy = norm_dy
             
@@ -250,25 +257,24 @@ class VirtualController:
                     self.btn_run['state'] = self.btn_run.get('previous_state', False)
                     self.btn_run['color'] = (100, 200, 100, self.active_alpha) if self.btn_run['state'] else (100, 100, 100, self.idle_alpha)
 
-        else:
-            self.right_dx = norm_dx
-            self.right_dy = norm_dy
-
     def update_cursor(self, game):
         if not self.enabled: return
         self.is_playing = (getattr(game, 'game_state', 'PLAYING') == 'PLAYING')
         
-        if self.is_playing and self.right_touch_id is not None:
-            self.v_mouse_x += self.right_dx * 15.0
-            self.v_mouse_y += self.right_dy * 15.0
-            
-            self.v_mouse_x = max(0, min(GAME_WIDTH, self.v_mouse_x))
-            self.v_mouse_y = max(0, min(GAME_HEIGHT, self.v_mouse_y))
-            
+        if self.is_playing and self.btn_aim.get('pressed'):
+            self._do_auto_aim(game)
             pygame.event.post(pygame.event.Event(
                 pygame.MOUSEMOTION, 
                 {'pos': (int(self.v_mouse_x), int(self.v_mouse_y)), 'rel': (0, 0), 'buttons': (0,0,0), 'injected': True}
             ))
+
+        # --- GLOBAL UI SAFETY CATCH ---
+        # When user completely releases the screen, forcefully reset stuck click debouncers in the main game logic.
+        if not self.ui_touches and not self.ui_pressed:
+            if hasattr(game, 'click_handled') and getattr(game, 'click_handled', False):
+                game.click_handled = False
+            if hasattr(game, 'ui_click_handled') and getattr(game, 'ui_click_handled', False):
+                game.ui_click_handled = False
 
     def draw(self, surface):
         if not self.enabled: return
@@ -298,14 +304,9 @@ class VirtualController:
             pygame.draw.circle(overlay_surf, (200, 200, 200, 50), (self.l_cx, self.l_cy), self.joy_base_radius, 2)
             l_color = (220, 220, 220, self.active_alpha) if self.left_touch_id else (150, 150, 150, self.idle_alpha)
             pygame.draw.circle(overlay_surf, l_color, (int(self.left_stick_pos[0]), int(self.left_stick_pos[1])), self.joy_stick_radius)
-                
-            pygame.draw.circle(overlay_surf, (30, 30, 30, 80), (self.r_cx, self.r_cy), self.joy_base_radius)
-            pygame.draw.circle(overlay_surf, (200, 200, 200, 50), (self.r_cx, self.r_cy), self.joy_base_radius, 2)
-            r_color = (220, 120, 120, self.active_alpha) if self.right_touch_id else (150, 100, 100, self.idle_alpha)
-            pygame.draw.circle(overlay_surf, r_color, (int(self.right_stick_pos[0]), int(self.right_stick_pos[1])), self.joy_stick_radius)
             
             font = pygame.font.SysFont(None, 24)
-            for btn in [self.btn_run, self.btn_click, self.btn_interact]:
+            for btn in [self.btn_run, self.btn_click, self.btn_interact, self.btn_aim]:
                 pygame.draw.ellipse(overlay_surf, btn['color'], btn['rect'])
                 
                 is_active = btn.get('pressed') or btn.get('state') or btn.get('auto_active')

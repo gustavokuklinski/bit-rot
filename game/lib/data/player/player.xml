@@ -31,6 +31,7 @@
     <initial_loot>
         <item name="ID" chance="1" />
         <item name="Wallet" chance="1" />
+        <item name="Mobile off" chance="1" />
     </initial_loot>
 
     <visuals>

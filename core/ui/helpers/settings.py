@@ -38,18 +38,21 @@ def _get_friendly_value_display(key, value):
 
     return ""
 
+
 def _draw_settings_screen(game, state, mouse_pos):
-    # Calculate dynamic centering offset based on base 1280x720 resolution
-    center_offset_x = (GAME_WIDTH - 1280) // 2
-    center_offset_y = (GAME_HEIGHT - 720) // 2
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
+    center_offset_x = (GAME_WIDTH - S(1280)) // 2
+    center_offset_y = (GAME_HEIGHT - S(720)) // 2
     
-    col_start_x = 170 + center_offset_x
-    base_y = 30 + center_offset_y
+    col_start_x = S(170) + center_offset_x
+    base_y = S(30) + center_offset_y
     
-    col_width = 350
-    header_height = 30
-    border_radius = 4
-    padding = 10
+    col_width = S(350)
+    header_height = S(30)
+    border_radius = S(4)
+    padding = S(10)
     
     BTN_GREEN = (50, 205, 50)  
     BTN_BLUE = (23, 162, 184)  
@@ -61,8 +64,7 @@ def _draw_settings_screen(game, state, mouse_pos):
         "apply_settings": None
     }
 
-    # Control Panel
-    control_rect = pygame.Rect(col_start_x, base_y, col_width - 100, 180)
+    control_rect = pygame.Rect(col_start_x, base_y, col_width - S(100), S(180))
     control_header = pygame.Rect(control_rect.x, control_rect.y, control_rect.width, header_height)
     control_body = pygame.Rect(control_rect.x, control_rect.y + header_height, control_rect.width, control_rect.height - header_height)
 
@@ -70,31 +72,27 @@ def _draw_settings_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, control_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, control_rect, 1, border_radius=border_radius)
     
-    game.game_screen.blit(font.render(tr('ui', "Settings Control"), True, WHITE), (control_header.x + 10, control_header.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Settings Control"), True, WHITE), (control_header.x + S(10), control_header.y + S(7)))
 
-    btn_w = 120
-    apply_rect = pygame.Rect(0, 0, btn_w, 35)
+    btn_w = S(120)
+    apply_rect = pygame.Rect(0, 0, btn_w, S(35))
     
-    # Shift the button slightly up from the center to make room for the text
     apply_rect.centerx = control_body.centerx
-    apply_rect.centery = control_body.centery - 8
+    apply_rect.centery = control_body.centery - S(8)
     
     pygame.draw.rect(game.game_screen, BTN_BLUE, apply_rect, border_radius=4)
     apply_txt = font.render(tr('ui', "Apply"), True, WHITE)
     game.game_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
     clickable_rects['apply_settings'] = apply_rect
 
-    # --- NEW: Restart Warning Text ---
-    # Renders perfectly centered underneath the Apply button
     warning_text = font_14.render(tr('ui', "Requires a restart to apply."), True, GRAY)
     warning_x = control_body.centerx - (warning_text.get_width() // 2)
-    warning_y = apply_rect.bottom + 5
-    game.game_screen.blit(warning_text, (warning_x, warning_y + 20))
+    warning_y = apply_rect.bottom + S(5)
+    game.game_screen.blit(warning_text, (warning_x, warning_y + S(20)))
 
-    # Settings List
     settings_area_x = col_start_x + col_width
-    settings_area_w = 830
-    settings_rect = pygame.Rect(settings_area_x - 87, base_y, settings_area_w, 660)
+    settings_area_w = S(830)
+    settings_rect = pygame.Rect(settings_area_x - S(87), base_y, settings_area_w, S(660))
     
     settings_header = pygame.Rect(settings_rect.x, settings_rect.y, settings_rect.width, header_height)
     settings_body = pygame.Rect(settings_rect.x, settings_rect.y + header_height, settings_rect.width, settings_rect.height - header_height)
@@ -103,10 +101,10 @@ def _draw_settings_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, settings_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, settings_rect, 1, border_radius=border_radius)
     
-    game.game_screen.blit(font.render(tr('ui', "Configuration Values"), True, WHITE), (settings_header.x + 10, settings_header.y + 7))
+    game.game_screen.blit(font.render(tr('ui', "Configuration Values"), True, WHITE), (settings_header.x + S(10), settings_header.y + S(7)))
     
-    content_rect = settings_body.inflate(-20, -20)
-    line_h = 40
+    content_rect = settings_body.inflate(-S(20), -S(20))
+    line_h = S(40)
     
     draw_items = []
     config_data = state.get('settings_data', {})
@@ -137,10 +135,9 @@ def _draw_settings_screen(game, state, mouse_pos):
         y_off = -scroll_y
         for item in draw_items:
             if item[0] == 'header':
-                # --- NEW: Translate the Header String ('ui', 'game', etc) ---
                 header_name = tr('ui', item[1].capitalize())
                 text = font.render(header_name.upper(), True, YELLOW)
-                sub.blit(text, (0, y_off + 10))
+                sub.blit(text, (0, y_off + S(10)))
             else:
                 block, key, val_data = item[1], item[2], item[3]
                 
@@ -154,8 +151,8 @@ def _draw_settings_screen(game, state, mouse_pos):
 
                 val = val_data.get('value') if isinstance(val_data, dict) else val_data
                 
-                input_w = 200
-                input_rect = pygame.Rect(content_rect.width - input_w - 5, y_off + 5, input_w, 30)
+                input_w = S(200)
+                input_rect = pygame.Rect(content_rect.width - input_w - S(5), y_off + S(5), input_w, S(30))
                 abs_rect = pygame.Rect(content_rect.x + input_rect.x, content_rect.y + input_rect.y, input_rect.width, input_rect.height)
                 
                 str_val = str(val).lower()
@@ -164,17 +161,17 @@ def _draw_settings_screen(game, state, mouse_pos):
                 is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay']) or ('volume' in key)
                 is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
                 is_language_cycle = (key == 'language')
-                is_display_cycle = (key in ['resolution', 'window_mode']) # <--- NEW
+                is_display_cycle = (key in ['resolution', 'window_mode']) 
                 is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle or is_display_cycle
 
                 lbl = font_14.render(display_label + ":", True, WHITE)
-                sub.blit(lbl, (0, y_off + 12)) 
+                sub.blit(lbl, (0, y_off + S(12))) 
                 
                 friendly_text = _get_friendly_value_display(key, val)
                 if friendly_text and not is_bool and not is_cycle_setting:
                     info_surf = font_14.render(friendly_text, True, GRAY)
-                    info_pos_x = input_rect.x - info_surf.get_width() - 15
-                    sub.blit(info_surf, (info_pos_x, y_off + 12))
+                    info_pos_x = input_rect.x - info_surf.get_width() - S(15)
+                    sub.blit(info_surf, (info_pos_x, y_off + S(12)))
 
                 if is_bool:
                     hovered = abs_rect.collidepoint(mouse_pos)
@@ -188,8 +185,8 @@ def _draw_settings_screen(game, state, mouse_pos):
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
                     
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.right - 8, input_rect.centery), (input_rect.right - 14, input_rect.centery - 4), (input_rect.right - 14, input_rect.centery + 4)])
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.x + 8, input_rect.centery), (input_rect.x + 14, input_rect.centery - 4), (input_rect.x + 14, input_rect.centery + 4)])
+                    pygame.draw.polygon(sub, WHITE, [(input_rect.right - S(8), input_rect.centery), (input_rect.right - S(14), input_rect.centery - S(4)), (input_rect.right - S(14), input_rect.centery + S(4))])
+                    pygame.draw.polygon(sub, WHITE, [(input_rect.x + S(8), input_rect.centery), (input_rect.x + S(14), input_rect.centery - S(4)), (input_rect.x + S(14), input_rect.centery + S(4))])
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['config_bools'].append((block, key, abs_rect))
@@ -202,7 +199,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     
                     if is_language_cycle:
                         label = str(val)
-                    elif is_display_cycle: # <--- NEW DISPLAY FORMATTING
+                    elif is_display_cycle: 
                         if key == 'resolution' and str(val).lower() == 'max':
                             label = tr('ui', "Native (Max)")
                         elif key == 'window_mode':
@@ -221,7 +218,6 @@ def _draw_settings_screen(game, state, mouse_pos):
                             if not 'volume' in key and comp_val <= 0.0: comp_val = 0.01
                             comp_val = round(comp_val, 2)
 
-                            # New 0% label specifically for Volume
                             if 'volume' in key and abs(comp_val - 0.0) < 0.001: label = tr('ui', "Muted (0%)")
                             elif abs(comp_val - 0.01) < 0.001: label = tr('ui', "Extreme Low (1%)")
                             elif abs(comp_val - 0.25) < 0.001: label = tr('ui', "Low (25%)")
@@ -245,8 +241,8 @@ def _draw_settings_screen(game, state, mouse_pos):
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
                     
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.right - 8, input_rect.centery), (input_rect.right - 14, input_rect.centery - 4), (input_rect.right - 14, input_rect.centery + 4)])
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.x + 8, input_rect.centery), (input_rect.x + 14, input_rect.centery - 4), (input_rect.x + 14, input_rect.centery + 4)])
+                    pygame.draw.polygon(sub, WHITE, [(input_rect.right - S(8), input_rect.centery), (input_rect.right - S(14), input_rect.centery - S(4)), (input_rect.right - S(14), input_rect.centery + S(4))])
+                    pygame.draw.polygon(sub, WHITE, [(input_rect.x + S(8), input_rect.centery), (input_rect.x + S(14), input_rect.centery - S(4)), (input_rect.x + S(14), input_rect.centery + S(4))])
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['config_cycles'].append((block, key, abs_rect))
@@ -257,7 +253,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, col, input_rect, 1)
                     
                     txt_surf = font_14.render(str(val), True, WHITE)
-                    sub.blit(txt_surf, (input_rect.x + 5, input_rect.y + 7))
+                    sub.blit(txt_surf, (input_rect.x + S(5), input_rect.y + S(7)))
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['config_inputs'].append((block, key, abs_rect))
@@ -265,12 +261,12 @@ def _draw_settings_screen(game, state, mouse_pos):
             y_off += line_h
 
     if max_scroll > 0:
-        bar_area = pygame.Rect(settings_body.right - 14, settings_body.y + 5, 10, settings_body.height - 10)
-        handle_h = max(20, (content_rect.height / total_h) * bar_area.height)
+        bar_area = pygame.Rect(settings_body.right - S(14), settings_body.y + S(5), S(10), settings_body.height - S(10))
+        handle_h = max(S(20), (content_rect.height / total_h) * bar_area.height)
         scroll_pct = scroll_y / max_scroll if max_scroll > 0 else 0
         handle_y = bar_area.y + (scroll_pct * (bar_area.height - handle_h))
         
-        state['settings_scroll_handle'] = pygame.Rect(bar_area.x, handle_y, 10, handle_h)
+        state['settings_scroll_handle'] = pygame.Rect(bar_area.x, handle_y, S(10), handle_h)
         state['settings_scrollbar_track'] = bar_area
         pygame.draw.rect(game.game_screen, GRAY, state['settings_scroll_handle'], border_radius=2)
     else:
@@ -280,12 +276,14 @@ def _draw_settings_screen(game, state, mouse_pos):
 
     return clickable_rects
 
-
 def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
     if event.type == pygame.MOUSEWHEEL:
         rect = state.get('settings_content_rect')
         if rect and rect.collidepoint(mouse_pos):
-            state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] - (event.y * 30), state.get('settings_max_scroll', 0)))
+            state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] - (event.y * S(30)), state.get('settings_max_scroll', 0)))
     
     elif event.type == pygame.KEYDOWN:
         if state.get('active_setting'):
@@ -318,8 +316,6 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             core.data.config.load_settings(preset_name)
             pygame.quit()
         
-            # 3. Seamlessly reboot the Python process from scratch
-            # This forces config.py to re-evaluate the new max screen size and font scale
             os.execv(sys.executable, ['python'] + sys.argv)
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.set_volume(0.5 * core.data.config.VOLUME_MUSIC)
@@ -357,7 +353,6 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                              setting_obj = {'value': setting_obj, 'name': key}
                              state['settings_data'][block][key] = setting_obj
 
-                        # --- LIVE SAVE: Writes directly to config.xml ---
                         if key == 'language':
                             langs = ['en_US', 'pt_BR']
                             current_val = str(setting_obj['value'])
@@ -370,7 +365,6 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             state['settings_data'][block][key]['value'] = new_val
                             load_language(new_val)
                             
-                            # Write new config to disk immediately so you don't have to press apply
                             preset_name = state.get('selected_config_preset', 'config')
                             core.data.config.save_language_to_config(new_val, preset_name)
                             
@@ -378,20 +372,13 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             break
 
                         elif key == 'resolution':
-                            # 1. Ask the hardware what it supports (returns largest to smallest)
                             modes = pygame.display.list_modes()
                             
                             if modes == -1 or not modes:
-                                # Failsafe in case of weird virtual displays or headless servers
                                 res_list = ['1280x720', '1920x1080', 'max']
                             else:
-                                # 2. Filter out tiny resolutions, format as "WxH", and reverse so it counts up
                                 res_list = [f"{w}x{h}" for w, h in reversed(modes) if w >= 1280 and h >= 720]
-                                
-                                # 3. Remove duplicates (some OSs return duplicates for different refresh rates)
                                 res_list = list(dict.fromkeys(res_list))
-                                
-                                # 4. Always ensure "max" is the final option
                                 res_list.append('max')
 
                             current_val = str(setting_obj['value']).lower()
@@ -412,20 +399,17 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             clicked_input = True
                             break
 
-                        # Math options only trigger if the above breaks didn't fire
                         try:
                             current_val = float(setting_obj['value'])
                         except ValueError:
                             current_val = 0.0
                             
-
                         is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or (key in ['water_threshold', 'food_water_multiplier_decay']) or ('volume' in key)
 
                         if is_percentage_cycle:
                             comp_val = current_val
                             if key == 'water_threshold': comp_val /= 100.0
                             
-                            # Allow volume to reach 0.0
                             if not 'volume' in key and comp_val <= 0.0: comp_val = 0.01
                             
                             comp_val = round(comp_val, 2)
@@ -435,7 +419,7 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             elif comp_val < 0.75: new_val = 0.75
                             elif comp_val < 1.0: new_val = 1.0
                             else: 
-                                new_val = 0.0 if 'volume' in key else 0.01 # Volume cycles to 0
+                                new_val = 0.0 if 'volume' in key else 0.01 
 
                         elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
                             if current_val < 1800000: new_val = 1800000.0
