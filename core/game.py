@@ -168,22 +168,28 @@ class Game:
         self.modals = []
         self.saved_modals = [] 
 
-        right_panel_x = GAME_WIDTH - 246
-        messages_panel_y = GAME_HEIGHT - 256
+        right_panel_x = GAME_WIDTH - 244
+        messages_panel_y = GAME_HEIGHT - 244
+        
         self.last_modal_positions = {
-            'status': (65, 3),
-            'inventory': (right_panel_x - 256, messages_panel_y - 3),
-            'gear': (right_panel_x, 3),
+            # --- Right Panel Stack (Top to Bottom) ---
+            'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
+            'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT - INVENTORY_MODAL_HEIGHT),
+            'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT),
+            
+            # --- Bottom Panel Dock (Left to Right) ---
+            # Anchored perfectly to the Bottom Edge
+            'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+            'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+            
+            # --- Keep your other floating modals centered/default ---
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'nearby': (right_panel_x, messages_panel_y - 3),
-            'messages': (3, messages_panel_y),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (300, 100),
-            'help': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2),
-            'slots': (right_panel_x - 246, 3)
+            'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
+            'slots': (GAME_WIDTH - GEAR_MODAL_WIDTH - SLOTS_MODAL_WIDTH, 0)
         }
-
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']
             self.modals.append({

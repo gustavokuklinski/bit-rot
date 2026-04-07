@@ -103,27 +103,16 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
     quests = load_quests()
     
-    # ---------------------------------------------------------
-    # 1. State Processing & Categorization
-    # ---------------------------------------------------------
     completed_list = getattr(player, 'completed_quests', [])
     active_list = getattr(player, 'quests', [])
     
-    in_progress = []
-    next_petrol_locked = []
-    island_locked = []
-    completed_quests = []
-    
-    np_total = 0
-    np_comp = 0
-    isl_total = 0
-    isl_comp = 0
+    in_progress, next_petrol_locked, island_locked, completed_quests = [], [], [], []
+    np_total = np_comp = isl_total = isl_comp = 0
 
     for q in quests:
         is_completed = (q['complete_flag'] in completed_list) or (q['node_id'] in completed_list)
         is_open = ((q['node_id'] in active_list) or (q['name'] in active_list)) and not is_completed
         
-        # Track stats for the headers
         if q['is_procedural']:
             isl_total += 1
             if is_completed: isl_comp += 1
@@ -131,88 +120,58 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             np_total += 1
             if is_completed: np_comp += 1
             
-        # Sort into rendering buckets
-        if is_completed:
-            completed_quests.append(q)
-        elif is_open:
-            in_progress.append(q)
-        elif q['is_procedural']:
-            island_locked.append(q)
-        else:
-            next_petrol_locked.append(q)
+        if is_completed: completed_quests.append(q)
+        elif is_open: in_progress.append(q)
+        elif q['is_procedural']: island_locked.append(q)
+        else: next_petrol_locked.append(q)
 
-    total_global = len(quests)
-    comp_global = len(completed_quests)
-    in_prog_count = len(in_progress)
+    total_global, comp_global, in_prog_count = len(quests), len(completed_quests), len(in_progress)
 
-    # ---------------------------------------------------------
-    # Setup layout variables [FIXED VERTICAL ALIGNMENT]
-    # ---------------------------------------------------------
     start_x = modal_rect.left + 15
-    base_y = modal_rect.top + 80  # Moved down 20px (was 60) to avoid tab overlap
+    base_y = modal_rect.top + 70  # Shifted up to match shorter modal
     slot_size = 40
     gap = 10
-    cols = 4 
+    cols = 9 # Increased for wider horizontal fit
     
     def get_section_height(items):
         if not items: return 0
         rows = (len(items) + cols - 1) // cols
-        return 30 + (rows * (slot_size + gap)) + 10 # Header + Grid + Padding
+        return 30 + (rows * (slot_size + gap)) + 10
 
     total_content_height = (
-        get_section_height(in_progress) +
-        get_section_height(next_petrol_locked) +
-        get_section_height(island_locked) +
-        get_section_height(completed_quests)
+        get_section_height(in_progress) + get_section_height(next_petrol_locked) +
+        get_section_height(island_locked) + get_section_height(completed_quests)
     )
     
-    # ---------------------------------------------------------
-    # 2. Scrolling Logic
-    # Reduced visible height by 20px so it doesn't push out of the bottom of the modal
-    visible_height = modal_rect.height - 100 
+    visible_height = modal_rect.height - 80 
     max_scroll = max(0, total_content_height - visible_height)
     
-    # Initialize scroll states
-    if 'quest_scroll_y' not in modal:
-        modal['quest_scroll_y'] = 0.0
-    if 'quest_is_dragging' not in modal:
-        modal['quest_is_dragging'] = False
+    if 'quest_scroll_y' not in modal: modal['quest_scroll_y'] = 0.0
+    if 'quest_is_dragging' not in modal: modal['quest_is_dragging'] = False
 
-    # --- NEW: Mouse Wheel Scrolling Logic ---
-    # Retrieve the scroll wheel delta (injected by your event loop)
     scroll_dy = modal.get('scroll_dy', 0)
-    
-    # Only scroll if the mouse is actively hovering over the modal
     if scroll_dy != 0 and modal_rect.collidepoint(mouse_pos):
-        scroll_speed = 35 # Adjust this value to make scrolling faster/slower
-        modal['quest_scroll_y'] -= scroll_dy * scroll_speed
-        
-        # Reset the scroll delta so it doesn't continuously scroll forever
+        modal['quest_scroll_y'] -= scroll_dy * 35
         modal['scroll_dy'] = 0 
-    # ----------------------------------------
 
     mouse_pressed = pygame.mouse.get_pressed()[0]
-    
     scrollbar_x = modal_rect.right - 15
     scrollbar_w = 8
     
-    # Scrollbar handle height (dynamic based on content)
     handle_h = max(30, int((visible_height / max(1, total_content_height)) * visible_height))
     if total_content_height <= visible_height: handle_h = visible_height
     
-    # Track position
     scroll_ratio = modal['quest_scroll_y'] / max(1, max_scroll)
     handle_y = base_y + (scroll_ratio * (visible_height - handle_h))
     handle_rect = pygame.Rect(scrollbar_x, handle_y, scrollbar_w, handle_h)
     track_rect = pygame.Rect(scrollbar_x, base_y, scrollbar_w, visible_height)
     
-    # Drag Logic
     if mouse_pressed:
-        if not modal.get('quest_was_pressed', False): # Just clicked
+        if not modal.get('quest_was_pressed', False):
             if handle_rect.collidepoint(mouse_pos):
                 modal['quest_is_dragging'] = True
                 modal['quest_drag_offset'] = mouse_pos[1] - handle_y
-            elif track_rect.collidepoint(mouse_pos): # Clicked on track to jump
+            elif track_rect.collidepoint(mouse_pos):
                 new_y = mouse_pos[1] - (handle_h / 2)
                 percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
                 modal['quest_scroll_y'] = percent * max_scroll
@@ -221,32 +180,21 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             new_y = mouse_pos[1] - modal.get('quest_drag_offset', 0)
             percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
             modal['quest_scroll_y'] = percent * max_scroll
-    else:
-        modal['quest_is_dragging'] = False
+    else: modal['quest_is_dragging'] = False
         
     modal['quest_was_pressed'] = mouse_pressed
-    
-    # Fallback to prevent rendering glitches if window resizes
     modal['quest_scroll_y'] = max(0, min(modal['quest_scroll_y'], max_scroll))
     current_scroll = modal['quest_scroll_y']
 
-    # ---------------------------------------------------------
-    # 3. Rendering Sections
-    # ---------------------------------------------------------
-    # Set clipping rect so scrolling items disappear under headers/footers
     clip_rect = pygame.Rect(modal_rect.left + 5, base_y, modal_rect.width - 25, visible_height)
     surface.set_clip(clip_rect)
     
     current_y = base_y - current_scroll
     pending_tooltip = None
-    
-    header_font = pygame.font.SysFont("Arial", 16, bold=True)
-    icon_font = pygame.font.SysFont("Arial", 14)
 
     def draw_quest_section(title, items, y_offset, outline_color):
         if not items: return y_offset
         
-        # Draw Header
         title_surf = font_14.render(title, True, WHITE)
         surface.blit(title_surf, (start_x, y_offset))
         y_offset += 25
@@ -262,18 +210,14 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             
             slot_rect = pygame.Rect(x, y, slot_size, slot_size)
             
-            # Skip drawing if completely out of bounds for performance
-            if y > base_y + visible_height or y + slot_size < base_y:
-                continue
+            if y > base_y + visible_height or y + slot_size < base_y: continue
             
-            # Draw Slot Background
             pygame.draw.rect(surface, GRAY_40, slot_rect)
             
-            # Draw Item Image
             item = q['item_obj']
             if item and getattr(item, 'image', None):
                 img = item.image.copy()
-                if outline_color == GRAY_60: img.set_alpha(100) # Faded if locked
+                if outline_color == GRAY_60: img.set_alpha(100)
                 scaled_img = pygame.transform.scale(img, (32, 32))
                 img_rect = scaled_img.get_rect(center=slot_rect.center)
                 surface.blit(scaled_img, img_rect)
@@ -282,11 +226,9 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
                 if outline_color == GRAY_60: fallback_text.set_alpha(100)
                 surface.blit(fallback_text, fallback_text.get_rect(center=slot_rect.center))
                 
-            # Draw Border
             border_width = 2 if outline_color != GRAY_60 else 1
             pygame.draw.rect(surface, outline_color, slot_rect, border_width)
             
-            # Tooltip handling
             if slot_rect.collidepoint(mouse_pos) and clip_rect.collidepoint(mouse_pos):
                 class QuestTooltipDummy:
                     def __init__(self, q_data):
@@ -296,37 +238,26 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
                         else: status = 'Locked'
                         
                         self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
-                        
-                        # Dummy properties to prevent crash on Item generic tooltip renderer
                         self.item_type = self.durability = self.max_durability = None
-                        self.load = self.capacity = self.min_damage = self.max_damage = None
-                        self.ammo_type = self.defence = None
+                        self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
                         
                 pending_tooltip = QuestTooltipDummy(q)
 
         rows = (len(items) + cols - 1) // cols
         return y_offset + (rows * (slot_size + gap)) + 15
         
-    # Draw Each Group dynamically
     current_y = draw_quest_section(f"In Progress ({in_prog_count})", in_progress, current_y, YELLOW)
     current_y = draw_quest_section(f"Next Petrol ({np_comp}/{np_total})", next_petrol_locked, current_y, GRAY_60)
     current_y = draw_quest_section(f"Island Quest ({isl_comp}/{isl_total})", island_locked, current_y, GRAY_60)
     current_y = draw_quest_section(f"Completed ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
 
-    # ---------------------------------------------------------
-    # 4. Finalize Drawing (Unclip & Scrollbar)
-    # ---------------------------------------------------------
-    surface.set_clip(None) # Reset clipping so UI borders aren't clipped
+    surface.set_clip(None)
     
-    # Draw Scrollbar if needed
     if total_content_height > visible_height:
-        pygame.draw.rect(surface, WHITE, track_rect) # Track
-        
+        pygame.draw.rect(surface, WHITE, track_rect)
         handle_color = GRAY_80 if modal['quest_is_dragging'] else GRAY_40
         if handle_rect.collidepoint(mouse_pos): handle_color = GRAY_80
-            
-        pygame.draw.rect(surface, handle_color, handle_rect, border_radius=4) # Handle
+        pygame.draw.rect(surface, handle_color, handle_rect, border_radius=4)
 
-    # Tooltip drawn strictly last
     if pending_tooltip:
         draw_tooltip(surface, pending_tooltip, (mouse_pos[0] + 15, mouse_pos[1] + 15))

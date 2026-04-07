@@ -83,8 +83,18 @@ def handle_movement(game):
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
     game.player.is_running = is_running
 
+    # --- MODAL COLLISION CHECK TO DISARM AIMING ---
+    mouse_pos = game._get_scaled_mouse_pos()
+    is_over_ui = game.context_menu.get('active', False)
+    if not is_over_ui:
+        for modal in game.modals:
+            if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+                is_over_ui = True
+                break
+
     # Use Left CTRL, Right CTRL, Right Mouse Button (index 2) or Triggers to aim
-    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim)
+    # Force disarm if the cursor is hovering over any Modal or the Context Menu is open
+    game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim) and not is_over_ui
 
     if game.player.stamina <= 0:
         current_speed = final_base_speed / 3

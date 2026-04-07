@@ -343,24 +343,60 @@ def process_chat_command(game, text):
     return False
 
 
+def toggle_default_ui(game):
+    """
+    Acts as a UI Panic/Reset button.
+    - If the UI is perfectly docked, it closes all panels to clear the screen.
+    - If the UI is messy, moved, or missing pieces, it cleans up and snaps to default.
+    """
+    # 1. Define the mathematically perfect default positions
+    default_positions = {
+        'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
+        'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT - INVENTORY_MODAL_HEIGHT),
+        'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT),
+        'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+        'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
+    }
+    
+    core_types = {'gear', 'inventory', 'nearby', 'messages', 'status'}
+    
+    # 2. Analyze the current state of the UI
+    current_types = {m['type'] for m in game.modals if not m.get('minimized', False)}
+    
+    # Are we strictly showing ONLY the 5 core modals?
+    is_perfectly_default = (current_types == core_types) and (len(game.modals) == 5)
+    
+    # Are they physically sitting at their exact default coordinates?
+    if is_perfectly_default:
+        for m in game.modals:
+            expected_pos = default_positions.get(m['type'])
+            if not expected_pos or tuple(map(int, m['rect'].topleft)) != tuple(map(int, expected_pos)):
+                is_perfectly_default = False
+                break
+
+    # 3. Execute the appropriate action
+    if is_perfectly_default:
+        # If perfectly aligned, TAB clears the screen for a full immersive view
+        game.modals.clear()
+    else:
+        # If messy, moved, or closed, wipe everything and rebuild the perfect layout
+        game.modals.clear()
+        
+        # Override the game's anchor tracking so they spawn exactly where we want
+        game.last_modal_positions.update(default_positions)
+        
+        # Trigger your existing spawn functions to build them
+        toggle_gear_modal(game)
+        toggle_inventory_modal(game)
+        toggle_nearby_modal(game)
+        toggle_messages_modal(game)
+        toggle_status_modal(game)
+
 def handle_keyboard_events(game, event):
 
     if event.type == pygame.KEYDOWN:
-        # [UPDATED] Toggle UI Visibility with TAB (Close/Restore Logic)
         if event.key == pygame.K_TAB:
-            # Ensure storage exists if not added to game.py yet (safe fallback)
-            if not hasattr(game, 'saved_modals'):
-                game.saved_modals = []
-
-            if game.modals:
-                # If modals are active: Save them and Close them
-                game.saved_modals = game.modals[:] 
-                game.modals.clear()
-            else:
-                # If no modals active: Restore from saved if available
-                if game.saved_modals:
-                    game.modals = game.saved_modals[:]
-                    game.saved_modals = [] 
+            toggle_default_ui(game)
             return
 
         # [ADDED] Check if a top modal wants to handle the event (e.g. Search Bar)
@@ -377,12 +413,8 @@ def handle_keyboard_events(game, event):
             return
 
         if event.key == pygame.K_ESCAPE:
-            if game.modals:
-                game.modals.pop()
-                return
-            else:
-                toggle_pause(game)
-                return
+            toggle_pause(game)
+            return
         
         if event.key == pygame.K_F11:
             pygame.display.toggle_fullscreen()

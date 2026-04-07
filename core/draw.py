@@ -39,8 +39,29 @@ def draw_game(game):
 
     # World Rendering with Pixelated Zoom
     zoom = getattr(game, 'zoom_level', 1.0)
-    view_w = int(GAME_WIDTH / zoom)
-    view_h = int(GAME_HEIGHT / zoom)
+    
+    # --- DYNAMIC VIEWPORT RESIZING START ---
+    dynamic_w = GAME_WIDTH
+    dynamic_h = GAME_HEIGHT
+    
+    for modal in getattr(game, 'modals', []):
+        if not modal.get('minimized', False) and 'rect' in modal:
+            # If a designated Right Panel modal is actually positioned on the right
+            if modal['type'] in ['nearby', 'inventory', 'gear']:
+                if modal['rect'].left >= GAME_WIDTH - 244:
+                    dynamic_w = min(dynamic_w, modal['rect'].left)
+            # If a designated Bottom Panel modal is actually positioned on the bottom
+            if modal['type'] in ['messages', 'status']:
+                if modal['rect'].top >= GAME_HEIGHT - 240:
+                    dynamic_h = min(dynamic_h, modal['rect'].top)
+                    
+    # Safeties to ensure the viewport never collapses completely
+    dynamic_w = max(GAME_WIDTH // 3, dynamic_w)
+    dynamic_h = max(GAME_HEIGHT // 3, dynamic_h)
+
+    view_w = int(dynamic_w / zoom)
+    view_h = int(dynamic_h / zoom)
+    # --- DYNAMIC VIEWPORT RESIZING END ---
 
     if not hasattr(game, 'cached_view_surface') or \
        game.cached_view_surface.get_width() != view_w or \
@@ -539,11 +560,14 @@ def draw_game(game):
     light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
     world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    game_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
-    if view_w == GAME_WIDTH and view_h == GAME_HEIGHT:
+    # Use the new dynamic bounds for the draw rect
+    game_rect = pygame.Rect(GAME_OFFSET_X, 0, dynamic_w, dynamic_h)
+    
+    # Check zoom directly to determine if scaling is required
+    if zoom == 1.0:
         game.game_screen.blit(world_view_surface, game_rect)
     else:
-        scaled_world = pygame.transform.scale(world_view_surface, (GAME_WIDTH, GAME_HEIGHT))
+        scaled_world = pygame.transform.scale(world_view_surface, (dynamic_w, dynamic_h))
         game.game_screen.blit(scaled_world, game_rect)
 
 
