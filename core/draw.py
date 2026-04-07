@@ -828,11 +828,11 @@ def draw_game(game):
                 if not hasattr(game, 'vehicle_icons'):
                     game.vehicle_icons = {}
                     icon_paths = {
-                        'fuel': 'game/lib/sprites/items/car_fuel_unit.png',
-                        'motor': 'game/lib/sprites/items/car_motor.png',
-                        'power': 'game/lib/sprites/items/car_battery.png',
-                        'tires': 'game/lib/sprites/items/car_tire.png',
-                        'key': 'game/lib/sprites/items/car_key_pickup.png'
+                        'fuel': SPRITE_PATH + '/items/car_fuel_unit.png',
+                        'motor': SPRITE_PATH + '/items/car_motor.png',
+                        'power': SPRITE_PATH + '/items/car_battery.png',
+                        'tires': SPRITE_PATH + '/items/car_tire.png',
+                        'key': SPRITE_PATH + '/items/car_key_pickup.png'
                     }
                     for k, path in icon_paths.items():
                         try:

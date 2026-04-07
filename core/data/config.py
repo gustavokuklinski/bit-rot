@@ -156,7 +156,6 @@ def load_settings(preset="default"):
     
     if not os.path.exists(filepath):
         print(f"Modified config not found. Loading default from read-only assets.")
-        # Fallback to the bundled, read-only default file
         filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
         if not os.path.exists(filepath):
             filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
@@ -184,7 +183,6 @@ def load_settings(preset="default"):
 
     filepath = f'./game/save/config/{preset}.xml'
     if not os.path.exists(filepath):
-        print(f"Config file not found: {filepath}. Loading default.")
         filepath = './game/save/config/config.xml'
 
     try:
@@ -270,7 +268,17 @@ def load_settings(preset="default"):
         RESOLUTION = ui_config.find('resolution').get('value')
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
-        if RESOLUTION.lower() == "max":
+        # --- MOBILE RESOLUTION & SCALING LOGIC ---
+        is_android = 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ
+
+        if is_android:
+            # Optimal mobile scaling: Half of the hardware native resolution.
+            # Pygame's SCALED flag in game.py will blow this up to fill the screen perfectly,
+            # drastically improving FPS while keeping hitboxes accurate.
+            GAME_WIDTH = infoObject.current_w // 2
+            GAME_HEIGHT = infoObject.current_h // 2
+            WINDOW_MODE = "fullscreen"
+        elif RESOLUTION.lower() == "max":
             GAME_WIDTH = infoObject.current_w
             GAME_HEIGHT = infoObject.current_h
         else:
@@ -283,7 +291,12 @@ def load_settings(preset="default"):
                 GAME_HEIGHT = 720
         
         UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
-        RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
+        
+        if is_android:
+            # Increase base font scale by 50% for mobile readability
+            RESOLUTION_VALUE = (1.0 + (UI_SCALE - 1.0) * 0.3) * 1.5
+        else:
+            RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
 
         # --- 3. Lock-in the True Font Render right here ---
         try:
@@ -294,8 +307,6 @@ def load_settings(preset="default"):
             font     = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
             font_14  = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
 
-
-        UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
 
         val_crt = ui_config.find('crt_filter')
         if val_crt is not None:
@@ -322,8 +333,6 @@ def load_settings(preset="default"):
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))
         ANIMAL_RESPAWN_TIMER_MS = int(animal_config.find('animal_respawn_ms_timer').get('value'))
-        
-        print(f"Configuration loaded from {filepath}")
 
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
@@ -334,11 +343,10 @@ def save_language_to_config(lang_code, preset="config"):
     GAME_LANGUAGE = lang_code
     writable_root = get_writable_dir()
     config_dir = os.path.join(writable_root, "game", "save", "config")
-    os.makedirs(config_dir, exist_ok=True) # Create folders if they don't exist
+    os.makedirs(config_dir, exist_ok=True) 
     
     filepath = os.path.join(config_dir, f"{preset}.xml")
     
-    # If the file doesn't exist in the writable dir yet, copy the default one over first
     if not os.path.exists(filepath):
         bundled_path = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
         if os.path.exists(bundled_path):
@@ -378,6 +386,5 @@ try:
         GAME_VERSION = f.read().strip()
 except:
     GAME_VERSION = "0.0.1"
-
 
 load_settings()

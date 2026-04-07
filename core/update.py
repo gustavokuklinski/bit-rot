@@ -405,30 +405,28 @@ def update_game_state(game):
             break
 
         # [OPTIMIZATION] Adaptive quadtree query and obstacle lookup based on LOD
-        # LOD 1: Full queries (AI needs accurate data)
-        # LOD 2: Smaller query radius, skip obstacles
-        # LOD 3: Skip all queries (zombies far away)
         if dist_sq <= LOD_BASE_RADIUS_SQ:
             # LOD 1: Full queries
             search_area = zombie.rect.inflate(GRID_SIZE, GRID_SIZE)
-            nearby_zombies = game.quadtree.query(search_area)
-            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
+            nearby_entities = game.quadtree.query(search_area)
+            # Remove self from the quadtree results
+            nearby_entities = [e for e in nearby_entities if e != zombie]
             nearby_obstacles = get_nearby_obstacles(zombie.rect, game.cached_obstacle_grid, GRID_SIZE)
         elif dist_sq <= LOD_BASE_RADIUS_SQ * 2:
             # LOD 2: Reduced queries, no obstacle lookup
             search_area = zombie.rect.inflate(GRID_SIZE // 2, GRID_SIZE // 2)
-            nearby_zombies = game.quadtree.query(search_area)
-            nearby_zombies = [z for z in nearby_zombies if isinstance(z, Zombie) and z != zombie]
+            nearby_entities = game.quadtree.query(search_area)
+            nearby_entities = [e for e in nearby_entities if e != zombie]
             nearby_obstacles = []
         else:
             # LOD 3: Skip all spatial queries
-            nearby_zombies = []
+            nearby_entities = []
             nearby_obstacles = []
 
         
         # --- ENTITY SEPARATION (Physics) ---
         # Keep entities from getting stuck on top of each other
-        for other_entity in nearby_zombies:
+        for other_entity in nearby_entities:
             # Broad Phase: Rect overlap
             if not getattr(other_entity, 'is_dead', False) and zombie.rect.colliderect(other_entity.rect):
                 

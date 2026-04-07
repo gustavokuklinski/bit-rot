@@ -45,7 +45,7 @@ def get_save_files():
 
 def delete_save(filename):
     """Deletes a specific save folder."""
-    path = os.path.join(get_writable_dir(), "game", "save", "game")
+    path = os.path.join(get_writable_dir(), "game", "save", "game", filename)
     try:
         if os.path.exists(path):
             shutil.rmtree(path)

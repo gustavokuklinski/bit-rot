@@ -24,7 +24,7 @@
         </attribute>
 
         <attribute id="agility" name="Agility" image="ui/agility.png" base_xp="200">
-            <effect target="stamina_consumption_reduction" value="0.003" type="flat" />
+            <effect target="stamina_consumption_reduction" value="0.001" type="flat" />
         </attribute>
 
         <attribute id="lucky" name="Luck" image="ui/lucky.png"  base_xp="300">
@@ -41,7 +41,7 @@
 
     <stats>
         <stat id="stamina">
-            <param name="regen_base" value="0.002" />
+            <param name="regen_base" value="0.003" />
             <param name="run_cost_base" value="0.003" />
             <param name="bed_recovery_mult" value="2.0" />
             <param name="melee_cost" value="0.002" /> 
@@ -50,7 +50,7 @@
         
         <stat id="tireness">
             <param name="night_decay" value="0.0" />
-            <param name="day_recovery" value="0.001" />
+            <param name="day_recovery" value="0.002" />
             <param name="stamina_penalty" value="-0.005" />
             <param name="run_penalty" value="-0.005" />
             <param name="melee_cost" value="0.0005" /> 

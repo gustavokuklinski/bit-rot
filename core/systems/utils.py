@@ -79,39 +79,50 @@ def find_nearby_containers(game):
 
 def get_targeted_interactable(game):
     """
-    Returns the highest priority interactable entity based on where the player is facing.
-    Useful to prevent conflict between doors, NPCs, and vehicles.
+    Returns the highest priority interactable entity based on where the player is facing,
+    with a forgiving search radius for analog stick users.
     """
     if not getattr(game, 'player', None): return None
 
     facing_x, facing_y = get_player_facing_tile(game)
     if facing_x is None: return None
     
-    # Center of the tile the player is currently facing
     target_world_x = facing_x * TILE_SIZE + TILE_SIZE / 2
     target_world_y = facing_y * TILE_SIZE + TILE_SIZE / 2
     
     candidates = []
     
-    # 1. Stairs (Highest Priority if standing directly on them)
     px, py = int(game.player.rect.centerx // TILE_SIZE), int(game.player.rect.centery // TILE_SIZE)
+    
+    # 1. Stairs (Highest Priority if standing directly on them)
     if hasattr(game, 'map_data') and 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
         current_t = game.map_manager.get_tile_at(px, py)
         if current_t and current_t.get('is_stair'):
             candidates.append({'type': 'stair', 'entity': (px, py), 'dist': -1}) 
     
-    # 2. Facing Tile (Doors / Windows / Stairs in front of player)
+    # 2. Facing Tile & Nearby Tiles (Doors / Windows / Stairs)
+    # To make this mobile-friendly, we search a 3x3 area around the player
+    # and find the closest interactable tile. 
+    best_tile = find_interactable_tile(game)
+    if best_tile:
+        tx, ty = best_tile
+        # Calculate distance to prioritize it properly
+        tile_center_x = (tx * TILE_SIZE) + (TILE_SIZE / 2)
+        tile_center_y = (ty * TILE_SIZE) + (TILE_SIZE / 2)
+        dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+        candidates.append({'type': 'tile', 'entity': (tx, ty), 'dist': dist})
+    
+    # Also explicitly check the facing tile if it's a stair (since find_interactable_tile only checks 'is_statable')
     if hasattr(game, 'map_data') and 0 <= facing_y < len(game.map_data) and 0 <= facing_x < len(game.map_data[0]):
         facing_t = game.map_manager.get_tile_at(facing_x, facing_y)
-        if facing_t and (facing_t.get('is_statable') or facing_t.get('is_stair')):
-            candidates.append({'type': 'tile', 'entity': (facing_x, facing_y), 'dist': 0.1})
+        if facing_t and facing_t.get('is_stair'):
+             candidates.append({'type': 'tile', 'entity': (facing_x, facing_y), 'dist': 0.1})
 
     # 3. NPCs
     for npc in getattr(game, 'npcs', []):
         if not getattr(npc, 'is_friendly', False) or getattr(npc, 'aggro_timer', 0) > 0: continue
         dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
         if dist < TILE_SIZE * 1.5:
-            # Calculate distance from the *facing tile* to the NPC
             facing_dist = math.hypot(target_world_x - npc.rect.centerx, target_world_y - npc.rect.centery)
             candidates.append({'type': 'npc', 'entity': npc, 'dist': facing_dist})
             
@@ -123,7 +134,6 @@ def get_targeted_interactable(game):
             dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
             if dist < TILE_SIZE * 2.0:
                 facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
-                # Give vehicles a bonus if they overlap the tile the player is specifically facing
                 veh_grid_rect = pygame.Rect(obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height)
                 facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 if veh_grid_rect.colliderect(facing_rect):
@@ -133,7 +143,7 @@ def get_targeted_interactable(game):
     if not candidates:
         return None
         
-    # Sort by closest distance to the player's facing point
+    # Sort by closest distance 
     candidates.sort(key=lambda x: x['dist'])
     return candidates[0]
 
@@ -143,11 +153,9 @@ def screen_to_world(game, screen_pos):
     
     zoom = getattr(game, 'zoom_level', 1.0)
     
-    # Scale screen coordinates down to the view's internal resolution
     view_x = screen_x / zoom
     view_y = screen_y / zoom
     
-    # Subtract the camera offset to get the true world coordinates
     offset_x = getattr(game, 'offset_x', 0)
     offset_y = getattr(game, 'offset_y', 0)
     

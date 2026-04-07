@@ -1098,7 +1098,7 @@ def run_player_setup(game):
     else:
         clickable_rects = _draw_settings_screen(game, state, mouse_pos)
     
-    for event in pygame.event.get():
+    for event in game.get_events():
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
             

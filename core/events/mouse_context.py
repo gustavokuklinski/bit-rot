@@ -635,6 +635,10 @@ def handle_context_menu_click(game, mouse_pos):
                 
 
             elif source in ['ground', 'nearby', 'container'] and option in ['Grab', 'Grab One', 'Grab Half', 'Grab All']:
+                
+                if getattr(item, 'type', None) in ('animal', 'zombie'):
+                    game.context_menu['active'] = False
+                    return
 
                 target_inventory = game.player.inventory
                 target_capacity = game.player.get_total_inventory_slots()
@@ -648,7 +652,9 @@ def handle_context_menu_click(game, mouse_pos):
                         elif option == 'Grab Half':
                             weight_multiplier = max(1, item.load // 2) / item.load
 
-                    if game.player.current_weight + (item.get_total_weight() * weight_multiplier) > game.player.max_carry_weight:
+                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 0)
+
+                    if game.player.current_weight + (item_weight * weight_multiplier) > game.player.max_carry_weight:
                         display_message(tr('msg', "Cannot carry anymore weight"))
                         game.context_menu['active'] = False
                         return
@@ -994,6 +1000,8 @@ def handle_right_click(game, mouse_pos):
             
             if isinstance(clicked_item, Corpse):
                 can_grab = False
+            elif getattr(clicked_item, 'type', None) in ('animal', 'zombie'):
+                can_grab = False
             elif is_camp and clicked_item.inventory:
                 can_grab = False
             
@@ -1022,7 +1030,7 @@ def handle_right_click(game, mouse_pos):
             if 'Drop' in options: options.remove('Drop')
             if 'Drop one' in options: options.remove('Drop one') 
             if 'Drop all' in options: options.remove('Drop all') 
-            if not isinstance(clicked_item, Corpse):
+            if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
                 if not getattr(clicked_item, 'liquid', False):
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         if 'Grab' in options: options.remove('Grab')

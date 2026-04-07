@@ -218,7 +218,7 @@ class ZombieAI:
 
         return trigger_result
 
-    def update_ai(self, player_rect, obstacles, other_zombies, game):
+    def update_ai(self, player_rect, obstacles, nearby_entities, game):
         """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
@@ -236,26 +236,21 @@ class ZombieAI:
         nearest_target = None
         min_target_dist_sq = dist_to_player_sq
 
-        # Check NPCs
-        if hasattr(game, 'npcs'):
-            for npc in game.npcs:
-                if npc.is_dead: continue
-                ndx = npc.rect.centerx - self.rect.centerx
-                ndy = npc.rect.centery - self.rect.centery
-                npc_dist_sq = ndx*ndx + ndy*ndy
-                if npc_dist_sq < min_target_dist_sq:
-                    min_target_dist_sq = npc_dist_sq
-                    nearest_target = npc
-
-        # --- NEW: Check Animals ---
-        # Animals exist in the same array as zombies. We only target them if they have type 'animal'.
-        for entity in other_zombies:
-            if getattr(entity, 'type', '') == 'animal' and not entity.is_dead:
-                adx = entity.rect.centerx - self.rect.centerx
-                ady = entity.rect.centery - self.rect.centery
-                animal_dist_sq = adx*adx + ady*ady
-                if animal_dist_sq < min_target_dist_sq:
-                    min_target_dist_sq = animal_dist_sq
+        # --- QUADTREE TARGETING: Check nearby NPCs and Animals natively ---
+        # Eliminate the linear loop over game.npcs and use the quadtree subset
+        for entity in nearby_entities:
+            if getattr(entity, 'is_dead', False): continue
+            
+            is_npc = hasattr(game, 'npcs') and entity in game.npcs
+            is_animal = getattr(entity, 'type', '') == 'animal'
+            
+            if is_npc or is_animal:
+                edx = entity.rect.centerx - self.rect.centerx
+                edy = entity.rect.centery - self.rect.centery
+                entity_dist_sq = edx*edx + edy*edy
+                
+                if entity_dist_sq < min_target_dist_sq:
+                    min_target_dist_sq = entity_dist_sq
                     nearest_target = entity
 
         if nearest_target:
@@ -360,9 +355,10 @@ class ZombieAI:
                 target_pos = None
 
         if target_pos:
-            self.move_towards(target_pos, obstacles, other_zombies, game, can_see_target=(can_see_target and self.state == 'chasing'))
+            # FIX: Passed nearby_entities correctly here!
+            self.move_towards(target_pos, obstacles, nearby_entities, game, can_see_target=(can_see_target and self.state == 'chasing'))
 
-    def move_towards(self, target_pos, obstacles, other_zombies, game, can_see_target=True):
+    def move_towards(self, target_pos, obstacles, nearby_entities, game, can_see_target=True):
 
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
         
@@ -438,7 +434,8 @@ class ZombieAI:
         separation_radius_sq = separation_radius ** 2
         neighbor_count = 0
         
-        for z in other_zombies:
+        # FIX: Iterate through all nearby_entities for physics separation
+        for z in nearby_entities:
             if z is self: continue
             
             dx = self.rect.centerx - z.rect.centerx

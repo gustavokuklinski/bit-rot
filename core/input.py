@@ -72,7 +72,7 @@ def handle_movement(game):
     # Override with Mobile Virtual Controller if active
     if hasattr(game, 'virtual_controller') and game.virtual_controller.enabled:
         # Only override if the virtual analog is actually being touched
-        if game.virtual_controller.joy_touch_id is not None:
+        if game.virtual_controller.left_touch_id is not None:
             joy_lx = game.virtual_controller.dx
             joy_ly = game.virtual_controller.dy
         
@@ -153,8 +153,12 @@ def handle_input(game):
     if getattr(game, 'joystick_handler', None):
         game.joystick_handler.update_cursor(game)
 
+    if getattr(game, 'virtual_controller', None) and getattr(game.virtual_controller, 'enabled', False):
+        if hasattr(game.virtual_controller, 'update_cursor'):
+            game.virtual_controller.update_cursor(game)
+
     mouse_pos = game._get_scaled_mouse_pos()
-    for event in pygame.event.get():
+    for event in game.get_events():
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
 

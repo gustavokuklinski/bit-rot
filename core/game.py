@@ -287,8 +287,131 @@ class Game:
         self.fast_forward_speed = 50.0
 
         self.world_time = WorldTime(self)
+        self._hook_pygame_global()
 
     
+    def _hook_pygame_global(self):
+        import pygame
+        
+        if getattr(pygame, '_mobile_patched', False): return
+        pygame._mobile_patched = True
+        
+        orig_event_get = pygame.event.get
+        orig_flip = pygame.display.flip
+        orig_update = pygame.display.update
+        orig_mouse_get_pos = pygame.mouse.get_pos
+        orig_mouse_get_pressed = pygame.mouse.get_pressed
+        orig_key_get_pressed = pygame.key.get_pressed
+        
+        def patched_event_get(*args, **kwargs):
+            events = orig_event_get(*args, **kwargs)
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            
+            if is_virtual:
+                self.virtual_controller.update_cursor(self)
+                
+            if not hasattr(self, '_touch_scroll_accum'):
+                self._touch_scroll_accum = 0.0
+
+            processed = []
+            for event in events:
+                if is_virtual:
+                    if event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
+                        self.virtual_controller.process_event(event, self)
+                        
+                    if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                        if not getattr(event, 'injected', False):
+                            continue
+                    processed.append(event)
+                else:
+                    if event.type == pygame.FINGERDOWN:
+                        sw, sh = pygame.display.get_surface().get_size()
+                        pygame.mouse.set_pos((int(event.x * sw), int(event.y * sh)))
+                        processed.append(event)
+                    elif event.type == pygame.FINGERMOTION:
+                        self._touch_scroll_accum -= (event.dy * 60)
+                        if abs(self._touch_scroll_accum) >= 1.0:
+                            ticks = int(self._touch_scroll_accum)
+                            self._touch_scroll_accum -= ticks
+                            processed.append(pygame.event.Event(pygame.MOUSEWHEEL, {'x': 0, 'y': -ticks, 'flipped': False}))
+                        processed.append(event)
+                    else:
+                        processed.append(event)
+            return processed
+
+        def patched_mouse_get_pos():
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            if is_virtual and hasattr(self.virtual_controller, 'v_mouse_x'):
+                return (int(self.virtual_controller.v_mouse_x), int(self.virtual_controller.v_mouse_y))
+            return orig_mouse_get_pos()
+
+        def patched_mouse_get_pressed(*args, **kwargs):
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            if is_virtual and hasattr(self.virtual_controller, 'btn_click'):
+                left_click = self.virtual_controller.btn_click.get('pressed', False) or getattr(self.virtual_controller, 'ui_pressed', False)
+                right_click = self.virtual_controller.btn_aim.get('state', False)
+                return (left_click, False, right_click)
+            return orig_mouse_get_pressed(*args, **kwargs)
+
+        def patched_key_get_pressed():
+            orig_keys = orig_key_get_pressed()
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            
+            if is_virtual and hasattr(self.virtual_controller, 'btn_run'):
+                run_state = self.virtual_controller.btn_run.get('state', False)
+                int_state = self.virtual_controller.btn_interact.get('pressed', False)
+                
+                if run_state or int_state:
+                    # THE BULLETPROOF HARDWARE WRAPPER
+                    class VirtualKeyWrapper:
+                        def __getitem__(self, key):
+                            import pygame
+                            if run_state and key in (pygame.K_LSHIFT, pygame.K_RSHIFT): return 1
+                            if int_state and key == pygame.K_e: return 1
+                            try:
+                                return orig_keys[key]
+                            except Exception:
+                                return 0
+                                
+                        def __len__(self):
+                            return len(orig_keys)
+                            
+                        def __iter__(self):
+                            for i in range(len(orig_keys)):
+                                yield self.__getitem__(i)
+                                
+                        def __bool__(self):
+                            return True
+                            
+                        def __contains__(self, key):
+                            return self.__getitem__(key) == 1
+                    
+                    return VirtualKeyWrapper()
+            return orig_keys
+            
+        def patched_flip():
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            if is_virtual:
+                surf = pygame.display.get_surface()
+                if surf: self.virtual_controller.draw(surf)
+            orig_flip()
+
+        def patched_update(*args, **kwargs):
+            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
+            if is_virtual:
+                surf = pygame.display.get_surface()
+                if surf: self.virtual_controller.draw(surf)
+            orig_update(*args, **kwargs)
+            
+        pygame.event.get = patched_event_get
+        pygame.mouse.get_pos = patched_mouse_get_pos
+        pygame.mouse.get_pressed = patched_mouse_get_pressed
+        pygame.key.get_pressed = patched_key_get_pressed
+        pygame.display.flip = patched_flip
+        pygame.display.update = patched_update
+
+    def get_events(self):
+        return pygame.event.get()
 
     def save_game(self):
         return save_game(self)
@@ -445,7 +568,7 @@ class Game:
         draw_btn(self.game_screen, btn_save, tr('ui', "Save Game"), mouse_pos)
         draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
 
-        for event in pygame.event.get():
+        for event in self.get_events():
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
             
@@ -574,7 +697,7 @@ class Game:
             _, close_help_btn, _ = draw_help_modal(self.game_screen, self, self.main_menu_help_modal_data, self.assets)
 
         # 3. Handle Clicks and Scrolling Events
-        for event in pygame.event.get():
+        for event in self.get_events():
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
@@ -713,7 +836,7 @@ class Game:
             self.load_game_state['is_dragging_scrollbar'] = False
             self.load_game_state['scroll_drag_start_y'] = 0
 
-        for event in pygame.event.get():
+        for event in self.get_events():
 
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
@@ -805,7 +928,7 @@ class Game:
         mouse_pos = self._get_scaled_mouse_pos()
         menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
 
-        for event in pygame.event.get():
+        for event in self.get_events():
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
@@ -1131,6 +1254,9 @@ class Game:
         self._update_screen()
 
     def _update_screen(self):
+        if getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False):
+            self.virtual_controller.draw(self.game_screen)
+
         pygame.display.flip()
         self.dt_ms = self.clock.tick(0) 
         
