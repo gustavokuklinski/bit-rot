@@ -11,13 +11,13 @@ def toggle_inventory_modal(game):
     inventory_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'inventory':
+            # Save position before closing
+            game.last_modal_positions['inventory'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             inventory_modal_exists = True
             break
     if not inventory_modal_exists:
-        # [FIX] Ensure saved modals are cleared if user opens new one, or just proceed
-        # game.saved_modals = []  # Optional: clear stack if user interacts
-        
+        # game.saved_modals = []  # REMOVE this line so it doesn't break our new saving system!
         new_inventory_modal = {
             'id': uuid.uuid4(),
             'type': 'inventory',
@@ -34,6 +34,7 @@ def toggle_status_modal(game):
     status_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'status':
+            game.last_modal_positions['status'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             status_modal_exists = True
             break
@@ -54,6 +55,7 @@ def toggle_nearby_modal(game):
     nearby_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'nearby':
+            game.last_modal_positions['nearby'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             nearby_modal_exists = True
             break
@@ -74,6 +76,7 @@ def toggle_messages_modal(game):
     messages_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'messages':
+            game.last_modal_positions['messages'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             messages_modal_exists = True
             break
@@ -94,6 +97,7 @@ def toggle_gear_modal(game):
     gear_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'gear':
+            game.last_modal_positions['gear'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             gear_modal_exists = True
             break
@@ -116,6 +120,7 @@ def toggle_crafting_modal(game):
     crafting_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'crafting':
+            game.last_modal_positions['crafting'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             crafting_modal_exists = True
             break
@@ -169,6 +174,7 @@ def toggle_help_modal(game):
     help_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'help':
+            game.last_modal_positions['help'] = (modal['rect'].x, modal['rect'].y) # Add this
             game.modals.remove(modal)
             help_modal_exists = True
             break
@@ -345,47 +351,48 @@ def process_chat_command(game, text):
 
 def toggle_default_ui(game):
     """
-    Acts as a UI Panic/Reset button.
-    - If the UI is perfectly docked, it closes all panels to clear the screen.
-    - If the UI is messy, moved, or missing pieces, it cleans up and snaps to default.
+    Acts as a UI Hide/Restore toggle button.
+    - If modals are currently open, it saves their state/positions and clears the screen.
+    - If the UI is hidden, it restores the saved modals exactly where they were.
+    - If there is no saved state, it brings up the default layout.
     """
-    # 1. Define the mathematically perfect default positions
-    default_positions = {
-        'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
-        'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT - INVENTORY_MODAL_HEIGHT),
-        'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT),
-        'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-        'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
-    }
-    
-    core_types = {'gear', 'inventory', 'nearby', 'messages', 'status'}
-    
-    # 2. Analyze the current state of the UI
-    current_types = {m['type'] for m in game.modals if not m.get('minimized', False)}
-    
-    # Are we strictly showing ONLY the 5 core modals?
-    is_perfectly_default = (current_types == core_types) and (len(game.modals) == 5)
-    
-    # Are they physically sitting at their exact default coordinates?
-    if is_perfectly_default:
-        for m in game.modals:
-            expected_pos = default_positions.get(m['type'])
-            if not expected_pos or tuple(map(int, m['rect'].topleft)) != tuple(map(int, expected_pos)):
-                is_perfectly_default = False
-                break
-
-    # 3. Execute the appropriate action
-    if is_perfectly_default:
-        # If perfectly aligned, TAB clears the screen for a full immersive view
-        game.modals.clear()
-    else:
-        # If messy, moved, or closed, wipe everything and rebuild the perfect layout
+    # 1. If modals are currently on screen, save them and hide
+    if game.modals:
+        game.saved_modals = []
+        for modal in game.modals:
+            # Save their exact current position before hiding
+            if 'rect' in modal:
+                game.last_modal_positions[modal['type']] = (modal['rect'].x, modal['rect'].y)
+            game.saved_modals.append(modal)
+        
+        # Clear the screen for an immersive view
         game.modals.clear()
         
-        # Override the game's anchor tracking so they spawn exactly where we want
+    # 2. If the screen is clear, check if we have a saved state to restore
+    elif getattr(game, 'saved_modals', None):
+        for modal in game.saved_modals:
+            # Ensure they get their last known positions updated safely
+            if modal['type'] in game.last_modal_positions:
+                pos = game.last_modal_positions[modal['type']]
+                modal['position'] = pos
+                if 'rect' in modal:
+                    modal['rect'].topleft = pos
+            game.modals.append(modal)
+            
+        # Clear saved state so we don't duplicate on next toggle
+        game.saved_modals.clear()
+        
+    # 3. If there is no saved state, load default perfect layout
+    else:
+        default_positions = {
+            'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
+            'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+            'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
+            'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+            'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
+        }
         game.last_modal_positions.update(default_positions)
         
-        # Trigger your existing spawn functions to build them
         toggle_gear_modal(game)
         toggle_inventory_modal(game)
         toggle_nearby_modal(game)

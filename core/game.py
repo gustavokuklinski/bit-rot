@@ -174,8 +174,12 @@ class Game:
         self.last_modal_positions = {
             # --- Right Panel Stack (Top to Bottom) ---
             'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
-            'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT - INVENTORY_MODAL_HEIGHT),
-            'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GAME_HEIGHT - NEARBY_MODAL_HEIGHT),
+    
+            # Inventory starts exactly where Gear ends (no space)
+            'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+            
+            # Nearby starts exactly where Inventory ends
+            'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
             
             # --- Bottom Panel Dock (Left to Right) ---
             # Anchored perfectly to the Bottom Edge
@@ -497,7 +501,7 @@ class Game:
                 if npc.is_dead or dist > MAX_DISTANCE:
                     modals_to_remove.append(modal)
 
-            elif modal['type'] == 'container':
+            elif modal['type'] in ('container', 'text', 'big_map', 'mobile'):
                 container_item = modal.get('item')
                 if container_item:
                     is_equipped = False

@@ -660,8 +660,8 @@ def update_game_state(game):
         Item.cleanup_disposables(game.containers, game.modals, ground_msg)
 
     for modal in list(game.modals):
-        if modal['type'] == 'container':
-            container_item = modal['item']
+        if modal['type'] in ('container', 'text', 'big_map', 'mobile'):
+            container_item = modal.get('item')
             if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
                 dx = game.player.rect.centerx - container_item.rect.centerx
                 dy = game.player.rect.centery - container_item.rect.centery

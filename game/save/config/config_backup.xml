@@ -3,8 +3,10 @@
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
-        <language value="en_US" name="Language (Default: en_US)"/>
+        <language value="en_US" name="Language"/>
         <crt_filter value="true" name="CRT filter (Default: True)"/>
+        <resolution value="1280x720" name="Resolution (Default: max)"/><!-- max - get the full resolution | 1280x720 -->
+        <window_mode value="fullscreen" name="Window (Default: fullscreen)"/><!-- windowed | fullscreen -->
     </ui>
     <audio>
         <volume_music value="0.25" name="Music Volume"/>
@@ -55,6 +57,6 @@
         <wander value="true" name="Zombie wandering (if False all Zombies will go to player)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>
         <respawn_timer value="600000" name="Respawn (Default: 600000)"/>
-        <infection_chance value="0.25" name="Zombie infection chance (Default: 0.10)"/>
+        <infection_chance value="0.25" name="Zombie infection chance (Default: 0.25)"/>
     </zombie>
 </config>

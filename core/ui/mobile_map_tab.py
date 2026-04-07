@@ -199,7 +199,8 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
         if modal['is_dragging_map']:
             dx = mouse_pos[0] - modal['last_drag_pos'][0]
             dy = mouse_pos[1] - modal['last_drag_pos'][1]
-            zoom = modal['map_zoom']
+            zoom = float(modal.get('map_zoom', 6))
+            if zoom <= 0: zoom = 1.0  # Safe fallback to prevent ZeroDivisionError
             modal['map_offset'] = (
                 modal['map_offset'][0] + (dx / zoom),
                 modal['map_offset'][1] + (dy / zoom)
@@ -241,9 +242,9 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     cached_surf = modal.get(cache_key)
     
     if cached_surf:
-        map_zoom = int(modal['map_zoom'])
+        map_zoom = float(modal.get('map_zoom', 6))
         
-        # Calculate Viewport
+        # Calculate Viewport bounds
         player_grid_x = game.player.rect.centerx // TILE_SIZE
         player_grid_y = game.player.rect.centery // TILE_SIZE
 
@@ -260,17 +261,29 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                 player_grid_x += gx_offset
                 player_grid_y += gy_offset
 
+        # Clamp offset to prevent panning into the infinite black void
+        # We ensure the view's center (player_grid - offset) never leaves the boundaries of the map
+        map_w, map_h = cached_surf.get_size()
+        off_x, off_y = modal.get('map_offset', (0, 0))
+        
+        clamped_x = max(player_grid_x - map_w, min(off_x, float(player_grid_x)))
+        clamped_y = max(player_grid_y - map_h, min(off_y, float(player_grid_y)))
+        modal['map_offset'] = (clamped_x, clamped_y)
+        off_x, off_y = clamped_x, clamped_y
+        
         tiles_in_view_w = map_area_rect.width / map_zoom
         tiles_in_view_h = map_area_rect.height / map_zoom
-        
-        off_x, off_y = modal['map_offset']
 
         src_x = (player_grid_x - (tiles_in_view_w / 2)) - off_x
         src_y = (player_grid_y - (tiles_in_view_h / 2)) - off_y
-        src_w = tiles_in_view_w
-        src_h = tiles_in_view_h
 
-        src_rect = pygame.Rect(src_x, src_y, src_w, src_h)
+        # Sub-pixel rendering fixes (use floor/ceil for exact mapping bounds instead of Pygame's default cast)
+        src_x_int = int(math.floor(src_x))
+        src_y_int = int(math.floor(src_y))
+        src_w_int = int(math.ceil(tiles_in_view_w)) + 1
+        src_h_int = int(math.ceil(tiles_in_view_h)) + 1
+
+        src_rect = pygame.Rect(src_x_int, src_y_int, src_w_int, src_h_int)
         map_rect = cached_surf.get_rect()
         clipped_src = src_rect.clip(map_rect)
         
@@ -278,12 +291,15 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
             sub_surf = cached_surf.subsurface(clipped_src)
             dest_w = int(clipped_src.width * map_zoom)
             dest_h = int(clipped_src.height * map_zoom)
-            scaled_surf = pygame.transform.scale(sub_surf, (dest_w, dest_h))
             
-            draw_offset_x = (clipped_src.x - src_x) * map_zoom
-            draw_offset_y = (clipped_src.y - src_y) * map_zoom
-            
-            surface.blit(scaled_surf, (map_area_rect.x + draw_offset_x, map_area_rect.y + draw_offset_y))
+            # Prevent Pygame scale crash if dimensions are 0 due to zooming out extremely fast
+            if dest_w > 0 and dest_h > 0:
+                scaled_surf = pygame.transform.scale(sub_surf, (dest_w, dest_h))
+                
+                draw_offset_x = (clipped_src.x - src_x) * map_zoom
+                draw_offset_y = (clipped_src.y - src_y) * map_zoom
+                
+                surface.blit(scaled_surf, (map_area_rect.x + draw_offset_x, map_area_rect.y + draw_offset_y))
         
         # --- Draw Player Icon ---
         screen_player_x = map_area_rect.x + (player_grid_x - src_x) * map_zoom

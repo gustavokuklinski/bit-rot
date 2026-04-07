@@ -1405,23 +1405,6 @@ def handle_mouse_motion(game, event, mouse_pos):
 
 
     for modal in reversed(game.modals):
-        if modal.get('is_dragging_map'):
-            start_pos = modal.get('drag_map_start', mouse_pos)
-            dx = mouse_pos[0] - start_pos[0]
-            dy = mouse_pos[1] - start_pos[1]
-            
-            zoom = modal.get('map_zoom', 6)
-            
-            modal['drag_map_start'] = mouse_pos
-            
-            current_off = modal.get('map_offset', (0, 0))
-            new_off_x = current_off[0] + (dx / zoom)
-            new_off_y = current_off[1] + (dy / zoom)
-            
-            modal['map_offset'] = (new_off_x, new_off_y)
-            return
-
-    for modal in reversed(game.modals):
         if modal.get('is_dragging_scrollbar'):
             mouse_delta_y = mouse_pos[1] - modal['scrollbar_drag_last_y']
             modal['scrollbar_drag_last_y'] = mouse_pos[1]
