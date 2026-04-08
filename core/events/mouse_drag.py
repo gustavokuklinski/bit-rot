@@ -42,6 +42,9 @@ def check_container_weight_limit(container, incoming_item, item_to_remove=None):
     return (current_weight + incoming_item.get_total_weight()) <= max_weight
 
 def handle_mouse_up(game, event, mouse_pos):
+    if hasattr(event, 'pos'):
+        mouse_pos = event.pos
+        
     for modal in reversed(game.modals):
         modal['is_dragging'] = False
         modal['is_dragging_scrollbar'] = False
@@ -1354,6 +1357,9 @@ def find_item_at_pos(game, mouse_pos):
     return None
 
 def handle_mouse_motion(game, event, mouse_pos):
+    if hasattr(event, 'pos'):
+        mouse_pos = event.pos
+
     if game.player:
         player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
         player_screen_y = GAME_HEIGHT / 2
@@ -1528,6 +1534,14 @@ def handle_left_click_drag_candidate(game, mouse_pos):
         return 
 
     modal = topmost_modal
+
+    header_drag_area = pygame.Rect(modal['rect'].x, modal['rect'].y, max(1, modal['rect'].width - 60), 35)
+    
+    if header_drag_area.collidepoint(mouse_pos):
+        modal['is_dragging'] = True
+        modal['drag_offset'] = (mouse_pos[0] - modal['rect'].x, mouse_pos[1] - modal['rect'].y)
+        return
+
     if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Mechanics':
         if 'equipment_rects' in modal:
             for slot_name, slot_rect in modal['equipment_rects'].items():

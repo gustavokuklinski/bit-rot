@@ -136,17 +136,17 @@ def handle_attack(game, mouse_pos):
                     )
 
                 game.player.melee_swing_timer = 10
-                player_screen_x = GAME_OFFSET_X + GAME_WIDTH / 2
-                player_screen_y = GAME_HEIGHT / 2
-
-                dx_swing = mouse_pos[0] - player_screen_x
-                dy_swing = mouse_pos[1] - player_screen_y
+                
+                # Use world coordinates instead of assuming the player is centered on-screen
+                world_pos = game.screen_to_world(mouse_pos)
+                
+                dx_swing = world_pos[0] - game.player.rect.centerx
+                dy_swing = world_pos[1] - game.player.rect.centery
 
                 # Angle for Swing Animation (Inverted Y for Cartesian logic)
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
 
                 hit_something = False
-                world_pos = game.screen_to_world(mouse_pos)
 
                 # Determine Attack Range
                 attack_range = TILE_SIZE * 1.5 # Default melee reach

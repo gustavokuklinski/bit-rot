@@ -2,7 +2,6 @@
 **=== Guia de sobrevivência do Bit Rot ===**
 
 Bem-vindo ao Guia de Sobrevivência! Use as abas para navegar por aqui.  
-Você pode retornar a esta Ajuda a qualquer momento durante o jogo pressionando: **?** ou **/**.
 
 ---
 

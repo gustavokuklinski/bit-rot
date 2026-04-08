@@ -5,13 +5,14 @@ import os
 import platform
 import subprocess
 import uuid
+from core.android_handler import is_android, get_android_writable_dir
 
 def get_writable_dir():
     """Returns a safe, writable directory for saves and configs on any platform."""
-    if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
+    if is_android():
         # Running on Android - Use Pygame-CE's internal private storage
         # Replace 'org.test.myapp' with your actual package.domain and package.name from buildozer.spec
-        return os.environ.get('ANDROID_PRIVATE', '/data/org.bit.rot/files')
+        return get_android_writable_dir()
     else:
         # Running on PC - Use the standard local directory
         return os.path.abspath(".")
@@ -269,9 +270,9 @@ def load_settings(preset="default"):
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
         # --- MOBILE RESOLUTION & SCALING LOGIC ---
-        is_android = 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ
+        is_android_device = is_android()
 
-        if is_android:
+        if is_android_device:
             # Optimal mobile scaling: Half of the hardware native resolution.
             # Pygame's SCALED flag in game.py will blow this up to fill the screen perfectly,
             # drastically improving FPS while keeping hitboxes accurate.
@@ -292,7 +293,7 @@ def load_settings(preset="default"):
         
         UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
         
-        if is_android:
+        if is_android_device:
             # Increase base font scale by 50% for mobile readability
             RESOLUTION_VALUE = (1.0 + (UI_SCALE - 1.0) * 0.3) * 1.5
         else:

@@ -3,10 +3,8 @@
 
 Welcome to the Survivor Guide! Use the tabs to navigate over this.
 
-**Tips** 
-- You can get back to this Help everytime during gameplay by pressing: ? or /.
+**Fast Tips** 
 - Complete your first quest talking to a NPC
-- Press F11 to toggle Fullscreen at anytime.
 
 ---
 
@@ -34,7 +32,7 @@ You have three objectives. Choose wisely, because the island is listening.
 
 ---
 
-### [ COMMANDS ]
+### [ Commands ]
 
 **Keyboard**
 
@@ -93,14 +91,14 @@ Keybinds
 * **B + Left:** Open/Close Messages Modal
 * **B + Right:** Open/Close Help Modal
 
-### [ INVENTORY ]
+### [ Inventory ]
 
 * **Managing Items** : Left-click and hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
 * **Quick Access Belt** : Drop essential tools or weapons into your Belt slots to quickly equip them using keys 1-5.
 * **Gear & Armor** : Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 * **Carry Weight** : Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
 
-### [ STATUS ]
+### [ Status ]
 
 * **Health**: Your life force. It drops from physical attacks, starvation, dehydration, severe infection, or carrying too much weight. Use medical supplies or sleep on a proper bed to recover.
 
@@ -120,7 +118,7 @@ Keybinds
 
 
 
-### [ TIPS ]
+### [ Tips ]
 
 * **Permadeath**: This is how you Rot. If you die, you lose everything. Play carefully.
 

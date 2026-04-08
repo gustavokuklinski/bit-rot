@@ -1,3 +1,4 @@
+# core/game.py
 import pygame
 import asyncio
 import uuid
@@ -39,7 +40,7 @@ from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
 from core.events.joystick import JoystickHandler
 from core.events.virtual_controller import VirtualController
-
+from core.android_handler import is_android, hook_pygame_for_android
 
 class Game:
     def __init__(self):
@@ -57,7 +58,8 @@ class Game:
         else:
             display_flags |= pygame.RESIZABLE
         
-        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags, vsync=1)
+        
+        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
         
         pygame.display.set_caption("Bit Rot")
         try:
@@ -72,7 +74,7 @@ class Game:
         
         self.virtual_controller = VirtualController()
         
-        if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
+        if is_android():
             # Running on Android: Enable Virtual UI, Disable Physical Joystick
             self.virtual_controller.enabled = True
             self.joystick_handler = None 
@@ -96,7 +98,6 @@ class Game:
             
         except Exception as e:
             print(f"Could not load custom cursor: {e}")
-
 
         init_messages(self)
 
@@ -194,6 +195,12 @@ class Game:
             'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
             'slots': (GAME_WIDTH - GEAR_MODAL_WIDTH - SLOTS_MODAL_WIDTH, 0)
         }
+        
+        # Override default positions for Android layout
+        if getattr(self.virtual_controller, 'enabled', False):
+            self.last_modal_positions['inventory'] = (GAME_WIDTH - INVENTORY_MODAL_WIDTH, 0)
+            self.last_modal_positions['nearby'] = (GAME_WIDTH - NEARBY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
+            
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']
             self.modals.append({
@@ -209,7 +216,8 @@ class Game:
             'index': -1,
             'options': [],
             'rects': [],
-            'position': (0, 0)
+            'position': (0, 0),
+            'action_map': []
         }
 
         self.is_dragging = False
@@ -220,7 +228,6 @@ class Game:
         self.drag_start_pos = (0, 0)
         self.DRAG_THRESHOLD = 5
 
-        
         self.pause_button_rect = None
         self.forward_button_rect = None
         self.status_button_rect = None
@@ -299,128 +306,9 @@ class Game:
         self.fast_forward_speed = 50.0
 
         self.world_time = WorldTime(self)
-        self._hook_pygame_global()
 
-    
-    def _hook_pygame_global(self):
-        import pygame
-        
-        if getattr(pygame, '_mobile_patched', False): return
-        pygame._mobile_patched = True
-        
-        orig_event_get = pygame.event.get
-        orig_flip = pygame.display.flip
-        orig_update = pygame.display.update
-        orig_mouse_get_pos = pygame.mouse.get_pos
-        orig_mouse_get_pressed = pygame.mouse.get_pressed
-        orig_key_get_pressed = pygame.key.get_pressed
-        
-        def patched_event_get(*args, **kwargs):
-            events = orig_event_get(*args, **kwargs)
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            
-            if is_virtual:
-                self.virtual_controller.update_cursor(self)
-                
-            if not hasattr(self, '_touch_scroll_accum'):
-                self._touch_scroll_accum = 0.0
+        hook_pygame_for_android(self)
 
-            processed = []
-            for event in events:
-                if is_virtual:
-                    if event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
-                        self.virtual_controller.process_event(event, self)
-                        
-                    if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-                        if not getattr(event, 'injected', False):
-                            continue
-                    processed.append(event)
-                else:
-                    if event.type == pygame.FINGERDOWN:
-                        sw, sh = pygame.display.get_surface().get_size()
-                        pygame.mouse.set_pos((int(event.x * sw), int(event.y * sh)))
-                        processed.append(event)
-                    elif event.type == pygame.FINGERMOTION:
-                        self._touch_scroll_accum -= (event.dy * 60)
-                        if abs(self._touch_scroll_accum) >= 1.0:
-                            ticks = int(self._touch_scroll_accum)
-                            self._touch_scroll_accum -= ticks
-                            processed.append(pygame.event.Event(pygame.MOUSEWHEEL, {'x': 0, 'y': -ticks, 'flipped': False}))
-                        processed.append(event)
-                    else:
-                        processed.append(event)
-            return processed
-
-        def patched_mouse_get_pos():
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual and hasattr(self.virtual_controller, 'v_mouse_x'):
-                return (int(self.virtual_controller.v_mouse_x), int(self.virtual_controller.v_mouse_y))
-            return orig_mouse_get_pos()
-
-        def patched_mouse_get_pressed(*args, **kwargs):
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual and hasattr(self.virtual_controller, 'btn_click'):
-                left_click = self.virtual_controller.btn_click.get('pressed', False) or getattr(self.virtual_controller, 'ui_pressed', False)
-                right_click = self.virtual_controller.btn_aim.get('state', False)
-                return (left_click, False, right_click)
-            return orig_mouse_get_pressed(*args, **kwargs)
-
-        def patched_key_get_pressed():
-            orig_keys = orig_key_get_pressed()
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            
-            if is_virtual and hasattr(self.virtual_controller, 'btn_run'):
-                run_state = self.virtual_controller.btn_run.get('state', False)
-                int_state = self.virtual_controller.btn_interact.get('pressed', False)
-                
-                if run_state or int_state:
-                    # THE BULLETPROOF HARDWARE WRAPPER
-                    class VirtualKeyWrapper:
-                        def __getitem__(self, key):
-                            import pygame
-                            if run_state and key in (pygame.K_LSHIFT, pygame.K_RSHIFT): return 1
-                            if int_state and key == pygame.K_e: return 1
-                            try:
-                                return orig_keys[key]
-                            except Exception:
-                                return 0
-                                
-                        def __len__(self):
-                            return len(orig_keys)
-                            
-                        def __iter__(self):
-                            for i in range(len(orig_keys)):
-                                yield self.__getitem__(i)
-                                
-                        def __bool__(self):
-                            return True
-                            
-                        def __contains__(self, key):
-                            return self.__getitem__(key) == 1
-                    
-                    return VirtualKeyWrapper()
-            return orig_keys
-            
-        def patched_flip():
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual:
-                surf = pygame.display.get_surface()
-                if surf: self.virtual_controller.draw(surf)
-            orig_flip()
-
-        def patched_update(*args, **kwargs):
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual:
-                surf = pygame.display.get_surface()
-                if surf: self.virtual_controller.draw(surf)
-            orig_update(*args, **kwargs)
-            
-        pygame.event.get = patched_event_get
-        pygame.mouse.get_pos = patched_mouse_get_pos
-        pygame.mouse.get_pressed = patched_mouse_get_pressed
-        pygame.key.get_pressed = patched_key_get_pressed
-        pygame.display.flip = patched_flip
-        pygame.display.update = patched_update
 
     def get_events(self):
         return pygame.event.get()
@@ -677,6 +565,34 @@ class Game:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if start_btn and start_btn.collidepoint(mouse_pos):
+                        # Ensure UI starts in Android Layout when done loading
+                        if getattr(self.virtual_controller, 'enabled', False):
+                            self.modals.clear()
+                            
+                            new_inventory_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'inventory',
+                                'item': None,
+                                'position': self.last_modal_positions['inventory'],
+                                'is_dragging': False,
+                                'drag_offset': (0, 0),
+                                'rect': pygame.Rect(self.last_modal_positions['inventory'][0], self.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+                                'minimized': False
+                            }
+                            self.modals.append(new_inventory_modal)
+                            
+                            new_nearby_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'nearby',
+                                'item': None,
+                                'position': self.last_modal_positions['nearby'],
+                                'is_dragging': False,
+                                'drag_offset': (0, 0),
+                                'rect': pygame.Rect(self.last_modal_positions['nearby'][0], self.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
+                                'minimized': False
+                            }
+                            self.modals.append(new_nearby_modal)
+                            
                         self.game_state = 'PLAYING'
                         
     def run_menu(self):
@@ -1048,9 +964,11 @@ class Game:
                 self.active_animals.append(item)
 
         # [OPTIMIZATION] Hard caps on active entities to maintain FPS on large maps
-        MAX_ACTIVE_ZOMBIES = 100
-        MAX_ACTIVE_ANIMALS = 30
-        
+        is_android = getattr(self.virtual_controller, 'enabled', False)
+        MAX_ACTIVE_ZOMBIES = 35 if is_android else 100
+        MAX_ACTIVE_ANIMALS = 8 if is_android else 30
+        MAX_ACTIVE_NPCS = 5 if is_android else 10
+
         if len(self.active_zombies) > MAX_ACTIVE_ZOMBIES:
             # Sort by distance and keep closest
             self.active_zombies.sort(key=lambda z: (z.rect.centerx - px)**2 + (z.rect.centery - py)**2)
@@ -1064,7 +982,7 @@ class Game:
         self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
         
         # [OPTIMIZATION] Cap active NPCs
-        MAX_ACTIVE_NPCS = 10
+        
         if len(self.active_npcs) > MAX_ACTIVE_NPCS:
             self.active_npcs.sort(key=lambda n: (n.rect.centerx - px)**2 + (n.rect.centery - py)**2)
             self.active_npcs = self.active_npcs[:MAX_ACTIVE_NPCS]
@@ -1165,6 +1083,31 @@ class Game:
 
         self._cleanup_modals()
         
+        perm_modals = [m for m in self.modals if m.get('type') in ('inventory', 'nearby')]
+        other_modals = [m for m in self.modals if m.get('type') not in ('inventory', 'nearby')]
+        
+        if other_modals:
+            # 2. Only allow ONE dynamic modal to be opened (Take the most recently opened one)
+            active_center_modal = other_modals[-1]
+            
+            # 3. Position the modal at the center horizontally, and 2px from the bottom vertically
+            c_x = (GAME_WIDTH // 2) - (active_center_modal['rect'].width // 2)
+            c_y = GAME_HEIGHT - active_center_modal['rect'].height - 2
+            
+            # Apply the fixed position to the modal and its Rect
+            active_center_modal['rect'].x = c_x
+            active_center_modal['rect'].y = c_y
+            active_center_modal['position'] = (c_x, c_y)
+            
+            # Prevent dragging this modal on Android
+            active_center_modal['is_dragging'] = False
+            
+            # 4. Overwrite the modal list: Fixed Modals + 1 Active Modal
+            self.modals = perm_modals + [active_center_modal]
+        else:
+            # If no other modals are open, just render the fixed ones
+            self.modals = perm_modals
+
         self.map_manager.reset_frame_metrics()
         if self.player:
              self.map_manager.update_chunks(self.player.rect.center)
