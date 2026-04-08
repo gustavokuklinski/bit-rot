@@ -1,4 +1,3 @@
-# core/events/mouse_context.py
 import pygame
 import uuid
 import math

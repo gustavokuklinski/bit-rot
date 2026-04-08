@@ -11,7 +11,6 @@ from core.map.world_layers import set_active_layer
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 
 keys_held = {}
-
 def handle_movement(game):
     if game.player.is_sleeping:
         return
@@ -21,16 +20,6 @@ def handle_movement(game):
         game.player.vy = 0
         game.player.is_running = False
         return
-        
-    # --- ANDROID ONLY: Freeze player movement if navigating Context Menu ---
-    # We only want to freeze the player on Mobile so they can use the joystick to navigate the UI.
-    # PC players should still be able to use WASD to walk away while a menu is open.
-    if getattr(game, 'virtual_controller', None) and getattr(game.virtual_controller, 'enabled', False):
-        if game.context_menu.get('active', False):
-            game.player.vx = 0
-            game.player.vy = 0
-            game.player.is_running = False
-            return
     
     if game.chat_active:
         game.player.vx = 0
@@ -48,12 +37,15 @@ def handle_movement(game):
 
     keys = pygame.key.get_pressed()
 
+    # Turn off fast forward when movement keys are pressed
+    # Turn off fast forward when movement keys are pressed
     if (keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_a] or keys[pygame.K_d]):
         if game.player and not game.player.is_sleeping:
             game.is_fast_forwarding = False
 
     mouse_buttons = pygame.mouse.get_pressed()
     
+    # --- Dynamic Speed Calculation using XML Config ---
     base_move_speed = core.data.config.PLAYER_SPEED
     speed_multiplier = 1.0
 
@@ -68,14 +60,18 @@ def handle_movement(game):
     final_base_speed = base_move_speed * speed_multiplier
     current_speed = 0
 
+    # ---> 1. FETCH JOYSTICK DATA <---
     joy_lx, joy_ly = 0, 0
     joy_run, joy_aim = False, False
     
+    # Check Hardware Joystick first
     if getattr(game, 'joystick_handler', None):
         joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
         joy_run, joy_aim = game.joystick_handler.get_action_states()
 
+    # Override with Mobile Virtual Controller if active
     if hasattr(game, 'virtual_controller') and game.virtual_controller.enabled:
+        # Only override if the virtual analog is actually being touched
         if game.virtual_controller.left_touch_id is not None:
             joy_lx = game.virtual_controller.dx
             joy_ly = game.virtual_controller.dy
@@ -83,9 +79,11 @@ def handle_movement(game):
         joy_run = joy_run or game.virtual_controller.btn_run['state']
         joy_aim = joy_aim or game.virtual_controller.btn_aim['state']
 
+    # ---> 2. APPLY JOYSTICK STATES TO PLAYER <---
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
     game.player.is_running = is_running
 
+    # --- MODAL COLLISION CHECK TO DISARM AIMING ---
     mouse_pos = game._get_scaled_mouse_pos()
     is_over_ui = game.context_menu.get('active', False)
     if not is_over_ui:
@@ -94,6 +92,8 @@ def handle_movement(game):
                 is_over_ui = True
                 break
 
+    # Use Left CTRL, Right CTRL, Right Mouse Button (index 2) or Triggers to aim
+    # Force disarm if the cursor is hovering over any Modal or the Context Menu is open
     game.player.is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim) and not is_over_ui
 
     if game.player.stamina <= 0:
@@ -105,6 +105,11 @@ def handle_movement(game):
     else:
         current_speed = final_base_speed / 2
 
+    # ---------------------------------------------------------
+    # MOVEMENT LOGIC: SEPARATE KEYBOARD AND JOYSTICK MATH
+    # ---------------------------------------------------------
+    
+    # 3. Read Keyboard Input
     kb_dx, kb_dy = 0, 0
     if keys[pygame.K_w]: kb_dy -= 1
     if keys[pygame.K_s]: kb_dy += 1
@@ -113,12 +118,15 @@ def handle_movement(game):
 
     dx, dy = 0, 0
 
+    # 4. Apply the correct Math based on the input device
     if kb_dx != 0 or kb_dy != 0:
+        # Keyboard was pressed: Apply the 1.414 division to prevent diagonal speed boosting
         dx, dy = kb_dx, kb_dy
         if dx != 0 and dy != 0:
             dx /= math.sqrt(2)
             dy /= math.sqrt(2)
     else:
+        # Joystick is being used: The hardware already outputs a perfect circle
         dx, dy = joy_lx, joy_ly
         
         magnitude = math.sqrt(dx**2 + dy**2)
@@ -126,9 +134,11 @@ def handle_movement(game):
             dx /= magnitude
             dy /= magnitude
             
+        # BOOST JOYSTICK SPEED (25% faster than Keyboard)
         dx *= 1.25
         dy *= 1.25
 
+    # 5. Smooth Facing Direction
     if abs(dx) > 0.15 or abs(dy) > 0.15:
         new_facing = None
         if abs(dx) > abs(dy): 
@@ -139,14 +149,15 @@ def handle_movement(game):
         if new_facing is not None and new_facing != game.player.facing_direction:
             game.player.facing_direction = new_facing
 
+    # 6. TELL THE ANIMATION ENGINE WE ARE MOVING
     if dx != 0 or dy != 0:
         game.player.is_moving = True
     else:
         game.player.is_moving = False
 
+    # 7. Apply Final Velocity
     game.player.vx = dx * current_speed
     game.player.vy = dy * current_speed
-
 
 def handle_input(game):
     if getattr(game, 'joystick_handler', None):
@@ -169,9 +180,12 @@ def handle_input(game):
             sys.exit()
 
         if event.type == pygame.MOUSEWHEEL:
+            # Check zoom first (global behavior)
+            # Optimization: Check if mouse is colliding with any visible modal
             is_over_modal = False
             topmost_modal = None
 
+            # Find topmost modal under mouse
             for modal in reversed(game.modals):
                 if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
                     is_over_modal = True
@@ -186,6 +200,7 @@ def handle_input(game):
                         game.zoom_level -= 0.1
                     game.zoom_level = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
             else:
+                # Handle scrolling for the topmost modal ONLY
                 modal = topmost_modal
                 if modal.get('type') == 'messages' and not modal.get('minimized', False):
                     content_rect = modal.get('content_rect') 
@@ -194,7 +209,7 @@ def handle_input(game):
                         active_log = game.message_logs.get(active_tab, [])
                         
                         line_height = font_14.get_height() + 2
-                        total_text_height = len(game.message_log) * line_height 
+                        total_text_height = len(game.message_log) * line_height # Note: logic might need active_log check
                         visible_height = content_rect.height
                         max_scroll_offset = max(0, total_text_height - visible_height)
                         current_offset = modal.get('scroll_offset_y', 0)
@@ -233,6 +248,9 @@ def handle_input(game):
                         elif event.y < 0: 
                             modal['map_zoom'] = max(2, current_zoom - 1)
 
+        #if event.type == pygame.VIDEORESIZE:
+        #    self.game_screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+
         if game.game_state == 'PLAYING':
             handle_keyboard_events(game, event) 
 
@@ -246,6 +264,7 @@ def handle_input(game):
                         if game.player.vehicle:
                             game.player.exit_vehicle(game)
                         else:
+                            # Use our new targeting logic!
                             target = get_targeted_interactable(game)
                             if target:
                                 if target['type'] == 'npc':
@@ -304,6 +323,8 @@ def handle_input(game):
                                             if set_active_layer(game, target_layer):
                                                 game.player.layer_switch_cooldown = 30
                                             return 
+
+                           
 
             handle_movement(game)
             if event.type == pygame.MOUSEBUTTONDOWN:

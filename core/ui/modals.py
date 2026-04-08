@@ -8,6 +8,7 @@ class BaseModal:
         self.modal = modal
         self.assets = assets
         
+        # --- THE FIX: Instantly translate any title passed to any modal ---
         self.title = tr('modal', title) 
         
         self.modal_w, self.modal_h = self.get_modal_dimensions()
@@ -16,10 +17,6 @@ class BaseModal:
         self.minimized = modal.get('minimized', False)
         self.is_active = modal.get('is_active', False)
         self.modal_rect = pygame.Rect(self.modal_x, self.modal_y, self.modal_w, self.header_h if self.minimized else self.modal_h)
-        
-        # --- FIX: Ensure the raw modal state perfectly tracks its calculated rect so header drags don't bounce out 
-        self.modal['rect'] = self.modal_rect 
-        
         self.close_button_rect = self.assets['close_button'].get_rect(topright=(self.modal_x + self.modal_w - 10, self.modal_y + 10))
         self.minimize_button_rect = self.assets['minimize_button'].get_rect(topright=(self.close_button_rect.left - 10, self.modal_y + 10))
 
@@ -66,10 +63,6 @@ class BaseModal:
         title_text = font.render(self.title, True, WHITE)
 
         self.surface.blit(title_text, (self.modal_x + 10, self.modal_y + 10))
-
-        self.close_button_rect = self.assets['close_button'].get_rect(topright=(self.modal_x + self.modal_w - 10, self.modal_y + 10))
-        self.minimize_button_rect = self.assets['minimize_button'].get_rect(topright=(self.close_button_rect.left - 10, self.modal_y + 10))
-        
         self.surface.blit(self.assets['close_button'], self.close_button_rect)
         self.surface.blit(self.assets['minimize_button'], self.minimize_button_rect)
 
@@ -85,8 +78,5 @@ class BaseModal:
         self.draw_header()
 
     def get_buttons(self):
-        self.close_button_rect = self.assets['close_button'].get_rect(topright=(self.modal_x + self.modal_w - 10, self.modal_y + 10))
-        self.minimize_button_rect = self.assets['minimize_button'].get_rect(topright=(self.close_button_rect.left - 10, self.modal_y + 10))
-        
         return {'id': self.modal['id'], 'type': 'close', 'rect': self.close_button_rect}, \
                {'id': self.modal['id'], 'type': 'minimize', 'rect': self.minimize_button_rect}

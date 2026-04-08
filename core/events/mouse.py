@@ -16,9 +16,6 @@ from core.events.mouse_combat import handle_attack
 from core.data.localization import tr
 
 def handle_mouse_down(game, event, mouse_pos):
-    if hasattr(event, 'pos'):
-        mouse_pos = event.pos
-        
     if event.button == 1:
         if game.context_menu['active']:
             menu_clicked = False
