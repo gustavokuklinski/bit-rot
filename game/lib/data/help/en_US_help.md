@@ -4,6 +4,7 @@
 Welcome to the Survivor Guide! Use the tabs to navigate over this.
 
 **Fast Tips** 
+- Press TAB to toggle game HUD
 - Complete your first quest talking to a NPC
 
 ---

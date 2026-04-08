@@ -38,8 +38,6 @@ from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
 from core.events.joystick import JoystickHandler
-from core.events.virtual_controller import VirtualController
-
 
 class Game:
     def __init__(self):
@@ -48,8 +46,6 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
 
-        # The global GAME_WIDTH and GAME_HEIGHT were already calculated 
-        # flawlessly by config.py before this file was even imported!
         display_flags = pygame.SCALED | pygame.DOUBLEBUF
         
         if WINDOW_MODE.lower() == "fullscreen":
@@ -70,40 +66,24 @@ class Game:
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
         self.logger.info("Initializing Rot Engine...")
         
-        self.virtual_controller = VirtualController()
-        
-        if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
-            # Running on Android: Enable Virtual UI, Disable Physical Joystick
-            self.virtual_controller.enabled = True
-            self.joystick_handler = None 
-            self.logger.info("Android detected: Virtual Controller enabled.")
-        else:
-            # Running on PC: Enable Physical Joystick, Disable Virtual UI
-            self.virtual_controller.enabled = False
-            self.joystick_handler = JoystickHandler(logger=self.logger)
-            self.logger.info("PC detected: Hardware Joystick enabled.")
+        # Hard initialization for PC control schemes
+        self.joystick_handler = JoystickHandler(logger=self.logger)
+        self.logger.info("PC detected: Hardware Joystick enabled.")
 
         try:
-            # 1. Load the cursor graphic
             cursor_surface = pygame.image.load(SPRITE_PATH + 'ui/cursor.png').convert_alpha()
-            
-            # 2. Create the cursor object 
-            # The (0, 0) tuple is the "hotspot" (the exact pixel on the image where the click registers - usually top-left)
             custom_cursor = pygame.cursors.Cursor((0, 0), cursor_surface)
-            
-            # 3. Apply it globally to the game window
             pygame.mouse.set_cursor(custom_cursor)
             
         except Exception as e:
             print(f"Could not load custom cursor: {e}")
-
 
         init_messages(self)
 
         load_language(core.data.config.GAME_LANGUAGE)
 
         self.clock = pygame.time.Clock()
-        self.dt_ms = 16 # Default to 16ms for the very first frame
+        self.dt_ms = 16 
         self.dt_mult = 1.0
         self.assets = load_assets()
         self.game_state = 'MENU'
@@ -134,16 +114,14 @@ class Game:
         self.zombie_grid = {}
         self.item_grid = {}
         self.container_grid = {}
-        # [OPTIMIZATION] Dynamic grid cell size based on chunk size
-        # Larger chunks = larger grid cells to reduce bucket count
-        # Formula: 3x chunk tile size (in pixels), clamped between 512-2048
+        
         self.GRID_CELL_SIZE = max(512, min(2048, c_size * t_size * 3))
 
         # [OPTIMIZATION] Movement-based grid rebuild tracking
-        self.last_zombie_grid_positions = {}  # Track zombie positions for movement detection
+        self.last_zombie_grid_positions = {}  
         self.last_item_grid_positions = {}
         self.last_container_grid_positions = {}
-        self.GRID_REBUILD_THRESHOLD = self.GRID_CELL_SIZE // 4  # Rebuild if entity moves 1/4 cell
+        self.GRID_REBUILD_THRESHOLD = self.GRID_CELL_SIZE // 4  
 
         self.frame_count = 0
 
@@ -172,21 +150,11 @@ class Game:
         messages_panel_y = GAME_HEIGHT - 244
         
         self.last_modal_positions = {
-            # --- Right Panel Stack (Top to Bottom) ---
             'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
-    
-            # Inventory starts exactly where Gear ends (no space)
             'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
-            
-            # Nearby starts exactly where Inventory ends
             'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
-            
-            # --- Bottom Panel Dock (Left to Right) ---
-            # Anchored perfectly to the Bottom Edge
             'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
             'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
-            
-            # --- Keep your other floating modals centered/default ---
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
@@ -220,7 +188,6 @@ class Game:
         self.drag_start_pos = (0, 0)
         self.DRAG_THRESHOLD = 5
 
-        
         self.pause_button_rect = None
         self.forward_button_rect = None
         self.status_button_rect = None
@@ -299,128 +266,7 @@ class Game:
         self.fast_forward_speed = 50.0
 
         self.world_time = WorldTime(self)
-        self._hook_pygame_global()
 
-    
-    def _hook_pygame_global(self):
-        import pygame
-        
-        if getattr(pygame, '_mobile_patched', False): return
-        pygame._mobile_patched = True
-        
-        orig_event_get = pygame.event.get
-        orig_flip = pygame.display.flip
-        orig_update = pygame.display.update
-        orig_mouse_get_pos = pygame.mouse.get_pos
-        orig_mouse_get_pressed = pygame.mouse.get_pressed
-        orig_key_get_pressed = pygame.key.get_pressed
-        
-        def patched_event_get(*args, **kwargs):
-            events = orig_event_get(*args, **kwargs)
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            
-            if is_virtual:
-                self.virtual_controller.update_cursor(self)
-                
-            if not hasattr(self, '_touch_scroll_accum'):
-                self._touch_scroll_accum = 0.0
-
-            processed = []
-            for event in events:
-                if is_virtual:
-                    if event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
-                        self.virtual_controller.process_event(event, self)
-                        
-                    if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-                        if not getattr(event, 'injected', False):
-                            continue
-                    processed.append(event)
-                else:
-                    if event.type == pygame.FINGERDOWN:
-                        sw, sh = pygame.display.get_surface().get_size()
-                        pygame.mouse.set_pos((int(event.x * sw), int(event.y * sh)))
-                        processed.append(event)
-                    elif event.type == pygame.FINGERMOTION:
-                        self._touch_scroll_accum -= (event.dy * 60)
-                        if abs(self._touch_scroll_accum) >= 1.0:
-                            ticks = int(self._touch_scroll_accum)
-                            self._touch_scroll_accum -= ticks
-                            processed.append(pygame.event.Event(pygame.MOUSEWHEEL, {'x': 0, 'y': -ticks, 'flipped': False}))
-                        processed.append(event)
-                    else:
-                        processed.append(event)
-            return processed
-
-        def patched_mouse_get_pos():
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual and hasattr(self.virtual_controller, 'v_mouse_x'):
-                return (int(self.virtual_controller.v_mouse_x), int(self.virtual_controller.v_mouse_y))
-            return orig_mouse_get_pos()
-
-        def patched_mouse_get_pressed(*args, **kwargs):
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual and hasattr(self.virtual_controller, 'btn_click'):
-                left_click = self.virtual_controller.btn_click.get('pressed', False) or getattr(self.virtual_controller, 'ui_pressed', False)
-                right_click = self.virtual_controller.btn_aim.get('state', False)
-                return (left_click, False, right_click)
-            return orig_mouse_get_pressed(*args, **kwargs)
-
-        def patched_key_get_pressed():
-            orig_keys = orig_key_get_pressed()
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            
-            if is_virtual and hasattr(self.virtual_controller, 'btn_run'):
-                run_state = self.virtual_controller.btn_run.get('state', False)
-                int_state = self.virtual_controller.btn_interact.get('pressed', False)
-                
-                if run_state or int_state:
-                    # THE BULLETPROOF HARDWARE WRAPPER
-                    class VirtualKeyWrapper:
-                        def __getitem__(self, key):
-                            import pygame
-                            if run_state and key in (pygame.K_LSHIFT, pygame.K_RSHIFT): return 1
-                            if int_state and key == pygame.K_e: return 1
-                            try:
-                                return orig_keys[key]
-                            except Exception:
-                                return 0
-                                
-                        def __len__(self):
-                            return len(orig_keys)
-                            
-                        def __iter__(self):
-                            for i in range(len(orig_keys)):
-                                yield self.__getitem__(i)
-                                
-                        def __bool__(self):
-                            return True
-                            
-                        def __contains__(self, key):
-                            return self.__getitem__(key) == 1
-                    
-                    return VirtualKeyWrapper()
-            return orig_keys
-            
-        def patched_flip():
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual:
-                surf = pygame.display.get_surface()
-                if surf: self.virtual_controller.draw(surf)
-            orig_flip()
-
-        def patched_update(*args, **kwargs):
-            is_virtual = getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False)
-            if is_virtual:
-                surf = pygame.display.get_surface()
-                if surf: self.virtual_controller.draw(surf)
-            orig_update(*args, **kwargs)
-            
-        pygame.event.get = patched_event_get
-        pygame.mouse.get_pos = patched_mouse_get_pos
-        pygame.mouse.get_pressed = patched_mouse_get_pressed
-        pygame.key.get_pressed = patched_key_get_pressed
-        pygame.display.flip = patched_flip
-        pygame.display.update = patched_update
 
     def get_events(self):
         return pygame.event.get()
@@ -432,7 +278,6 @@ class Game:
         return load_game(self, save_folder_name)
 
     def start_new_game(self, player_data, save_dir_name=None):
-
         return start_new_game(self, player_data, save_dir_name)
 
     def load_map(self, map_filename):
@@ -554,7 +399,6 @@ class Game:
         overlay.fill((0, 0, 0, 150))
         self.game_screen.blit(overlay, (0, 0))
 
-        # --- FIX: Translated Pause Text ---
         text = font_14.render(tr('ui', "GAME PAUSED AND SAVED"), True, WHITE)
         text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
         self.game_screen.blit(text, text_rect)
@@ -575,7 +419,6 @@ class Game:
             txt_rect = txt_surf.get_rect(center=rect.center)
             surface.blit(txt_surf, txt_rect)
 
-        # --- FIX: Translated Buttons ---
         draw_btn(self.game_screen, btn_continue, tr('ui', "Continue"), mouse_pos)
         draw_btn(self.game_screen, btn_save, tr('ui', "Save Game"), mouse_pos)
         draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
@@ -583,8 +426,6 @@ class Game:
         for event in self.get_events():
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
-            
-            self.virtual_controller.process_event(event, self)
 
             if event.type == pygame.QUIT:
                 self.running = False
@@ -598,7 +439,6 @@ class Game:
                     if self.save_game():
                         pass
                 elif btn_quit.collidepoint(mouse_pos):
-                    # --- NEW: Stop ambient sounds when quitting to menu ---
                     if hasattr(self, 'world_time') and self.world_time:
                         self.world_time.stop_all_sounds()
                     self.game_state = 'MENU'
@@ -636,12 +476,9 @@ class Game:
             self.logger.info("Game Execution Ended safely.")
 
     def run_loading(self):
-        # 1. Fetch ALL events once at the very beginning of the frame
         events = pygame.event.get()
-        
         mouse_pos = self._get_scaled_mouse_pos()
         
-        # FIX: Check for QUIT globally so the window can be closed even while loading
         for event in events:
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
@@ -650,12 +487,10 @@ class Game:
                 self.running = False
                 return
         
-        # 2. Pass the events into the draw function so it can read the scroll wheel
         start_btn = draw_loading_screen(self.game_screen, self.loading_done, mouse_pos, events)
         self._update_screen()
         
         if not self.loading_done:
-            # FIX: Use a background thread to prevent blocking the Pygame Event Loop
             if not hasattr(self, '_loading_thread'):
                 
                 if self.loading_data:
@@ -665,15 +500,12 @@ class Game:
                     self._loading_thread = threading.Thread(target=self.load_game, args=(self.loading_saved_game_folder,), daemon=True)
                     self._loading_thread.start()
             else:
-                # If the thread exists, check if it has finished its job
                 if not self._loading_thread.is_alive():
                     self.loading_done = True
-                    del self._loading_thread # Cleanup
+                    del self._loading_thread 
                     self.loading_data = None 
                     self.loading_saved_game_folder = None
         else:
-            # 3. Use the same 'events' list we already fetched! 
-            # Do NOT call pygame.event.get() again here.
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if start_btn and start_btn.collidepoint(mouse_pos):
@@ -686,15 +518,12 @@ class Game:
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
-        # 1. Draw the base menu and capture the new help_rect
         start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect = draw_menu(self.game_screen, mouse_pos, has_save)
 
-        # 2. NEW: If the user clicked Help, draw the modal over the menu
         back_btn = None
         if getattr(self, 'show_main_menu_help', False):
             back_btn = draw_loading_screen(self.game_screen, True, mouse_pos, events, is_main_menu_help=True)
 
-        # 3. Handle Clicks and Scrolling Events
         for event in events:
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
@@ -705,7 +534,6 @@ class Game:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 pygame.display.toggle_fullscreen()
 
-            # --- Handle Help Modal Events ---
             if getattr(self, 'show_main_menu_help', False):
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mouse_pos = self._get_scaled_mouse_pos()
@@ -715,11 +543,9 @@ class Game:
                         
                 continue 
 
-            # --- standard game load / flag clicks below ---
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = self._get_scaled_mouse_pos()
                 
-                # --- CHECK IF THEY CLICKED THE HELP BUTTON ---
                 if help_rect and help_rect.collidepoint(mouse_pos):
                     self.show_main_menu_help = True
                     continue
@@ -837,7 +663,6 @@ class Game:
         run_player_setup(self)
 
     def run_game_over(self):
-        # --- NEW: Stop ambient sounds when on Game Over screen ---
         if hasattr(self, 'world_time') and self.world_time:
             self.world_time.stop_all_sounds()
         
@@ -848,7 +673,6 @@ class Game:
             except Exception as e:
                 self.logger.info(f"Permadeath deletion failed: {e}")
             
-            # Set to None so it only triggers once while the Game Over screen is running
             self.current_save_folder_name = None
             
         pygame.mouse.set_visible(True)
@@ -871,9 +695,7 @@ class Game:
                     return
         self._update_screen()
 
-    # [NEW] Grid Rebuild Methods with Movement Detection
     def _check_significant_movement(self, entity, tracked_dict, entity_id):
-        """Check if an entity has moved significantly since last grid rebuild."""
         current_pos = (entity.rect.centerx, entity.rect.centery)
         if entity_id not in tracked_dict:
             tracked_dict[entity_id] = current_pos
@@ -890,31 +712,22 @@ class Game:
         return False
 
     def rebuild_zombie_grid(self):
-        """Rebuild zombie grid only if significant movement detected."""
-        
-
-        # Count current zombies and animals
         current_zombie_count = len(self.zombies)
         current_animal_count = sum(1 for item in self.items_on_ground if isinstance(item, Animal))
         current_total = current_zombie_count + current_animal_count
 
-        # Check if count changed (new spawns or deaths)
         tracked_total = len(self.last_zombie_grid_positions)
         if current_total != tracked_total:
-            # Count changed - force rebuild
             pass
         else:
-            # Count same - check for significant movement
             needs_rebuild = False
 
-            # Check if any zombie moved significantly
             for z in self.zombies:
                 z_id = id(z)
                 if self._check_significant_movement(z, self.last_zombie_grid_positions, z_id):
                     needs_rebuild = True
                     break
 
-            # Also check animals (they're in items_on_ground but tracked as zombies for AI)
             if not needs_rebuild:
                 for item in self.items_on_ground:
                     if isinstance(item, Animal):
@@ -924,9 +737,8 @@ class Game:
                             break
 
             if not needs_rebuild:
-                return  # Skip rebuild - no significant movement
+                return 
 
-        # Cleanup removed zombies and animals from tracking
         zombie_ids = {id(z) for z in self.zombies}
         animal_ids = {id(item) for item in self.items_on_ground if isinstance(item, Animal)}
         valid_ids = zombie_ids | animal_ids
@@ -935,13 +747,11 @@ class Game:
                 del self.last_zombie_grid_positions[z_id]
 
         self.zombie_grid.clear()
-        # Add zombies
         for z in self.zombies:
             key = (int(z.rect.centerx // self.GRID_CELL_SIZE), int(z.rect.centery // self.GRID_CELL_SIZE))
             if key not in self.zombie_grid: self.zombie_grid[key] = []
             self.zombie_grid[key].append(z)
 
-        # Add animals (they use zombie AI for wandering)
         for item in self.items_on_ground:
             if isinstance(item, Animal):
                 key = (int(item.rect.centerx // self.GRID_CELL_SIZE), int(item.rect.centery // self.GRID_CELL_SIZE))
@@ -949,18 +759,15 @@ class Game:
                 self.zombie_grid[key].append(item)
 
     def rebuild_item_grid(self, force=False):
-        """Rebuild item grid only if items changed or moved significantly."""
-        # Items on ground are mostly static, rebuild only on count change or periodic check
         if not hasattr(self, '_last_item_count'):
             self._last_item_count = 0
         
-        # Force rebuild if count changed or every 60 frames
         if len(self.items_on_ground) != self._last_item_count:
             self._last_item_count = len(self.items_on_ground)
             force = True
         
         if not force and self.frame_count % 60 != 0:
-            return  # Skip rebuild - no new items
+            return 
         
         self.item_grid.clear()
         for i in self.items_on_ground:
@@ -969,12 +776,11 @@ class Game:
             self.item_grid[key].append(i)
 
     def rebuild_container_grid(self):
-        """Rebuild container grid only if containers changed or moved significantly."""
         if not hasattr(self, '_last_container_count'):
             self._last_container_count = 0
         
         if len(self.containers) == self._last_container_count and self.frame_count % 60 != 0:
-            return  # Skip rebuild
+            return  
         
         self._last_container_count = len(self.containers)
         self.container_grid.clear()
@@ -988,35 +794,26 @@ class Game:
         handle_input(self)
         self.frame_count += 1
 
-        # [OPTIMIZATION] Movement-based Grid Updates (no fixed intervals)
-        # Grids rebuild only when entities move significantly
         self.rebuild_zombie_grid()
         
-        # Static grids rebuild less frequently (items/containers are mostly static)
         if self.frame_count % 60 == 0:
             self.rebuild_item_grid()
             self.rebuild_container_grid()
 
-        # [OPTIMIZATION] Dynamic simulation distance based on performance
-        # Scale distance down if too many entities, up if few
         px, py = self.player.rect.center
         
-        # Base simulation distances (in pixels)
         BASE_SIMULATION_DISTANCE = 800
         MAX_ACTIVE_ENTITIES_TARGET = 150
         
-        # Count current entities to adjust simulation distance dynamically
         total_nearby_entities = len(getattr(self, 'active_zombies', []))
         
-        # Adjust simulation distance based on entity count
         if total_nearby_entities > MAX_ACTIVE_ENTITIES_TARGET:
-            SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 0.75  # Reduce by 25%
+            SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 0.75  
         elif total_nearby_entities < MAX_ACTIVE_ENTITIES_TARGET * 0.5:
-            SIMULATION_DISTANCE = min(1200, BASE_SIMULATION_DISTANCE * 1.25)  # Increase by 25%, max 1200
+            SIMULATION_DISTANCE = min(1200, BASE_SIMULATION_DISTANCE * 1.25)  
         else:
             SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE
         
-        # [OPTIMIZATION] Calculate Active Sets using Spatial Grid
         start_grid_x = int((px - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
         end_grid_x = int((px + SIMULATION_DISTANCE) // self.GRID_CELL_SIZE) + 1
         start_grid_y = int((py - SIMULATION_DISTANCE) // self.GRID_CELL_SIZE)
@@ -1037,22 +834,18 @@ class Game:
                 if key in self.container_grid:
                     self.visible_containers.extend(self.container_grid[key])
 
-        # Filter out animals from active_zombies and collect them separately
         
         self.active_animals = [z for z in self.active_zombies if isinstance(z, Animal)]
         self.active_zombies = [z for z in self.active_zombies if not isinstance(z, Animal)]
 
-        # Also get animals from visible_items (for loaded games)
         for item in self.visible_items:
             if isinstance(item, Animal) and item not in self.active_animals:
                 self.active_animals.append(item)
 
-        # [OPTIMIZATION] Hard caps on active entities to maintain FPS on large maps
         MAX_ACTIVE_ZOMBIES = 100
         MAX_ACTIVE_ANIMALS = 30
         
         if len(self.active_zombies) > MAX_ACTIVE_ZOMBIES:
-            # Sort by distance and keep closest
             self.active_zombies.sort(key=lambda z: (z.rect.centerx - px)**2 + (z.rect.centery - py)**2)
             self.active_zombies = self.active_zombies[:MAX_ACTIVE_ZOMBIES]
         
@@ -1060,47 +853,38 @@ class Game:
             self.active_animals.sort(key=lambda a: (a.rect.centerx - px)**2 + (a.rect.centery - py)**2)
             self.active_animals = self.active_animals[:MAX_ACTIVE_ANIMALS]
 
-        # Active NPCs (small count, can iterate)
         self.active_npcs = [n for n in self.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
         
-        # [OPTIMIZATION] Cap active NPCs
         MAX_ACTIVE_NPCS = 10
         if len(self.active_npcs) > MAX_ACTIVE_NPCS:
             self.active_npcs.sort(key=lambda n: (n.rect.centerx - px)**2 + (n.rect.centery - py)**2)
             self.active_npcs = self.active_npcs[:MAX_ACTIVE_NPCS]
 
-        # [OPTIMIZATION] Quadtree Dirty Flag - Only rebuild if entities moved significantly
         quadtree_needs_rebuild = False
 
-        # Check if player moved significantly (more than 64 pixels)
         if hasattr(self, 'last_quadtree_player_pos'):
             dx = px - self.last_quadtree_player_pos[0]
             dy = py - self.last_quadtree_player_pos[1]
-            if dx*dx + dy*dy > 4096:  # 64^2 (increased threshold)
+            if dx*dx + dy*dy > 4096:  
                 quadtree_needs_rebuild = True
         else:
             quadtree_needs_rebuild = True
 
-        # Check if projectiles changed
         if hasattr(self, 'last_quadtree_projectile_count'):
             if len(self.projectiles) != self.last_quadtree_projectile_count:
                 quadtree_needs_rebuild = True
         else:
             quadtree_needs_rebuild = True
 
-        # Check frame count for periodic rebuild (every 30 frames - reduced frequency)
         if self.frame_count % 30 == 0:
             quadtree_needs_rebuild = True
         
         if quadtree_needs_rebuild:
-            # Store state for next frame comparison
             self.last_quadtree_player_pos = (px, py)
             self.last_quadtree_projectile_count = len(self.projectiles)
             
-            # Populate Quadtree with ONLY active entities
             self.quadtree.clear()
             for z in self.active_zombies: self.quadtree.insert(z)
-            # Add animals to quadtree
             for a in self.active_animals:
                 self.quadtree.insert(a)
             for n in self.active_npcs: self.quadtree.insert(n)
@@ -1131,7 +915,6 @@ class Game:
             manage_dynamic_npcs(self)
             self.npc_spawn_timer = 0
 
-        # [OPTIMIZATION] Only update NPCs within reasonable distance with LOD
         player_pos = self.player.rect.center if self.player else None
         NPC_UPDATE_RADIUS_SQ = (NPC_DETECTION_RADIUS + 300) ** 2
         npcs_updated = 0
@@ -1143,20 +926,15 @@ class Game:
                 dy = npc.rect.centery - player_pos[1]
                 dist_sq = dx*dx + dy*dy
                 
-                # Skip distant NPCs unless they're chasing
                 if dist_sq > NPC_UPDATE_RADIUS_SQ and npc.state != 'chasing':
                     continue
                 
-                # [OPTIMIZATION] LOD-based update frequency for NPCs
                 if dist_sq > 400**2 and npc.state != 'chasing':
-                    # Update every 2nd frame for medium distance
                     if dist_sq <= 800**2 and self.frame_count % 2 != 0:
                         continue
-                    # Update every 4th frame for far distance
                     elif dist_sq > 800**2 and self.frame_count % 4 != 0:
                         continue
             
-            # [OPTIMIZATION] Limit NPCs updated per frame
             npcs_updated += 1
             if npcs_updated > MAX_NPCS_PER_FRAME:
                 break
@@ -1171,7 +949,6 @@ class Game:
         
         draw_game(self)
 
-        # --- CHANGED: Prevent tooltip rendering if Context Menu is active ---
         if self.hovered_item and not self.context_menu.get('active', False):
             mouse_pos = self._get_scaled_mouse_pos()
             draw_tooltip(self.game_screen, self.hovered_item, mouse_pos)
@@ -1182,14 +959,9 @@ class Game:
         self._update_screen()
 
     def _update_screen(self):
-        if getattr(self, 'virtual_controller', None) and getattr(self.virtual_controller, 'enabled', False):
-            self.virtual_controller.draw(self.game_screen)
-
         pygame.display.flip()
         self.dt_ms = self.clock.tick(0) 
         
-        # Calculate the multiplier based on your 60 FPS tuning
-        # Limits the multiplier to prevent huge physics jumps during lag spikes
         if self.dt_ms > 100: 
             self.dt_ms = 100 
             

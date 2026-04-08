@@ -8,13 +8,8 @@ import uuid
 
 def get_writable_dir():
     """Returns a safe, writable directory for saves and configs on any platform."""
-    if 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ:
-        # Running on Android - Use Pygame-CE's internal private storage
-        # Replace 'org.test.myapp' with your actual package.domain and package.name from buildozer.spec
-        return os.environ.get('ANDROID_PRIVATE', '/data/org.bit.rot/files')
-    else:
-        # Running on PC - Use the standard local directory
-        return os.path.abspath(".")
+    # Running on PC - Use the standard local directory
+    return os.path.abspath(".")
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -268,17 +263,7 @@ def load_settings(preset="default"):
         RESOLUTION = ui_config.find('resolution').get('value')
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
-        # --- MOBILE RESOLUTION & SCALING LOGIC ---
-        is_android = 'ANDROID_ARGUMENT' in os.environ or 'ANDROID_BOOTLOGO' in os.environ
-
-        if is_android:
-            # Optimal mobile scaling: Half of the hardware native resolution.
-            # Pygame's SCALED flag in game.py will blow this up to fill the screen perfectly,
-            # drastically improving FPS while keeping hitboxes accurate.
-            GAME_WIDTH = infoObject.current_w // 2
-            GAME_HEIGHT = infoObject.current_h // 2
-            WINDOW_MODE = "fullscreen"
-        elif RESOLUTION.lower() == "max":
+        if RESOLUTION.lower() == "max":
             GAME_WIDTH = infoObject.current_w
             GAME_HEIGHT = infoObject.current_h
         else:
@@ -291,12 +276,7 @@ def load_settings(preset="default"):
                 GAME_HEIGHT = 720
         
         UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
-        
-        if is_android:
-            # Increase base font scale by 50% for mobile readability
-            RESOLUTION_VALUE = (1.0 + (UI_SCALE - 1.0) * 0.3) * 1.5
-        else:
-            RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
+        RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
 
         # --- 3. Lock-in the True Font Render right here ---
         try:
@@ -337,7 +317,6 @@ def load_settings(preset="default"):
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
 
-# --- NEW: Independent save override for Language to strictly respect XML ---
 def save_language_to_config(lang_code, preset="config"):
     global GAME_LANGUAGE
     GAME_LANGUAGE = lang_code
