@@ -57,7 +57,7 @@ class Game:
         else:
             display_flags |= pygame.RESIZABLE
         
-        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags, vsync=1)
+        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
         
         pygame.display.set_caption("Bit Rot")
         try:
