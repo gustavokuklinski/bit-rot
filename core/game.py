@@ -6,6 +6,7 @@ import os
 import platform
 import math
 import threading
+import sys
 import core.data.config
 from core.data.config import *
 from core.ui.helpers.main_menu import draw_menu
@@ -38,6 +39,8 @@ from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
 from core.events.joystick import JoystickHandler
+from core.android.virtual_controller import VirtualAndroidController
+from core.android.ui_adapter import adapt_modals_for_mobile
 
 class Game:
     def __init__(self):
@@ -67,8 +70,14 @@ class Game:
         self.logger.info("Initializing Rot Engine...")
         
         # Hard initialization for PC control schemes
-        self.joystick_handler = JoystickHandler(logger=self.logger)
-        self.logger.info("PC detected: Hardware Joystick enabled.")
+        self.is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
+
+        if self.is_android:
+            self.joystick_handler = VirtualAndroidController(logger=self.logger)
+            self.logger.info("Android detected: Virtual Gamepad enabled.")
+        else:
+            self.joystick_handler = JoystickHandler(logger=self.logger)
+            self.logger.info("PC detected: Hardware Joystick enabled.")
 
         try:
             cursor_surface = pygame.image.load(SPRITE_PATH + 'ui/cursor.png').convert_alpha()
@@ -955,6 +964,14 @@ class Game:
 
         if self.context_menu['active']:
             draw_context_menu(self.game_screen, self.context_menu, self._get_scaled_mouse_pos())
+
+
+        if getattr(self, 'is_android', False):
+            adapt_modals_for_mobile(self)
+            
+            if self.joystick_handler:
+                self.joystick_handler.draw(self.game_screen)
+
 
         self._update_screen()
 
