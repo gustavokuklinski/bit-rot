@@ -2,6 +2,7 @@
 import pygame
 import xml.etree.ElementTree as ET
 import os
+import sys
 import platform
 import subprocess
 import uuid
@@ -262,6 +263,10 @@ def load_settings(preset="default"):
 
         RESOLUTION = ui_config.find('resolution').get('value')
         WINDOW_MODE = ui_config.find('window_mode').get('value')
+
+        if hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ:
+            RESOLUTION = "1067x480"
+            WINDOW_MODE = "fullscreen"
 
         if RESOLUTION.lower() == "max":
             GAME_WIDTH = infoObject.current_w

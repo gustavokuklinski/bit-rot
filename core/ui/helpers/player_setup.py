@@ -1036,6 +1036,8 @@ def run_player_setup(game):
         _load_config_presets(state)
 
     state = game.player_setup_state
+    
+    # Global mouse position is strictly used ONLY for visual hovers during drawing
     mouse_pos = game._get_scaled_mouse_pos()
     
     game.game_screen.fill(DARK_GRAY)
@@ -1076,6 +1078,13 @@ def run_player_setup(game):
         clickable_rects = _draw_settings_screen(game, state, mouse_pos)
     
     for event in game.get_events():
+        # --- FIX: Anti-Ghost Click Logic ---
+        # Intercept the exact hardware coordinate tied to this single event frame 
+        # bypassing the delayed multi-touch tracker lag on Android.
+        event_pos = mouse_pos
+        if hasattr(event, 'pos'):
+            event_pos = event.pos
+            
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
             
@@ -1084,20 +1093,21 @@ def run_player_setup(game):
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if back_btn.collidepoint(mouse_pos):
+            # We must use event_pos instead of mouse_pos for interactions
+            if back_btn.collidepoint(event_pos):
                 game.game_state = 'MENU'
                 return
-            if player_btn.collidepoint(mouse_pos):
+            if player_btn.collidepoint(event_pos):
                 state['current_tab'] = 'Player'
                 continue
-            elif settings_btn.collidepoint(mouse_pos):
+            elif settings_btn.collidepoint(event_pos):
                 state['current_tab'] = 'Settings'
                 continue
 
         if state['current_tab'] == 'Settings':
-            handle_settings_events(game, state, event, mouse_pos, clickable_rects)
+            handle_settings_events(game, state, event, event_pos, clickable_rects)
         else:
-            handle_player_events(game, state, event, mouse_pos, clickable_rects)
+            handle_player_events(game, state, event, event_pos, clickable_rects)
 
     game._update_screen()
 

@@ -204,6 +204,9 @@ class Game:
         self.nearby_button_rect = None
         self.messages_button_rect = None
         self.crafting_button_rect = None
+        self.slots_button_rect = None
+        self.help_button_rect = None
+        self.gear_button_rect = None
         self.camera = None
         self.map_states = {}
         self.layer_items = {}
@@ -956,6 +959,9 @@ class Game:
         if self.player:
              self.map_manager.update_chunks(self.player.rect.center)
         
+        if getattr(self, 'is_android', False):
+            adapt_modals_for_mobile(self)
+
         draw_game(self)
 
         if self.hovered_item and not self.context_menu.get('active', False):
@@ -966,9 +972,7 @@ class Game:
             draw_context_menu(self.game_screen, self.context_menu, self._get_scaled_mouse_pos())
 
 
-        if getattr(self, 'is_android', False):
-            adapt_modals_for_mobile(self)
-            
+        if getattr(self, 'is_android', False):            
             if self.joystick_handler:
                 self.joystick_handler.draw(self.game_screen)
 
