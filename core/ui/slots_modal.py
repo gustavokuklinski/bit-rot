@@ -1,7 +1,7 @@
 import pygame
 import math
 from core.data.config import *
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 from core.ui.container_modal import _draw_slots
 from core.ui.tooltip import draw_tooltip
 from core.data.localization import tr
@@ -64,31 +64,18 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
         modal['scroll_offset_y'] = 0
 
     mouse_pressed = pygame.mouse.get_pressed()[0]
-    scrollbar_rect = None
 
     if max_scroll > 0:
-        track_rect = pygame.Rect(base_modal.modal_x + base_modal.modal_w - 15, content_y, 10, view_h)
-        pygame.draw.rect(surface, (40, 40, 40), track_rect, border_radius=5)
-        
-        handle_h = max(20, int((view_h / total_height) * view_h))
-        handle_y = content_y + (modal['scroll_offset_y'] / max_scroll) * (view_h - handle_h)
-        handle_rect = pygame.Rect(track_rect.x, handle_y, 10, handle_h)
-
-        # Let the engine's mouse.py initiate the drag flag, we just process the math while it's active
-        modal['scrollbar_handle_rect'] = handle_rect
         if not mouse_pressed:
             modal['is_dragging_scrollbar'] = False
 
         if modal.get('is_dragging_scrollbar'):
+            # Process the math while mouse.py holds the drag flag active
+            handle_h = max(20, int((view_h / total_height) * view_h))
             rel_y = mouse_pos[1] - content_y - (handle_h / 2)
             pct = max(0.0, min(1.0, rel_y / (view_h - handle_h)))
             modal['scroll_offset_y'] = pct * max_scroll
             
-        handle_y = content_y + (modal['scroll_offset_y'] / max_scroll) * (view_h - handle_h)
-        handle_rect.y = handle_y
-        pygame.draw.rect(surface, (100, 100, 100), handle_rect, border_radius=5)
-        scrollbar_rect = handle_rect
-        
     modal['scroll_offset_y'] = max(0, min(modal['scroll_offset_y'], max_scroll))
 
     # --- 4. Render Content with Hardware Clipping ---
@@ -143,6 +130,10 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
         current_y += container_h
 
     surface.set_clip(old_clip)
+
+    # --- CHANGED: Use Standardized Scrollbar ---
+    bar_rect = pygame.Rect(base_modal.modal_x + base_modal.modal_w - 10, content_y, 8, view_h)
+    draw_scrollbar(surface, modal, bar_rect, view_h, total_height, modal['scroll_offset_y'])
 
     # --- 6. Draw Tooltips and Breadcrumbs ---
     hovered_header = None

@@ -1,6 +1,8 @@
 import pygame
 from core.data.config import *
 from core.data.localization import tr
+from core.ui.modals import draw_scrollbar
+
 
 def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, height):
     from core.ui.npc_dialog_modal import get_wrapped_lines
@@ -68,15 +70,5 @@ def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, heig
     surface.blit(content_surf, (start_x, start_y), (0, scroll_y, width, height))
     
     # Draw Scrollbar
-    if max_scroll > 0:
-        scrollbar_x = start_x + width - 10
-        pygame.draw.rect(surface, GRAY_80, (scrollbar_x, start_y, 8, height))
-        
-        visible_ratio = height / total_height
-        thumb_height = max(20, height * visible_ratio)
-        thumb_y = start_y + (scroll_y / max_scroll) * (height - thumb_height)
-        
-        pygame.draw.rect(surface, WHITE, (scrollbar_x, thumb_y, 8, thumb_height))
-        
-        # [CHANGED] Assign to standard scrollbar handle rect
-        modal['scrollbar_handle_rect'] = pygame.Rect(scrollbar_x, thumb_y, 8, thumb_height)
+    bar_rect = pygame.Rect(start_x + width - 10, start_y, 8, height)
+    draw_scrollbar(surface, modal, bar_rect, height, total_height, scroll_y)

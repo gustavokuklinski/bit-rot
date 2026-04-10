@@ -4,6 +4,7 @@ import shutil
 from datetime import datetime
 from core.data.config import *
 from core.data.localization import tr
+from core.ui.modals import draw_scrollbar
 
 def get_save_files():
     save_dir = os.path.join(get_writable_dir(), "game", "save", "game")
@@ -133,19 +134,11 @@ def draw_load_game_screen(game, state, mouse_pos):
             y_offset += item_height
 
     if max_scroll > 0:
-        scrollbar_bg = pygame.Rect(list_rect.right - S(10), list_rect.top, S(10), list_rect.height)
-        pygame.draw.rect(game.game_screen, (40, 40, 40), scrollbar_bg)
+        bar_rect = pygame.Rect(list_rect.right - S(10), list_rect.top, 8, list_rect.height)
+        draw_scrollbar(game.game_screen, state, bar_rect, list_rect.height, total_content_height, state['scroll_y'])
         
-        clickable_rects['scrollbar_track'] = scrollbar_bg 
-
-        handle_h = max(S(20), (list_rect.height / total_content_height) * list_rect.height)
-        scroll_pct = state['scroll_y'] / max_scroll
-        handle_y = list_rect.y + (scroll_pct * (list_rect.height - handle_h))
-        
-        handle_rect = pygame.Rect(list_rect.right - S(10), handle_y, S(10), handle_h)
-        pygame.draw.rect(game.game_screen, GRAY, handle_rect)
-        
-        clickable_rects['scrollbar_handle'] = handle_rect 
+        clickable_rects['scrollbar_track'] = bar_rect
+        clickable_rects['scrollbar_handle'] = state['scrollbar_handle_rect']
 
     button_area_y = list_rect.bottom + S(10)
     btn_width = S(120)

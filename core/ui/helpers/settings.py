@@ -6,6 +6,7 @@ import core.data.config
 from core.data.config import *
 from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
 from core.data.localization import tr, load_language
+from core.ui.modals import draw_scrollbar
 
 def _get_friendly_value_display(key, value):
     try:
@@ -261,14 +262,12 @@ def _draw_settings_screen(game, state, mouse_pos):
             y_off += line_h
 
     if max_scroll > 0:
-        bar_area = pygame.Rect(settings_body.right - S(14), settings_body.y + S(5), S(10), settings_body.height - S(10))
-        handle_h = max(S(20), (content_rect.height / total_h) * bar_area.height)
-        scroll_pct = scroll_y / max_scroll if max_scroll > 0 else 0
-        handle_y = bar_area.y + (scroll_pct * (bar_area.height - handle_h))
+        bar_area = pygame.Rect(settings_body.right - S(14), settings_body.y + S(5), 8, settings_body.height - S(10))
+        draw_scrollbar(game.game_screen, state, bar_area, content_rect.height, total_h, scroll_y)
         
-        state['settings_scroll_handle'] = pygame.Rect(bar_area.x, handle_y, S(10), handle_h)
+        # Route the global handle rect to the specific key your drag math expects
+        state['settings_scroll_handle'] = state['scrollbar_handle_rect']
         state['settings_scrollbar_track'] = bar_area
-        pygame.draw.rect(game.game_screen, GRAY, state['settings_scroll_handle'], border_radius=2)
     else:
         state['settings_scroll_handle'] = None
     

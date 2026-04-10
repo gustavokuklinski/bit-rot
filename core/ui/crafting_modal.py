@@ -1,7 +1,7 @@
 # core/ui/crafting_modal.py
 import pygame
 import random 
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 from core.data.config import *
 from core.entities.item.item import Item
 from core.data.recipe_manager import RecipeManager
@@ -368,10 +368,11 @@ class CraftingModal(BaseModal):
             if click and is_hovered and not self.modal.get('is_dragging_scrollbar'):
                 self.selected_recipe = recipe
 
-        if track_rect and handle_rect:
-            pygame.draw.rect(self.surface, (20, 20, 20), track_rect)
-            handle_color = (140, 140, 140) if self.modal.get('is_dragging_scrollbar') or handle_rect.collidepoint(mouse_pos) else (100, 100, 100)
-            pygame.draw.rect(self.surface, handle_color, handle_rect, border_radius=4)
+        bar_rect = pygame.Rect(list_rect.right - 10, list_rect.top + 2, 8, list_rect.height - 4)
+        draw_scrollbar(self.surface, self.modal, bar_rect, self.visible_items, len(filtered_recipes), scroll_offset)
+        
+        # Ensure legacy drag inputs for crafting still hook into the new rect
+        self.modal['crafting_handle_rect'] = self.modal.get('scrollbar_handle_rect')
 
         details_x = list_x + self.list_width + self.padding
         details_y = list_y 

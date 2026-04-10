@@ -1,6 +1,6 @@
 import pygame
 from core.data.config import *
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.data.localization import tr
 
@@ -136,25 +136,7 @@ def draw_text_modal(surface, game, modal, assets):
         pass # Skip drawing content if rect is invalid
 
     # --- Draw Scrollbar ---
-    if total_text_height > content_height:
-        scrollbar_area_height = content_height
-        scrollbar_area_rect = pygame.Rect(content_rect.right + 2, content_rect.top, 8, scrollbar_area_height)
-
-        handle_height_ratio = content_height / total_text_height
-        handle_height = max(10, scrollbar_area_height * handle_height_ratio)
-
-        handle_pos_ratio = 0
-        if max_scroll_offset > 0:
-            handle_pos_ratio = scroll_offset_y / max_scroll_offset
-        
-        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
-
-        scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(surface, GRAY, scrollbar_handle_rect, 0, 2)
-
-        modal['scrollbar_handle_rect'] = scrollbar_handle_rect
-        
-    else:
-        modal['scrollbar_handle_rect'] = None
+    bar_rect = pygame.Rect(content_rect.right + 2, content_rect.top, 8, content_height)
+    draw_scrollbar(surface, modal, bar_rect, content_height, total_text_height, scroll_offset_y)
 
     return None, close_button

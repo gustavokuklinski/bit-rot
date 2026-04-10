@@ -7,6 +7,7 @@ from core.ui.tooltip import draw_tooltip
 from core.entities.item.item import Item
 from core.data.localization import tr
 from core.entities.npc.npc_dialog import NPCDialog 
+from core.ui.modals import draw_scrollbar
 
 _QUESTS_CACHE = None
 
@@ -253,11 +254,8 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
 
     surface.set_clip(None)
     
-    if total_content_height > visible_height:
-        pygame.draw.rect(surface, WHITE, track_rect)
-        handle_color = GRAY_80 if modal['quest_is_dragging'] else GRAY_40
-        if handle_rect.collidepoint(mouse_pos): handle_color = GRAY_80
-        pygame.draw.rect(surface, handle_color, handle_rect, border_radius=4)
+    bar_rect = pygame.Rect(modal_rect.right - 10, base_y, 8, visible_height)
+    draw_scrollbar(surface, modal, bar_rect, visible_height, total_content_height, current_scroll)
 
     if pending_tooltip:
         draw_tooltip(surface, pending_tooltip, (mouse_pos[0] + 15, mouse_pos[1] + 15))

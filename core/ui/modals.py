@@ -3,6 +3,29 @@ import pygame
 from core.data.config import *
 from core.data.localization import tr
 
+def draw_scrollbar(surface, modal, bar_rect, viewport_height, total_height, scroll_offset):
+    """Standardized scrollbar pattern across UI modals."""
+    max_scroll = max(0, total_height - viewport_height)
+    modal['max_scroll_offset'] = max_scroll
+
+    if max_scroll <= 0:
+        modal['scrollbar_handle_rect'] = None
+        return
+
+    # Draw scrollbar background track
+    pygame.draw.rect(surface, DARK_GRAY, bar_rect, border_radius=3)
+
+    # Calculate handle height and position
+    handle_h = max(20, (viewport_height / total_height) * bar_rect.height)
+    scroll_pct = scroll_offset / max_scroll if max_scroll > 0 else 0
+    handle_y = bar_rect.y + scroll_pct * (bar_rect.height - handle_h)
+
+    handle_rect = pygame.Rect(bar_rect.x, handle_y, bar_rect.width, handle_h)
+
+    # Draw handle
+    pygame.draw.rect(surface, GRAY, handle_rect, border_radius=3)
+    modal['scrollbar_handle_rect'] = handle_rect
+    
 class BaseModal:
     def __init__(self, surface, modal, assets, title, w=None, h=None):
         self.surface = surface

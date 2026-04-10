@@ -98,6 +98,40 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if valid_drop:
                                         item_ref = game.dragged_item
                                         
+                                        existing_item = vehicle.equipment.get(slot_name)
+                                        if existing_item and existing_item.can_stack_with(item_ref):
+                                            item_ref.rect.center = game.player.rect.center
+                                            if item_ref not in game.items_on_ground:
+                                                game.items_on_ground.append(item_ref)
+                                                
+                                            def do_stack_vehicle():
+                                                if item_ref in game.items_on_ground:
+                                                    game.items_on_ground.remove(item_ref)
+                                                
+                                                # Pour liquid up to max capacity
+                                                available = existing_item.capacity - existing_item.load
+                                                transfer = min(available, item_ref.load)
+                                                existing_item.load += transfer
+                                                item_ref.load -= transfer
+                                                
+                                                # Update vehicle gauges immediately
+                                                vehicle.update_stats_from_equipment()
+                                                
+                                                # Return remains to inventory if any
+                                                if item_ref.load > 0:
+                                                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                                        game.player.inventory.append(item_ref)
+                                                    else:
+                                                        game.items_on_ground.append(item_ref)
+                                                        item_ref.rect.center = game.player.rect.center
+                                            
+                                            action_name = tr('msg', "Refueling") if slot_name == 'fuel' else tr('msg', "Transferring")
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2) if is_external_source else 1.0
+                                            game.player.start_action(action_name, transfer_time, do_stack_vehicle, xp_reward=0.5)
+                                            
+                                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                            return
+
                                         # --- FIX 2: VOID DROP PROTECTION ---
                                         item_ref.rect.center = game.player.rect.center
                                         if item_ref not in game.items_on_ground:

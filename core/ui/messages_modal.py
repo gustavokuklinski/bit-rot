@@ -1,7 +1,7 @@
 # core/ui/messages_modal.py
 import pygame
 from core.data.config import *
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 # Removed unused Tabs import (optional, but cleaner)
 
 def draw_messages_modal(surface, game, modal, assets):
@@ -139,25 +139,8 @@ def draw_messages_modal(surface, game, modal, assets):
         pass 
 
     # --- Draw Scrollbar ---
-    if total_text_height > content_height:
-        scrollbar_area_rect = pygame.Rect(content_rect.right - 6, content_rect.top, 6, content_rect.height)
-        handle_height_ratio = content_height / total_text_height
-        handle_height = max(10, content_rect.height * handle_height_ratio)
-        
-        if max_scroll > 0:
-            scroll_pct = modal['scroll_offset_y'] / max_scroll
-        else:
-            scroll_pct = 0
-            
-        handle_y = scrollbar_area_rect.y + (scroll_pct * (scrollbar_area_rect.height - handle_height))
-        scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.x, handle_y, 6, handle_height)
-        
-        pygame.draw.rect(surface, GRAY, scrollbar_handle_rect, border_radius=3)
-        modal['scrollbar_handle_rect'] = scrollbar_handle_rect
-        modal['max_scroll_offset'] = max_scroll 
-    else:
-        modal['scrollbar_handle_rect'] = None
-        modal['max_scroll_offset'] = 0
+    bar_rect = pygame.Rect(content_rect.right - 6, content_rect.top, 8, content_rect.height)
+    draw_scrollbar(surface, modal, bar_rect, content_height, total_text_height, modal['scroll_offset_y'])
 
     # --- Draw Input Box ---
     border_col = YELLOW if game.chat_active else GRAY

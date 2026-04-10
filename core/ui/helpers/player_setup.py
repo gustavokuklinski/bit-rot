@@ -10,13 +10,14 @@ from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 import random
 from faker import Faker
-fake = Faker()
 from types import SimpleNamespace
 from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.settings import _draw_settings_screen, handle_settings_events
 from core.data.localization import tr
+from core.ui.modals import draw_scrollbar
 
+fake = Faker()
 _stat_icons_cache = {}
 
 STARTING_POINTS = 5
@@ -319,14 +320,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
             y_off += line_height
 
     if total_prof_text_height > prof_content_rect.height:
-        scroll_rect = pygame.Rect(prof_content_rect.right + S(2), prof_content_rect.top, S(8), prof_content_rect.height)
-        handle_h = max(S(10), prof_content_rect.height * (prof_content_rect.height / total_prof_text_height))
-        handle_pos = 0 if prof_max_scroll <= 0 else prof_scroll_y / prof_max_scroll
-        handle_y = scroll_rect.top + (prof_content_rect.height - handle_h) * handle_pos
-        prof_handle_rect = pygame.Rect(scroll_rect.left, handle_y, scroll_rect.width, handle_h)
-        pygame.draw.rect(game.game_screen, GRAY, prof_handle_rect, 0, 2)
-        state['prof_scrollbar_handle_rect'] = prof_handle_rect
-    else: state['prof_scrollbar_handle_rect'] = None
+        bar_rect = pygame.Rect(prof_content_rect.right + S(2), prof_content_rect.top, 8, prof_content_rect.height)
+        draw_scrollbar(game.game_screen, state, bar_rect, prof_content_rect.height, total_prof_text_height, prof_scroll_y)
+        state['prof_scrollbar_handle_rect'] = state['scrollbar_handle_rect']
+    else: 
+        state['prof_scrollbar_handle_rect'] = None
 
     available_rect = pygame.Rect(col2_x, prof_rect.bottom + S(20), col2_width, S(640 - 160 - 20))
     
@@ -381,16 +379,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
             y_offset += line_height
 
     if total_text_height > visible_height:
-        scrollbar_area_height = traits_content_rect.height
-        scrollbar_area_rect = pygame.Rect(traits_content_rect.right + S(2), traits_content_rect.top, S(8), scrollbar_area_height)
-        handle_height_ratio = visible_height / total_text_height
-        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
-        handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
-        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
-        traits_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.game_screen, GRAY, traits_scrollbar_handle_rect, 0, 2)
-        state['traits_scrollbar_handle_rect'] = traits_scrollbar_handle_rect
-    else: state['traits_scrollbar_handle_rect'] = None
+        bar_rect = pygame.Rect(traits_content_rect.right + S(2), traits_content_rect.top, 8, traits_content_rect.height)
+        draw_scrollbar(game.game_screen, state, bar_rect, visible_height, total_text_height, scroll_offset_y)
+        state['traits_scrollbar_handle_rect'] = state['scrollbar_handle_rect']
+    else: 
+        state['traits_scrollbar_handle_rect'] = None
 
     chosen_rect = pygame.Rect(col3_x, base_y, col3_width, S(640))
     header_rect = pygame.Rect(chosen_rect.x, chosen_rect.y, chosen_rect.width, header_height)
@@ -454,18 +447,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
             y_offset += S(35)
             
     if total_text_height > visible_height:
-        scrollbar_area_height = chosen_content_rect.height
-        scrollbar_area_rect = pygame.Rect(chosen_content_rect.right + S(2), chosen_content_rect.top, S(8), scrollbar_area_height)
-        
-        handle_height_ratio = visible_height / total_text_height
-        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
-        
-        handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
-        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
-        
-        chosen_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.game_screen, GRAY, chosen_scrollbar_handle_rect, 0, 2)
-        state['chosen_scrollbar_handle_rect'] = chosen_scrollbar_handle_rect
+        bar_rect = pygame.Rect(chosen_content_rect.right + S(2), chosen_content_rect.top, 8, chosen_content_rect.height)
+        draw_scrollbar(game.game_screen, state, bar_rect, visible_height, total_text_height, scroll_offset_y)
+        state['chosen_scrollbar_handle_rect'] = state['scrollbar_handle_rect']
     else:
         state['chosen_scrollbar_handle_rect'] = None
 
@@ -654,17 +638,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
             
             y_offset += line_height
 
+    # --- CHANGED: Stats Scrollbar ---
     if total_text_height > visible_height:
-        scrollbar_area_height = stats_content_rect.height
-        scrollbar_area_rect = pygame.Rect(stats_content_rect.right + S(2), stats_content_rect.top, S(8), scrollbar_area_height)
-        handle_height_ratio = visible_height / total_text_height
-        handle_height = max(S(10), scrollbar_area_height * handle_height_ratio)
-        handle_pos_ratio = 0 if max_scroll_offset <= 0 else scroll_offset_y / max_scroll_offset
-        handle_y = scrollbar_area_rect.top + (scrollbar_area_height - handle_height) * handle_pos_ratio
-        stats_scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(game.game_screen, GRAY, stats_scrollbar_handle_rect, 0, 2)
-        state['stats_scrollbar_handle_rect'] = stats_scrollbar_handle_rect
-    else: state['stats_scrollbar_handle_rect'] = None
+        bar_rect = pygame.Rect(stats_content_rect.right + S(2), stats_content_rect.top, 8, stats_content_rect.height)
+        draw_scrollbar(game.game_screen, state, bar_rect, visible_height, total_text_height, scroll_offset_y)
+        state['stats_scrollbar_handle_rect'] = state['scrollbar_handle_rect']
+    else: 
+        state['stats_scrollbar_handle_rect'] = None
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + S(20), col4_width, S(70))
     is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)

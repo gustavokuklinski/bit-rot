@@ -5,6 +5,7 @@ import core.data.config as config_module
 from core.data.config import *
 from core.data.localization import tr
 from core.ui.text_modal import wrap_text
+from core.ui.modals import draw_scrollbar
 
 HELP_CACHE = {
     'tabs': [],          
@@ -258,43 +259,37 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     track_h = clip_h
     scrollbar_area_rect = pygame.Rect(box_rect.right - S(20), content_y_start, S(10), track_h)
     
+    # --- CHANGED: Standardized Drag Math ---
     if max_scroll > 0:
-        handle_height = max(40.0, track_h * (track_h / max(1.0, float(active_tab['total_h']))))
-        
         if mouse_buttons[0] or clicked:
-            if not HELP_CACHE['is_dragging']:
-                handle_pos_ratio = HELP_CACHE['scroll_y'] / max_scroll if max_scroll > 0 else 0
-                handle_y = scrollbar_area_rect.top + (track_h - handle_height) * handle_pos_ratio
-                scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-                
-                hitbox = scrollbar_handle_rect.inflate(S(20), 0)
-                
-                if hitbox.collidepoint(mouse_pos):
-                    HELP_CACHE['is_dragging'] = True
+            if not HELP_CACHE.get('is_dragging_scrollbar'):
+                handle_rect = HELP_CACHE.get('scrollbar_handle_rect')
+                # Inflate makes it easier to click the handle without being pixel-perfect
+                if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(mouse_pos):
+                    HELP_CACHE['is_dragging_scrollbar'] = True
                     HELP_CACHE['drag_start_y'] = mouse_y
                     HELP_CACHE['drag_start_scroll'] = HELP_CACHE['scroll_y']
         else:
-            HELP_CACHE['is_dragging'] = False
+            HELP_CACHE['is_dragging_scrollbar'] = False
             
-        if HELP_CACHE['is_dragging']:
+        if HELP_CACHE.get('is_dragging_scrollbar'):
             delta_y = mouse_y - HELP_CACHE['drag_start_y']
-            track_travel = (track_h - handle_height)
+            handle_h = max(20, (clip_h / max(1.0, float(active_tab['total_h']))) * clip_h)
+            track_travel = clip_h - handle_h
             if track_travel > 0:
                 scroll_delta = (delta_y / track_travel) * max_scroll
                 HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['drag_start_scroll'] + scroll_delta, max_scroll))
-                
-        pygame.draw.rect(surface, (50, 50, 50), scrollbar_area_rect, border_radius=5)
-        
-        handle_pos_ratio = HELP_CACHE['scroll_y'] / max_scroll if max_scroll > 0 else 0
-        handle_y = scrollbar_area_rect.top + (track_h - handle_height) * handle_pos_ratio
-        scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        
-        handle_color = (180, 180, 180) if HELP_CACHE['is_dragging'] else (120, 120, 120)
-        pygame.draw.rect(surface, handle_color, scrollbar_handle_rect, border_radius=5)
     else:
         HELP_CACHE['scroll_y'] = 0.0
+        HELP_CACHE['is_dragging_scrollbar'] = False
 
     actual_scroll = int(HELP_CACHE['scroll_y'])
+
+    # --- CHANGED: Use Standardized Scrollbar Rendering ---
+    bar_rect = pygame.Rect(box_rect.right - S(14), content_y_start, 8, clip_h)
+    draw_scrollbar(surface, HELP_CACHE, bar_rect, clip_h, active_tab['total_h'], HELP_CACHE['scroll_y'])
+
+    # (Keep the clipping phase below untouched)
     clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
     
     try:

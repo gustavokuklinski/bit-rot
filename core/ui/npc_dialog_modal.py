@@ -1,6 +1,6 @@
 import pygame
 from core.data.config import *
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 from core.data.localization import tr
 from core.ui.tabs import Tabs
 from core.ui.npc_special_dialogs_tab import draw_special_dialogs_tab
@@ -185,6 +185,19 @@ def draw_npc_dialog_modal(surface, modal, game):
             
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
+
+            # --- [ADDED] Mouse Drag Math ---
+            mouse_pressed = pygame.mouse.get_pressed()[0]
+            if not mouse_pressed:
+                modal['is_dragging_scrollbar'] = False
+
+            if modal.get('is_dragging_scrollbar') and max_scroll > 0:
+                m_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                handle_h = max(20, (viewport_height / total_height) * viewport_height)
+                rel_y = m_pos[1] - content_y - (handle_h / 2)
+                pct = max(0.0, min(1.0, rel_y / (viewport_height - handle_h)))
+                modal['scroll_offset_y'] = pct * max_scroll
+
             scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
             modal['scroll_offset_y'] = scroll_offset_y
 
@@ -222,18 +235,8 @@ def draw_npc_dialog_modal(surface, modal, game):
             surface.set_clip(original_clip)
             
             # --- Draw the visible Scrollbar ---
-            if max_scroll > 0:
-                bar_w = 8
-                bar_x = col2_x + text_area_width + 2
-                bar_y = content_y
-                bar_h = viewport_height
-                pygame.draw.rect(surface, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
-                
-                handle_h = max(20, (viewport_height / total_height) * bar_h)
-                handle_y = bar_y + (scroll_offset_y / max_scroll) * (bar_h - handle_h)
-                handle_rect = pygame.Rect(bar_x, handle_y, bar_w, handle_h)
-                pygame.draw.rect(surface, GRAY_60, handle_rect)
-                modal['scrollbar_handle_rect'] = handle_rect
+            bar_rect = pygame.Rect(col2_x + text_area_width + 2, content_y, 8, viewport_height)
+            draw_scrollbar(surface, modal, bar_rect, viewport_height, total_height, scroll_offset_y)
                 
         else:
             selected_opt = dialogs[active_index]
@@ -260,6 +263,19 @@ def draw_npc_dialog_modal(surface, modal, game):
             
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
+            
+            # --- [ADDED] Mouse Drag Math ---
+            mouse_pressed = pygame.mouse.get_pressed()[0]
+            if not mouse_pressed:
+                modal['is_dragging_scrollbar'] = False
+
+            if modal.get('is_dragging_scrollbar') and max_scroll > 0:
+                m_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                handle_h = max(20, (viewport_height / total_height) * viewport_height)
+                rel_y = m_pos[1] - content_y - (handle_h / 2)
+                pct = max(0.0, min(1.0, rel_y / (viewport_height - handle_h)))
+                modal['scroll_offset_y'] = pct * max_scroll
+
             scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
             modal['scroll_offset_y'] = scroll_offset_y
             
@@ -284,19 +300,8 @@ def draw_npc_dialog_modal(surface, modal, game):
             
             surface.set_clip(original_clip)
             
-            # --- Draw Scrollbar ---
-            if max_scroll > 0:
-                bar_w = 8
-                bar_x = col2_x + text_area_width + 2
-                bar_y = content_y
-                bar_h = viewport_height
-                pygame.draw.rect(surface, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
-                
-                handle_h = max(20, (viewport_height / total_height) * bar_h)
-                handle_y = bar_y + (scroll_offset_y / max_scroll) * (bar_h - handle_h)
-                handle_rect = pygame.Rect(bar_x, handle_y, bar_w, handle_h)
-                pygame.draw.rect(surface, GRAY_60, handle_rect)
-                modal['scrollbar_handle_rect'] = handle_rect
+            bar_rect = pygame.Rect(col2_x + text_area_width + 2, content_y, 8, viewport_height)
+            draw_scrollbar(surface, modal, bar_rect, viewport_height, total_height, scroll_offset_y)
 
     elif active_tab == 1:
         draw_special_dialogs_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)

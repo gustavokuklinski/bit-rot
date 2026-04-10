@@ -3,7 +3,7 @@ import re
 import pygame
 import core.data.config as config_module
 from core.data.config import *
-from core.ui.modals import BaseModal
+from core.ui.modals import BaseModal, draw_scrollbar
 from core.ui.text_modal import wrap_text
 from core.data.localization import tr
 
@@ -272,16 +272,7 @@ def draw_help_modal(surface, game, modal, assets):
         pass 
 
     # --- Draw Scrollbar ---
-    if max_scroll_offset > 0:
-        scrollbar_area_rect = pygame.Rect(content_rect.right + 5, content_rect.top, 8, content_height)
-        handle_height = max(20, content_height * (content_height / max(1, active_tab['total_h'])))
-        handle_pos_ratio = scroll_offset_y / max_scroll_offset if max_scroll_offset > 0 else 0
-        handle_y = scrollbar_area_rect.top + (content_height - handle_height) * handle_pos_ratio
-        
-        scrollbar_handle_rect = pygame.Rect(scrollbar_area_rect.left, handle_y, scrollbar_area_rect.width, handle_height)
-        pygame.draw.rect(surface, GRAY, scrollbar_handle_rect, 0, 4)
-        modal['scrollbar_handle_rect'] = scrollbar_handle_rect
-    else:
-        modal['scrollbar_handle_rect'] = None
+    bar_rect = pygame.Rect(content_rect.right + 5, content_rect.top, 8, content_height)
+    draw_scrollbar(surface, modal, bar_rect, content_height, active_tab['total_h'], scroll_offset_y)
 
     return None, close_button
