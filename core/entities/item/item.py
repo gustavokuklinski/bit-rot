@@ -64,8 +64,8 @@ class Item:
         self.firing_distance = firing_distance 
         self.disposable = disposable
         
-        self.liquid = liquid
-        self.allow_liquid = allow_liquid
+        self.liquid = str(liquid).lower() == 'true' if isinstance(liquid, str) else bool(liquid)
+        self.allow_liquid = str(allow_liquid).lower() == 'true' if isinstance(allow_liquid, str) else bool(allow_liquid)
 
         self.require = require
         # Weight System

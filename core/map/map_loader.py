@@ -146,6 +146,14 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
                             container.image = tile_def['image']
+                            
+                            # --- FIX: Transfer Liquid & Infinite Source Flags ---
+                            val = tile_def.get('allow_liquid', False)
+                            container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            container.is_maptile = True
+                            container.item_type = 'maptile_container'
+                            # --------------------------------------------------
+                            
                             containers.append(container)
                 else:
                     print(f"Warning: Undefined ground tile character '{char}' at ({x},{y}).")
@@ -183,6 +191,14 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.rect = rect
                             container.image = tile_def['image']
+                            
+                            # --- FIX: Transfer Liquid & Infinite Source Flags ---
+                            val = tile_def.get('allow_liquid', False)
+                            container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            container.is_maptile = True
+                            container.item_type = 'maptile_container'
+                            # --------------------------------------------------
+                            
                             containers.append(container)
                 else:
                     print(f"Warning: Undefined base tile character '{char}' at ({x},{y}).")
@@ -255,10 +271,18 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     if tile_def['type'] == 'maptile_container':
                         capacity = tile_def.get('capacity', 0)
                         items = _generate_container_items(tile_def)
-                                        
+                        
                         container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                         container.rect = rect
                         container.image = tile_def['image']
+                        
+                        # --- FIX: Transfer Liquid & Infinite Source Flags ---
+                        val = tile_def.get('allow_liquid', False)
+                        container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                        container.is_maptile = True
+                        container.item_type = 'maptile_container'
+                        # --------------------------------------------------
+                        
                         containers.append(container)
     
     if light_layout:

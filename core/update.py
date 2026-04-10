@@ -671,10 +671,11 @@ def update_game_state(game):
                     game.modals.remove(modal)
     
     current_time = pygame.time.get_ticks()
-    game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']]
+    # [OPTIMIZATION] Strict hard-cap on memory arrays to prevent frame stuttering during chaos
+    game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']][:150]
 
     if hasattr(game, 'blood_stains'):
-        game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']]
+        game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']][:250]
 
     # --- Vehicle Update ---
     if game.map_manager and hasattr(game.map_manager, 'vehicles'):

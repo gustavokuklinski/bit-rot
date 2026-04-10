@@ -140,20 +140,31 @@ class PlayerInventory:
         item, source_inventory = self.find_item_and_stack(source, index, container_item)
         if not item: return
 
-        item_to_drop = None
-        if quantity == 'all' or quantity >= item.load:
-            item_to_drop = self.drop_item(game, source, index, container_item)
-        elif quantity > 0 and item.load > 0:
-            item_to_drop = Item.create_from_name(tr('item', item.name))
-            if not item_to_drop: return
+        # --- INFINITE SOURCE LOGIC ---
+        is_infinite = container_item and getattr(container_item, 'allow_liquid', False) and getattr(item, 'liquid', False)
 
-            transfer_amount = min(item.load, quantity)
-            item_to_drop.load = transfer_amount
-            item_to_drop.durability = item.durability 
-            
-            item.load -= transfer_amount
-            if item.load <= 0:
-                self.drop_item(game, source, index, container_item) 
+        item_to_drop = None
+        if is_infinite:
+            item.load = getattr(item, 'capacity', 100) # Keep map container full
+            item_to_drop = Item.create_from_name(tr('item', item.name))
+            if item_to_drop:
+                transfer_amount = min(item_to_drop.capacity or 100, quantity) if quantity != 'all' else (item_to_drop.capacity or 100)
+                item_to_drop.load = transfer_amount
+                item_to_drop.durability = item.durability
+        else:
+            if quantity == 'all' or quantity >= item.load:
+                item_to_drop = self.drop_item(game, source, index, container_item)
+            elif quantity > 0 and item.load > 0:
+                item_to_drop = Item.create_from_name(tr('item', item.name))
+                if not item_to_drop: return
+
+                transfer_amount = min(item.load, quantity)
+                item_to_drop.load = transfer_amount
+                item_to_drop.durability = item.durability 
+                
+                item.load -= transfer_amount
+                if item.load <= 0:
+                    self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
             offset_x = random.randint(-8, 8)
@@ -177,7 +188,6 @@ class PlayerInventory:
             source_inventory = self._get_source_inventory(source, container_item) 
             if source_inventory and 0 <= index < len(source_inventory): item = source_inventory[index] 
 
-            # [FIX] Attach 'obj' to the target definitions so we can check their liquid flags
             targets = []
             if target_container is self:
                 targets.append({'inv': self.inventory, 'cap': self.base_inventory_slots, 'name': "Inventory", 'obj': self})
@@ -186,8 +196,15 @@ class PlayerInventory:
             else: return
 
             if not item: return
-            remaining_load = item.load
+            
             is_item_liquid = getattr(item, 'liquid', False)
+            is_infinite = container_item and getattr(container_item, 'allow_liquid', False) and is_item_liquid
+            
+            if is_infinite:
+                item.load = getattr(item, 'capacity', 100) # Ensure map tile stays at max capacity
+                remaining_load = 9999
+            else:
+                remaining_load = item.load
             
             if not source_is_on_player and target_is_on_player:
                 if self.current_weight + item.get_total_weight() > self.max_carry_weight:
@@ -195,9 +212,8 @@ class PlayerInventory:
                     return
 
             for target in targets:
-                # [FIX] Skip this target container if liquid flags don't perfectly match
                 target_obj = target.get('obj')
-                if getattr(target_obj, 'allow_liquid', False) != is_item_liquid:
+                if str(getattr(target_obj, 'allow_liquid', False)).lower() != str(is_item_liquid).lower():
                     continue
                     
                 target_inv = target['inv']
@@ -207,11 +223,12 @@ class PlayerInventory:
                         transfer = min(available_space, remaining_load)
                         target_item.load += transfer
                         remaining_load -= transfer
-                        item.load = remaining_load 
+                        if not is_infinite:
+                            item.load = remaining_load 
                         if remaining_load <= 0: break
                 if remaining_load <= 0: break
             
-            if item.load <= 0:
+            if not is_infinite and item.load <= 0:
                 if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
                     if source == 'belt':
                         self.belt[index] = None
@@ -228,9 +245,8 @@ class PlayerInventory:
             if remaining_load > 0:
                 transferred = False
                 for target in targets:
-                    # [FIX] Apply liquid match constraint for creating new item slots too
                     target_obj = target.get('obj')
-                    if getattr(target_obj, 'allow_liquid', False) != is_item_liquid:
+                    if str(getattr(target_obj, 'allow_liquid', False)).lower() != str(is_item_liquid).lower():
                         continue
                         
                     target_inv = target['inv']
@@ -239,24 +255,29 @@ class PlayerInventory:
 
                     if len(target_inv) < target_cap:
                         new_stack = Item.create_from_name(tr('item', item.name))
-                        new_stack.load = remaining_load
+                        transfer_amt = min(new_stack.capacity or 100, remaining_load)
+                        new_stack.load = transfer_amt
                         new_stack.durability = item.durability 
                         target_inv.append(new_stack)
+                        remaining_load -= transfer_amt
                         
-                        if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
-                            if source == 'belt':
-                                self.belt[index] = None
-                                item.in_belt = False
-                            else:
-                                source_inventory.pop(index)
-                            if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
-                                game.items_on_ground.remove(item)
+                        if not is_infinite:
+                            item.load = remaining_load
+                            if item.load <= 0:
+                                if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
+                                    if source == 'belt':
+                                        self.belt[index] = None
+                                        item.in_belt = False
+                                    else:
+                                        source_inventory.pop(index)
+                                    if game and getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
+                                        game.items_on_ground.remove(item)
 
-                        display_message(f"{tr('msg', 'Sent')} {remaining_load} {tr('item', item.name)} {tr('msg', 'to')} {target_name}.")
+                        display_message(f"{tr('msg', 'Sent')} {transfer_amt} {tr('item', item.name)} {tr('msg', 'to')} {target_name}.")
                         transferred = True
-                        break 
+                        if remaining_load <= 0: break 
                 
-                if not transferred:
+                if not transferred and not is_infinite:
                     display_message(f"{tr('msg', 'Inventory full. Could not transfer remaining')} {remaining_load}.")
 
         # --- CHANGED PART ---

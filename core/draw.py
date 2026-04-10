@@ -66,8 +66,10 @@ def draw_game(game):
     if not hasattr(game, 'cached_view_surface') or \
        game.cached_view_surface.get_width() != view_w or \
        game.cached_view_surface.get_height() != view_h:
-        game.cached_view_surface = pygame.Surface((view_w, view_h))
-        game.particle_scratch = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        # [OPTIMIZATION] Add .convert() - Backgrounds don't need alpha, huge FPS boost
+        game.cached_view_surface = pygame.Surface((view_w, view_h)).convert()
+        # [OPTIMIZATION] Add .convert_alpha() for fast particle blending
+        game.particle_scratch = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA).convert_alpha()
     
     world_view_surface = game.cached_view_surface
     world_view_surface.fill((20, 20, 20)) 
@@ -804,7 +806,7 @@ def draw_game(game):
                 
                 vignette = pygame.transform.smoothscale(tiny_v, (int(GAME_WIDTH), int(GAME_HEIGHT)))
                 game.crt_overlay.blit(vignette, (0, 0))
-
+                game.crt_overlay = game.crt_overlay.convert_alpha()
             # Apply the filter strictly to the game world before UI is drawn
             game.game_screen.blit(game.crt_overlay, (0, 0))
                 

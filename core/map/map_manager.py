@@ -107,7 +107,7 @@ class MapManager:
         curr_cy = int(py // (self.CHUNK_SIZE * TILE_SIZE))
         
         # Radius to pre-load (slightly larger than view)
-        LOAD_RADIUS = 4 
+        LOAD_RADIUS = 2 
         
         # Spiral out or check nearby chunks
         chunks_to_check = []
@@ -144,7 +144,7 @@ class MapManager:
                      break
                      
         # Optional: Unload very far chunks
-        self.unload_far_chunks(curr_cx, curr_cy, LOAD_RADIUS + 4)
+        self.unload_far_chunks(curr_cx, curr_cy, LOAD_RADIUS + 1)
 
     def unload_far_chunks(self, center_cx, center_cy, keep_radius):
         """Unloads chunks outside the keep_radius to free memory."""
@@ -331,6 +331,7 @@ class MapManager:
                             if defn:
                                 surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
 
+        surface = surface.convert_alpha() 
         self.chunk_surfaces[key] = surface
         return surface
 

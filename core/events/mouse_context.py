@@ -11,6 +11,33 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 
+
+def does_allow_liquid(obj):
+    """Safely checks if an object allows liquid, accounting for string-parsed XML booleans."""
+    if not obj: return False
+    val = getattr(obj, 'allow_liquid', None)
+    if val is not None: return str(val).lower() in ['true', '1'] or val is True
+    if hasattr(obj, 'properties') and isinstance(obj.properties, dict):
+        if 'allow_liquid' in obj.properties:
+            val = obj.properties['allow_liquid']
+            return str(val).lower() in ['true', '1'] or val is True
+    if isinstance(obj, dict):
+        if 'allow_liquid' in obj:
+            val = obj['allow_liquid']
+            return str(val).lower() in ['true', '1'] or val is True
+    return False
+
+def is_infinite_liquid_source(obj):
+    """Checks if the object is an infinite map tile source/sink."""
+    if not does_allow_liquid(obj):
+        return False
+    item_type = getattr(obj, 'item_type', '')
+    obj_type = getattr(obj, 'type', '')
+    if isinstance(obj, dict):
+        item_type = obj.get('item_type', item_type)
+        obj_type = obj.get('type', obj_type)
+    return item_type == 'maptile_container' or obj_type == 'maptile_container' or getattr(obj, 'is_maptile', False)
+
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
 
@@ -170,8 +197,9 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Send to':
                 target_container_name = target_sub_slot
                 
-                # --- FIX 1: TOCTOU BUG (Return True on success, False if already gone) ---
-                def remove_item_from_src(target_item):
+                def remove_item_from_src(target_item, is_clone=False):
+                    if is_clone: return True  # Do not pop clones representing infinite sources
+                    
                     if source == 'inventory':
                         for idx_val, v in enumerate(game.player.inventory):
                             if v is target_item: game.player.inventory.pop(idx_val); return True
@@ -201,17 +229,32 @@ def handle_context_menu_click(game, mouse_pos):
                     if source == 'inventory':
                         game.context_menu['active'] = False
                         return
-                        
+                    
+                    if getattr(item, 'liquid', False):
+                        display_message(tr('msg', "Liquid spills. It needs a container."))
+                        game.context_menu['active'] = False
+                        return
+
                     if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
                         display_message(tr('msg', "Cannot carry anymore weight"))
                         game.context_menu['active'] = False
                         return
                         
                     def do_send_inv():
-                        # Protects against 2nd delayed click firing and duplicating an item
-                        if remove_item_from_src(item):
-                            game.player.inventory.append(item)
-                            game.player.stack_item_in_inventory(item)
+                        # Clone if it's an infinite liquid source
+                        is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
+                        
+                        if is_inf and getattr(item, 'liquid', False):
+                            clone = Item.create_from_name(item.name)
+                            if clone:
+                                clone.load = getattr(item, 'capacity', 100)
+                                clone.durability = item.durability
+                                game.player.inventory.append(clone)
+                                game.player.stack_item_in_inventory(clone)
+                        else:
+                            if remove_item_from_src(item):
+                                game.player.inventory.append(item)
+                                game.player.stack_item_in_inventory(item)
                         
                     transfer_time = max(0.1, item.get_total_weight() * 0.2)
                     if source in ['nearby', 'ground', 'container', 'container_map']:
@@ -221,7 +264,6 @@ def handle_context_menu_click(game, mouse_pos):
                         
                 else:
                     target_container = None
-                    # --- FIX 4: RESOLVE BY ID ---
                     for b_item in game.player.belt:
                         if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and b_item.name == target_container_name: 
                             target_container = b_item; break
@@ -256,6 +298,19 @@ def handle_context_menu_click(game, mouse_pos):
                             
                         def do_send_container():
                             removed_item = item
+                            is_clone = False
+                            
+                            is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
+                            
+                            # Handle infinite liquid sources: safely clone the item
+                            if is_inf and getattr(removed_item, 'liquid', False):
+                                clone = Item.create_from_name(removed_item.name)
+                                if clone:
+                                    clone.load = getattr(removed_item, 'capacity', 100)
+                                    clone.durability = removed_item.durability
+                                    removed_item = clone
+                                    is_clone = True
+                                    
                             qty_to_send = getattr(removed_item, 'load', 1)
                             if qty_to_send is None: qty_to_send = 1
                             
@@ -298,14 +353,14 @@ def handle_context_menu_click(game, mouse_pos):
                                         removed_item.load = r_load - qty_to_send
                                         target_container.inventory.append(new_item)
                                 else:
-                                    # Protects against TOCTOU duplication
-                                    if remove_item_from_src(removed_item):
+                                    # Use original item reference here to pop correctly, pass is_clone for infinite bypassing
+                                    if remove_item_from_src(item, is_clone=is_clone):
                                         target_container.inventory.append(removed_item)
                             elif qty_to_send > 0 and not stacked:
                                 display_message(tr('msg', "Container is full."))
                                 
                             if hasattr(removed_item, 'load') and removed_item.load is not None and removed_item.load <= 0:
-                                remove_item_from_src(removed_item)
+                                remove_item_from_src(item, is_clone=is_clone)
                                 
                         transfer_time = max(0.1, item.get_total_weight() * 0.2)
                         if source in ['nearby', 'ground', 'container', 'container_map']:
