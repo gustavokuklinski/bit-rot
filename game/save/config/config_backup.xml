@@ -5,13 +5,13 @@
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
         <language value="en_US" name="Language"/>
         <crt_filter value="true" name="CRT filter (Default: True)"/>
-        <resolution value="1280x720" name="Resolution (Default: max)"/><!-- max - get the full resolution | 1280x720 -->
-        <window_mode value="fullscreen" name="Window (Default: fullscreen)"/><!-- windowed | fullscreen -->
+        <resolution value="1280x720" name="Resolution (Default: 1280x720)"/>
+        <window_mode value="windowed" name="Window (Default: windowed)"/>
     </ui>
     <audio>
-        <volume_music value="0.25" name="Music Volume"/>
-        <volume_background value="1.0" name="Background Volume"/>
-        <volume_atmospheric value="1.0" name="Atmospheric Volume"/>
+        <volume_music value="0.25" name="Music Volume (Default: low)"/>
+        <volume_background value="0.5" name="Background Volume (Default: Balanced)"/>
+        <volume_atmospheric value="0.5" name="Atmospheric Volume (Default: Balanced)"/>
     </audio>
     <game>
         <time_daylength value="900000" name="Day length (Default: 15 minutes)"/>
