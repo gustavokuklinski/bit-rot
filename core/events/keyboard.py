@@ -46,8 +46,7 @@ def toggle_status_modal(game):
             'position': game.last_modal_positions['status'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT),
-            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
         }
         game.modals.append(new_status_modal)
 
@@ -67,8 +66,7 @@ def toggle_nearby_modal(game):
             'position': game.last_modal_positions['nearby'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['nearby'][0], game.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
-            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['nearby'][0], game.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)
         }
         game.modals.append(new_nearby_modal)
 
@@ -88,8 +86,7 @@ def toggle_messages_modal(game):
             'position': game.last_modal_positions['messages'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['messages'][0], game.last_modal_positions['messages'][1], MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT),
-            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['messages'][0], game.last_modal_positions['messages'][1], MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)
         }
         game.modals.append(new_messages_modal)
 
@@ -111,8 +108,7 @@ def toggle_gear_modal(game):
             'drag_offset': (0, 0),
             'rect': pygame.Rect(game.last_modal_positions.get('gear', (700, 10))[0], 
                                 game.last_modal_positions.get('gear', (700, 10))[1], 
-                                GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
-            'minimized': False
+                                GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)
         }
         game.modals.append(new_gear_modal)
 
@@ -135,8 +131,7 @@ def toggle_crafting_modal(game):
                 game.last_modal_positions.get('crafting', (300, 100))[0], 
                 game.last_modal_positions.get('crafting', (300, 100))[1], 
                 CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
-            ),
-            'minimized': False
+            )
         }
         
         screen = getattr(game, 'screen', pygame.display.get_surface())
@@ -165,8 +160,7 @@ def toggle_slots_modal(game):
             'rect': pygame.Rect(
                 game.last_modal_positions.get('slots', (100, 100))[0],
                 game.last_modal_positions.get('slots', (100, 100))[1],
-                SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT),
-            'minimized': False
+                SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)
         }
         game.modals.append(new_slots_modal)
 
@@ -186,7 +180,6 @@ def toggle_help_modal(game):
             'is_dragging': False,
             'drag_offset': (0, 0),
             'rect': pygame.Rect(0, 0, HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
-            'minimized': False,
             'scroll_offset_y': 0
         }
         # Realize rect bounds

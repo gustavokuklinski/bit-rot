@@ -209,10 +209,8 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory (I)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
+    close_button = base_modal.get_buttons()
     
-    if base_modal.minimized:
-        return None, close_button, minimize_button
 
     # --- 1. DYNAMIC TAB GENERATION ---
     tabs_data = [{'label': 'Inventory', 'icon_path': SPRITE_PATH + 'ui/inventory_tab.png'}]
@@ -264,7 +262,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
         # Use the generic container drawer for any detected container
         _draw_container_tab(surface, game, player, modal, mouse_pos, container_mapping[active_label])
     
-    return None, close_button, minimize_button
+    return None, close_button
 
 def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
     """Generic drawer that reuses slot logic for any container object."""

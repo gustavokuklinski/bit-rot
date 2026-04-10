@@ -50,14 +50,12 @@ def wrap_text(text, width, font):
 def draw_text_modal(surface, game, modal, assets):
     item = modal.get('item')
     if not item:
-        return None, None, None
+        return None, None
         
     base_modal = BaseModal(surface, modal, assets, tr('item', item.name))
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
+    close_button = base_modal.get_buttons()
 
-    if base_modal.minimized:
-        return None, close_button, minimize_button
 
     # --- Scroll & Content Variables ---
     scroll_offset_y = modal.get('scroll_offset_y', 0)
@@ -159,4 +157,4 @@ def draw_text_modal(surface, game, modal, assets):
     else:
         modal['scrollbar_handle_rect'] = None
 
-    return None, close_button, minimize_button
+    return None, close_button

@@ -175,8 +175,7 @@ class Game:
             help_pos = self.last_modal_positions['help']
             self.modals.append({
                 'type': 'help',
-                'rect': pygame.Rect(help_pos[0], help_pos[1], HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
-                'minimized': False
+                'rect': pygame.Rect(help_pos[0], help_pos[1], HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)
             })
 
         self.context_menu = {

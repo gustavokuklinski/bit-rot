@@ -21,11 +21,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Nearby (N)"))
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        modal['content_rect'] = None 
-        return close_button, minimize_button
+    close_button = base_modal.get_buttons()
 
     # --- CHANGED: Filter and Group Items ---
     raw_nearby_objects = game.find_nearby_containers()
@@ -74,7 +70,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         modal['content_rect'] = None
         modal['tabs_data'] = []
         modal['tab_rects'] = []
-        return close_button, minimize_button
+        return close_button
 
     tabs_data = []
     current_tab_labels = set() 
@@ -137,4 +133,4 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         container_modal_view = {'rect': content_rect}
         draw_container_content(surface, game, container, container_modal_view, assets, mouse_pos)
 
-    return close_button, minimize_button
+    return close_button

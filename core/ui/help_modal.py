@@ -31,10 +31,7 @@ def draw_help_modal(surface, game, modal, assets):
 
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial (?)"))
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        return None, close_button, minimize_button
+    close_button = base_modal.get_buttons()
 
     # --- Scroll & UI Constants ---
     padding = 15
@@ -287,4 +284,4 @@ def draw_help_modal(surface, game, modal, assets):
     else:
         modal['scrollbar_handle_rect'] = None
 
-    return None, close_button, minimize_button
+    return None, close_button

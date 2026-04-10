@@ -26,15 +26,12 @@ def adapt_modals_for_mobile(game):
     modals_to_remove = []
     allowed_other_modal = None
 
-    # 1. Evaluate modals: Close minimized and restrict to ONE "other" modal
+    # 1. Evaluate modals: Close and restrict to ONE "other" modal
     # Iterate backwards to prioritize the most recently opened modal
     for i in range(len(game.modals) - 1, -1, -1):
         m = game.modals[i]
         
-        # Rule: Make Minimize close the modal entirely
-        if m.get('minimized'):
-            modals_to_remove.append(m)
-            continue
+        
             
         # Rule: Only allow ONE "other" modal at a time, but keep Inventory/Nearby open
         if m.get('type') not in ('inventory', 'nearby'):

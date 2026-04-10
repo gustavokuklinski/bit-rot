@@ -287,7 +287,6 @@ def handle_input(game):
                                             'active_dialog_index': -1,                 
                                             'position': (pos_x, pos_y),
                                             'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
-                                            'minimized': False,
                                             'is_dragging': False,
                                             'drag_offset': (0, 0)
                                         })
@@ -304,7 +303,6 @@ def handle_input(game):
                                             'vehicle': found_vehicle,
                                             'position': pos,
                                             'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
-                                            'minimized': False,
                                             'is_dragging': False, 
                                             'drag_offset': (0, 0), 
                                             'active_tab': 'Info'

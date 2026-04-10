@@ -34,11 +34,9 @@ def load_assets():
 
     try:
         assets['close_button'] = pygame.image.load(SPRITE_PATH + 'ui/close.png').convert_alpha()
-        assets['minimize_button'] = pygame.image.load(SPRITE_PATH + 'ui/minimize.png').convert_alpha()
     except pygame.error as e:
         print(f"Error loading modal buttons: {e}")
         assets['close_button'] = None
-        assets['minimize_button'] = None
 
     try:
         assets['gear_icon'] = pygame.image.load(SPRITE_PATH + 'ui/gear_icon.png').convert_alpha()

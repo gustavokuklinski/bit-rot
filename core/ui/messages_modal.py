@@ -7,13 +7,8 @@ from core.ui.modals import BaseModal
 def draw_messages_modal(surface, game, modal, assets):
     base_modal = BaseModal(surface, modal, assets, "Messages (M)")
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
+    close_button = base_modal.get_buttons()
 
-    if base_modal.minimized:
-        return None, close_button, minimize_button
-
-    # --- REMOVED TABS LOGIC ---
-    # The tabs_data list and tabs.draw() have been deleted.
 
     # Get active log (Hardcoded to 'All' since tabs are gone)
     active_log = game.message_logs.get('All', [])
@@ -195,4 +190,4 @@ def draw_messages_modal(surface, game, modal, assets):
     send_button = {'id': modal['id'], 'type': 'send_msg', 'rect': send_btn_rect}
     input_button = {'id': modal['id'], 'type': 'chat_input', 'rect': input_rect}
 
-    return None, close_button, minimize_button, send_button, input_button
+    return None, close_button, send_button, input_button

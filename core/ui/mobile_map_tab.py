@@ -419,12 +419,9 @@ def draw_big_map_modal(surface, game, modal, assets):
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     
-    close_button, minimize_button = base_modal.get_buttons()
+    close_button = base_modal.get_buttons()
     
-    if base_modal.minimized:
-        return [close_button, minimize_button]
-
     # Draw the map content inside, requesting the full world map
     zoom_in, zoom_out = draw_map_tab(surface, game, modal, assets, full_map=True)
     
-    return [close_button, minimize_button, zoom_in, zoom_out]
+    return [close_button, zoom_in, zoom_out]

@@ -500,6 +500,7 @@ def update_game_state(game):
             zombie.knockback_velocity[1] *= decay_factor
             zombie.knockback_timer -= game.dt_ms * multiplier
 
+        nearby_zombies = [z for z in nearby_entities if isinstance(z, Zombie)]
         zombie.update_ai(game.player.rect, nearby_obstacles, nearby_zombies, game)
 
         # [OPTIMIZATION] Removed redundant attack check - handled in update_ai

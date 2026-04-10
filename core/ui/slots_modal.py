@@ -10,10 +10,7 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Slots Overview (Y)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        return [close_button, minimize_button]
+    close_button = base_modal.get_buttons()
 
     # --- 1. Gather All Containers ---
     containers = []
@@ -184,5 +181,5 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
             item = c.inventory[idx]
             draw_tooltip(surface, item, (mouse_pos[0] + 15, mouse_pos[1] + 15))
 
-    buttons = [close_button, minimize_button]
+    buttons = [close_button]
     return buttons

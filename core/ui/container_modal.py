@@ -63,13 +63,10 @@ def draw_container_view(surface, game, container_item, modal, assets, mouse_pos)
     
     base_modal = BaseModal(surface, modal, assets, f"{container_item.name} Contents")
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        return close_button, minimize_button
+    close_button = base_modal.get_buttons()
 
     padding = 10
     start_x = base_modal.modal_x + padding
     start_y = base_modal.modal_y + 40
     _draw_slots(surface, game, container_item, start_x, start_y, base_modal.modal_h, base_modal.header_h, mouse_pos)
-    return close_button, minimize_button
+    return close_button

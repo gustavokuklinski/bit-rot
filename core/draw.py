@@ -945,18 +945,18 @@ def draw_game(game):
 
         elif modal['type'] == 'messages':
             result = draw_messages_modal(game.game_screen, game, modal, game.assets)
-            if len(result) == 5:
-                _, close_button, minimize_button, send_btn, input_box = result
+            if len(result) == 4: # Changed to 4 to match the actual return statement
+                _, close_button, send_btn, input_box = result
                 if send_btn: game.modal_buttons.append(send_btn)
                 if input_box: game.modal_buttons.append(input_box)
             else:
-                _, close_button, minimize_button = result
-            if close_button: game.modal_buttons.append(close_button)
-            if minimize_button: game.modal_buttons.append(minimize_button)
+                _, close_button = result
+            if close_button: game.modal_buttons.extend(close_button) # Use extend because get_buttons() returns a tuple now
+
         elif modal['type'] == 'text':
-            _, close_button, minimize_button = draw_text_modal(game.game_screen, game, modal, game.assets)
-            if close_button: game.modal_buttons.append(close_button)
-            if minimize_button: game.modal_buttons.append(minimize_button)
+            _, close_button = draw_text_modal(game.game_screen, game, modal, game.assets)
+            if close_button: game.modal_buttons.extend(close_button)
+
         elif modal['type'] == 'mobile':
             buttons = draw_mobile_modal(game.game_screen, game, modal, game.assets)
             game.modal_buttons.extend(buttons)
@@ -969,10 +969,10 @@ def draw_game(game):
         elif modal['type'] == 'npc_dialog':
             buttons = draw_npc_dialog_modal(game.game_screen, modal, game)
             game.modal_buttons.extend(buttons)
+            
         elif modal['type'] == 'help': 
-            _, close_button, minimize_button = draw_help_modal(game.game_screen, game, modal, game.assets)
-            if close_button: game.modal_buttons.append(close_button)
-            if minimize_button: game.modal_buttons.append(minimize_button)
+            _, close_button = draw_help_modal(game.game_screen, game, modal, game.assets)
+            if close_button: game.modal_buttons.extend(close_button)
         elif modal['type'] == 'crafting':
             if 'instance' not in modal:
                 modal['instance'] = CraftingModal(game.game_screen, modal, game.assets, game)

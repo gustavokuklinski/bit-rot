@@ -5,7 +5,7 @@
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
         <language value="en_US" name="Language"/>
         <crt_filter value="true" name="CRT filter (Default: True)"/>
-        <resolution value="1600x900" name="Resolution (Default: 1280x720)"/>
+        <resolution value="1280x720" name="Resolution (Default: 1280x720)"/>
         <window_mode value="windowed" name="Window (Default: windowed)"/>
     </ui>
     <audio>
@@ -47,11 +47,11 @@
     </animal>
     <npc>
         <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk (Default: 10)"/>
-        <static_percent value="1.40" name="Static NPC percentage (Default: 0.40)"/>
-        <hostile_percent value="0.00" name="Hostile NPC percentage (Default: 0.60)"/>
+        <static_percent value="0.40" name="Static NPC percentage (Default: 0.40)"/>
+        <hostile_percent value="0.60" name="Hostile NPC percentage (Default: 0.60)"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="0" name="Max Zombie spawn on chunk (Default: 10)"/>
+        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
         <spawn value="10" name="Zombies per spawn (Default: 5)"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day (Default: 1, example: day five will respawn 5x)"/>
         <wander value="true" name="Zombie wandering (if False all Zombies will go to player)"/>

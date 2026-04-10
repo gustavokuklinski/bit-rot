@@ -9,10 +9,7 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Gear (G)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        return close_button, minimize_button
+    close_button = base_modal.get_buttons()
     
     # --- Tabs Logic ---
     # 1. Start with default Gear tab
@@ -60,7 +57,7 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     elif active_label in container_mapping:
         _draw_container_tab(surface, game, player, modal, mouse_pos, container_mapping[active_label])
     
-    return close_button, minimize_button
+    return close_button
 
 def _draw_container_tab(surface, game, player, modal, mouse_pos, container_obj):
     """Draws the inventory slots for a specific clothing container."""

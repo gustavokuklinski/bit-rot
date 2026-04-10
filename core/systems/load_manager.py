@@ -199,8 +199,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'position': stat_pos,
             'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)),
             'is_dragging': False,
-            'drag_offset': (0, 0),
-            'minimized': False
+            'drag_offset': (0, 0)
         },
         {
             'type': 'inventory', 
@@ -209,7 +208,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'minimized': False,
             'active_tab': 'Inventory'
         },
         {
@@ -218,8 +216,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'position': gear_pos,
             'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
             'is_dragging': False,
-            'drag_offset': (0, 0),
-            'minimized': False
+            'drag_offset': (0, 0)
         },
         {
             'type': 'nearby', 
@@ -228,7 +225,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'minimized': False,
             'active_tab': 'Ground'
         },
         {
@@ -237,8 +233,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'position': msg_pos,
             'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)),
             'is_dragging': False,
-            'drag_offset': (0, 0),
-            'minimized': False
+            'drag_offset': (0, 0)
         },
         {
             'type': 'slots', 
@@ -246,8 +241,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'position': slots_pos,
             'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)),
             'is_dragging': False,
-            'drag_offset': (0, 0),
-            'minimized': False
+            'drag_offset': (0, 0)
         }
     ]
 
@@ -259,8 +253,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'position': help_pos,
             'rect': pygame.Rect(help_pos, (HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)),
             'is_dragging': False,
-            'drag_offset': (0, 0),
-            'minimized': False
+            'drag_offset': (0, 0)
         })
     
     game.map_states = {}

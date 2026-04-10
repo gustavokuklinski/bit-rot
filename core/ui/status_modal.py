@@ -11,10 +11,7 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     base_modal = BaseModal(surface, modal, assets, "Player Status (H)")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
-
-    if base_modal.minimized:
-        return close_button, minimize_button
+    close_button = base_modal.get_buttons()
 
     tabs_data = [
         {'label': 'Health', 'icon_path': SPRITE_PATH + 'ui/hp.png'},
@@ -40,4 +37,4 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     elif modal['active_tab'] == 'Quests': # [NEW] Route to quests drawing function
         draw_quests_tab(surface, player, modal, assets, mouse_pos)
 
-    return close_button, minimize_button
+    return close_button

@@ -1,3 +1,4 @@
+# core/events/mouse.py
 import pygame
 import uuid
 import random
@@ -32,11 +33,30 @@ def handle_mouse_down(game, event, mouse_pos):
                 break
         
         if topmost_modal:
+            
+            # --- THE FIX: Direct, Universal Close Button Handler ---
+            # Bypass all button lists, UI instances, and IDs entirely. 
+            if topmost_modal.get('close_button_rect') and topmost_modal['close_button_rect'].collidepoint(mouse_pos):
+                if topmost_modal.get('type') == 'messages':
+                    game.chat_active = False
+                game.modals.remove(topmost_modal)
+                return
+
+            # --- Keep the flattening logic for OTHER buttons (map zooms, chat sends, etc.) ---
+            flat_buttons = []
+            def _flatten_buttons(items):
+                if isinstance(items, dict):
+                    flat_buttons.append(items)
+                elif isinstance(items, (list, tuple)):
+                    for i in items:
+                        _flatten_buttons(i)
+            
+            _flatten_buttons(getattr(game, 'modal_buttons', []))
 
             if topmost_modal['type'] == 'npc_dialog':
                 clicked_header_button = False
-                for button in getattr(game, 'modal_buttons', []):
-                    if button['id'] == topmost_modal['id'] and button['rect'].collidepoint(mouse_pos):
+                for b in flat_buttons:
+                    if b.get('id') == topmost_modal.get('id') and b.get('rect') and b['rect'].collidepoint(mouse_pos):
                         clicked_header_button = True
                         break
                 
@@ -161,7 +181,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                                     attr, amt = xp_str.split(':', 1)
                                                     try:
                                                         game.player.progression.add_xp(game.player, attr.strip(), int(amt))
-                                                        #display_message(game, f"+{amt} {attr.capitalize()} XP")
                                                     except ValueError:
                                                         pass
 
@@ -178,64 +197,47 @@ def handle_mouse_down(game, event, mouse_pos):
                                                 if not npc_ref.is_static:
                                                     npc_ref.state = 'wandering'
                                         
-                                        # Refresh the dialog options list immediately so the used 'once' dialog vanishes 
-                                        # topmost_modal['dialogs'] = npc_ref.get_dialog_options()
                                         break
                         else:
                             topmost_modal['active_dialog_index'] = -1
-                            
-                            # --- [NEW] Refresh dynamic dialog options ---
-                            # This recalculates requirements (like new items or unlocked flags)
-                            # so newly available dialog options appear immediately!
                             topmost_modal['dialogs'] = topmost_modal['npc'].get_dialog_options()
-                            
                             return
 
             if game.modals[-1] != topmost_modal:
                 game.modals.remove(topmost_modal)
                 game.modals.append(topmost_modal)
             
-            for button in getattr(game, 'modal_buttons', []):
-                if button['id'] == topmost_modal['id'] and button['rect'].collidepoint(mouse_pos):
-                    if button['type'] == 'close':
-                        if topmost_modal['type'] == 'messages':
+            # Use the newly flattened buttons here
+            for button in flat_buttons:
+                if 'id' not in button or 'rect' not in button:
+                    continue
+
+                if button.get('id') == topmost_modal.get('id') and button['rect'].collidepoint(mouse_pos):
+                    if button.get('type') == 'close':
+                        if topmost_modal.get('type') == 'messages':
                             game.chat_active = False
                         game.modals.remove(topmost_modal)
                         return
-                    elif button['type'] == 'minimize':
-                        is_minimized = not topmost_modal.get('minimized', False)
-                        topmost_modal['minimized'] = is_minimized
-                        header_height = 35
-                        if topmost_modal['type'] == 'inventory': full_h = INVENTORY_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'gear': full_h = GEAR_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'status': full_h = STATUS_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'messages': full_h = MESSAGES_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'crafting': full_h = CRAFTING_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'npc_dialog': full_h = CRAFTING_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'help': full_h = HELP_MODAL_HEIGHT
-                        elif topmost_modal['type'] == 'big_map': full_h = MAP_MODAL_HEIGHT
-                        else: full_h = CONTAINER_MODAL_WIDTH
-                        topmost_modal['rect'].height = header_height if is_minimized else full_h
-                        return
-                    elif button['type'] in ['map_zoom_in', 'map_zoom_out']:
+                    
+                    elif button.get('type') in ['map_zoom_in', 'map_zoom_out']:
                         current_zoom = float(topmost_modal.get('map_zoom', 4))
                         is_image_mode = topmost_modal.get('full_map_image') is not None
                         
                         if is_image_mode:
                             step = max(0.2, current_zoom * 0.2)
-                            if button['type'] == 'map_zoom_in':
+                            if button.get('type') == 'map_zoom_in':
                                 topmost_modal['map_zoom'] = min(50.0, current_zoom + step)
                             else:
                                 topmost_modal['map_zoom'] = max(0.2, current_zoom - step)
                         else:
                             current_zoom = int(current_zoom)
-                            if button['type'] == 'map_zoom_in':
+                            if button.get('type') == 'map_zoom_in':
                                 topmost_modal['map_zoom'] = min(32, current_zoom + 1)
                             else:
                                 topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
 
-                    elif button['type'] == 'send_msg':
+                    elif button.get('type') == 'send_msg':
                         if game.chat_input_text.strip():
                             game.player.chat_text = game.chat_input_text
                             game.player.chat_timer = game.player.chat_duration
@@ -243,30 +245,31 @@ def handle_mouse_down(game, event, mouse_pos):
                             game.chat_input_text = ""
                             game.chat_active = True 
                         return
-                    elif button['type'] == 'chat_input':
+                    elif button.get('type') == 'chat_input':
                         game.chat_active = True
                         return
 
-            if topmost_modal.get('minimized', False):
-                 modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
-                 if modal_header_rect.collidepoint(mouse_pos):
-                    topmost_modal['is_dragging'] = True
-                    topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
-                    return
-            else:
+                if 'instance' in topmost_modal and hasattr(topmost_modal['instance'], 'close_button_rect'):
+                    if topmost_modal['instance'].close_button_rect.collidepoint(mouse_pos):
+                        if topmost_modal.get('type') == 'messages':
+                            game.chat_active = False
+                        game.modals.remove(topmost_modal)
+                        return
+                        
                 modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
                 if modal_header_rect.collidepoint(mouse_pos):
                     topmost_modal['is_dragging'] = True
                     topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
                     return
 
-                scrollbar_rect = topmost_modal.get('scrollbar_handle_rect') 
+                scrollbar_rect = topmost_modal.get('scrollbar_handle_rect')
+
                 if scrollbar_rect and scrollbar_rect.collidepoint(mouse_pos):
                     topmost_modal['is_dragging_scrollbar'] = True
                     topmost_modal['scrollbar_drag_last_y'] = mouse_pos[1] 
                     return
 
-                if topmost_modal['type'] == 'crafting':
+                if topmost_modal.get('type') == 'crafting':
                     handle_rect = topmost_modal.get('crafting_handle_rect')
                     if handle_rect and handle_rect.collidepoint(mouse_pos):
                         topmost_modal['is_dragging_scrollbar'] = True
@@ -277,13 +280,12 @@ def handle_mouse_down(game, event, mouse_pos):
                     if topmost_modal['instance'].handle_event(event): 
                         return
                 
-                if topmost_modal['type'] in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle', 'gear'] and 'tab_rects' in topmost_modal:
+                if topmost_modal.get('type') in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle', 'gear'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                         if tab_rect.collidepoint(mouse_pos):
                              tabs_data = topmost_modal.get('tabs_data', [])
                              
-                             # Fix: Provide fallback tabs for Vehicle modal if 'tabs_data' isn't natively populated on the dictionary
-                             if not tabs_data and topmost_modal['type'] == 'vehicle':
+                             if not tabs_data and topmost_modal.get('type') == 'vehicle':
                                  tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}, {'label': 'Seats'}]
                                  
                              if i < len(tabs_data):
@@ -293,8 +295,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 if hasattr(topmost_modal, 'handle_event'):
                     if topmost_modal.handle_event(event): return
 
-                # Engine and Lights toggles specifically on the Info tab
-                if topmost_modal['type'] == 'vehicle' and topmost_modal.get('active_tab') == 'Vehicle':
+                if topmost_modal.get('type') == 'vehicle' and topmost_modal.get('active_tab') == 'Vehicle':
                     rects = topmost_modal.get('rects', {})
                     veh = topmost_modal['vehicle']
                     
@@ -311,9 +312,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         if veh.lights == 'on': veh.toggle_lights()
                         return
 
-                
-                
-                if topmost_modal['type'] == 'big_map' and not topmost_modal.get('minimized', False):
+                if topmost_modal.get('type') == 'big_map':
                     map_rect = topmost_modal.get('map_area_rect')
                     if map_rect and map_rect.collidepoint(mouse_pos):
                         topmost_modal['is_dragging_map'] = True
@@ -322,8 +321,6 @@ def handle_mouse_down(game, event, mouse_pos):
 
                 handle_left_click_drag_candidate(game, mouse_pos)
                 return
-
-        
 
         if game.chat_active:
             game.chat_active = False
@@ -347,23 +344,21 @@ def handle_mouse_down(game, event, mouse_pos):
             toggle_messages_modal(game); return
         if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
             toggle_crafting_modal(game); return
-        if game.help_button_rect and game.help_button_rect.collidepoint(mouse_pos): # <--- ADD THIS
+        if game.help_button_rect and game.help_button_rect.collidepoint(mouse_pos):
             toggle_help_modal(game); return
-
-        
             
         if getattr(game.player, 'is_aiming', False):
             handle_attack(game, mouse_pos)
             return
 
     elif event.button in (4, 5):
+        # [Unchanged Logic...]
         topmost_modal = None
         for modal in reversed(game.modals):
             if modal['rect'].collidepoint(mouse_pos):
                 topmost_modal = modal
                 break
         if topmost_modal:
-            # Button 4 is scroll UP (positive dy), Button 5 is scroll DOWN (negative dy)
             topmost_modal['scroll_dy'] = 1 if event.button == 4 else -1
         if topmost_modal and topmost_modal['type'] == 'crafting':
             offset = topmost_modal.get('crafting_scroll_offset', 0)
@@ -371,9 +366,9 @@ def handle_mouse_down(game, event, mouse_pos):
             visible = topmost_modal.get('crafting_visible_items', 14)
             max_scroll = max(0, total - visible)
             
-            if event.button == 4: # Scroll Up
+            if event.button == 4:
                 topmost_modal['crafting_scroll_offset'] = max(0, offset - 1)
-            elif event.button == 5: # Scroll Down
+            elif event.button == 5:
                 topmost_modal['crafting_scroll_offset'] = min(max_scroll, offset + 1)
             return
 
@@ -381,9 +376,9 @@ def handle_mouse_down(game, event, mouse_pos):
             offset = topmost_modal.get('scroll_offset_y', 0)
             max_scroll = topmost_modal.get('max_scroll_offset', 0)
             
-            if event.button == 4: # Scroll Up
+            if event.button == 4:
                 topmost_modal['scroll_offset_y'] = max(0, offset - 30)
-            elif event.button == 5: # Scroll Down
+            elif event.button == 5:
                 topmost_modal['scroll_offset_y'] = min(max_scroll, offset + 30)
             return
 

@@ -246,13 +246,10 @@ class CraftingModal(BaseModal):
             self.modal_rect.height = self.modal_h
 
         self.close_button_rect.topright = (self.modal_x + self.modal_w - 10, self.modal_y + 10)
-        self.minimize_button_rect.topright = (self.close_button_rect.left - 10, self.modal_y + 10)
 
         self.draw_base()
         
-        if self.minimized: 
-            close_btn, min_btn = self.get_buttons()
-            return None, close_btn, min_btn
+        
 
         # ---> FIX: Read dynamically scaled screen coordinates for UI matching <---
         mouse_pos = self.game._get_scaled_mouse_pos() if hasattr(self.game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
@@ -431,8 +428,7 @@ class CraftingModal(BaseModal):
         if self.dropdown_state['active']:
             draw_context_menu(self.surface, self.dropdown_state, mouse_pos)
 
-        close_btn, min_btn = self.get_buttons()
-        return None, close_btn, min_btn
+        return None, self.get_buttons()
 
     def _draw_ingredient_tooltip(self, names, pos, nearby_containers):
         locs = self._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)

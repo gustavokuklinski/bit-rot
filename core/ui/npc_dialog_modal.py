@@ -82,8 +82,7 @@ def draw_npc_dialog_modal(surface, modal, game):
     base = BaseModal(surface, modal, game.assets, title_str)
     base.draw_base()
     
-    close_button, minimize_button = base.get_buttons()
-    if base.minimized: return close_button, minimize_button
+    close_button = base.get_buttons()
 
     x, y = modal['position']
     width, height = modal['rect'].size
@@ -302,4 +301,4 @@ def draw_npc_dialog_modal(surface, modal, game):
     elif active_tab == 1:
         draw_special_dialogs_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
 
-    return close_button, minimize_button
+    return close_button

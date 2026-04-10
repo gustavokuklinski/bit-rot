@@ -322,8 +322,8 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, vehicle.name)
     base_modal.draw_base()
     
-    close_btn, min_btn = base_modal.get_buttons()
-    if base_modal.minimized: return [close_btn, min_btn]
+    close_btn = base_modal.get_buttons()
+
 
     # Initialize tabs data if not already set (Added 'Seats')
     tabs_data = [
@@ -367,4 +367,4 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
                 if item:
                     draw_tooltip(surface, item, mouse_pos)
 
-    return [close_btn, min_btn]
+    return [close_btn]

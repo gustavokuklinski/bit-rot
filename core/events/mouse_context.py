@@ -87,7 +87,6 @@ def handle_context_menu_click(game, mouse_pos):
                         'dialogs': dialogs,
                         'position': (pos_x, pos_y),
                         'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
-                        'minimized': False,
                         'is_dragging': False,
                         'drag_offset': (0, 0),
                         'active_dialog_index': -1 
@@ -113,7 +112,6 @@ def handle_context_menu_click(game, mouse_pos):
                     'type': 'vehicle', 'vehicle': item,
                     'position': pos,
                     'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
-                    'minimized': False,
                     'is_dragging': False, 
                     'drag_offset': (0, 0), 
                     'active_tab': 'Info'
@@ -136,8 +134,7 @@ def handle_context_menu_click(game, mouse_pos):
                         'id': uuid.uuid4(), 'type': 'container', 'item': item,
                         'position': game.last_modal_positions['container'],
                         'is_dragging': False, 'drag_offset': (0, 0),
-                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-                        'minimized': False
+                        'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
                     }
                     game.modals.append(new_container_modal)
                  clicked_on_menu = True
@@ -539,7 +536,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'position': game.last_modal_positions['text'], 
                             'is_dragging': False, 'drag_offset': (0, 0),
                             'rect': pygame.Rect(game.last_modal_positions['text'][0], game.last_modal_positions['text'][1], TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT),
-                            'minimized': False, 'scroll_offset_y': 0
+                            'scroll_offset_y': 0
                         }
                         game.modals.append(new_text_modal)
                 else:
@@ -558,7 +555,6 @@ def handle_context_menu_click(game, mouse_pos):
                         'item': item,
                         'position': default_pos,
                         'rect': pygame.Rect(default_pos, (MAP_MODAL_WIDTH, MAP_MODAL_HEIGHT)),
-                        'minimized': False,
                         'is_dragging': False, 
                         'drag_offset': (0, 0),
                         'map_zoom': 6,
@@ -576,7 +572,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'position': game.last_modal_positions['mobile'],
                             'is_dragging': False, 'drag_offset': (0, 0),
                             'rect': pygame.Rect(game.last_modal_positions['mobile'][0], game.last_modal_positions['mobile'][1], MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT), 
-                            'minimized': False, 'active_tab': 'Clock'
+                            'active_tab': 'Clock'
                         }
                         game.modals.append(new_mobile_modal)
                     clicked_on_menu = True
@@ -588,7 +584,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'position': game.last_modal_positions['text'], 
                             'is_dragging': False, 'drag_offset': (0, 0),
                             'rect': pygame.Rect(game.last_modal_positions['text'][0], game.last_modal_positions['text'][1], TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT),
-                            'minimized': False, 'scroll_offset_y': 0
+                            'scroll_offset_y': 0
                         }
                         game.modals.append(new_text_modal)
                     clicked_on_menu = True
@@ -599,8 +595,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'id': uuid.uuid4(), 'type': 'container', 'item': item,
                             'position': game.last_modal_positions['container'],
                             'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1],CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-                            'minimized': False
+                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1],CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
                         }
                         game.modals.append(new_container_modal)
                     clicked_on_menu = True

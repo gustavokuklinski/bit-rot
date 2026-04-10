@@ -26,15 +26,9 @@ def draw_mobile_modal(surface, game, modal, assets):
         
     base_modal = BaseModal(surface, modal, assets, title)
     base_modal.draw_base()
-    close_button, minimize_button = base_modal.get_buttons()
+    close_button = base_modal.get_buttons()
 
-    all_buttons = [close_button, minimize_button]
-
-    if base_modal.minimized:
-        return all_buttons
-
-    if base_modal.minimized:
-        return close_button, minimize_button
+    all_buttons = [close_button]
 
     # --- Tabs ---
     tabs_data = [
