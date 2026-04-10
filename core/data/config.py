@@ -79,7 +79,6 @@ font = None
 font_14 = None
 
 TILE_SIZE = 16
-GAME_BIT = 32
 
 TIME_DAYLENGTH = 0
 TIME_SUNRISE_HR = 0.0

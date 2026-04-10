@@ -813,9 +813,13 @@ class Game:
 
         px, py = self.player.rect.center
         
-        BASE_SIMULATION_DISTANCE = 800
-        MAX_ACTIVE_ENTITIES_TARGET = 150
+
+        BASE_SIMULATION_DISTANCE = 500
+        MAX_ACTIVE_ENTITIES_TARGET = 60
+        MAX_ACTIVE_ZOMBIES = 40
+        MAX_ACTIVE_ANIMALS = 10
         
+
         total_nearby_entities = len(getattr(self, 'active_zombies', []))
         
         if total_nearby_entities > MAX_ACTIVE_ENTITIES_TARGET:
@@ -853,8 +857,7 @@ class Game:
             if isinstance(item, Animal) and item not in self.active_animals:
                 self.active_animals.append(item)
 
-        MAX_ACTIVE_ZOMBIES = 100
-        MAX_ACTIVE_ANIMALS = 30
+        
         
         if len(self.active_zombies) > MAX_ACTIVE_ZOMBIES:
             self.active_zombies.sort(key=lambda z: (z.rect.centerx - px)**2 + (z.rect.centery - py)**2)

@@ -10,7 +10,7 @@ from core.entities.npc.npc import NPC
 from core.entities.animal.animal import Animal
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.game_over import draw_game_over
-from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal # draw_belt_hud get_belt_hud_slot_rect
+from core.ui.inventory_modal import draw_inventory_modal, get_inventory_slot_rect, get_belt_slot_rect_in_modal
 from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
@@ -205,7 +205,16 @@ def draw_game(game):
         if chunk_surf:
             dest_x = cx * chunk_size * tile_size + offset_x
             dest_y = cy * chunk_size * tile_size + offset_y
-            world_view_surface.blit(chunk_surf, (dest_x, dest_y))
+            
+            # [UNIVERSAL OPTIMIZATION] Explicit clipping for ALL platforms.
+            # Prevents Pygame from reading 4MB out-of-bounds memory chunks per frame.
+            chunk_rect = pygame.Rect(dest_x, dest_y, chunk_surf.get_width(), chunk_surf.get_height())
+            screen_rect_clip = pygame.Rect(0, 0, view_w, view_h)
+            clip_rect = chunk_rect.clip(screen_rect_clip)
+            
+            if clip_rect.width > 0 and clip_rect.height > 0:
+                area_rect = pygame.Rect(clip_rect.x - dest_x, clip_rect.y - dest_y, clip_rect.width, clip_rect.height)
+                world_view_surface.blit(chunk_surf, clip_rect.topleft, area=area_rect)
 
     for pos, start_t in shaking_tiles.items():
         gx, gy = pos
@@ -257,8 +266,9 @@ def draw_game(game):
         for key in keys[:-MAX_LIGHT_CACHE_ENTRIES]:
             del game.light_mask_cache[key]
 
-    low_res_w = view_w // 2
-    low_res_h = view_h // 2
+    divisor = 4 if getattr(game, 'is_android', False) else 2
+    low_res_w = max(1, view_w // divisor)
+    low_res_h = max(1, view_h // divisor)
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
 
     light_mask_low.fill((30, 30, 30))
@@ -493,7 +503,7 @@ def draw_game(game):
         impact_x = splash['pos'][0] + offset_x
         impact_y = splash['pos'][1] + offset_y
 
-        num_particles = 10 
+        num_particles = 4 if getattr(game, 'is_android', False) else 10
         for i in range(num_particles):
             offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) * random.uniform(0.7, 1.3)
             angle = math.radians(i * (360 / num_particles) + random.randint(-45, 45))
@@ -565,7 +575,7 @@ def draw_game(game):
     # Use the new dynamic bounds for the draw rect
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, dynamic_w, dynamic_h)
     
-    retro_bit_surface = world_view_surface.convert(GAME_BIT)
+    retro_bit_surface = world_view_surface.convert()
 
     # Check zoom directly to determine if scaling is required
     if zoom == 1.0:
