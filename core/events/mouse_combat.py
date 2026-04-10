@@ -53,7 +53,9 @@ def handle_attack(game, mouse_pos):
                         pitch_variance=0.15
                     )
 
-                target_world_x, target_world_y = game.screen_to_world(mouse_pos)
+                aim_pos = game._get_scaled_mouse_pos()
+                target_world_x, target_world_y = game.screen_to_world(aim_pos)
+                # target_world_x, target_world_y = game.screen_to_world(mouse_pos)
                 
                 dx = target_world_x - game.player.rect.centerx
                 dy = target_world_y - game.player.rect.centery
@@ -138,7 +140,9 @@ def handle_attack(game, mouse_pos):
                 game.player.melee_swing_timer = 10
                 
                 # Convert screen coordinates to world coordinates first
-                world_pos = game.screen_to_world(mouse_pos)
+                aim_pos = game._get_scaled_mouse_pos()
+                world_pos = game.screen_to_world(aim_pos)
+                # world_pos = game.screen_to_world(mouse_pos)
                 
                 # Calculate the swing angle relative to the player's true world position
                 dx_swing = world_pos[0] - game.player.rect.centerx

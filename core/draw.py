@@ -563,11 +563,14 @@ def draw_game(game):
     # Use the new dynamic bounds for the draw rect
     game_rect = pygame.Rect(GAME_OFFSET_X, 0, dynamic_w, dynamic_h)
     
+    retro_bit_surface = world_view_surface.convert(GAME_BIT)
+
     # Check zoom directly to determine if scaling is required
     if zoom == 1.0:
-        game.game_screen.blit(world_view_surface, game_rect)
+        game.game_screen.blit(retro_bit_surface, game_rect)
     else:
-        scaled_world = pygame.transform.scale(world_view_surface, (dynamic_w, dynamic_h))
+        # Scale the 8-bit surface up using nearest-neighbor (crisp pixelation)
+        scaled_world = pygame.transform.scale(retro_bit_surface, (dynamic_w, dynamic_h))
         game.game_screen.blit(scaled_world, game_rect)
 
 
@@ -913,6 +916,9 @@ def draw_game(game):
     game.modal_buttons = []
     mouse_pos = game._get_scaled_mouse_pos()
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
+
+    if getattr(game, 'is_android', False) and getattr(game, 'joystick_handler', None):
+        game.joystick_handler.draw(game.game_screen)
 
     for modal in game.modals:
         modal['is_active'] = (modal['id'] == topmost_modal_id)

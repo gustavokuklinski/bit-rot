@@ -49,7 +49,7 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
 
-        display_flags = pygame.SCALED | pygame.DOUBLEBUF
+        display_flags = pygame.SCALED # | pygame.DOUBLEBUF
         
         if WINDOW_MODE.lower() == "fullscreen":
             display_flags |= pygame.FULLSCREEN
@@ -164,12 +164,12 @@ class Game:
             'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
             'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
             'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+            'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
             'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
             'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
-            'crafting': (300, 100),
+            'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
             'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
-            'slots': (GAME_WIDTH - GEAR_MODAL_WIDTH - SLOTS_MODAL_WIDTH, 0)
         }
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']
@@ -970,11 +970,6 @@ class Game:
 
         if self.context_menu['active']:
             draw_context_menu(self.game_screen, self.context_menu, self._get_scaled_mouse_pos())
-
-
-        if getattr(self, 'is_android', False):            
-            if self.joystick_handler:
-                self.joystick_handler.draw(self.game_screen)
 
 
         self._update_screen()

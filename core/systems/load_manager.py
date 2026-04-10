@@ -190,6 +190,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
     msg_pos = game.last_modal_positions.get('messages', (3, 460))
     gear_pos = game.last_modal_positions.get('gear', (1034, 3))
+    slots_pos = game.last_modal_positions.get('slots', (1034, 3))
 
     game.modals = [
         {
@@ -235,6 +236,15 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             'id': str(uuid.uuid4()), 
             'position': msg_pos,
             'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)),
+            'is_dragging': False,
+            'drag_offset': (0, 0),
+            'minimized': False
+        },
+        {
+            'type': 'slots', 
+            'id': str(uuid.uuid4()), 
+            'position': slots_pos,
+            'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
             'minimized': False

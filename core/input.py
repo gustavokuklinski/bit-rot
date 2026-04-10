@@ -154,6 +154,37 @@ def handle_input(game):
         game.joystick_handler.update_cursor(game)
 
     mouse_pos = game._get_scaled_mouse_pos()
+
+    # --- NEW: LONG PRESS TRACKER ---
+    # Initialize dynamic trackers if they don't exist yet
+    if not hasattr(game, '_touch_start_time'):
+        game._touch_start_time = 0
+        game._touch_start_pos = (0, 0)
+        game._long_press_triggered = False
+
+    # Check for long-press continuously outside the Pygame event queue
+    mouse_pressed = pygame.mouse.get_pressed()
+    if mouse_pressed[0] and getattr(game, 'joystick_handler', None) and not game._long_press_triggered:
+        current_time = pygame.time.get_ticks()
+        # 500ms threshold for a long press
+        if current_time - game._touch_start_time > 500: 
+            # Calculate finger drift (jitter tolerance)
+            mx, my = mouse_pos
+            dist = math.hypot(mx - game._touch_start_pos[0], my - game._touch_start_pos[1])
+            
+            # FIX: Only trigger long-press if they haven't already started dragging an item
+            if dist < 15 and not getattr(game, 'is_dragging', False):  
+                game._long_press_triggered = True
+                
+                # Disarm the drag system safely so the item stays in the inventory
+                game.drag_candidate = None 
+                
+                # Inject a synthetic Right-Click (Button 3) to trigger the context menu natively
+                v_event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'button': 3, 'pos': mouse_pos})
+                handle_mouse_down(game, v_event, mouse_pos)
+    # -------------------------------
+
+
     for event in game.get_events():
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
@@ -302,9 +333,35 @@ def handle_input(game):
 
             handle_movement(game)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                handle_mouse_down(game, event, mouse_pos)
+                ignore = False
+                if getattr(game, 'joystick_handler', None) and not getattr(event, 'v_btn', False):
+                    # FIX: Check if the handler actually has the 'is_over_controller' method
+                    if hasattr(event, 'pos') and hasattr(game.joystick_handler, 'is_over_controller'):
+                        if game.joystick_handler.is_over_controller(event.pos):
+                            ignore = True
+                
+                if not ignore:
+                    # --- NEW: START LONG PRESS TIMER ---
+                    game._touch_start_time = pygame.time.get_ticks()
+                    game._touch_start_pos = getattr(event, 'pos', mouse_pos)
+                    game._long_press_triggered = False
+                    # -----------------------------------
+                    
+                    handle_mouse_down(game, event, mouse_pos)
+                    
             elif event.type == pygame.MOUSEBUTTONUP:
-                handle_mouse_up(game, event, mouse_pos)
+                ignore = False
+                if getattr(game, 'joystick_handler', None) and not getattr(event, 'v_btn', False):
+                    # FIX: Check if the handler actually has the 'is_over_controller' method
+                    if hasattr(event, 'pos') and hasattr(game.joystick_handler, 'is_over_controller'):
+                        if game.joystick_handler.is_over_controller(event.pos):
+                            ignore = True
+                        
+                if not ignore:
+                    # FIX: REMOVED the destructive 'game.is_dragging = False' override here
+                    # Letting the native drag handler cleanly resolve and bounce the item back!
+                    handle_mouse_up(game, event, mouse_pos)
+                    
             elif event.type == pygame.MOUSEMOTION:
                 handle_mouse_motion(game, event, mouse_pos)
         elif game.game_state == 'PAUSED':

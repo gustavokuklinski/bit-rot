@@ -51,6 +51,9 @@ def adapt_modals_for_mobile(game):
         game.modals = [m for m in game.modals if id(m) not in ids_to_remove]
 
     # 2. Enforce fixed positions & disable dragging
+    # Find the width of the right-side panels (Inventory or Nearby) to calculate offset
+    right_panel_w = next((m['rect'].width for m in game.modals if m.get('type') in ('inventory', 'nearby') and 'rect' in m), 0)
+
     for modal_data in game.modals:
         modal_data['is_dragging'] = False 
         
@@ -71,9 +74,9 @@ def adapt_modals_for_mobile(game):
             target_y = INVENTORY_MODAL_HEIGHT
             
         else:
-            # Rule: Any other modal must be 2px from the bottom center
-            target_x = (GAME_WIDTH // 2) - (modal_w // 2)
-            target_y = GAME_HEIGHT - modal_h - 2
+            # Rule: Calculate space to invoke this modal directly to the left of the Nearby/Inventory modals
+            target_x = GAME_WIDTH - right_panel_w - modal_w
+            target_y = 0 # GAME_HEIGHT - modal_h - 2
         
         # Update coordinate dictionaries safely
         modal_data['position'] = (target_x, target_y)
