@@ -564,3 +564,108 @@ Start: 20/10/2024
 - [x] Add: New Clothes: head_worker_helmet
 - [x] Add: New Clothes: foot_shoes.xml
 - [x] Fix: Player pickup campfire on, auto turn off and prevent to turn camp fire on in inventory
+- [x] Add: New asphalt tiles as drunkward path
+- [x] Fix: NPCs cannot kill zombies
+- [x] Add: Make the game map like a town
+- [x] Fix: Ajusted the asphalt as strait for best connection
+- [x] Fix: Vehicle modal now loads at the bottom 
+- [x] Rem: Removed the body parts player
+- [x] Fix: Static NPCS only spawn at homes (specifies tile to spawn static NPCs)
+- [x] Fix: Best game balance
+- [x] Add: Some maptiles have `is_visible="true"` so player can see zombies, npcs and animals over some tiles
+- [x] Add: Infection is now gained by stay on the rain or when get attacked
+- [x] Fix: Player spawn at a building, not centered at the map
+- [x] Fix: Game colliders making player stuck during gameplay (Bug by Spoken)
+- [x] Fix: Animal attack (Bug by Spoken)
+- [x] Fix: NPC like_of_sight on combat (Bug: Spoken)
+- [x] Fix: make sure Disposable containers always spawn with something
+- [x] Fix: Messages modal open by default
+- [x] Fix: Player type texts on Message modal
+- [x] Fix: Player cannot chat with hostile NPCs
+- [x] Add: New Dialog mindmap to game editor
+- [x] Add: Tile oil pump from Exxoil and Gethulius
+- [x] Add: Set a new Profession list to player builder a new traits.xml structure
+- [x] Fix: Stack items in inventory set to 10 (Previous was 5)
+- [x] Add: Help button with game commands and little tips
+- [x] Add: New Clothes Tshirt for: Exxoil and Gethulius
+- [x] Add: Display the game build on Gameplay (changed color to White)
+- [x] Add: Zombies, NPCs and Vehicles have a `spawn_weight` for typo
+- [x] Fix: Added weapon fail/out of ammo to Messages player log
+- [x] Fix: On `player_settings.py` added the underscore 
+- [x] Add: Start up with Helper & Tutorial enabled by default (Can be changed on Settings)
+- [x] Fix: On the `ID` item fixed the underscore selected
+- [x] Fix: Error when backpack is on ground
+- [x] Fix: On settings use the default carrousel
+- [x] Add: Nearby ground icon
+- [x] Add: Player Settings translated 
+- [x] Add: Fuel required to reload item like: Camp fire
+- [x] Fix: Messages word wrap
+- [x] Fix: Atmospheric sounds leaking to other screens
+- [x] Add: Icons to Gear and Vehicle(Vehicle, Mechanics) tabs
+- [x] Fix: Show a light green border to where the player is facing to avoid unwanted interactions
+- [x] Fix: Startup game with Gear Modal Closed (Cleaned UI) (You must find out how to change your Clothes by yourself)
+- [x] Fix: Door/Window close
+- [x] Add: Added the new attributte: `attack_player` to animals
+- [x] Fix: Animals only spawn on `bg_grass` and `dirty_01`
+- [x] Add: Translated the game tutorial
+- [x] Add: New Permadeath (Player die, lose the save)
+- [x] Add: HELP modal on loading screen
+- [x] Add: Damage will go first to Defence, them to the player
+- [x] Add: Help modal to Game menu screen
+- [x] Add: Some balancing by player level: example:
+    - If Strength is level 10, it will bonus 100% on Melee attacks doubleing them.
+    - When the player Repair some item, to fully repair it the Maintenance level must be 10, so the repair will be 100%
+    - When the player dismantle and item, it will yield all items if maintenance is level 10
+    - The damage of Melee weapons will be max damage only if the Melee level is level 10
+    - The damage of Ranged weapons will be max damage only if Ranged is leveled to 10
+
+- [x] Rem: Remove the Backpack, they are treated as Containers now.
+- [x] New: UI overhaul
+- [x] Fix: Map tiles and containers can only support 15 slots
+- [x] Add: Gear now have 3 util slots allow to place containers and utility clothes
+- [x] Fix: Animals spawning in buildings
+- [x] Fix: Some maptiles with wrong floors
+- [x] Fix: Petrol building was spawning vehicles inside
+- [x] Fix: Tranfer items from Inventory to Gear are now instant as they place on the same Player
+- [x] Fix: Set items default integer for recude and restore
+- [x] Fix: Place the clothes defence as integers
+- [x] Add: Defence and Weight to Player setup
+- [x] Add: SFX Shoot for M4A1
+- [x] Fix: Duplicated 'Equip' on containers
+- [x] Add: New context menu on 'Equip' showing places to equip items
+- [x] Add: New context menu to 'Send to' showing all player available containers to send items
+- [x] Fix: On maptiles showing the options 'Send to' (it was sending the tile to player inventory)
+- [x] Add to Player Status info about weather, time and kills. It only display if mobile is on player
+- [x] Fix: Added type container to spawn items
+- [x] Fix: Some VOID drop protections and TOCTOU
+- [x] Add: New Slots modal to make best management of containers and items during gameplay
+- [x] Fix: Fixed a micro-sleeping issue
+- [x] Fix: Place the Alerts to `progression.xml`
+- [x] Fix: Vehicle modal overhaul
+- [x] Add: CRT Filter in game (can be disabled on settings)
+- [x] Fix: Load game screen now show the click to start
+- [x] Add: On `dialogs.xml` Player quest interactions
+- [x] Add: New Tab to list game quests
+- [x] Add: On Map show the location of Quest items when player accept quest
+- [x] Add: Save the player quest progress
+- [x] Add: Set the default controller settings in the game
+- [x] Add: Change the game resolutions in settings, switch between Window and Fullscreen
+- [x] Add: Apply settings restart game 
+- [x] Add: Font scale by resolution
+- [x] Fix: Tooltips best margin for redeability
+- [x] Add: Durability to Gear modal
+- [x] Add: On `dialogs.xml` Random dialog fragments for procedural generation
+- [x] Fix: Right click to grab Animal game crash
+- [x] Rem: Pan camera in game when reach borders removed
+- [x] Add: Make snap modals on Right and Bottom
+- [x] Add: Player Status now are horizontal instead vertical
+- [x] Fix: Unload big map and mobile modal if not in inventory
+- [x] Fix: Arrow keys as mouse to play only with keyboard
+- [x] Fix: Melee Arch on screen resizable
+- [x] Fix: Reduce Vehicle Modal size
+- [x] Fix: Make the Vehicle Modal always spawn at the bottom-right of the screen
+- [x] Fix: Remove the hover effect on: `garden_grass_*` map tiles
+- [x] Rem: Removed the Minimize button from modals
+- [x] Fix: Game scrollbars patterns
+- [x] Fix: Liquid system (Spill drops, make infinit water)
+- [x] Fix: Map tile for Player start in game
