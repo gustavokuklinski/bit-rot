@@ -430,8 +430,90 @@ class Vehicle:
             self.active = False
             self.car_state = "Off"
             display_message(f"{self.name} {tr('msg', 'engine turned OFF.')}")
+            
+            # [NEW] Return key to its exact previous location
+            if getattr(self, '_auto_key_inserted', False) and self.equipment.get('key'):
+                key_item = self.equipment.get('key')
+                target_list = getattr(self, '_auto_key_container', driver_seat.inventory)
+                self.remove_equipment('key')
+                self._auto_key_inserted = False
+                self._auto_key_container = None
+                
+                returned = False
+                if isinstance(target_list, list):
+                    if target_list is driver_seat.belt:
+                        for i in range(len(driver_seat.belt)):
+                            if driver_seat.belt[i] is None:
+                                driver_seat.belt[i] = key_item
+                                returned = True
+                                break
+                    elif target_list is driver_seat.inventory:
+                        if len(driver_seat.inventory) < driver_seat.get_total_inventory_slots():
+                            driver_seat.inventory.append(key_item)
+                            if hasattr(driver_seat, 'stack_item_in_inventory'):
+                                driver_seat.stack_item_in_inventory(key_item)
+                            returned = True
+                    else:
+                        target_list.append(key_item) # Inner container (like backpack)
+                        returned = True
+                        
+                # Fallback to general inventory or ground if original location is blocked
+                if not returned:
+                    if len(driver_seat.inventory) < driver_seat.get_total_inventory_slots():
+                        driver_seat.inventory.append(key_item)
+                        if hasattr(driver_seat, 'stack_item_in_inventory'):
+                            driver_seat.stack_item_in_inventory(key_item)
+                    else:
+                        key_item.rect.center = driver_seat.rect.center
+                        if hasattr(driver_seat, 'game') and hasattr(driver_seat.game, 'items_on_ground'):
+                            driver_seat.game.items_on_ground.append(key_item)
         else:
             has_key = self.equipment.get('key') is not None
+            
+            if not has_key:
+                # [NEW] Deep Search Algorithm to scan through all bags and pockets
+                def recursive_search_key(item_list):
+                    for i, it in enumerate(item_list):
+                        if not it: continue
+                        if self.can_equip(it, 'key'):
+                            return it, item_list, i
+                        if hasattr(it, 'inventory') and it.inventory:
+                            found, src_list, idx = recursive_search_key(it.inventory)
+                            if found: return found, src_list, idx
+                    return None, None, -1
+                    
+                found_key = None
+                src_list = None
+                idx = -1
+                
+                found_key, src_list, idx = recursive_search_key(driver_seat.belt)
+                if not found_key:
+                    found_key, src_list, idx = recursive_search_key(driver_seat.inventory)
+                if not found_key:
+                    for k, v in driver_seat.clothes.items():
+                        if not v: continue
+                        if self.can_equip(v, 'key'):
+                            found_key, src_list, idx = v, driver_seat.clothes, k
+                            break
+                        if hasattr(v, 'inventory') and v.inventory:
+                            found_key, src_list, idx = recursive_search_key(v.inventory)
+                            if found_key: break
+                            
+                # Pull the key and memory-map its source
+                if found_key:
+                    if src_list == driver_seat.belt:
+                        driver_seat.belt[idx] = None
+                    elif src_list == driver_seat.clothes:
+                        driver_seat.clothes[idx] = None
+                    else:
+                        src_list.pop(idx)
+                        
+                    self.equipment['key'] = found_key
+                    self.update_stats_from_equipment()
+                    self._auto_key_inserted = True
+                    self._auto_key_container = src_list
+                    has_key = True
+
             battery_item = self.equipment.get('battery')
             has_power = False
             if battery_item:
@@ -491,26 +573,23 @@ class Vehicle:
             if matches_name or matches_id:
                 return True
             else:
-                print(f"--- KEY MISMATCH DEBUG ---")
-                print(f"Vehicle Requires: '{required_val}'")
-                print(f"Item Name:        '{item_name}' (Match: {matches_name})")
-                print(f"Item Key ID:      '{item_key_id}' (Match: {matches_id})")
-                print(f"--------------------------")
                 return False
             
-        elif slot == 'fuel': return getattr(item, 'status_effect', None) == 'fuel'
+        elif slot == 'fuel': 
+            return getattr(item, 'status_effect', None) == 'fuel' or getattr(item, 'name', '') == 'Fuel Unit'
             
         elif slot == 'battery':
-            item_type = getattr(item, 'item_type', None)
-            return item_type in ['car_battery'] and (hasattr(item, 'durability') or hasattr(item, 'load'))
+            item_type = getattr(item, 'item_type', getattr(item, 'type', None))
+            return item_type == 'car_battery' or getattr(item, 'name', '') == 'Car Battery'
         
         elif slot == 'motor':
-            is_motor = getattr(item, 'item_type', None) == 'car_motor' or getattr(item, 'type', None) == 'car_motor'
-            return is_motor or getattr(item, 'status', None) == 'motor'
+            item_type = getattr(item, 'item_type', getattr(item, 'type', None))
+            # Relaxed the check to look at name and type safely
+            return item_type == 'car_motor' or getattr(item, 'name', '') == 'Car Engine' or getattr(item, 'status', None) == 'motor'
         
         elif slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
-            return item_type == 'car_tire'
+            return item_type == 'car_tire' or getattr(item, 'name', '') == 'Car Tire'
 
         return False
 
@@ -519,14 +598,17 @@ class Vehicle:
             display_message(f"{tr('msg', 'Cannot equip')} {tr('item', item.name)} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
             return False
 
-        old_item = self.equipment.pop(slot, None)
+        # Use .get() instead of .pop() so we don't accidentally destroy the slot definition
+        old_item = self.equipment.get(slot)
         self.equipment[slot] = item
         self.update_stats_from_equipment()
         return old_item
 
     def remove_equipment(self, slot):
         if slot in self.equipment:
-            item = self.equipment.pop(slot)
+            item = self.equipment[slot]
+            # Safely empty the slot by setting it to None instead of completely removing the key from the dictionary
+            self.equipment[slot] = None 
             self.update_stats_from_equipment()
             return item
         return None
