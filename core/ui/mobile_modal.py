@@ -21,18 +21,9 @@ def draw_mobile_modal(surface, game, modal, assets):
 
     title = f"Mobile {time_str}"
 
-    if not modal.get('minimized', False):
-        modal['rect'].height = MOBILE_MODAL_HEIGHT
-        
-    base_modal = BaseModal(surface, modal, assets, title)
-    base_modal.draw_base()
-    close_button = base_modal.get_buttons()
-
-    all_buttons = [close_button]
-
-    # --- Tabs ---
+    # Set up tab configurations beforehand so we can check active_tab to size the UI dynamically
     tabs_data = [
-        {'label': 'Clock', 'icon_path': SPRITE_PATH + 'ui/clock.png'}, # Add icon paths if you have them
+        {'label': 'Clock', 'icon_path': SPRITE_PATH + 'ui/clock.png'},
         {'label': 'Map', 'icon_path':  SPRITE_PATH + 'ui/map.png'},
     ]
     modal['tabs_data'] = tabs_data
@@ -41,17 +32,22 @@ def draw_mobile_modal(surface, game, modal, assets):
     if 'active_tab' not in modal or modal['active_tab'] not in {t['label'] for t in tabs_data}:
         modal['active_tab'] = 'Clock' # Default to Clock
 
+    base_modal = BaseModal(surface, modal, assets, title)
+
+
+
+    base_modal.draw_base()
+    close_button = base_modal.get_buttons()
+
+    all_buttons = [close_button]
+
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw() # Draws tabs below the header
+    tabs.draw() # Draws tabs below the header (now taking up the dynamically adjusted width)
 
     # --- Draw Tab Content ---
     if modal['active_tab'] == 'Clock':
         draw_clock_tab(surface, game, modal, assets)
     elif modal['active_tab'] == 'Map':
-        zoom_in_btn, zoom_out_btn = draw_map_tab(surface, game, modal, assets)
-        if zoom_in_btn:
-            all_buttons.append(zoom_in_btn)
-        if zoom_out_btn:
-            all_buttons.append(zoom_out_btn)
+        draw_map_tab(surface, game, modal, assets)
     
     return all_buttons

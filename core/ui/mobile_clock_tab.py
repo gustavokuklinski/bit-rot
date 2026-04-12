@@ -40,7 +40,7 @@ def draw_clock_tab(surface, game, modal, assets):
         label_rect = label_surf.get_rect(center=(center_x, y_offset))
         surface.blit(label_surf, label_rect)
 
-    y_offset += 50
+    y_offset += 40
 
     # --- 2. Large Digital Clock ---
     try:
@@ -66,7 +66,7 @@ def draw_clock_tab(surface, game, modal, assets):
     time_rect = time_surf.get_rect(center=(center_x, y_offset))
     surface.blit(time_surf, time_rect)
     
-    y_offset += time_rect.height + 30
+    y_offset += time_rect.height + 20
 
     # --- 3. Stats (Kills) ---
     zombies_killed = game.zombies_killed
@@ -75,7 +75,7 @@ def draw_clock_tab(surface, game, modal, assets):
     kills_rect = kills_surf.get_rect(center=(center_x, y_offset))
     surface.blit(kills_surf, kills_rect)
 
-    y_offset += 30
+    y_offset += 20
 
     # --- 4. Time Survived (In-Game Time) ---
     try:
@@ -91,7 +91,7 @@ def draw_clock_tab(surface, game, modal, assets):
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
     surface.blit(alive_surf, alive_rect)
 
-    y_offset += 30
+    y_offset += 20
 
     # --- 5. Weather Info ---
     try:

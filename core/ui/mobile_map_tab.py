@@ -1,4 +1,4 @@
-# core/ui/map_tab.py
+# core/ui/mobile_map_tab.py
 
 import pygame
 import math
@@ -184,7 +184,8 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     content_height = modal['rect'].height - 90
     content_width = modal['rect'].width - 20
     
-    map_area_rect = pygame.Rect(content_x_start, content_y_start, content_width, content_height - 40) 
+    # Removed the "- 40" since zoom buttons are no longer taking up vertical space
+    map_area_rect = pygame.Rect(content_x_start, content_y_start, content_width, content_height) 
     modal['map_area_rect'] = map_area_rect
 
     # --- 2.5 Handle Mouse Dragging (Panning) ---
@@ -386,33 +387,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                             surface.blit(excl_surf, excl_rect)
 
 
-    # --- 5. Draw Zoom Buttons ---
-    button_y = map_area_rect.bottom + 10
-    zoom_in_rect = pygame.Rect(map_area_rect.centerx - 35, button_y, 30, 30)
-    zoom_out_rect = pygame.Rect(map_area_rect.centerx + 5, button_y, 30, 30)
-
-    pygame.draw.rect(surface, GRAY_60, zoom_in_rect, 0, 3)
-    pygame.draw.rect(surface, WHITE, zoom_in_rect, 1, 3)
-    plus_surf = font_14.render("+", True, WHITE)
-    plus_rect = plus_surf.get_rect(center=zoom_in_rect.center)
-    surface.blit(plus_surf, plus_rect)
-
-    pygame.draw.rect(surface, GRAY_60, zoom_out_rect, 0, 3)
-    pygame.draw.rect(surface, WHITE, zoom_out_rect, 1, 3)
-    minus_surf = font_14.render("-", True, WHITE)
-    minus_rect = minus_surf.get_rect(center=zoom_out_rect.center)
-    surface.blit(minus_surf, minus_rect)
-    
-    modal['map_zoom_in_rect'] = zoom_in_rect
-    modal['map_zoom_out_rect'] = zoom_out_rect
-
-    return {
-        'id': modal['id'], 'type': 'map_zoom_in', 'rect': zoom_in_rect
-    }, {
-        'id': modal['id'], 'type': 'map_zoom_out', 'rect': zoom_out_rect
-    }
-
-
 def draw_big_map_modal(surface, game, modal, assets):
     # Create the window frame
     base_modal = BaseModal(surface, modal, assets, f"{modal['item'].name}")
@@ -422,6 +396,6 @@ def draw_big_map_modal(surface, game, modal, assets):
     close_button = base_modal.get_buttons()
     
     # Draw the map content inside, requesting the full world map
-    zoom_in, zoom_out = draw_map_tab(surface, game, modal, assets, full_map=True)
+    draw_map_tab(surface, game, modal, assets, full_map=True)
     
-    return [close_button, zoom_in, zoom_out]
+    return [close_button]

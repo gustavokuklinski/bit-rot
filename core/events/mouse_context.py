@@ -1263,9 +1263,9 @@ def handle_right_click(game, mouse_pos):
             options = ['Status', 'Inventory', 'Gear']
         elif click_source == 'vehicle_equipment':
             if click_index == 'fuel':
-                options = ['Remove fuel to', 'Inspect']
+                options = ['Remove fuel to']
             else:
-                options = ['Remove', 'Inspect']
+                options = ['Remove']
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
             if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:

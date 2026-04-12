@@ -170,6 +170,7 @@ class Game:
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
             'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
+            'vehicle': (600, 150),
         }
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']

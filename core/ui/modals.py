@@ -25,7 +25,7 @@ def draw_scrollbar(surface, modal, bar_rect, viewport_height, total_height, scro
     # Draw handle
     pygame.draw.rect(surface, GRAY, handle_rect, border_radius=3)
     modal['scrollbar_handle_rect'] = handle_rect
-    
+
 class BaseModal:
     def __init__(self, surface, modal, assets, title, w=None, h=None):
         self.surface = surface
