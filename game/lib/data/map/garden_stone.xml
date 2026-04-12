@@ -1,4 +1,4 @@
-<map name="garden_stone" type="maptile" char="garden_stone" is_obstacle="true" destructible="true">
+<map name="garden_stone" type="maptile" char="garden_stone" is_obstacle="true" destructible="true" is_visible="true">
     <visuals>
         <sprite file="garden_stone.png" />
     </visuals>

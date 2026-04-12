@@ -1,8 +1,9 @@
 <item name="Zombie Meat" type="consumable_food" allow_belt="false">
     <properties>
         <restore status="[food]" value="3" />
-        <reduce status="[tireness]" value="2" />
-        <restore status="[infection]" value="90" />
+        <reduce status="[tireness]" value="50" />
+        <restore status="[infection]" value="80" />
+        <restore status="[anxiety]" value="90" />
         <load value="1" />
         <capacity value="5" />
         <weight weight="0.2"/>

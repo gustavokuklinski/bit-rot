@@ -92,7 +92,12 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         parent_rect = pygame.Rect(menu_x, menu_y + active_sub_idx * item_height, max_width, item_height)
         sub_options = options[active_sub_idx]['sub']
         
-        sub_labels = [tr('context', sub) for sub in sub_options]
+        # [NEW] Extract custom display names if provided, otherwise fallback to the raw ID
+        sub_labels = []
+        for sub in sub_options:
+            disp_name = options[active_sub_idx].get('display_names', {}).get(sub, sub)
+            sub_labels.append(tr('context', disp_name))
+            
         sub_max_width = max((font.size(label)[0] for label in sub_labels), default=0) + (padding * 2) + 15 # Extra space for *
         sub_height = len(sub_options) * item_height
         
@@ -136,6 +141,8 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                 # Check for replacements
                 raw_sub_id = sub_options[i]
                 replace_name = options[active_sub_idx].get('replacing', {}).get(raw_sub_id)
+                # [NEW] Extract tooltip string if provided
+                sub_tooltip = options[active_sub_idx].get('tooltips', {}).get(raw_sub_id) 
 
                 menu_state['rects'].append(sub_opt_rect)
                 action_string = f"{options[active_sub_idx]['label']}::{sub_options[i]}"
@@ -148,6 +155,9 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                     # If hovering over an occupied slot, prep the tooltip
                     if replace_name:
                         tooltip_info = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", mouse_pos)
+                    # [NEW] Render location tooltip
+                    elif sub_tooltip:
+                        tooltip_info = (tr('msg', sub_tooltip), mouse_pos)
                     
                 text_surf = font.render(sub_label, True, text_color)
                 surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))

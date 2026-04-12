@@ -790,6 +790,8 @@ def draw_game(game):
 
         # --- CRT FILTER OVERLAY ---
         # Only draw if enabled in the settings
+        # --- CRT FILTER OVERLAY ---
+        # Only draw if enabled in the settings
         if getattr(core.data.config, 'UI_CRT_FILTER', True):
             # Cached to ensure zero performance hit during the main loop
             if not hasattr(game, 'crt_overlay') or game.crt_overlay.get_size() != (int(GAME_WIDTH), int(GAME_HEIGHT)):
@@ -817,9 +819,97 @@ def draw_game(game):
                 vignette = pygame.transform.smoothscale(tiny_v, (int(GAME_WIDTH), int(GAME_HEIGHT)))
                 game.crt_overlay.blit(vignette, (0, 0))
                 game.crt_overlay = game.crt_overlay.convert_alpha()
-            # Apply the filter strictly to the game world before UI is drawn
-            game.game_screen.blit(game.crt_overlay, (0, 0))
                 
+            # --- ANXIETY CRT GLITCH EFFECT ---
+            crt_x, crt_y = 0, 0
+            anxiety = getattr(game.player, 'anxiety', 0)
+            
+            # Discretize anxiety into 5% buckets
+            stepped_anxiety = (int(anxiety) // 5) * 5
+            
+            if stepped_anxiety >= 10:  # Glitching threshold begins
+                intensity = min(1.0, stepped_anxiety / 100.0) 
+                
+                # 1. Aggressive Flickering
+                # Drops opacity much lower (down to 40) and more frequently
+                if random.random() < (0.4 * intensity):
+                    game.crt_overlay.set_alpha(random.randint(40, 150))
+                else:
+                    game.crt_overlay.set_alpha(255)
+
+                # 2. Frenetic CRT Jitter (Heavier shaking)
+                if random.random() < (0.5 * intensity):
+                    max_x_jitter = max(1, int(25 * intensity))
+                    max_y_jitter = max(1, int(12 * intensity))
+                    crt_x = random.choice([-1, 1]) * random.randint(1, max_x_jitter)
+                    crt_y = random.choice([-1, 1]) * random.randint(1, max_y_jitter)
+                
+                # 3. Frenetic Blocks of Tearing
+                # At high anxiety, this will loop and slice the screen multiple times in one frame!
+                max_tears_per_frame = int(6 * intensity) 
+                
+                if max_tears_per_frame > 0:
+                    # Randomize how many tears actually happen this specific frame (0 to max)
+                    num_tears = random.randint(0, max_tears_per_frame)
+                    
+                    for _ in range(num_tears):
+                        # Allow much thicker blocks of tearing (up to 80px thick)
+                        max_h = max(6, int(80 * intensity))
+                        
+                        # Calculate safe Y bounds so Pygame doesn't crash on subsurface
+                        safe_max_y = max(0, int(GAME_HEIGHT) - max_h)
+                        tear_y = random.randint(0, safe_max_y)
+                        tear_h = random.randint(5, max_h)
+                        
+                        # Allow the tears to stretch much further horizontally
+                        max_offset = max(1, int(70 * intensity))
+                        tear_offset = random.choice([-1, 1]) * random.randint(1, max_offset)
+                        
+                        # Snip the screen and shift it
+                        tear_rect = pygame.Rect(0, tear_y, GAME_WIDTH, tear_h)
+                        tear_surf = game.game_screen.subsurface(tear_rect).copy()
+                        
+                        game.game_screen.blit(tear_surf, (tear_offset, tear_y))
+            else:
+                game.crt_overlay.set_alpha(255)
+
+            # Apply the filter strictly to the game world before UI is drawn
+            game.game_screen.blit(game.crt_overlay, (crt_x, crt_y))
+        
+            # --- FATIGUE B&W HIGH CONTRAST EFFECT ---
+        # Safely fetch tireness (starts at 100 and drops to 0)
+        # Default to 100 so the effect doesn't trigger unexpectedly
+        tireness_fatigue = getattr(game.player, 'tireness', 100) 
+        
+        # Start fading player vision to high-contrast B&W when tireness drops below 50%
+        if tireness_fatigue <= 50:
+            # Smooth intensity from 0.0 (at 50% tireness) up to 1.0 (at 0% tireness)
+            f_intensity = min(1.0, max(0.0, (50 - tireness_fatigue) / 50.0))
+            
+            try:
+                # 1. Take a snapshot of the current colored game world (including CRT)
+                world_snap = game.game_screen.copy()
+                
+                # 2. Convert the entire snapshot to Grayscale (Requires Pygame 2.0+)
+                bw_world = pygame.transform.grayscale(world_snap)
+                
+                # 3. High Contrast Trick: Blit the grayscale image over itself using MULTIPLY.
+                # This mathematically squares the pixel values, making shadows incredibly dark 
+                # and gritty, perfectly simulating the "closing in" feeling of passing out.
+                bw_world.blit(bw_world, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+                
+                # 4. Fade this harsh B&W layer smoothly over the normal colored screen
+                bw_world.set_alpha(int(255 * f_intensity))
+                
+                # 5. Apply it to the screen
+                game.game_screen.blit(bw_world, (0, 0))
+            except AttributeError:
+                # Fallback for older Pygame versions that lack transform.grayscale:
+                # Just draw a progressively darkening black overlay
+                fallback_overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT), pygame.SRCALPHA)
+                fallback_overlay.fill((0, 0, 0, int(180 * f_intensity)))
+                game.game_screen.blit(fallback_overlay, (0, 0))
+
         if tooltip_to_draw:
             if isinstance(tooltip_to_draw, str):
                 lines = tooltip_to_draw.split('\n')
@@ -1173,10 +1263,66 @@ def draw_game(game):
             scaled_reticle = pygame.transform.scale(reticle_img, (new_w, new_h))
             rect = scaled_reticle.get_rect(center=game._get_scaled_mouse_pos())
             game.game_screen.blit(scaled_reticle, rect)
+
+            # --- ELEGANT AMMO COUNTER NEAR RETICLE ---
+            if game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
+                ammo_in_gun = getattr(game.player.active_weapon, 'load', 0)
+                if ammo_in_gun is None: ammo_in_gun = 0
+                ammo_type = getattr(game.player.active_weapon, 'ammo_type', None)
+                
+                total_ammo = 0
+                if ammo_type:
+                    # Recursive function to check all nested containers/gear for the correct bullet
+                    def _count_in_list(item_list):
+                        count = 0
+                        for item in item_list:
+                            if not item: continue
+                            if item.name == ammo_type:
+                                count += getattr(item, 'load', 1) or 1
+                            if hasattr(item, 'inventory') and item.inventory:
+                                count += _count_in_list(item.inventory)
+                        return count
+                        
+                    total_ammo += _count_in_list(game.player.belt)
+                    total_ammo += _count_in_list(game.player.inventory)
+                    total_ammo += _count_in_list(game.player.clothes.values())
+                    
+                font_ammo = globals().get('font_14', game.assets.get('font'))
+                if not font_ammo: font_ammo = pygame.font.Font(None, 24)
+                
+                # Visual combat flair: shift color based on gun load
+                max_cap = getattr(game.player.active_weapon, 'capacity', 1)
+                if max_cap is None or max_cap <= 0: max_cap = 1
+                
+                text_color = (255, 255, 255) # White
+                if ammo_in_gun == 0:
+                    text_color = (255, 50, 50) # Red
+                elif (ammo_in_gun / max_cap) <= 0.25:
+                    text_color = (255, 200, 50) # Yellow
+                    
+                ammo_text = f"{int(ammo_in_gun)} / {int(total_ammo)}"
+                text_surf = font_ammo.render(ammo_text, True, text_color)
+                
+                # Position it elegantly to the right of the reticle
+                bg_rect = text_surf.get_rect(topleft=(rect.right + 12, rect.centery - text_surf.get_height() // 2))
+                
+                # Safety check: If it clips off the right side of the screen, flip it to the left side
+                if bg_rect.right > game.game_screen.get_width() - 5:
+                    bg_rect.right = rect.left - 12
+                
+                bg_pad = bg_rect.inflate(12, 6)
+                
+                # Draw a sleek, semi-transparent pill background for readability against any terrain
+                pill_surface = pygame.Surface((bg_pad.width, bg_pad.height), pygame.SRCALPHA)
+                pygame.draw.rect(pill_surface, (0, 0, 0, 160), pill_surface.get_rect(), border_radius=4)
+                pygame.draw.rect(pill_surface, (150, 150, 150, 100), pill_surface.get_rect(), 1, border_radius=4)
+                
+                game.game_screen.blit(pill_surface, bg_pad.topleft)
+                game.game_screen.blit(text_surf, bg_rect)
     else:
         pygame.mouse.set_visible(True)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LCTRL] or keys[pygame.K_LCTRL]:
+        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
              pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
         else:
              pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)

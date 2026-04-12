@@ -264,17 +264,19 @@ def handle_context_menu_click(game, mouse_pos):
                         
                 else:
                     target_container = None
-                    for b_item in game.player.belt:
-                        if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and b_item.name == target_container_name: 
-                            target_container = b_item; break
-                    if not target_container:
-                        for i_item in game.player.inventory:
-                            if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and i_item.name == target_container_name: 
-                                target_container = i_item; break
-                    if not target_container:
-                        for c_item in game.player.clothes.values():
-                            if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and c_item.name == target_container_name: 
-                                target_container = c_item; break
+                    all_containers = [item for item in game.player.belt if item] + \
+                                     [item for item in game.player.inventory if item] + \
+                                     [item for item in game.player.clothes.values() if item]
+                    
+                    for c_item in all_containers:
+                        if getattr(c_item, 'item_type', '') in ['container', 'cloth']:
+                            # Safe ID matching fixes issues with duplicate container names
+                            if hasattr(c_item, 'id') and str(c_item.id) == target_container_name:
+                                target_container = c_item
+                                break
+                            # Fallback to name just in case
+                            if not target_container and c_item.name == target_container_name:
+                                target_container = c_item
                             
                     if target_container:
                         item_load = getattr(item, 'load', 1)
@@ -1170,35 +1172,42 @@ def handle_right_click(game, mouse_pos):
                     new_options.append('Equip')
                     
             elif opt == 'Send to':
-                sub_opts = ['Inventory']
+                sub_opts = []
+                display_map = {}
+                tooltip_map = {}
                 
-                # Fetch all valid player containers strictly by item type
-                containers = []
-                for b_item in game.player.belt:
+                is_liquid = getattr(clicked_item, 'liquid', False)
+                
+                # Never display plain 'Inventory' for liquid items
+                if not is_liquid:
+                    sub_opts.append('Inventory')
+                    display_map['Inventory'] = 'Inventory'
+                
+                # Fetch all valid player containers alongside their UI locations
+                containers_with_loc = []
+                for i, b_item in enumerate(game.player.belt):
                     if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
-                        containers.append(b_item)
+                        containers_with_loc.append((b_item, f"Belt > Slot {i+1}"))
                 for i_item in game.player.inventory:
                     if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and getattr(i_item, 'inventory', None) is not None:
-                        containers.append(i_item)
-                for c_item in game.player.clothes.values():
+                        containers_with_loc.append((i_item, "Inventory"))
+                for slot, c_item in game.player.clothes.items():
                     if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and getattr(c_item, 'inventory', None) is not None:
-                        containers.append(c_item)
+                        containers_with_loc.append((c_item, f"Gear > {str(slot).capitalize()}"))
                         
-                for c in containers:
+                for c, loc_str in containers_with_loc:
                     if c is clicked_item: continue
                     
-                    # Liquid validations
-                    if getattr(clicked_item, 'liquid', False) and not getattr(c, 'allow_liquid', False): continue
-                    if getattr(c, 'allow_liquid', False) and not getattr(clicked_item, 'liquid', False): continue
+                    # Core constraints: Filter based on liquid allowance
+                    if is_liquid and not getattr(c, 'allow_liquid', False): continue
+                    if getattr(c, 'allow_liquid', False) and not is_liquid: continue
                     
-                    # SAFE LOAD EXTRACTION
                     c_item_load = getattr(clicked_item, 'load', 1)
                     if c_item_load is None: c_item_load = 1
                     
                     unit_weight = clicked_item.get_total_weight() / max(1, c_item_load)
                     avail_weight = float('inf')
                     
-                    # SAFE WEIGHT EXTRACTION
                     cont_weight = getattr(c, 'weight', 0)
                     if cont_weight is not None and cont_weight > 0:
                         max_w = cont_weight * 5.0
@@ -1208,7 +1217,6 @@ def handle_right_click(game, mouse_pos):
                     if avail_weight < unit_weight:
                         continue 
                         
-                    # Slot validations
                     can_fit = False
                     c_cap = getattr(c, 'capacity', 0)
                     if c_cap is None: c_cap = 0
@@ -1227,11 +1235,33 @@ def handle_right_click(game, mouse_pos):
                                 break
                                 
                     if can_fit:
-                        c_label = f"{c.name}"
-                        if c_label not in sub_opts:
-                            sub_opts.append(c_label)
+                        c_id = str(getattr(c, 'id', c.name))
+                        
+                        liquid_qty = 0
+                        liquid_name = ""
+                        
+                        # Inspect the container to see if there are any liquids inside
+                        if getattr(c, 'allow_liquid', False):
+                            for inside_item in getattr(c, 'inventory', []):
+                                if getattr(inside_item, 'liquid', False):
+                                    liquid_qty += getattr(inside_item, 'load', 1) or 1
+                                    liquid_name = inside_item.name
+                        
+                        # Generate the dynamic label string 
+                        if liquid_qty > 0:
+                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} units)"
+                        elif getattr(c, 'allow_liquid', False):
+                            display_str = f"{c.name} (Empty)"
+                        else:
+                            display_str = c.name
                             
-                new_options.append({'label': 'Send to', 'sub': sub_opts})
+                        # Package for the dropdown architect
+                        if c_id not in sub_opts:
+                            sub_opts.append(c_id)
+                            display_map[c_id] = display_str
+                            tooltip_map[c_id] = f"Location: {loc_str}"
+                            
+                new_options.append({'label': 'Send to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
                 
             else:
                 new_options.append(opt)
@@ -1241,4 +1271,3 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []
         return
-        

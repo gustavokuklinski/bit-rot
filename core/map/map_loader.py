@@ -29,6 +29,9 @@ def _generate_container_items(tile_def):
     loot_pool = list(tile_def['loot'])
     random.shuffle(loot_pool)
     
+    # Check if this is a liquid container
+    is_liquid_source = tile_def.get('allow_liquid', False)
+    
     for loot_entry in loot_pool:
         if capacity > 0 and len(items) >= capacity:
             break
@@ -39,25 +42,31 @@ def _generate_container_items(tile_def):
         # 2. Check chance to spawn anything at all from this entry
         adjusted_chance = loot_entry['chance'] * total_multiplier
         
-        if random.random() < adjusted_chance:
+        # Force guaranteed spawn rules if it's a liquid source
+        if is_liquid_source:
+            adjusted_chance = 1.0  
+            total_multiplier = 1.0 
+        
+        if random.random() <= adjusted_chance:
             min_qty = int(loot_entry.get('min', 1))
             max_qty = int(loot_entry.get('max', 1))
             
             # 3. Calculate quantity based on total multiplier
-            # If total_multiplier is 1.0+ -> max_qty
-            # If total_multiplier is close to 0 -> min_qty
             scaled_qty = min_qty + int(round((max_qty - min_qty) * min(1.0, total_multiplier)))
             qty = max(min_qty, min(max_qty, scaled_qty))
             
-            # 4. If total multiplier is extremely low (e.g. 1% * 1% = 0.0001), 
-            # allow it to occasionally yield 'none' even if it hit the adjusted chance check.
-            if total_multiplier <= 0.01 and random.random() > 0.5:
+            # Force maximum quantity yield for liquids
+            if is_liquid_source:
+                qty = max_qty
+            
+            # 4. If total multiplier is extremely low, allow occasional empty yields
+            if not is_liquid_source and total_multiplier <= 0.01 and random.random() > 0.5:
                 qty = 0
 
             if qty <= 0:
                 continue
 
-            # 5. Spawn the determined quantity
+            # 5. Spawn the determined quantity and enforce max load
             if 'type' in loot_entry:
                 matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type'] and not n.endswith(' on')]
                 if matching_items:
@@ -65,13 +74,23 @@ def _generate_container_items(tile_def):
                         if capacity > 0 and len(items) >= capacity: break
                         chosen_item = random.choice(matching_items)
                         new_item = Item.create_from_name(chosen_item)
-                        if new_item: items.append(new_item)
+                        
+                        if new_item:
+                            # [FIX] If it's a liquid source, force the item's stack size to its maximum
+                            if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
+                                new_item.load = new_item.capacity
+                            items.append(new_item)
                         
             elif 'item' in loot_entry and not loot_entry['item'].endswith(' on'):
                 for _ in range(qty):
                     if capacity > 0 and len(items) >= capacity: break
                     new_item = Item.create_from_name(loot_entry['item'])
-                    if new_item: items.append(new_item)
+                    
+                    if new_item:
+                        # [FIX] If it's a liquid source, force the item's stack size to its maximum
+                        if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
+                            new_item.load = new_item.capacity
+                        items.append(new_item)
                     
     return items
 
