@@ -629,7 +629,7 @@ def draw_game(game):
     if game.player and game.player.is_sleeping:
         game.game_screen.fill((0, 0, 0))
         font = game.assets.get('font') or pygame.font.Font(None, 30)
-        text_surf = font.render(tr('ui', "Sweet Dreams. Press Space to Wake up."), True, (255, 255, 255))
+        text_surf = font.render(tr('ui', "Sweet Dreams. Press SPACE to Wake up."), True, (255, 255, 255))
         text_rect = text_surf.get_rect(center=(game.game_screen.get_width() // 2, game.game_screen.get_height() // 2))
         game.game_screen.blit(text_surf, text_rect)
 

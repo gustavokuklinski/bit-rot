@@ -46,8 +46,42 @@ class PlayerMovement:
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
             
-            self.x += TILE_SIZE 
-            self.rect.topleft = (self.x, self.y)
+            # --- NEW: Dynamic Pixel-Perfect Exit Logic ---
+            # Define 4 tight exit points (Right, Left, Bottom, Top) directly hugging the vehicle's doors
+            exit_points = [
+                (self.vehicle.rect.right + 2, self.vehicle.rect.centery - (self.rect.height / 2)),
+                (self.vehicle.rect.left - self.rect.width - 2, self.vehicle.rect.centery - (self.rect.height / 2)),
+                (self.vehicle.rect.centerx - (self.rect.width / 2), self.vehicle.rect.bottom + 2),
+                (self.vehicle.rect.centerx - (self.rect.width / 2), self.vehicle.rect.top - self.rect.height - 2)
+            ]
+            
+            placed = False
+            for px, py in exit_points:
+                self.rect.topleft = (int(px), int(py))
+                collision = False
+                # Check collision with ALL walls and the vehicle itself
+                for ob in game.obstacles:
+                    if self.rect.colliderect(ob):
+                        collision = True
+                        break
+                        
+                if not collision:
+                    self.x, self.y = px, py
+                    placed = True
+                    break
+            
+            if not placed:
+                # Fallback to radial grid search only if perfectly hugged sides are fully blocked by walls
+                self.x = self.vehicle.rect.centerx - (self.rect.width / 2)
+                self.y = self.vehicle.rect.centery - (self.rect.height / 2)
+                self.rect.topleft = (int(self.x), int(self.y))
+                
+                free_pos = find_free_tile(self.rect, game.obstacles, max_radius=2, initial_pos=(self.x, self.y))
+                if free_pos:
+                    self.x, self.y = free_pos
+                    self.rect.topleft = (int(self.x), int(self.y))
+            # -------------------------------
+            
             self.vehicle = None
             self.vehicle_seat_index = None
             

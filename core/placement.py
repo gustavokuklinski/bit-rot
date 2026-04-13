@@ -32,12 +32,11 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                 collision = True
                 break
     if not collision:
-        # [FIX] Return coordinates instead of True
         return (rect.x, rect.y)
 
-    # If not, and we have an initial position, search outwards
+    # If not, and we have an initial position, search outwards radially
     if initial_pos:
-        for radius in range(1, max_radius + 1): # Search in a <max_radius>-tile radius
+        for radius in range(1, max_radius + 1): 
             for i in range(-radius, radius + 1):
                 for j in range(-radius, radius + 1):
                     if abs(i) < radius and abs(j) < radius:
@@ -46,9 +45,7 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                     rect.x = start_x + i * TILE_SIZE
                     rect.y = start_y + j * TILE_SIZE
 
-                    if not (0 <= rect.x < GAME_WIDTH and 0 <= rect.y < GAME_HEIGHT):
-                        continue
-
+                    # Removed the screen-bound check here so it works on massive world maps
                     collision = False
                     for ob in obstacles:
                         if rect.colliderect(ob):
@@ -61,10 +58,8 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                                 break
                     
                     if not collision:
-                        # [FIX] Return coordinates instead of True
                         return (rect.x, rect.y) 
 
-    # If no free tile was found within the radius, return None instead of False
     return None
 
 def find_random_free_tile(rect, obstacles, items_on_ground):
@@ -87,7 +82,6 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
                     break
         
         if not collision:
-            # [FIX] Return coordinates instead of True
             return (rect.x, rect.y)
 
         rect.x += TILE_SIZE
@@ -99,5 +93,4 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
         
         attempts += 1
 
-    # [FIX] Return None instead of False
     return None

@@ -170,7 +170,7 @@ class Game:
             'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
             'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
             'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
-            'vehicle': (600, 150),
+            'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
         }
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']
@@ -451,6 +451,7 @@ class Game:
                     if self.save_game():
                         pass
                 elif btn_quit.collidepoint(mouse_pos):
+                    self.is_fast_forwarding = False
                     if hasattr(self, 'world_time') and self.world_time:
                         self.world_time.stop_all_sounds()
                     self.game_state = 'MENU'
@@ -675,6 +676,7 @@ class Game:
         run_player_setup(self)
 
     def run_game_over(self):
+        self.is_fast_forwarding = False
         if hasattr(self, 'world_time') and self.world_time:
             self.world_time.stop_all_sounds()
         

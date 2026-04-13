@@ -131,13 +131,18 @@ def get_targeted_interactable(game):
         if getattr(obj, 'item_type', '') == 'vehicle':
             if getattr(game.player, 'vehicle', None) == obj:
                 continue
-            dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
-            if dist < TILE_SIZE * 2.0:
+            
+            # Check if player is close to the vehicle's outer edges instead of center
+            interact_rect = obj.rect.inflate(TILE_SIZE, TILE_SIZE)
+            if interact_rect.colliderect(game.player.rect):
+                
                 facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
-                veh_grid_rect = pygame.Rect(obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height)
                 facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                if veh_grid_rect.colliderect(facing_rect):
-                    facing_dist -= TILE_SIZE 
+                
+                if obj.rect.colliderect(facing_rect):
+                    # Give massive priority boost if the tile the player is directly facing touches the vehicle
+                    facing_dist -= 1000 
+                    
                 candidates.append({'type': 'vehicle', 'entity': obj, 'dist': facing_dist})
                 
     if not candidates:

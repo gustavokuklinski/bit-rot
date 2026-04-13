@@ -31,22 +31,50 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
         
         # --- CHANGED: Default border is GRAY, changes to WHITE when highlighted ---
         border_color = GRAY
-        if game.is_dragging and slot_rect.collidepoint(mouse_pos):
+        if getattr(game, 'is_dragging', False) and slot_rect.collidepoint(mouse_pos):
             border_color = WHITE # Highlight color
 
         pygame.draw.rect(surface, border_color, slot_rect, 1, 3)
 
         if i < len(container_item.inventory):
             item = container_item.inventory[i]
-            if item.image:
+            if getattr(item, 'image', None):
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
-            else:
+            elif hasattr(item, 'color'):
                 pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
             
-            if item.is_stackable and item.load is not None and item.load > 1:
-                stack_text = font_14.render(str(int(item.load)), True, WHITE)
-                text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
-                surface.blit(stack_text, text_rect)
+            # --- STRICT DURABILITY BAR LOGIC ---
+            if hasattr(item, 'durability') and item.durability is not None and getattr(item, 'max_durability', None) is not None and float(item.max_durability) > 0:
+                pct = max(0.0, min(1.0, float(item.durability) / float(item.max_durability)))
+                bar_w, bar_h = slot_rect.width - 10, 3
+                bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
+                
+                col_color = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
+                
+                pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
+                if pct > 0: 
+                    pygame.draw.rect(surface, col_color, (bar_x, bar_y, int(bar_w * pct), bar_h))
+            # -----------------------------------
+            
+            # --- Text Overlay Logic (For Ammo & Stacks) ---
+            show_count = False
+            if hasattr(item, 'is_stackable') and getattr(item, 'is_stackable', lambda: False)() and item.load is not None and item.load > 1:
+                show_count = True
+            elif getattr(item, 'item_type', '') in ['weapon', 'weapon_ranged'] and getattr(item, 'load', None) is not None:
+                show_count = True
+            elif hasattr(item, 'load') and item.load is not None and item.load > 1:
+                show_count = True
+            
+            if show_count:
+                try:
+                    from core.ui.inventory_modal import draw_text_shadow, font_14
+                    draw_text_shadow(surface, font_14, str(int(item.load)), WHITE, 
+                                   (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
+                except ImportError:
+                    from core.data.config import font
+                    stack_text = font.render(str(int(item.load)), True, WHITE)
+                    text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
+                    surface.blit(stack_text, text_rect)
 
 def draw_container_content(surface, game, container_item, modal, assets, mouse_pos):
     if not container_item or not hasattr(container_item, 'inventory'):

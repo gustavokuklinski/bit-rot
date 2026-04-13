@@ -320,26 +320,25 @@ class JoystickHandler:
         """Translates joystick hardware events into standard keyboard/mouse events"""
         
         # --- GLOBAL KEYBOARD CLICK INTERCEPTION ---
-        # --- GLOBAL KEYBOARD CLICK INTERCEPTION ---
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                game = getattr(self, 'last_game_ref', None)
-                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
-            elif event.key == pygame.K_RALT: # ALT GR for Right Click
-                game = getattr(self, 'last_game_ref', None)
-                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
-                
-        elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_SPACE:
-                game = getattr(self, 'last_game_ref', None)
-                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
-            elif event.key == pygame.K_RALT:
-                game = getattr(self, 'last_game_ref', None)
-                mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
+        #if event.type == pygame.KEYDOWN:
+        #    if event.key == pygame.K_SPACE:
+        #        game = getattr(self, 'last_game_ref', None)
+        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
+        #    elif event.key == pygame.K_RALT: # ALT GR for Right Click
+        #        game = getattr(self, 'last_game_ref', None)
+        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
+        #        
+        #elif event.type == pygame.KEYUP:
+        #    if event.key == pygame.K_SPACE:
+        #        game = getattr(self, 'last_game_ref', None)
+        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
+        #    elif event.key == pygame.K_RALT:
+        #        game = getattr(self, 'last_game_ref', None)
+        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
 
         if event.type == pygame.JOYAXISMOTION:
             if event.axis == AXIS_LT: 

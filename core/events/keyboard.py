@@ -1,3 +1,4 @@
+# core/events/keyboard.py
 import pygame
 import uuid
 import math
@@ -17,7 +18,6 @@ def toggle_inventory_modal(game):
             inventory_modal_exists = True
             break
     if not inventory_modal_exists:
-        # game.saved_modals = []  # REMOVE this line so it doesn't break our new saving system!
         new_inventory_modal = {
             'id': uuid.uuid4(),
             'type': 'inventory',
@@ -34,7 +34,7 @@ def toggle_status_modal(game):
     status_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'status':
-            game.last_modal_positions['status'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['status'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             status_modal_exists = True
             break
@@ -54,7 +54,7 @@ def toggle_nearby_modal(game):
     nearby_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'nearby':
-            game.last_modal_positions['nearby'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['nearby'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             nearby_modal_exists = True
             break
@@ -74,7 +74,7 @@ def toggle_messages_modal(game):
     messages_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'messages':
-            game.last_modal_positions['messages'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['messages'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             messages_modal_exists = True
             break
@@ -94,7 +94,7 @@ def toggle_gear_modal(game):
     gear_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'gear':
-            game.last_modal_positions['gear'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['gear'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             gear_modal_exists = True
             break
@@ -116,7 +116,7 @@ def toggle_crafting_modal(game):
     crafting_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'crafting':
-            game.last_modal_positions['crafting'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['crafting'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             crafting_modal_exists = True
             break
@@ -168,7 +168,7 @@ def toggle_help_modal(game):
     help_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'help':
-            game.last_modal_positions['help'] = (modal['rect'].x, modal['rect'].y) # Add this
+            game.last_modal_positions['help'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             help_modal_exists = True
             break
@@ -176,13 +176,12 @@ def toggle_help_modal(game):
         new_help_modal = {
             'id': uuid.uuid4(),
             'type': 'help',
-            'position': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2), # Centered
+            'position': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2),
             'is_dragging': False,
             'drag_offset': (0, 0),
             'rect': pygame.Rect(0, 0, HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
             'scroll_offset_y': 0
         }
-        # Realize rect bounds
         new_help_modal['rect'].topleft = new_help_modal['position']
         game.modals.append(new_help_modal)
 
@@ -227,7 +226,6 @@ def process_chat_command(game, text):
     # --- GOD MODE ---
     if command == "god" or command == "godzen":
         if game.player:
-            # Stats to max
             game.player.health = 100.0
             game.player.max_health = 100.0
             game.player.water = 100.0
@@ -242,9 +240,8 @@ def process_chat_command(game, text):
             for part in game.player.body_parts.values():
                 part['value'] = 100.0
                 
-            # Attributes to 10
             for attr in game.player.attributes.keys():
-                game.player.progression.add_xp(game.player, attr, 999999) # Add lots of XP
+                game.player.progression.add_xp(game.player, attr, 999999)
                 
             game.player.god_mode = True
             
@@ -257,7 +254,6 @@ def process_chat_command(game, text):
         return True
 
     # --- ITEM SPAWN ---
-    # Matches %rot item "Item Name" [qty]
     item_match = re.match(r'item\s+"([^"]+)"(?:\s+(\d+))?', command)
     if item_match:
         item_name = item_match.group(1)
@@ -277,7 +273,7 @@ def process_chat_command(game, text):
         if spawned > 0:
             display_message(game, f"{tr('msg', 'Spawned')} {spawned}x '{item_name}' {tr('msg', 'into inventory.')}")
         else:
-            display_message(game, f"{tr('msg', 'Could not spawn cloth')} '{cloth_name}'.")
+            display_message(game, f"{tr('msg', 'Could not spawn item')} '{item_name}'.")
         return True
 
     # --- CLOTH SPAWN ---
@@ -314,7 +310,6 @@ def process_chat_command(game, text):
         veh_def = loader.get_definition_by_name(veh_name)
         
         if veh_def and game.player:
-            # Spawn 1 tile away in a random direction
             directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
             dx, dy = random.choice(directions)
             spawn_x = game.player.rect.centerx + (dx * TILE_SIZE * 2)
@@ -333,7 +328,7 @@ def process_chat_command(game, text):
             )
             
             game.containers.append(new_vehicle)
-            game.rebuild_container_grid() # Update grid
+            game.rebuild_container_grid()
             display_message(game, f"Spawned vehicle '{veh_name}' nearby.")
         else:
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
@@ -343,28 +338,17 @@ def process_chat_command(game, text):
 
 
 def toggle_default_ui(game):
-    """
-    Acts as a UI Hide/Restore toggle button.
-    - If modals are currently open, it saves their state/positions and clears the screen.
-    - If the UI is hidden, it restores the saved modals exactly where they were.
-    - If there is no saved state, it brings up the default layout.
-    """
-    # 1. If modals are currently on screen, save them and hide
     if game.modals:
         game.saved_modals = []
         for modal in game.modals:
-            # Save their exact current position before hiding
             if 'rect' in modal:
                 game.last_modal_positions[modal['type']] = (modal['rect'].x, modal['rect'].y)
             game.saved_modals.append(modal)
         
-        # Clear the screen for an immersive view
         game.modals.clear()
         
-    # 2. If the screen is clear, check if we have a saved state to restore
     elif getattr(game, 'saved_modals', None):
         for modal in game.saved_modals:
-            # Ensure they get their last known positions updated safely
             if modal['type'] in game.last_modal_positions:
                 pos = game.last_modal_positions[modal['type']]
                 modal['position'] = pos
@@ -372,10 +356,8 @@ def toggle_default_ui(game):
                     modal['rect'].topleft = pos
             game.modals.append(modal)
             
-        # Clear saved state so we don't duplicate on next toggle
         game.saved_modals.clear()
         
-    # 3. If there is no saved state, load default perfect layout
     else:
         default_positions = {
             'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
@@ -395,19 +377,73 @@ def toggle_default_ui(game):
 def handle_keyboard_events(game, event):
 
     if event.type == pygame.KEYDOWN:
+        
+        # --- 1. ACTIVE CHAT HANDLING (Highest Priority) ---
+        # Moving this check to the very top prevents chat input actions (like typing 'i' or 'TAB') 
+        # from inadvertently triggering normal gameplay hotkeys while the modal is focused.
+        if getattr(game, 'chat_active', False):
+            if event.key == pygame.K_RETURN:
+                if getattr(game, 'chat_input_text', '').strip():
+                    # Process and store history for Up/Down arrows
+                    if not hasattr(game, 'chat_history'):
+                        game.chat_history = []
+                    game.chat_history.append(game.chat_input_text)
+                    game.chat_history_index = len(game.chat_history)
+                    
+                    is_command = process_chat_command(game, game.chat_input_text)
+                    
+                    if not is_command:
+                        game.player.chat_text = game.chat_input_text
+                        game.player.chat_timer = game.player.chat_duration
+                        
+                        from core.messages import display_message
+                        display_message(game, f"{game.player.name}: {game.chat_input_text}")
+                
+                game.chat_input_text = ""
+                game.chat_active = False
+
+            elif event.key == pygame.K_BACKSPACE:
+                if len(getattr(game, 'chat_input_text', '')) > 0:
+                    game.chat_input_text = game.chat_input_text[:-1]
+            
+            elif event.key == pygame.K_ESCAPE:
+                game.chat_active = False
+                
+            elif event.key == pygame.K_UP:
+                if hasattr(game, 'chat_history') and game.chat_history:
+                    if not hasattr(game, 'chat_history_index'):
+                        game.chat_history_index = len(game.chat_history)
+                    game.chat_history_index = max(0, game.chat_history_index - 1)
+                    game.chat_input_text = game.chat_history[game.chat_history_index]
+                    
+            elif event.key == pygame.K_DOWN:
+                if hasattr(game, 'chat_history') and game.chat_history:
+                    if not hasattr(game, 'chat_history_index'):
+                        game.chat_history_index = len(game.chat_history)
+                    game.chat_history_index = min(len(game.chat_history), game.chat_history_index + 1)
+                    if game.chat_history_index < len(game.chat_history):
+                        game.chat_input_text = game.chat_history[game.chat_history_index]
+                    else:
+                        game.chat_input_text = ""
+            else:
+                if len(getattr(game, 'chat_input_text', '')) < 50 and event.unicode:
+                    game.chat_input_text += event.unicode
+            
+            # Important: Halt further event processing so no modals are toggled
+            return 
+            
+        # --- 2. GLOBAL KEYS ---
         if event.key == pygame.K_TAB:
             toggle_default_ui(game)
             return
 
-        # [ADDED] Check if a top modal wants to handle the event (e.g. Search Bar)
-        # Ensure we don't handle events for hidden modals
+        # Check if a top modal wants to handle the event (e.g. Search Bar)
         if game.modals and not getattr(game, 'hide_modals', False):
             top_modal = game.modals[-1]
             if 'instance' in top_modal and hasattr(top_modal['instance'], 'handle_event'):
                 if top_modal['instance'].handle_event(event):
                     return
 
-        # --- Global Keys ---
         if event.key == pygame.K_F2:
             toggle_pause(game)
             return
@@ -423,35 +459,7 @@ def handle_keyboard_events(game, event):
             game.is_fast_forwarding = not game.is_fast_forwarding
             return
 
-        # --- 1. ACTIVE CHAT HANDLING ---
-        if game.chat_active:
-            if event.key == pygame.K_RETURN:
-                if game.chat_input_text.strip():
-                    is_command = process_chat_command(game, game.chat_input_text)
-                    
-                    if not is_command:
-                        game.player.chat_text = game.chat_input_text
-                        game.player.chat_timer = game.player.chat_duration
-                        
-                        from core.messages import display_message
-                        display_message(game, f"{game.player.name}: {game.chat_input_text}")
-                
-                game.chat_input_text = ""
-                game.chat_active = False
-
-            elif event.key == pygame.K_BACKSPACE:
-                game.chat_input_text = game.chat_input_text[:-1]
-            
-            elif event.key == pygame.K_ESCAPE:
-                game.chat_active = False
-                
-            else:
-                if len(game.chat_input_text) < 50:
-                    game.chat_input_text += event.unicode
-            
-            return 
-
-        # --- 2. GAMEPLAY KEYS (Only if Chat is NOT active) ---
+        # --- 3. GAMEPLAY KEYS (Only if Chat is NOT active) ---
         if game.game_state == 'PLAYING':
             
             if event.key == pygame.K_RETURN or event.key == pygame.K_t:

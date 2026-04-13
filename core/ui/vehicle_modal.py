@@ -283,9 +283,28 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
              if getattr(item, 'image', None):
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
-             if hasattr(item, 'load') and item.load is not None and item.load > 0:
+             # --- Durability / Load Bar Logic ---
+             cur_val, max_val = None, None
+             if hasattr(item, 'durability') and item.durability is not None and getattr(item, 'max_durability', None) is not None:
+                 cur_val, max_val = item.durability, item.max_durability
+             elif hasattr(item, 'load') and item.load is not None and getattr(item, 'capacity', None) is not None:
+                 cur_val, max_val = item.load, item.capacity
+
+             if cur_val is not None and max_val is not None and float(max_val) > 0:
+                 pct = max(0.0, min(1.0, float(cur_val) / float(max_val)))
+                 bar_w, bar_h = slot_rect.width - 10, 3
+                 bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
+                 
+                 col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
+                 
+                 pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
+                 if pct > 0: 
+                     pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
+             elif hasattr(item, 'load') and item.load is not None and item.load > 0:
+                 # Fallback to text if no 'capacity' property is present to build a bar
                  draw_text_shadow(surface, font_14, str(int(item.load)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
+             # -----------------------------------
 
         modal['equipment_rects'][slot_name] = slot_rect
         current_x += slot_size + slot_gap
@@ -309,7 +328,24 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
              if getattr(item, 'image', None):
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
-             if hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
+             cur_val, max_val = None, None
+             if hasattr(item, 'durability') and item.durability is not None and getattr(item, 'max_durability', None) is not None:
+                 cur_val, max_val = item.durability, item.max_durability
+             elif hasattr(item, 'load') and item.load is not None and getattr(item, 'capacity', None) is not None:
+                 cur_val, max_val = item.load, item.capacity
+
+             if cur_val is not None and max_val is not None and float(max_val) > 0:
+                 pct = max(0.0, min(1.0, float(cur_val) / float(max_val)))
+                 bar_w, bar_h = slot_rect.width - 10, 3
+                 bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
+                 
+                 col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
+                 
+                 pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
+                 if pct > 0: 
+                     pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
+             elif hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
+                 # Fallback to text if no 'max_durability' property is present to build a bar
                  draw_text_shadow(surface, font_14, str(int(item.durability)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
