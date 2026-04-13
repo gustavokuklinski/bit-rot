@@ -1,32 +1,44 @@
 <player_traits>
     <profession>
-        <trait id="Profession_Unemployed" name="Unemployed" cost="1" tooltip="Fast pick pocket" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_Unemployed" name="Unemployed" cost="1" tooltip="Fast pick pocket" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:5, fitness:5, agility: 5]" />
         </trait>
-        <trait id="Profession_Nurse" name="Nurse" cost="1" tooltip="Knows basic medicine" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Police_Officer]">
+        <trait id="Profession_Nurse" name="Nurse" cost="1" tooltip="Knows basic medicine" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Police_Officer]">
             <attributes level="[strength:5, fitness:5, agility: 5, maintenance: 2, intelligence: 3, lucky: 1]" />
+            <recipe magazine="Survivor Guide Basic" />
             <recipe magazine="Medicine Vol.1" />
         </trait>
-        <trait id="Profession_Police_Officer" name="Police Officer" cost="1" tooltip="The main security skills" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Nurse]">
+        <trait id="Profession_Police_Officer" name="Police Officer" cost="1" tooltip="The main security skills" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Nurse]">
             <attributes level="[strength:5, fitness:5, agility: 3, maintenance: 1, intelligence: 1, ranged: 3, lucky: 2]" />
+            <recipe magazine="Survivor Guide Basic" />
         </trait>
-        <trait id="Profession_Scientist" name="Scientist" cost="1" tooltip="Higher intelligence skills" disable="[Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_Scientist" name="Scientist" cost="1" tooltip="Higher intelligence skills" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:2, fitness:2, agility: 4, lucky: 3, maintenance: 2, intelligence: 5]" />
+            <recipe magazine="Survivor Guide Basic" />
             <recipe magazine="Medicine Vol.1" />
         </trait>
-        <trait id="Profession_Mechanic" name="Mechanic" cost="1" tooltip="Knows how vehicles works" disable="[Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_Mechanic" name="Mechanic" cost="1" tooltip="Knows how vehicles works" disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:5, fitness:5, agility: 5, maintenance: 1, intelligence: 2]" />
+            <recipe magazine="Survivor Guide Basic" />
             <recipe magazine="Vehicle Engineering Vol.1" />
             <recipe magazine="Vehicle Engineering Vol.2" />
             <recipe magazine="Vehicle Engineering Vol.3" />
         </trait>
-        <trait id="Profession_Spy" name="Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_Spy" name="Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:4, fitness:4, agility: 5, lucky: 5,maintenance: 1, intelligence: 3]" />
+            <recipe magazine="Survivor Guide Basic" />
             <recipe magazine="Medicine Vol.1" />
             <recipe magazine="Vehicle Engineering Vol.1" />
         </trait>
-        <trait id="Profession_CEO_assistant" name="CEO assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
-            <attributes level="[strength:2, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
+        <trait id="Profession_CEO_assistant" name="CEO assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Maintenance, Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:1, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
+            <recipe magazine="Survivor Guide Basic" />
+        </trait>
+        <trait id="Profession_Maintenance" name="Maintenance" cost="1" tooltip="Maintenance worker" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:2, fitness:3, agility: 4, lucky: 3, maintenance: 5, intelligence: 4]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Carpentary Vol.1" />
+            <recipe magazine="Vehicle Engineering Vol.1" />
         </trait>
     </profession>
     <traits>

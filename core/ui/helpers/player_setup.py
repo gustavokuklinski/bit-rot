@@ -142,22 +142,29 @@ def _draw_player_build_screen(game, state, mouse_pos):
     clickable_rects['name_input'] = name_input_rect
 
     buttons_y = preset_body_rect.y + S(80)
-    btn_width = S(80)
-    btn_padding = (preset_body_rect.width - (btn_width * 3) - (padding * 2)) // 2
+    btn_width = S(77)
+    btn_gap = S(10)
     
-    save_btn_rect = pygame.Rect(preset_body_rect.x + padding, buttons_y, btn_width, S(30))
+    # Calculate total width of the three buttons to center them as a group
+    total_buttons_width = (btn_width * 3) + (btn_gap * 2)
+    start_btn_x = preset_body_rect.x + (preset_body_rect.width - total_buttons_width) // 2
+    
+    save_btn_rect = pygame.Rect(start_btn_x, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Save"), True, WHITE), (save_btn_rect.x + S(20), save_btn_rect.y + S(5)))
+    save_text = font.render(tr('ui', "Save"), True, WHITE)
+    game.game_screen.blit(save_text, save_text.get_rect(center=save_btn_rect.center))
     clickable_rects['save_button'] = save_btn_rect
     
-    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_padding, buttons_y, btn_width, S(30))
+    random_btn_rect = pygame.Rect(save_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Random"), True, WHITE), (random_btn_rect.x + S(10), random_btn_rect.y + S(5)))
+    random_text = font.render(tr('ui', "Random"), True, WHITE)
+    game.game_screen.blit(random_text, random_text.get_rect(center=random_btn_rect.center))
     clickable_rects['random_button'] = random_btn_rect
 
-    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_padding, buttons_y, btn_width, S(30))
+    delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
-    game.game_screen.blit(font.render(tr('ui', "Delete"), True, WHITE), (delete_btn_rect.x + S(15), delete_btn_rect.y + S(5)))
+    delete_text = font.render(tr('ui', "Delete"), True, WHITE)
+    game.game_screen.blit(delete_text, delete_text.get_rect(center=delete_btn_rect.center))
     clickable_rects['delete_button'] = delete_btn_rect
     
     load_dd_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + S(125), preset_body_rect.width - padding*2, S(30))
@@ -172,8 +179,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
     game.game_screen.blit(font.render(tr('ui', "Sex:"), True, WHITE), (preset_body_rect.x + padding, sex_y))
     
     sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
-    male_btn_rect = pygame.Rect(preset_body_rect.x + padding, sex_y + S(25), sex_btn_width, S(30))
-    female_btn_rect = pygame.Rect(male_btn_rect.right + padding, sex_y + S(25), sex_btn_width, S(30))
+    sex_gap = padding
+    
+    # Calculate total width of the two sex buttons to center them as a group
+    total_sex_width = (sex_btn_width * 2) + sex_gap
+    start_sex_x = preset_body_rect.x + (preset_body_rect.width - total_sex_width) // 2
+    
+    male_btn_rect = pygame.Rect(start_sex_x, sex_y + S(25), sex_btn_width, S(30))
+    female_btn_rect = pygame.Rect(male_btn_rect.right + sex_gap, sex_y + S(25), sex_btn_width, S(30))
     
     current_sex = state['base_data'].get('sex', 'Male')
     
@@ -183,7 +196,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, male_btn_rect, 1, border_radius=3)
-    game.game_screen.blit(font.render(tr('ui', "Male"), True, WHITE), (male_btn_rect.centerx - S(20), male_btn_rect.y + S(5)))
+        
+    male_text = font.render(tr('ui', "Male"), True, WHITE)
+    game.game_screen.blit(male_text, male_text.get_rect(center=male_btn_rect.center))
     
     if current_sex == 'Female':
         pygame.draw.rect(game.game_screen, (80, 80, 80), female_btn_rect, 0, border_radius=3)
@@ -191,7 +206,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, female_btn_rect, 1, border_radius=3)
-    game.game_screen.blit(font.render(tr('ui', "Female"), True, WHITE), (female_btn_rect.centerx - S(28), female_btn_rect.y + S(5)))
+        
+    female_text = font.render(tr('ui', "Female"), True, WHITE)
+    game.game_screen.blit(female_text, female_text.get_rect(center=female_btn_rect.center))
     
     clickable_rects['sex_buttons'] = {'Male': male_btn_rect, 'Female': female_btn_rect}
  

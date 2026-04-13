@@ -1,0 +1,10 @@
+<item name="Almanach" type="charm">
+    <properties>
+        <sprite file="consumable_magazine_general_content.png" />
+        <weight weight="0.001" />
+    </properties>
+    <attributes>
+        <intelligence value="3.0" />
+    </attributes>
+    <spawn chance="10" />
+</item>
