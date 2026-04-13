@@ -213,7 +213,6 @@ def handle_context_menu_click(game, mouse_pos):
                             target_container = c_item
                             
                 if target_container:
-                    # [FIX] Pop the item out completely first so it loses its direct memory reference to the vehicle slot
                     removed_item = veh.remove_equipment(slot_name)
                     if removed_item:
                         qty_to_send = getattr(removed_item, 'load', 1)
@@ -233,7 +232,7 @@ def handle_context_menu_click(game, mouse_pos):
                         actual_transfer = min(qty_to_send, max_qty_by_weight)
                         
                         if actual_transfer <= 0:
-                            veh.add_equipment(removed_item, slot_name) # Return fully if no space
+                            veh.add_equipment(removed_item, slot_name)
                             display_message(tr('msg', "Container is full by weight."))
                             game.context_menu['active'] = False
                             return
@@ -241,7 +240,6 @@ def handle_context_menu_click(game, mouse_pos):
                         original_load = qty_to_send
                         amount_transferred = 0
                         
-                        # 1. Try stacking into existing items
                         if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
                             for inv_item in target_container.inventory:
                                 if inv_item.can_stack_with(removed_item):
@@ -259,12 +257,10 @@ def handle_context_menu_click(game, mouse_pos):
                                     if actual_transfer <= 0:
                                         break
                                         
-                        # 2. Try empty slots
                         c_cap = getattr(target_container, 'capacity', 0)
                         if c_cap is None: c_cap = 0
                         
                         if actual_transfer > 0 and len(target_container.inventory) < c_cap:
-                            # [FIX] Clone it to ensure absolutely no shared memory references are passed to the container
                             new_item = Item.create_from_name(removed_item.name)
                             if new_item:
                                 new_item.load = actual_transfer
@@ -273,12 +269,11 @@ def handle_context_menu_click(game, mouse_pos):
                                 amount_transferred += actual_transfer
                                 actual_transfer = 0
                                 
-                        # 3. Handle leftovers strictly
                         remaining_load = original_load - amount_transferred
                         
                         if remaining_load > 0:
                             removed_item.load = remaining_load
-                            veh.add_equipment(removed_item, slot_name) # Re-insert ONLY the remainder
+                            veh.add_equipment(removed_item, slot_name)
                             
                         if amount_transferred > 0:
                             display_message(f"{tr('msg', 'Removed fuel to')} {target_container.name}.")
@@ -291,7 +286,7 @@ def handle_context_menu_click(game, mouse_pos):
                 target_container_name = target_sub_slot
                 
                 def remove_item_from_src(target_item, is_clone=False):
-                    if is_clone: return True  # Do not pop clones representing infinite sources
+                    if is_clone: return True
                     
                     if source == 'inventory':
                         for idx_val, v in enumerate(game.player.inventory):
@@ -328,13 +323,7 @@ def handle_context_menu_click(game, mouse_pos):
                         game.context_menu['active'] = False
                         return
 
-                    if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
-                        display_message(tr('msg', "Cannot carry anymore weight"))
-                        game.context_menu['active'] = False
-                        return
-                        
                     def do_send_inv():
-                        # Clone if it's an infinite liquid source
                         is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
                         
                         if is_inf and getattr(item, 'liquid', False):
@@ -363,11 +352,9 @@ def handle_context_menu_click(game, mouse_pos):
                     
                     for c_item in all_containers:
                         if getattr(c_item, 'item_type', '') in ['container', 'cloth']:
-                            # Safe ID matching fixes issues with duplicate container names
                             if hasattr(c_item, 'id') and str(c_item.id) == target_container_name:
                                 target_container = c_item
                                 break
-                            # Fallback to name just in case
                             if not target_container and c_item.name == target_container_name:
                                 target_container = c_item
                             
@@ -397,7 +384,6 @@ def handle_context_menu_click(game, mouse_pos):
                             
                             is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
                             
-                            # Handle infinite liquid sources: safely clone the item
                             if is_inf and getattr(removed_item, 'liquid', False):
                                 clone = Item.create_from_name(removed_item.name)
                                 if clone:
@@ -621,13 +607,6 @@ def handle_context_menu_click(game, mouse_pos):
                                     elif game.player.clothes.get('util3') is None:
                                         item_slot = 'util3'
 
-                    source_is_external = source in ['ground', 'nearby']
-                    if source_is_external:
-                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
-                            display_message(tr('msg', "Cannot carry anymore weight"))
-                            game.context_menu['active'] = False
-                            return
-
                     if item_slot in game.player.clothes_slots or item_slot in ['util', 'util2', 'util3']:
                         item_from_source = None
                         if source == 'inventory' and 0 <= index < len(game.player.inventory):
@@ -659,11 +638,6 @@ def handle_context_menu_click(game, mouse_pos):
                     if source == 'ground':
                         if getattr(item, 'liquid', False):
                             print("Cannot pick up liquid directly to inventory.")
-                            game.context_menu['active'] = False
-                            return
-
-                        if game.player.current_weight + item.get_total_weight() > game.player.max_carry_weight:
-                            display_message(tr('msg', "Cannot carry anymore weight"))
                             game.context_menu['active'] = False
                             return
 
@@ -904,13 +878,6 @@ def handle_context_menu_click(game, mouse_pos):
                             weight_multiplier = 1.0 / item.load
                         elif option == 'Grab Half':
                             weight_multiplier = max(1, item.load // 2) / item.load
-
-                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 0)
-
-                    if game.player.current_weight + (item_weight * weight_multiplier) > game.player.max_carry_weight:
-                        display_message(tr('msg', "Cannot carry anymore weight"))
-                        game.context_menu['active'] = False
-                        return
 
                     def do_grab():
                         grabbed = False

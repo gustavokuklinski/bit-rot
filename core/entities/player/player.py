@@ -417,31 +417,52 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             _update_items_text(self.inventory + self.belt + list(self.clothes.values()))
 
         # --- Overweight Logic ---
-        overweight_ratio = 0
-        if self.max_carry_weight > 0:
-             overweight_ratio = self.current_weight / self.max_carry_weight
+        overweight_amount = self.current_weight - self.max_carry_weight
         
-        # Apply stamina caps dynamically based on weight
-        t1 = PROGRESSION_CONFIG.get_stat('weight', 'penalty_threshold_1', 0.75)
-        t2 = PROGRESSION_CONFIG.get_stat('weight', 'penalty_threshold_2', 1.0)
-        
-        stamina_cap_mult = 1.0
-        if overweight_ratio >= t2:
-             stamina_cap_mult = PROGRESSION_CONFIG.get_stat('weight', 'penalty_value_2', 0.5)
-        elif overweight_ratio >= t1:
-             stamina_cap_mult = PROGRESSION_CONFIG.get_stat('weight', 'penalty_value_1', 0.75)
-             
-        # Cap the current stamina dynamically based on the penalty
-        current_max_stamina = self.max_stamina * stamina_cap_mult
-        if self.stamina > current_max_stamina:
-             self.stamina = current_max_stamina
+        if overweight_amount > 0:
+            # Scale: For every 1 unit of overweight, reduce maximums by 5% Health, 2.5% Stamina, 2.5% Tireness
+            # (Which yields exactly 10% Health, 5% Stamina, 5% Tireness reduction for 2 units overweight)
+            health_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_health_penalty', 0.05)
+            stamina_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_stamina_penalty', 0.025)
+            tireness_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_tireness_penalty', 0.025)
 
-        if overweight_ratio > 1.0:
-             loss = 0.01 * (overweight_ratio - 1.0) 
-             self.health = max(0.0, self.health - loss)
-             
-             if self.is_running and is_moving:
-                  self.progression.add_xp(self, 'strength', 0.001)
+            # Apply the fetched multipliers to the overweight amount
+            health_reduction = health_pen_rate * overweight_amount
+            stamina_reduction = stamina_pen_rate * overweight_amount
+            tireness_reduction = tireness_pen_rate * overweight_amount
+
+            current_max_health = self.max_health * max(0.1, 1.0 - health_reduction)
+            current_max_stamina = self.max_stamina * max(0.1, 1.0 - stamina_reduction)
+            current_max_tireness = self.max_tireness * max(0.1, 1.0 - tireness_reduction)
+
+            # Enforce the new caps (draining smoothly over time to feel organic rather than instant damage)
+            if self.health > current_max_health:
+                self.health -= 0.05 * game.dt_mult
+                self.health = max(current_max_health, self.health)
+
+            if self.stamina > current_max_stamina:
+                self.stamina = current_max_stamina
+
+            if self.tireness > current_max_tireness:
+                self.tireness -= 0.05 * game.dt_mult
+                self.tireness = max(current_max_tireness, self.tireness)
+                
+            if self.is_running and is_moving:
+                self.progression.add_xp(self, 'fitness', 0.001)
+        else:
+            # Standard sub-threshold logic (if heavy but not yet technically "overweight")
+            overweight_ratio = 0
+            if self.max_carry_weight > 0:
+                overweight_ratio = self.current_weight / self.max_carry_weight
+                
+            t1 = PROGRESSION_CONFIG.get_stat('weight', 'penalty_threshold_1', 0.75)
+            stamina_cap_mult = 1.0
+            if overweight_ratio >= t1:
+                stamina_cap_mult = PROGRESSION_CONFIG.get_stat('weight', 'penalty_value_1', 0.75)
+                
+            current_max_stamina = self.max_stamina * stamina_cap_mult
+            if self.stamina > current_max_stamina:
+                self.stamina = current_max_stamina
 
         all_inventories = [self.belt, self.inventory]
             

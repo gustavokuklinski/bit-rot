@@ -165,12 +165,12 @@ class Game:
             'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
             'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
             'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-            'container': (GAME_WIDTH / 2 - 150, GAME_HEIGHT / 2 - 150),
-            'text': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150),
-            'mobile': (GAME_WIDTH / 2 - 125, GAME_HEIGHT / 2 - 200),
+            'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+            'text': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+            'mobile': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+            'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
             'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
             'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
-            'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
         }
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']

@@ -1,4 +1,4 @@
-<map name="misc_barrel" type="maptile_container" char="misc_barrel" is_obstacle="true">
+<map name="misc_barrel" type="maptile_container" char="misc_barrel" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="misc_barrel.png" />
     </visuals>

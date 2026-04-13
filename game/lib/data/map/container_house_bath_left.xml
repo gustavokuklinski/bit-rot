@@ -1,4 +1,4 @@
-<map name="house_bath" type="maptile_container" char="house_bath" is_obstacle="true" allow_liquid="true">
+<map name="house_bath" type="maptile_container" char="house_bath" is_obstacle="true" allow_liquid="true" is_visible="true">
     <visuals>
         <sprite file="house_bath.png" />
     </visuals>

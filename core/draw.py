@@ -832,13 +832,13 @@ def draw_game(game):
                 
                 # 1. Aggressive Flickering
                 # Drops opacity much lower (down to 40) and more frequently
-                if random.random() < (0.4 * intensity):
-                    game.crt_overlay.set_alpha(random.randint(40, 150))
-                else:
-                    game.crt_overlay.set_alpha(255)
+                #if random.random() < (0.4 * intensity):
+                #    game.crt_overlay.set_alpha(random.randint(40, 150))
+                #else:
+                #    game.crt_overlay.set_alpha(255)
 
                 # 2. Frenetic CRT Jitter (Heavier shaking)
-                if random.random() < (0.5 * intensity):
+                if random.random() < (0.4 * intensity):
                     max_x_jitter = max(1, int(25 * intensity))
                     max_y_jitter = max(1, int(12 * intensity))
                     crt_x = random.choice([-1, 1]) * random.randint(1, max_x_jitter)
@@ -846,7 +846,7 @@ def draw_game(game):
                 
                 # 3. Frenetic Blocks of Tearing
                 # At high anxiety, this will loop and slice the screen multiple times in one frame!
-                max_tears_per_frame = int(6 * intensity) 
+                max_tears_per_frame = int(5 * intensity) 
                 
                 if max_tears_per_frame > 0:
                     # Randomize how many tears actually happen this specific frame (0 to max)

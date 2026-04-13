@@ -1,4 +1,4 @@
-<map name="military_crate" type="maptile_container" char="military_crate" is_obstacle="true">
+<map name="military_crate" type="maptile_container" char="military_crate" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="military_crate.png" />
     </visuals>

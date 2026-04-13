@@ -199,9 +199,8 @@ def handle_mouse_up(game, event, mouse_pos):
                     return 
 
                 def check_player_weight(incoming_item):
-                    if game.player.current_weight + incoming_item.get_total_weight() > game.player.max_carry_weight:
-                        display_message(tr('msg', "Cannot carry anymore weight"))
-                        return False
+                    # We have completely disabled the drag-and-drop weight block!
+                    # The scaling penalties in player.py handle the consequences natively.
                     return True
                
                 # --- Drop on BELT ---

@@ -106,11 +106,6 @@ class PlayerInventory:
         if not any(slot is None for slot in self.belt):
             display_message(tr('msg', "Belt is full."))
             return False
-            
-        if source_type in ['ground', 'nearby']:
-            if self.current_weight + item.get_total_weight() > self.max_carry_weight:
-                display_message(tr('msg', "Cannot carry anymore weight"))
-                return False
 
         source_inventory = self._get_source_inventory(source_type, container_item)
         if source_inventory is None:
@@ -205,11 +200,6 @@ class PlayerInventory:
                 remaining_load = 9999
             else:
                 remaining_load = item.load
-            
-            if not source_is_on_player and target_is_on_player:
-                if self.current_weight + item.get_total_weight() > self.max_carry_weight:
-                    display_message(tr('msg', "Cannot carry anymore weight"))
-                    return
 
             for target in targets:
                 target_obj = target.get('obj')
@@ -280,31 +270,23 @@ class PlayerInventory:
                 if not transferred and not is_infinite:
                     display_message(f"{tr('msg', 'Inventory full. Could not transfer remaining')} {remaining_load}.")
 
-        # --- CHANGED PART ---
         def is_on_player(container):
             if not container: return False
             if container is self: return True 
             
-            # 1. Recognize the Player entity itself as "on player" by verifying if its inventory matches this one
             if hasattr(container, 'inventory'):
-                # Handle cases where container.inventory is the PlayerInventory object (self)
-                # or where container.inventory is the direct item list (self.inventory)
                 if container.inventory is self or container.inventory is getattr(self, 'inventory', None):
                     return True
 
-            # 2. Safely check if the container is a string that belongs to player slots
             if isinstance(container, str):
                 if container in ['inventory', 'belt', 'gear', 'clothes']: return True
-                # Catch specific slot transfers like 'util', 'legs', 'body'
                 if hasattr(self, 'clothes') and container in self.clothes: return True
                 return False
 
-            # 3. Check objects robustly by reference and ID
             c_id = getattr(container, 'id', None)
             
             def check_recursive(items):
                 if not items: return False
-                # Handle both dicts (self.clothes) and lists (inventory, belt)
                 items_to_check = items.values() if isinstance(items, dict) else items
                 for item in items_to_check:
                     if not item: continue
@@ -318,10 +300,8 @@ class PlayerInventory:
             if hasattr(self, 'inventory') and check_recursive(self.inventory): return True
             return False
 
-        # source_is_on_player handles slot strings ('legs', 'util') OR the physical item object
         source_is_on_player = is_on_player(source) or is_on_player(container_item)
         target_is_on_player = is_on_player(target_container)
-        # --------------------
         
         needs_timer = not (source_is_on_player and target_is_on_player)
         action_label = "Looting" if not source_is_on_player and target_is_on_player else "Transferring"

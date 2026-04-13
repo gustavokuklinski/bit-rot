@@ -81,8 +81,10 @@
             <param name="alert_threshold" value="0.75" /> 
             <param name="penalty_threshold_1" value="0.75" />
             <param name="penalty_value_1" value="0.75" /> 
-            <param name="penalty_threshold_2" value="1.0" />
-            <param name="penalty_value_2" value="0.5" /> 
+
+            <param name="overweight_health_penalty" value="0.05" /> 
+            <param name="overweight_stamina_penalty" value="0.025" /> 
+            <param name="overweight_tireness_penalty" value="0.025" />
         </stat>
         
         <stat id="anxiety">

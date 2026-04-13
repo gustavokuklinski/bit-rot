@@ -10,7 +10,7 @@ class ProceduralGeneratorTemplate:
             self.forest_tiles = [k for k in self.game.tile_manager.definitions.keys() if k.startswith('Forest_')]
         
         if not self.forest_tiles:
-            self.forest_tiles = ['garden_tree_1', 'garden_tree_8', 'garden_stone', 'bg_grass', 'garden_dirty_1', 'garden_dirty_2', 'garden_grass_3', 'garden_grass_1', 'garden_grass_2']
+            self.forest_tiles = ['garden_tree_1', 'garden_tree_8', 'garden_stone', 'bg_grass', 'garden_dirty_1', 'garden_dirty_2', 'garden_grass_3', 'garden_tall_grass','garden_grass_1', 'garden_grass_2']
 
         # 2. Identify & Categorize Templates
         self.categorized_templates = {

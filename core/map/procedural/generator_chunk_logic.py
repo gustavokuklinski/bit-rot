@@ -616,7 +616,7 @@ class ProceduralGeneratorChunk:
                     building_mask[ry][rx] = True
 
         grass_decos = getattr(self, 'grass_decorations', ['garden_stone', 'garden_tree_8','garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
-        dirt_decos = getattr(self, 'dirt_decorations', ['garden_stone', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3'])
+        dirt_decos = getattr(self, 'dirt_decorations', ['garden_stone', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass'])
         sand_decos = getattr(self, 'sand_decorations', ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4'])
         
         grass_chance = 0.05
