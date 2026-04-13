@@ -5,7 +5,6 @@
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
         <language value="en_US" name="Language"/>
         <crt_filter value="true" name="CRT filter (Default: True)"/>
-        <resolution value="1280x720" name="Resolution (Default: 1280x720)"/>
         <window_mode value="windowed" name="Window (Default: windowed)"/>
     </ui>
     <audio>

@@ -99,8 +99,8 @@ def create_blood_splatter(game, target_rect, damage, direction_vector=None):
             'duration': random.randint(30000, 60000) 
         })
     
-    if len(game.blood_stains) > 250:
-        game.blood_stains = game.blood_stains[-250:]
+    if len(game.blood_stains) > 60:
+        game.blood_stains = game.blood_stains[-60:]
 
 def update_game_state(game):
     
@@ -431,10 +431,10 @@ def update_game_state(game):
             if not getattr(other_entity, 'is_dead', False) and zombie.rect.colliderect(other_entity.rect):
                 
                 # Narrow Phase: Pixel-perfect Mask overlap
-                if hasattr(zombie, 'mask') and hasattr(other_entity, 'mask') and zombie.mask and other_entity.mask:
-                    offset = (other_entity.rect.x - zombie.rect.x, other_entity.rect.y - zombie.rect.y)
-                    if not zombie.mask.overlap(other_entity.mask, offset):
-                        continue # Skip separation if pixels don't touch
+                #if hasattr(zombie, 'mask') and hasattr(other_entity, 'mask') and zombie.mask and other_entity.mask:
+                #    offset = (other_entity.rect.x - zombie.rect.x, other_entity.rect.y - zombie.rect.y)
+                #    if not zombie.mask.overlap(other_entity.mask, offset):
+                #        continue # Skip separation if pixels don't touch
 
                 dx = zombie.rect.centerx - other_entity.rect.centerx
                 dy = zombie.rect.centery - other_entity.rect.centery

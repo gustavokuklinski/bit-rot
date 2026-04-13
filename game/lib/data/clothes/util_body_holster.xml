@@ -1,4 +1,4 @@
-<cloth name="Body Holster" type="cloth" id="util" builder="false" hotbar="true">
+<cloth name="Body Holster" type="cloth" id="util" builder="false">
     <properties>
         <defence value="0.0" />
         <capacity value="1" />

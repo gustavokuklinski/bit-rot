@@ -261,24 +261,20 @@ def load_settings(preset="default"):
         val_tutorial = ui_config.find('ui_show_tutorial_default')
         UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
 
-        RESOLUTION = ui_config.find('resolution').get('value')
+        RESOLUTION = "1280x720"
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
         if hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ:
             RESOLUTION = "1067x480"
             WINDOW_MODE = "fullscreen"
 
-        if RESOLUTION.lower() == "max":
-            GAME_WIDTH = infoObject.current_w
-            GAME_HEIGHT = infoObject.current_h
-        else:
-            try:
-                parts = RESOLUTION.split('x')
-                GAME_WIDTH = int(parts[0])
-                GAME_HEIGHT = int(parts[1])
-            except (ValueError, IndexError):
-                GAME_WIDTH = 1280
-                GAME_HEIGHT = 720
+        try:
+            parts = RESOLUTION.split('x')
+            GAME_WIDTH = int(parts[0])
+            GAME_HEIGHT = int(parts[1])
+        except (ValueError, IndexError):
+            GAME_WIDTH = 1280
+            GAME_HEIGHT = 720
         
         UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
         RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
