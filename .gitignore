@@ -6,5 +6,6 @@ bin
 build
 game/save/player
 game/save/game
+game/save/server
 game/logs
 game/lib/sfx/*/*-pygbag.ogg
