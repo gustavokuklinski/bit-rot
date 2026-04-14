@@ -157,7 +157,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                         item_ref.rect.center = game.player.rect.center
                                             
                                             action_name = tr('msg', "Refueling") if slot_name == 'fuel' else tr('msg', "Transferring")
-                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2) if is_external_source else 1.0
+                                            transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                             game.player.start_action(action_name, transfer_time, do_stack_vehicle, xp_reward=0.5)
                                             
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -183,7 +183,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         
                                         
                                         action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
-                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2) if is_external_source else 1.0
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                         game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
                                         
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None

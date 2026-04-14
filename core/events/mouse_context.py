@@ -213,73 +213,79 @@ def handle_context_menu_click(game, mouse_pos):
                             target_container = c_item
                             
                 if target_container:
-                    removed_item = veh.remove_equipment(slot_name)
-                    if removed_item:
-                        qty_to_send = getattr(removed_item, 'load', 1)
-                        if qty_to_send is None: qty_to_send = 1
+                    fuel_item = veh.equipment.get(slot_name)
+                    if fuel_item:
+                        transfer_time = max(0.1, fuel_item.get_total_weight() * 0.2)
                         
-                        unit_weight = removed_item.get_total_weight() / max(1, qty_to_send)
-                        avail_weight = float('inf')
-                        
-                        cont_weight = getattr(target_container, 'weight', 0)
-                        if cont_weight is not None and cont_weight > 0:
-                            max_w = cont_weight * 5.0
-                            cur_w = sum(i.get_total_weight() for i in getattr(target_container, 'inventory', []))
-                            avail_weight = max_w - cur_w
-                            
-                        max_qty_by_weight = int(avail_weight // unit_weight) if unit_weight > 0 else qty_to_send
-                        
-                        actual_transfer = min(qty_to_send, max_qty_by_weight)
-                        
-                        if actual_transfer <= 0:
-                            veh.add_equipment(removed_item, slot_name)
-                            display_message(tr('msg', "Container is full by weight."))
-                            game.context_menu['active'] = False
-                            return
-                            
-                        original_load = qty_to_send
-                        amount_transferred = 0
-                        
-                        if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
-                            for inv_item in target_container.inventory:
-                                if inv_item.can_stack_with(removed_item):
-                                    i_cap = getattr(inv_item, 'capacity', 1)
-                                    if i_cap is None: i_cap = 1
-                                    i_load = getattr(inv_item, 'load', 1)
-                                    if i_load is None: i_load = 1
-                                    
-                                    avail = i_cap - i_load
-                                    trans = min(avail, actual_transfer)
-                                    if trans > 0:
-                                        inv_item.load = i_load + trans
-                                        actual_transfer -= trans
-                                        amount_transferred += trans
-                                    if actual_transfer <= 0:
-                                        break
-                                        
-                        c_cap = getattr(target_container, 'capacity', 0)
-                        if c_cap is None: c_cap = 0
-                        
-                        if actual_transfer > 0 and len(target_container.inventory) < c_cap:
-                            new_item = Item.create_from_name(removed_item.name)
-                            if new_item:
-                                new_item.load = actual_transfer
-                                if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
-                                target_container.inventory.append(new_item)
-                                amount_transferred += actual_transfer
-                                actual_transfer = 0
+                        def do_remove_fuel():
+                            removed_item = veh.remove_equipment(slot_name)
+                            if removed_item:
+                                qty_to_send = getattr(removed_item, 'load', 1)
+                                if qty_to_send is None: qty_to_send = 1
                                 
-                        remaining_load = original_load - amount_transferred
-                        
-                        if remaining_load > 0:
-                            removed_item.load = remaining_load
-                            veh.add_equipment(removed_item, slot_name)
-                            
-                        if amount_transferred > 0:
-                            display_message(f"{tr('msg', 'Removed fuel to')} {target_container.name}.")
-                        else:
-                            display_message(tr('msg', "Container is full."))
-                            
+                                unit_weight = removed_item.get_total_weight() / max(1, qty_to_send)
+                                avail_weight = float('inf')
+                                
+                                cont_weight = getattr(target_container, 'weight', 0)
+                                if cont_weight is not None and cont_weight > 0:
+                                    max_w = cont_weight * 5.0
+                                    cur_w = sum(i.get_total_weight() for i in getattr(target_container, 'inventory', []))
+                                    avail_weight = max_w - cur_w
+                                    
+                                max_qty_by_weight = int(avail_weight // unit_weight) if unit_weight > 0 else qty_to_send
+                                
+                                actual_transfer = min(qty_to_send, max_qty_by_weight)
+                                
+                                if actual_transfer <= 0:
+                                    veh.add_equipment(removed_item, slot_name)
+                                    display_message(tr('msg', "Container is full by weight."))
+                                    game.context_menu['active'] = False
+                                    return
+                                    
+                                original_load = qty_to_send
+                                amount_transferred = 0
+                                
+                                if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
+                                    for inv_item in target_container.inventory:
+                                        if inv_item.can_stack_with(removed_item):
+                                            i_cap = getattr(inv_item, 'capacity', 1)
+                                            if i_cap is None: i_cap = 1
+                                            i_load = getattr(inv_item, 'load', 1)
+                                            if i_load is None: i_load = 1
+                                            
+                                            avail = i_cap - i_load
+                                            trans = min(avail, actual_transfer)
+                                            if trans > 0:
+                                                inv_item.load = i_load + trans
+                                                actual_transfer -= trans
+                                                amount_transferred += trans
+                                            if actual_transfer <= 0:
+                                                break
+                                                
+                                c_cap = getattr(target_container, 'capacity', 0)
+                                if c_cap is None: c_cap = 0
+                                
+                                if actual_transfer > 0 and len(target_container.inventory) < c_cap:
+                                    new_item = Item.create_from_name(removed_item.name)
+                                    if new_item:
+                                        new_item.load = actual_transfer
+                                        if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
+                                        target_container.inventory.append(new_item)
+                                        amount_transferred += actual_transfer
+                                        actual_transfer = 0
+                                        
+                                remaining_load = original_load - amount_transferred
+                                
+                                if remaining_load > 0:
+                                    removed_item.load = remaining_load
+                                    veh.add_equipment(removed_item, slot_name)
+                                    
+                                if amount_transferred > 0:
+                                    display_message(f"{tr('msg', 'Removed fuel to')} {target_container.name}.")
+                                else:
+                                    display_message(tr('msg', "Container is full."))
+                                    
+                        game.player.start_action(f"Transferring {tr('item', fuel_item.name)}", transfer_time, do_remove_fuel, xp_reward=1)
                 clicked_on_menu = True
 
             elif option == 'Send to':
@@ -453,17 +459,24 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Remove' and source == 'vehicle_equipment':
                 veh = container_item
                 slot_name = index
-                removed_item = veh.remove_equipment(slot_name)
+                item_to_remove = veh.equipment.get(slot_name)
                 
-                if removed_item:
-                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                        game.player.inventory.append(removed_item)
-                        if hasattr(game.player, 'stack_item_in_inventory'):
-                            game.player.stack_item_in_inventory(removed_item)
-                    else:
-                        removed_item.rect.center = game.player.rect.center
-                        game.items_on_ground.append(removed_item)
-                    display_message(f"{tr('msg', 'Removed')} {tr('item', removed_item.name)}.")
+                if item_to_remove:
+                    transfer_time = max(0.1, item_to_remove.get_total_weight() * 0.2)
+                    
+                    def do_remove():
+                        removed_item = veh.remove_equipment(slot_name)
+                        if removed_item:
+                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(removed_item)
+                                if hasattr(game.player, 'stack_item_in_inventory'):
+                                    game.player.stack_item_in_inventory(removed_item)
+                            else:
+                                removed_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(removed_item)
+                            display_message(f"{tr('msg', 'Removed')} {tr('item', removed_item.name)}.")
+                            
+                    game.player.start_action(f"Removing {tr('item', item_to_remove.name)}", transfer_time, do_remove, xp_reward=1)
                 clicked_on_menu = True
 
             elif option.startswith('Insert '):
@@ -499,23 +512,28 @@ def handle_context_menu_click(game, mouse_pos):
                                 if found_item: break
                                 
                     if found_item:
-                        if src_list == game.player.belt:
-                            game.player.belt[idx] = None
-                        elif src_list == game.player.clothes:
-                            game.player.clothes[idx] = None
-                        else:
-                            src_list.pop(idx)
-                            
-                        old_item = veh.add_equipment(found_item, slot_name)
-                        if old_item:
-                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(old_item)
-                                if hasattr(game.player, 'stack_item_in_inventory'):
-                                    game.player.stack_item_in_inventory(old_item)
+                        transfer_time = max(0.1, found_item.get_total_weight() * 0.2)
+                        
+                        def do_insert():
+                            if src_list == game.player.belt:
+                                game.player.belt[idx] = None
+                            elif src_list == game.player.clothes:
+                                game.player.clothes[idx] = None
                             else:
-                                old_item.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_item)
-                        display_message(f"{tr('msg', 'Inserted')} {tr('item', found_item.name)}.")
+                                src_list.pop(idx)
+                                
+                            old_item = veh.add_equipment(found_item, slot_name)
+                            if old_item:
+                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    game.player.inventory.append(old_item)
+                                    if hasattr(game.player, 'stack_item_in_inventory'):
+                                        game.player.stack_item_in_inventory(old_item)
+                                else:
+                                    old_item.rect.center = game.player.rect.center
+                                    game.items_on_ground.append(old_item)
+                            display_message(f"{tr('msg', 'Inserted')} {tr('item', found_item.name)}.")
+                            
+                        game.player.start_action(f"Inserting {tr('item', found_item.name)}", transfer_time, do_insert, xp_reward=1)
                     else:
                         display_message(f"{tr('msg', 'You do not have a suitable item for this slot.')}")
                         
@@ -538,25 +556,30 @@ def handle_context_menu_click(game, mouse_pos):
                     elif option == 'Add tire to': slot = target_sub_slot
 
                     if slot and veh.can_equip(item, slot):
-                        if source == 'inventory':
-                            game.player.inventory.pop(index)
-                        elif source == 'belt':
-                            game.player.belt[index] = None
-                        elif source == 'gear':
-                            game.player.clothes[index] = None
-                        elif source == 'container' and container_item:
-                            container_item.inventory.pop(index)
+                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                        
+                        def do_add():
+                            if source == 'inventory':
+                                game.player.inventory.pop(index)
+                            elif source == 'belt':
+                                game.player.belt[index] = None
+                            elif source == 'gear':
+                                game.player.clothes[index] = None
+                            elif source == 'container' and container_item:
+                                container_item.inventory.pop(index)
 
-                        old_item = veh.add_equipment(item, slot)
-                        if old_item:
-                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(old_item)
-                                if hasattr(game.player, 'stack_item_in_inventory'):
-                                    game.player.stack_item_in_inventory(old_item)
-                            else:
-                                old_item.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_item)
-                        display_message(f"{tr('msg', 'Installed')} {tr('item', item.name)} {tr('msg', 'in vehicle')}.")
+                            old_item = veh.add_equipment(item, slot)
+                            if old_item:
+                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    game.player.inventory.append(old_item)
+                                    if hasattr(game.player, 'stack_item_in_inventory'):
+                                        game.player.stack_item_in_inventory(old_item)
+                                else:
+                                    old_item.rect.center = game.player.rect.center
+                                    game.items_on_ground.append(old_item)
+                            display_message(f"{tr('msg', 'Installed')} {tr('item', item.name)} {tr('msg', 'in vehicle')}.")
+                            
+                        game.player.start_action(f"Installing {tr('item', item.name)}", transfer_time, do_add, xp_reward=1)
                 clicked_on_menu = True
 
             elif option == 'Reload':
