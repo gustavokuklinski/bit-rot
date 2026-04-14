@@ -189,15 +189,16 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     modal['map_area_rect'] = map_area_rect
 
     # --- 2.5 Handle Mouse Dragging (Panning) ---
-    if 'is_dragging_map' not in modal or 'last_drag_pos' not in modal:
+    if 'is_dragging_map' not in modal:
         modal['is_dragging_map'] = False
+    if 'last_drag_pos' not in modal:
         modal['last_drag_pos'] = (0, 0)
 
     mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
     mouse_pressed = pygame.mouse.get_pressed()[0]
     
     if mouse_pressed:
-        if modal['is_dragging_map']:
+        if modal.get('is_dragging_map', False):
             dx = mouse_pos[0] - modal['last_drag_pos'][0]
             dy = mouse_pos[1] - modal['last_drag_pos'][1]
             zoom = float(modal.get('map_zoom', 6))
@@ -207,9 +208,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                 modal['map_offset'][1] + (dy / zoom)
             )
             modal['last_drag_pos'] = mouse_pos
-        elif map_area_rect.collidepoint(mouse_pos):
-             modal['is_dragging_map'] = True
-             modal['last_drag_pos'] = mouse_pos
     else:
         modal['is_dragging_map'] = False
 
@@ -262,18 +260,32 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                 player_grid_x += gx_offset
                 player_grid_y += gy_offset
 
-        # Clamp offset to prevent panning into the infinite black void
-        # We ensure the view's center (player_grid - offset) never leaves the boundaries of the map
         map_w, map_h = cached_surf.get_size()
         off_x, off_y = modal.get('map_offset', (0, 0))
         
-        clamped_x = max(player_grid_x - map_w, min(off_x, float(player_grid_x)))
-        clamped_y = max(player_grid_y - map_h, min(off_y, float(player_grid_y)))
-        modal['map_offset'] = (clamped_x, clamped_y)
-        off_x, off_y = clamped_x, clamped_y
-        
         tiles_in_view_w = map_area_rect.width / map_zoom
         tiles_in_view_h = map_area_rect.height / map_zoom
+
+        # Clamp offset to prevent panning into the infinite black void
+        # We ensure the view's edges never leave the boundaries of the map
+        max_off_x = player_grid_x - (tiles_in_view_w / 2)
+        min_off_x = player_grid_x + (tiles_in_view_w / 2) - map_w
+        
+        max_off_y = player_grid_y - (tiles_in_view_h / 2)
+        min_off_y = player_grid_y + (tiles_in_view_h / 2) - map_h
+
+        if tiles_in_view_w > map_w:
+            clamped_x = player_grid_x - map_w / 2
+        else:
+            clamped_x = max(min_off_x, min(off_x, max_off_x))
+            
+        if tiles_in_view_h > map_h:
+            clamped_y = player_grid_y - map_h / 2
+        else:
+            clamped_y = max(min_off_y, min(off_y, max_off_y))
+
+        modal['map_offset'] = (clamped_x, clamped_y)
+        off_x, off_y = clamped_x, clamped_y
 
         src_x = (player_grid_x - (tiles_in_view_w / 2)) - off_x
         src_y = (player_grid_y - (tiles_in_view_h / 2)) - off_y

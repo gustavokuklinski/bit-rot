@@ -7,5 +7,4 @@ build
 game/save/player
 game/save/game
 game/logs
-game/multiplayer/server
 game/lib/sfx/*/*-pygbag.ogg

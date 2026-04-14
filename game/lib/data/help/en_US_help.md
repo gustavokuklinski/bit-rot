@@ -5,6 +5,8 @@ Welcome to the Survivor Guide! Use the tabs to navigate over this.
 
 **Fast Tips** 
 - Press TAB to toggle game HUD
+- Press SHIFT+TAB to reset game HUD
+- Press F11 to switch Windowed and Fullscreen
 - Complete your first quest talking to a NPC
 
 ---
@@ -43,7 +45,7 @@ You have three objectives. Choose wisely, because the island is listening.
 * **Space** : Wake up from sleep
 * **F2** : Pause / Save Menu
 * **F3** : Fast Forward Time
-* **F11** : Fullscreen
+* **F11** : Toggle Windowed/Fullscreen
 * **I** : Inventory - Player inventory and backpack
 * **H** : Status - Player status
 * **G** : Gear - Player clothes
@@ -52,45 +54,13 @@ You have three objectives. Choose wisely, because the island is listening.
 * **C** : Crafting - Craft recipes
 * **? or /** : Open Help menu
 * **TAB** : Show/Hide modals
+* **SHIT+TAB** : Reset to default HUD
 
 **Mouse**
 
 * **LCTRL / RCTRL / RMB** : Aim Weapon
 * **LMB + Click (while aiming)** : Attack / Shoot / Melee
 * **RMB + Click (on items)** : Context Menu
-
-**Controller (Xbox-like)**
-
-* **A:** Run 
-* **B:** Context menu
-* **X:** Reload
-* **Y:** Interact
-* **LB:** Zoom Out / Previous Tab / Scroll Up
-* **RB:** Zoom In / Next Tab / Scroll Down
-* **LT:** Left-Click (Mouse Button 1) / Drag & Drop items
-* **RT:** Aim Weapon
-* **Left Stick:** Player Movement
-* **Right Stick:** Move Cursor / Snap to UI elements
-
-* **L3:** Pause Game
-* **Select:** Fast Forward Time
-* **Start:** Toggle Modals
-
-Dpad
-* **Up:** Scroll Up / Arrow Up / Navigate up in Context Menu
-* **Down:** Scroll Down / Arrow Down / Navigate down in Context Menu
-* **Left:** Cycle Belt Slot Left (Keys 1-5)
-* **Right:** Cycle Belt Slot Right (Keys 5-1)
-
-Keybinds
-* **Y + Up:** Open/Close Status Modal
-* **Y + Down:** Open/Close Gear Modal
-* **Y + Left:** Open/Close Inventory Modal
-* **Y + Right:** Open/Close Nearby Modal
-* **B + Up:** Open/Close Messages Modal
-* **B + Down:** Open/Close Crafting Modal
-* **B + Left:** Open/Close Messages Modal
-* **B + Right:** Open/Close Help Modal
 
 ### [ Inventory ]
 

@@ -336,6 +336,33 @@ def process_chat_command(game, text):
 
     return False
 
+def reset_modal_positions(game):
+    """Snaps all open modals back to their default layout positions."""
+    default_positions = {
+        'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
+        'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+        'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
+        'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+        'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+        'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+        'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+        'text': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+        'mobile': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+        'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+        'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
+        'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
+    }
+    
+    if hasattr(game, 'last_modal_positions'):
+        game.last_modal_positions.update(default_positions)
+    
+    for modal in game.modals:
+        m_type = modal.get('type')
+        if m_type in default_positions:
+            pos = default_positions[m_type]
+            modal['position'] = pos
+            if 'rect' in modal:
+                modal['rect'].topleft = pos
 
 def toggle_default_ui(game):
     if game.modals:
@@ -434,7 +461,11 @@ def handle_keyboard_events(game, event):
             
         # --- 2. GLOBAL KEYS ---
         if event.key == pygame.K_TAB:
-            toggle_default_ui(game)
+            mods = pygame.key.get_mods()
+            if mods & pygame.KMOD_SHIFT:
+                reset_modal_positions(game)
+            else:
+                toggle_default_ui(game)
             return
 
         # Check if a top modal wants to handle the event (e.g. Search Bar)

@@ -254,8 +254,9 @@ class CraftingModal(BaseModal):
         # ---> FIX: Read dynamically scaled screen coordinates for UI matching <---
         mouse_pos = self.game._get_scaled_mouse_pos() if hasattr(self.game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
         
-        # ---> FIX: Check both hardware physical clicks and the joystick flag <---
-        click = pygame.mouse.get_pressed()[0] or getattr(self, '_force_click', False)
+        # ---> FIX: Exclusively use the event-dispatched click flag to respect Z-Index!
+        # Do NOT poll raw pygame.mouse.get_pressed() here, otherwise background modals will intercept it.
+        click = getattr(self, '_force_click', False)
         self._force_click = False # Consume flag
 
         if getattr(self, 'dropdown_just_closed', False):

@@ -312,12 +312,15 @@ def handle_mouse_down(game, event, mouse_pos):
                         if veh.lights == 'on': veh.toggle_lights()
                         return
 
-                if topmost_modal.get('type') == 'big_map':
-                    map_rect = topmost_modal.get('map_area_rect')
-                    if map_rect and map_rect.collidepoint(mouse_pos):
-                        topmost_modal['is_dragging_map'] = True
-                        topmost_modal['drag_map_start'] = mouse_pos
-                        return
+                if topmost_modal.get('type') in ['big_map', 'mobile']:
+                    if topmost_modal.get('type') == 'mobile' and topmost_modal.get('active_tab', '') != 'Map':
+                        pass
+                    else:
+                        map_rect = topmost_modal.get('map_area_rect')
+                        if map_rect and map_rect.collidepoint(mouse_pos):
+                            topmost_modal['is_dragging_map'] = True
+                            topmost_modal['last_drag_pos'] = mouse_pos
+                            return
 
                 handle_left_click_drag_candidate(game, mouse_pos)
                 return
