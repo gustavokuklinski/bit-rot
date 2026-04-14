@@ -391,7 +391,8 @@ def toggle_default_ui(game):
             'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
             'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
             'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-            'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)
+            'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+            'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
         }
         game.last_modal_positions.update(default_positions)
         
@@ -400,6 +401,7 @@ def toggle_default_ui(game):
         toggle_nearby_modal(game)
         toggle_messages_modal(game)
         toggle_status_modal(game)
+        toggle_slots_modal(game)
 
 def handle_keyboard_events(game, event):
 
