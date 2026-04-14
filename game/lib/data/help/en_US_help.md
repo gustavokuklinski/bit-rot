@@ -45,7 +45,6 @@ You have three objectives. Choose wisely, because the island is listening.
 * **Space** : Wake up from sleep
 * **F2** : Pause / Save Menu
 * **F3** : Fast Forward Time
-* **F11** : Toggle Windowed/Fullscreen
 * **I** : Inventory - Player inventory and backpack
 * **H** : Status - Player status
 * **G** : Gear - Player clothes

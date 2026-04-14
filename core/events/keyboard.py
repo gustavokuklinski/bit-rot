@@ -25,8 +25,7 @@ def toggle_inventory_modal(game):
             'position': game.last_modal_positions['inventory'],
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
-            'minimized': False
+            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
         }
         game.modals.append(new_inventory_modal)
 
@@ -337,7 +336,7 @@ def process_chat_command(game, text):
     return False
 
 def reset_modal_positions(game):
-    """Snaps all open modals back to their default layout positions."""
+    """Snaps all open modals back to their default layout positions and restores the default UI state."""
     default_positions = {
         'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
         'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
@@ -353,16 +352,17 @@ def reset_modal_positions(game):
         'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
     }
     
+    # Update the internal state memory to ensure next popups are positioned correctly
     if hasattr(game, 'last_modal_positions'):
         game.last_modal_positions.update(default_positions)
     
-    for modal in game.modals:
-        m_type = modal.get('type')
-        if m_type in default_positions:
-            pos = default_positions[m_type]
-            modal['position'] = pos
-            if 'rect' in modal:
-                modal['rect'].topleft = pos
+    # Elegantly clear all existing modal states (closing unexpected/dragged ones)
+    game.modals.clear()
+    if hasattr(game, 'saved_modals'):
+        game.saved_modals.clear()
+        
+    # Re-use the existing logic that perfectly opens the default modals
+    toggle_default_ui(game)
 
 def toggle_default_ui(game):
     if game.modals:

@@ -1210,7 +1210,7 @@ def handle_mouse_up(game, event, mouse_pos):
             if not dropped_successfully:
                 is_over_modal = False
                 for modal in game.modals:
-                    if not modal.get('minimized', False) and modal['rect'].collidepoint(mouse_pos):
+                    if modal['rect'].collidepoint(mouse_pos):
                         is_over_modal = True
                         break
 
@@ -1556,10 +1556,9 @@ def handle_mouse_motion(game, event, mouse_pos):
         if modal['is_dragging']:
             new_x = mouse_pos[0] - modal['drag_offset'][0]
             new_y = mouse_pos[1] - modal['drag_offset'][1]
-            is_minimized = modal.get('minimized', False)
             header_height = 35
             modal_width = modal['rect'].width
-            modal_height = header_height if is_minimized else modal['rect'].height
+            modal_height = modal['rect'].height
             clamped_x = max(0, min(new_x, GAME_WIDTH - modal_width))
             clamped_y = max(0, min(new_y, GAME_HEIGHT - modal_height))
             modal['position'] = (clamped_x, clamped_y)

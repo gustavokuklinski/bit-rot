@@ -40,7 +40,6 @@ Você tem três objetivos. Escolha com sabedoria, pois a ilha está ouvindo.
 * **Espaço** : Acordar do sono
 * **F2** : Pausa / Menu de Salvar
 * **F3** : Avançar o Tempo
-* **F11** : Tela Cheia
 * **I** : Inventário - Inventário do jogador e mochila
 * **H** : Status - Status do jogador
 * **G** : Equipamento - Roupas do jogador

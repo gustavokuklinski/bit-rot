@@ -5,6 +5,7 @@
         <restore status="[health]" value="2" />
         <restore status="[tireness]" value="2" />
         <restore status="[stamina]" value="5" />
+        <reduce status="[anxiety]" value="1" />
         <load value="1" />
         <capacity value="3" />
         <weight weight="0.1"/>

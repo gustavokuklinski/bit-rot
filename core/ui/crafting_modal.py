@@ -236,14 +236,9 @@ class CraftingModal(BaseModal):
     def draw(self):
         self.tabs_manager.surface = self.surface
 
-        self.minimized = self.modal.get('minimized', False)
         self.modal_x, self.modal_y = self.modal['position']
         self.modal_rect.topleft = (self.modal_x, self.modal_y)
-        
-        if self.minimized:
-            self.modal_rect.height = self.header_h
-        else:
-            self.modal_rect.height = self.modal_h
+
 
         self.close_button_rect.topright = (self.modal_x + self.modal_w - 10, self.modal_y + 10)
 

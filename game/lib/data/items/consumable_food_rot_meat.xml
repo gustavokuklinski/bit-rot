@@ -1,4 +1,4 @@
-<item name="Rat Meat" type="consumable_food" allow_belt="false">
+<item name="Rot Meat" type="consumable_food" allow_belt="false">
     <properties>
         <restore status="[food]" value="5" />
         <reduce status="[tireness]" value="30" />
@@ -7,7 +7,7 @@
         <load value="1" />
         <capacity value="5" />
         <weight weight="0.2"/>
-        <sprite file="consumable_food_rat_meat.png" />
+        <sprite file="consumable_food_rot_meat.png" />
     </properties>
     <spawn chance="1" />
 </item>

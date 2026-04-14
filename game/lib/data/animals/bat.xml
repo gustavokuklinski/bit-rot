@@ -13,6 +13,7 @@
     </visuals>
     <loot>
         <item item="Kukaroach (Bit Rot publisher)" chance="1" />
+        <item item="Rot Meat" chance="1" />
     </loot>
     <sound>
         <hit src="animal_bat_hit.ogg" />

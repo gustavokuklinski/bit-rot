@@ -342,20 +342,30 @@ class PlayerInventory:
 
     def stack_item_in_inventory(self, item_to_stack):
         if not item_to_stack.is_stackable(): return 
+        
         for item in self.inventory:
+            if item is item_to_stack: continue # Fix: Prevent stacking with itself
             if item.can_stack_with(item_to_stack):
                 available_space = item.capacity - item.load
                 transfer = min(available_space, item_to_stack.load)
                 item.load += transfer
                 item_to_stack.load -= transfer
-                if item_to_stack.load <= 0: return 
+                if item_to_stack.load <= 0:
+                    if item_to_stack in self.inventory:
+                        self.inventory.remove(item_to_stack) # Safely clean up the 0-load ghost item!
+                    return 
+                    
         for item in self.belt:
+            if item is item_to_stack: continue # Fix: Prevent stacking with itself
             if item and item.can_stack_with(item_to_stack):
                 available_space = item.capacity - item.load
                 transfer = min(available_space, item_to_stack.load)
                 item.load += transfer
                 item_to_stack.load -= transfer
-                if item_to_stack.load <= 0: return 
+                if item_to_stack.load <= 0:
+                    if item_to_stack in self.inventory:
+                        self.inventory.remove(item_to_stack) # Safely clean up the 0-load ghost item!
+                    return 
 
     def find_water_to_auto_drink(self):
         def search_recursive(container_item):

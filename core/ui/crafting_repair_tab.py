@@ -209,7 +209,7 @@ class CraftingRepairTab:
             elif r.magazine: btn_text = tr('ui', "NEED MAGAZINE")
             else: btn_text = tr('ui', "NEED SKILLS")
         elif can_craft:
-            btn_text = tr('ui', "REPAIR ITEM") # Use "REPAIR ITEM" and "DISMANTLE" for the other tabs
+            btn_text = tr('ui', "REPAIR ITEM") 
         else:
             btn_text = tr('ui', "MISSING RESOURCES")
 
@@ -295,14 +295,23 @@ class CraftingRepairTab:
                         removed += take
                         
                         if (item.is_stackable() and item.load is not None and item.load <= 0) or (not item.is_stackable() and take > 0):
-                            if ctype == 'list': container.pop(key)
+                            if ctype == 'list': 
+                                if item in container:
+                                    container.remove(item)
                             elif ctype == 'fixed_list': container[key] = None
                             elif ctype == 'dict': container[key] = None
                             elif ctype == 'attr': setattr(container, key, None)
                                 
                         if removed >= to_remove: break
             
-            if target_ctype == 'list': target_container.pop(target_key)
+            # --- FIX: Default to full repair if ingredients don't specify a restore amount ---
+            if total_repair_amount <= 0:
+                total_repair_amount = target_item.max_durability - target_item.durability
+            
+            # --- FIX: Use remove(target_item) instead of pop(target_key) to avoid shifting bugs ---
+            if target_ctype == 'list': 
+                if target_item in target_container:
+                    target_container.remove(target_item)
             elif target_ctype == 'fixed_list': target_container[target_key] = None
             elif target_ctype == 'dict': target_container[target_key] = None
             elif target_ctype == 'attr': setattr(target_container, target_key, None)

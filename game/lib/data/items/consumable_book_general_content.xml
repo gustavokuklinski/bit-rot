@@ -1,4 +1,4 @@
-<item name="Magazine (General content)" type="consumable_book" allow_belt="false">
+<item name="Magazine" type="consumable_book" allow_belt="false">
     <properties>
         <reduce status="[anxiety]" value="5" />
         <weight weight="0.01"/>

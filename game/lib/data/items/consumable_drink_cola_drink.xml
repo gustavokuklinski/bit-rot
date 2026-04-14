@@ -3,6 +3,7 @@
         <restore status="[water]" value="5" />
         <restore status="[tireness]" value="15" />
         <restore status="[stamina]" value="8" />
+        <reduce status="[anxiety]" value="1" />
         <load value="1" />
         <capacity value="5" />
         <weight weight="0.1"/>

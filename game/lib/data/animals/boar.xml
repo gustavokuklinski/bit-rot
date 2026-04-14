@@ -13,7 +13,7 @@
     </visuals>
     
     <loot>
-        <item item="Rat Meat" chance="1" />
+        <item item="Rot Meat" chance="1" />
         <item item="Kukaroach (Bit Rot publisher)" chance="1" />
     </loot>
 

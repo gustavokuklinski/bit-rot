@@ -45,7 +45,7 @@ def draw_game(game):
     dynamic_h = GAME_HEIGHT
     
     for modal in getattr(game, 'modals', []):
-        if not modal.get('minimized', False) and 'rect' in modal:
+        if 'rect' in modal:
             # If a designated Right Panel modal is actually positioned on the right
             if modal['type'] in ['nearby', 'inventory', 'gear']:
                 if modal['rect'].left >= GAME_WIDTH - 244:

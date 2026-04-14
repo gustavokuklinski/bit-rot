@@ -119,7 +119,7 @@ class VirtualAndroidController:
         # --- FIX: ALLOW NATIVE CLICKS ON MODALS AND TABS ---
         if hasattr(self, 'game') and self.game and hasattr(self.game, 'modals'):
             for modal in self.game.modals:
-                if not modal.get('minimized') and 'rect' in modal:
+                if 'rect' in modal:
                     # Tabs sit above the rect, so expand the hit zone upwards by 40px
                     hit_rect = pygame.Rect(
                         modal['rect'].x, 
@@ -208,7 +208,7 @@ class VirtualAndroidController:
                 # --- FIX: INTERACTION Z-INDEX INCLUDING TABS ---
                 if hasattr(self, 'game') and self.game and hasattr(self.game, 'modals'):
                     for modal in self.game.modals:
-                        if not modal.get('minimized') and 'rect' in modal:
+                        if 'rect' in modal:
                             # Match the tab-inclusive hit zone
                             hit_rect = pygame.Rect(
                                 modal['rect'].x, 

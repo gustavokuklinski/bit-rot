@@ -212,7 +212,7 @@ def handle_input(game):
                     game.zoom_level = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
             else:
                 modal = topmost_modal
-                if modal.get('type') == 'messages' and not modal.get('minimized', False):
+                if modal.get('type') == 'messages':
                     content_rect = modal.get('content_rect') 
                     if content_rect and content_rect.collidepoint(mouse_pos):
                         active_tab = modal.get('active_tab', 'All')
@@ -228,7 +228,7 @@ def handle_input(game):
                         new_offset = current_offset - scroll_amount 
                         modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
 
-                elif modal.get('type') == 'text' and not modal.get('minimized', False):
+                elif modal.get('type') == 'text':
                     content_rect = modal.get('content_rect')
                     if content_rect and content_rect.collidepoint(mouse_pos):
                         max_scroll_offset = modal.get('max_scroll_offset', 0) 
@@ -240,7 +240,7 @@ def handle_input(game):
 
                         modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
 
-                elif modal.get('type') == 'mobile' and not modal.get('minimized', False) and modal.get('active_tab') == 'Map':
+                elif modal.get('type') == 'mobile' and modal.get('active_tab') == 'Map':
                     map_area = modal.get('map_area_rect')
                     if map_area and map_area.collidepoint(mouse_pos):
                         current_zoom = modal.get('map_zoom', 4)
@@ -249,7 +249,7 @@ def handle_input(game):
                         elif event.y < 0: 
                             modal['map_zoom'] = max(2, current_zoom - 1)
                 
-                elif modal.get('type') == 'big_map' and not modal.get('minimized', False):
+                elif modal.get('type') == 'big_map':
                     map_area = modal.get('map_area_rect')
                     if map_area and map_area.collidepoint(mouse_pos):
                         current_zoom = modal.get('map_zoom', 6)
