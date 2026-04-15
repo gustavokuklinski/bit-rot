@@ -132,7 +132,7 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     base_y = modal_rect.top + 70  # Shifted up to match shorter modal
     slot_size = 40
     gap = 10
-    cols = 9 # Increased for wider horizontal fit
+    cols = 7 # Increased for wider horizontal fit
     
     def get_section_height(items):
         if not items: return 0

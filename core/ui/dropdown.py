@@ -11,7 +11,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         menu_state['active'] = False
         return
 
-    item_height = 25
+    item_height = 30
     padding = 5
     
     # Pre-calculate main menu metrics

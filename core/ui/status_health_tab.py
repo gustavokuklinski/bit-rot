@@ -36,17 +36,19 @@ def _player_has_mobile(player):
     return False
 
 def draw_health_tab(surface, player, modal, assets, game=None):
-    padding = 10
-    col_width = (modal['rect'].width - (padding * 3)) // 2
+    padding = 15
+    # Split modal evenly into 3 columns
+    section_width = (modal['rect'].width - (padding * 4)) // 3
     
     start_y = modal['rect'].y + 70
     col1_x = modal['rect'].x + padding
-    col2_x = modal['rect'].x + col_width + (padding * 2)
+    col2_x = modal['rect'].x + section_width + (padding * 2)
+    col3_x = modal['rect'].x + (section_width * 2) + (padding * 3)
     
     mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
 
-    # --- Column 1: Visuals & Mobile Panel [LEFT] ---
+    # --- LEFT: Player Sprite ---
     new_w = 0 
     image_y = start_y + 10
     
@@ -76,90 +78,21 @@ def draw_health_tab(surface, player, modal, assets, game=None):
                     img_to_draw = item.tinted_image
                 char_surface.blit(img_to_draw, (0, 0))
         
-        scale_factor = 4 # Scaled down from 7 to fit the new shorter height
+        scale_factor = 7 
         new_w = TILE_SIZE * scale_factor
         new_h = TILE_SIZE * scale_factor
         
         big_sprite = pygame.transform.scale(char_surface, (new_w, new_h))
-        sprite_rect = big_sprite.get_rect(topleft=(col1_x, image_y))
+        # Center the sprite nicely in its designated column
+        sprite_x = col1_x + max(0, (section_width - new_w) // 2)
+        sprite_rect = big_sprite.get_rect(topleft=(sprite_x, image_y))
         surface.blit(big_sprite, sprite_rect)
-        
-    if game:
-        player_has_mobile = _player_has_mobile(player)
-        day_count = getattr(game.world_time, 'day_count', 0)
-        
-        if player_has_mobile:
-            current_hour = game.world_time.current_hour
-            mins = int((game.world_time.game_time_ms % (game.world_time.day_length_ms / 24)) / (game.world_time.day_length_ms / 24 / 60))
-            mins = (mins // 10) * 10 
-            time_str = f"{current_hour:02d}:{mins:02d}"
-            weather_state = getattr(game.world_time, 'weather', 'CLEAR')
-            timer_ms = getattr(game.world_time, 'weather_timer', 0)
-            game_ms_per_minute = game.world_time.day_length_ms / (24 * 60)
-            total_game_mins_left = int(timer_ms / game_ms_per_minute) if game_ms_per_minute > 0 else 0
-            w_hours = total_game_mins_left // 60
-            weather_str = f"Clear ({w_hours}h)" if weather_state == 'CLEAR' else f"Rain ({w_hours}h)"
-        else:
-            time_str = "--:--"
-            weather_state = getattr(game.world_time, 'weather', 'CLEAR')
-            weather_str = "Rain" if weather_state == 'RAIN' else "Clear"
 
-        day_str = f"{day_count} days"
-        kills_str = str(getattr(game, 'zombies_killed', 0))
-        
-        # Position Mobile Info panel directly to the right of the character image
-        info_x = col1_x + new_w + 10
-        info_y = image_y + 5
-        
-        world_state = getattr(game.world_time, 'state', 'DAY')
-        weather_icon = SPRITE_PATH + "ui/night.png" if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else SPRITE_PATH + "ui/day.png"
-        
-        lines = [
-            (SPRITE_PATH + "ui/clock.png", "Time", time_str),
-            (None, "", day_str),
-            (weather_icon, "Weather", weather_str),
-            (SPRITE_PATH + "ui/infection.png", "Kills", kills_str)
-        ]
-        
-        panel_width = 110
-        panel_height = len(lines) * 24 + 16
-        panel_rect = pygame.Rect(info_x, info_y, panel_width, panel_height)
-        
-        s = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
-        s.fill((20, 20, 20, 220))
-        surface.blit(s, panel_rect.topleft)
-        pygame.draw.rect(surface, (80, 80, 80), panel_rect, 1, border_radius=4)
-        
-        text_y = info_y + 8
-        tooltip_texts = ["Current time", "Days Alive", "Weather and next rain hour", "Player kills"]
-        
-        for idx, (icon_path, label, val) in enumerate(lines):
-            row_rect = pygame.Rect(info_x, text_y, panel_width, 24)
-            if row_rect.collidepoint(mouse_pos):
-                active_tooltip_item = StatusTooltipItem(tr('tooltip', tooltip_texts[idx]))
-
-            val_surf = font_14.render(val, True, WHITE)
-            icon_drawn = False
-            if icon_path:
-                try:
-                    img = pygame.image.load(icon_path).convert_alpha()
-                    img = pygame.transform.scale(img, (18, 18))
-                    surface.blit(img, (info_x + 10, text_y + 1))
-                    icon_drawn = True
-                except: pass
-            
-            if not icon_drawn and label:
-                lbl_surf = font_14.render(f"{label}:", True, (160, 160, 160))
-                surface.blit(lbl_surf, (info_x + 10, text_y))
-                
-            surface.blit(val_surf, (info_x + panel_width - val_surf.get_width() - 10, text_y))
-            text_y += 24
-
-    # --- Column 2: Body Parts Section [RIGHT] ---
+    # --- CENTER: Player Status (Health, Stamina, etc.) ---
     y_offset = start_y
     section_title = font.render(f"{player.name}", True, WHITE)
     surface.blit(section_title, (col2_x, y_offset))
-    y_offset += 25 
+    y_offset += 35 
     
     stat_icons = {}
     icon_files = {
@@ -183,26 +116,29 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     
+    last_y_pos = y_offset
     for i, (name, value, max_value, color) in enumerate(stats):
-        y_pos = y_offset + i * 27
+        y_pos = y_offset + i * 28
+        last_y_pos = y_pos
         icon = stat_icons.get(name)
         if icon:
-            surface.blit(icon, (col2_x, y_pos))
-            label_x = col2_x + 28
+            surface.blit(icon, (col2_x, y_pos - 4))
+            label_x = col2_x + 30
         else:
             text = font_14.render(f"{name}:", True, WHITE)
             surface.blit(text, (col2_x, y_pos))
             label_x = col2_x + 40
             
-        bar_x = label_x + 10
+        bar_x = label_x + 5
         ratio = value / max_value if max_value > 0 else 0
         draw_color = RED if name == "WGT" and ratio > 1.0 else color
             
-        max_bar_width = int(col_width - 60)
+        max_bar_width = int(section_width - (bar_x - col2_x))
         bar_width = int(max_bar_width * min(1.0, ratio))
         
-        bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)
-        border_rect = pygame.Rect(bar_x, y_pos + 5, max_bar_width, 10)
+        # Bordered stat bars
+        bar_rect = pygame.Rect(bar_x, y_pos + 2, bar_width, 10)
+        border_rect = pygame.Rect(bar_x, y_pos + 2, max_bar_width, 10)
         
         pygame.draw.rect(surface, draw_color, bar_rect)
         pygame.draw.rect(surface, WHITE, border_rect, 1)
@@ -212,6 +148,130 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             if name == "WGT": val_str = f"{value:.2f} / {max_value:.2f}"
             else: val_str = f"{int(value)}%"
             active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
+            
+    # Add Kills stat directly underneath the player bars
+    if game:
+        kills_y = last_y_pos + 38
+        kills_str = str(getattr(game, 'zombies_killed', 0))
+        
+        try:
+            img = pygame.image.load(SPRITE_PATH + "ui/infection.png").convert_alpha()
+            img = pygame.transform.scale(img, (24, 24))
+            surface.blit(img, (col2_x, kills_y - 4))
+        except: pass
+        
+        lbl_surf = font_14.render("Total Kills: ", True, (160, 160, 160))
+        surface.blit(lbl_surf, (col2_x + 30, kills_y))
+        
+        val_surf = font_14.render(kills_str, True, WHITE)
+        # Draw kills exactly after the label
+        surface.blit(val_surf, (col2_x + 30 + lbl_surf.get_width(), kills_y))
+        
+    # --- RIGHT: Other Info (Time, Weather, Kills) ---
+    if game:
+        day_count = getattr(game.world_time, 'day_count', 0)
+        player_has_mobile = _player_has_mobile(player)
+        
+        # Always calculate time for the progress bar, regardless of mobile status
+        current_hour = game.world_time.current_hour
+        mins = int((game.world_time.game_time_ms % (game.world_time.day_length_ms / 24)) / (game.world_time.day_length_ms / 24 / 60))
+        mins = (mins // 10) * 10 
+        time_ratio = (current_hour * 60 + mins) / 1440.0 # 24h cycle progress
+        
+        if player_has_mobile:
+            time_str = f"{current_hour:02d}:{mins:02d}"
+            time_color = WHITE
+            
+            weather_state = getattr(game.world_time, 'weather', 'CLEAR')
+            timer_ms = getattr(game.world_time, 'weather_timer', 0)
+            game_ms_per_minute = game.world_time.day_length_ms / (24 * 60)
+            total_game_mins_left = int(timer_ms / game_ms_per_minute) if game_ms_per_minute > 0 else 0
+            w_hours = total_game_mins_left // 60
+            
+            rain_val = f"{w_hours}h" if weather_state == 'CLEAR' else "Now"
+            if weather_state != 'CLEAR': rain_color = (100, 200, 255) # Cyan (Active Rain)
+            elif w_hours <= 2: rain_color = (255, 170, 100) # Orange (Rain soon)
+            else: rain_color = WHITE
+            
+        else:
+            time_str = "No Signal"
+            time_color = (200, 80, 80) # Alert red
+            
+            rain_val = "Offline"
+            rain_color = (120, 120, 120)
 
+        day_str = f"{day_count} days alive"
+        info_x = col3_x
+        info_y = start_y
+        
+        world_state = getattr(game.world_time, 'state', 'DAY')
+        weather_icon = SPRITE_PATH + "ui/night.png" if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else SPRITE_PATH + "ui/day.png"
+        
+        if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT']:
+            day_night_str = "Darkness"
+            dn_color = (150, 150, 255) # Muted blue/purple
+        else:
+            day_night_str = "Daylight"
+            dn_color = (255, 220, 100) # Soft gold
+        
+        # Tuple definition: (Icon Path, Label, Value, Value Color, Progress Bar Ratio)
+        lines = [
+            (SPRITE_PATH + "ui/clock.png", "Time", time_str, time_color, time_ratio),
+            (None, "", day_str, WHITE, None), # Label removed to merge "Days alive" into value
+            (weather_icon, "", day_night_str, dn_color, None),
+            (SPRITE_PATH + "ui/water.png", "Rain in", rain_val, rain_color, None),
+        ]
+        
+        status_title = font.render("World Info", True, WHITE)
+        surface.blit(status_title, (info_x, info_y))
+        
+        text_y = info_y + 35
+        tooltip_texts = ["Current time cycle", "Days Alive", "Time of day", "Time until rain"]
+        
+        panel_width = section_width - 10
+        
+        for idx, (icon_path, label, val, val_color, bar_ratio) in enumerate(lines):
+            row_rect = pygame.Rect(info_x, text_y, panel_width, 24)
+            if row_rect.collidepoint(mouse_pos):
+                active_tooltip_item = StatusTooltipItem(tr('tooltip', tooltip_texts[idx]))
+
+            if icon_path:
+                try:
+                    img = pygame.image.load(icon_path).convert_alpha()
+                    img = pygame.transform.scale(img, (18, 18))
+                    surface.blit(img, (info_x, text_y + 1))
+                except: pass
+            
+            # Start drawing text 25 pixels to the right of the icon column
+            current_x = info_x + 25 
+            
+            if label:
+                lbl_surf = font_14.render(f"{label}: ", True, (160, 160, 160))
+                surface.blit(lbl_surf, (current_x, text_y))
+                current_x += lbl_surf.get_width() # Move the X coordinate over by the label's width
+                
+            # Draw the value immediately after the label (or at the start if there is no label)
+            val_surf = font_14.render(val, True, val_color)
+            surface.blit(val_surf, (current_x, text_y))
+            
+            text_y += 24
+            
+            # Render a progress bar below lines that request one (e.g., Time Cycle)
+            if bar_ratio is not None:
+                bar_x = info_x + 25
+                max_bar_width = panel_width - 25
+                bar_width = int(max_bar_width * bar_ratio)
+                
+                # Bar styled same as the other stat bars (10px height, white border)
+                bar_rect = pygame.Rect(bar_x, text_y + 2, bar_width, 10)
+                border_rect = pygame.Rect(bar_x, text_y + 2, max_bar_width, 10)
+                
+                pygame.draw.rect(surface, GRAY, bar_rect) # Fill color (GRAY matching default stats)
+                pygame.draw.rect(surface, WHITE, border_rect, 1) # White border
+                text_y += 18 # Extra padding to make room for the 10px bar
+            else:
+                text_y += 6 # Standard row padding
+
+    # Final tooltips pass
     if active_tooltip_item:
         draw_tooltip(surface, active_tooltip_item, (mouse_pos[0], mouse_pos[1]))

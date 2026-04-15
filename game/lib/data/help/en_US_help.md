@@ -6,7 +6,8 @@ Welcome to the Survivor Guide! Use the tabs to navigate over this.
 **Fast Tips** 
 - Press TAB to toggle game HUD
 - Press SHIFT+TAB to reset game HUD
-- Press F11 to switch Windowed and Fullscreen
+- Hover to get item tooltips and info
+- Click-Drag and place on player slots
 - Complete your first quest talking to a NPC
 
 ---
@@ -76,13 +77,13 @@ You have three objectives. Choose wisely, because the island is listening.
 
 * **Hunger & Thirst**: Scavenge for food and water to stay alive. Dropping below 20% in either stat causes starvation or dehydration, which continuously saps your health. 
 
-* **Tireness**: Your wakefulness works naturally depletes. If your Tireness reaches zero, you will pass out on the spot! Find a safe place to sleep to restore it.
+* **Tiredness**: Your wakefulness works naturally depletes. If your Tiredness reaches zero, you will pass out on the spot! Find a safe place to sleep to restore it.
 
-* **Infection**: A lethal, progressive condition contracted from zombie bites or exposure to freezing rain. Once infected, it acts like a virus—slowly worsening over time, draining your health every second, and severely limiting your stamina. Reaching 100% infection means irreversible zombification.
+* **Infection**: A lethal, progressive condition contracted from the Rotters bites or exposure to freezing rain. Once infected, it acts like a virus—slowly worsening over time, draining your health every second, and severely limiting your stamina. Reaching 100% infection means irreversible rot.
 
-* **Anxiety**: Being surrounded by hordes of the undead will cause your character to panic. High anxiety drains your Tireness much faster, exhausting you quickly in tense situations.
+* **Anxiety**: Being surrounded by hordes of the undead will cause your character to panic. High anxiety drains your Tiredness much faster, exhausting you quickly in tense situations.
 
-* **Defence**: Use good durability clothes, they are your shield over weather, zombies and hostiles. 
+* **Defence**: Use good durability clothes, they are your shield over weather, rotters and hostiles. 
 
 * **Weight**: Increase your strength chopping tress and using melee weapons to carry more items.
 

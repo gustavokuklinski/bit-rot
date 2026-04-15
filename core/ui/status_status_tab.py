@@ -16,15 +16,14 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     padding = 10
     col_width = (modal['rect'].width - (padding * 3)) // 2
     
-    start_y = modal['rect'].y + 70
+    start_y = modal['rect'].y + 80
     col1_x = modal['rect'].x + padding
     col2_x = modal['rect'].x + col_width + (padding * 2)
     
     mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
 
-    name_text = font.render(tr('ui', "Condition"), True, WHITE)
-    surface.blit(name_text, (col1_x, start_y - 25))
+    
     
     stat_icons = {}
     icon_files = {
