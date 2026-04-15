@@ -34,7 +34,7 @@
             <attributes level="[strength:1, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
             <recipe magazine="Survivor Guide Basic" />
         </trait>
-        <trait id="Profession_Maintenance" name="Maintenance" cost="1" tooltip="Maintenance worker" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+        <trait id="Profession_Maintenance" name="Maintenance" cost="1" tooltip="Maintenance worker" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer, Profession_CEO_assistant]">
             <attributes level="[strength:2, fitness:3, agility: 4, lucky: 3, maintenance: 5, intelligence: 4]" />
             <recipe magazine="Survivor Guide Basic" />
             <recipe magazine="Carpentary Vol.1" />

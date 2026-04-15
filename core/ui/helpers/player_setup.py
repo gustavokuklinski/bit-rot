@@ -287,7 +287,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 
             y_offset += S(35)
     
-    prof_rect = pygame.Rect(col2_x, base_y, col2_width, S(160))
+    prof_rect = pygame.Rect(col2_x, base_y, col2_width, S(310))
     prof_header_rect = pygame.Rect(prof_rect.x, prof_rect.y, prof_rect.width, header_height)
     prof_body_rect = pygame.Rect(prof_rect.x, prof_rect.y + header_height, prof_rect.width, prof_rect.height - header_height)
     
@@ -343,8 +343,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else: 
         state['prof_scrollbar_handle_rect'] = None
 
-    available_rect = pygame.Rect(col2_x, prof_rect.bottom + S(20), col2_width, S(640 - 160 - 20))
-    
+    available_rect = pygame.Rect(col2_x, prof_rect.bottom + S(20), col2_width, S(640 - 310 - 20))
     avail_header_rect = pygame.Rect(available_rect.x, available_rect.y, available_rect.width, header_height)
     avail_body_rect = pygame.Rect(available_rect.x, available_rect.y + header_height, available_rect.width, available_rect.height - header_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
