@@ -44,16 +44,17 @@ def draw_game(game):
     dynamic_w = GAME_WIDTH
     dynamic_h = GAME_HEIGHT
     
+    # Modals that should never shrink the viewport
+    ignored_modals = {'big_map', 'npc_dialog', 'crafting'}
+    
     for modal in getattr(game, 'modals', []):
-        if 'rect' in modal:
-            # If a designated Right Panel modal is actually positioned on the right
-            if modal['type'] in ['nearby', 'inventory', 'gear']:
-                if modal['rect'].left >= GAME_WIDTH - 244:
-                    dynamic_w = min(dynamic_w, modal['rect'].left)
-            # If a designated Bottom Panel modal is actually positioned on the bottom
-            if modal['type'] in ['messages', 'status']:
-                if modal['rect'].top >= GAME_HEIGHT - 240:
-                    dynamic_h = min(dynamic_h, modal['rect'].top)
+        if 'rect' in modal and modal.get('type') not in ignored_modals:
+            # Dynamically shrink width if the modal is snapped to the right
+            if modal['rect'].left >= GAME_WIDTH - 244:
+                dynamic_w = min(dynamic_w, modal['rect'].left)
+            # Dynamically shrink height if the modal is snapped to the bottom
+            if modal['rect'].top >= GAME_HEIGHT - 240:
+                dynamic_h = min(dynamic_h, modal['rect'].top)
                     
     # Safeties to ensure the viewport never collapses completely
     dynamic_w = max(GAME_WIDTH // 3, dynamic_w)
