@@ -692,7 +692,11 @@ class Game:
         pygame.mouse.set_visible(True)
         pygame.mouse.set_cursor(self.assets.get('custom_cursor') or pygame.cursors.arrow)
         mouse_pos = self._get_scaled_mouse_pos()
-        menu_button = draw_game_over(self.game_screen, self.zombies_killed, mouse_pos)
+        
+        # --- CHANGED: Extracting days survived from world_time ---
+        days_survived = self.world_time.day_count if hasattr(self, 'world_time') and self.world_time else 0
+        
+        menu_button = draw_game_over(self.game_screen, self.zombies_killed, days_survived, mouse_pos)
 
         for event in self.get_events():
             if getattr(self, 'joystick_handler', None):

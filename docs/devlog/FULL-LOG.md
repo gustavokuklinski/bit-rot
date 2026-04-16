@@ -618,7 +618,6 @@ Start: 20/10/2024
     - When the player dismantle and item, it will yield all items if maintenance is level 10
     - The damage of Melee weapons will be max damage only if the Melee level is level 10
     - The damage of Ranged weapons will be max damage only if Ranged is leveled to 10
-
 - [x] Rem: Remove the Backpack, they are treated as Containers now.
 - [x] New: UI overhaul
 - [x] Fix: Map tiles and containers can only support 15 slots

@@ -24,7 +24,8 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
-def draw_game_over(screen, zombies_killed, mouse_pos):
+# --- CHANGED: Added days_survived parameter ---
+def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
@@ -50,13 +51,19 @@ def draw_game_over(screen, zombies_killed, mouse_pos):
         title_rect = _logo_img.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(_logo_img, title_rect)
     else:
-        title_text = font_14.render(tr('ui', "YOU DIED"), True, RED)
+        # --- CHANGED: Changed the title text ---
+        title_text = font_14.render(tr('ui', "YOU ROTTED"), True, RED)
         title_rect = title_text.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(title_text, title_rect)
 
-    score_text = font_14.render(f"{tr('ui', 'You Killed:')} {zombies_killed}", True, WHITE)
+    score_text = font_14.render(f"{tr('ui', 'Rotters Dead:')} {zombies_killed}", True, WHITE)
     score_rect = score_text.get_rect(center=(center_x, center_offset_y + S(324)))
     screen.blit(score_text, score_rect)
+    
+    # --- CHANGED: Render the days survived below the kills ---
+    days_text = font_14.render(f"{tr('ui', 'Days Survived:')} {days_survived}", True, WHITE)
+    days_rect = days_text.get_rect(center=(center_x, center_offset_y + S(350)))
+    screen.blit(days_text, days_rect)
 
     btn_width = S(400)
     btn_height = S(50)

@@ -1,3 +1,5 @@
+# core/entities/player/player.py
+
 import time
 import pygame
 import random
@@ -42,7 +44,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         # Stats
         self.name = data.get('name', "Player")
         
-        
         self.attributes = data.get('attributes', {
             'strength': 0.0, 'fitness': 0.0, 'melee': 0.0, 
             'ranged': 0.0, 'lucky': 0.0, 'agility': 0.0, 'intelligence': 0.0
@@ -83,7 +84,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
-        # [CHANGED] Increased base inventory slots from 5 to 10
         self.base_inventory_slots = 10
         
         self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
@@ -93,28 +93,23 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
-        clothes_colors_dict = data.get('clothes_colors', {}) # Fetch colors from setup data
+        clothes_colors_dict = data.get('clothes_colors', {}) 
         
         for slot, item_data in chosen_clothes_dict.items():
             if item_data and item_data != "None" and slot in self.clothes_slots:
                 if isinstance(item_data, dict):
-                    # It's loading from a save file, from_dict handles the color now!
                     self.clothes[slot] = Item.from_dict(item_data)
                 else:
-                    # It's a fresh spawn from Player Builder
                     setup_color = clothes_colors_dict.get(slot, (255, 255, 255))
                     self.clothes[slot] = Item.create_from_name(item_data, force_color=setup_color)
                     
-                # Apply the specific color to the player's instantiated item
                 if self.clothes[slot]:
-                    # Determine color: prioritize the loaded item's color, fallback to setup data
                     assigned_color = getattr(self.clothes[slot], 'color', None)
                     if not assigned_color or assigned_color == (255,255,255):
                          assigned_color = clothes_colors_dict.get(slot, (255, 255, 255))
                          
                     self.clothes[slot].color = assigned_color
                     
-                    # Pre-tint the item's ground/inventory image right now!
                     if self.clothes[slot].image and assigned_color != (255, 255, 255):
                         tinted = self.clothes[slot].image.copy()
                         tinted.fill((*assigned_color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
@@ -151,7 +146,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.images['right'] = old_sprite
 
         self.image = self.images.get('center')
-        # [NEW] Create collision mask from the player's image
         if self.image:
             self.mask = pygame.mask.from_surface(self.image)
         else:
@@ -186,20 +180,16 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
     @property
     def current_weight(self):
         total = 0.0
-        # Belt
         for item in self.belt:
              if item: total += item.get_total_weight()* 0.85
-        # Inventory
         for item in self.inventory:
              total += item.get_total_weight() 
         for item in self.clothes.values():
              if item: total += item.get_total_weight()* 0.85
-        
         return total
 
     @property
     def max_carry_weight(self):
-        # Base 10 + scaling with strength
         _, flat_bonus = self.progression.get_derived_bonus('carry_weight')
         return 5.0 + flat_bonus
 
@@ -207,7 +197,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         current_time = time.time()
 
         if self.action_timer > 0:
-            # Apply fast forward to action timer
             multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
             self.action_timer -= multiplier * game.dt_mult
             self.vx = 0
@@ -221,7 +210,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     if self.action_xp_reward > 0:
                         self.progression.add_xp(self, self.action_xp_attr, self.action_xp_reward)
                 self.action_name = ""
-            #return False
 
         if self.chat_timer > 0:
             self.chat_timer -= game.dt_mult
@@ -229,9 +217,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.chat_text = None
 
         keys = pygame.key.get_pressed()
-        
-        # ---> FIX: Instead of hardcoding WASD keys, we now respect the true 'is_moving' 
-        #           flag pushed by input.py which handles both Keyboard AND Joystick! <---
         is_moving = getattr(self, 'is_moving', False) and (self.vehicle is None)
 
         if is_moving:
@@ -247,19 +232,16 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         is_sleeping_or_resting = self.is_sleeping or is_active_resting
         
-        # Entering sleep state
         if is_sleeping_or_resting and self.saved_detection_radius is None:
             self.saved_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
             core.data.config.ZOMBIE_DETECTION_RADIUS = core.data.config.ZOMBIE_DETECTION_RADIUS * core.data.config.ZOMBIE_MULTIPLIER
             print(f"Stealth Mode: Radius set to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
-        # Exiting sleep state
         elif not is_sleeping_or_resting and self.saved_detection_radius is not None:
             core.data.config.ZOMBIE_DETECTION_RADIUS = self.saved_detection_radius
             self.saved_detection_radius = None
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
-        # Get dynamic stats from your progression.xml
         tireness_drain = abs(PROGRESSION_CONFIG.get_stat('tireness', 'night_decay', -0.002))
         stamina_regen = PROGRESSION_CONFIG.get_stat('stamina', 'regen_base', 0.02)
         tireness_recovery = PROGRESSION_CONFIG.get_stat('tireness', 'day_recovery', 0.001)
@@ -267,36 +249,38 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
 
         if not self.is_sleeping and not is_active_resting:
-            # Apply stamina penalty to tireness if stamina is depleted
             stamina_penalty = abs(PROGRESSION_CONFIG.get_stat('tireness', 'stamina_penalty', -0.005)) if self.stamina <= 0 else 0
             total_drain = (tireness_drain + stamina_penalty) * ff_multiplier * game.dt_mult
             self.tireness = max(0.0, self.tireness - total_drain)
 
-            # Consume stamina while running, and regenerate when walking/idle
             if is_moving and self.is_running:
                 stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
+                
+                if self.tireness <= 0:
+                    stamina_drain *= 2.5
+                    # CREATIVE ADDITION: Stumbling. Exhaustion physically prevents sustained running
+                    if random.random() < (0.02 * ff_multiplier * game.dt_mult):
+                        self.is_running = False
+                        display_message(tr('msg', "You stumble... too exhausted to run."))
+                        
                 self.stamina = max(0.0, self.stamina - (stamina_drain * ff_multiplier * game.dt_mult))
             else:
                 if self.stamina < self.max_stamina:
-                    self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * ff_multiplier * game.dt_mult))
+                    current_regen = stamina_regen if self.tireness > 0 else (stamina_regen * 0.2)
+                    self.stamina = min(self.max_stamina, self.stamina + (current_regen * ff_multiplier * game.dt_mult))
 
         if not self.is_sleeping and is_active_resting:
-            # Fetch multipliers from XML dynamically
             stam_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             tire_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             
             if self.stamina < self.max_stamina:
                 self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * ff_multiplier * game.dt_mult))
             if self.tireness < self.max_tireness:
-                # Buffed active resting tiredness recovery so it's noticeable when sitting on a bed
                 self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * 5.0 * ff_multiplier * game.dt_mult))
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
-            
-            # Factor in fast-forwarding speed properly so recovery aligns with passed time
             ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
-            
             base_sleep_restore = 0.05 * ff_multiplier * game.dt_mult
             
             tireness_restore = base_sleep_restore
@@ -309,7 +293,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 tireness_restore *= tire_sleep_mult
                 stamina_restore *= stam_sleep_mult
                 
-                # Recover health while sleeping on beds/benches
                 base_health_regen = PROGRESSION_CONFIG.get_stat('health', 'bed_sleep_regen', 0.01)
                 self.health = min(self.max_health, self.health + (base_health_regen * ff_multiplier * game.dt_mult))
 
@@ -323,7 +306,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 display_message(tr('msg', "You wake up refreshed."))
 
         mouse_buttons = pygame.mouse.get_pressed()
-        is_aiming = getattr(self, 'is_aiming', False) # ---> FIX: Respect joystick aiming
+        is_aiming = getattr(self, 'is_aiming', False) 
         is_firing = mouse_buttons[0]
 
         if not self.is_sleeping and is_aiming and is_firing:
@@ -358,7 +341,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
         
-        # Increase infection over time if infected
         if self.infection > 0:
             passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
             self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier * game.dt_mult))
@@ -366,6 +348,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         is_starving = self.food <= 20.0
         is_dehydrated = self.water <= 20.0
         is_infected = self.infection > 0
+        is_exhausted = self.tireness <= 0.0
         
         damage_this_frame = 0.0
         if is_starving:
@@ -374,6 +357,23 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             damage_this_frame += 0.003 * multiplier * game.dt_mult
         if is_infected:
             damage_this_frame += 0.005 * (self.infection / 100.0) * multiplier * game.dt_mult
+            
+        # CREATIVE ADDITION: Micro-sleeps, anxiety, and mechanical interruptions instead of passing out
+        if is_exhausted:
+            damage_this_frame += 0.001 * multiplier * game.dt_mult
+            self.anxiety = min(100.0, getattr(self, 'anxiety', 0.0) + (0.005 * multiplier * game.dt_mult))
+            
+            # Mechanic: Micro-sleeps. Periodically interrupts the player actions for 1-2 seconds with a stun
+            if self.action_timer <= 0 and random.random() < (0.0015 * multiplier * game.dt_mult):
+                display_message(tr('msg', "You nod off for a second..."))
+                self.action_timer = int(60 * random.uniform(1.0, 2.0))
+                self.action_total_time = self.action_timer
+                self.action_name = "Nodding off"
+                self.is_running = False
+                
+            # Mechanic: Trembling hands. Breaks focus occasionally while aiming
+            if getattr(self, 'is_aiming', False) and random.random() < 0.05:
+                self.current_aim_factor = max(0.1, getattr(self, 'current_aim_factor', 1.0) - 0.1)
             
         if damage_this_frame > 0:
             self.health = max(0.0, self.health - damage_this_frame)
@@ -420,13 +420,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         overweight_amount = self.current_weight - self.max_carry_weight
         
         if overweight_amount > 0:
-            # Scale: For every 1 unit of overweight, reduce maximums by 5% Health, 2.5% Stamina, 2.5% Tireness
-            # (Which yields exactly 10% Health, 5% Stamina, 5% Tireness reduction for 2 units overweight)
             health_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_health_penalty', 0.05)
             stamina_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_stamina_penalty', 0.025)
             tireness_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_tireness_penalty', 0.025)
 
-            # Apply the fetched multipliers to the overweight amount
             health_reduction = health_pen_rate * overweight_amount
             stamina_reduction = stamina_pen_rate * overweight_amount
             tireness_reduction = tireness_pen_rate * overweight_amount
@@ -435,7 +432,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             current_max_stamina = self.max_stamina * max(0.1, 1.0 - stamina_reduction)
             current_max_tireness = self.max_tireness * max(0.1, 1.0 - tireness_reduction)
 
-            # Enforce the new caps (draining smoothly over time to feel organic rather than instant damage)
             if self.health > current_max_health:
                 self.health -= 0.05 * game.dt_mult
                 self.health = max(current_max_health, self.health)
@@ -450,7 +446,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             if self.is_running and is_moving:
                 self.progression.add_xp(self, 'fitness', 0.001)
         else:
-            # Standard sub-threshold logic (if heavy but not yet technically "overweight")
             overweight_ratio = 0
             if self.max_carry_weight > 0:
                 overweight_ratio = self.current_weight / self.max_carry_weight
@@ -475,8 +470,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                             item.durability = 0
                             self.toggle_utility_item(item, None, None, None) 
 
-        # --- NEW: Weather & Barefoot Mechanics ---
-        # 1. Determine if under a roof
+        # --- Weather & Barefoot Mechanics ---
         is_under_roof = False
         if getattr(game, 'roof_data', None) and getattr(game, 'current_layer_index', 1) != 2:
             px = int(self.rect.centerx // TILE_SIZE)
@@ -488,13 +482,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         is_outside = getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof
         
-        # [CHANGED] 2. Rain Sickness Infection (Uses Defense instead of weather_protection)
         if is_outside and getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and self.vehicle is None:
-            # Uses the same calculation for damage, 5.0 defense = 100% protection against elements
             total_defence = self.get_total_defence()
             total_weather_protection = min(1.0, total_defence / 5.0)
             
-            # Base infection increase per tick while standing in rain
             base_rain_infection = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain_on_rain', 0.002)
             actual_rain_infection = base_rain_infection * (1.0 - total_weather_protection)
             
@@ -552,20 +543,17 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         return False
 
     def has_line_of_sight(self, target_rect, obstacles, game=None):
-        """Checks if there is an uninterrupted line between player and target."""
         start_pos = self.rect.center
         end_pos = target_rect.center
 
         for obs in obstacles:
             if obs.clipline(start_pos, end_pos):
-                # [NEW] Check if this obstacle tile allows visibility
                 if game and hasattr(game, 'map_manager'):
                     gx = obs.centerx // TILE_SIZE
                     gy = obs.centery // TILE_SIZE
                     tile_def = game.map_manager.get_tile_at(gx, gy)
                     if tile_def and tile_def.get('is_visible'):
-                        continue # It's transparent, keep checking further!
-                
+                        continue 
                 return False
 
         return True

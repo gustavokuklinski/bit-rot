@@ -218,11 +218,11 @@ class PlayerProgression:
         self.update_anxiety(player, game)
         self.update_tireness(player, game, is_moving)
 
-        if player.tireness <= 0 and not player.is_sleeping:
-            player.is_sleeping = True
-            player.vx = 0
-            player.vy = 0
-            display_message(tr('msg', "You passed out from exhaustion!"))
+        #if player.tireness <= 0 and not player.is_sleeping:
+        #    player.is_sleeping = True
+        #    player.vx = 0
+        #    player.vy = 0
+        #    display_message(tr('msg', "You passed out from exhaustion!"))
 
         if is_moving and player.is_running and player.stamina > 0:
             self.add_xp(player, 'fitness', 0.002)

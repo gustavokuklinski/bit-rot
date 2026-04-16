@@ -51,7 +51,7 @@
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk (Default: 10)"/>
-        <spawn value="10" name="Zombies per spawn (Default: 5)"/>
+        <spawn value="10" name="Zombies per spawn (Default: 10)"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day (Default: 1, example: day five will respawn 5x)"/>
         <wander value="true" name="Zombie wandering (if False all Zombies will go to player)"/>
         <sight_check value="true" name="Sight player (Default: true)"/>

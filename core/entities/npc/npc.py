@@ -6,6 +6,7 @@ import math
 import time
 from core.entities.item.item import Item, Projectile, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
+from core.entities.zombie.zombie_data import ZombieData  
 from core.messages import display_message
 from core.data.config import *
 from faker import Faker
@@ -37,7 +38,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             for t in NPCData.NPC_TEMPLATES:
                 t_static = t.get('is_static', False)
                 
-                # [FIX] Strict filtering: Walkable NPCs vs Static NPCs
                 if is_static and not t_static:
                     continue
                 if not is_static and t_static:
@@ -49,7 +49,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if available_templates:
                 template = random.choices(available_templates, weights=template_weights, k=1)[0]
             else:
-                # Fallback if filtering removed everything
                 template = random.choices(NPCData.NPC_TEMPLATES, weights=[t.get('spawn_weight', 10) for t in NPCData.NPC_TEMPLATES], k=1)[0]
         else:
             template = {
@@ -71,7 +70,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         Zombie.__init__(self, x, y, template)
         
-        # --- FIX: Prevent default XML loot tables from dropping duplicate white clothes ---
         if hasattr(self, 'loot_table'):
             self.loot_table = [loot for loot in self.loot_table if loot.get('item') not in ["Pants", "Jacket", "Tshirt", "TShirt", "Sneakers"]]
 
@@ -96,7 +94,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         name_val = template.get('name', 'RANDOM')
         template_static = template.get('is_static', False)
 
-        # Ensure Sex is explicitly defined to refine Faker generation and ID Cards
         sex_val = template.get('sex', 'Random').capitalize()
         if sex_val == 'Random':
             sex_val = random.choice(['Male', 'Female'])
@@ -107,21 +104,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.is_static = True
         else:
             self.is_static = template_static or is_static
-            
-            # Use Faker for realistic names
             try:
-                
                 fake = Faker()
                 if self.sex == 'Male':
                     self.name = fake.first_name_male()
                 else:
                     self.name = fake.first_name_female()
             except ImportError:
-                # Safe fallback if faker is missing
                 self.name = f"Survivor {random.randint(100, 999)}"
 
-        # [FIX] Enforce the user's rule cleanly:
-        # ALL Static NPCs are Friendly (chatable), ALL Walkable NPCs are Hostile.
         if self.is_static:
             self.is_friendly = True
         else:
@@ -137,17 +128,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.shelter_target = None
 
         self.idle_timer = 0
-        
         self.stuck_timer = 0
         self.stuck_angle = 0
 
-        # --- [NEW] 1. Set Defaults for Freshly Spawned NPCs ---
         self.dialog_flags = set()
         self.special_dialogs = []
 
-        # --- 2. Optional Data Overrides (for loading saves) ---
-        # Note: Check if your parameter is named 'data' or 'save_data' at the top of __init__
-        # We will use locals() to safely grab whichever one exists so it never crashes!
         loaded_data = locals().get('data', locals().get('save_data', None))
 
         if loaded_data:
@@ -163,7 +149,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 for slot, c_data in loaded_data['clothes'].items():
                     self.clothes[slot] = item_factory.create_item_from_dict(c_data) if c_data else None
                     
-            # --- [NEW] 3. Load Saved Memories if they exist ---
             self.dialog_flags = set(loaded_data.get('dialog_flags', []))
             self.special_dialogs = loaded_data.get('special_dialogs', [])
 
@@ -193,7 +178,17 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         possible_weapons = [name for name, data in ITEM_TEMPLATES.items() 
                             if data.get('type') in ['weapon_melee', 'weapon_ranged']]
         
-        if possible_weapons:
+        template_weapons = []
+        if hasattr(self, 'loot_table'):
+            for loot_dict in self.loot_table:
+                item_name = loot_dict.get('item')
+                if item_name in ITEM_TEMPLATES and ITEM_TEMPLATES[item_name].get('type') in ['weapon_melee', 'weapon_ranged']:
+                    template_weapons.append(item_name)
+        
+        if template_weapons:
+            weapon_name = random.choice(template_weapons)
+            self.equipped_weapon = Item.create_from_name(weapon_name, randomize_durability=True)
+        elif possible_weapons:
             weapon_name = random.choice(possible_weapons)
             self.equipped_weapon = Item.create_from_name(weapon_name, randomize_durability=True)
         else:
@@ -235,18 +230,28 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.clothes = {}
         hair_options = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
         predefined_clothes = template.get('predefined_clothes', {})
-        selected_hair = predefined_clothes.get('hair', random.choice(hair_options))
+        clothes_slots = template.get('clothes_slots', []) 
         
-        # Base fallback logic combined with XML predefined rules
         clothes_to_equip = {
-            "feet": predefined_clothes.get("feet") or "Sneakers",
-            "legs": predefined_clothes.get("legs") or "Pants",
-            "body": predefined_clothes.get("body") or "Tshirt",
-            "arms": predefined_clothes.get("arms") or ("Jacket" if random.random() < 0.2 else None),
-            "hair": selected_hair
+            "feet": "Sneakers",
+            "legs": "Pants",
+            "body": "Tshirt",
+            "arms": "Jacket" if random.random() < 0.2 else None,
+            "hair": random.choice(hair_options)
         }
         
-        # Inject other predefined specific clothing slots (like hand, head, util)
+        for slot_name in clothes_slots:
+            cloth_name = predefined_clothes.get(slot_name)
+            if cloth_name:
+                clothes_to_equip[slot_name] = cloth_name
+            else:
+                available_pool = ZombieData.ZOMBIE_CLOTHES_POOL.get(slot_name, [])
+                if available_pool:
+                    choice = random.choice(available_pool)
+                    clothes_to_equip[slot_name] = choice['name'] if isinstance(choice, dict) else choice
+                else:
+                    clothes_to_equip[slot_name] = None
+                    
         for slot_name, cloth_name in predefined_clothes.items():
             if slot_name not in clothes_to_equip:
                 clothes_to_equip[slot_name] = cloth_name
@@ -256,11 +261,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 continue
             item = Item.create_from_name(cloth_name)
             if item:
-                # Check if this specific item was explicitly defined in the XML for this slot
-                is_explicitly_defined = (slot_name in predefined_clothes and predefined_clothes[slot_name] == cloth_name)
+                is_explicitly_defined = (slot_name in predefined_clothes and predefined_clothes.get(slot_name) == cloth_name)
 
-                # Only apply random tint to fallback/randomized clothing (Not XML overrides)
-                if not is_explicitly_defined:
+                if not is_explicitly_defined and cloth_name in ("Tshirt", "Pants", "Jacket", "Sneakers"):
                     item.color = random.choice(CLOTHING_COLORS)
                     if item.image:
                         tinted = item.image.copy()
@@ -269,7 +272,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 
                 actual_slot = getattr(item, 'slot', slot_name)
                 
-                # Apply fallback slot overrides just in case item doesn't have it explicitly defined
                 if not getattr(item, 'slot', None):
                     if cloth_name == "Pants": actual_slot = "legs"
                     elif cloth_name == "Jacket": actual_slot = "arms"
@@ -286,15 +288,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
             self.mask.fill()
 
-
-
     def update(self, game):
         obstacles = game.obstacles
         if self.is_dead: return 
 
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
         
-        # [NEW] Determine terrain speed multiplier
         speed_mult = 1.0
         gx = self.rect.centerx // TILE_SIZE
         gy = self.rect.centery // TILE_SIZE
@@ -303,7 +302,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if tile_def:
                 name = tile_def.get('name', '').lower()
                 if 'window' in name or tile_def.get('is_window'):
-                    speed_mult = 0.35 # Slow down on windows
+                    speed_mult = 0.35 
 
         effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()
@@ -365,7 +364,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         potential_targets = []
         
-        # [FIX] Do not target zombies that are already dead
         for z in game.zombies:
             if not getattr(z, 'is_dead', False):
                 potential_targets.append(z)
@@ -389,7 +387,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if not player_is_far_and_following:
             for entity in potential_targets:
-                # [FIX] Static NPCs do not aggro based on proximity, they only react if hit
                 if self.is_static:
                     continue
 
@@ -420,7 +417,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.idle_timer = 0
         else:
             if self.is_static:
-                # [FIX] Static NPCs do not seek shelter or patrol. They strictly stand still unless aggroed.
                 target_pos = None
                 self.state = 'idle'
             else:
@@ -456,11 +452,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                  move_threshold = TILE_SIZE * 2.5
             
             if dist_to_dest > move_threshold:
-                has_los = True
-                if self.state != 'chasing': 
-                     has_los = False 
-                else:
-                    has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
+                # [FIX] Simplified Line of sight to avoid forcing heavy A* calculations
+                has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
 
                 if not has_los or self.stuck_timer > 0:
                     if current_time - self.last_path_calc_time > 1000 or not self.path or (self.state == 'chasing' and current_time - self.last_path_calc_time > 500):
@@ -501,7 +494,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             else:
                  if self.state == 'wandering' and self.patrol_target:
                       self.patrol_target = None
-                      self.patrol_wait = random.randint(100, 300)
+                      # [FIX] Organic wait timer so they don't look locked/twitching
+                      self.patrol_wait = random.randint(1500, 4000)
                  elif self.state == 'seeking_shelter':
                       pass 
 
@@ -556,8 +550,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                          return True, obstacle
             
             for entity in entities_to_check:
-                # [FIX] Shrink the entity's hitbox slightly so the NPC can step inside a few pixels
-                # We also ignore pixel-perfect mask checks here so edges can visually overlap
                 hitbox = entity.rect.inflate(-12, -12)
                 if rect_check.colliderect(hitbox):
                     return True, entity
@@ -580,6 +572,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
+                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately to pick a new reachable direction 
+                     if self.state == 'wandering': self.patrol_target = None
             
             self.y += step_dy
             self.rect.y = int(self.y)
@@ -597,6 +591,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
+                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately to pick a new reachable direction 
+                     if self.state == 'wandering': self.patrol_target = None
 
         self.rect.topleft = (int(self.x), int(self.y))
 
@@ -619,11 +615,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if found: break
     
     def _pick_patrol_point(self, game):
+        # [FIX] Anchor the patrol point calculation off the NPC's current position, not their original spawn
         for _ in range(10): 
             angle_p = math.radians(random.uniform(0, 360))
-            dist_p = random.uniform(TILE_SIZE * 2, TILE_SIZE * 10)
-            px = self.start_x + math.cos(angle_p) * dist_p
-            py = self.start_y + math.sin(angle_p) * dist_p
+            dist_p = random.uniform(TILE_SIZE * 2, TILE_SIZE * 8)
+            px = self.rect.centerx + math.cos(angle_p) * dist_p
+            py = self.rect.centery + math.sin(angle_p) * dist_p
             
             grid_x = int(px // TILE_SIZE)
             grid_y = int(py // TILE_SIZE)
@@ -668,7 +665,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 self.last_attack_time = current_time
                 attack_angle = math.atan2(-dy, dx)
                  
-                # [FIX] Properly calculate NPC damage including equipped weapons
                 base_damage = random.randint(self.min_attack, self.max_attack)
                 weapon_dmg = 0
                 if weapon:
@@ -677,7 +673,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     elif hasattr(weapon, 'min_damage') and hasattr(weapon, 'max_damage'):
                         weapon_dmg = random.randint(weapon.min_damage, weapon.max_damage)
                 
-                # Ensures that NPCs always do at least 1 damage (never 0 damage locking targets at 1 HP)
                 damage_to_deal = max(1, base_damage + weapon_dmg)
                  
                 if is_ranged_weapon and weapon:
@@ -692,7 +687,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     projectile.hostile = True
                     game.projectiles.append(projectile)
                     
-                else: # Melee attack
+                else: 
                     if getattr(self, 'sound_attack', None):
                         game.sound_manager.play_sound(self.sound_attack, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
                     self.melee_swing_timer = 250
@@ -701,16 +696,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     if target_entity == game.player:
                         target_entity.take_damage(game, damage_to_deal, 0)
                     else:
-                        # [FIX] Call die() for any target entity (Zombie, Animal, NPC) if damage is lethal
                         is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         if is_dead:
                             target_entity.die(game)
-                            #if target_entity in game.npcs:
-                            #    display_message(game, "A survivor has been killed.")
-                            #elif getattr(target_entity, 'type', '') == 'animal':
-                            #    pass # Animal death handled in its own die()
-                            #else:
-                            #    display_message(game, f"A zombie was eliminated by {self.name}.")
 
     def stop_moving(self):
         self.state = 'idle'
@@ -732,6 +720,4 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.clothes = {}
 
         super().die(game)
-        
-        # [FIX] Force removal from sprite rendering groups preventing dead visual entities
         self.kill()
