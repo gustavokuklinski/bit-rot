@@ -684,7 +684,8 @@ def handle_context_menu_click(game, mouse_pos):
                             except ValueError: pass
                         else:
                             for bi, slot in enumerate(game.player.belt):
-                                if slot is None and getattr(item, 'item_type', None) in ('weapon', 'tool'):
+                                item_t = getattr(item, 'item_type', '') or ''
+                                if slot is None and (item_t.startswith('weapon') or item_t == 'tool'):
                                     game.player.belt[bi] = item
                                     if 0 <= index < len(game.items_on_ground):
                                         game.items_on_ground.pop(index)
@@ -701,7 +702,7 @@ def handle_context_menu_click(game, mouse_pos):
                             else:
                                 print("No space to equip or pick up the item.")
                                 
-                        if getattr(item, 'item_type', None) == 'weapon':
+                        if str(getattr(item, 'item_type', '')).startswith('weapon'):
                             game.player.active_weapon = item
                     else:
                         if target_sub_slot and target_sub_slot.startswith('belt_'):
@@ -1492,7 +1493,7 @@ def handle_right_click(game, mouse_pos):
                         if existing:
                             replace_map[s] = existing.name
                         
-                elif item_type in ('weapon', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
+                elif item_type in ('weapon', 'weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
                     if getattr(clicked_item, 'allow_belt', True):
                          for b_idx in range(len(game.player.belt)):
                              slot_str = f"belt_{b_idx}"

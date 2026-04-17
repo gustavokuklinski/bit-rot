@@ -457,7 +457,7 @@ class PlayerActions:
         
         elif item_type == 'cloth':
             options.append('Open'); options.append('Equip')
-        elif item_type in ['weapon_melee', 'weapon_ranged', 'tool']:
+        elif item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:
             options.append('Equip')
             if item_type == 'weapon_ranged': options.append('Reload')
             if item_type == 'weapon_ranged' and getattr(item, 'load', None) is not None and getattr(item, 'load', 0) > 0: options.append('Get bullets')

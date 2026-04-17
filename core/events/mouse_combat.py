@@ -49,8 +49,9 @@ def handle_attack(game, mouse_pos):
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center,
-                        base_volume=random.uniform(0.2, 0.7),
-                        pitch_variance=0.15
+                        base_volume=1.0,
+                        
+                        is_critical=True
                     )
 
                 aim_pos = game._get_scaled_mouse_pos()
@@ -109,12 +110,81 @@ def handle_attack(game, mouse_pos):
                     
             elif weapon.load <= 0: 
                 if 'noammo' in weapon.sounds and weapon.sounds['noammo']:
-                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15)
+                    game.sound_manager.play_sound(weapon.sounds['noammo'], subdir='items', game=game, source_pos=game.player.rect.center, base_volume=1.0, pitch_variance=0.15, is_critical=True)
                 print(f"**CLICK!** {weapon.name} is out of ammo.")
                 display_message(f"{weapon.name} {tr('msg', 'is out of ammo.')}")
             else:
                 print(f"**CLUNK!** {weapon.name} is broken.")
                 display_message(f"{weapon.name} {tr('msg', 'is broken.')}")
+
+        elif weapon and weapon.item_type == 'weapon_throw':
+            # --- THROW ATTACK LOGIC ---
+            firing_delay = getattr(weapon, 'firing_second', 0.5)
+            if firing_delay > 0:
+                if time.time() - getattr(game.player, 'last_shot_time', 0) < firing_delay:
+                    return
+
+            if getattr(weapon, 'load', 1) > 0 or getattr(weapon, 'capacity', 1) > 0:
+                game.player.last_shot_time = time.time()
+                if 'shoot' in weapon.sounds and weapon.sounds['shoot']:
+                    game.sound_manager.play_sound(
+                        weapon.sounds['shoot'], 
+                        subdir='items',
+                        game=game,
+                        source_pos=game.player.rect.center,
+                        base_volume=1.0,
+                        is_critical=True
+                    )
+
+                aim_pos = game._get_scaled_mouse_pos()
+                target_world_x, target_world_y = game.screen_to_world(aim_pos)
+                
+                dx = target_world_x - game.player.rect.centerx
+                dy = target_world_y - game.player.rect.centery
+                calc_dist = math.hypot(dx, dy)
+                angle = math.atan2(dy, dx)
+                
+                max_dist_pixels = (getattr(weapon, 'firing_distance', 8) or 8) * TILE_SIZE
+                if calc_dist > max_dist_pixels:
+                    calc_dist = max_dist_pixels
+                    target_world_x = game.player.rect.centerx + math.cos(angle) * calc_dist
+                    target_world_y = game.player.rect.centery + math.sin(angle) * calc_dist
+
+                damage = game.player.get_attack_damage()
+
+                explosion_radius = 3
+                from core.entities.item.item_data import ITEM_TEMPLATES
+                template = ITEM_TEMPLATES.get(weapon.name)
+                if template and 'properties' in template and 'explosion' in template['properties']:
+                    explosion_radius = int(template['properties']['explosion'].get('value', 3))
+
+                proj = Projectile(
+                    game.player.rect.centerx, 
+                    game.player.rect.centery, 
+                    target_world_x, 
+                    target_world_y,
+                    speed=8,
+                    max_distance=calc_dist,
+                    damage=damage,
+                    game=game
+                )
+                proj.is_explosive = True
+                proj.explosion_radius = explosion_radius
+                proj.image = weapon.image
+                proj.owner = game.player
+                
+                if hasattr(weapon, 'sounds') and 'explosion' in weapon.sounds:
+                    proj.explosion_sound = weapon.sounds['explosion']
+                else:
+                    proj.explosion_sound = None
+
+                game.projectiles.append(proj)
+
+                weapon.load = (getattr(weapon, 'load', 1) or 1) - 1
+                if weapon.load <= 0:
+                    game.player.destroy_broken_weapon(weapon)
+                    game.player.active_weapon = None
+        # ---------------------------------------
 
         else:
             # --- MELEE ATTACK LOGIC ---
@@ -133,8 +203,9 @@ def handle_attack(game, mouse_pos):
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center,
-                        base_volume=random.uniform(0.2, 0.7),
-                        pitch_variance=0.15
+                        base_volume=1.0,
+                        pitch_variance=0.15,
+                        is_critical=True
                     )
 
                 game.player.melee_swing_timer = 10

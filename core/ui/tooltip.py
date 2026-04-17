@@ -135,15 +135,22 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if item.min_damage is not None and item.max_damage is not None:
         min_damage, max_damage = item.current_damage_range
         lines.append(f"{tr('tooltip', 'Damage:')} {min_damage}-{max_damage}")
+
+    from core.entities.item.item_data import ITEM_TEMPLATES
+    template = ITEM_TEMPLATES.get(item.name)
+    if template and 'properties' in template and 'explosion' in template['properties']:
+        explosion_radius = template['properties']['explosion'].get('value', 0)
+        lines.append(f"{tr('tooltip', 'Explosion Radius:')} {explosion_radius}")
+
     if item.ammo_type:
         lines.append(f"{tr('tooltip', 'Ammo:')} {tr('item', item.ammo_type)}")
     
-    if hasattr(item, 'repair_list') and item.repair_list:
-        lines.append(tr('tooltip', "Repairs:"))
-        for target_name in item.repair_list:
-            # Display item name (replacing underscores for cleaner look if desired)
-            display_str = target_name.replace('_', ' ')
-            lines.append(f" - {display_str}")
+    #if hasattr(item, 'repair_list') and item.repair_list:
+    #    lines.append(tr('tooltip', "Repairs:"))
+    #    for target_name in item.repair_list:
+    #        # Display item name (replacing underscores for cleaner look if desired)
+    #        display_str = target_name.replace('_', ' ')
+    #        lines.append(f" - {display_str}")
     
     if item.item_type == 'charm' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line

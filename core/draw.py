@@ -504,6 +504,37 @@ def draw_game(game):
         impact_x = splash['pos'][0] + offset_x
         impact_y = splash['pos'][1] + offset_y
 
+        # --- Added logic for Explosion rendering ---
+        if splash.get('type') == 'explosion':
+            if not hasattr(game, 'explosion_img'):
+                try:
+                    raw_img = pygame.image.load('./game/lib/sprites/items/weapon_throw_explosion.png').convert_alpha()
+                    game.explosion_img = raw_img
+                except:
+                    game.explosion_img = None
+                    
+            if game.explosion_img:
+                img = game.explosion_img.copy()
+                img.fill((255, 255, 255, base_opacity), special_flags=pygame.BLEND_RGBA_MULT)
+                
+                tile_size = TILE_SIZE
+                start_x = int(impact_x - splash['radius'])
+                start_y = int(impact_y - splash['radius'])
+                end_x = int(impact_x + splash['radius'])
+                end_y = int(impact_y + splash['radius'])
+                
+                # Render 1 tiled sprite per map-tile matching the explosion radius safely
+                for ty in range(start_y, end_y, tile_size):
+                    for tx in range(start_x, end_x, tile_size):
+                        dist_to_center = math.hypot((tx + tile_size/2) - impact_x, (ty + tile_size/2) - impact_y)
+                        if dist_to_center <= splash['radius']:
+                            scaled_tile = pygame.transform.scale(img, (tile_size, tile_size))
+                            world_view_surface.blit(scaled_tile, (tx, ty))
+            else:
+                # Fallback purely visual shockwave if the png is missing
+                pygame.draw.circle(world_view_surface, (255, 100, 0, base_opacity), (int(impact_x), int(impact_y)), int(splash['radius']))
+            continue
+
         num_particles = 4 if getattr(game, 'is_android', False) else 10
         for i in range(num_particles):
             offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) * random.uniform(0.7, 1.3)

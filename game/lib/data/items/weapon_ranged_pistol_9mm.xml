@@ -1,9 +1,9 @@
 <item name="Pistol 9mm" type="weapon_ranged" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
-        <load min="5" max="12" />
-        <weight weight="1.0"/>
-        <capacity value="12" />
+        <load min="0" max="15" />
+        <weight weight="0.8"/>
+        <capacity value="15" />
         <ammo type="9mm Ammo" />
         <damage min="25" max="55" />
         <firing pellets="1" spread_angle="0"  distance="20"/>

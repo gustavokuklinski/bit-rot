@@ -16,6 +16,13 @@ class Projectile:
         self.damage = damage
         self.game = game
         
+        # --- Added for explosive weapons (Grenades) ---
+        self.image = None
+        self.is_explosive = False
+        self.explosion_radius = 0
+        self.owner = None
+        # ----------------------------------------------
+        
         dx = target_x - start_x
         dy = target_y - start_y
         dist = (dx*dx + dy*dy) ** 0.5
@@ -49,7 +56,8 @@ class Projectile:
             if tile_def:
                 # If bullet hits a destructible obstacle (tree/stone), hit it and destroy bullet
                 if tile_def.get('destructible') and tile_def.get('is_obstacle') and not tile_def.get('is_visible'):
-                    self.game.map_manager.hit_tile(grid_x, grid_y, self.damage, weapon=None, is_projectile=True)
+                    if not getattr(self, 'is_explosive', False): # Explosives just hit the wall and trigger explosion, handled in update.py 
+                        self.game.map_manager.hit_tile(grid_x, grid_y, self.damage, weapon=None, is_projectile=True)
                     return True
                 # If bullet hits an indestructible wall, destroy bullet
                 elif tile_def.get('is_obstacle') and not tile_def.get('is_visible'):
@@ -66,4 +74,10 @@ class Projectile:
 
     def draw(self, surface, offset_x=0, offset_y=0):
         draw_center = (int(self.x) + offset_x, int(self.y) + offset_y)
-        pygame.draw.circle(surface, self.color, draw_center, 1)
+        
+        # --- Added image rendering for grenades ---
+        if self.image:
+            img_rect = self.image.get_rect(center=draw_center)
+            surface.blit(self.image, img_rect)
+        else:
+            pygame.draw.circle(surface, self.color, draw_center, 1)

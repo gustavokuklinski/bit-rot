@@ -323,13 +323,17 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         if is_moving and self.sound_steps:
             if current_time > self.last_step_sound_time:
+                step_vol = random.uniform(0.35, 0.38) if self.is_running else random.uniform(0.22, 0.25)
+                
                 game.sound_manager.play_sound(
                     self.sound_steps,
                     subdir='player',
                     game=game,
                     source_pos=self.rect.center,
-                    base_volume=random.uniform(0.2, 0.4),
-                    pitch_variance=0.15)
+                    base_volume=step_vol,
+                    pitch_variance=0.06, # Reduced from 0.15 for a more seamless, consistent material sound
+                    is_critical=True
+                )
                 
                 if self.is_running:
                     next_delay = random.uniform(0.25, 0.35) 

@@ -102,6 +102,148 @@ def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     if len(game.blood_stains) > 60:
         game.blood_stains = game.blood_stains[-60:]
 
+
+def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
+    current_time = pygame.time.get_ticks()
+    
+    # Fallback just in case a barrel or stationary object explodes
+    if not explosion_sound and owner and getattr(owner, 'active_weapon', None):
+        if hasattr(owner.active_weapon, 'sounds'):
+            explosion_sound = owner.active_weapon.sounds.get('explosion')
+    
+    if explosion_sound:
+        game.sound_manager.play_sound(
+            explosion_sound,
+            subdir='items',
+            game=game,
+            source_pos=(x, y), 
+            base_volume=1.0, 
+            pitch_variance=0.1,
+            force=True,
+            is_critical=True # Guarantees it uses a reserved channel
+        )
+        
+    # 1. Visual Splash 
+    game.splashes.append({
+        'pos': (x, y),
+        'time': current_time,
+        'duration': 800,
+        'radius': radius * TILE_SIZE,
+        'type': 'explosion'
+    })
+    
+    hit_radius = radius * TILE_SIZE
+    hit_rect = pygame.Rect(x - hit_radius, y - hit_radius, hit_radius*2, hit_radius*2)
+    
+    # 2. Damage Zombies
+    dead_zombies = []
+    for z in game.zombies:
+        if not getattr(z, 'is_dead', False) and hit_rect.colliderect(z.rect):
+            dist = math.hypot(z.rect.centerx - x, z.rect.centery - y)
+            if dist <= hit_radius:
+                z.last_hit_sound_time = current_time # Silence the individual meat-slap audio 
+                is_dead = z.take_damage(damage, game, attacker=owner)
+                if is_dead:
+                    dead_zombies.append(z)
+                else:
+                    if dist > 0:
+                        push_x = ((z.rect.centerx - x) / dist) * 15
+                        push_y = ((z.rect.centery - y) / dist) * 15
+                        z.knockback_velocity = [push_x, push_y]
+                        z.knockback_timer = 400
+                    z.aggro_timer = 15000
+                    z.state = 'chasing'
+                    
+    # Safely convert killed zombies into corpses 
+    for z in dead_zombies:
+        handle_zombie_death(game, z, game.items_on_ground, game.obstacles, getattr(owner, 'active_weapon', None))
+        if z in game.zombies:
+            game.zombies.remove(z)
+            if owner == getattr(game, 'player', None):
+                game.zombies_killed += 1
+                
+    # 3. Damage Animals
+    dead_animals = []
+    for a in getattr(game, 'active_animals', []):
+        if not getattr(a, 'is_dead', False) and hit_rect.colliderect(a.rect):
+            dist = math.hypot(a.rect.centerx - x, a.rect.centery - y)
+            if dist <= hit_radius:
+                a.last_hit_sound_time = current_time # Silence hit audio 
+                is_dead = a.take_damage(damage, game, attacker=owner)
+                if is_dead:
+                    dead_animals.append(a)
+                else:
+                    if dist > 0:
+                        push_x = ((a.rect.centerx - x) / dist) * 15
+                        push_y = ((a.rect.centery - y) / dist) * 15
+                        a.knockback_velocity = [push_x, push_y]
+                        a.knockback_timer = 400
+                    a.aggro_timer = 15000
+                    a.state = 'chasing'
+                    
+    for a in dead_animals:
+        a.die(game)
+        if a in game.items_on_ground:
+            game.items_on_ground.remove(a)
+        if a in game.active_animals:
+            game.active_animals.remove(a)
+
+    # 4. Damage NPCs
+    dead_npcs = []
+    if hasattr(game, 'npcs'):
+        for n in game.npcs:
+            if not getattr(n, 'is_dead', False) and hit_rect.colliderect(n.rect):
+                dist = math.hypot(n.rect.centerx - x, n.rect.centery - y)
+                if dist <= hit_radius:
+                    n.last_hit_sound_time = current_time # Silence hit audio 
+                    is_dead = n.take_damage(damage, game, attacker=owner)
+                    if is_dead:
+                        dead_npcs.append(n)
+                    else:
+                        if dist > 0:
+                            push_x = ((n.rect.centerx - x) / dist) * 15
+                            push_y = ((n.rect.centery - y) / dist) * 15
+                            n.knockback_velocity = [push_x, push_y]
+                            n.knockback_timer = 400
+                        n.aggro_timer = 15000
+                        n.state = 'chasing'
+                        if owner == getattr(game, 'player', None):
+                            n.is_friendly = False
+                            
+        for n in dead_npcs:
+            handle_zombie_death(game, n, game.items_on_ground, game.obstacles, getattr(owner, 'active_weapon', None))
+            if n in game.npcs:
+                game.npcs.remove(n)
+
+    # 5. Damage Player (Friendly Fire / Hazard)
+    if hasattr(game, 'player') and game.player and not getattr(game.player, 'is_dead', False) and hit_rect.colliderect(game.player.rect):
+        dist = math.hypot(game.player.rect.centerx - x, game.player.rect.centery - y)
+        if dist <= hit_radius:
+            game.player.take_damage(game, damage // 2, 0)
+            game.splashes.append({'pos': game.player.rect.center, 'time': current_time, 'duration': 350, 'radius': 3, 'type': 'hit_puff'})
+
+    # 6. Alert nearby entities (Sound logic)
+    ALARM_RADIUS = TILE_SIZE * 30
+    for other_zombie in game.zombies:
+        if not getattr(other_zombie, 'is_dead', False):
+            dist_sq = (other_zombie.rect.centerx - x)**2 + (other_zombie.rect.centery - y)**2
+            if dist_sq < ALARM_RADIUS ** 2:
+                other_zombie.aggro_timer = max(getattr(other_zombie, 'aggro_timer', 0), 10000)
+                other_zombie.state = 'chasing'
+
+    # 7. Destructible World Tiles Damage 
+    if hasattr(game, 'map_manager'):
+        grid_x = int(x // TILE_SIZE)
+        grid_y = int(y // TILE_SIZE)
+        for gy in range(grid_y - radius, grid_y + radius + 1):
+            for gx in range(grid_x - radius, grid_x + radius + 1):
+                dist = math.hypot(gx - grid_x, gy - grid_y)
+                if dist <= radius:
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and tile_def.get('destructible'):
+                        game.map_manager.hit_tile(gx, gy, damage, weapon=None, is_projectile=True)
+
+
 def update_game_state(game):
     
     GRID_SIZE = 128
@@ -151,11 +293,6 @@ def update_game_state(game):
         world_max_x = game.world_min_x + game.map_width_pixels
         world_max_y = game.world_min_y + game.map_height_pixels
 
-        # Apply fast forward to projectile speed
-        #if multiplier > 1.0:
-        #    p.vx *= multiplier
-        #    p.vy *= multiplier
-
         local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
 
         hit_wall = False
@@ -169,8 +306,17 @@ def update_game_state(game):
                 hit_wall = True
                 break
 
-        if p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y) or hit_wall:
+        reached_max = p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y)
+        
+        # When thrown item/projectile hits a wall or reaches destination
+        if reached_max or hit_wall:
             projectiles_to_remove.append(p)
+            if getattr(p, 'is_explosive', False):
+                trigger_explosion(game, p.x, p.y, p.damage, getattr(p, 'explosion_radius', 3), p.owner, getattr(p, 'explosion_sound', None))
+            continue
+            
+        # Explosives don't hit entities directly during flight, they fly over them
+        if getattr(p, 'is_explosive', False):
             continue
 
         if getattr(p, 'hostile', False) and game.player and not game.player.is_dead:

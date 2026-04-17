@@ -182,7 +182,7 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         target_height = len(base_map_data)
         target_width = len(base_map_data[0]) if target_height > 0 else 0
 
-    for i in range(1, 9):
+    for i in range(1, 2):
         if chunk_match:
             gx = chunk_match.group(2)
             gy = chunk_match.group(3)

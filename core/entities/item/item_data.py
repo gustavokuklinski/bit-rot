@@ -169,6 +169,9 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             if swing_node is not None:
                 template['sounds']['swing'] = swing_node.get('src')
 
+            explosion_node = sound_node.find('explosion')
+            if explosion_node is not None:
+                template['sounds']['explosion'] = explosion_node.get('src')
 
         ITEM_TEMPLATES[name] = template
 

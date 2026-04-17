@@ -320,7 +320,7 @@ class ZombieAI:
                         subdir=snd_dir, 
                         game=game, 
                         source_pos=self.rect.center, 
-                        base_volume=random.uniform(0.06, 0.09),
+                        base_volume=1.0,
                         pitch_variance=0.15
                     )
                     self.last_wander_sound_time = current_time
@@ -481,7 +481,14 @@ class ZombieAI:
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
              if current_time > self.last_step_sound_time:
                 snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                game.sound_manager.play_sound(self.sound_steps, subdir=snd_dir, game=game, source_pos=self.rect.center, base_volume=random.uniform(0.02, 0.06), pitch_variance=0.15)
+                game.sound_manager.play_sound(
+                    self.sound_steps, 
+                    subdir=snd_dir, 
+                    game=game, 
+                    source_pos=self.rect.center, 
+                    base_volume=random.uniform(0.2, 0.4), 
+                    pitch_variance=0.15
+                )
                 self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))
 
         # --- PHYSICS SUB-STEPPING ---

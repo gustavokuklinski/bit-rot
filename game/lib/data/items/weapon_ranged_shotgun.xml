@@ -1,7 +1,7 @@
 <item name="Shotgun" type="weapon_ranged" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
-        <load min="2" max="8" />
+        <load min="0" max="8" />
         <weight weight="2.0"/>
         <capacity value="8" />
         <ammo type="Shotgun Shells" />

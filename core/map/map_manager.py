@@ -505,8 +505,9 @@ class MapManager:
                     subdir='map',
                     game=self.game,
                     source_pos=tile_rect.center,
-                    base_volume=random.uniform(0.2, 0.7),
-                    pitch_variance=0.15
+                    base_volume=1.0,
+                    pitch_variance=0.15,
+                    is_critical=True
                 )
             
             self.invalidate_chunk(grid_x, grid_y)
@@ -549,7 +550,7 @@ class MapManager:
                 subdir='map',
                 game=self.game,
                 source_pos=tile_rect.center,
-                base_volume=random.uniform(0.2, 0.7),
+                base_volume=1.0,
                 pitch_variance=0.15
             )
 

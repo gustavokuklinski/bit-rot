@@ -90,7 +90,7 @@ class Animal(Zombie):
                     subdir='animals',  # Assuming your sounds are in sounds/animals/
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=random.uniform(0.2, 0.7),
+                    base_volume=random.uniform(0.2, 0.4),
                     pitch_variance=0.15 # Natural sound variation!
                 )
                 self.last_step_sound_time = current_time
@@ -180,7 +180,7 @@ class Animal(Zombie):
         current_time = pygame.time.get_ticks()
         if hasattr(self, 'sound_hit') and self.sound_hit and game and hasattr(game, 'sound_manager'):
             if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
-                game.sound_manager.play_sound(self.sound_hit, subdir='animals', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15) # Natural sound variation!
+                game.sound_manager.play_sound(self.sound_hit, subdir='animals', game=game, source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15) # Natural sound variation!
                 self.last_hit_sound_time = current_time
         
         # Instantly register as ready to die so the game calls die() without delay
@@ -208,7 +208,7 @@ class Animal(Zombie):
         
         # 1. Play animal death sound
         if getattr(self, 'sound_dead', None) and hasattr(game, 'sound_manager'):
-            game.sound_manager.play_sound(self.sound_dead, subdir='animals', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.7), pitch_variance=0.15) # Natural sound variation!
+            game.sound_manager.play_sound(self.sound_dead, subdir='animals', game=game, source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15) # Natural sound variation!
 
         # 2. Create Animal Corpse using the updated relative path
         corpse = Corpse(
