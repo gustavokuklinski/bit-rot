@@ -509,8 +509,18 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.vx = self.dx
 
             if hasattr(self, 'sound_steps') and self.sound_steps:
+                if not hasattr(self, 'last_step_sound_time'):
+                    self.last_step_sound_time = current_time + random.randint(0, 400)
+                    
                 if current_time - getattr(self, 'last_step_sound_time', 0) > 400:
-                    game.sound_manager.play_sound(self.sound_steps, subdir='npc', game=game, source_pos=self.rect.center, base_volume=random.uniform(0.2, 0.4), pitch_variance=0.15)
+                    game.sound_manager.play_sound(
+                        self.sound_steps, 
+                        subdir='npc', 
+                        game=game, 
+                        source_pos=self.rect.center, 
+                        base_volume=0.3, 
+                        pitch_variance=0.15
+                    )
                     self.last_step_sound_time = current_time
         else:
             self.walk_anim_angle = 0
@@ -679,7 +689,13 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     weapon_sound = weapon.sounds.get('shoot') if hasattr(weapon, 'sounds') else None
                     
                     if weapon_sound:
-                        game.sound_manager.play_sound(weapon_sound, subdir='items', game=game, source_pos=self.rect.center, base_volume=1.0)
+                        game.sound_manager.play_sound(
+                            weapon_sound, 
+                            subdir='items', 
+                            game=game, 
+                            source_pos=self.rect.center, 
+                            base_volume=1.0
+                        )
 
                     projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
                     projectile.damage = damage_to_deal
@@ -689,7 +705,13 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     
                 else: 
                     if getattr(self, 'sound_attack', None):
-                        game.sound_manager.play_sound(self.sound_attack, subdir='npc', game=game, source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15)
+                        game.sound_manager.play_sound(
+                            self.sound_attack, subdir='npc', 
+                            game=game, 
+                            source_pos=self.rect.center, 
+                            base_volume=1.0, 
+                            pitch_variance=0.15
+                        )
                     self.melee_swing_timer = 250
                     self.melee_swing_angle = attack_angle
                     

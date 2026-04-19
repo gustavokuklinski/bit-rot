@@ -4,7 +4,7 @@
         <weight weight="0.5"/>
         <capacity value="5" />
         <damage min="40" max="90" />
-        <explosion value="4" />
+        <explosion value="2" />
         <skill type="range" />
         <sprite file="weapon_throw_grenade.png" />
     </properties>

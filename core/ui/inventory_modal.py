@@ -98,7 +98,7 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             show_count = False
             if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
                 show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged'] and item.load is not None:
+            elif item.item_type in ['weapon', 'weapon_ranged','weapon_throw'] and item.load is not None:
                 show_count = True
 
             if show_count:
@@ -156,7 +156,7 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             show_count = False
             if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
                 show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged'] and item.load is not None:
+            elif item.item_type in ['weapon', 'weapon_ranged', 'weapon_throw'] and item.load is not None:
                 show_count = True
 
             if show_count:

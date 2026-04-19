@@ -19,7 +19,14 @@ class ZombieCombat:
         if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
             if hasattr(self, 'sound_hit') and self.sound_hit:
                 snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                game.sound_manager.play_sound(self.sound_hit, subdir=snd_dir, game=game, source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15)
+                game.sound_manager.play_sound(
+                    self.sound_hit, 
+                    subdir=snd_dir, 
+                    game=game, 
+                    source_pos=self.rect.center, 
+                    base_volume=1.0, 
+                    pitch_variance=0.15
+                )
             self.last_hit_sound_time = current_time
 
         # [FIX] Return True if the entity should be dead
@@ -87,7 +94,14 @@ class ZombieCombat:
         # 1. Play sound
         if self.sound_dead:
              snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-             game.sound_manager.play_sound(self.sound_dead, subdir=snd_dir, game=game, source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15)
+             game.sound_manager.play_sound(
+                self.sound_dead, 
+                subdir=snd_dir, 
+                game=game, 
+                source_pos=self.rect.center, 
+                base_volume=1.0, 
+                pitch_variance=0.15
+            )
              
         # 2. Create Corpse
         corpse = Corpse(

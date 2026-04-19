@@ -86,10 +86,11 @@ class SoundManager:
             print(f"Warning: Failed to shift pitch for {sound_key}: {e}")
             return base_sound
 
-    def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0, pitch_variance=0.0, force=False, is_critical=False):
+    def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0, pitch_variance=0.0, force=False, is_critical=False, fade_ms=0):
         """
         Plays a sound by its name.
         'is_critical' routes the sound to a protected reserved channel so it never drops.
+        'fade_ms' smoothly fades the sound in over the specified milliseconds.
         """
         if not name: 
             return
@@ -106,23 +107,25 @@ class SoundManager:
             is_critical = True
             force = True
 
-        # --- Re-Balanced Horde Dampening ---
+        # --- The Phasing & Summing Fix for Zombie Audio ---
         is_zombie = 'zombie' in subdir_lower or 'zombie' in name_lower
         
         if is_zombie:
-            # Light dampening so the XML config remains the dominant volume controller
             if any(k in name_lower for k in ['groan', 'moan', 'idle', 'wander', 'alert']):
-                base_volume *= 0.5  
+                if random.random() > 0.5:
+                    return None 
+                
+                if pitch_variance == 0.0:
+                    pitch_variance = 0.25
+                
+                base_volume *= random.uniform(0.3, 0.6)  
                 
         if 'step' in name_lower or 'walk' in name_lower:
             if pitch_variance == 0.0:
                 pitch_variance = 0.35  
             
             if is_zombie:
-                base_volume *= 0.3  # Reduced from 95% reduction to a moderate 70% reduction
-            
-            # NOTE: Player and NPC steps are no longer dampened here. 
-            # They will play at 100% of whatever the XML and entity script requests.
+                base_volume *= 0.3  
 
         if sound_key not in self.sounds:
             sound_path = name
@@ -188,9 +191,7 @@ class SoundManager:
             if distance > max_dist:
                 return 
 
-            # --- Re-Balanced Distance Falloff ---
-            # Brought the exponent down from 3.5 to 2.0 (Inverse-Square Law).
-            # Sounds will carry further and feel more natural as you move away.
+            # Inverse-Square Law Falloff
             volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
             
             final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
@@ -210,7 +211,8 @@ class SoundManager:
             final_ui_volume = min(1.0, final_ui_volume) 
             channel.set_volume(final_ui_volume, final_ui_volume)
     
-        channel.play(sound, loops=loops)
+        # [NEW] Passing the fade_ms directly into the channel start call
+        channel.play(sound, loops=loops, fade_ms=fade_ms)
         return channel
     
     def play_music(self, path, volume=1.0, loops=-1):

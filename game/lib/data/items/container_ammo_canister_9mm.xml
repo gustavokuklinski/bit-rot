@@ -1,4 +1,4 @@
-<item name="Ammo Canister" type="container" allow_belt="false">
+<item name="Ammo Canister 9mm" type="container" allow_belt="false">
     <properties>
         <capacity value="3" />
         <sprite file="container_ammo_canister_multi.png" />

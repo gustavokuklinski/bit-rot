@@ -312,6 +312,10 @@ class ZombieAI:
             self.state = 'wandering'
             
             if self.is_ambiently_noisy and core.data.config.ZOMBIE_WANDER_ENABLED and self.sound_wander:
+                if getattr(self, 'last_wander_sound_time', 0) == 0:
+                    self.last_wander_sound_time = current_time + random.randint(0, 6000)
+                    self.wander_sound_cooldown = random.randint(4000, 12000)
+
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
                     # [FIX] Determine correct subdirectory based on entity type
                     snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
@@ -479,14 +483,17 @@ class ZombieAI:
             self.walk_anim_angle = 0
             
         if is_moving and self.is_ambiently_noisy and self.sound_steps:
-             if current_time > self.last_step_sound_time:
+            if getattr(self, 'last_step_sound_time', 0) == 0:
+                self.last_step_sound_time = current_time + random.randint(0, 500)
+
+            if current_time > self.last_step_sound_time:
                 snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
                 game.sound_manager.play_sound(
                     self.sound_steps, 
                     subdir=snd_dir, 
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=random.uniform(0.2, 0.4), 
+                    base_volume=1.0, 
                     pitch_variance=0.15
                 )
                 self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))

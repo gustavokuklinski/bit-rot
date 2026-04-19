@@ -537,6 +537,38 @@ def handle_keyboard_events(game, event):
                 if game.player and game.player.is_sleeping:
                     game.player.is_sleeping = False
                     print("You woke up manually.")
+                elif game.player and game.player.stamina > 0 and not getattr(game.player, 'is_reloading', False):
+                    # --- MELEE SHOVE/PUSH LOGIC ---
+                    shove_range = TILE_SIZE * 1.5
+                    closest_zombie = None
+                    min_dist = shove_range
+                    
+                    # Find the closest zombie in range to shove
+                    for zombie in game.zombies:
+                        if getattr(zombie, 'is_dead', False): continue
+                        dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+                        if dist <= min_dist:
+                            min_dist = dist
+                            closest_zombie = zombie
+                            
+                    if closest_zombie:
+                        # Calculate angle of knockback
+                        dx_kb = closest_zombie.rect.centerx - game.player.rect.centerx
+                        dy_kb = closest_zombie.rect.centery - game.player.rect.centery
+                        kb_angle = math.atan2(dy_kb, dx_kb)
+                        
+                        # Apply physics knockback directly utilizing existing entity traits
+                        force = 10
+                        closest_zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                        closest_zombie.knockback_timer = 300
+                        
+                        # Deduct stamina and add a swing visual delay
+                        game.player.stamina = max(0.0, game.player.stamina - 2.0)
+                        game.player.melee_swing_timer = 10
+                        game.player.melee_swing_angle = kb_angle
+                        
+                        print("You pushed the enemy!")
+                        display_message(f"{weapon.name} {tr('msg', 'You pushed away!')}")
 
             if pygame.K_1 <= event.key <= pygame.K_5:
                 slot_index = event.key - pygame.K_1
