@@ -1,0 +1,10 @@
+<item name="Arrow" type="consumable_ammo" allow_belt="false">
+    <properties>
+        <status value="ammo" />
+        <weight weight="0.01"/>
+        <load min="10" max="50" />
+        <capacity value="100" />
+        <sprite file="consumable_ammo_arrow.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

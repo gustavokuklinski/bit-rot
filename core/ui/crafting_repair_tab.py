@@ -64,11 +64,14 @@ class CraftingRepairTab:
         pygame.draw.line(surface, GRAY, (details_x, details_y + 35), (details_x + details_w, details_y + 35), 1)
         
         # Ingredients
+        # Ingredients list
         ing_y = details_y + 50
         lbl = font_14.render(tr('ui', "Required Ingredients:"), True, GRAY)
         surface.blit(lbl, (details_x, ing_y))
         
         curr_y = ing_y + 30
+        col_width = details_w // 2  # Split the details area perfectly in half
+        
         can_craft = True
         active_tooltip_ingredients = None
         
@@ -94,19 +97,27 @@ class CraftingRepairTab:
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:
+                locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
                 for container, key, item, ctype, path in locs:
                     if item.id == sel_id:
                         name_display = f"[*] {tr('item', item.name)}"
                         img = item.image
                         break
 
-            text_x = details_x + 10
-            if img:
-                scaled_icon = pygame.transform.scale(img, (32, 32))
-                surface.blit(scaled_icon, (text_x, curr_y))
-                text_x += 35
+            # 1. Determine which column we are drawing in (Left = Even, Right = Odd)
+            is_right_col = (r_idx % 2 == 1)
+            
+            # 2. Set X coordinate based on column
+            current_x = (details_x + 10 + col_width) if is_right_col else (details_x + 10)
 
-            row_rect = pygame.Rect(details_x, curr_y, details_w, 32)
+            txt_str = f" {name_display}: {int(have)}/{needed}"
+            text_width = font_14.render(txt_str, True, color).get_width()
+            
+            # Calculate item width, but cap it so hover bounds don't leak into the next column
+            item_width = min((35 if img else 0) + text_width + 10, col_width - 15)
+            
+            row_rect = pygame.Rect(current_x, curr_y, item_width, 32)
+            
             if row_rect.collidepoint(mouse_pos):
                 active_tooltip_ingredients = valid_names
                 color = (min(255, color[0]+50), min(255, color[1]+50), min(255, color[2]+50))
@@ -115,6 +126,7 @@ class CraftingRepairTab:
                 if click and not self.modal.dropdown_state['active']:
                     opts = []
                     itms = []
+                    locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
                     for container, key, item, ctype, path in locs:
                         if tr('item', item.name) in valid_names:
                             qty = item.load if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
@@ -126,11 +138,21 @@ class CraftingRepairTab:
                             'req_idx': r_idx, 'position': mouse_pos
                         })
 
-            txt_str = f" {name_display}: {int(have)} / {tr('ui', 'Need:')} {needed}"
-            ing_surf = font_14.render(txt_str, True, color)
-            surface.blit(ing_surf, (text_x, curr_y + 8))
-            curr_y += 35
+            # Draw the Icon and Text
+            draw_x = current_x
+            if img:
+                scaled_icon = pygame.transform.scale(img, (32, 32))
+                surface.blit(scaled_icon, (draw_x, curr_y))
+                draw_x += 35
 
+            ing_surf = font_14.render(txt_str, True, color)
+            surface.blit(ing_surf, (draw_x, curr_y + 8))
+            
+            # 3. ONLY drop down to the next line if we just finished the Right Column
+            if is_right_col:
+                curr_y += 35
+                
+        # (The rest of your code remains exactly the same starting from btn_h = 40)
         btn_h = 40
         bottom_y = details_y + list_h
         btn_rect = pygame.Rect(details_x, bottom_y - btn_h, details_w, btn_h)
@@ -164,21 +186,37 @@ class CraftingRepairTab:
             can_craft = False
 
         if r.req_level:
-            for attr, lvl in reversed(list(r.req_level.items())):
-                attr_name = attr.replace('_', ' ').capitalize()
-                attr_name_tr = tr('ui', attr_name) # Fetch translated skill name
-                p_lvl = self.modal.player.progression.get_level(attr)
-                s_color = GREEN if p_lvl >= lvl else RED
-                txt = f"- {attr_name_tr}: {p_lvl}/{int(lvl)}"
-                s_surf = font_14.render(txt, True, s_color)
-                element_cursor_y -= 20
-                surface.blit(s_surf, (details_x + 10, element_cursor_y))
+            # 1. Move Y up ONCE for the entire single line
+            element_cursor_y -= 25 
             
+            # 2. Draw the Header on the left
             head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
             head_surf = font_14.render(head_txt, True, WHITE)
-            element_cursor_y -= 20
             surface.blit(head_surf, (details_x, element_cursor_y))
-            element_cursor_y -= 5
+            
+            # 3. Start drawing the skills exactly to the right of the Header
+            current_skill_x = details_x + head_surf.get_width() + 10
+            
+            items = list(r.req_level.items())
+            for idx, (attr, lvl) in enumerate(items):
+                attr_name = attr.replace('_', ' ').capitalize()
+                attr_name_tr = tr('ui', attr_name) 
+                p_lvl = self.modal.player.progression.get_level(attr)
+                s_color = GREEN if p_lvl >= lvl else RED
+                
+                # Render Skill Text
+                txt = f"{attr_name_tr}: {p_lvl}/{int(lvl)}"
+                s_surf = font_14.render(txt, True, s_color)
+                
+                # Notice how Y never changes here, only X!
+                surface.blit(s_surf, (current_skill_x, element_cursor_y))
+                current_skill_x += s_surf.get_width()
+                
+                # Draw the " - " separator if there are more skills
+                if idx < len(items) - 1:
+                    sep_surf = font_14.render(" - ", True, GRAY)
+                    surface.blit(sep_surf, (current_skill_x, element_cursor_y))
+                    current_skill_x += sep_surf.get_width()
 
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED

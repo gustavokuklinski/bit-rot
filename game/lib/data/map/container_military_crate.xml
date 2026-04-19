@@ -10,8 +10,9 @@
         <item type="weapon_ranged" min="1" max="2" chance="1.0" />
         <item type="weapon_throw" min="0" max="2" chance="1.0" />
         
-        <item item="Ammo Canister" chance="1.0" />
-        <item item="Ammo Canister" chance="1.0" />
+        <item item="Ammo Canister 556" chance="1.0" />
+        <item item="Ammo Canister 9mm" chance="1.0" />
+        <item item="Ammo Canister 762" chance="1.0" />
         <item item="MRE" chance="1.0" />
         <item item="Military Pants" chance="1.0" />
         <item item="Military Tshirt" chance="1.0" />

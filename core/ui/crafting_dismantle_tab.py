@@ -41,11 +41,15 @@ class CraftingDismantleTab:
         pygame.draw.line(surface, GRAY, (details_x, details_y + 35), (details_x + details_w, details_y + 35), 1)
         
         # Ingredients
+        # Ingredients list
+        # Ingredients list
         ing_y = details_y + 50
         lbl = font_14.render(tr('ui', "Required Ingredients:"), True, GRAY)
         surface.blit(lbl, (details_x, ing_y))
         
         curr_y = ing_y + 30
+        col_width = details_w // 2  # Split the details area perfectly in half
+        
         can_craft = True
         active_tooltip_ingredients = None
         
@@ -78,13 +82,20 @@ class CraftingDismantleTab:
                         img = item.image
                         break
 
-            text_x = details_x + 10
-            if img:
-                scaled_icon = pygame.transform.scale(img, (32, 32))
-                surface.blit(scaled_icon, (text_x, curr_y))
-                text_x += 35
+            # 1. Determine which column we are drawing in (Left = Even, Right = Odd)
+            is_right_col = (r_idx % 2 == 1)
+            
+            # 2. Set X coordinate based on column
+            current_x = (details_x + 10 + col_width) if is_right_col else (details_x + 10)
 
-            row_rect = pygame.Rect(details_x, curr_y, details_w, 32)
+            txt_str = f" {name_display}: {int(have)}/{needed}"
+            text_width = font_14.render(txt_str, True, color).get_width()
+            
+            # Calculate item width, but cap it so hover bounds don't leak into the next column
+            item_width = min((35 if img else 0) + text_width + 10, col_width - 15)
+            
+            row_rect = pygame.Rect(current_x, curr_y, item_width, 32)
+            
             if row_rect.collidepoint(mouse_pos):
                 active_tooltip_ingredients = valid_names
                 color = (min(255, color[0]+50), min(255, color[1]+50), min(255, color[2]+50))
@@ -105,37 +116,21 @@ class CraftingDismantleTab:
                             'req_idx': r_idx, 'position': mouse_pos
                         })
 
-            txt_str = f" {name_display}: {int(have)} / {tr('ui', 'Need:')} {needed}"
-            ing_surf = font_14.render(txt_str, True, color)
-            surface.blit(ing_surf, (text_x, curr_y + 8))
-            curr_y += 35
+            # Draw the Icon and Text
+            draw_x = current_x
+            if img:
+                scaled_icon = pygame.transform.scale(img, (32, 32))
+                surface.blit(scaled_icon, (draw_x, curr_y))
+                draw_x += 35
 
-        # Yields
-        if getattr(r, 'results', None):
-            curr_y += 10
-            lbl_res = font_14.render("Yields:", True, GRAY)
-            surface.blit(lbl_res, (details_x, curr_y))
-            curr_y += 30
-            for res in r.results:
-                res_name = res['names'][0] if res['names'] else "Unknown"
-                res_amt = res['amount']
-                res_chance = int(res.get('chance', 1.0) * 100)
-                chance_str = f" ({res_chance}%)" if res_chance < 100 else ""
-                
-                img = self.modal.yield_images.get(res_name)
-                item_color = self.modal.yield_colors.get(res_name, WHITE)
-                
-                text_x = details_x + 10
-                if img:
-                    scaled_icon = pygame.transform.scale(img, (32, 32))
-                    surface.blit(scaled_icon, (text_x, curr_y))
-                    text_x += 35
-                    
-                res_txt = f"{res_amt}x {res_name}{chance_str}"
-                res_surf = font_14.render(res_txt, True, item_color)
-                surface.blit(res_surf, (text_x, curr_y + 8))
-                curr_y += 35
+            ing_surf = font_14.render(txt_str, True, color)
+            surface.blit(ing_surf, (draw_x, curr_y + 8))
             
+            # 3. ONLY drop down to the next line if we just finished the Right Column
+            if is_right_col:
+                curr_y += 35
+                
+        # (The rest of your code remains exactly the same starting from btn_h = 40)
         btn_h = 40
         bottom_y = details_y + list_h
         btn_rect = pygame.Rect(details_x, bottom_y - btn_h, details_w, btn_h)
@@ -169,16 +164,39 @@ class CraftingDismantleTab:
             can_craft = False
 
         if r.req_level:
-            for attr, lvl in reversed(list(r.req_level.items())):
+            # 1. Move Y up ONCE for the entire single line
+            element_cursor_y -= 25 
+            
+            # 2. Draw the Header on the left
+            head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
+            head_surf = font_14.render(head_txt, True, WHITE)
+            surface.blit(head_surf, (details_x, element_cursor_y))
+            
+            # 3. Start drawing the skills exactly to the right of the Header
+            current_skill_x = details_x + head_surf.get_width() + 10
+            
+            items = list(r.req_level.items())
+            for idx, (attr, lvl) in enumerate(items):
                 attr_name = attr.replace('_', ' ').capitalize()
-                attr_name_tr = tr('ui', attr_name) # Fetch translated skill name
+                attr_name_tr = tr('ui', attr_name) 
                 p_lvl = self.modal.player.progression.get_level(attr)
                 s_color = GREEN if p_lvl >= lvl else RED
-                txt = f"- {attr_name_tr}: {p_lvl}/{int(lvl)}"
+                
+                # Render Skill Text
+                txt = f"{attr_name_tr}: {p_lvl}/{int(lvl)}"
                 s_surf = font_14.render(txt, True, s_color)
-                element_cursor_y -= 20
-                surface.blit(s_surf, (details_x + 10, element_cursor_y))
+                
+                # Notice how Y never changes here, only X!
+                surface.blit(s_surf, (current_skill_x, element_cursor_y))
+                current_skill_x += s_surf.get_width()
+                
+                # Draw the " - " separator if there are more skills
+                if idx < len(items) - 1:
+                    sep_surf = font_14.render(" - ", True, GRAY)
+                    surface.blit(sep_surf, (current_skill_x, element_cursor_y))
+                    current_skill_x += sep_surf.get_width()
             
+            # 3. Draw the Header ABOVE the skills line
             head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
             head_surf = font_14.render(head_txt, True, WHITE)
             element_cursor_y -= 20

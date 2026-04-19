@@ -36,6 +36,8 @@
         <item name="Grenade" chance="1" />
         <item name="AK47" chance="1" />
         <item name="762 Ammo" chance="1" />
+        <item name="Bow" chance="1" />
+        <item name="Arrow" chance="1" />
     </initial_loot>
 
     <visuals>

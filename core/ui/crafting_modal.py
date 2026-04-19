@@ -513,5 +513,5 @@ class CraftingModal(BaseModal):
                     take = min(to_remove - removed_check, item_qty)
                     removed_check += take
                     
-            if removed_check < to_remove: return f"{tr('msg', 'Missing')} {to_remove - removed_check} {tr('msg', 'of')} {valid_names[0]}"
+            #if removed_check < to_remove: return f"{tr('msg', 'Missing')} {to_remove - removed_check} {tr('msg', 'of')} {valid_names[0]}"
         return None

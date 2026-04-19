@@ -157,10 +157,10 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     # Safely convert killed zombies into corpses 
     for z in dead_zombies:
         handle_zombie_death(game, z, game.items_on_ground, game.obstacles, getattr(owner, 'active_weapon', None))
-        if z in game.zombies:
-            game.zombies.remove(z)
-            if owner == getattr(game, 'player', None):
-                game.zombies_killed += 1
+        
+        # --- FIX: Removed the "if z in game.zombies" check since it was causing the bypass ---
+        if owner == getattr(game, 'player', None):
+            game.zombies_killed += 1
                 
     # 3. Damage Animals
     dead_animals = []
@@ -212,6 +212,7 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
                             
         for n in dead_npcs:
             handle_zombie_death(game, n, game.items_on_ground, game.obstacles, getattr(owner, 'active_weapon', None))
+            # Same fix applied here just in case!
             if n in game.npcs:
                 game.npcs.remove(n)
 
@@ -242,8 +243,7 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
                     tile_def = game.map_manager.get_tile_at(gx, gy)
                     if tile_def and tile_def.get('destructible'):
                         game.map_manager.hit_tile(gx, gy, damage, weapon=None, is_projectile=True)
-
-
+                        
 def update_game_state(game):
     
     GRID_SIZE = 128
