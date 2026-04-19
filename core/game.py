@@ -41,6 +41,7 @@ from core.map.world_time import WorldTime
 from core.events.joystick import JoystickHandler
 from core.android.virtual_controller import VirtualAndroidController
 from core.android.ui_adapter import adapt_modals_for_mobile
+from core.ui.helpers.keybinds import keybinds_ui
 
 class Game:
     def __init__(self):
@@ -531,7 +532,15 @@ class Game:
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
-        start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect = draw_menu(self.game_screen, mouse_pos, has_save)
+       
+        start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(self.game_screen, mouse_pos, has_save)
+
+        if getattr(keybinds_ui, 'active', False):
+            keybinds_ui.handle_events(events)
+            keybinds_ui.draw(self.game_screen, mouse_pos)
+            self._update_screen()
+            return
+            
 
         back_btn = None
         if getattr(self, 'show_main_menu_help', False):
@@ -561,6 +570,10 @@ class Game:
                 
                 if help_rect and help_rect.collidepoint(mouse_pos):
                     self.show_main_menu_help = True
+                    continue
+
+                if controls_rect and controls_rect.collidepoint(mouse_pos):
+                    keybinds_ui.toggle()
                     continue
 
                 flag_clicked = False

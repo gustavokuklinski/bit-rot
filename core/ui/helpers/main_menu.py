@@ -9,6 +9,7 @@ from core.data.localization import tr
 _logo_img = None
 _language_cache = None
 _help_img_menu = None
+_controls_img_menu = None  # NEW: global for the controls icon
 
 def get_available_languages():
     global _language_cache
@@ -77,7 +78,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     center_offset_x = (GAME_WIDTH - S(1280)) // 2
     center_offset_y = (GAME_HEIGHT - S(720)) // 2
 
-    global _logo_img, _help_img_menu
+    global _logo_img, _help_img_menu, _controls_img_menu
     screen.fill(DARK_GRAY)
 
     try:
@@ -96,6 +97,14 @@ def draw_menu(screen, mouse_pos, has_save=False):
             help_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'help.png')
             _help_img_menu = pygame.image.load(help_path).convert_alpha()
             _help_img_menu = pygame.transform.scale(_help_img_menu, (S(32), S(32)))
+    except Exception as e:
+        pass
+
+    try:
+        if _controls_img_menu is None:
+            controls_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'controls.png')
+            _controls_img_menu = pygame.image.load(controls_path).convert_alpha()
+            _controls_img_menu = pygame.transform.scale(_controls_img_menu, (S(32), S(32)))
     except Exception as e:
         pass
 
@@ -135,6 +144,9 @@ def draw_menu(screen, mouse_pos, has_save=False):
     screen.blit(footer_text, footer_rect)
 
     help_rect = None
+    controls_rect = None
+
+    # Draw Help Icon
     if _help_img_menu:
         help_bg_rect = pygame.Rect(0, 0, S(48), S(48))
         help_bg_rect.bottomleft = (center_offset_x + S(20), center_offset_y + S(700)) 
@@ -149,6 +161,25 @@ def draw_menu(screen, mouse_pos, has_save=False):
         screen.blit(_help_img_menu, img_rect)
         
         help_rect = help_bg_rect 
+
+    # Draw Controls Icon next to Help Icon
+    if _controls_img_menu:
+        controls_bg_rect = pygame.Rect(0, 0, S(48), S(48))
+        if help_rect:
+            controls_bg_rect.bottomleft = (help_rect.right + S(10), help_rect.bottom)
+        else:
+            controls_bg_rect.bottomleft = (center_offset_x + S(20), center_offset_y + S(700))
+            
+        is_hovered_controls = controls_bg_rect.collidepoint(mouse_pos)
+        bg_color = (80, 80, 80) if is_hovered_controls else (60, 60, 60)
+        
+        pygame.draw.rect(screen, bg_color, controls_bg_rect, border_radius=6)
+        pygame.draw.rect(screen, (40, 40, 40), controls_bg_rect, width=1, border_radius=6)
+        
+        img_rect = _controls_img_menu.get_rect(center=controls_bg_rect.center)
+        screen.blit(_controls_img_menu, img_rect)
+        
+        controls_rect = controls_bg_rect
 
     langs = get_available_languages()
     flag_rects = []
@@ -196,4 +227,4 @@ def draw_menu(screen, mouse_pos, has_save=False):
         pygame.draw.rect(screen, WHITE, bg_rect, 1)
         screen.blit(tooltip_text, tooltip_rect)
 
-    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect
+    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect, controls_rect

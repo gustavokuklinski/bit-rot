@@ -1,18 +1,20 @@
-# core/events/keyboard.py
 import pygame
 import uuid
 import math
-import random # Added for %rot vehicle
+import random 
 from core.data.config import *
 from core.events.game_actions import try_grab_item
 from core.ui.crafting_modal import CraftingModal
 from core.data.localization import tr
+from core.ui.helpers.keybinds import keybind_manager
+from core.messages import display_message
+from core.systems.utils import get_targeted_interactable
+from core.map.world_layers import set_active_layer
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
     for modal in game.modals:
         if modal['type'] == 'inventory':
-            # Save position before closing
             game.last_modal_positions['inventory'] = (modal['rect'].x, modal['rect'].y)
             game.modals.remove(modal)
             inventory_modal_exists = True
@@ -22,10 +24,12 @@ def toggle_inventory_modal(game):
             'id': uuid.uuid4(),
             'type': 'inventory',
             'item': None,
-            'position': game.last_modal_positions['inventory'],
+            'position': getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['inventory'][0], game.last_modal_positions['inventory'][1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT))[1], 
+                                INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
         }
         game.modals.append(new_inventory_modal)
 
@@ -42,10 +46,12 @@ def toggle_status_modal(game):
             'id': uuid.uuid4(),
             'type': 'status',
             'item': None,
-            'position': game.last_modal_positions['status'],
+            'position': getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['status'][0], game.last_modal_positions['status'][1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT))[1], 
+                                STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
         }
         game.modals.append(new_status_modal)
 
@@ -62,10 +68,12 @@ def toggle_nearby_modal(game):
             'id': uuid.uuid4(),
             'type': 'nearby',
             'item': None,
-            'position': game.last_modal_positions['nearby'],
+            'position': getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['nearby'][0], game.last_modal_positions['nearby'][1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))[1], 
+                                NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)
         }
         game.modals.append(new_nearby_modal)
 
@@ -82,10 +90,12 @@ def toggle_messages_modal(game):
             'id': uuid.uuid4(),
             'type': 'messages',
             'item': None,
-            'position': game.last_modal_positions['messages'],
+            'position': getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions['messages'][0], game.last_modal_positions['messages'][1], MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT))[1], 
+                                MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)
         }
         game.modals.append(new_messages_modal)
 
@@ -102,11 +112,11 @@ def toggle_gear_modal(game):
             'id': uuid.uuid4(),
             'type': 'gear',
             'item': None,
-            'position': game.last_modal_positions.get('gear', (700, 10)),
+            'position': getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(game.last_modal_positions.get('gear', (700, 10))[0], 
-                                game.last_modal_positions.get('gear', (700, 10))[1], 
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0))[1], 
                                 GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)
         }
         game.modals.append(new_gear_modal)
@@ -123,22 +133,20 @@ def toggle_crafting_modal(game):
         modal_data = {
             'id': uuid.uuid4(),
             'type': 'crafting',
-            'position': game.last_modal_positions.get('crafting', (300, 100)),
+            'position': getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2)),
             'is_dragging': False,
             'drag_offset': (0, 0),
             'rect': pygame.Rect(
-                game.last_modal_positions.get('crafting', (300, 100))[0], 
-                game.last_modal_positions.get('crafting', (300, 100))[1], 
+                getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2))[0], 
+                getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2))[1], 
                 CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
             )
         }
         
         screen = getattr(game, 'screen', pygame.display.get_surface())
         assets = getattr(game, 'assets', {})
-        
         crafting_instance = CraftingModal(screen, modal_data, assets, game)
         modal_data['instance'] = crafting_instance
-        
         game.modals.append(modal_data)
 
 def toggle_slots_modal(game):
@@ -153,12 +161,12 @@ def toggle_slots_modal(game):
         new_slots_modal = {
             'id': uuid.uuid4(),
             'type': 'slots',
-            'position': game.last_modal_positions.get('slots', (100, 100)),
+            'position': getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)),
             'is_dragging': False,
             'drag_offset': (0, 0),
             'rect': pygame.Rect(
-                game.last_modal_positions.get('slots', (100, 100))[0],
-                game.last_modal_positions.get('slots', (100, 100))[1],
+                getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[0],
+                getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[1],
                 SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)
         }
         game.modals.append(new_slots_modal)
@@ -187,7 +195,6 @@ def toggle_help_modal(game):
 def find_closest_vehicle(game):
     closest_vehicle = None
     closest_dist_sq = float('inf')
-
     if not game.player: return None
 
     for entity in game.containers:
@@ -213,9 +220,7 @@ def toggle_pause(game):
 
 def process_chat_command(game, text):
     """Processes potential cheat commands entered in chat."""
-    from core.messages import display_message
     import re
-    
     text = text.strip()
     if not text.startswith("%rot "):
         return False
@@ -336,7 +341,6 @@ def process_chat_command(game, text):
     return False
 
 def reset_modal_positions(game):
-    """Snaps all open modals back to their default layout positions and restores the default UI state."""
     default_positions = {
         'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
         'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
@@ -351,17 +355,11 @@ def reset_modal_positions(game):
         'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
         'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
     }
-    
-    # Update the internal state memory to ensure next popups are positioned correctly
     if hasattr(game, 'last_modal_positions'):
         game.last_modal_positions.update(default_positions)
-    
-    # Elegantly clear all existing modal states (closing unexpected/dragged ones)
     game.modals.clear()
     if hasattr(game, 'saved_modals'):
         game.saved_modals.clear()
-        
-    # Re-use the existing logic that perfectly opens the default modals
     toggle_default_ui(game)
 
 def toggle_default_ui(game):
@@ -371,9 +369,7 @@ def toggle_default_ui(game):
             if 'rect' in modal:
                 game.last_modal_positions[modal['type']] = (modal['rect'].x, modal['rect'].y)
             game.saved_modals.append(modal)
-        
         game.modals.clear()
-        
     elif getattr(game, 'saved_modals', None):
         for modal in game.saved_modals:
             if modal['type'] in game.last_modal_positions:
@@ -382,9 +378,7 @@ def toggle_default_ui(game):
                 if 'rect' in modal:
                     modal['rect'].topleft = pos
             game.modals.append(modal)
-            
         game.saved_modals.clear()
-        
     else:
         default_positions = {
             'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
@@ -395,7 +389,6 @@ def toggle_default_ui(game):
             'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
         }
         game.last_modal_positions.update(default_positions)
-        
         toggle_gear_modal(game)
         toggle_inventory_modal(game)
         toggle_nearby_modal(game)
@@ -403,17 +396,14 @@ def toggle_default_ui(game):
         toggle_status_modal(game)
         toggle_slots_modal(game)
 
-def handle_keyboard_events(game, event):
-
+def handle_keyboard_events(game, event, action_triggered=None):
+    
+    # --- 1. KEYBOARD-ONLY UI & CHAT HANDLING (Strictly KEYDOWN) ---
     if event.type == pygame.KEYDOWN:
         
-        # --- 1. ACTIVE CHAT HANDLING (Highest Priority) ---
-        # Moving this check to the very top prevents chat input actions (like typing 'i' or 'TAB') 
-        # from inadvertently triggering normal gameplay hotkeys while the modal is focused.
         if getattr(game, 'chat_active', False):
             if event.key == pygame.K_RETURN:
                 if getattr(game, 'chat_input_text', '').strip():
-                    # Process and store history for Up/Down arrows
                     if not hasattr(game, 'chat_history'):
                         game.chat_history = []
                     game.chat_history.append(game.chat_input_text)
@@ -424,8 +414,6 @@ def handle_keyboard_events(game, event):
                     if not is_command:
                         game.player.chat_text = game.chat_input_text
                         game.player.chat_timer = game.player.chat_duration
-                        
-                        from core.messages import display_message
                         display_message(game, f"{game.player.name}: {game.chat_input_text}")
                 
                 game.chat_input_text = ""
@@ -455,13 +443,10 @@ def handle_keyboard_events(game, event):
                     else:
                         game.chat_input_text = ""
             else:
-                if len(getattr(game, 'chat_input_text', '')) < 50 and event.unicode:
+                if len(getattr(game, 'chat_input_text', '')) < 50 and getattr(event, 'unicode', ''):
                     game.chat_input_text += event.unicode
-            
-            # Important: Halt further event processing so no modals are toggled
             return 
             
-        # --- 2. GLOBAL KEYS ---
         if event.key == pygame.K_TAB:
             mods = pygame.key.get_mods()
             if mods & pygame.KMOD_SHIFT:
@@ -470,18 +455,13 @@ def handle_keyboard_events(game, event):
                 toggle_default_ui(game)
             return
 
-        # Check if a top modal wants to handle the event (e.g. Search Bar)
         if game.modals and not getattr(game, 'hide_modals', False):
             top_modal = game.modals[-1]
             if 'instance' in top_modal and hasattr(top_modal['instance'], 'handle_event'):
                 if top_modal['instance'].handle_event(event):
                     return
 
-        if event.key == pygame.K_F2:
-            toggle_pause(game)
-            return
-
-        if event.key == pygame.K_ESCAPE:
+        if event.key == pygame.K_F2 or event.key == pygame.K_ESCAPE:
             toggle_pause(game)
             return
         
@@ -489,95 +469,19 @@ def handle_keyboard_events(game, event):
             pygame.display.toggle_fullscreen()
 
         if event.key == pygame.K_F3:
-            game.is_fast_forwarding = not game.is_fast_forwarding
+            game.is_fast_forwarding = not getattr(game, 'is_fast_forwarding', False)
             return
 
-        # --- 3. GAMEPLAY KEYS (Only if Chat is NOT active) ---
+        # Hardcoded Hotbar & Zoom bindings
         if game.game_state == 'PLAYING':
-            
-            if event.key == pygame.K_RETURN or event.key == pygame.K_t:
-                game.chat_active = True
-                if not any(m['type'] == 'messages' for m in game.modals):
-                    toggle_messages_modal(game)
-                return
-
-            if event.key == pygame.K_i:
-                toggle_inventory_modal(game)
-            if event.key == pygame.K_h:
-                toggle_status_modal(game)
-            if event.key == pygame.K_g:
-                toggle_gear_modal(game)
-            if event.key == pygame.K_n:
-                toggle_nearby_modal(game)
-            if event.key == pygame.K_m:
-                toggle_messages_modal(game)
-            if event.key == pygame.K_c:
-                toggle_crafting_modal(game)
-            if event.key == pygame.K_y:
-                toggle_slots_modal(game)
-            if event.unicode == '?' or event.key == pygame.K_SLASH:
-                toggle_help_modal(game)
-            if event.key == pygame.K_r:
-                if game.player:
-                    game.player.reload_active_weapon(game=game)
-
-            if event.key == pygame.K_q:
-                vehicle_found = find_closest_vehicle(game)
-                for modal in game.modals:
-                    if modal['type'] == 'vehicle':
-                        vehicle_found = modal['vehicle']
-                        break
-                
-                if vehicle_found:
-                    vehicle_found.toggle_engine()
-                else:
-                    print("No vehicle nearby.")
-            
-            if event.key == pygame.K_SPACE:
-                if game.player and game.player.is_sleeping:
-                    game.player.is_sleeping = False
-                    print("You woke up manually.")
-                elif game.player and game.player.stamina > 0 and not getattr(game.player, 'is_reloading', False):
-                    # --- MELEE SHOVE/PUSH LOGIC ---
-                    shove_range = TILE_SIZE * 1.5
-                    closest_zombie = None
-                    min_dist = shove_range
-                    
-                    # Find the closest zombie in range to shove
-                    for zombie in game.zombies:
-                        if getattr(zombie, 'is_dead', False): continue
-                        dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-                        if dist <= min_dist:
-                            min_dist = dist
-                            closest_zombie = zombie
-                            
-                    if closest_zombie:
-                        # Calculate angle of knockback
-                        dx_kb = closest_zombie.rect.centerx - game.player.rect.centerx
-                        dy_kb = closest_zombie.rect.centery - game.player.rect.centery
-                        kb_angle = math.atan2(dy_kb, dx_kb)
-                        
-                        # Apply physics knockback directly utilizing existing entity traits
-                        force = 10
-                        closest_zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
-                        closest_zombie.knockback_timer = 300
-                        
-                        # Deduct stamina and add a swing visual delay
-                        game.player.stamina = max(0.0, game.player.stamina - 2.0)
-                        game.player.melee_swing_timer = 10
-                        game.player.melee_swing_angle = kb_angle
-                        
-                        print("You pushed the enemy!")
-                        display_message(f"{weapon.name} {tr('msg', 'You pushed away!')}")
-
             if pygame.K_1 <= event.key <= pygame.K_5:
                 slot_index = event.key - pygame.K_1
                 if game.player:
                     item = game.player.belt[slot_index]
                     if item:
                         if item.item_type.startswith('consumable'):
-                            game.player.consume_item(item, 'belt', slot_index,game=game)
-                        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw','tool']:
+                            game.player.consume_item(item, 'belt', slot_index, game=game)
+                        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:
                             if game.player.active_weapon == item:
                                 game.player.active_weapon = None
                                 print(f"Unequipped {tr('item', item.name)}.")
@@ -595,3 +499,128 @@ def handle_keyboard_events(game, event):
             elif event.key == pygame.K_MINUS: 
                 game.zoom_level -= zoom_step
                 game.zoom_level = max(FAR_ZOOM, game.zoom_level)
+
+    # --- 2. UNIFIED GAMEPLAY ACTIONS (Any Input Device) ---
+    if action_triggered and game.game_state == 'PLAYING' and not getattr(game, 'chat_active', False):
+        
+        if action_triggered == 'chat':
+            game.chat_active = True
+            if not any(m['type'] == 'messages' for m in game.modals):
+                toggle_messages_modal(game)
+            return
+            
+        elif action_triggered == 'toggle_inventory': toggle_inventory_modal(game)
+        elif action_triggered == 'toggle_status': toggle_status_modal(game)
+        elif action_triggered == 'toggle_gear': toggle_gear_modal(game)
+        elif action_triggered == 'toggle_nearby': toggle_nearby_modal(game)
+        elif action_triggered == 'toggle_messages': toggle_messages_modal(game)
+        elif action_triggered == 'toggle_crafting': toggle_crafting_modal(game)
+        elif action_triggered == 'toggle_slots': toggle_slots_modal(game)
+        elif action_triggered == 'reload':
+            if game.player:
+                game.player.reload_active_weapon(game=game)
+                
+        elif action_triggered == 'vehicle_engine':
+            vehicle_found = find_closest_vehicle(game)
+            for modal in game.modals:
+                if modal['type'] == 'vehicle':
+                    vehicle_found = modal['vehicle']
+                    break
+            if vehicle_found:
+                vehicle_found.toggle_engine()
+            else:
+                print("No vehicle nearby.")
+                
+        elif action_triggered == 'action_shove':
+            if getattr(game.player, 'vehicle', None):
+                game.player.vehicle.brake(brake_force=0.6, game=game)
+            elif game.player and game.player.is_sleeping:
+                game.player.is_sleeping = False
+                print("You woke up manually.")
+            elif game.player and game.player.stamina > 0 and not getattr(game.player, 'is_reloading', False):
+                shove_range = TILE_SIZE * 1.5
+                closest_zombie = None
+                min_dist = shove_range
+                
+                for zombie in game.zombies:
+                    if getattr(zombie, 'is_dead', False): continue
+                    dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+                    if dist <= min_dist:
+                        min_dist = dist
+                        closest_zombie = zombie
+                        
+                if closest_zombie:
+                    dx_kb = closest_zombie.rect.centerx - game.player.rect.centerx
+                    dy_kb = closest_zombie.rect.centery - game.player.rect.centery
+                    kb_angle = math.atan2(dy_kb, dx_kb)
+                    
+                    force = 10
+                    closest_zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                    closest_zombie.knockback_timer = 300
+                    
+                    game.player.stamina = max(0.0, game.player.stamina - 2.0)
+                    game.player.melee_swing_timer = 10
+                    game.player.melee_swing_angle = kb_angle
+                    
+                    print("You pushed the enemy!")
+                    display_message(game, f"{tr('msg', 'You pushed an enemy away!')}")
+
+        elif action_triggered == 'interact':
+            if getattr(game.player, 'vehicle', None):
+                game.player.exit_vehicle(game)
+            else:
+                target = get_targeted_interactable(game)
+                if target:
+                    if target['type'] == 'npc':
+                        found_npc = target['entity']
+                        if not any(m['type'] == 'npc_dialog' for m in game.modals):
+                            pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
+                            pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
+                            game.modals.append({
+                                'id': str(uuid.uuid4()),
+                                'type': 'npc_dialog',
+                                'npc': found_npc,
+                                'dialogs': found_npc.get_dialog_options(), 
+                                'active_dialog_index': -1,                 
+                                'position': (pos_x, pos_y),
+                                'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
+                                'is_dragging': False,
+                                'drag_offset': (0, 0)
+                            })
+                    elif target['type'] == 'vehicle':
+                        found_vehicle = target['entity']
+                        game.player.enter_vehicle(found_vehicle, game)
+                        if not any(m['type'] == 'vehicle' for m in game.modals):
+                            default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 + 120)
+                            pos = getattr(game, 'last_modal_positions', {}).get('vehicle', default_pos)
+                            
+                            new_modal = {
+                                'id': str(uuid.uuid4()),
+                                'type': 'vehicle',
+                                'vehicle': found_vehicle,
+                                'position': pos,
+                                'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
+                                'is_dragging': False, 
+                                'drag_offset': (0, 0), 
+                                'active_tab': 'Info'
+                            }
+                            game.modals.append(new_modal)
+                    elif target['type'] == 'stair':
+                        px, py = target['entity']
+                        current_tile_char = game.map_data[py][px]
+                        current_tile_def = game.tile_manager.definitions.get(current_tile_char)
+                        if current_tile_def and current_tile_def.get('is_stair'):
+                            target_layer = current_tile_def.get('target_layer')
+                            if game.player.layer_switch_cooldown <= 0:
+                                if set_active_layer(game, target_layer):
+                                    game.player.layer_switch_cooldown = 30
+                    elif target['type'] == 'tile':
+                        tx, ty = target['entity']
+                        tile = game.map_manager.get_tile_at(tx, ty)
+                        if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                            game.map_manager.toggle_door_state(tx, ty)
+                        elif tile and tile.get('is_stair'):
+                            target_layer = tile.get('target_layer')
+                            if game.player.layer_switch_cooldown <= 0:
+                                if set_active_layer(game, target_layer):
+                                    game.player.layer_switch_cooldown = 30

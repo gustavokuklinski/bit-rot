@@ -1,0 +1,15 @@
+<item name="Improvised Bomb" type="weapon_throw" allow_belt="true">
+    <properties>
+        <load min="1" max="5" />
+        <weight weight="0.1"/>
+        <capacity value="5" />
+        <damage min="20" max="60" />
+        <explosion value="3" />
+        <skill type="range" />
+        <sprite file="weapon_throw_improvised_bomb.png" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <explosion src="grenade.ogg" />
+    </sound>
+</item>
