@@ -30,6 +30,26 @@ from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.ui.slots_modal import draw_slots_modal
 from core.systems.utils import get_player_facing_tile, get_targeted_interactable
 from core.data.localization import tr
+from core.ui.helpers.keybinds import keybind_manager
+
+def get_key_name(action):
+    """Safely retrieves the human-readable string for a bound key."""
+    val = keybind_manager.kb_binds.get(action)
+    if val is None:
+        return ""
+    if val < 0:
+        btn_num = -val
+        if btn_num == 1: return "LMB"
+        elif btn_num == 2: return "MMB"
+        elif btn_num == 3: return "RMB"
+        else: return f"MB{btn_num}"
+    else:
+        name = pygame.key.name(val).upper()
+        if name == "SPACE": return "SPACE"
+        if name == "LEFT SHIFT": return "LSHIFT"
+        if name == "LEFT CTRL": return "LCTRL"
+        if name == "RETURN": return "ENTER"
+        return name
 
 def draw_game(game):
     # Clear the main screen
@@ -748,9 +768,11 @@ def draw_game(game):
                     else:
                         key_status = tr('tooltip', "Yes") if equip.get('key') else tr('tooltip', "Missing")
                         
-                    # Construct multi-line tooltip - UPDATE THESE LINES:
-                    t_enter = tr('tooltip', "Press E to enter/exit vehicle")
-                    t_engine = tr('tooltip', "Press Q to turn on/off engine")
+                    interact_key = get_key_name('interact')
+                    engine_key = get_key_name('vehicle_engine')
+                
+                    t_enter = tr('tooltip', f"Press {interact_key} to enter/exit vehicle")
+                    t_engine = tr('tooltip', f"Press {engine_key} to turn on/off engine")
                     t_rmb = tr('tooltip', "RMB for Vehicle Options and Trunk")
                     t_mot = tr('tooltip', "Motor")
                     t_fuel = tr('tooltip', "Fuel")
@@ -784,16 +806,16 @@ def draw_game(game):
                     dist = math.hypot(game.player.rect.centerx - (fx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (fy*TILE_SIZE + TILE_SIZE/2))
                     if dist < TILE_SIZE * 1.5:
                         tile_rect = pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        interact_key = get_key_name('interact')
+                            
                         if is_stair:
-                            # Update this line:
-                            interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E\nto go Down/Up')})
+                            interactables.append({'rect': tile_rect, 'tip': tr('tooltip', f'Press {interact_key}\nto go Down/Up')})
                         else:
                             name = t.get('name', '').lower()
-                            # Update these lines:
                             if 'window' in name:
-                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E or RMB\nto Open/Close')})
+                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', f'Press {interact_key} or RMB\nto Open/Close')})
                             else:
-                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', 'Press E or RMB\nto Open/Close')})
+                                interactables.append({'rect': tile_rect, 'tip': tr('tooltip', f'Press {interact_key} or RMB\nto Open/Close')})
                                 
         # Draw the '!' marks
         mouse_pos = game._get_scaled_mouse_pos()
@@ -1240,15 +1262,15 @@ def draw_game(game):
 
     elif not game.context_menu['active']:
         ui_buttons = [
-            (game.pause_button_rect, tr('ui', "Pause and Save (F2)")),
-            (game.forward_button_rect, tr('ui', "Skip time (F3)")),
-            (game.status_button_rect, tr('ui', "Player Status (H)")),
-            (game.inventory_button_rect, tr('ui', "Inventory (I)")),
-            (game.gear_button_rect, tr('ui', "Gear (G)")),
-            (getattr(game, 'slots_button_rect', None), tr('ui', "Slots Overview (Y)")),
-            (game.nearby_button_rect, tr('ui', "Nearby (N)")),
-            (game.messages_button_rect, tr('ui', "Messages (M)")),
-            (game.crafting_button_rect, tr('ui', "Crafting (C)")),
+            (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), # *Update key name if you make a specific 'pause' action
+            (game.forward_button_rect, tr('ui', "Skip time (F3)")), # Usually hardcoded, leave as F3 unless bound
+            (game.status_button_rect, tr('ui', f"Player Status ({get_key_name('toggle_status')})")),
+            (game.inventory_button_rect, tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")),
+            (game.gear_button_rect, tr('ui', f"Gear ({get_key_name('toggle_gear')})")),
+            (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")),
+            (game.nearby_button_rect, tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")),
+            (game.messages_button_rect, tr('ui', f"Messages ({get_key_name('toggle_messages')})")),
+            (game.crafting_button_rect, tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")),
             (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
         ]
         

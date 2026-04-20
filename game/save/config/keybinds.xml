@@ -11,7 +11,7 @@
         <bind action="chat" key="116"/>
         <bind action="toggle_inventory" key="105"/>
         <bind action="toggle_crafting" key="99"/>
-        <bind action="toggle_status" key="104"/>
+        <bind action="toggle_status" key="98"/>
         <bind action="toggle_gear" key="103"/>
         <bind action="toggle_nearby" key="110"/>
         <bind action="toggle_messages" key="109"/>

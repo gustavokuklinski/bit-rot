@@ -3,7 +3,7 @@
     <ui>
         <ui_background_music value="true" name="Background music (Default: True)"/>
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay (Default: False)"/>
-        <language value="pt_BR" name="Language"/>
+        <language value="en_US" name="Language"/>
         <crt_filter value="true" name="CRT filter (Default: True)"/>
         <window_mode value="windowed" name="Window (Default: windowed)"/>
     </ui>
