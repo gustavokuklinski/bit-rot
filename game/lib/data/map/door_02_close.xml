@@ -1,4 +1,7 @@
-<map name="door_02_close" type="maptile" char="door_02_close" state="close"  is_obstacle="true">
+<map name="door_02_close" type="maptile" char="door_02_close" state="close"  is_obstacle="true" destructible="true">
+    <properties>
+        <health min="160" max="260" />
+    </properties>
     <visuals>
         <sprite id="close" file="door_02_close.png" />
     </visuals>

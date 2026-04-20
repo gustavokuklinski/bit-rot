@@ -237,7 +237,6 @@ class ZombieAI:
         min_target_dist_sq = dist_to_player_sq
 
         # --- QUADTREE TARGETING: Check nearby NPCs and Animals natively ---
-        # Eliminate the linear loop over game.npcs and use the quadtree subset
         for entity in nearby_entities:
             if getattr(entity, 'is_dead', False): continue
             
@@ -265,13 +264,9 @@ class ZombieAI:
         can_see_target = self.has_line_of_sight(target_rect, game, current_time)
         target_pos = None
 
-        # Check chase triggers to determine state
         should_chase = self._check_chase_triggers(game.player, game, dist_to_target, current_time)
-
-        # [FIX] Aggroed zombies always chase player regardless of distance
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
 
-        # [NEW] Godzen mode override: Ignore player completely
         if target_entity == game.player and getattr(game.player, 'godzen_mode', False):
             can_see_target = False
             should_chase = False
@@ -294,9 +289,7 @@ class ZombieAI:
                     self.vx, self.vy = 0, 0
                     return
 
-        # [FIX] Once zombie enters chase state, keep chasing (don't go back to wandering)
         elif self.state == 'chasing':
-            # Keep chasing player even if triggers are not met
             target_pos = target_rect.center
             self.state = 'chasing'
 
@@ -307,7 +300,6 @@ class ZombieAI:
                     self.last_attack_time = current_time
                     self.vx, self.vy = 0, 0
                     return
-
         else:
             self.state = 'wandering'
             
@@ -317,7 +309,6 @@ class ZombieAI:
                     self.wander_sound_cooldown = random.randint(4000, 12000)
 
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
-                    # [FIX] Determine correct subdirectory based on entity type
                     snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
                     game.sound_manager.play_sound(
                         self.sound_wander, 
@@ -359,14 +350,12 @@ class ZombieAI:
                 target_pos = None
 
         if target_pos:
-            # FIX: Passed nearby_entities correctly here!
             self.move_towards(target_pos, obstacles, nearby_entities, game, can_see_target=(can_see_target and self.state == 'chasing'))
 
     def move_towards(self, target_pos, obstacles, nearby_entities, game, can_see_target=True):
 
         multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
         
-        # [NEW] Determine terrain speed multiplier
         speed_mult = 1.0
         gx = self.rect.centerx // TILE_SIZE
         gy = self.rect.centery // TILE_SIZE
@@ -375,7 +364,7 @@ class ZombieAI:
             if tile_def:
                 name = tile_def.get('name', '').lower()
                 if 'window' in name or tile_def.get('is_window'):
-                    speed_mult = 0.35 # Slow down on windows
+                    speed_mult = 0.35 
 
         effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()
@@ -387,7 +376,6 @@ class ZombieAI:
              use_pathfinding = True
 
         if use_pathfinding:
-            # [OPTIMIZATION] Increased recalc delay to 1.5s to reduce CPU load
             if current_time - self.last_path_calc_time > 1500 or not self.path:
                 new_path = self._get_path_astar(self.rect.center, target_pos, game)
                 if new_path:
@@ -432,13 +420,12 @@ class ZombieAI:
                 move_x = (dx / dist) * effective_speed
                 move_y = (dy / dist) * effective_speed
 
-        # --- SEPARATION LOGIC (OPTIMIZED) ---
+        # --- SEPARATION LOGIC ---
         sep_x, sep_y = 0, 0
         separation_radius = TILE_SIZE * 0.9
         separation_radius_sq = separation_radius ** 2
         neighbor_count = 0
         
-        # FIX: Iterate through all nearby_entities for physics separation
         for z in nearby_entities:
             if z is self: continue
             
@@ -450,7 +437,6 @@ class ZombieAI:
 
             dist_sq = dx*dx + dy*dy
             if dist_sq < separation_radius_sq:
-                # [OPTIMIZATION] Avoid sqrt when possible, use approximation for very close entities
                 if dist_sq < 0.01:
                     angle = random.uniform(0, 6.28)
                     sep_x += math.cos(angle)
@@ -506,13 +492,18 @@ class ZombieAI:
         step_x, step_y = move_x / steps, move_y / steps
         
         for _ in range(steps):
+            # --- X AXIS ---
             self.x += step_x
             self.rect.x = int(self.x)
             collided = False
+            hit_obstacle = None
+            
             for obs in obstacles:
-                if self.rect.colliderect(obs): collided = True; break
+                if self.rect.colliderect(obs): 
+                    collided = True
+                    hit_obstacle = obs
+                    break
                 
-            # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
             if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
                     collided = True
@@ -523,14 +514,39 @@ class ZombieAI:
                 if abs(step_x) > 0.1:
                     self.stuck_timer = 200
                     self.stuck_angle = random.randint(0, 360)
+                
+                # [NEW] Attack destructibles when path is blocked
+                if hit_obstacle and self.state == 'chasing':
+                    gx = hit_obstacle.x // TILE_SIZE
+                    gy = hit_obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    
+                    if tile_def and tile_def.get('destructible'):
+                        if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                            damage = random.randint(self.min_attack, self.max_attack)
+                            game.map_manager.hit_tile(gx, gy, damage)
+                            self.last_attack_time = current_time
+                            self.melee_swing_timer = 10
+                            
+                            if getattr(self, 'sound_attack', None):
+                                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                                game.sound_manager.play_sound(
+                                    self.sound_attack, subdir=snd_dir, game=game, 
+                                    source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                )
             
+            # --- Y AXIS ---
             self.y += step_y
             self.rect.y = int(self.y)
             collided = False
+            hit_obstacle = None
+            
             for obs in obstacles:
-                if self.rect.colliderect(obs): collided = True; break
+                if self.rect.colliderect(obs): 
+                    collided = True
+                    hit_obstacle = obs
+                    break
 
-            # [FIX] Shrink player collision box by 12 pixels so zombie steps slightly inside
             if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
                 if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
                     collided = True
@@ -541,5 +557,25 @@ class ZombieAI:
                 if abs(step_y) > 0.1:
                     self.stuck_timer = 200
                     self.stuck_angle = random.randint(0, 360)
+
+                # [NEW] Attack destructibles when path is blocked
+                if hit_obstacle and self.state == 'chasing':
+                    gx = hit_obstacle.x // TILE_SIZE
+                    gy = hit_obstacle.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    
+                    if tile_def and tile_def.get('destructible'):
+                        if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                            damage = random.randint(self.min_attack, self.max_attack)
+                            game.map_manager.hit_tile(gx, gy, damage)
+                            self.last_attack_time = current_time
+                            self.melee_swing_timer = 10
+                            
+                            if getattr(self, 'sound_attack', None):
+                                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                                game.sound_manager.play_sound(
+                                    self.sound_attack, subdir=snd_dir, game=game, 
+                                    source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                )
 
         self.rect.topleft = (int(self.x), int(self.y))

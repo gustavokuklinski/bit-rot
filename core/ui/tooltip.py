@@ -69,10 +69,15 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
 
     if hasattr(item, 'effects') and item.effects:
         for effect in item.effects:
+            val = effect.get('value', 0)
+            
+            # Skip rendering effects that have a value of 0
+            if val == 0:
+                continue
+
             # Format targets nicely: "Health, Tireness"
             targets_str = ", ".join([tr('tooltip', t.capitalize()) for t in effect['targets']])
             
-            val = effect.get('value', 0)
             range_str = f"{val}"
             
             # Determine Sign and Color
