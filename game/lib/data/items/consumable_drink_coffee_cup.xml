@@ -1,4 +1,4 @@
-<item name="Coffee Mug" type="consumable_drink" allow_belt="false">
+<item name="Coffee Cup" type="consumable_drink" allow_belt="false">
     <properties>
         <restore status="[tireness]" value="15" />
         <restore status="[stamina]" value="15" />
@@ -6,7 +6,7 @@
         <load min="1" max="1" />
         <capacity value="1" />
         <weight weight="0.1"/>
-        <sprite file="consumable_drink_coffee_mug.png" />
+        <sprite file="consumable_drink_coffee_cup.png" />
     </properties>
     <spawn chance="1" />
 </item>

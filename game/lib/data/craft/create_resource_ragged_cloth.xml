@@ -1,3 +1,3 @@
 <recipe type="resource" craft="create" output="Ragged Cloth" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="4" time="1.0">
-    <ingredient name="[Military Tshirt, Medical Pants, Medical Vest, Tshirt, Balaclava, Medical Tshirt, Next Petrol Tshirt]" destroy="true" amount="1" />
+    <ingredient name="[Military Tshirt, Medical Pants, Medical Vest, Tshirt, Balaclava, Medical Tshirt, Next Petrol Tshirt, Exxoil Tshirt, Gethulius Tshirt" destroy="true" amount="1" />
 </recipe>

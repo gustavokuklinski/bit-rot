@@ -1,0 +1,7 @@
+<recipe type="weapon_melee" craft="create" output="Metal Axe" req_level="[intelligence:8, maintenance:8]" gain_xp="[intelligence:10, maintenance:20]" amount="1" time="3.0">
+    <ingredient name="Metal Scrap" destroy="true" amount="10" />
+    <ingredient name="Metal Bar" destroy="true" amount="2" />
+    <ingredient name="Weld" destroy="true" amount="3" />
+    <ingredient name="[Nails, Screws]" destroy="true" amount="20" />
+    <ingredient name="Blueprint" destroy="true" amount="30" />
+</recipe>

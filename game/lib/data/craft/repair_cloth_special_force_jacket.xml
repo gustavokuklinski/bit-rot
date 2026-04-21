@@ -1,0 +1,7 @@
+<recipe type="cloth" craft="repair" output="Special Force Jacket" magazine="Sewing Vol.1" gain_xp="[intelligence:0.5, maintenance:0.6]" amount="1" time="2.0">
+    <ingredient name="Special Force Jacket" destroy="false" amount="1" />
+    <ingredient name="Line Twine" destroy="true" amount="3" />
+    <ingredient name="Needle" destroy="true" amount="1" />
+    <ingredient name="Denim Stripes" destroy="true" amount="5" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

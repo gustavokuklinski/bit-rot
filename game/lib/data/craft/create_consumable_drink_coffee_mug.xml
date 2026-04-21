@@ -1,5 +1,0 @@
-<recipe type="consumable_drink" craft="create" output="Coffee Mug" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="1" time="1.0">
-    <ingredient name="Empty Mug" destroy="true" amount="1" />
-    <ingredient name="Coffee" destroy="true" amount="1" />
-    <ingredient name="Water Unit" destroy="true" amount="2" />
-</recipe>
