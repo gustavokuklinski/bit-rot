@@ -46,6 +46,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
     menu_state['action_map'] = [] # Maps drawn rect index to the actual string action
     
     hovered_main_index = -1
+    active_tooltip = None  # [NEW] Global tooltip tracker
     
     # Draw main items
     for i, label in enumerate(main_labels):
@@ -56,6 +57,12 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         # If hovering a submenu parent or its child, keep it highlighted
         if is_hovered:
             hovered_main_index = i
+            
+            # [NEW] Check for main menu tooltips (like "Barricate")
+            if not has_sub[i] and isinstance(options[i], str):
+                main_tooltip = menu_state.get('tooltips', {}).get(options[i])
+                if main_tooltip:
+                    active_tooltip = (tr('msg', main_tooltip), mouse_pos)
             
         text_color = WHITE
         if is_hovered:
@@ -92,7 +99,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
         parent_rect = pygame.Rect(menu_x, menu_y + active_sub_idx * item_height, max_width, item_height)
         sub_options = options[active_sub_idx]['sub']
         
-        # [NEW] Extract custom display names if provided, otherwise fallback to the raw ID
+        # Extract custom display names if provided, otherwise fallback to the raw ID
         sub_labels = []
         for sub in sub_options:
             disp_name = options[active_sub_idx].get('display_names', {}).get(sub, sub)
@@ -132,8 +139,6 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             sub_s.fill((20, 20, 20, 220))
             surface.blit(sub_s, sub_rect.topleft)
             pygame.draw.rect(surface, WHITE, sub_rect, 1)
-            
-            tooltip_info = None
 
             for i, sub_label in enumerate(sub_labels):
                 sub_opt_rect = pygame.Rect(sub_x, sub_y + i * item_height, sub_max_width, item_height)
@@ -141,7 +146,6 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                 # Check for replacements
                 raw_sub_id = sub_options[i]
                 replace_name = options[active_sub_idx].get('replacing', {}).get(raw_sub_id)
-                # [NEW] Extract tooltip string if provided
                 sub_tooltip = options[active_sub_idx].get('tooltips', {}).get(raw_sub_id) 
 
                 menu_state['rects'].append(sub_opt_rect)
@@ -154,10 +158,10 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                     text_color = YELLOW
                     # If hovering over an occupied slot, prep the tooltip
                     if replace_name:
-                        tooltip_info = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", mouse_pos)
-                    # [NEW] Render location tooltip
+                        active_tooltip = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", mouse_pos)
+                    # Render location tooltip
                     elif sub_tooltip:
-                        tooltip_info = (tr('msg', sub_tooltip), mouse_pos)
+                        active_tooltip = (tr('msg', sub_tooltip), mouse_pos)
                     
                 text_surf = font.render(sub_label, True, text_color)
                 surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
@@ -167,24 +171,24 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                     ast_surf = font.render("*", True, (255, 100, 100)) # Light Red asterisk
                     surface.blit(ast_surf, (sub_opt_rect.right - padding - ast_surf.get_width(), sub_opt_rect.y + (item_height - ast_surf.get_height()) // 2))
 
-            # Draw the tooltip on top of everything
-            if tooltip_info:
-                t_text, t_pos = tooltip_info
-                t_surf = font.render(t_text, True, WHITE)
-                t_rect = t_surf.get_rect()
-                t_rect.topleft = (t_pos[0] + 15, t_pos[1] + 15) # Offset below mouse
-                
-                # Clamp tooltip to screen
-                if t_rect.right > GAME_WIDTH:
-                    t_rect.right = t_pos[0] - 5
-                if t_rect.bottom > GAME_HEIGHT:
-                    t_rect.bottom = t_pos[1] - 5
-                    
-                bg_rect = t_rect.inflate(10, 10)
-                
-                # Draw background
-                s_tooltip = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-                s_tooltip.fill((20, 20, 20, 240))
-                surface.blit(s_tooltip, bg_rect.topleft)
-                pygame.draw.rect(surface, WHITE, bg_rect, 1)
-                surface.blit(t_surf, t_rect)
+    # [NEW] Draw the tooltip globally on top of everything
+    if active_tooltip:
+        t_text, t_pos = active_tooltip
+        t_surf = font.render(t_text, True, WHITE)
+        t_rect = t_surf.get_rect()
+        t_rect.topleft = (t_pos[0] + 15, t_pos[1] + 15) # Offset below mouse
+        
+        # Clamp tooltip to screen
+        if t_rect.right > GAME_WIDTH:
+            t_rect.right = t_pos[0] - 5
+        if t_rect.bottom > GAME_HEIGHT:
+            t_rect.bottom = t_pos[1] - 5
+            
+        bg_rect = t_rect.inflate(10, 10)
+        
+        # Draw background
+        s_tooltip = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        s_tooltip.fill((20, 20, 20, 240))
+        surface.blit(s_tooltip, bg_rect.topleft)
+        pygame.draw.rect(surface, WHITE, bg_rect, 1)
+        surface.blit(t_surf, t_rect)

@@ -1,0 +1,8 @@
+<map name="wooden_window_01_broke_barricate" type="maptile" char="wooden_window_01_broke_barricate" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
+    <visuals>
+        <sprite id="close" file="wooden_window_01_broke_barricate.png" />
+    </visuals>
+</map>

@@ -1,4 +1,4 @@
-<map name="door_02_barricate" type="maptile" char="door_02_barricate" is_obstacle="false" destructible="true">
+<map name="door_02_barricate" type="maptile" char="door_02_barricate" is_obstacle="true" destructible="true">
     <properties>
         <health min="160" max="260" />
     </properties>

@@ -10,6 +10,7 @@ from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
+from core.placement import find_free_tile
 
 
 def does_allow_liquid(obj):
@@ -178,10 +179,149 @@ def handle_context_menu_click(game, mouse_pos):
                 else:
                     print("You go to sleep...")
                     game.player.is_sleeping = True
+                    
             if option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
                     game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
                 clicked_on_menu = True
+                
+            elif option == 'Barricate':
+                if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
+                    has_hammer = False
+                    planks = 0
+                    nails = 0
+                    
+                    for it in game.player.inventory + game.player.belt:
+                        if it:
+                            name_low = it.name.lower()
+                            if 'hammer' in name_low: has_hammer = True
+                            if 'plank' in name_low: planks += getattr(it, 'load', 1)
+                            if 'nails' in name_low: nails += getattr(it, 'load', 1)
+                            
+                    if has_hammer and planks >= 4 and nails >= 8:
+                        grid_x = item['grid_x']
+                        grid_y = item['grid_y']
+                        char = item.get('char', '')
+                        
+                        def do_barricate():
+                            def consume(name_substr, amount):
+                                amt_left = amount
+                                
+                                # 1. Check Belt (Fixed size list, replacing with None is correct)
+                                for i in range(len(game.player.belt)):
+                                    it = game.player.belt[i]
+                                    if it and name_substr in it.name.lower():
+                                        load = getattr(it, 'load', 1)
+                                        if load > amt_left:
+                                            it.load -= amt_left
+                                            return
+                                        else:
+                                            amt_left -= load
+                                            game.player.belt[i] = None
+                                            if amt_left <= 0:
+                                                return
+                                                
+                                # 2. Check Inventory (Dynamic list, must pop. Iterating backwards is safe)
+                                for i in range(len(game.player.inventory) - 1, -1, -1):
+                                    it = game.player.inventory[i]
+                                    if it and name_substr in it.name.lower():
+                                        load = getattr(it, 'load', 1)
+                                        if load > amt_left:
+                                            it.load -= amt_left
+                                            return
+                                        else:
+                                            amt_left -= load
+                                            game.player.inventory.pop(i) 
+                                            if amt_left <= 0:
+                                                return
+                                                
+                            consume('plank', 4)
+                            consume('nails', 8)
+                            
+                            base_name = char.replace('_open', '').replace('_close', '').replace('_broke', '')
+                            if '_broke' in char:
+                                new_char = f"{base_name}_broke_barricate"
+                            else:
+                                new_char = f"{base_name}_barricate"
+                                
+                            if new_char not in game.tile_manager.definitions:
+                                display_message(tr('msg', f"Error: Tile '{new_char}' not found in XML!"))
+                                return
+                                
+                            if hasattr(game.map_manager, '_replace_tile'):
+                                game.map_manager._replace_tile(grid_x, grid_y, char, new_char)
+                                
+                            if hasattr(game.player, 'progression'):
+                                game.player.progression.add_xp(game.player, 'maintenance', 5)
+                                
+                            target_name = "Window" if "window" in char.lower() else "Door"
+                            display_message(tr('msg', f"{target_name} barricaded successfully."))
+                            
+                        game.player.start_action("Barricading", 5.0, do_barricate, xp_reward=0)
+                    else:
+                        display_message(tr('msg', "Need: Hammer, 4 Plank and 8 Nails."))
+                clicked_on_menu = True
+
+            elif option == 'Unbarricade':
+                if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
+                    has_tool = False
+                    for it in game.player.inventory + game.player.belt:
+                        if it:
+                            name_low = it.name.lower()
+                            if 'axe' in name_low or 'pickaxe' in name_low or 'picaxe' in name_low or 'crowbar' in name_low:
+                                has_tool = True
+                                break
+                    
+                    if has_tool:
+                        grid_x = item['grid_x']
+                        grid_y = item['grid_y']
+                        char = item.get('char', '')
+                        
+                        def do_unbarricade():
+                            if '_broke_barricate' in char:
+                                target_char = char.replace('_broke_barricate', '_broke')
+                            else:
+                                target_char = char.replace('_barricate', '_close')
+                                if target_char not in game.tile_manager.definitions:
+                                    target_char = char.replace('_barricate', '')
+                                    
+                            if target_char not in game.tile_manager.definitions:
+                                display_message(tr('msg', f"Error: Tile '{target_char}' not found in XML!"))
+                                return
+                                
+                            if hasattr(game.map_manager, '_replace_tile'):
+                                game.map_manager._replace_tile(grid_x, grid_y, char, target_char)
+                                
+                            # Handle random drops
+                            from core.placement import find_free_tile
+                            plank_qty = random.randint(0, 2)
+                            nails_qty = random.randint(0, 2)
+                            
+                            def spawn_drop(name, qty):
+                                if qty > 0:
+                                    drop_item = Item.create_from_name(name)
+                                    if drop_item:
+                                        drop_item.load = qty
+                                        center_x = grid_x * TILE_SIZE + TILE_SIZE // 2
+                                        center_y = grid_y * TILE_SIZE + TILE_SIZE // 2
+                                        drop_item.rect.center = (center_x, center_y)
+                                        if find_free_tile(drop_item.rect, game.obstacles, game.items_on_ground, initial_pos=(drop_item.rect.x, drop_item.rect.y), max_radius=2):
+                                            game.items_on_ground.append(drop_item)
+                            
+                            spawn_drop('Plank', plank_qty)
+                            spawn_drop('Nails', nails_qty)
+                                
+                            if hasattr(game.player, 'progression'):
+                                game.player.progression.add_xp(game.player, 'maintenance', 5)
+                                
+                            target_name = "Window" if "window" in char.lower() else "Door"
+                            display_message(tr('msg', f"{target_name} unbarricaded successfully."))
+                            
+                        game.player.start_action("Unbarricading", 4.0, do_unbarricade, xp_reward=0)
+                    else:
+                        display_message(tr('msg', "Need: Axe (Any), Pickaxe or Crowbar."))
+                clicked_on_menu = True
+
             if option == 'Toggle Light':
                 if source == 'light_source':
                     item['active'] = not item['active']
@@ -1172,19 +1312,24 @@ def handle_right_click(game, mouse_pos):
 
             if tile:
                 if dist_sq <= max_dist_sq:
+                    char = ""
+                    try: char = game.map_data[grid_y][grid_x]
+                    except: pass
+                    
                     if tile.get('type') == "maptile_car":
                         vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                         if vehicle:
                             clicked_item = vehicle
                             click_source = 'container_map'
                             click_index = 0
-                    elif tile.get('is_statable'):
+                    elif tile.get('is_statable') or ('door' in char.lower() or 'window' in char.lower()):
                         clicked_item = {
                             'name': tile.get('name', 'Object'), 
                             'type': 'map_tile', 
                             'grid_x': grid_x, 
                             'grid_y': grid_y, 
-                            'state': tile.get('state')
+                            'state': tile.get('state'),
+                            'char': char
                         }
                         click_source = 'map_tile'
                     elif tile.get('sleep'):
@@ -1219,6 +1364,12 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['index'] = click_index
         game.context_menu['container_item'] = click_container_item
         game.context_menu['position'] = mouse_pos
+        
+        if 'tooltips' not in game.context_menu:
+            game.context_menu['tooltips'] = {}
+
+        game.context_menu['tooltips']['Barricate'] = "Need: Hammer (Any), 4 Plank and 8 Nails."
+        game.context_menu['tooltips']['Unbarricade'] = "Need: Axe (Any), Pickaxe or Crowbar."
 
         options = ['']
 
@@ -1248,6 +1399,15 @@ def handle_right_click(game, mouse_pos):
                     options.append('Open door/window')
                 elif clicked_item['state'] == 'open':
                     options.append('Close door/window')
+                    
+            if 'char' in clicked_item:
+                char = clicked_item['char']
+                if 'door' in char.lower() or 'window' in char.lower():
+                    if '_barricate' not in char:
+                        options.append('Barricate')
+                    else:
+                        options.append('Unbarricade')
+                        
         elif click_source == 'light_source':
             options = ['Toggle Light']
         elif click_source == 'player_self':

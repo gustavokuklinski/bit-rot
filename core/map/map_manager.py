@@ -579,20 +579,26 @@ class MapManager:
             if (grid_x, grid_y) in self.shaking_tiles:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
-            # [UPDATED] Check for a broken variant of the tile
-            base_name = char.replace("_open", "").replace("_close", "")
-            broken_char = f"{base_name}_broke"
-            
-            if broken_char in self.game.tile_manager.definitions:
-                target_char = broken_char
+            # [NEW] Check for barricade reversion or a broken variant
+            if '_barricate' in char:
+                if '_broke_barricate' in char:
+                    target_char = char.replace('_broke_barricate', '_broke')
+                else:
+                    target_char = char.replace('_barricate', '_close')
             else:
-                try:
-                    ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
-                except (KeyError, IndexError, AttributeError):
-                    ground_char = "." 
-                target_char = ground_char
+                base_name = char.replace("_open", "").replace("_close", "")
+                broken_char = f"{base_name}_broke"
+                
+                if broken_char in self.game.tile_manager.definitions:
+                    target_char = broken_char
+                else:
+                    try:
+                        ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
+                    except (KeyError, IndexError, AttributeError):
+                        ground_char = "." 
+                    target_char = ground_char
 
-            # Replace with the broken door (or ground if no broken state exists)
+            # Replace with the new state
             self._replace_tile(grid_x, grid_y, char, target_char)
 
             if 'drops' in definition:
