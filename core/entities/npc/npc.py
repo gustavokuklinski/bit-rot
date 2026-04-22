@@ -511,17 +511,20 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if hasattr(self, 'sound_steps') and self.sound_steps:
                 if not hasattr(self, 'last_step_sound_time'):
                     self.last_step_sound_time = current_time + random.randint(0, 400)
+                    self.current_step_delay = random.randint(350, 450)
                     
-                if current_time - getattr(self, 'last_step_sound_time', 0) > 400:
+                delay = getattr(self, 'current_step_delay', 400)
+                if current_time - getattr(self, 'last_step_sound_time', 0) > delay:
                     game.sound_manager.play_sound(
                         self.sound_steps, 
                         subdir='npc', 
                         game=game, 
                         source_pos=self.rect.center, 
                         base_volume=0.3, 
-                        pitch_variance=0.15
+                        pitch_variance=0.25 # Slightly more variance to prevent phase alignment
                     )
                     self.last_step_sound_time = current_time
+                    self.current_step_delay = random.randint(350, 500) # Re-randomize cadence
         else:
             self.walk_anim_angle = 0
             self.vx = 0

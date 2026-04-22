@@ -35,9 +35,9 @@
         <item name="Grenade" chance="1" />
         <item name="AK47" chance="1" />
         <item name="762 Ammo" chance="1" />
-        <item name="Primitive Hammer" chance="1" />
-        <item name="Plank" chance="1" />
-        <item name="Nails" chance="1" />
+        <item name="Emergency Channel Record" chance="1" />
+        <item name="GWBC-20260731" chance="1" />
+        <item name="TGWT-20260731" chance="1" />
     </initial_loot>
 
     <visuals>

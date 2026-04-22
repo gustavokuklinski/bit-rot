@@ -4,19 +4,29 @@ from core.ui.modals import BaseModal
 
 def get_container_slot_rect(container_pos, i):
     rows, cols = 4, 5
-    slot_size = 40 # Reduced to 40
-    gap = 6        # Added gap system
+    slot_size = 40
+    gap = 6        
     start_x = container_pos[0] + 10
     start_y = container_pos[1] + 40
     row = i // cols
     col = i % cols
     return pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
 
-def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header_h, mouse_pos):
+def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header_h, mouse_pos, modal=None):
     rows, cols = 4, 5
     slot_size = 40
     gap = 6
     padding = 10
+    
+    # Dynamically verify if this specific modal is at the top layer over the mouse cursor
+    is_top_hovered = True
+    if modal:
+        for m in reversed(game.modals):
+            if m['rect'].collidepoint(mouse_pos):
+                if m.get('id') != modal.get('id'):
+                    is_top_hovered = False
+                break
+                
     # Calculate visible rows dynamically utilizing the new gap calculation
     max_visible_rows = int((modal_h - header_h - padding) / (slot_size + gap))
     max_visible_slots = max_visible_rows * cols
@@ -26,12 +36,12 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
         col = i % cols
         slot_rect = pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
         
-        # --- ADDED: Fill background with GRAY_40 to match inventory slots ---
+        # Fill background with GRAY_40 to match inventory slots
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
         
-        # --- CHANGED: Default border is GRAY, changes to WHITE when highlighted ---
+        # Default border is GRAY, changes to WHITE when highlighted ONLY if it is the Top Modal
         border_color = GRAY
-        if getattr(game, 'is_dragging', False) and slot_rect.collidepoint(mouse_pos):
+        if getattr(game, 'is_dragging', False) and slot_rect.collidepoint(mouse_pos) and is_top_hovered:
             border_color = WHITE # Highlight color
 
         pygame.draw.rect(surface, border_color, slot_rect, 1, 3)
@@ -83,7 +93,8 @@ def draw_container_content(surface, game, container_item, modal, assets, mouse_p
     padding = 10
     start_x = modal['rect'].x + padding
     start_y = modal['rect'].y + 40
-    _draw_slots(surface, game, container_item, start_x, start_y, modal['rect'].height, 40, mouse_pos)
+    # Pass 'modal' variable explicitly down the chain
+    _draw_slots(surface, game, container_item, start_x, start_y, modal['rect'].height, 40, mouse_pos, modal)
 
 def draw_container_view(surface, game, container_item, modal, assets, mouse_pos):
     if not container_item or not hasattr(container_item, 'inventory'):
@@ -96,5 +107,8 @@ def draw_container_view(surface, game, container_item, modal, assets, mouse_pos)
     padding = 10
     start_x = base_modal.modal_x + padding
     start_y = base_modal.modal_y + 40
-    _draw_slots(surface, game, container_item, start_x, start_y, base_modal.modal_h, base_modal.header_h, mouse_pos)
+    
+    # Pass 'modal' variable explicitly down the chain
+    _draw_slots(surface, game, container_item, start_x, start_y, base_modal.modal_h, base_modal.header_h, mouse_pos, modal)
+    
     return close_button

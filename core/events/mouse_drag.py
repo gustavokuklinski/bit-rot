@@ -4,6 +4,7 @@ import math
 import random
 from core.data.config import *
 from core.entities.item.item import Item
+from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_slot_rect, get_belt_hud_slot_rect
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
@@ -1010,7 +1011,36 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = True
                         
                         if dropped_successfully: break
-                    
+
+                    elif modal['type'] == 'mobile' and modal.get('active_tab') == 'MP3' and modal['rect'].collidepoint(mouse_pos):
+                        for slot_data in modal.get('mp3_slot_rects', []):
+                            if slot_data['rect'].collidepoint(mouse_pos):
+                                i = slot_data['index']
+                                dragged = game.dragged_item
+                                item_type = getattr(dragged, 'type', None)
+                                if not item_type:
+                                    tmpl = ITEM_TEMPLATES.get(getattr(dragged, 'name', ''))
+                                    if tmpl:
+                                        item_type = tmpl.get('type')
+                                
+                                if item_type == 'sd_card':
+                                    old_item = game.mp3_state['slots'][i]
+                                    game.mp3_state['slots'][i] = dragged
+                                    
+                                    if old_item:
+                                        game.dragged_item = old_item
+                                        dropped_successfully = False # allow bounce or secondary placement
+                                    else:
+                                        dropped_successfully = True
+                                        
+                                    if game.mp3_state['playing_idx'] == i:
+                                        pygame.mixer.music.stop()
+                                        game.mp3_state['status'] = 'stopped'
+                                else:
+                                    display_message(tr('msg', "Only SD cards can be inserted here."))
+                                    dropped_successfully = False
+                                break
+                        if dropped_successfully: break
 
                 if dropped_successfully:
                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -1255,8 +1285,8 @@ def handle_mouse_up(game, event, mouse_pos):
                         elif type_orig == 'belt' and 0 <= i_orig < len(game.player.belt):
                             game.player.belt[i_orig] = game.dragged_item
                             game.dragged_item.in_belt = True
-                        
-                        
+                        elif type_orig == 'mp3':
+                            game.mp3_state['slots'][i_orig] = game.dragged_item
                         elif type_orig == 'gear':
                             slot_name = i_orig 
                             game.player.clothes[slot_name] = game.dragged_item
@@ -1542,7 +1572,11 @@ def handle_mouse_motion(game, event, mouse_pos):
                                 new_item.y = item_to_drag.y
                                 game.dragged_item = new_item
                                 display_message(tr('msg', "Campfire extinguished when picked up."))
-                                
+                elif type_orig == 'mp3':
+                    game.mp3_state['slots'][i_orig] = None
+                    if game.mp3_state['playing_idx'] == i_orig:
+                        pygame.mixer.music.stop()
+                        game.mp3_state['status'] = 'stopped'        
                 elif type_orig == 'vehicle_equipment':
                     vehicle = container_info[0]
                     slot_name = i_orig
@@ -1591,6 +1625,17 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         return
+                        
+    elif modal['type'] == 'mobile' and modal.get('active_tab') == 'MP3':
+        for slot_data in modal.get('mp3_slot_rects', []):
+            if slot_data['rect'].collidepoint(mouse_pos):
+                i = slot_data['index']
+                item = game.mp3_state['slots'][i]
+                if item:
+                    game.drag_candidate = (item, (i, 'mp3'))
+                    game.drag_start_pos = mouse_pos
+                    game.drag_offset = (mouse_pos[0] - slot_data['rect'].x, mouse_pos[1] - slot_data['rect'].y)
+                    return
 
     if modal['type'] == 'nearby':
         active_tab_label = modal.get('active_tab')

@@ -187,17 +187,29 @@ class SoundManager:
             dy = source_pos[1] - player_pos[1]
             distance = math.hypot(dx, dy)
 
+            # --- NEW: Spatial Audio Culling for Footsteps ---
+            is_step = 'step' in name_lower or 'walk' in name_lower
+            is_player = subdir_lower == 'player'
+            
             max_dist = GAME_WIDTH * 0.6 
+            if is_step and not is_player:
+                # Clamp non-player footsteps strictly to the view radius
+                max_dist = GAME_WIDTH * 0.45
+                
             if distance > max_dist:
                 return 
 
-            # Inverse-Square Law Falloff
-            volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
+            # Inverse-Square / Inverse-Cube Law Falloff
+            if is_step and not is_player:
+                # Steeper absolute drop-off for ambient steps prevents distant crowds from summing up
+                volume_falloff = math.pow(max(0.0, 1.0 - (distance / max_dist)), 3.0)
+            else:
+                volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
             
             final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
             final_volume = min(1.0, final_volume) 
 
-            pan_range = TILE_SIZE * 15 
+            pan_range = TILE_SIZE * 15
             pan_factor = max(-1.0, min(1.0, dx / pan_range))
             
             angle = (pan_factor + 1.0) * math.pi / 4.0

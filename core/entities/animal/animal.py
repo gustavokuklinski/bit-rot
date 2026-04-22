@@ -85,17 +85,21 @@ class Animal(Zombie):
             current_time = pygame.time.get_ticks()
             if not hasattr(self, 'last_step_sound_time'):
                 self.last_step_sound_time = current_time + random.randint(0, 400)
-            # Step speed (400ms is a good default trot, adjust if needed)
-            if current_time - getattr(self, 'last_step_sound_time', 0) > 400:
+                self.current_step_delay = random.randint(350, 450) # Init organic delay
+                
+            delay = getattr(self, 'current_step_delay', 400)
+            if current_time - getattr(self, 'last_step_sound_time', 0) > delay:
 
                 game.sound_manager.play_sound(
                     self.sound_steps, 
                     subdir='animals',  
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=0.3
+                    base_volume=0.3,
+                    pitch_variance=0.2 # Organic pitch change
                 )
                 self.last_step_sound_time = current_time
+                self.current_step_delay = random.randint(350, 500) # Re-randomize for organic cadence
 
     # [FIX] Explicitly prevent the AI update from running if the animal is dead
     def update_ai(self, player_rect, obstacles, other_zombies, game):

@@ -18,7 +18,6 @@
     </loot>
     <sound>
         <hit src="animal_cow_hit.ogg" />
-
         <dead src="animal_dead.ogg" />
         <steps src="animal_cow_steps.ogg" />
     </sound>

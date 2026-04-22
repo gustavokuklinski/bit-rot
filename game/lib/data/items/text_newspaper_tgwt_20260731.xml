@@ -1,0 +1,40 @@
+<item name="TGWT-20260731" type="text" tip="Contains:\nPlayer: Name, Sex, Traits and Known Recipes\nZombie and NPC: Name, Sex">
+    <properties>
+        <sprite file="text_newspaper.png" />
+        <weight weight="0.001"/>
+        <text>
+            THE GLOBE WORLD TRIBUNE #GWBC-20260731
+            The Official Print of the Next Petrol Archipelago
+            FRONT PAGE | SPECIAL EDITION: FIVE YEARS FREE
+            
+            AD: GET THE AUDIO VERSION WITH:
+            ** PULSE OF THE RODA - SAMBABOYS! **
+            USE THE SD CARD: GWBC-20260731 ON MOBILE!
+
+            WE POWER THE WORLD. WE CURE THE WORLD. WE ARE TOGETHER.
+            By Lead Editor, Marcus Vance
+
+            Good morning, citizens! Today marks exactly five years since the world was declared COVID-19 Free. As we look out from the Next Petrol Headquarters on this beautiful day in heaven, we are reminded of the resilience of our workforce. Please report to your assigned locations with pride today.
+
+            GLOBAL LOGISTICS: EXL22 DELIVERS HOPE By Fiona Tress, Global Infrastructure Desk
+            The massive logistical undertaking of global immunization continues as Platform EXL22 successfully completed a vital vaccine delivery to Brazil and China today. The operation required 45 high-risk refuel trips, demonstrating Next Petrol’s unmatched maritime capabilities. The challenge to cure the world remains big, but our commitment is bigger.
+            
+            SCIENCE AND HEALTH: RK FAMILY STABILIZES NEW CURE By Dr. Aris Thorne, Medical Correspondent
+            LABORATORY SECTOR — Breakthroughs in pathogen suppression have reached a new milestone. Researchers operating under the RK Family have finally stabilized cross-breeding proteins derived from Zika and Malaria. This specific protein chain is designed to drastically decrease current infection rates.
+            Medical officials confirm the first iteration of this vaccine is now labeled for "continuous use" to ensure efficacy. However, the next generation of the cure is already in development and is slated to be a one-time dose. Hazmat distribution protocols are being initiated and will commence shortly across all sectors.
+
+            MARKET WATCH: PETROL HOLDS STRONG By Julian Vance, Financial Columnist
+            Investors can breathe easy. The petrol stock market remains entirely stable this quarter. Market analysts report that all operational islands and platforms governed by Exxoil and Gethulius are providing force output equally. This stabilization is directly combating the commonwealth threat, following the strict quotas assigned by the RK Family.
+
+            HUMANITARIAN EFFORTS AND ARCHIPELAGO SECURITY
+            - ASYLUM GRANTED: Platform GTH56, in a joint operation with the Red Cross, ONU, and ACNUR, has successfully provided asylum to a new Nation within the Next Petrol Archipelago. This is their 86th successful mission with no fatal casualties. A formal alliance ceremony will take place at headquarters this afternoon.
+            - GTH54 REMEMBERED: Today is the 5-year anniversary of the GTH54 incident. Officials confirm the displaced families, transferred to the secure shore zones in Rio de Janeiro, are in good health. No incidents occurred during the transfer and refuel operations.
+            - ROGUE CELL DETAINED: Security forces intercepted and captured a small cell of rogues early this morning. The suspects are currently under interrogation. Citizens are reminded to keep their homes secure as Next Petrol Police maintain order.
+
+            THE NEW WORLD ALLIANCE EXPANDS By Helena Rostova, Geopolitical Analyst
+            HEADQUARTERS — The geopolitical landscape shifts toward progress today as Rosskrild and Silva move to formalize an unprecedented global alliance. The current coalition—comprising Brazil, China, Russia, South Africa, Polynesia, the United East States, and the Outback Nations—will welcome Persiastan into the fold.
+            This historic agreement is built on an exchange: the construction of a brand-new Next Platform. Through partnerships with Exxoil, Gethulius, and Oilmuz, this mega-project promises the development of high-speed land railways and distribution networks directly into Russia and the remains of the European Union, accelerating the rebuilding process.
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

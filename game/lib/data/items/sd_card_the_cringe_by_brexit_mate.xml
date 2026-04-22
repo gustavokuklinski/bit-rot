@@ -1,0 +1,18 @@
+<item name="The Cringe by Brexit Mate" type="sd_card" tip="Product from Britain\n Use with Mobile > MP3">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <audio value="radio/pirate_01.ogg" />
+    </properties>
+    <spawn chance="0" />
+</item>
+<!-- Transcript
+We hope you didn't Rot around, or if you are being Rotted listening to this, you are a survivor.
+
+Our mission is set to save the world. A broken world by companies and big families.
+What if your vaccine is creating a new kind of Junkie for a big family with facade companies?
+
+We represent a forgotten society at forgotten places around the world!
+
+Are you listening to me? Yeah, Tune on to The Cringe by Brexit Mate
+-->

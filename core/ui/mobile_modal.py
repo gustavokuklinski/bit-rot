@@ -4,6 +4,7 @@ from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
 from core.ui.mobile_clock_tab import draw_clock_tab
 from core.ui.mobile_map_tab import draw_map_tab
+from core.ui.mobile_mp3_tab import draw_mp3_tab # NEW IMPORT
 
 def draw_mobile_modal(surface, game, modal, assets):
     try:
@@ -25,6 +26,7 @@ def draw_mobile_modal(surface, game, modal, assets):
     tabs_data = [
         {'label': 'Clock', 'icon_path': SPRITE_PATH + 'ui/clock.png'},
         {'label': 'Map', 'icon_path':  SPRITE_PATH + 'ui/map.png'},
+        {'label': 'MP3', 'icon_path':  SPRITE_PATH + 'ui/mp3.png'}, # NEW TAB
     ]
     modal['tabs_data'] = tabs_data
 
@@ -33,8 +35,6 @@ def draw_mobile_modal(surface, game, modal, assets):
         modal['active_tab'] = 'Clock' # Default to Clock
 
     base_modal = BaseModal(surface, modal, assets, title)
-
-
 
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
@@ -49,5 +49,7 @@ def draw_mobile_modal(surface, game, modal, assets):
         draw_clock_tab(surface, game, modal, assets)
     elif modal['active_tab'] == 'Map':
         draw_map_tab(surface, game, modal, assets)
+    elif modal['active_tab'] == 'MP3':
+        draw_mp3_tab(surface, game, modal, assets) # CALL NEW DRAW FUNCTION
     
     return all_buttons

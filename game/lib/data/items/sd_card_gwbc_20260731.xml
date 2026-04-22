@@ -1,0 +1,25 @@
+<item name="GWBC-20260731" type="sd_card" tip="Use with Mobile > MP3">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <audio value="radio/radio_01.ogg" />
+    </properties>
+    <spawn chance="0" />
+</item>
+<!-- Transcript
+Good morning! Today, we celebrate a monumental milestone: Five years COVID-19 Free! Welcome to the Globe World Broadcast Channel. We are live from Next Petrol Headquarters on this beautiful day in paradise. Please proceed to your assigned locations, and have a highly productive day!
+
+In GWBC News today: Platform EXL22 has made a successful vaccine delivery to Brazil and China, completing 45 refuel trips in record time. The challenge to cure the world is immense, but we remain steadfast. We Power the World. We Cure the World. We are together!
+
+Turning to Science. Researchers from the RK Family have officially stabilized cross-breeding proteins from Zika and Malaria to drastically decrease infection rates. This first vaccine is now authorized for 'continuous use' to maintain efficacy. The upcoming generation of this family of vaccines will require only a single dose. Hazmat distribution begins shortly.
+
+In Finance: The petrol stock market remains perfectly stable. All islands and platforms operating under Exxoil and Gethulius are contributing equal force to the commonwealth threat, as assigned by the RK Family.
+
+On the Humanitarian front: Platform GTH56, alongside the Red Cross, ONU, and ACNUR, has granted asylum to a newly formed Nation at the Next Petrol Archipelago. This marks their 86th consecutive successful mission with zero fatal casualties. Representatives will arrive at headquarters this afternoon to formally sign the alliance.
+
+Today also marks exactly five years since the GTH54 incident. We want to reassure everyone that the affected families were safely transferred to Rio de Janeiro. They are doing well and remain in the secure coastal zones. There were zero incidents reported during the refueling trips.
+
+A brief Police update: A small cell of rogues was captured earlier today and is currently undergoing interrogation. Keep your homes locked and secure; our security forces are working around the clock to keep Next Petrol safe.
+
+Finally, in Politics: Rosskrild & Silva are formalizing an expansion to the current global alliance. Brazil, China, Russia, South Africa, Polynesia, the United East States, and the Outback Nations will partner with Persiastan. In exchange, a brand-new Next Platform will be constructed. This partnership—supported by Exxoil, Gethulius, and Oilmuz—will establish faster land railways and distribution networks to Russia and the remains of the European Union, paving the way for our global rebuild.
+-->
