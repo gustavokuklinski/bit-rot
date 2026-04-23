@@ -17,6 +17,15 @@ def draw_mp3_tab(surface, game, modal, assets):
         }
         
     state = game.mp3_state
+
+    # --- Auto-Play Next Track Logic ---
+    try:
+        # If status is playing, but the music stream finished natively, advance automatically!
+        if state['status'] == 'playing' and not pygame.mixer.music.get_busy():
+            handle_control(game, 'next')
+    except Exception:
+        pass
+
     y_offset = modal['rect'].y + 80
     center_x = modal['rect'].centerx
 
@@ -90,10 +99,10 @@ def draw_mp3_tab(surface, game, modal, assets):
     control_padding = 8
     
     controls = [
-        {'label': '<', 'action': 'prev'},
-        {'label': '||' if state['status'] == 'playing' else '>', 'action': 'play_pause'},
-        {'label': '[]', 'action': 'stop'},
-        {'label': '>', 'action': 'next'}
+        {'label': '«', 'action': 'prev'},
+        {'label': '||' if state['status'] == 'playing' else '►', 'action': 'play_pause'},
+        {'label': '■', 'action': 'stop'},
+        {'label': '»', 'action': 'next'}
     ]
     
     total_ctrl_w = (control_w * len(controls)) + (control_padding * (len(controls) - 1))
@@ -204,12 +213,25 @@ def play_track(game, index):
                 try:
                     snd = pygame.mixer.Sound(audio_path)
                     state['track_lengths'][audio_path] = snd.get_length()
-                except:
+                except Exception:
                     state['track_lengths'][audio_path] = 0
 
-            game.sound_manager.play_music(audio_path, volume=state.get('volume', 1.0))
-            state['playing_idx'] = index
-            state['status'] = 'playing'
+            try:
+                # Bypass SoundManager to prevent endless loop hijacks. 
+                # Play strictly once (0) so the native get_busy() flag drops correctly when complete.
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load(audio_path)
+                pygame.mixer.music.set_volume(state.get('volume', 1.0) * core.data.config.VOLUME_MUSIC)
+                pygame.mixer.music.play(0)
+                
+                # Check that it actually started properly (prevents broken audio file infinite loop spam)
+                if pygame.mixer.music.get_busy():
+                    state['playing_idx'] = index
+                    state['status'] = 'playing'
+                else:
+                    state['status'] = 'stopped'
+            except Exception:
+                state['status'] = 'stopped'
 
 def handle_control(game, action):
     state = game.mp3_state
@@ -238,24 +260,38 @@ def handle_control(game, action):
         
     elif action == 'next':
         idx = max(0, state['playing_idx'])
+        played = False
         for _ in range(5):
             idx = (idx + 1) % 5
             if state['slots'][idx]:
                 play_track(game, idx)
-                break
+                # Ensure the newly loaded track is verified functioning before marking as handled
+                if state['status'] == 'playing':
+                    played = True
+                    break
+        if not played:
+            pygame.mixer.music.stop()
+            state['status'] = 'stopped'
                 
     elif action == 'prev':
         idx = max(0, state['playing_idx'])
+        played = False
         for _ in range(5):
             idx = (idx - 1) % 5
             if state['slots'][idx]:
                 play_track(game, idx)
-                break
+                # Ensure the newly loaded track is verified functioning before marking as handled
+                if state['status'] == 'playing':
+                    played = True
+                    break
+        if not played:
+            pygame.mixer.music.stop()
+            state['status'] = 'stopped'
                 
     elif action == 'vol_down':
         state['volume'] = max(0.0, round(state['volume'] - 0.1, 1))
         pygame.mixer.music.set_volume(state['volume'] * core.data.config.VOLUME_MUSIC)
         
     elif action == 'vol_up':
-        state['volume'] = min(2.0, round(state['volume'] + 0.1, 1)) # INCREASED CEILING TO 200%
+        state['volume'] = min(2.0, round(state['volume'] + 0.1, 1)) 
         pygame.mixer.music.set_volume(state['volume'] * core.data.config.VOLUME_MUSIC)

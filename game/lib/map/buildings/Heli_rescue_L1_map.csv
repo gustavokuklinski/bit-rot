@@ -7,7 +7,7 @@ outside_metal_fence_1,,@@,window_02_close,door_02_close,@@,window_02_close,@@,mi
 outside_metal_fence_1,,@@,house_wardrobe,,lab_cupboard_01,medical_cupboard_01,@@,,outside_metal_fence_1
 outside_metal_fence_1,,window_02_close,,,,,window_02_close,,outside_metal_fence_1
 outside_metal_fence_1,,window_02_close,military_crate,,,house_bench,window_02_close,,outside_metal_fence_1
-outside_metal_fence_1,,@@,crate,,,military_radio,@@,,outside_metal_fence_1
+outside_metal_fence_1,,@@,crate,house_computer,,military_radio,@@,,outside_metal_fence_1
 outside_metal_fence_1,,@@,window_02_close,@@,door_02_close,window_02_close,@@,,outside_metal_fence_1
 outside_metal_fence_1,,,,,,,,,outside_metal_fence_1
 outside_metal_fence_1,,outside_metal_fence_1,outside_metal_fence_1,outside_metal_door_01_close,outside_metal_door_01_close,outside_metal_fence_1,outside_metal_fence_1,,outside_metal_fence_1

@@ -249,6 +249,11 @@ class ZombieAI:
                 entity_dist_sq = edx*edx + edy*edy
                 
                 if entity_dist_sq < min_target_dist_sq:
+                    # [NEW FIX]: Ensure zombies only target static NPCs if they have line of sight to them
+                    if getattr(entity, 'is_static', False):
+                        if not self.has_line_of_sight(entity.rect, game, current_time):
+                            continue  # Skip targeting this static NPC if we can't see them
+                            
                     min_target_dist_sq = entity_dist_sq
                     nearest_target = entity
 

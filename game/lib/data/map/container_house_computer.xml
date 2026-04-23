@@ -1,0 +1,9 @@
+<map name="house_computer" type="maptile_container" char="house_computer" is_obstacle="true" is_visible="true">
+    <visuals>
+        <sprite file="house_computer.png" />
+    </visuals>
+    <capacity value="5" />
+    <loot>
+        <item type="sd_card" min="1" max="5" chance="1.0" />
+    </loot>
+</map>

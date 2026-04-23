@@ -32,12 +32,7 @@
         <item name="ID" chance="1" />
         <item name="Wallet" chance="1" />
         <item name="Mobile off" chance="1" />
-        <item name="Grenade" chance="1" />
-        <item name="AK47" chance="1" />
-        <item name="762 Ammo" chance="1" />
-        <item name="Emergency Channel Record" chance="1" />
-        <item name="GWBC-20260731" chance="1" />
-        <item name="TGWT-20260731" chance="1" />
+        <item name="Mixtape #0731" chance="1" />
     </initial_loot>
 
     <visuals>

@@ -515,7 +515,8 @@ class MapManager:
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
     
-    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False):
+    # [FIX] Added the 'attacker' argument and conditional checks for stamina drain
+    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
 
@@ -525,9 +526,13 @@ class MapManager:
         if not definition or not definition.get('destructible'):
             return False
             
-        # Only drain stamina and durability if it's a manual melee hit (not a bullet)
-        if not is_projectile:
-            STAMINA_COST = 0.5
+        # Determine if the entity hitting the tile is the player
+        # If attacker is not provided, assume it's the player for backward compatibility
+        is_player = (attacker is None) or (attacker == getattr(self.game, 'player', None))
+            
+        # Only drain stamina and durability if it's a manual melee hit (not a bullet) AND performed by the player
+        if not is_projectile and is_player:
+            STAMINA_COST = 0.05
             if self.game.player.stamina < STAMINA_COST:
                 display_message(tr('msg', "You are too exhausted to chop/mine!"))
                 return True
@@ -536,7 +541,7 @@ class MapManager:
             self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
 
             if weapon and weapon.durability is not None:
-                DURABILITY_COST = 0.7
+                DURABILITY_COST = 0.05
                 weapon.durability = max(0, weapon.durability - DURABILITY_COST)
                 if weapon.durability <= 0:
                     self.game.player.active_weapon = None
