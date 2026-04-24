@@ -275,7 +275,17 @@ def handle_mouse_down(game, event, mouse_pos):
                         topmost_modal['is_dragging_scrollbar'] = True
                         topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
                         return
+
+                max_scroll = topmost_modal.get('max_scroll_offset', 0)
+                if topmost_modal.get('type') == 'crafting':
+                    total = topmost_modal.get('crafting_total_items', 0)
+                    visible = topmost_modal.get('crafting_visible_items', 14)
+                    max_scroll = max(0, total - visible)
                 
+                if max_scroll > 0:
+                    topmost_modal['is_scrolling_content'] = True
+                    topmost_modal['content_drag_last_y'] = mouse_pos[1]
+                    
                 if 'instance' in topmost_modal and hasattr(topmost_modal['instance'], 'handle_event'):
                     if topmost_modal['instance'].handle_event(event): 
                         return

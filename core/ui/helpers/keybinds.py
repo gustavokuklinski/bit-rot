@@ -129,6 +129,10 @@ class KeybindsMenuUI:
         self.error_timer = 0
         self.scroll_offset_y = 0
         self.is_dragging_scrollbar = False
+        
+        self.is_scrolling_content = False
+        self.content_drag_last_y = 0
+
         self.item_height = int(45 * config.UI_SCALE)
         self.modal_state = {}  # Dictionary to interface with draw_scrollbar
 
@@ -172,44 +176,53 @@ class KeybindsMenuUI:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.waiting_for_key = None
-                        return True
+                        continue
 
                     if self.active_tab == 'keyboard_mouse':
                         conflict = keybind_manager.get_kb_action_for_key(event.key)
                         self._attempt_bind(event.key, conflict)
-                    return True
+                    continue
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.active_tab == 'keyboard_mouse':
                         mouse_val = -event.button
                         conflict = keybind_manager.get_kb_action_for_key(mouse_val)
                         self._attempt_bind(mouse_val, conflict)
-                    return True
+                    continue
 
                 elif event.type == pygame.JOYBUTTONDOWN:
                     if self.active_tab == 'joystick':
                         conflict = keybind_manager.get_joy_action_for_key(event.button)
                         self._attempt_bind(event.button, conflict)
-                    return True
+                    continue
 
                 continue
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.active = False
-                return True
+                continue
 
             if event.type == pygame.MOUSEWHEEL:
                 self.scroll_offset_y -= event.y * int(30 * config.UI_SCALE)
                 self._clamp_scroll()
-                return True
+                continue
                 
             if event.type == pygame.MOUSEMOTION:
                 if self.is_dragging_scrollbar:
                     self._handle_scroll_drag(event.pos[1])
-                    return True
+                    continue # Swapped 'return True' for 'continue'
+
+                elif self.is_scrolling_content:
+                    delta_y = event.pos[1] - self.content_drag_last_y
+                    self.content_drag_last_y = event.pos[1]
+                    self.scroll_offset_y -= delta_y 
+                    self._clamp_scroll()
+                    continue # Swapped 'return True' for 'continue'
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.is_dragging_scrollbar = False
+                self.is_scrolling_content = False
+                continue
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect = self.get_rects()
@@ -217,23 +230,25 @@ class KeybindsMenuUI:
 
                 if back_btn_rect.collidepoint(mouse_pos):
                     self.active = False
-                    return True
+                    continue
 
                 if bar_rect.collidepoint(mouse_pos):
                     self.is_dragging_scrollbar = True
                     self._handle_scroll_drag(mouse_pos[1])
-                    return True
-
+                    continue
+                
                 if tab_kb_rect.collidepoint(mouse_pos):
                     self.active_tab = 'keyboard_mouse'
                     self.scroll_offset_y = 0
-                    return True
+                    continue
 
                 if tab_joy_rect.collidepoint(mouse_pos):
                     self.active_tab = 'joystick'
                     self.scroll_offset_y = 0
-                    return True
+                    continue
 
+                # --- Verify if a button was clicked so we don't accidentally scroll ---
+                clicked_button = False
                 if list_rect.collidepoint(mouse_pos):
                     y_offset = list_rect.y - self.scroll_offset_y
                     binds = DEFAULT_KB_MOUSE_BINDS if self.active_tab == 'keyboard_mouse' else DEFAULT_JOYSTICK_BINDS
@@ -244,11 +259,19 @@ class KeybindsMenuUI:
                             btn_w = int(250 * config.UI_SCALE)
                             btn_h = int(35 * config.UI_SCALE)
                             key_btn_rect = pygame.Rect(row_rect.right - btn_w, row_rect.centery - btn_h//2, btn_w, btn_h)
+                            
                             if key_btn_rect.collidepoint(mouse_pos):
                                 self.waiting_for_key = action
-                                return True
+                                clicked_button = True
+                                break
                         y_offset += self.item_height
 
+                # Only start scrolling if we are in the list AND we didn't just press an assign button
+                if list_rect.collidepoint(mouse_pos) and not clicked_button:
+                    self.is_scrolling_content = True
+                    self.content_drag_last_y = mouse_pos[1]
+
+        # Return True at the very end to signal the UI is active and consumed events
         return True
 
     def _attempt_bind(self, new_val, conflict_action):

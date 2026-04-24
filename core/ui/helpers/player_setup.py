@@ -798,6 +798,24 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
         if scrollbar_clicked: return
 
+        stats_rect = state.get('stats_content_rect')
+        traits_rect = state.get('traits_content_rect')
+        chosen_rect = state.get('chosen_content_rect')
+        prof_rect = state.get('prof_content_rect')
+
+        if stats_rect and stats_rect.collidepoint(mouse_pos) and state.get('stats_max_scroll', 0) > 0:
+            state['is_scrolling_stats_content'] = True
+            state['stats_content_drag_last_y'] = mouse_pos[1]
+        elif traits_rect and traits_rect.collidepoint(mouse_pos) and state.get('traits_max_scroll', 0) > 0:
+            state['is_scrolling_traits_content'] = True
+            state['traits_content_drag_last_y'] = mouse_pos[1]
+        elif chosen_rect and chosen_rect.collidepoint(mouse_pos) and state.get('chosen_max_scroll', 0) > 0:
+            state['is_scrolling_chosen_content'] = True
+            state['chosen_content_drag_last_y'] = mouse_pos[1]
+        elif prof_rect and prof_rect.collidepoint(mouse_pos) and state.get('prof_max_scroll', 0) > 0:
+            state['is_scrolling_prof_content'] = True
+            state['prof_content_drag_last_y'] = mouse_pos[1]
+
         if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos): state['name_input_active'] = True
         else: state['name_input_active'] = False
 
@@ -912,6 +930,12 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         state['is_dragging_chosen_scrollbar'] = False
         state['is_dragging_prof_scrollbar'] = False
 
+
+        state['is_scrolling_stats_content'] = False
+        state['is_scrolling_traits_content'] = False
+        state['is_scrolling_chosen_content'] = False
+        state['is_scrolling_prof_content'] = False
+
     elif event.type == pygame.MOUSEMOTION:
         if state.get('is_dragging_stats_scrollbar'):
             mouse_delta_y = mouse_pos[1] - state['stats_scroll_drag_last_y']; state['stats_scroll_drag_last_y'] = mouse_pos[1]
@@ -937,6 +961,30 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             if track_height > 0:
                  state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) + (mouse_delta_y * (state['prof_max_scroll'] / track_height)), state['prof_max_scroll']))
 
+        elif state.get('is_scrolling_stats_content'):
+            mouse_delta_y = mouse_pos[1] - state['stats_content_drag_last_y']
+            state['stats_content_drag_last_y'] = mouse_pos[1]
+            new_offset = state.get('stats_scroll_offset_y', 0) - mouse_delta_y
+            state['stats_scroll_offset_y'] = max(0, min(new_offset, state.get('stats_max_scroll', 0)))
+
+        elif state.get('is_scrolling_traits_content'):
+            mouse_delta_y = mouse_pos[1] - state['traits_content_drag_last_y']
+            state['traits_content_drag_last_y'] = mouse_pos[1]
+            new_offset = state.get('traits_scroll_offset_y', 0) - mouse_delta_y
+            state['traits_scroll_offset_y'] = max(0, min(new_offset, state.get('traits_max_scroll', 0)))
+
+        elif state.get('is_scrolling_chosen_content'):
+            mouse_delta_y = mouse_pos[1] - state['chosen_content_drag_last_y']
+            state['chosen_content_drag_last_y'] = mouse_pos[1]
+            new_offset = state.get('chosen_scroll_offset_y', 0) - mouse_delta_y
+            state['chosen_scroll_offset_y'] = max(0, min(new_offset, state.get('chosen_max_scroll', 0)))
+
+        elif state.get('is_scrolling_prof_content'):
+            mouse_delta_y = mouse_pos[1] - state['prof_content_drag_last_y']
+            state['prof_content_drag_last_y'] = mouse_pos[1]
+            new_offset = state.get('prof_scroll_offset_y', 0) - mouse_delta_y
+            state['prof_scroll_offset_y'] = max(0, min(new_offset, state.get('prof_max_scroll', 0)))
+            
 def run_player_setup(game):
     scale = UI_SCALE
     def S(val): return int(val * scale)
@@ -964,6 +1012,11 @@ def run_player_setup(game):
         state['is_dragging_stats_scrollbar'] = False; state['stats_scroll_drag_last_y'] = 0
         state['is_dragging_traits_scrollbar'] = False; state['traits_scroll_drag_last_y'] = 0
         state['total_trait_cost'] = 0
+
+        state['is_scrolling_stats_content'] = False; state['stats_content_drag_last_y'] = 0
+        state['is_scrolling_traits_content'] = False; state['traits_content_drag_last_y'] = 0
+        state['is_scrolling_chosen_content'] = False; state['chosen_content_drag_last_y'] = 0
+        state['is_scrolling_prof_content'] = False; state['prof_content_drag_last_y'] = 0
 
         Item.load_item_templates()
         Zombie.load_templates()

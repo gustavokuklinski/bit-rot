@@ -62,6 +62,11 @@ def draw_load_game_screen(game, state, mouse_pos):
         state['save_list'] = get_save_files()
         state['scroll_y'] = 0
         state['selected_save_index'] = None
+
+        state['is_scrolling_content'] = False
+        state['content_drag_last_y'] = 0
+        state['is_dragging_scrollbar'] = False
+        state['scrollbar_drag_last_y'] = 0
     
     game.game_screen.fill(DARK_GRAY)
     
@@ -94,6 +99,9 @@ def draw_load_game_screen(game, state, mouse_pos):
     list_rect = pygame.Rect(body_rect.x + padding, body_rect.y + padding, body_rect.width - (padding * 2), body_rect.height - S(70))
     pygame.draw.rect(game.game_screen, (20, 20, 20), list_rect)
     pygame.draw.rect(game.game_screen, GRAY, list_rect, 1)
+    
+    # --- ADDED: Pass exactly where the list is drawn to the event handler ---
+    clickable_rects['list_area'] = list_rect
 
     item_height = S(35)
     total_content_height = len(state['save_list']) * item_height
@@ -166,3 +174,61 @@ def draw_load_game_screen(game, state, mouse_pos):
     clickable_rects['back_button'] = back_btn_rect
 
     return clickable_rects
+
+def handle_load_game_events(game, state, event, mouse_pos, clickable_rects):
+    scale = UI_SCALE
+    def S(val): return int(val * scale)
+
+    if event.type == pygame.MOUSEWHEEL:
+        state['scroll_y'] = max(0, min(state['scroll_y'] - (event.y * S(30)), state.get('max_scroll', 0)))
+
+    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        # Use event.pos instead of mouse_pos for exact touch locations
+        click_pos = event.pos 
+        
+        # 1. Check Scrollbar Track/Handle
+        if clickable_rects.get('scrollbar_handle') and clickable_rects['scrollbar_handle'].collidepoint(click_pos):
+            state['is_dragging_scrollbar'] = True
+            state['scrollbar_drag_last_y'] = click_pos[1]
+            return
+
+        # 2. Check Content Area (for Kinetic Scrolling)
+        list_rect = clickable_rects.get('list_area')
+        if list_rect and list_rect.collidepoint(click_pos) and state.get('max_scroll', 0) > 0:
+            state['is_scrolling_content'] = True
+            state['content_drag_last_y'] = click_pos[1]
+
+        # 3. Check specific item clicks
+        for idx, filename, rect in clickable_rects.get('save_items', []):
+            if rect.collidepoint(click_pos):
+                state['selected_save_index'] = idx
+                break
+
+    elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        state['is_dragging_scrollbar'] = False
+        state['is_scrolling_content'] = False
+
+    elif event.type == pygame.MOUSEMOTION:
+        # Use event.pos for flawless drag tracking on Android
+        motion_pos = event.pos 
+        
+        if state.get('is_dragging_scrollbar'):
+            mouse_delta_y = motion_pos[1] - state['scrollbar_drag_last_y']
+            state['scrollbar_drag_last_y'] = motion_pos[1]
+            
+            track_rect = clickable_rects.get('scrollbar_track')
+            handle_rect = clickable_rects.get('scrollbar_handle')
+            max_scroll = state.get('max_scroll', 0)
+
+            if track_rect and handle_rect and max_scroll > 0:
+                track_height = track_rect.height - handle_rect.height
+                if track_height > 0:
+                    scroll_amount = mouse_delta_y * (max_scroll / track_height)
+                    state['scroll_y'] = max(0, min(state['scroll_y'] + scroll_amount, max_scroll))
+
+        elif state.get('is_scrolling_content'):
+            mouse_delta_y = motion_pos[1] - state['content_drag_last_y']
+            state['content_drag_last_y'] = motion_pos[1]
+            
+            new_scroll = state.get('scroll_y', 0) - mouse_delta_y
+            state['scroll_y'] = max(0, min(new_scroll, state.get('max_scroll', 0)))

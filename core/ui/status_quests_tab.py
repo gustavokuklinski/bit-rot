@@ -149,6 +149,8 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     
     if 'quest_scroll_y' not in modal: modal['quest_scroll_y'] = 0.0
     if 'quest_is_dragging' not in modal: modal['quest_is_dragging'] = False
+    if 'quest_is_scrolling_content' not in modal: modal['quest_is_scrolling_content'] = False
+    if 'quest_content_last_y' not in modal: modal['quest_content_last_y'] = 0
 
     scroll_dy = modal.get('scroll_dy', 0)
     if scroll_dy != 0 and modal_rect.collidepoint(mouse_pos):
@@ -167,27 +169,42 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     handle_rect = pygame.Rect(scrollbar_x, handle_y, scrollbar_w, handle_h)
     track_rect = pygame.Rect(scrollbar_x, base_y, scrollbar_w, visible_height)
     
+    # NEW: Define clip_rect before input processing to map touch boundaries
+    clip_rect = pygame.Rect(modal_rect.left + 5, base_y, modal_rect.width - 25, visible_height)
+    
     if mouse_pressed:
         if not modal.get('quest_was_pressed', False):
-            if handle_rect.collidepoint(mouse_pos):
+            # inflated handle rect slightly to make it easier to grab on touch screens
+            if handle_rect.inflate(20, 0).collidepoint(mouse_pos):
                 modal['quest_is_dragging'] = True
                 modal['quest_drag_offset'] = mouse_pos[1] - handle_y
             elif track_rect.collidepoint(mouse_pos):
                 new_y = mouse_pos[1] - (handle_h / 2)
                 percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
                 modal['quest_scroll_y'] = percent * max_scroll
+            # --- NEW KINETIC START ---
+            elif clip_rect.collidepoint(mouse_pos) and max_scroll > 0:
+                modal['quest_is_scrolling_content'] = True
+                modal['quest_content_last_y'] = mouse_pos[1]
                 
         if modal['quest_is_dragging']:
             new_y = mouse_pos[1] - modal.get('quest_drag_offset', 0)
             percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
             modal['quest_scroll_y'] = percent * max_scroll
-    else: modal['quest_is_dragging'] = False
+            
+        # --- NEW KINETIC DRAG MATH ---
+        elif modal.get('quest_is_scrolling_content'):
+            delta_y = mouse_pos[1] - modal['quest_content_last_y']
+            modal['quest_scroll_y'] -= delta_y
+            modal['quest_content_last_y'] = mouse_pos[1]
+    else: 
+        modal['quest_is_dragging'] = False
+        modal['quest_is_scrolling_content'] = False
         
     modal['quest_was_pressed'] = mouse_pressed
     modal['quest_scroll_y'] = max(0, min(modal['quest_scroll_y'], max_scroll))
     current_scroll = modal['quest_scroll_y']
 
-    clip_rect = pygame.Rect(modal_rect.left + 5, base_y, modal_rect.width - 25, visible_height)
     surface.set_clip(clip_rect)
     
     current_y = base_y - current_scroll
@@ -231,18 +248,20 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             pygame.draw.rect(surface, outline_color, slot_rect, border_width)
             
             if slot_rect.collidepoint(mouse_pos) and clip_rect.collidepoint(mouse_pos):
-                class QuestTooltipDummy:
-                    def __init__(self, q_data):
-                        self.name = tr('ui', q_data['name'])
-                        if outline_color == GREEN: status = 'Completed'
-                        elif outline_color == YELLOW: status = 'In Progress'
-                        else: status = 'Locked'
-                        
-                        self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
-                        self.item_type = self.durability = self.max_durability = None
-                        self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
-                        
-                pending_tooltip = QuestTooltipDummy(q)
+                # Suppress tooltip display if user is actively dragging the screen
+                if not modal.get('quest_is_scrolling_content') and not modal.get('quest_is_dragging'):
+                    class QuestTooltipDummy:
+                        def __init__(self, q_data):
+                            self.name = tr('ui', q_data['name'])
+                            if outline_color == GREEN: status = 'Completed'
+                            elif outline_color == YELLOW: status = 'In Progress'
+                            else: status = 'Locked'
+                            
+                            self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
+                            self.item_type = self.durability = self.max_durability = None
+                            self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
+                            
+                    pending_tooltip = QuestTooltipDummy(q)
 
         rows = (len(items) + cols - 1) // cols
         return y_offset + (rows * (slot_size + gap)) + 15

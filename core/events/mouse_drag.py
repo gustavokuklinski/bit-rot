@@ -78,6 +78,7 @@ def handle_mouse_up(game, event, mouse_pos):
         modal['is_dragging'] = False
         modal['is_dragging_scrollbar'] = False
         modal['is_dragging_map'] = False
+        modal['is_scrolling_content'] = False
 
     if event.button == 1:
         if game.drag_origin:
@@ -1482,6 +1483,40 @@ def handle_mouse_motion(game, event, mouse_pos):
                     scroll_per_pixel = max_scroll / track_height
                     current_offset = modal.get('scroll_offset_y', 0)
                     new_offset = current_offset + (mouse_delta_y * scroll_per_pixel)
+                    modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll))
+            return
+
+        if modal.get('is_scrolling_content'):
+            # If the user is dragging an item, cancel content scrolling to prevent conflict
+            if getattr(game, 'is_dragging', False) or getattr(game, 'drag_candidate', None):
+                modal['is_scrolling_content'] = False
+                continue
+                
+            mouse_delta_y = mouse_pos[1] - modal['content_drag_last_y']
+            modal['content_drag_last_y'] = mouse_pos[1]
+            
+            if modal.get('type') == 'crafting':
+                # Crafting works on list indices, so we apply a sensitivity threshold per item
+                sensitivity = 20
+                modal['content_drag_accum_y'] = modal.get('content_drag_accum_y', 0) + mouse_delta_y
+                
+                if abs(modal['content_drag_accum_y']) >= sensitivity:
+                    steps = int(modal['content_drag_accum_y'] / sensitivity)
+                    modal['content_drag_accum_y'] -= steps * sensitivity
+                    
+                    offset = modal.get('crafting_scroll_offset', 0)
+                    total = modal.get('crafting_total_items', 0)
+                    visible = modal.get('crafting_visible_items', 14)
+                    max_scroll = max(0, total - visible)
+                    
+                    # Inverse offset: Pulling down (positive delta) scrolls up (-)
+                    modal['crafting_scroll_offset'] = max(0, min(max_scroll, offset - steps))
+            else:
+                max_scroll = modal.get('max_scroll_offset', 0)
+                if max_scroll > 0:
+                    current_offset = modal.get('scroll_offset_y', 0)
+                    # Inverse offset: Pulling down (positive delta) decreases Y offset
+                    new_offset = current_offset - mouse_delta_y
                     modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll))
             return
 

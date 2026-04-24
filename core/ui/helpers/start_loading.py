@@ -6,6 +6,10 @@ from core.data.config import *
 from core.data.localization import tr
 from core.ui.text_modal import wrap_text
 from core.ui.modals import draw_scrollbar
+try:
+    from PIL import Image
+except ImportError:
+    pass
 
 HELP_CACHE = {
     'tabs': [],          
@@ -15,7 +19,9 @@ HELP_CACHE = {
     'scroll_y': 0.0,
     'is_dragging': False,
     'drag_start_y': 0,
-    'drag_start_scroll': 0
+    'drag_start_scroll': 0,
+    'is_scrolling_content': False,
+    'content_drag_last_y': 0
 }
 
 def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_help=False):
@@ -182,6 +188,10 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             HELP_CACHE['is_dragging'] = False
             HELP_CACHE['active_tab'] = 0
             
+            # --- NEW: Init scroll vars ---
+            HELP_CACHE['is_scrolling_content'] = False
+            HELP_CACHE['content_drag_last_y'] = 0
+            
         except Exception as e:
             print(f"[Loading Screen] Error loading {target_path}: {e}")
             HELP_CACHE['lang'] = current_lang
@@ -251,20 +261,40 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     
     mouse_y = mouse_pos[1]
     
+    # Pre-calculate the content clip rect for use in event logic
+    clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
+    
+    # --- ADDED: Kinetic scroll logic merged into the main event loop ---
     if events is not None:
         for event in events:
             if event.type == pygame.MOUSEWHEEL:
                 HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - (event.y * S(35)), max_scroll))
+            
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Prevent dragging content if they clicked the scrollbar directly
+                handle_rect = HELP_CACHE.get('scrollbar_handle_rect')
+                if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(event.pos):
+                    pass # Scrollbar drag handled below
+                elif clip_rect.collidepoint(event.pos) and max_scroll > 0:
+                    HELP_CACHE['is_scrolling_content'] = True
+                    HELP_CACHE['content_drag_last_y'] = event.pos[1]
+                    
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                HELP_CACHE['is_scrolling_content'] = False
+                
+            elif event.type == pygame.MOUSEMOTION:
+                if HELP_CACHE.get('is_scrolling_content'):
+                    delta_y = event.pos[1] - HELP_CACHE['content_drag_last_y']
+                    HELP_CACHE['content_drag_last_y'] = event.pos[1]
+                    HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - delta_y, max_scroll))
 
     track_h = clip_h
     scrollbar_area_rect = pygame.Rect(box_rect.right - S(20), content_y_start, S(10), track_h)
     
-    # --- CHANGED: Standardized Drag Math ---
     if max_scroll > 0:
         if mouse_buttons[0] or clicked:
             if not HELP_CACHE.get('is_dragging_scrollbar'):
                 handle_rect = HELP_CACHE.get('scrollbar_handle_rect')
-                # Inflate makes it easier to click the handle without being pixel-perfect
                 if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(mouse_pos):
                     HELP_CACHE['is_dragging_scrollbar'] = True
                     HELP_CACHE['drag_start_y'] = mouse_y
@@ -285,13 +315,9 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
 
     actual_scroll = int(HELP_CACHE['scroll_y'])
 
-    # --- CHANGED: Use Standardized Scrollbar Rendering ---
     bar_rect = pygame.Rect(box_rect.right - S(14), content_y_start, 8, clip_h)
     draw_scrollbar(surface, HELP_CACHE, bar_rect, clip_h, active_tab['total_h'], HELP_CACHE['scroll_y'])
 
-    # (Keep the clipping phase below untouched)
-    clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
-    
     try:
         content_surface = surface.subsurface(clip_rect)
         y_offset = -actual_scroll
