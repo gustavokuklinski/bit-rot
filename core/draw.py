@@ -528,7 +528,7 @@ def draw_game(game):
         if splash.get('type') == 'explosion':
             if not hasattr(game, 'explosion_img'):
                 try:
-                    raw_img = pygame.image.load('./game/lib/sprites/items/weapon_throw_explosion.png').convert_alpha()
+                    raw_img = pygame.image.load(SPRITE_PATH + 'items/weapon_throw_explosion.png').convert_alpha()
                     game.explosion_img = raw_img
                 except:
                     game.explosion_img = None
