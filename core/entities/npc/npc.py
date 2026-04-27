@@ -595,6 +595,31 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if collision:
                 if collider in obstacles:
                     self._handle_door_interaction(collider, game)
+                    
+                    # [ELEGANT FIX] Hostile NPCs attack structural barricades/windows (avoiding trees/rocks)
+                    if self.state == 'chasing':
+                        gx = collider.x // TILE_SIZE
+                        gy = collider.y // TILE_SIZE
+                        tile_def = game.map_manager.get_tile_at(gx, gy)
+                        
+                        if tile_def and tile_def.get('destructible'):
+                            name = str(tile_def.get('name', '')).lower()
+                            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                                           'door' in name or 'window' in name or 'barricate' in name)
+                            
+                            if is_structural:
+                                if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                                    damage = random.randint(self.min_attack, self.max_attack)
+                                    game.map_manager.hit_tile(gx, gy, damage, attacker=self)
+                                    self.last_attack_time = current_time
+                                    self.melee_swing_timer = 250
+                                    
+                                    if getattr(self, 'sound_attack', None):
+                                        game.sound_manager.play_sound(
+                                            self.sound_attack, subdir='npc', game=game,
+                                            source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                        )
+                                step_dx = 0 # Kill sliding momentum to commit to the attack
                 
                 self.x -= step_dx
                 self.rect.x = int(self.x)
@@ -603,7 +628,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
-                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately to pick a new reachable direction 
                      if self.state == 'wandering': self.patrol_target = None
             
             self.y += step_dy
@@ -614,6 +638,31 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if collision:
                 if collider in obstacles:
                     self._handle_door_interaction(collider, game)
+                    
+                    # [ELEGANT FIX] Hostile NPCs attack structural barricades/windows on Y-AXIS
+                    if self.state == 'chasing':
+                        gx = collider.x // TILE_SIZE
+                        gy = collider.y // TILE_SIZE
+                        tile_def = game.map_manager.get_tile_at(gx, gy)
+                        
+                        if tile_def and tile_def.get('destructible'):
+                            name = str(tile_def.get('name', '')).lower()
+                            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                                           'door' in name or 'window' in name or 'barricate' in name)
+                            
+                            if is_structural:
+                                if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                                    damage = random.randint(self.min_attack, self.max_attack)
+                                    game.map_manager.hit_tile(gx, gy, damage, attacker=self)
+                                    self.last_attack_time = current_time
+                                    self.melee_swing_timer = 250
+                                    
+                                    if getattr(self, 'sound_attack', None):
+                                        game.sound_manager.play_sound(
+                                            self.sound_attack, subdir='npc', game=game,
+                                            source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                        )
+                                step_dy = 0 # Kill sliding momentum to commit to the attack
                 
                 self.y -= step_dy
                 self.rect.y = int(self.y)
@@ -622,7 +671,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
-                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately to pick a new reachable direction 
+                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately 
                      if self.state == 'wandering': self.patrol_target = None
 
         self.rect.topleft = (int(self.x), int(self.y))

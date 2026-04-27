@@ -122,12 +122,17 @@ class ZombieAI:
                 if is_obstacle and next_node != target_grid:
                     tile_def = game.map_manager.get_tile_at(next_node[0], next_node[1])
                     if tile_def:
-                        # [ELEGANT FIX] NPCs know how to open windows and doors.
                         is_npc = hasattr(self, 'is_friendly') 
+                        name = str(tile_def.get('name', '')).lower()
+                        
+                        # [ELEGANT FIX] Filter to only allow pathing through structural barriers
+                        is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                                       'door' in name or 'window' in name or 'barricate' in name)
+
                         if is_npc and tile_def.get('is_statable'):
                             move_cost = 2.0  # Slight delay cost for opening
-                        elif tile_def.get('destructible'):
-                            move_cost = 15.0 # Cost of breaking barricades
+                        elif tile_def.get('destructible') and is_structural:
+                            move_cost = 15.0 # Cost of breaking barricades/doors
                         else:
                             continue
                     else:
@@ -538,9 +543,14 @@ class ZombieAI:
                     tile_def = game.map_manager.get_tile_at(gx, gy)
                     
                     if tile_def and tile_def.get('destructible'):
-                        if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                        name = str(tile_def.get('name', '')).lower()
+                        is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                                       'door' in name or 'window' in name or 'barricate' in name)
+                        
+                        if is_structural:
+                            if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
                             damage = random.randint(self.min_attack, self.max_attack)
-                            game.map_manager.hit_tile(gx, gy, damage)
+                            game.map_manager.hit_tile(gx, gy, attacker=self)
                             self.last_attack_time = current_time
                             self.melee_swing_timer = 10
                             
@@ -584,9 +594,14 @@ class ZombieAI:
                     tile_def = game.map_manager.get_tile_at(gx, gy)
                     
                     if tile_def and tile_def.get('destructible'):
-                        if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                        name = str(tile_def.get('name', '')).lower()
+                        is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                                       'door' in name or 'window' in name or 'barricate' in name)
+                        
+                        if is_structural:
+                            if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
                             damage = random.randint(self.min_attack, self.max_attack)
-                            game.map_manager.hit_tile(gx, gy, damage)
+                            game.map_manager.hit_tile(gx, gy, attacker=self)
                             self.last_attack_time = current_time
                             self.melee_swing_timer = 10
                             
