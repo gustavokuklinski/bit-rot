@@ -288,6 +288,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
             self.mask.fill()
 
+        self.last_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
+
     def update(self, game):
         obstacles = game.obstacles
         if self.is_dead: return 
@@ -307,6 +309,22 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()
         
+        current_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
+        
+        if hasattr(self, 'last_grid_pos') and current_grid_pos != self.last_grid_pos:
+            lgx, lgy = self.last_grid_pos
+            if 0 <= lgy < len(game.map_data) and 0 <= lgx < len(game.map_data[0]):
+                tile_def = game.map_manager.get_tile_at(lgx, lgy)
+                
+                # If the NPC just stepped off an OPEN statable tile (like a Window or Door)
+                if tile_def and tile_def.get('is_statable') and tile_def.get('state') == 'open':
+                    # Only close it if they aren't in a frantic combat panic
+                    if self.state in ['wandering', 'idle', 'seeking_shelter'] or self.is_friendly:
+                        game.map_manager.toggle_door_state(lgx, lgy)
+            
+            self.last_grid_pos = current_grid_pos
+
+
         is_raining = getattr(game, 'is_raining', False)
         if hasattr(game, 'weather'):
             is_raining = is_raining or getattr(game.weather, 'is_raining', False)

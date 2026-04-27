@@ -118,10 +118,21 @@ class ZombieAI:
                 tile_def = game.map_manager.get_tile_at(next_node[0], next_node[1])
                 is_obstacle = tile_def and tile_def.get('is_obstacle', False)
                 
-                if is_obstacle and next_node != target_grid:
-                    continue
-                
                 move_cost = 1.0
+                if is_obstacle and next_node != target_grid:
+                    tile_def = game.map_manager.get_tile_at(next_node[0], next_node[1])
+                    if tile_def:
+                        # [ELEGANT FIX] NPCs know how to open windows and doors.
+                        is_npc = hasattr(self, 'is_friendly') 
+                        if is_npc and tile_def.get('is_statable'):
+                            move_cost = 2.0  # Slight delay cost for opening
+                        elif tile_def.get('destructible'):
+                            move_cost = 15.0 # Cost of breaking barricades
+                        else:
+                            continue
+                    else:
+                        continue
+                
                 new_g = g_score[current] + move_cost
                 
                 if next_node not in g_score or new_g < g_score[next_node]:
@@ -539,6 +550,9 @@ class ZombieAI:
                                     self.sound_attack, subdir=snd_dir, game=game, 
                                     source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
                                 )
+                        
+                        step_x = 0
+                        step_y = 0
             
             # --- Y AXIS ---
             self.y += step_y
@@ -582,5 +596,8 @@ class ZombieAI:
                                     self.sound_attack, subdir=snd_dir, game=game, 
                                     source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
                                 )
+
+                        step_x = 0
+                        step_y = 0
 
         self.rect.topleft = (int(self.x), int(self.y))
