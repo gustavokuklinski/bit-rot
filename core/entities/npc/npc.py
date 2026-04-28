@@ -608,17 +608,23 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                                            'door' in name or 'window' in name or 'barricate' in name)
                             
                             if is_structural:
-                                if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                                # [ELEGANT FIX] Desynchronize the attack cooldown
+                                attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
+                                
+                                if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
                                     damage = random.randint(self.min_attack, self.max_attack)
                                     game.map_manager.hit_tile(gx, gy, damage, attacker=self)
                                     self.last_attack_time = current_time
+                                    # Randomize the next hit between 0.7s and 1.35s
+                                    self.current_attack_delay = random.randint(700, 1350) 
                                     self.melee_swing_timer = 250
                                     
                                     if getattr(self, 'sound_attack', None):
                                         game.sound_manager.play_sound(
                                             self.sound_attack, subdir='npc', game=game,
-                                            source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
                                         )
+
                                 step_dx = 0 # Kill sliding momentum to commit to the attack
                 
                 self.x -= step_dx
@@ -651,16 +657,21 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                                            'door' in name or 'window' in name or 'barricate' in name)
                             
                             if is_structural:
-                                if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
+                                # [ELEGANT FIX] Desynchronize the attack cooldown
+                                attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
+                                
+                                if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
                                     damage = random.randint(self.min_attack, self.max_attack)
                                     game.map_manager.hit_tile(gx, gy, damage, attacker=self)
                                     self.last_attack_time = current_time
+                                    # Randomize the next hit between 0.7s and 1.35s
+                                    self.current_attack_delay = random.randint(700, 1350) 
                                     self.melee_swing_timer = 250
                                     
                                     if getattr(self, 'sound_attack', None):
                                         game.sound_manager.play_sound(
                                             self.sound_attack, subdir='npc', game=game,
-                                            source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
+                                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
                                         )
                                 step_dy = 0 # Kill sliding momentum to commit to the attack
                 

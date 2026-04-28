@@ -548,18 +548,23 @@ class ZombieAI:
                                        'door' in name or 'window' in name or 'barricate' in name)
                         
                         if is_structural:
-                            if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
-                            damage = random.randint(self.min_attack, self.max_attack)
-                            game.map_manager.hit_tile(gx, gy, attacker=self)
-                            self.last_attack_time = current_time
-                            self.melee_swing_timer = 10
+                            # [ELEGANT FIX] Desynchronize the mob! Give each attack a randomized cooldown
+                            attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
                             
-                            if getattr(self, 'sound_attack', None):
-                                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                                game.sound_manager.play_sound(
-                                    self.sound_attack, subdir=snd_dir, game=game, 
-                                    source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
-                                )
+                            if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
+                                damage = random.randint(self.min_attack, self.max_attack)
+                                game.map_manager.hit_tile(gx, gy, damage, attacker=self)
+                                self.last_attack_time = current_time
+                                # Randomize the next hit between 0.7s and 1.35s to break the "marching" rhythm
+                                self.current_attack_delay = random.randint(700, 1350) 
+                                self.melee_swing_timer = 10
+                                
+                                if getattr(self, 'sound_attack', None):
+                                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                                    game.sound_manager.play_sound(
+                                        self.sound_attack, subdir=snd_dir, game=game, 
+                                        source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
+                                    )
                         
                         step_x = 0
                         step_y = 0
@@ -599,18 +604,23 @@ class ZombieAI:
                                        'door' in name or 'window' in name or 'barricate' in name)
                         
                         if is_structural:
-                            if current_time - getattr(self, 'last_attack_time', 0) > (1000.0 / multiplier):
-                            damage = random.randint(self.min_attack, self.max_attack)
-                            game.map_manager.hit_tile(gx, gy, attacker=self)
-                            self.last_attack_time = current_time
-                            self.melee_swing_timer = 10
+                            # [ELEGANT FIX] Desynchronize the mob! Give each attack a randomized cooldown
+                            attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
                             
-                            if getattr(self, 'sound_attack', None):
-                                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                                game.sound_manager.play_sound(
-                                    self.sound_attack, subdir=snd_dir, game=game, 
-                                    source_pos=self.rect.center, base_volume=1.0, pitch_variance=0.15
-                                )
+                            if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
+                                damage = random.randint(self.min_attack, self.max_attack)
+                                game.map_manager.hit_tile(gx, gy, damage, attacker=self)
+                                self.last_attack_time = current_time
+                                # Randomize the next hit between 0.7s and 1.35s to break the "marching" rhythm
+                                self.current_attack_delay = random.randint(700, 1350) 
+                                self.melee_swing_timer = 10
+                                
+                                if getattr(self, 'sound_attack', None):
+                                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                                    game.sound_manager.play_sound(
+                                        self.sound_attack, subdir=snd_dir, game=game, 
+                                        source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
+                                    )
 
                         step_x = 0
                         step_y = 0

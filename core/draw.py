@@ -2,6 +2,8 @@ import pygame
 import math
 import random
 import time
+import sys
+import os
 from core.data.config import *
 import core.data.config
 from core.entities.item.item import Item
@@ -64,6 +66,8 @@ def draw_game(game):
     dynamic_w = GAME_WIDTH
     dynamic_h = GAME_HEIGHT
     
+    is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
+
     # Modals that should never shrink the viewport
     ignored_modals = {'big_map', 'npc_dialog', 'crafting'}
     
@@ -72,9 +76,12 @@ def draw_game(game):
             # Dynamically shrink width if the modal is snapped to the right
             if modal['rect'].left >= GAME_WIDTH - 244:
                 dynamic_w = min(dynamic_w, modal['rect'].left)
+            
             # Dynamically shrink height if the modal is snapped to the bottom
-            if modal['rect'].top >= GAME_HEIGHT - 240:
-                dynamic_h = min(dynamic_h, modal['rect'].top)
+            # ONLY apply this if we are NOT on Android
+            if not is_android:
+                if modal['rect'].top >= GAME_HEIGHT - 240:
+                    dynamic_h = min(dynamic_h, modal['rect'].top)
                     
     # Safeties to ensure the viewport never collapses completely
     dynamic_w = max(GAME_WIDTH // 3, dynamic_w)
