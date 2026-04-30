@@ -180,6 +180,13 @@ class Game:
                 'rect': pygame.Rect(help_pos[0], help_pos[1], HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)
             })
 
+        self.modals.append({
+            'type': 'belt',
+            # We initialize a rough rect; your dynamic_h logic in draw.py will handle its true position
+            'rect': pygame.Rect(GAME_WIDTH // 2 - 150, GAME_HEIGHT - 60, 300, 60),
+            'id': 'belt_hud' 
+        })
+
         self.context_menu = {
             'active': False,
             'item': None,

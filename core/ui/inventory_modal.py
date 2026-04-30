@@ -27,12 +27,87 @@ def draw_text_shadow(surface, font, text, color, pos, align='topleft', shadow_co
 
 # --- Belt HUD Functions ---
 
-def get_belt_hud_slot_rect(i):
+def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
+    """Draws the always-visible belt HUD at the bottom of the screen."""
+    for i in range(5):
+        # --- CHANGED: Pass dynamic_h down to the rect calculator ---
+        slot_rect = get_belt_hud_slot_rect(i, game=game, dynamic_h=dynamic_h)
+        
+        pygame.draw.rect(surface, (30, 30, 30), slot_rect, 0, 3)
+        
+        item = player.belt[i]
+        if item and player.active_weapon and item.id == player.active_weapon.id:
+            pygame.draw.rect(surface, YELLOW, slot_rect, 2, 3)
+        else:
+            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+
+        # Draw Hotkey Number (Inside, Gray)
+        num_text = font_14.render(str(i + 1), True, GRAY)
+        surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
+
+        if item:
+            try:
+                if item.image:
+                    thumb = pygame.transform.scale(item.image, (slot_rect.width - 8, slot_rect.height - 8))
+                    thumb_rect = thumb.get_rect(center=slot_rect.center)
+                    surface.blit(thumb, thumb_rect)
+                else:
+                    pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
+            except Exception:
+                pass
+            
+            # Durability Bar
+            if item.durability is not None and item.max_durability > 0:
+                max_dur = item.max_durability
+                cur_dur = max(0, item.durability)
+                pct = cur_dur / max_dur
+                bar_w, bar_h = slot_rect.width - 10, 3
+                bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
+                col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
+                pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
+                if pct > 0: pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
+
+            # Stack/Ammo Count (With Shadow)
+            show_count = False
+            if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
+                show_count = True
+            elif item.item_type in ['weapon', 'weapon_ranged'] and item.load is not None:
+                show_count = True
+
+            if show_count:
+                draw_text_shadow(
+                    surface, 
+                    font_14,
+                    str(int(item.load)), 
+                    WHITE, 
+                    (slot_rect.right - 3, slot_rect.bottom - 1), 
+                    align='bottomright'
+                )
+
+def get_belt_hud_slot_rect(i, game=None, dynamic_h=None, **kwargs):
+    from core.data.config import GAME_WIDTH, GAME_HEIGHT
+    
     slot_size = 40 # Reduced from 48
     gap = 6        # Reduced from 8
     total_width = (slot_size * 5) + (gap * 4)
     start_x = (GAME_WIDTH - total_width) // 2
-    start_y = GAME_HEIGHT - slot_size - 15 
+    
+    current_height = GAME_HEIGHT
+    
+    # 1. Use the explicitly passed height if available (from draw.py)
+    if dynamic_h is not None:
+        current_height = dynamic_h
+    # 2. Extract from the directly passed game object
+    elif game is not None and hasattr(game, 'dynamic_h'):
+        current_height = game.dynamic_h
+    # 3. THE MAGIC FIX: Automatically pull the snapped height for your mouse event files
+    else:
+        from core.messages import _game_instance
+        if _game_instance is not None and hasattr(_game_instance, 'dynamic_h'):
+            current_height = _game_instance.dynamic_h
+            
+    start_y = current_height - slot_size - 15 
+    
     x = start_x + i * (slot_size + gap)
     return pygame.Rect(x, start_y, slot_size, slot_size)
 
