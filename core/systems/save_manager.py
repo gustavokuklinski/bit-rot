@@ -58,7 +58,6 @@ def save_game(game):
                 "water": game.player.water,
                 "food": game.player.food,
                 "stamina": game.player.stamina,
-                "tireness": game.player.tireness,
                 "infection": game.player.infection,
                 "anxiety": game.player.anxiety
             },

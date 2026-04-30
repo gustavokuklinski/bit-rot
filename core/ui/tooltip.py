@@ -75,7 +75,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
             if val == 0:
                 continue
 
-            # Format targets nicely: "Health, Tireness"
+            # Format targets nicely: "Health, Stamina"
             targets_str = ", ".join([tr('tooltip', t.capitalize()) for t in effect['targets']])
             
             range_str = f"{val}"

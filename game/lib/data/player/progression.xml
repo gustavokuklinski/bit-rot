@@ -47,17 +47,6 @@
             <param name="melee_cost" value="0.002" /> 
             <param name="alert_threshold" value="20.0" />
         </stat>
-        
-        <stat id="tireness">
-            <param name="night_decay" value="0.0002" />
-            <param name="day_recovery" value="0.002" />
-            <param name="stamina_penalty" value="-0.01" />
-            <param name="run_penalty" value="-0.005" />
-            <param name="melee_cost" value="0.001" /> 
-            <param name="bed_recovery_mult" value="1.5" /> 
-            <param name="bed_sleep_mult" value="2.5" /> 
-            <param name="alert_threshold" value="20.0" />
-        </stat>
 
         <stat id="health">
             <param name="bed_sleep_regen" value="0.1" /> 
@@ -84,7 +73,6 @@
 
             <param name="overweight_health_penalty" value="0.05" /> 
             <param name="overweight_stamina_penalty" value="0.025" /> 
-            <param name="overweight_tireness_penalty" value="0.025" />
         </stat>
         
         <stat id="anxiety">

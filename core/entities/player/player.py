@@ -52,8 +52,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.max_health = stats.get('health', 100.0)
         self.health = self.max_health
         
-        self.max_tireness = stats.get('tireness', 100.0)
-        self.tireness = stats.get('tireness', self.max_tireness)
         self.max_stamina = stats.get('stamina', 100.0)
         self.stamina = stats.get('stamina', self.max_stamina)
         self.water = stats.get('water', 100.0)
@@ -242,23 +240,15 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.saved_detection_radius = None
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
-        tireness_drain = abs(PROGRESSION_CONFIG.get_stat('tireness', 'night_decay', -0.002))
         stamina_regen = PROGRESSION_CONFIG.get_stat('stamina', 'regen_base', 0.02)
-        tireness_recovery = PROGRESSION_CONFIG.get_stat('tireness', 'day_recovery', 0.001)
-
         ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
 
         if not self.is_sleeping and not is_active_resting:
-            stamina_penalty = abs(PROGRESSION_CONFIG.get_stat('tireness', 'stamina_penalty', -0.005)) if self.stamina <= 0 else 0
-            total_drain = (tireness_drain + stamina_penalty) * ff_multiplier * game.dt_mult
-            self.tireness = max(0.0, self.tireness - total_drain)
-
             if is_moving and self.is_running:
                 stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
                 
-                if self.tireness <= 0:
-                    stamina_drain *= 2.5
-                    # CREATIVE ADDITION: Stumbling. Exhaustion physically prevents sustained running
+                if self.stamina <= 10.0:
+                    # Stumbling logic tied directly to low stamina
                     if random.random() < (0.02 * ff_multiplier * game.dt_mult):
                         self.is_running = False
                         display_message(tr('msg', "You stumble... too exhausted to run."))
@@ -266,41 +256,32 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.stamina = max(0.0, self.stamina - (stamina_drain * ff_multiplier * game.dt_mult))
             else:
                 if self.stamina < self.max_stamina:
-                    current_regen = stamina_regen if self.tireness > 0 else (stamina_regen * 0.2)
-                    self.stamina = min(self.max_stamina, self.stamina + (current_regen * ff_multiplier * game.dt_mult))
+                    self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * ff_multiplier * game.dt_mult))
 
         if not self.is_sleeping and is_active_resting:
             stam_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
-            tire_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_recovery_mult', 2.0) if is_recovery_tile else 1.0
             
             if self.stamina < self.max_stamina:
                 self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * ff_multiplier * game.dt_mult))
-            if self.tireness < self.max_tireness:
-                self.tireness = min(self.max_tireness, self.tireness + (tireness_recovery * tire_mult * 5.0 * ff_multiplier * game.dt_mult))
 
         if self.is_sleeping:
             game.is_fast_forwarding = True
             ff_multiplier = game.fast_forward_speed if getattr(game, 'is_fast_forwarding', False) else 1.0
             base_sleep_restore = 0.05 * ff_multiplier * game.dt_mult
             
-            tireness_restore = base_sleep_restore
             stamina_restore = base_sleep_restore
             
             if is_recovery_tile:
-                tire_sleep_mult = PROGRESSION_CONFIG.get_stat('tireness', 'bed_sleep_mult', 1.5)
                 stam_sleep_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_sleep_mult', 1.5)
-                
-                tireness_restore *= tire_sleep_mult
                 stamina_restore *= stam_sleep_mult
                 
                 base_health_regen = PROGRESSION_CONFIG.get_stat('health', 'bed_sleep_regen', 0.01)
                 self.health = min(self.max_health, self.health + (base_health_regen * ff_multiplier * game.dt_mult))
 
-            self.tireness = min(self.max_tireness, self.tireness + tireness_restore)
             self.stamina = min(self.max_stamina, self.stamina + stamina_restore)
 
-            if self.tireness >= self.max_tireness:
-                self.tireness = self.max_tireness
+            if self.stamina >= self.max_stamina:
+                self.stamina = self.max_stamina
                 self.is_sleeping = False
                 game.is_fast_forwarding = False
                 display_message(tr('msg', "You wake up refreshed."))
@@ -352,7 +333,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         is_starving = self.food <= 20.0
         is_dehydrated = self.water <= 20.0
         is_infected = self.infection > 0
-        is_exhausted = self.tireness <= 0.0
+        is_exhausted = self.stamina <= 0.0
         
         damage_this_frame = 0.0
         if is_starving:
@@ -426,15 +407,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if overweight_amount > 0:
             health_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_health_penalty', 0.05)
             stamina_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_stamina_penalty', 0.025)
-            tireness_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_tireness_penalty', 0.025)
 
             health_reduction = health_pen_rate * overweight_amount
             stamina_reduction = stamina_pen_rate * overweight_amount
-            tireness_reduction = tireness_pen_rate * overweight_amount
 
             current_max_health = self.max_health * max(0.1, 1.0 - health_reduction)
             current_max_stamina = self.max_stamina * max(0.1, 1.0 - stamina_reduction)
-            current_max_tireness = self.max_tireness * max(0.1, 1.0 - tireness_reduction)
 
             if self.health > current_max_health:
                 self.health -= 0.05 * game.dt_mult
@@ -442,10 +420,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
             if self.stamina > current_max_stamina:
                 self.stamina = current_max_stamina
-
-            if self.tireness > current_max_tireness:
-                self.tireness -= 0.05 * game.dt_mult
-                self.tireness = max(current_max_tireness, self.tireness)
                 
             if self.is_running and is_moving:
                 self.progression.add_xp(self, 'fitness', 0.001)

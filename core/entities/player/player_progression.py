@@ -101,7 +101,6 @@ class PlayerProgression:
     def get_anxiety_bonus(self, player): return self.get_total_attribute_bonus(player, 'anxiety')
     def get_infection_bonus(self, player): return self.get_total_attribute_bonus(player, 'infection')
     def get_health_bonus(self, player): return self.get_total_attribute_bonus(player, 'health')
-    def get_tireness_bonus(self, player): return self.get_total_attribute_bonus(player, 'tireness')
     def get_food_bonus(self, player): return self.get_total_attribute_bonus(player, 'food')
     def get_water_bonus(self, player): return self.get_total_attribute_bonus(player, 'water')
 
@@ -216,13 +215,8 @@ class PlayerProgression:
         self.update_stamina(player, is_moving)
         self.update_infection(player)
         self.update_anxiety(player, game)
-        self.update_tireness(player, game, is_moving)
+        
 
-        #if player.tireness <= 0 and not player.is_sleeping:
-        #    player.is_sleeping = True
-        #    player.vx = 0
-        #    player.vy = 0
-        #    display_message(tr('msg', "You passed out from exhaustion!"))
 
         if is_moving and player.is_running and player.stamina > 0:
             self.add_xp(player, 'fitness', 0.002)
@@ -262,38 +256,7 @@ class PlayerProgression:
         
         player.anxiety = min(100, player.anxiety + final)
 
-    def update_tireness(self, player, game, is_moving):
-        # 1. Get XML Constants
-        night_decay = self.config.get_stat('tireness', 'night_decay', -0.03)
-        day_recov = self.config.get_stat('tireness', 'day_recovery', 0.002)
-        
-        # 2. Determine Base Change (Day/Night)
-        world_state = game.world_time.state
-        base_change = night_decay if "NIGHT" in world_state else day_recov
-
-        # 3. Penalties (from XML)
-        stam_penalty = self.config.get_stat('tireness', 'stamina_penalty', -0.01)
-        run_penalty = self.config.get_stat('tireness', 'run_penalty', -0.02)
-        
-        current_penalty = 0.0
-        if player.stamina <= 0: current_penalty += stam_penalty
-        if is_moving and player.is_running: current_penalty += run_penalty
-
-        # 4. Anxiety Modifier (Higher anxiety = faster tireness/slower recovery)
-        anxiety_mod = 1.0 + (player.anxiety / 100.0)
-        
-        if base_change < 0: base_change *= anxiety_mod
-        else: base_change /= anxiety_mod
-
-        # 5. Trait Modifiers (Rested/Sleepy)
-        trait_perc = self.get_tireness_bonus(player)
-        trait_mod = 1.0 + (trait_perc / 100.0)
-
-        if base_change < 0: base_change /= trait_mod # Rested slows decay
-        else: base_change *= trait_mod               # Rested speeds recovery
-
-        final_change = base_change + current_penalty
-        player.tireness = max(0, min(player.max_tireness, player.tireness + final_change))
+    
 
     def update_infection(self, player):
         if player.infection > 0:
@@ -306,40 +269,33 @@ class PlayerProgression:
 
     def handle_melee_attack(self, player):
         stamina_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
-        tireness_cost = self.config.get_stat('tireness', 'melee_cost', 0.02)
         
         # Consume stamina
         if player.stamina > 0:
             player.stamina = max(0.0, player.stamina - stamina_cost)
             
-        # Consume tiredness
-        if player.tireness > 0:
-            player.tireness = max(0.0, player.tireness - tireness_cost)
-            
         return True
 
     def get_melee_damage_multiplier(self, player):
-        # Now: Base 1.0 + (Sum of all attribute effects targeting 'melee_damage')
         mult_bonus, flat_bonus = self.get_derived_bonus('melee_damage')
-        
         base_multiplier = 1.0 + mult_bonus
-        
-        tireness_mod = player.tireness / player.max_tireness
-        return (base_multiplier * tireness_mod) + flat_bonus
+
+        stamina_mod = 0.5 + (0.5 * (player.stamina / player.max_stamina))
+        return (base_multiplier * stamina_mod) + flat_bonus
 
     def get_unarmed_damage(self, player):
         mult_bonus, flat_bonus = self.get_derived_bonus('unarmed_damage')
-        
         base_damage = 1.0 + mult_bonus
-        tireness_mod = player.tireness / player.max_tireness
-        return (base_damage * tireness_mod) + flat_bonus
+        
+        stamina_mod = player.stamina / player.max_stamina
+        return (base_damage * stamina_mod) + flat_bonus
 
     def get_ranged_damage_multiplier(self, player):
         mult_bonus, flat_bonus = self.get_derived_bonus('ranged_damage')
-        
         base_multiplier = 1.0 + mult_bonus
-        tireness_mod = player.tireness / player.max_tireness
-        return base_multiplier * tireness_mod
+        
+        stamina_mod = player.stamina / player.max_stamina
+        return base_multiplier * stamina_mod
 
     def get_headshot_chance(self, player):
         mult_bonus, flat_bonus = self.get_derived_bonus('headshot_chance')

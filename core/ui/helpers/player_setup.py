@@ -55,7 +55,6 @@ def _load_stat_icons():
         "water": SPRITE_PATH + "ui/water.png",
         "food": SPRITE_PATH + "ui/food.png",
         "anxiety": SPRITE_PATH + "ui/axiety.png", 
-        "tireness": SPRITE_PATH + "ui/tireness.png", 
         "infection": SPRITE_PATH + "ui/infection.png",
         "defence": SPRITE_PATH + "ui/defence.png",
         "weight": SPRITE_PATH + "ui/weight.png",
@@ -682,18 +681,48 @@ def _draw_player_build_screen(game, state, mouse_pos):
     if active_preset_dropdown:
         options = state.get('preset_list', ["None"])
         option_height = S(25)
-        list_height = len(options) * option_height
+        
+        max_visible = 10
+        visible_count = min(len(options), max_visible)
+        list_height = visible_count * option_height
+        total_height = len(options) * option_height
+        
         list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom, load_dd_rect.width, list_height)
+        state['preset_list_rect'] = list_rect
+        
         pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
         pygame.draw.rect(game.game_screen, WHITE, list_rect, 1)
-        y_offset = list_rect.y
+        
+        max_scroll = max(0, total_height - list_height)
+        state['preset_max_scroll'] = max_scroll
+        scroll_y = max(0, min(state.get('preset_scroll_y', 0), max_scroll))
+        state['preset_scroll_y'] = scroll_y
+        
+        drawable_list_rect = game.game_screen.get_rect().clip(list_rect)
         clickable_rects["load_dropdown_options"] = []
-        for option_name in options:
-            option_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, option_height)
-            if option_rect.collidepoint(mouse_pos): pygame.draw.rect(game.game_screen, (70, 70, 70), option_rect)
-            game.game_screen.blit(font.render(option_name, True, WHITE), (option_rect.x + S(5), option_rect.y + S(2)))
-            clickable_rects["load_dropdown_options"].append((option_name, option_rect))
-            y_offset += option_height
+        
+        if drawable_list_rect.width > 0 and drawable_list_rect.height > 0:
+            list_surface = game.game_screen.subsurface(drawable_list_rect)
+            
+            y_offset = 0 - scroll_y
+            for option_name in options:
+                row_rect_rel = pygame.Rect(0, y_offset, list_rect.width, option_height)
+                row_rect_abs = pygame.Rect(list_rect.x, list_rect.y + y_offset, list_rect.width, option_height)
+                
+                if row_rect_rel.bottom > 0 and row_rect_rel.top < list_rect.height:
+                    if row_rect_abs.collidepoint(mouse_pos):
+                        pygame.draw.rect(list_surface, (70, 70, 70), row_rect_rel)
+                    list_surface.blit(font.render(option_name, True, WHITE), (row_rect_rel.x + S(5), row_rect_rel.y + S(2)))
+                    clickable_rects["load_dropdown_options"].append((option_name, row_rect_abs))
+                    
+                y_offset += option_height
+                
+        if total_height > list_height:
+            bar_rect = pygame.Rect(list_rect.right - S(8), list_rect.top, S(8), list_rect.height)
+            draw_scrollbar(game.game_screen, state, bar_rect, list_height, total_height, scroll_y)
+            state['preset_scrollbar_handle_rect'] = state['scrollbar_handle_rect']
+        else:
+            state['preset_scrollbar_handle_rect'] = None
 
     if hovered_trait_id:
         trait_data = TRAIT_DEFINITIONS.get(hovered_trait_id)
@@ -755,8 +784,9 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
     if event.type == pygame.MOUSEWHEEL:
         stats_rect = state.get('stats_content_rect')
         chosen_rect = state.get('chosen_content_rect')
-        
-        if state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
+        if state.get('preset_dropdown_active') and state.get('preset_list_rect') and state['preset_list_rect'].collidepoint(mouse_pos):
+             state['preset_scroll_y'] = max(0, min(state.get('preset_scroll_y', 0) - event.y * S(25), state.get('preset_max_scroll', 0)))
+        elif state.get('traits_content_rect') and state['traits_content_rect'].collidepoint(mouse_pos):
              state['traits_scroll_offset_y'] = max(0, min(state['traits_scroll_offset_y'] - event.y * S(70), state.get('traits_max_scroll', 0)))
         elif state.get('prof_content_rect') and state['prof_content_rect'].collidepoint(mouse_pos):
              state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) - event.y * S(70), state.get('prof_max_scroll', 0)))
@@ -786,8 +816,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         dropdown_clicked = False
         scrollbar_clicked = False
-        
-        if state.get('stats_scrollbar_handle_rect') and state['stats_scrollbar_handle_rect'].collidepoint(mouse_pos):
+
+        if state.get('preset_dropdown_active') and state.get('preset_scrollbar_handle_rect') and state['preset_scrollbar_handle_rect'].collidepoint(mouse_pos):
+            state['is_dragging_preset_scrollbar'] = True; state['preset_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
+        if not scrollbar_clicked and state.get('stats_scrollbar_handle_rect') and state['stats_scrollbar_handle_rect'].collidepoint(mouse_pos):
             state['is_dragging_stats_scrollbar'] = True; state['stats_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
         if not scrollbar_clicked and state.get('traits_scrollbar_handle_rect') and state['traits_scrollbar_handle_rect'].collidepoint(mouse_pos):
             state['is_dragging_traits_scrollbar'] = True; state['traits_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
@@ -797,6 +829,30 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
              state['is_dragging_chosen_scrollbar'] = True; state['chosen_scroll_drag_last_y'] = mouse_pos[1]; scrollbar_clicked = True
 
         if scrollbar_clicked: return
+
+        if state.get('preset_dropdown_active'):
+            # 1. Did they click inside the open dropdown menu?
+            if state.get('preset_list_rect') and state['preset_list_rect'].collidepoint(mouse_pos):
+                if state.get('preset_max_scroll', 0) > 0:
+                    state['is_scrolling_preset_content'] = True
+                    state['preset_content_drag_start_y'] = mouse_pos[1]
+                    state['preset_content_drag_last_y'] = mouse_pos[1]
+                # Consume the click to prevent Ghost Clicks on things beneath the menu!
+                return 
+                
+            # 2. Did they click the toggle button to close it?
+            elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
+                state['preset_dropdown_active'] = False
+                return 
+                
+            # 3. If they clicked completely outside the menu, close the menu and let the click fall through.
+            else:
+                state['preset_dropdown_active'] = False
+                
+        # If the menu is CLOSED, check if they clicked the button to open it
+        elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
+            state['preset_dropdown_active'] = True
+            return
 
         stats_rect = state.get('stats_content_rect')
         traits_rect = state.get('traits_content_rect')
@@ -883,18 +939,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 game.game_state = 'LOADING'
                 game.loading_done = False
                 return
-        
-        if state.get('preset_dropdown_active'):
-            for option_name, option_rect in clickable_rects.get("load_dropdown_options", []):
-                if option_rect.collidepoint(mouse_pos):
-                    state['selected_preset'] = option_name; state['preset_dropdown_active'] = False; _load_preset(state); dropdown_clicked = True; break
-            if dropdown_clicked: return
-
-        if clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
-            state['preset_dropdown_active'] = not state.get('preset_dropdown_active', False); dropdown_clicked = True
-
-        if not dropdown_clicked:
-            state['preset_dropdown_active'] = False
 
         if 'sex_buttons' in clickable_rects:
             for sex, rect in clickable_rects['sex_buttons'].items():
@@ -925,19 +969,44 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         if clickable_rects.get('delete_button') and clickable_rects['delete_button'].collidepoint(mouse_pos): _delete_preset(state)
 
     elif event.type == pygame.MOUSEBUTTONUP:
+        if event.button == 1:
+
+            was_scrolling_preset = False
+            if state.get('is_scrolling_preset_content'):
+                drag_dist = abs(mouse_pos[1] - state.get('preset_content_drag_start_y', mouse_pos[1]))
+                if drag_dist > S(5): # If moved more than 5 pixels, it's a drag
+                    was_scrolling_preset = True
+            
+            # If they didn't drag the menu, select the option
+            if state.get('preset_dropdown_active') and not was_scrolling_preset:
+                if state.get('preset_list_rect') and state['preset_list_rect'].collidepoint(mouse_pos):
+                    for option_name, option_rect in clickable_rects.get("load_dropdown_options", []):
+                        if option_rect.collidepoint(mouse_pos):
+                            state['selected_preset'] = option_name
+                            state['preset_dropdown_active'] = False
+                            _load_preset(state)
+                            break
+
+        state['is_dragging_preset_scrollbar'] = False
         state['is_dragging_stats_scrollbar'] = False
         state['is_dragging_traits_scrollbar'] = False
         state['is_dragging_chosen_scrollbar'] = False
         state['is_dragging_prof_scrollbar'] = False
 
-
+        state['is_scrolling_preset_content'] = False
         state['is_scrolling_stats_content'] = False
         state['is_scrolling_traits_content'] = False
         state['is_scrolling_chosen_content'] = False
         state['is_scrolling_prof_content'] = False
 
     elif event.type == pygame.MOUSEMOTION:
-        if state.get('is_dragging_stats_scrollbar'):
+        if state.get('is_dragging_preset_scrollbar'):
+            mouse_delta_y = mouse_pos[1] - state['preset_scroll_drag_last_y']; state['preset_scroll_drag_last_y'] = mouse_pos[1]
+            track_height = state['preset_list_rect'].height - state['preset_scrollbar_handle_rect'].height
+            if track_height > 0:
+                state['preset_scroll_y'] = max(0, min(state.get('preset_scroll_y', 0) + (mouse_delta_y * (state['preset_max_scroll'] / track_height)), state['preset_max_scroll']))
+
+        elif state.get('is_dragging_stats_scrollbar'):
             mouse_delta_y = mouse_pos[1] - state['stats_scroll_drag_last_y']; state['stats_scroll_drag_last_y'] = mouse_pos[1]
             track_height = state['stats_content_rect'].height - state['stats_scrollbar_handle_rect'].height
             if track_height > 0:
@@ -960,6 +1029,12 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             track_height = state['prof_content_rect'].height - state['prof_scrollbar_handle_rect'].height
             if track_height > 0:
                  state['prof_scroll_offset_y'] = max(0, min(state.get('prof_scroll_offset_y', 0) + (mouse_delta_y * (state['prof_max_scroll'] / track_height)), state['prof_max_scroll']))
+
+        elif state.get('is_scrolling_preset_content'):
+            mouse_delta_y = mouse_pos[1] - state['preset_content_drag_last_y']
+            state['preset_content_drag_last_y'] = mouse_pos[1]
+            new_offset = state.get('preset_scroll_y', 0) - mouse_delta_y
+            state['preset_scroll_y'] = max(0, min(new_offset, state.get('preset_max_scroll', 0)))
 
         elif state.get('is_scrolling_stats_content'):
             mouse_delta_y = mouse_pos[1] - state['stats_content_drag_last_y']
@@ -1060,6 +1135,12 @@ def run_player_setup(game):
         state['preset_list'] = ["None"]
         state['selected_preset'] = "None"
         state['preset_dropdown_active'] = False
+
+        state['preset_scroll_y'] = 0
+        state['preset_max_scroll'] = 0
+        state['is_dragging_preset_scrollbar'] = False
+        state['preset_scroll_drag_last_y'] = 0
+        state['preset_list_rect'] = None
         _load_presets(state)
 
         if 'current_tab' not in state:

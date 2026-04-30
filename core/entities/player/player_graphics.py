@@ -210,8 +210,9 @@ class PlayerGraphics:
 
         # UI Bars
         if self.is_sleeping:
-            if self.max_tireness < 0:
-                progress = 1.0 - max(0.0, min(1.0, self.tireness / self.max_tireness))
+            if getattr(self, 'max_stamina', 100) > 0:
+                # Progress fills up as stamina reaches max_stamina
+                progress = max(0.0, min(1.0, self.stamina / self.max_stamina))
             else:
                 progress = 0.0
             

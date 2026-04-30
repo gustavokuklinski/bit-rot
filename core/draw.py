@@ -937,15 +937,14 @@ def draw_game(game):
             # Apply the filter strictly to the game world before UI is drawn
             game.game_screen.blit(game.crt_overlay, (crt_x, crt_y))
         
-            # --- FATIGUE B&W HIGH CONTRAST EFFECT ---
-        # Safely fetch tireness (starts at 100 and drops to 0)
-        # Default to 100 so the effect doesn't trigger unexpectedly
-        tireness_fatigue = getattr(game.player, 'tireness', 100) 
+        # --- FATIGUE B&W HIGH CONTRAST EFFECT ---
+        # Safely fetch stamina (starts at max_stamina and drops to 0)
+        stamina_fatigue = getattr(game.player, 'stamina', 100) 
         
-        # Start fading player vision to high-contrast B&W when tireness drops below 50%
-        if tireness_fatigue <= 50:
-            # Smooth intensity from 0.0 (at 50% tireness) up to 1.0 (at 0% tireness)
-            f_intensity = min(1.0, max(0.0, (50 - tireness_fatigue) / 50.0))
+        # Start fading player vision to high-contrast B&W when stamina drops below 50%
+        if stamina_fatigue <= 50:
+            # Smooth intensity from 0.0 (at 50% stamina) up to 1.0 (at 0% stamina)
+            f_intensity = min(1.0, max(0.0, (50 - stamina_fatigue) / 50.0))
             
             try:
                 # 1. Take a snapshot of the current colored game world (including CRT)

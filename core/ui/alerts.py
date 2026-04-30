@@ -40,7 +40,7 @@ def draw_player_alerts(surface, player):
     if player.health <= PROGRESSION_CONFIG.get_stat('health', 'alert_threshold', 50.0):
         active_alerts.append(("ui/hp.png", RED, tr('alert', "You are hurt, use a Medkit.")))
     
-    if player.stamina <= PROGRESSION_CONFIG.get_stat('stamina', 'alert_threshold', 20.0):
+    if player.stamina <= PROGRESSION_CONFIG.get_stat('stamina', 'alert_threshold', 25.0):
         active_alerts.append(("ui/stamina.png", GRAY, tr('alert', "You are tired, take a Rest.")))
 
     if player.water <= PROGRESSION_CONFIG.get_stat('water', 'alert_threshold', 20.0):
@@ -48,9 +48,6 @@ def draw_player_alerts(surface, player):
 
     if player.food <= PROGRESSION_CONFIG.get_stat('food', 'alert_threshold', 20.0):
         active_alerts.append(("ui/food.png", GREEN, tr('alert', "You are hungry, try some MRE's.")))
-
-    if player.tireness <= PROGRESSION_CONFIG.get_stat('tireness', 'alert_threshold', 20.0):
-        active_alerts.append(("ui/tireness.png", (100, 100, 150), tr('alert', "You are feeling sleepy, take a nap.")))
 
     if player.anxiety >= PROGRESSION_CONFIG.get_stat('anxiety', 'alert_threshold', 30.0):
         active_alerts.append(("ui/axiety.png", (150, 0, 150), tr('alert', "You are anxious, try reading.")))

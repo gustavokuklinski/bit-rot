@@ -174,7 +174,7 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Gear': toggle_gear_modal(game)
 
             if option == 'Sleep':
-                if game.player.tireness >= game.player.max_tireness * 0.95:
+                if game.player.stamina >= game.player.max_stamina * 0.95:
                     display_message(tr('msg', "You are not tired enough to sleep."))
                 else:
                     print("You go to sleep...")

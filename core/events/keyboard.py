@@ -236,8 +236,6 @@ def process_chat_command(game, text):
             game.player.food = 100.0
             game.player.stamina = 100.0
             game.player.max_stamina = 100.0
-            game.player.tireness = 100.0
-            game.player.max_tireness = 100.0
             game.player.infection = 0.0
             game.player.anxiety = 0.0
             

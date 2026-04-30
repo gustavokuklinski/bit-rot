@@ -139,7 +139,6 @@ class PlayerActions:
                                 stat_cap = 100.0
                                 if target_stat == 'health': stat_cap = self.max_health # Fallback
                                 elif target_stat == 'stamina': stat_cap = self.max_stamina
-                                elif target_stat == 'tireness': stat_cap = self.max_tireness
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)

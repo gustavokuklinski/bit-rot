@@ -28,14 +28,14 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     stat_icons = {}
     icon_files = {
         "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
-        "TIR": SPRITE_PATH + "ui/tireness.png", "WTR": SPRITE_PATH + "ui/water.png",
-        "FOD": SPRITE_PATH + "ui/food.png", "INF": SPRITE_PATH + "ui/infection.png",
-        "XP": SPRITE_PATH + "ui/xp.png", "ANX": SPRITE_PATH + "ui/axiety.png",
-        "DEF": SPRITE_PATH + "ui/defence.png", "WGT": SPRITE_PATH + "ui/weight.png"
+        "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", 
+        "INF": SPRITE_PATH + "ui/infection.png", "XP": SPRITE_PATH + "ui/xp.png", 
+        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png", 
+        "WGT": SPRITE_PATH + "ui/weight.png"
     }
     
     stat_names = {
-        "HP": "Health", "STM": "Stamina", "TIR": "Tiredness", "WTR": "Water",
+        "HP": "Health", "STM": "Stamina", "WTR": "Water",
         "FOD": "Food", "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence", "WGT": "Weight"
     }
 
@@ -48,7 +48,6 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     stats = [
         ("HP", player.health, player.max_health, GRAY),
         ("STM", player.stamina, player.max_stamina, GRAY),
-        ("TIR", player.tireness, 100, GRAY),
         ("WTR", player.water, 100, GRAY),
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),

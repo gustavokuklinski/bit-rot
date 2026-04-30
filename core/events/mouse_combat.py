@@ -209,13 +209,7 @@ def handle_attack(game, mouse_pos):
         else:
             # --- MELEE ATTACK LOGIC ---
             if game.player.progression.handle_melee_attack(game.player):
-                # Consume stamina for melee attack
-                if game.player.stamina > 0:
-                    game.player.stamina = max(0, game.player.stamina - 0.3)
                 
-                # Increase tiredness
-                if game.player.tireness > 0:
-                    game.player.tireness = max(0.0, game.player.tireness - 0.5)
 
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(

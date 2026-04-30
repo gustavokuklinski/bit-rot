@@ -538,7 +538,7 @@ class MapManager:
                 return True
 
             self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
-            self.game.player.tireness = min(self.game.player.max_tireness, self.game.player.tireness + 0.5)
+
 
             if weapon and weapon.durability is not None:
                 DURABILITY_COST = 0.05

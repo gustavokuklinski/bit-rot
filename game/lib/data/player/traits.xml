@@ -76,8 +76,8 @@
             <stats health="15" />
         </trait>
 
-        <trait id="rested" name="Rested" cost="1" tooltip="+15% tireness recovery">
-            <stats tireness="15" />
+        <trait id="rested" name="Rested" cost="1" tooltip="+15% stamina recovery">
+            <stats stamina="15" />
         </trait>
 
         <trait id="camel" name="Camel" cost="1" tooltip="20% faster water recovery">
@@ -117,8 +117,8 @@
             <stats infection="15" />
         </trait>
 
-        <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-15% stamina, +15% tireness, -10% Speed">
-            <stats stamina="-15" tireness="15" />
+        <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-30% stamina, -10% Speed">
+            <stats stamina="-30" />
             <attributes strength="-1" />
             <config set="PLAYER_SPEED:0.90" />
         </trait>
@@ -132,8 +132,8 @@
             <stats health="-15" />
         </trait>
 
-        <trait id="sleepy" name="Sleepy" cost="-1" tooltip="-20% tireness recovery">
-            <stats tireness="-20" />
+        <trait id="sleepy" name="Sleepy" cost="-1" tooltip="-20% stamina recovery">
+            <stats stamina="-20" />
         </trait>
 
         <trait id="high_thirst" name="High thirst" cost="-1" tooltip="-25% water recovery">
