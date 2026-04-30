@@ -1,6 +1,5 @@
 <item name="Coffee Cup" type="consumable_drink" allow_belt="false">
     <properties>
-        <restore status="[tireness]" value="15" />
         <restore status="[stamina]" value="15" />
         <reduce status="[anxiety]" value="20" />
         <load min="1" max="1" />

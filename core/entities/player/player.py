@@ -246,13 +246,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if not self.is_sleeping and not is_active_resting:
             if is_moving and self.is_running:
                 stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
-                
-                if self.stamina <= 10.0:
-                    # Stumbling logic tied directly to low stamina
-                    if random.random() < (0.02 * ff_multiplier * game.dt_mult):
-                        self.is_running = False
-                        display_message(tr('msg', "You stumble... too exhausted to run."))
-                        
                 self.stamina = max(0.0, self.stamina - (stamina_drain * ff_multiplier * game.dt_mult))
             else:
                 if self.stamina < self.max_stamina:

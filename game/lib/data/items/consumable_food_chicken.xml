@@ -3,7 +3,6 @@
         <restore status="[food]" value="5" />
         <restore status="[water]" value="1" />
         <restore status="[health]" value="2" />
-        <restore status="[tireness]" value="2" />
         <restore status="[stamina]" value="5" />
         <reduce status="[anxiety]" value="1" />
         <load value="1" />

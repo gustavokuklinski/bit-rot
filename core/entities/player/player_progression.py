@@ -267,11 +267,15 @@ class PlayerProgression:
 
     # --- COMBAT & ACTIONS (Calculated via Attributes) ---
 
-    def handle_melee_attack(self, player):
-        stamina_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
+    def handle_melee_attack(self, player, weapon=None):
+        # Unarmed attacks consume stamina, but melee weapons/tools do not
+        if weapon and getattr(weapon, 'item_type', '') in ['weapon_melee', 'tool']:
+            stamina_cost = 0.0
+        else:
+            stamina_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
         
         # Consume stamina
-        if player.stamina > 0:
+        if player.stamina > 0 and stamina_cost > 0:
             player.stamina = max(0.0, player.stamina - stamina_cost)
             
         return True

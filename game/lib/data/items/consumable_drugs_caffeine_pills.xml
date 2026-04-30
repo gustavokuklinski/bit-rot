@@ -1,7 +1,6 @@
 <item name="Caffeine Pills" type="consumable_drugs" allow_belt="true">
     <properties>
         <restore status="[stamina]" value="15" />
-        <restore status="[tireness]" value="15" />
         <reduce status="[anxiety]" value="15" />
         <load value="1" />
         <capacity value="10" />

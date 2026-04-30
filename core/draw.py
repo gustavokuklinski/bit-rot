@@ -937,14 +937,20 @@ def draw_game(game):
             # Apply the filter strictly to the game world before UI is drawn
             game.game_screen.blit(game.crt_overlay, (crt_x, crt_y))
         
-        # --- FATIGUE B&W HIGH CONTRAST EFFECT ---
-        # Safely fetch stamina (starts at max_stamina and drops to 0)
-        stamina_fatigue = getattr(game.player, 'stamina', 100) 
+        # --- LOW HEALTH B&W HIGH CONTRAST EFFECT ---
+        player_health = getattr(game.player, 'health', 100)
         
-        # Start fading player vision to high-contrast B&W when stamina drops below 50%
-        if stamina_fatigue <= 50:
-            # Smooth intensity from 0.0 (at 50% stamina) up to 1.0 (at 0% stamina)
-            f_intensity = min(1.0, max(0.0, (50 - stamina_fatigue) / 50.0))
+        # Dynamically fetch the alert_threshold from the XML progression config
+        # Fallback to 50.0 if the progression system isn't fully loaded yet
+        try:
+            health_threshold = float(game.player.progression.config.get_stat('health', 'alert_threshold', 50.0))
+        except AttributeError:
+            health_threshold = 50.0
+        
+        # Start fading player vision to high-contrast B&W when health drops below the XML threshold
+        if player_health <= health_threshold:
+            # Smooth intensity from 0.0 (at threshold) up to 1.0 (at 0 health)
+            f_intensity = min(1.0, max(0.0, (health_threshold - player_health) / health_threshold))
             
             try:
                 # 1. Take a snapshot of the current colored game world (including CRT)

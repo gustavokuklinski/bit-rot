@@ -41,16 +41,17 @@
 
     <stats>
         <stat id="stamina">
-            <param name="regen_base" value="0.003" />
-            <param name="run_cost_base" value="0.003" />
+            <param name="regen_base" value="0.0002" />
+            <param name="run_cost_base" value="0.0003" />
             <param name="bed_recovery_mult" value="2.0" />
-            <param name="melee_cost" value="0.002" /> 
+            <param name="melee_cost" value="0.002" />
             <param name="alert_threshold" value="20.0" />
         </stat>
 
         <stat id="health">
             <param name="bed_sleep_regen" value="0.1" /> 
-            <param name="alert_threshold" value="50.0" /> </stat>
+            <param name="alert_threshold" value="40.0" /> 
+        </stat>
 
         <stat id="metabolism">
             <param name="decay_rate_seconds" value="5.0" />

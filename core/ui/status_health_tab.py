@@ -149,23 +149,6 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             else: val_str = f"{int(value)}%"
             active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
             
-    # Add Kills stat directly underneath the player bars
-    if game:
-        kills_y = last_y_pos + 38
-        kills_str = str(getattr(game, 'zombies_killed', 0))
-        
-        try:
-            img = pygame.image.load(SPRITE_PATH + "ui/infection.png").convert_alpha()
-            img = pygame.transform.scale(img, (24, 24))
-            surface.blit(img, (col2_x, kills_y - 4))
-        except: pass
-        
-        lbl_surf = font_14.render("Total Kills: ", True, (160, 160, 160))
-        surface.blit(lbl_surf, (col2_x + 30, kills_y))
-        
-        val_surf = font_14.render(kills_str, True, WHITE)
-        # Draw kills exactly after the label
-        surface.blit(val_surf, (col2_x + 30 + lbl_surf.get_width(), kills_y))
         
     # --- RIGHT: Other Info (Time, Weather, Kills) ---
     if game:

@@ -22,21 +22,29 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     
     mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
-
-    
     
     stat_icons = {}
     icon_files = {
-        "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
-        "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", 
-        "INF": SPRITE_PATH + "ui/infection.png", "XP": SPRITE_PATH + "ui/xp.png", 
-        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png", 
+        "HP": SPRITE_PATH + "ui/hp.png", 
+        "STM": SPRITE_PATH + "ui/stamina.png",
+        "WTR": SPRITE_PATH + "ui/water.png", 
+        "FOD": SPRITE_PATH + "ui/food.png", 
+        "INF": SPRITE_PATH + "ui/infection.png", 
+        "XP": SPRITE_PATH + "ui/xp.png", 
+        "ANX": SPRITE_PATH + "ui/axiety.png", 
+        "DEF": SPRITE_PATH + "ui/defence.png", 
         "WGT": SPRITE_PATH + "ui/weight.png"
     }
     
     stat_names = {
-        "HP": "Health", "STM": "Stamina", "WTR": "Water",
-        "FOD": "Food", "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence", "WGT": "Weight"
+        "HP": "Health", 
+        "STM": "Stamina", 
+        "WTR": "Water",
+        "FOD": "Food", 
+        "INF": "Sickness", 
+        "ANX": "Anxiety", 
+        "DEF": "Defence", 
+        "WGT": "Weight"
     }
 
     for k, path in icon_files.items():
@@ -57,9 +65,9 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
-        is_col2 = i >= 5
+        is_col2 = i >= 4
         x_col = col2_x if is_col2 else col1_x
-        row_idx = i - 5 if is_col2 else i
+        row_idx = i - 4 if is_col2 else i
         
         y_pos = start_y + (row_idx * 28)
         

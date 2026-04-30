@@ -208,7 +208,7 @@ def handle_attack(game, mouse_pos):
 
         else:
             # --- MELEE ATTACK LOGIC ---
-            if game.player.progression.handle_melee_attack(game.player):
+            if game.player.progression.handle_melee_attack(game.player, weapon):
                 
 
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
@@ -238,7 +238,9 @@ def handle_attack(game, mouse_pos):
                 if weapon and hasattr(weapon, 'reach'):
                      attack_range = weapon.reach * TILE_SIZE
 
-                can_deal_damage = game.player.stamina > 0
+                # Allow damage if player has stamina, OR if they are using a weapon that doesn't require stamina
+                has_melee_weapon = weapon is not None and getattr(weapon, 'item_type', '') in ['weapon_melee', 'tool']
+                can_deal_damage = game.player.stamina > 0 or has_melee_weapon
 
                 for zombie in game.zombies:
                     dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
@@ -390,7 +392,8 @@ def handle_attack(game, mouse_pos):
                                  if result:
                                      hit_something = True
                                      target_found = True
-                                     if game.player.stamina > 0:
+                                     # ONLY drain extra stamina if hitting a tile unarmed
+                                     if weapon is None and game.player.stamina > 0:
                                          game.player.stamina = max(0.0, game.player.stamina - 0.5)
                                      break
 
