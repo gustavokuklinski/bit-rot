@@ -377,6 +377,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         weapon = getattr(self, 'equipped_weapon', None)
         search_range = self.base_search_range 
+
+        if not self.is_friendly and game.player:
+            if getattr(game.player, 'is_sleeping', False):
+                search_range *= 0.3
+            elif getattr(game.player, 'is_aiming', False):
+                search_range *= 0.5
+            elif getattr(game.player, 'is_running', False):
+                search_range *= 1.5
+
         is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
         if is_ranged_weapon: search_range = self.base_search_range * 2 
 
@@ -727,6 +736,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         obs_grid_y = obstacle.y // TILE_SIZE
         tile_def = game.map_manager.get_tile_at(obs_grid_x, obs_grid_y)
         if tile_def and tile_def.get('is_statable'):
+
+            name = str(tile_def.get('name', '')).lower()
+            if 'barricate' in name or 'barricad' in name:
+                return
+
             char = game.map_data[obs_grid_y][obs_grid_x]
             if 'close' in char or tile_def.get('state') == 'close':
                 game.map_manager.toggle_door_state(obs_grid_x, obs_grid_y)

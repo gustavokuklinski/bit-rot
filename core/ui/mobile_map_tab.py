@@ -18,7 +18,7 @@ MINIMAP_COLORS = {
     'R': (100, 100, 100),   # Road/Street - Asphalt Grey
     'F': (20, 80, 20),      # Deep Forest - Darker Green
     'C': (200, 200, 200),   # Construction - Solid Light Block
-    'default': (80, 80, 80) # Default fallback
+    'default': (45, 45, 45) # Default fallback (Indoor floors)
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255) # Bright cyan for player
 
@@ -83,6 +83,8 @@ def generate_minimap_cache(game, full_map=False):
                                     final_char = 'G'
                                 elif 'forest' in g_name:
                                     final_char = 'F'
+                                else:
+                                    final_char = 'default' # Catch generic floors
                         
                         # Base
                         if y < len(b_data) and x < len(b_data[y]):
@@ -93,10 +95,16 @@ def generate_minimap_cache(game, full_map=False):
                                     b_name = b_def.get('name', '').lower()
                                     if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
                                         final_char = 'R'
-                                    elif b_def.get('is_obstacle') or 'wall' in b_name or ('floor' in b_name and 'grass' not in b_name):
+                                    elif b_def.get('is_obstacle') or 'wall' in b_name:
                                         final_char = 'C'
+                                    elif 'floor' in b_name and 'grass' not in b_name:
+                                        final_char = 'default'
+                                    elif final_char == ' ':
+                                        final_char = 'default' # Ensure valid tiles aren't invisible
                                 elif b_tile.upper().startswith('R'):
                                     final_char = 'R'
+                                elif final_char == ' ':
+                                    final_char = 'default'
 
                         # Roof
                         if y < len(r_data) and x < len(r_data[y]):
@@ -144,6 +152,8 @@ def generate_minimap_cache(game, full_map=False):
                             final_char = 'G'
                         elif 'forest' in g_name:
                             final_char = 'F'
+                        else:
+                            final_char = 'default'
                 
                 # Base
                 if y < len(base_layer) and x < len(base_layer[y]):
@@ -154,10 +164,16 @@ def generate_minimap_cache(game, full_map=False):
                             b_name = b_def.get('name', '').lower()
                             if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
                                 final_char = 'R'
-                            elif b_def.get('is_obstacle') or 'wall' in b_name or ('floor' in b_name and 'grass' not in b_name):
+                            elif b_def.get('is_obstacle') or 'wall' in b_name:
                                 final_char = 'C'
+                            elif 'floor' in b_name and 'grass' not in b_name:
+                                final_char = 'default'
+                            elif final_char == ' ':
+                                final_char = 'default'
                         elif b_tile.upper().startswith('R'):
                             final_char = 'R'
+                        elif final_char == ' ':
+                            final_char = 'default'
 
                 # Roof
                 if y < len(roof_layer) and x < len(roof_layer[y]):

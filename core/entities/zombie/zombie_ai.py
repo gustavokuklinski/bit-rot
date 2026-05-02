@@ -170,6 +170,14 @@ class ZombieAI:
             return self.cached_trigger_result
 
         base_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
+
+        if getattr(player, 'is_sleeping', False):
+            base_detection_radius *= 0.3  # Harder to detect sleeping players
+        elif getattr(player, 'is_aiming', False):
+            base_detection_radius *= 0.5  # Stealthy aiming
+        elif getattr(player, 'is_running', False):
+            base_detection_radius *= 1.5  # Running is loud/visible
+            
         # [NEW] Increase detection radius by 3x when player shoots ranged weapon (gunshot noise)
         if getattr(player, 'gun_flash_timer', 0) > 0:
             detection_radius = base_detection_radius * 3
