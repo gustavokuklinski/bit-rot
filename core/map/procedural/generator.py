@@ -56,8 +56,8 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         
         # --- GLOBAL L2 LIMITS (Specific Templates) ---
         self.global_l2_limits = {
-            'Bunker': MAP_CHUNKS * 2,
-            'Dungeon': MAP_CHUNKS * 3,
+            'Bunker': MAP_CHUNKS * 5,
+            'Dungeon': MAP_CHUNKS * 5,
         }
         
         # Forest settings

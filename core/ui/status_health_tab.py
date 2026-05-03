@@ -42,8 +42,8 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     
     start_y = modal['rect'].y + 70
     col1_x = modal['rect'].x + padding
-    col2_x = modal['rect'].x + section_width + (padding * 2)
-    col3_x = modal['rect'].x + (section_width * 2) + (padding * 3)
+    col2_x = modal['rect'].x + section_width + (padding * 2) - 15
+    col3_x = modal['rect'].x + (section_width * 2) + (padding * 3) - 10
     
     mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
@@ -84,8 +84,8 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         
         big_sprite = pygame.transform.scale(char_surface, (new_w, new_h))
         # Center the sprite nicely in its designated column
-        sprite_x = col1_x + max(0, (section_width - new_w) // 2)
-        sprite_rect = big_sprite.get_rect(topleft=(sprite_x, image_y))
+        sprite_x = col1_x + max(0, (section_width - new_w) // 2) - 10
+        sprite_rect = big_sprite.get_rect(topleft=(sprite_x, image_y + 10))
         surface.blit(big_sprite, sprite_rect)
 
     # --- CENTER: Player Status (Health, Stamina, etc.) ---
@@ -118,7 +118,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     
     last_y_pos = y_offset
     for i, (name, value, max_value, color) in enumerate(stats):
-        y_pos = y_offset + i * 28
+        y_pos = y_offset + i * 27
         last_y_pos = y_pos
         icon = stat_icons.get(name)
         if icon:
