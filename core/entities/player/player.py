@@ -342,12 +342,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.anxiety = min(100.0, getattr(self, 'anxiety', 0.0) + (0.005 * multiplier * game.dt_mult))
             
             # Mechanic: Micro-sleeps. Periodically interrupts the player actions for 1-2 seconds with a stun
-            if self.action_timer <= 0 and random.random() < (0.0015 * multiplier * game.dt_mult):
-                display_message(tr('msg', "You nod off for a second..."))
-                self.action_timer = int(60 * random.uniform(1.0, 2.0))
-                self.action_total_time = self.action_timer
-                self.action_name = "Nodding off"
-                self.is_running = False
+            #if self.action_timer <= 0 and random.random() < (0.0015 * multiplier * game.dt_mult):
+            #    display_message(tr('msg', "You nod off for a second..."))
+            #    self.action_timer = int(60 * random.uniform(1.0, 2.0))
+            #    self.action_total_time = self.action_timer
+            #    self.action_name = "Nodding off"
+            #    self.is_running = False
                 
             # Mechanic: Trembling hands. Breaks focus occasionally while aiming
             if getattr(self, 'is_aiming', False) and random.random() < 0.05:

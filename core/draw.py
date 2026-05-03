@@ -620,15 +620,21 @@ def draw_game(game):
         hover_rect = game.hovered_interactable_tile_rect.move(offset_x, offset_y)
         pygame.draw.rect(world_view_surface, BLUE, hover_rect, 2)
     
+    # NEW: Fetch target safely before the interactables list is populated
     target = get_targeted_interactable(game)
+    target_world_rect = None # Keep track of the highlighted rect to find its tooltip later
+
     if target:
         target_color = (0, 255, 100) # Bright Green highlight
+        
         if target['type'] in ['npc', 'vehicle']:
-            hover_rect = target['entity'].rect.move(offset_x, offset_y)
+            target_world_rect = target['entity'].rect
+            hover_rect = target_world_rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
         elif target['type'] in ['tile', 'stair']:
             tx, ty = target['entity']
-            hover_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE).move(offset_x, offset_y)
+            target_world_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            hover_rect = target_world_rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
 
     light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
@@ -831,9 +837,14 @@ def draw_game(game):
         mouse_pos = game._get_scaled_mouse_pos()
         
         tooltip_to_draw = None
+        focused_tip = None # NEW: Store the tooltip data for the focused object
         
         for item in interactables:
             world_rect = item['rect']
+            
+            # Match target_world_rect with the interactables list to grab its tooltip text
+            if target_world_rect and world_rect == target_world_rect:
+                focused_tip = item['tip']
             
             # Position '!' top middle of the entity/tile
             screen_x = ((world_rect.centerx + offset_x) * zoom) + GAME_OFFSET_X
@@ -852,8 +863,6 @@ def draw_game(game):
             if box_rect.collidepoint(mouse_pos):
                 tooltip_to_draw = item['tip']
 
-        # --- CRT FILTER OVERLAY ---
-        # Only draw if enabled in the settings
         # --- CRT FILTER OVERLAY ---
         # Only draw if enabled in the settings
         if getattr(core.data.config, 'UI_CRT_FILTER', True):
@@ -1077,6 +1086,110 @@ def draw_game(game):
                     val_s = font_14.render(stat['val'], True, WHITE)
                     game.game_screen.blit(val_s, (curr_x, curr_y + 2))
                     curr_x += val_s.get_width() + 10
+
+        if focused_tip and focused_tip != tooltip_to_draw:
+            padding = 5
+            if isinstance(focused_tip, str):
+                lines = focused_tip.split('\n')
+                max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
+                
+                # Apply 5px padding on all sides
+                tt_w = max_w + (padding * 2)
+                tt_h = len(lines) * 20 + (padding * 2)
+                
+                # Center using GAME_WIDTH to match the Belt HUD perfectly
+                tt_x = (GAME_WIDTH // 2) - (tt_w // 2)
+                tt_y = dynamic_h - 70 - tt_h
+                
+                tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+                
+                tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+                tip_bg.fill((0, 0, 0, 220))
+                game.game_screen.blit(tip_bg, (tt_x, tt_y))
+                pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
+                
+                curr_y = tt_y + padding
+                for line in lines:
+                    ls = font_14.render(line, True, WHITE)
+                    # Center align the text horizontally
+                    line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
+                    game.game_screen.blit(ls, (line_x, curr_y))
+                    curr_y += 20
+                    
+            elif isinstance(focused_tip, dict) and focused_tip.get('type') == 'vehicle':
+                if not hasattr(game, 'vehicle_icons'):
+                    game.vehicle_icons = {}
+                    icon_paths = {
+                        'fuel': SPRITE_PATH + '/items/car_fuel_unit.png',
+                        'motor': SPRITE_PATH + '/items/car_motor.png',
+                        'power': SPRITE_PATH + '/items/car_battery.png',
+                        'tires': SPRITE_PATH + '/items/car_tire.png',
+                        'key': SPRITE_PATH + '/items/car_key_pickup.png'
+                    }
+                    for k, path in icon_paths.items():
+                        try:
+                            game.vehicle_icons[k] = pygame.transform.scale(pygame.image.load(path).convert_alpha(), (16, 16))
+                        except Exception:
+                            game.vehicle_icons[k] = None
+
+                lines = focused_tip['text_lines']
+                max_w = max((font_14.render(line, True, WHITE).get_width() for line in lines), default=0)
+                
+                stats_w = 0
+                for stat in focused_tip['stats']:
+                    icon_img = game.vehicle_icons.get(stat['icon'])
+                    if icon_img:
+                        stats_w += 16 + 4
+                    else:
+                        stats_w += font_14.render(stat['text'] + ": ", True, WHITE).get_width()
+                    stats_w += font_14.render(stat['val'], True, WHITE).get_width() + 10
+                
+                # Remove the trailing 10px spacing from the last stat for perfect centering
+                if stats_w > 0:
+                    stats_w -= 10
+                
+                max_w = max(max_w, stats_w)
+                
+                # Apply 5px padding on all sides, plus 20px height for the stats row
+                tt_w = max_w + (padding * 2)
+                tt_h = len(lines) * 20 + 20 + (padding * 2)
+                
+                # Center using GAME_WIDTH to match the Belt HUD perfectly
+                tt_x = (GAME_WIDTH // 2) - (tt_w // 2)
+                tt_y = dynamic_h - 70 - tt_h
+                
+                tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+                
+                tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+                tip_bg.fill((0, 0, 0, 220))
+                game.game_screen.blit(tip_bg, (tt_x, tt_y))
+                pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
+                
+                curr_y = tt_y + padding
+                for line in lines:
+                    ls = font_14.render(line, True, WHITE)
+                    # Center align the text horizontally
+                    line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
+                    game.game_screen.blit(ls, (line_x, curr_y))
+                    curr_y += 20
+                
+                # Center align the entire stats row horizontally
+                curr_x = tt_x + (tt_w // 2) - (stats_w // 2)
+                for stat in focused_tip['stats']:
+                    icon_img = game.vehicle_icons.get(stat['icon'])
+                    
+                    if icon_img:
+                        game.game_screen.blit(icon_img, (curr_x, curr_y))
+                        curr_x += 20
+                    else:
+                        text_s = font_14.render(stat['text'] + ": ", True, WHITE)
+                        game.game_screen.blit(text_s, (curr_x, curr_y + 2))
+                        curr_x += text_s.get_width()
+                    
+                    val_s = font_14.render(stat['val'], True, WHITE)
+                    game.game_screen.blit(val_s, (curr_x, curr_y + 2))
+                    curr_x += val_s.get_width() + 10
+
 
         draw_belt_hud(game.game_screen, game, game.player, game._get_scaled_mouse_pos(), dynamic_h)
         alert_tooltip = draw_player_alerts(game.game_screen, game.player)
