@@ -17,6 +17,7 @@ from core.events.mouse_combat import handle_attack
 from core.data.localization import tr
 
 def handle_mouse_down(game, event, mouse_pos):
+
     if event.button == 1:
         if game.context_menu['active']:
             menu_clicked = False
@@ -402,3 +403,15 @@ def handle_mouse_down(game, event, mouse_pos):
 
         handle_right_click(game, mouse_pos)
         return
+    
+    if hasattr(game, 'dynamic_h'):
+        for i in range(5):
+            slot_rect = get_belt_hud_slot_rect(i, game=game, dynamic_h=game.dynamic_h)
+            
+            if slot_rect.collidepoint(mouse_pos):
+                if game.player.belt[i] is not None:
+                    # CHANGE 'belt_hud' to 'belt' right here:
+                    game.drag_candidate = (game.player.belt[i], ('belt', i)) 
+                    game.drag_start_pos = mouse_pos
+                    game.drag_origin = ('belt', i) # Make sure this matches too!
+                    return

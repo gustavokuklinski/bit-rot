@@ -302,7 +302,28 @@ def handle_input(game):
                             ignore = True
                         
                 if not ignore:
+                    # --- BELT HUD DUPLICATION FIX ---
+                    # 1. Cache the drag state BEFORE the drop is processed
+                    was_dragging = getattr(game, 'is_dragging', False)
+                    origin = getattr(game, 'drag_origin', None)
+                    dragged_item_ref = getattr(game, 'dragged_item', None)
+
+                    # 2. Let the game process the drop normally
                     handle_mouse_up(game, event, mouse_pos)
+
+                    # 3. If the drop was successful, the game will have set 'is_dragging' to False
+                    if was_dragging and not getattr(game, 'is_dragging', False):
+                        # Verify the origin is our expected tuple safely
+                        if isinstance(origin, tuple) and len(origin) == 2:
+                            origin_type, origin_index = origin
+                            
+                            # If it came from the belt, clear the original slot to prevent duplication
+                            if origin_type in ('belt_hud', 'belt'):
+                                game.player.belt[origin_index] = None 
+                                
+                                # Reset the weight property if applicable
+                                if hasattr(dragged_item_ref, 'in_belt'):
+                                    dragged_item_ref.in_belt = False
                     
             elif event.type == pygame.MOUSEMOTION:
                 handle_mouse_motion(game, event, mouse_pos)
