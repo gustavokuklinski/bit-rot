@@ -15,6 +15,7 @@ from editor.map import Map
 from editor.ui import Sidebar, Toolbar, NewBuildingModal, LogConsole, MenuBar
 from editor.file_tree import FileTree
 from editor.dialog_editor import DialogEditor
+from editor.crafts import CraftEditor
 
 # Initialize Pygame
 pygame.init()
@@ -91,12 +92,14 @@ def load_map_layers(game_map, map_name, map_dir):
             game_map.layers[l] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
         game_map.set_active_layer('map')
 
+
 def save_map_layers(game_map, map_name, map_dir):
     for layer in game_map.layers.keys():
         path = os.path.join(map_dir, f"{map_name}_{layer}.csv")
         game_map.save_to_csv(path, layer)
         print(f"Saved {path}")
         
+
 def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
     size = int(TILE_SIZE * scale)
     top_y = view_rect.top - 20
@@ -105,6 +108,7 @@ def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
         px = int(x * size + ox)
         if view_rect.left <= px <= view_rect.right:
             surface.blit(font.render(str(x), True, WHITE), (px+2, top_y+2))
+
     left_x = view_rect.left - 20
     pygame.draw.rect(surface, DARK_GREY, (left_x, view_rect.top, 20, view_rect.height))
     for y in range(h):
@@ -114,12 +118,14 @@ def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
 
 def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, map_view_rect):
     scaled_tile_size = int(TILE_SIZE * zoom_scale)
+
     for x in range(map_width + 1):
         line_x = offset_x + x * scaled_tile_size
         if map_view_rect.left <= line_x <= map_view_rect.right:
             start_y = max(map_view_rect.top, offset_y)
             end_y = min(map_view_rect.bottom, offset_y + map_height * scaled_tile_size)
             if start_y < end_y: pygame.draw.line(surface, LIGHT_GREY, (line_x, start_y), (line_x, end_y))
+
     for y in range(map_height + 1):
         line_y = offset_y + y * scaled_tile_size
         if map_view_rect.top <= line_y <= map_view_rect.bottom:
@@ -147,23 +153,37 @@ def editor():
     game_root = os.path.abspath(os.path.join('./game'))
     xml_path = os.path.join(game_root, 'lib', 'data', 'map')
     sprite_path = os.path.join(game_root, 'lib', 'sprites', 'map')
+    
+    # Standard Items Paths
     item_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'items')
     item_xml_path = os.path.join(game_root, 'lib', 'data', 'items')
-
+    
+    # Clothes Paths
+    clothes_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'clothes')
+    clothes_xml_path = os.path.join(game_root, 'lib', 'data', 'clothes')
+    
     map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
     
     if not os.path.exists(item_sprite_path):
         try: os.makedirs(item_sprite_path)
         except OSError: pass
+
     if not os.path.exists(item_xml_path):
         try: os.makedirs(item_xml_path)
         except OSError: pass
 
+    # Load standard items
     item_tiles = load_items_from_xml(item_xml_path, item_sprite_path)
+    
+    # Load clothes with their correct dedicated sprite path
+    if os.path.exists(clothes_xml_path):
+        clothes_tiles = load_items_from_xml(clothes_xml_path, clothes_sprite_path) 
+        item_tiles.update(clothes_tiles)
+
     all_render_tiles = {**map_tiles, **item_tiles}
 
     # Primary Modes
-    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog"])
+    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts"])
     editor_mode = "Building" 
 
     content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT
@@ -176,6 +196,7 @@ def editor():
     log_console = LogConsole(0, current_screen_height - LOG_WINDOW_HEIGHT, current_screen_width - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, FONT)
 
     dialog_editor = DialogEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
+    craft_editor = CraftEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
 
     building_map = Map(width=20, height=20) 
     current_map_obj = building_map
@@ -200,6 +221,7 @@ def editor():
     zoom_index = INITIAL_ZOOM_INDEX
     
     map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 20, content_y + 20, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, current_screen_height - content_y - LOG_WINDOW_HEIGHT - 20)
+
     dragging = False
     drag_start = (0,0)
     
@@ -229,6 +251,8 @@ def editor():
                 log_console.resize(current_screen_width - SIDEBAR_WIDTH, LOG_WINDOW_HEIGHT, current_screen_height - LOG_WINDOW_HEIGHT)
                 toolbar.resize(current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH)
                 dialog_editor.resize(current_screen_width, current_screen_height)
+                craft_editor.resize(current_screen_width, current_screen_height)
+                
                 map_view_rect = pygame.Rect(
                     FILE_TREE_WIDTH + 20, 
                     content_y + 20, 
@@ -241,12 +265,17 @@ def editor():
             if menu_action:
                 editor_mode = menu_action
                 if editor_mode == "NPC Dialog": log_console.add_message("Switched to Dialog Editor")
+                elif editor_mode == "Crafts": log_console.add_message("Switched to Craft Editor")
                 else: log_console.add_message("Switched to Building Mode")
                 continue
 
             # Route to respective full-screen handlers
             if editor_mode == "NPC Dialog":
                 dialog_editor.handle_event(event)
+                continue
+                
+            if editor_mode == "Crafts":
+                craft_editor.handle_event(event)
                 continue
 
             # Keyboard Shortcuts (Building Mode Context)
@@ -259,18 +288,18 @@ def editor():
                     save_map_layers(current_map_obj, current_base_name, current_root_dir)
                     modified_maps.discard((current_folder, current_base_name))
                     log_console.add_message("Saved map")
-                elif ctrl_held and event.key == pygame.K_c: 
-                     if selection_rect:
+                elif ctrl_held and event.key == pygame.K_c:  
+                    if selection_rect:
                         clipboard = current_map_obj.get_tiles_in_rect(selection_rect, current_map_obj.active_layer_name)
                         log_console.add_message("Copied selection")
-                elif ctrl_held and event.key == pygame.K_v: 
-                     if clipboard:
+                elif ctrl_held and event.key == pygame.K_v:  
+                    if clipboard:
                         tx, ty = (selection_rect.x, selection_rect.y) if selection_rect else (0,0)
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
                         log_console.add_message("Pasted clipboard")
                         modified_maps.add((current_folder, current_base_name))
-                elif event.key == pygame.K_DELETE: 
-                     if selection_rect:
+                elif event.key == pygame.K_DELETE:  
+                    if selection_rect:
                         current_map_obj.clear_rect(selection_rect, current_map_obj.active_layer_name)
                         modified_maps.add((current_folder, current_base_name))
                         log_console.add_message("Cleared selection")
@@ -282,7 +311,7 @@ def editor():
                     sidebar.selected_tile = None
                     sidebar.selected_item = None
                     sidebar.selected_building = None
-            
+                    
             # Modal Handling (Eats events if active)
             if new_building_modal.active:
                 res = new_building_modal.handle_event(event)
@@ -308,6 +337,7 @@ def editor():
                     sidebar.active_tab = "Tiles" 
                     log_console.add_message(f"Created & Opened {b_name}")
                 continue
+
 
             if sidebar.handle_event(event):
                 if sidebar.selected_tile or sidebar.selected_item: 
@@ -381,7 +411,7 @@ def editor():
                         current_map_obj.paste_tiles((tx, ty), clipboard, current_map_obj.active_layer_name)
                         modified_maps.add((current_folder, current_base_name))
                         log_console.add_message("Pasted clipboard")
-            
+                        
             log_console.handle_event(event)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -424,8 +454,9 @@ def editor():
                     camera_offset_x += dx
                     camera_offset_y += dy
                     drag_start = event.pos
-                if is_selecting and selection_start and pygame.mouse.get_pressed()[0]:
-                     if map_view_rect.collidepoint(mx, my):
+
+                if is_selecting and selection_start and pygame.mouse.get_pressed()[0]: 
+                    if map_view_rect.collidepoint(mx, my):
                         map_x = int(((mx - camera_offset_x) / current_zoom) // TILE_SIZE)
                         map_y = int(((my - camera_offset_y) / current_zoom) // TILE_SIZE)
                         x1, y1 = selection_start
@@ -437,22 +468,28 @@ def editor():
         
         if editor_mode == "NPC Dialog":
             dialog_editor.draw(screen)
+        elif editor_mode == "Crafts":
+            craft_editor.draw(screen)
         else:
             current_map_obj.render(screen, all_render_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
+
             draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
 
-            if selection_rect:
-                 sx = selection_rect.x * TILE_SIZE * current_zoom + camera_offset_x
-                 sy = selection_rect.y * TILE_SIZE * current_zoom + camera_offset_y
-                 sw = selection_rect.width * TILE_SIZE * current_zoom
-                 sh = selection_rect.height * TILE_SIZE * current_zoom
+            if selection_rect: 
+                 sx = selection_rect.x * TILE_SIZE * current_zoom + camera_offset_x 
+                 sy = selection_rect.y * TILE_SIZE * current_zoom + camera_offset_y 
+                 sw = selection_rect.width * TILE_SIZE * current_zoom 
+                 sh = selection_rect.height * TILE_SIZE * current_zoom 
                  pygame.draw.rect(screen, YELLOW, (sx, sy, sw, sh), 2)
 
             draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect, FONT)
+            
             current_file_tree.draw(screen, current_base_name, current_folder, current_map_obj.active_layer_name, modified_maps)
             sidebar.draw(screen)
             log_console.draw(screen)
-            toolbar.draw(screen) # ONLY drawn during building
+            toolbar.draw(screen)
+
+            # ONLY drawn during building
             if new_building_modal.active: new_building_modal.draw(screen)
 
         menu_bar.draw(screen) # ALWAYS drawn at the top

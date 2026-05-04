@@ -2,6 +2,6 @@
     <ingredient name="Leather Black Pants" destroy="false" amount="1" />
     <ingredient name="Line Twine" destroy="true" amount="3" />
     <ingredient name="Needle" destroy="true" amount="1" />
-    <ingredient name="Leather Stripes" destroy="true" amount="5" />
+    <ingredient name="Leather Piece" destroy="true" amount="5" />
     <ingredient name="Blueprint" destroy="true" amount="1" />
 </recipe>

@@ -9,10 +9,14 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
 
     attributes_to_draw = [
-        ("Strength", "strength"), ("Fitness", "fitness"),
-        ("Agility", "agility"), ("Luck", "lucky"),
-        ("Melee", "melee"), ("Ranged", "ranged"),
-        ("Maintenance", "maintenance"), ("Intelligence", "intelligence")
+        ("Strength", "strength"),
+        ("Fitness", "fitness"),
+        ("Agility", "agility"),
+        ("Luck", "lucky"),
+        ("Melee", "melee"),
+        ("Ranged", "ranged"),
+        ("Maintenance", "maintenance"),
+        ("Intelligence", "intelligence")
     ]
 
     start_x_1 = modal_rect.left + 15
