@@ -8,7 +8,7 @@
         <damage min="25" max="55" />
         <firing pellets="1" spread_angle="0"  distance="20"/>
         <skill type="range" />
-        <sprite file="weapon_ranged_glock_9mm.png" />
+        <sprite file="weapon_ranged_pistol_usp_acp45.png" />
         <knockback value="2" />
     </properties>
     <sound>

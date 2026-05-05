@@ -100,8 +100,8 @@ def draw_mp3_tab(surface, game, modal, assets):
     
     controls = [
         {'label': '«', 'action': 'prev'},
-        {'label': '||' if state['status'] == 'playing' else '►', 'action': 'play_pause'},
-        {'label': '■', 'action': 'stop'},
+        {'label': '||' if state['status'] == 'playing' else '>', 'action': 'play_pause'},
+        {'label': 'X', 'action': 'stop'},
         {'label': '»', 'action': 'next'}
     ]
     
