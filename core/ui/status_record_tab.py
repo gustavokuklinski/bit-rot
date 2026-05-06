@@ -57,15 +57,10 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                 surface.blit(icon_surf, (icon_x - 5, current_y - 3))
 
         bonus_perc = player.progression.get_total_attribute_bonus(player, attr_id)
-        bonus_color = (100, 255, 100) if bonus_perc > 0 else (255, 100, 100)
         
         text_x = icon_x + icon_size + 10
         label_surf = font_14.render(f"{tr('ui', label)}:", True, WHITE)
         surface.blit(label_surf, (text_x - 3, current_y + 2))
-
-        if bonus_perc != 0:
-            bonus_surf = font_14.render(f"[{int(bonus_perc):+}%]", True, bonus_color)
-            surface.blit(bonus_surf, (text_x + label_surf.get_width() + 5, current_y + 2))
 
         # Adjusted horizontal position to fit the 50% column constraint nicely
         value_x = text_x + 95 
@@ -83,7 +78,10 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                 
                 if value_rect.collidepoint(mouse_pos):
                     pending_tooltip = {
-                        "label": label, "curr_xp": int(curr_xp), "req_xp": req_xp
+                        "label": label, 
+                        "curr_xp": int(curr_xp), 
+                        "req_xp": req_xp,
+                        "bonus_perc": bonus_perc  # Pass the bonus down to the tooltip
                     }
 
     if pending_tooltip:
@@ -91,6 +89,13 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             def __init__(self, data):
                 self.name = f"{tr('ui', data['label'])} {tr('ui', 'Experience')}"
                 self.tooltip_text = f"{tr('ui', 'Progress:')} {data['curr_xp']} / {data['req_xp']} XP"
+                
+                # Check for a bonus and append it to the tooltip text on a new line
+                bonus = data.get('bonus_perc', 0)
+                if bonus != 0:
+                    self.tooltip_text += f"\n{tr('ui', 'Boost:')} {int(bonus):+}%"
+
                 self.item_type = self.durability = self.max_durability = None
                 self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
+                
         draw_tooltip(surface, XPTooltip(pending_tooltip), (mouse_pos[0], mouse_pos[1]))

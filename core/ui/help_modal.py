@@ -29,7 +29,7 @@ def draw_help_modal(surface, game, modal, assets):
     if 'instance' not in modal:
         modal['instance'] = HelpModalInstance(modal, game)
 
-    base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial (?)"))
+    base_modal = BaseModal(surface, modal, assets, tr('ui', "Help and Tutorial"))
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 

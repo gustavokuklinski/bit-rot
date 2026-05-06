@@ -4,7 +4,8 @@
         <weight weight="0.001" />
     </properties>
     <attributes>
-        <intelligence value="3.0" />
+        <intelligence value="5" />
+        <maintenance value="5" />
     </attributes>
     <spawn chance="10" />
 </item>

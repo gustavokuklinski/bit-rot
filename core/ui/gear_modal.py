@@ -6,7 +6,7 @@ from core.ui.tabs import Tabs
 from core.data.localization import tr
 
 def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
-    base_modal = BaseModal(surface, modal, assets, "Gear (G)")
+    base_modal = BaseModal(surface, modal, assets, "Gear")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button = base_modal.get_buttons()

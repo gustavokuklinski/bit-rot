@@ -159,7 +159,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     
     if item.item_type == 'charm' and hasattr(item, 'attribute_modifiers') and item.attribute_modifiers:
         lines.append("") # Add a spacer line
-        lines.append(tr('tooltip', "Passive (in Inventory):"))
+        lines.append(tr('tooltip', "Passive skill boost:"))
         for attr_name, value in item.attribute_modifiers.items():
             # Format as: "  Lucky: +0.5%"
             lines.append(f"  {attr_name.capitalize()}: +{value:.1f}%")

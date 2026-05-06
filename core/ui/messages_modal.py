@@ -5,7 +5,7 @@ from core.ui.modals import BaseModal, draw_scrollbar
 # Removed unused Tabs import (optional, but cleaner)
 
 def draw_messages_modal(surface, game, modal, assets):
-    base_modal = BaseModal(surface, modal, assets, "Messages (M)")
+    base_modal = BaseModal(surface, modal, assets, "Messages")
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 

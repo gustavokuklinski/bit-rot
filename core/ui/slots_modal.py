@@ -7,7 +7,7 @@ from core.ui.tooltip import draw_tooltip
 from core.data.localization import tr
 
 def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
-    base_modal = BaseModal(surface, modal, assets, "Slots Overview (Y)")
+    base_modal = BaseModal(surface, modal, assets, "Slots Overview")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button = base_modal.get_buttons()

@@ -78,15 +78,26 @@ class PlayerProgression:
         """Calculates percentage bonus from Traits and Charms (Inventory)."""
         total_bonus = 0.0
         
-        # Helper to check an item
+        # Helper to check an item and its contents recursively
         def check_item(item):
-            if item and item.item_type == 'charm' and item.attribute_modifiers:
-                return item.attribute_modifiers.get(attr_name, 0.0)
-            return 0.0
+            bonus = 0.0
+            if not item: 
+                return bonus
+                
+            if item.item_type == 'charm' and item.attribute_modifiers:
+                bonus += item.attribute_modifiers.get(attr_name, 0.0)
+                
+            # If the item is a container/cloth, check its inventory too
+            if hasattr(item, 'inventory') and item.inventory:
+                for sub_item in item.inventory:
+                    bonus += check_item(sub_item)
+                    
+            return bonus
 
         for item in player.inventory: total_bonus += check_item(item)
         for item in player.belt: total_bonus += check_item(item)
-        
+        for item in player.clothes.values(): total_bonus += check_item(item) # Added check for equipped charms
+
         # Traits
         for trait in player.traits:
             t_def = TRAIT_DEFINITIONS.get(trait)
@@ -216,7 +227,8 @@ class PlayerProgression:
         self.update_infection(player)
         self.update_anxiety(player, game)
         
-
+        for attr_id, attr_data in self.attributes.items():
+            attr_data['xp_to_next_level'] = self._calc_xp_req(attr_id, attr_data['level'], player=player)
 
         if is_moving and player.is_running and player.stamina > 0:
             self.add_xp(player, 'fitness', 0.002)

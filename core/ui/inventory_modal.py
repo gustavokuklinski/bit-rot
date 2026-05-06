@@ -281,7 +281,7 @@ def get_belt_slot_rect_in_modal(i, modal_position):
 
 
 def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
-    base_modal = BaseModal(surface, modal, assets, "Inventory (I)")
+    base_modal = BaseModal(surface, modal, assets, "Inventory")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button = base_modal.get_buttons()

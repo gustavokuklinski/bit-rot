@@ -8,7 +8,7 @@ from core.ui.status_record_tab import draw_record_tab
 from core.ui.status_quests_tab import draw_quests_tab # [NEW] Import the new tab
 
 def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos, game=None):
-    base_modal = BaseModal(surface, modal, assets, "Player Status (H)")
+    base_modal = BaseModal(surface, modal, assets, "Player Status")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
