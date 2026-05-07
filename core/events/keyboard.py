@@ -617,11 +617,11 @@ def handle_keyboard_events(game, event, action_triggered=None):
                         tile = game.map_manager.get_tile_at(tx, ty)
                         if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
                             game.map_manager.toggle_door_state(tx, ty)
-                        elif tile and tile.get('is_stair'):
-                            target_layer = tile.get('target_layer')
-                            if game.player.layer_switch_cooldown <= 0:
-                                if set_active_layer(game, target_layer):
-                                    game.player.layer_switch_cooldown = 30
+                        #elif tile and tile.get('is_stair'):
+                        #    target_layer = tile.get('target_layer')
+                        #    if game.player.layer_switch_cooldown <= 0:
+                        #        if set_active_layer(game, target_layer):
+                        #            game.player.layer_switch_cooldown = 30
                     
                     elif target['type'] == 'container':
                         found_container = target['entity']

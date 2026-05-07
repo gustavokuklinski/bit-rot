@@ -5,7 +5,6 @@ Welcome to the Survivor Guide! Use the tabs to navigate over this.
 
 **Fast Tips** 
 - Press TAB to toggle game HUD
-- Press SHIFT+TAB to reset game HUD
 - Hover to get item tooltips and info
 - Click-Drag and place on player slots
 - Complete your first quest talking to a NPC
@@ -36,31 +35,6 @@ You have three objectives. Choose wisely, because the island is listening.
 
 ---
 
-### [ Commands ]
-
-**Keyboard**
-
-* **W, A, S, D** : Move your character
-* **E** : Interact: Talk to NPCs, Open/Close Doors/Windows, Enter Vehicles, Use Stairs
-* **1 to 5** : Use or Equip item from your Belt
-* **Space** : Wake up from sleep
-* **F2** : Pause / Save Menu
-* **F3** : Fast Forward Time
-* **I** : Inventory - Player inventory and backpack
-* **H** : Status - Player status
-* **G** : Gear - Player clothes
-* **N** : Nearby - Nearby items from containers
-* **M** : Messages - Events happening in game
-* **C** : Crafting - Craft recipes
-* **? or /** : Open Help menu
-* **TAB** : Show/Hide modals
-* **SHIT+TAB** : Reset to default HUD
-
-**Mouse**
-
-* **LCTRL / RCTRL / RMB** : Aim Weapon
-* **LMB + Click (while aiming)** : Attack / Shoot / Melee
-* **RMB + Click (on items)** : Context Menu
 
 ### [ Inventory ]
 

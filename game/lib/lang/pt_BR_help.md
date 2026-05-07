@@ -30,32 +30,6 @@ Você tem três objetivos. Escolha com sabedoria, pois a ilha está ouvindo.
 ---
 
 
-### [ COMANDOS ]
-
-**Teclado**
-
-* **W, A, S, D** : Mover seu personagem
-* **E** : Interagir: Falar com NPCs, Abrir/Fechar Portas/Janelas, Entrar em Veículos, Usar Escadas
-* **1 a 5** : Usar ou Equipar item do seu Cinto
-* **Espaço** : Acordar do sono
-* **F2** : Pausa / Menu de Salvar
-* **F3** : Avançar o Tempo
-* **I** : Inventário - Inventário do jogador e mochila
-* **H** : Status - Status do jogador
-* **G** : Equipamento - Roupas do jogador
-* **N** : Proximidades - Itens próximos em contêineres
-* **M** : Mensagens - Eventos acontecendo no jogo
-* **C** : Criação - Receitas de criação
-* **? ou /** : Abrir este menu de Ajuda
-
-**Mouse**
-
-* **LCTRL / RCTRL / RMB** : Mirar Arma
-* **LMB + Click (enquanto mira)** : Atacar / Atirar / Corpo a Corpo
-* **RMB + Click (em itens)** : Menu de Contexto (Equipar, Largar, Consumir, Recarregar)
-
-Aqui está a tradução para o português do Brasil:
-
 ### [ INVENTÁRIO ]
 
 * **Gerenciamento de Itens**: Clique com o botão esquerdo e segure um item para arrastá-lo pelos espaços do inventário. Solte os itens fora da interface (no mundo) para descartá-los.

@@ -3,7 +3,7 @@
     type="quest" 
     allow_belt="false"
     tip="This item is used for quest"
-    spawn_amount_global="10"
+    spawn_amount_global="5"
     spawn_maptile="[house_small_library]"
     spawn_layer="[1]">
     <properties>

@@ -143,7 +143,12 @@ def load_config_data(filepath):
                 key = setting.tag
                 val = setting.get('value')
                 display_name = setting.get('name', key)
-                data[block_name][key] = {'value': val, 'name': display_name}
+                default_val = setting.get('default')
+                setting_dict = {'value': val, 'name': display_name}
+                if default_val is not None:
+                    setting_dict['default'] = default_val
+
+                data[block_name][key] = setting_dict
         return data
     except Exception as e:
         print(f"Error loading config {filepath}: {e}")
@@ -157,9 +162,12 @@ def save_config_xml(data, filepath):
             if isinstance(val_data, dict):
                 val = val_data.get('value', '')
                 name = val_data.get('name', '')
+                default_val = val_data.get('default')
                 elem = ET.SubElement(block_node, key, value=str(val))
                 if name:
                     elem.set('name', name)
+                if default_val is not None:
+                    elem.set('default', str(default_val))
             else:
                 ET.SubElement(block_node, key, value=str(val_data))
 

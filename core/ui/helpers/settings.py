@@ -75,16 +75,28 @@ def _draw_settings_screen(game, state, mouse_pos):
     
     game.game_screen.blit(font.render(tr('ui', "Settings Control"), True, WHITE), (control_header.x + S(10), control_header.y + S(7)))
 
-    btn_w = S(120)
+    btn_w = S(130)
     apply_rect = pygame.Rect(0, 0, btn_w, S(35))
     
-    apply_rect.centerx = control_body.centerx
+    # Move Apply to the left
+    apply_rect.centerx = control_body.centerx - S(70)
     apply_rect.centery = control_body.centery - S(8)
     
     pygame.draw.rect(game.game_screen, BTN_BLUE, apply_rect, border_radius=4)
     apply_txt = font.render(tr('ui', "Apply"), True, WHITE)
     game.game_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
     clickable_rects['apply_settings'] = apply_rect
+
+    # Add Reset Default to the right
+    BTN_RED = (200, 50, 50)
+    reset_rect = pygame.Rect(0, 0, btn_w, S(35))
+    reset_rect.centerx = control_body.centerx + S(70)
+    reset_rect.centery = control_body.centery - S(8)
+    
+    pygame.draw.rect(game.game_screen, BTN_RED, reset_rect, border_radius=4)
+    reset_txt = font.render(tr('ui', "Reset Default"), True, WHITE)
+    game.game_screen.blit(reset_txt, (reset_rect.centerx - reset_txt.get_width()//2, reset_rect.centery - reset_txt.get_height()//2))
+    clickable_rects['reset_default'] = reset_rect
 
     warning_text = font_14.render(tr('ui', "Requires a restart to apply."), True, GRAY)
     warning_x = control_body.centerx - (warning_text.get_width() // 2)
@@ -309,6 +321,17 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             state['settings_scroll_drag_last_y'] = mouse_pos[1]
             return
 
+        if clickable_rects.get('reset_default') and clickable_rects['reset_default'].collidepoint(mouse_pos):
+            if 'settings_data' in state:
+                for block, settings in state['settings_data'].items():
+                    for key, setting_obj in settings.items():
+                        # If the setting is a dictionary and has the 'default' attribute from your XML
+                        if isinstance(setting_obj, dict) and 'default' in setting_obj:
+                            setting_obj['value'] = setting_obj['default']
+            return
+        
+        
+
         if clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
             preset_name = state.get('selected_config_preset', 'config')
             
@@ -460,9 +483,13 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                             state['settings_data'][block][key]['value'] = str(new_val)
                         clicked_input = True
                         break
+            if not clicked_input and state.get('settings_content_rect') and state['settings_content_rect'].collidepoint(mouse_pos):
+                state['is_dragging_settings_content'] = True
+                state['settings_content_drag_last_y'] = mouse_pos[1]
 
     elif event.type == pygame.MOUSEBUTTONUP:
         state['is_dragging_settings_scrollbar'] = False
+        state['is_dragging_settings_content'] = False
         
     elif event.type == pygame.MOUSEMOTION:
         if state.get('is_dragging_settings_scrollbar'):
@@ -478,3 +505,13 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
                 if track_height > 0:
                     scroll_amount = mouse_delta_y * (max_scroll / track_height)
                     state['settings_scroll_y'] = max(0, min(state['settings_scroll_y'] + scroll_amount, max_scroll))
+            
+        elif state.get('is_dragging_settings_content'):
+            mouse_delta_y = mouse_pos[1] - state['settings_content_drag_last_y']
+            state['settings_content_drag_last_y'] = mouse_pos[1]
+            max_scroll = state.get('settings_max_scroll', 0)
+            
+            if max_scroll > 0:
+                # Moving the mouse down moves the content down (decreases scroll_y)
+                current_scroll = state.get('settings_scroll_y', 0)
+                state['settings_scroll_y'] = max(0, min(current_scroll - mouse_delta_y, max_scroll))

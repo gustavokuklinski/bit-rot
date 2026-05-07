@@ -3,7 +3,7 @@
     type="quest" 
     allow_belt="false"
     tip="This item is used for quest"
-    spawn_amount_global="10"
+    spawn_amount_global="20"
     spawn_maptile="[military_crate]"
     spawn_layer="[1]">
     <properties>

@@ -303,7 +303,7 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             game.map_states[current_filename] = {}
             
         game.map_states[current_filename]['zombies'] = list(game.zombies)
-        
+        game.map_states[current_filename]['blood_stains'] = list(getattr(game, 'blood_stains', []))
         chasing_animals = []
         if hasattr(game, 'active_animals'):
             chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
@@ -379,6 +379,8 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
         if new_filename in game.map_states:
             game.items_on_ground = game.map_states[new_filename].get('items_on_ground', [])
             game.zombies = game.map_states[new_filename].get('zombies', [])
+            game.blood_stains = game.map_states[new_filename].get('blood_stains', [])
+
             if hasattr(game, 'active_animals'):
                 game.active_animals = game.map_states[new_filename].get('active_animals', [])
                 
@@ -408,7 +410,7 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                         game.obstacles.append(v.rect)
         else:
             game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-            
+            game.blood_stains = []
             if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
                 game.zombies = list(game.layer_zombies[layer_index])
             else:
