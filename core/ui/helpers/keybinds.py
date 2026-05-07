@@ -144,14 +144,14 @@ class KeybindsMenuUI:
         self.is_dragging_scrollbar = False
 
     def _clamp_scroll(self):
-        _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect = self.get_rects()
+        _, _, _, _, _, list_rect, _, _, _ = self.get_rects()
         binds = DEFAULT_KB_MOUSE_BINDS if self.active_tab == 'keyboard_mouse' else DEFAULT_JOYSTICK_BINDS
         total_h = len(binds) * self.item_height
         max_scroll = max(0, total_h - list_rect.height)
         self.scroll_offset_y = max(0, min(self.scroll_offset_y, max_scroll))
 
     def _handle_scroll_drag(self, my):
-        _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect = self.get_rects()
+        _, _, _, _, _, list_rect, bar_rect, _, _ = self.get_rects()
         binds = DEFAULT_KB_MOUSE_BINDS if self.active_tab == 'keyboard_mouse' else DEFAULT_JOYSTICK_BINDS
         total_h = len(binds) * self.item_height
         visible_h = list_rect.height
@@ -225,12 +225,24 @@ class KeybindsMenuUI:
                 continue
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect = self.get_rects()
+                _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect = self.get_rects()
                 mouse_pos = event.pos
 
                 if back_btn_rect.collidepoint(mouse_pos):
                     self.active = False
                     continue
+
+                # ---> ADDED: Handle Reset Default Button Click <---
+                if reset_btn_rect.collidepoint(mouse_pos):
+                    if self.active_tab == 'keyboard_mouse':
+                        for action, data in DEFAULT_KB_MOUSE_BINDS.items():
+                            keybind_manager.kb_binds[action] = data['val']
+                    else:
+                        for action, data in DEFAULT_JOYSTICK_BINDS.items():
+                            keybind_manager.joy_binds[action] = data['val']
+                    keybind_manager.save()
+                    continue
+                # --------------------------------------------------
 
                 if bar_rect.collidepoint(mouse_pos):
                     self.is_dragging_scrollbar = True
@@ -316,16 +328,20 @@ class KeybindsMenuUI:
         list_rect = pygame.Rect(bg_rect.x + padding, list_y, bg_rect.width - (padding * 2) - scrollbar_width - S(10), list_height)
         bar_rect = pygame.Rect(list_rect.right + S(10), list_y, scrollbar_width, list_height)
 
-        btn_width = S(300)
+        # ---> ADDED: Calculate rects for both buttons side-by-side <---
+        btn_width = S(200)
         btn_height = S(45)
-        back_btn_rect = pygame.Rect(center_x - btn_width // 2, bg_rect.bottom + S(20), btn_width, btn_height)
+        spacing = S(20)
+        back_btn_rect = pygame.Rect(center_x - btn_width - spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
+        reset_btn_rect = pygame.Rect(center_x + spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
+        # --------------------------------------------------------------
         
-        return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect
+        return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect
 
     def draw(self, screen, mouse_pos):
         if not self.active: return
 
-        center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect = self.get_rects()
+        center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect = self.get_rects()
 
         # 1. Solid Menu Background
         screen.fill(config.DARK_GRAY)
@@ -427,6 +443,15 @@ class KeybindsMenuUI:
 
         # 6. External Back Button
         draw_btn(screen, back_btn_rect, "Back", mouse_pos, enabled=True)
+
+        # ---> ADDED: Draw Red Reset Default Button <---
+        hovered = reset_btn_rect.collidepoint(mouse_pos)
+        reset_color = (220, 70, 70) if hovered else (200, 50, 50)
+        pygame.draw.rect(screen, reset_color, reset_btn_rect, border_radius=4)
+        pygame.draw.rect(screen, config.WHITE, reset_btn_rect, width=1, border_radius=4)
+        reset_txt = config.font_14.render("Reset Default", True, config.WHITE)
+        screen.blit(reset_txt, (reset_btn_rect.centerx - reset_txt.get_width()//2, reset_btn_rect.centery - reset_txt.get_height()//2))
+        # ----------------------------------------------
 
         # 7. Error Overlay
         if self.error_message:
