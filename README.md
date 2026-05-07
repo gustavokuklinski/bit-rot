@@ -41,6 +41,7 @@ $ pygbag . # Open localhost:8000 (Uses the main.py default file)
 **Linux**
 ```shell
 # Nuitka
+$ nuitka --onefile --include-data-dir=game=game bitrot.py # Make one file packed
 $ nuitka --onefile --output-dir=./build bitrot.py # Compile the game
 $ nuitka --onefile --output-dir=./build editor.py # Compile the editor
 ```

@@ -19,7 +19,9 @@ GAME_OFFSET_X = 0
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
-BASE_DIR = os.path.abspath(".")
+# BASE_DIR = os.path.abspath(".")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
 
 MAP_DIR = os.path.join(BASE_DIR, "game", "lib", "map") + os.sep
 DATA_PATH = os.path.join(BASE_DIR, "game", "lib", "data") + os.sep
@@ -177,9 +179,9 @@ def load_settings(preset="default"):
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
 
-    filepath = f'./game/save/config/{preset}.xml'
-    if not os.path.exists(filepath):
-        filepath = './game/save/config/config.xml'
+    #filepath = f'./game/save/config/{preset}.xml'
+    #if not os.path.exists(filepath):
+    #    filepath = './game/save/config/config.xml'
 
     try:
         tree = ET.parse(filepath)

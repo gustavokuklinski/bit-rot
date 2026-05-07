@@ -71,7 +71,7 @@ class CraftingDismantleTab:
             
             primary_name = valid_names[0]
             img = self.modal.ingredient_images.get(primary_name)
-            name_display = primary_name if len(valid_names) == 1 else f"{primary_name} ({tr('ui', 'Any')})"
+            name_display = primary_name if len(valid_names) == 1 else f"{primary_name}"
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:

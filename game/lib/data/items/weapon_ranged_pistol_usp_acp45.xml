@@ -1,4 +1,4 @@
-<item name="USP45" type="weapon_ranged" allow_belt="true">
+<item name="USP" type="weapon_ranged" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
         <load min="0" max="15" />

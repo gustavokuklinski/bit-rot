@@ -30,7 +30,7 @@ from core.ui.crafting_modal import CraftingModal
 from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.ui.slots_modal import draw_slots_modal
-from core.systems.utils import get_player_facing_tile, get_targeted_interactable
+from core.systems.utils import get_player_facing_tile, get_targeted_interactable, find_nearby_containers
 from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 
@@ -627,7 +627,7 @@ def draw_game(game):
     if target:
         target_color = (0, 255, 100) # Bright Green highlight
         
-        if target['type'] in ['npc', 'vehicle']:
+        if target['type'] in ['npc', 'vehicle', 'container']:
             target_world_rect = target['entity'].rect
             hover_rect = target_world_rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
@@ -832,7 +832,22 @@ def draw_game(game):
                                 interactables.append({'rect': tile_rect, 'tip': tr('tooltip', f'Press {interact_key} or RMB\nto Open/Close')})
                             else:
                                 interactables.append({'rect': tile_rect, 'tip': tr('tooltip', f'Press {interact_key} or RMB\nto Open/Close')})
-                                
+
+        for obj in find_nearby_containers(game):
+            # Exclude vehicles, they are handled separately
+            if getattr(obj, 'item_type', '') == 'vehicle':
+                continue
+            
+            is_valid = False
+            if getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse']:
+                is_valid = True
+            elif type(obj).__name__ == 'Corpse':
+                is_valid = True
+                
+            if is_valid and screen_rect.colliderect(obj.rect):
+                interact_key = get_key_name('interact')
+                interactables.append({'rect': obj.rect, 'tip': tr('tooltip', f'Press {interact_key} to inspect')})
+
         # Draw the '!' marks
         mouse_pos = game._get_scaled_mouse_pos()
         

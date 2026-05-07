@@ -63,7 +63,8 @@ def find_interactable_tile(game):
 def find_nearby_containers(game):
     nearby_objects = []
     seen_ids = set()
-    all_candidates = game.items_on_ground + game.containers + game.corpses
+    # all_candidates = game.items_on_ground + game.containers + game.corpses
+    all_candidates = game.items_on_ground + game.containers + getattr(game, 'corpses', [])
     
     for obj in all_candidates:
         if id(obj) in seen_ids:
@@ -144,7 +145,26 @@ def get_targeted_interactable(game):
                     facing_dist -= 1000 
                     
                 candidates.append({'type': 'vehicle', 'entity': obj, 'dist': facing_dist})
+
+    for obj in find_nearby_containers(game):
+        if getattr(obj, 'item_type', '') == 'vehicle':
+            continue
+        
+        is_valid = False
+        item_type = getattr(obj, 'item_type', '')
+        if item_type in ['container', 'maptile_container', 'corpse']:
+            is_valid = True
+        elif type(obj).__name__ == 'Corpse':
+            is_valid = True
+            
+        if is_valid:
+            facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
+            facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            if obj.rect.colliderect(facing_rect):
+                facing_dist -= 500 # Priority boost if facing directly
                 
+            candidates.append({'type': 'container', 'entity': obj, 'dist': facing_dist})
+
     if not candidates:
         return None
         

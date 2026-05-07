@@ -34,7 +34,13 @@ class CraftingKnowRecipesTab:
             if not is_unlocked:
                 continue
         
-            if search_text and search_text.lower() not in r.output_name.lower(): continue
+            if search_text:
+                st = search_text.lower()
+                matches_output = st in r.output_name.lower()
+                matches_ing = any(any(st in n.lower() for n in ing['names']) for ing in r.ingredients)
+                if not (matches_output or matches_ing):
+                    continue
+                    
             filtered.append(r)
 
         return filtered

@@ -3,6 +3,7 @@ import uuid
 import math
 import random
 from core.data.config import *
+from core.data.recipe_manager import RecipeManager
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.ui.inventory_modal import get_belt_hud_slot_rect, get_inventory_slot_rect, get_belt_slot_rect_in_modal
@@ -938,6 +939,31 @@ def handle_context_menu_click(game, mouse_pos):
                 else:
                     game.player.read_recipe_book(item)
                 clicked_on_menu = True
+            
+            elif option == 'Crafts':
+                crafting_modal = next((m for m in game.modals if m['type'] == 'crafting'), None)
+                tab_name = tr('tab', "Known Recipes")
+                
+                if not crafting_modal:
+                    default_pos = game.last_modal_positions.get('crafting', (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2))
+                    new_modal = {
+                        'id': uuid.uuid4(),
+                        'type': 'crafting',
+                        'position': default_pos,
+                        'rect': pygame.Rect(default_pos[0], default_pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
+                        'is_dragging': False,
+                        'drag_offset': (0, 0),
+                        'active_tab': tab_name,
+                        'search_text': item.name,
+                        'search_active': False
+                    }
+                    game.modals.append(new_modal)
+                else:
+                    crafting_modal['active_tab'] = tab_name
+                    crafting_modal['search_text'] = item.name
+                    crafting_modal['search_active'] = False
+                
+                clicked_on_menu = True
 
             elif option == 'Open' or option == 'Inspect':
                 if getattr(item, 'item_type', None) == 'map':
@@ -1525,6 +1551,24 @@ def handle_right_click(game, mouse_pos):
                 if 'Add battery' not in options: options.append('Add battery')
             if veh.can_equip(clicked_item, 'tire_fl'):
                 if 'Add tire to' not in options: options.append('Add tire to')
+
+        if item_type not in ['map_tile', 'maptile', 'maptile_container', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
+            item_name_to_check = getattr(clicked_item, 'name', '')
+            if item_name_to_check:
+                has_crafts = False
+                for r in RecipeManager.RECIPES:
+                    if item_name_to_check.lower() in r.output_name.lower():
+                        has_crafts = True
+                        break
+                    for ing in r.ingredients:
+                        if any(item_name_to_check.lower() in n.lower() for n in ing['names']):
+                            has_crafts = True
+                            break
+                    if has_crafts:
+                        break
+                
+                if has_crafts and 'Crafts' not in options:
+                    options.append('Crafts')
 
         # --- SUBMENU GENERATION LOGIC ---
         new_options = []

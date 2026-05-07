@@ -311,7 +311,18 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
 
         if clickable_rects.get('apply_settings') and clickable_rects['apply_settings'].collidepoint(mouse_pos):
             preset_name = state.get('selected_config_preset', 'config')
-            save_config_xml(state['settings_data'], f"./game/save/config/{preset_name}.xml")
+            
+            # 1. Get the safe, persistent directory (where the .exe is)
+            writable_root = core.data.config.get_writable_dir()
+            save_dir = os.path.join(writable_root, "game", "save", "config")
+            
+            # 2. Safely create the nested folders if they don't exist yet
+            os.makedirs(save_dir, exist_ok=True)
+            
+            # 3. Save the XML
+            save_path = os.path.join(save_dir, f"{preset_name}.xml")
+            save_config_xml(state['settings_data'], save_path)
+            
             core.data.config.load_settings(preset_name)
             pygame.quit()
         

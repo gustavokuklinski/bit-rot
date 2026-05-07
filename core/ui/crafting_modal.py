@@ -58,8 +58,14 @@ class CraftingModal(BaseModal):
             self.modal['active_tab'] = tr('tab', "Known Recipes")
 
         # Search State
-        self.search_text = ""
-        self.search_active = False
+        if 'search_text' not in self.modal:
+            self.modal['search_text'] = ""
+        if 'search_active' not in self.modal:
+            self.modal['search_active'] = False
+            
+        self.search_text = self.modal['search_text']
+        self.search_active = self.modal['search_active']
+
         self.search_rect = None
 
         # Dropdown selection state
@@ -107,10 +113,12 @@ class CraftingModal(BaseModal):
             if is_left_click and self.search_rect:
                 if self.search_rect.collidepoint(mouse_pos):
                     self.search_active = True
+                    self.modal['search_active'] = True
                     pygame.key.set_repeat(500, 50) 
                     return True
                 else:
                     self.search_active = False
+                    self.modal['search_active'] = False
                     pygame.key.set_repeat() 
                     
             # ---> FIX: If the click wasn't consumed by UI elements above, flag it for the drawing loop <---
@@ -120,16 +128,20 @@ class CraftingModal(BaseModal):
         elif event.type == pygame.KEYDOWN and self.search_active:
             if event.key == pygame.K_BACKSPACE:
                 self.search_text = self.search_text[:-1]
+                self.modal['search_text'] = self.search_text  # <--- UPDATE
             elif event.key == pygame.K_RETURN:
                 self.search_active = False
+                self.modal['search_active'] = False           # <--- UPDATE
                 pygame.key.set_repeat()
             elif event.key == pygame.K_ESCAPE:
                 self.search_active = False
+                self.modal['search_active'] = False           # <--- UPDATE
                 pygame.key.set_repeat()
                 return True 
             else:
                 if len(self.search_text) < 20 and len(event.unicode) > 0 and event.unicode.isprintable():
                     self.search_text += event.unicode
+                    self.modal['search_text'] = self.search_text  # <--- UPDATE
             
             self.modal['crafting_scroll_offset'] = 0 
             return True

@@ -4,6 +4,9 @@ __pycache__
 .buildozer
 bin
 build
+bitrot.build
+bitrot.dist
+bitrot.onefile-build
 game/save/player
 game/save/game
 game/save/server

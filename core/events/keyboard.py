@@ -622,3 +622,27 @@ def handle_keyboard_events(game, event, action_triggered=None):
                             if game.player.layer_switch_cooldown <= 0:
                                 if set_active_layer(game, target_layer):
                                     game.player.layer_switch_cooldown = 30
+                    
+                    elif target['type'] == 'container':
+                        found_container = target['entity']
+                        
+                        # Only open the modal if it isn't already active for this specific container
+                        modal_exists = False
+                        for modal in game.modals:
+                            if modal['type'] == 'container' and modal.get('item') == found_container:
+                                modal_exists = True
+                                break
+                                
+                        if not modal_exists:
+                            default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
+                            
+                            new_modal = {
+                                'id': uuid.uuid4(),
+                                'type': 'container',
+                                'item': found_container,
+                                'position': default_pos,
+                                'rect': pygame.Rect(default_pos[0], default_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
+                                'is_dragging': False,
+                                'drag_offset': (0, 0)
+                            }
+                            game.modals.append(new_modal)
