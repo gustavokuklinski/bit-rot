@@ -462,9 +462,18 @@ def draw_game(game):
 
         draw_pos = item.rect.move(offset_x, offset_y)
         if getattr(item, 'image', None):
-            world_view_surface.blit(item.image, draw_pos)
+            # Cache the 8x8 scaled image directly on the item so we aren't transforming every frame
+            if not hasattr(item, 'ground_image_8x8'):
+                item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
+            
+            # Center the 8x8 image within its standard TILE_SIZE footprint
+            cx = draw_pos.x + (draw_pos.width // 2) - 4
+            cy = draw_pos.y + (draw_pos.height // 2) - 4
+            world_view_surface.blit(item.ground_image_8x8, (cx, cy))
         else:
-            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+            cx = draw_pos.x + (draw_pos.width // 2) - 4
+            cy = draw_pos.y + (draw_pos.height // 2) - 4
+            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), (cx, cy, 8, 8))
 
     # Draw Projectiles
     for p in game.projectiles:
@@ -1530,12 +1539,43 @@ def draw_game(game):
                 game.game_screen.blit(pill_surface, bg_pad.topleft)
                 game.game_screen.blit(text_surf, bg_rect)
     else:
-        pygame.mouse.set_visible(True)
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
-             pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
+        # --- UPDATED: Custom Cursor or Placement Preview ---
+        item_to_place_data = getattr(game, 'item_to_place', None)
+        
+        if item_to_place_data:
+            # Hide default cursor and draw the item being placed
+            pygame.mouse.set_visible(False)
+            item = item_to_place_data['item']
+            m_pos = game._get_scaled_mouse_pos()
+            
+            # Calculate distance to see if it's a valid placement (green = good, red = too far)
+            world_mouse_pos = game.screen_to_world(m_pos)
+            dx = world_mouse_pos[0] - game.player.rect.centerx
+            dy = world_mouse_pos[1] - game.player.rect.centery
+            dist_sq = dx*dx + dy*dy
+            in_range = dist_sq <= (TILE_SIZE * 1.5) ** 2
+            
+            if getattr(item, 'image', None):
+                img_rect = item.image.get_rect(center=m_pos)
+                game.game_screen.blit(item.image, img_rect)
+                
+                # Draw a helpful tint over the item
+                tint = pygame.Surface(img_rect.size, pygame.SRCALPHA)
+                tint.fill((0, 255, 0, 80) if in_range else (255, 0, 0, 80))
+                game.game_screen.blit(tint, img_rect.topleft)
+            else:
+                rect = pygame.Rect(0, 0, 16, 16)
+                rect.center = m_pos
+                pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), rect)
+                pygame.draw.rect(game.game_screen, (0, 255, 0) if in_range else (255, 0, 0), rect, 2)
         else:
-             pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
+            # Standard custom cursor logic
+            pygame.mouse.set_visible(True)
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                 pygame.mouse.set_cursor(game.assets.get('aim_cursor') or pygame.cursors.arrow)
+            else:
+                 pygame.mouse.set_cursor(game.assets.get('custom_cursor') or pygame.cursors.arrow)
 
     if hasattr(game, 'clock'):
         fps = int(game.clock.get_fps())

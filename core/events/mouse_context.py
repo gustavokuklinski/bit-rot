@@ -901,6 +901,16 @@ def handle_context_menu_click(game, mouse_pos):
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
             
+            elif option == 'Place':
+                game.item_to_place = {
+                    'item': item,
+                    'source': source,
+                    'index': index,
+                    'container': container_item
+                }
+                display_message(tr('msg', "Select a location to place the item."))
+                clicked_on_menu = True
+
             elif option == 'Drop':
                 if getattr(item, 'liquid', False):
                     print(f"The {tr('item', item.name)} spills.")
@@ -1458,7 +1468,8 @@ def handle_right_click(game, mouse_pos):
             if 'Unequip' not in options: options.append('Unequip')
             if 'Drop' not in options: options.append('Drop')
             options = [o for o in options if o != 'Equip']
-
+        if click_source in ['inventory', 'belt', 'gear']:
+            if 'Place' not in options: options.append('Place')
         elif click_source == 'ground':
             if 'Drop' in options: options.remove('Drop')
 

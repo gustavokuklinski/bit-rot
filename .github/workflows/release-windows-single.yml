@@ -38,12 +38,11 @@ jobs:
           # Only moving the standalone executable
           mv build/bitrot.exe release/bitrot.exe
 
+      # CHANGED: Use PowerShell's native zip command
       - name: Zip Artifacts for Release
-        shell: bash
+        shell: pwsh
         run: |
-          cd release
-          zip -r ../bitrot_windows.zip .
-          cd ..
+          Compress-Archive -Path "release\*" -DestinationPath "bitrot_windows.zip"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

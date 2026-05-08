@@ -19,6 +19,46 @@ from core.data.localization import tr
 def handle_mouse_down(game, event, mouse_pos):
 
     if event.button == 1:
+        if getattr(game, 'item_to_place', None):
+            world_pos = game.screen_to_world(mouse_pos)
+            dx = world_pos[0] - game.player.rect.centerx
+            dy = world_pos[1] - game.player.rect.centery
+            dist_sq = dx*dx + dy*dy
+            
+            # Allow placement up to ~1 tile away (including diagonals)
+            if dist_sq <= (TILE_SIZE * 1.5) ** 2:
+                item_data = game.item_to_place
+                item = item_data['item']
+                source = item_data['source']
+                index = item_data['index']
+                container_item = item_data['container']
+                
+                if getattr(item, 'liquid', False):
+                    display_message(tr('msg', "Cannot place liquid directly."))
+                else:
+                    dropped_item = None
+                    if source == 'gear':
+                        item_to_drop = game.player.clothes.get(index)
+                        if item_to_drop and item_to_drop == item:
+                            dropped_item = game.player.drop_item(game, source, index, container_item)
+                    else:
+                        dropped_item = game.player.drop_item(game, source, index, container_item)
+                        
+                    # Catch the dropped item if `drop_item` didn't explicitly return it
+                    if not dropped_item and game.items_on_ground:
+                        if game.items_on_ground[-1].name == item.name:
+                            dropped_item = game.items_on_ground[-1]
+                            
+                    # Update its position to the exact clicked world coordinate
+                    if dropped_item:
+                        dropped_item.rect.center = world_pos
+                        dropped_item.x, dropped_item.y = world_pos
+            else:
+                display_message(tr('msg', "Too far to place item!"))
+                
+            game.item_to_place = None
+            return
+
         if game.context_menu['active']:
             menu_clicked = False
             for rect in game.context_menu.get('rects', []):
@@ -397,6 +437,10 @@ def handle_mouse_down(game, event, mouse_pos):
             return
 
     elif event.button == 3:
+        if getattr(game, 'item_to_place', None):
+            game.item_to_place = None
+            return
+            
         if game.context_menu['active']:
             game.context_menu['active'] = False
             return
