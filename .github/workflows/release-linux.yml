@@ -49,7 +49,7 @@ jobs:
           cd release
           zip -r ../bitrot_linux.zip .
           cd ..
-
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

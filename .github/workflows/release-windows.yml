@@ -44,6 +44,13 @@ jobs:
           cd release
           zip -r ../bitrot_windows.zip .
           cd ..
+      
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitrot-windows-build
+          path: bitrot_windows.zip
+          retention-days: 5
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
