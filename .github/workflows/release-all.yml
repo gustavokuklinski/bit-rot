@@ -1,4 +1,4 @@
-name: Bit Rot Release
+name: Bit Rot Release - All
 
 on:
   push:
