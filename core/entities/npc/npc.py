@@ -612,9 +612,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         tile_def = game.map_manager.get_tile_at(gx, gy)
                         
                         if tile_def and tile_def.get('destructible'):
+                            char = game.map_data[gy][gx]
                             name = str(tile_def.get('name', '')).lower()
                             is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                           'door' in name or 'window' in name or 'barricate' in name)
+                                           'door' in name or 'window' in name or 'barricate' in name or 'barricate' in char)
                             
                             if is_structural:
                                 # [ELEGANT FIX] Desynchronize the attack cooldown
@@ -661,9 +662,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         tile_def = game.map_manager.get_tile_at(gx, gy)
                         
                         if tile_def and tile_def.get('destructible'):
+                            char = game.map_data[gy][gx]
                             name = str(tile_def.get('name', '')).lower()
                             is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                           'door' in name or 'window' in name or 'barricate' in name)
+                                           'door' in name or 'window' in name or 'barricate' in name or 'barricate' in char)
                             
                             if is_structural:
                                 # [ELEGANT FIX] Desynchronize the attack cooldown
@@ -738,10 +740,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if tile_def and tile_def.get('is_statable'):
 
             name = str(tile_def.get('name', '')).lower()
-            if 'barricate' in name or 'barricad' in name:
+            char = game.map_data[obs_grid_y][obs_grid_x]
+            if 'barricate' in name or 'barricad' in name or 'barricate' in char or 'barricad' in char:
                 return
 
-            char = game.map_data[obs_grid_y][obs_grid_x]
             if 'close' in char or tile_def.get('state') == 'close':
                 game.map_manager.toggle_door_state(obs_grid_x, obs_grid_y)
 

@@ -341,6 +341,17 @@ class JoystickHandler:
             if event.button == BTN_X:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
             
+            # ---> System State Hotkeys (6, 7, 8) <---
+            elif event.button == BTN_L3: 
+                # Button 8 -> Pause Game (F2)
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_F2, 'unicode': ''}))
+            elif event.button == BTN_START: 
+                # Button 7 -> Toggle Modals (TAB)
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_TAB, 'unicode': '\t'}))
+            elif event.button == BTN_SELECT: 
+                # Button 6 -> Fast Forward (F)
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_f, 'unicode': 'f'}))
+            
             # ---> Navigation triggers not natively covered by Keybinds.xml <---
             elif event.button in (BTN_LB, BTN_RB):
                 handled_tab = False

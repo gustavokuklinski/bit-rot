@@ -1,0 +1,58 @@
+name: Bit Rot Release - Linux
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release on Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf ccache
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with Nuitka
+        run: |
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build bitrot.py
+
+      - name: Prepare Staging Directory
+        shell: bash
+        run: |
+          mkdir release
+          cp -r game release/game
+          mv build/bitrot.bin release/bitrot.bin
+
+      - name: Zip Artifacts for Release
+        shell: bash
+        run: |
+          cd release
+          zip -r ../bitrot_linux.zip .
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: bitrot_linux.zip
+          generate_release_notes: true

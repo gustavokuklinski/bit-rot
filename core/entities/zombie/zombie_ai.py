@@ -126,10 +126,12 @@ class ZombieAI:
                         name = str(tile_def.get('name', '')).lower()
                         
                         # [ELEGANT FIX] Filter to only allow pathing through structural barriers
+                        char = game.map_data[next_node[1]][next_node[0]]
+                        is_barricaded = 'barricate' in char or 'barricad' in char or 'barricate' in name or 'barricad' in name
                         is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                       'door' in name or 'window' in name or 'barricate' in name)
+                                       'door' in name or 'window' in name or is_barricaded)
 
-                        if is_npc and tile_def.get('is_statable'):
+                        if is_npc and tile_def.get('is_statable') and not is_barricaded:
                             move_cost = 2.0  # Slight delay cost for opening
                         elif tile_def.get('destructible') and is_structural:
                             move_cost = 15.0 # Cost of breaking barricades/doors

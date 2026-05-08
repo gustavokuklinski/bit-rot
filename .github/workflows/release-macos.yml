@@ -1,0 +1,53 @@
+name: Bit Rot Release - macOS
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release on macOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with Nuitka
+        run: |
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns bitrot.py
+
+      - name: Prepare Staging Directory
+        shell: bash
+        run: |
+          mkdir release
+          cp -r game release/game
+          mv build/bitrot.app release/bitrot.app
+
+      - name: Zip Artifacts for Release
+        shell: bash
+        run: |
+          cd release
+          zip -r ../bitrot_macos.zip .
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: bitrot_macos.zip
+          generate_release_notes: true

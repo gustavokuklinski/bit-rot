@@ -1,0 +1,53 @@
+name: Bit Rot Single Release - Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Standalone on Windows
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with Nuitka
+        run: |
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico --include-data-dir=game=game bitrot.py
+
+      - name: Prepare Staging Directory
+        shell: bash
+        run: |
+          mkdir release
+          # Only moving the standalone executable
+          mv build/bitrot.exe release/bitrot.exe
+
+      - name: Zip Artifacts for Release
+        shell: bash
+        run: |
+          cd release
+          zip -r ../bitrot_windows.zip .
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: bitrot_windows.zip
+          generate_release_notes: true

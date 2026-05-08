@@ -26,22 +26,38 @@ DEFAULT_KB_MOUSE_BINDS = {
     'reload': {'val': pygame.K_r, 'name': 'Reload Weapon'},
     'vehicle_engine': {'val': pygame.K_q, 'name': 'Toggle Engine'},
     'action_shove': {'val': pygame.K_SPACE, 'name': 'Shove / Brake'},
+    
+    # ---> ADDED: System Controls for Keyboard <---
+    'fast_forward': {'val': pygame.K_f, 'name': 'Fast Forward'},
+    'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals'},
+    'pause': {'val': pygame.K_F2, 'name': 'Pause Game'},
+    
+    # Fake Keyboard keys just so the UI has something to show for triggers
+    'shoot': {'val': -1, 'name': 'Shoot / Attack'}, # -1 is Left Click
+    'aim_trigger': {'val': -3, 'name': 'Aim Weapon'} # -3 is Right Click
 }
 
 # Joystick uses button integers directly (0, 1, 2, 3...)
 # Note: LT (Shoot), RT (Aim), and X (Context Menu) are handled natively via hardware axes/overrides
 DEFAULT_JOYSTICK_BINDS = {
-    'move_up': {'val': 11, 'name': 'Move Up (Scroll)'},
-    'move_down': {'val': 12, 'name': 'Move Down (Scroll)'},
-    'move_left': {'val': 13, 'name': 'Move Left (Belt/Context Menu)'},
-    'move_right': {'val': 14, 'name': 'Move Right (Belt/Context Menu)'},
-    'interact': {'val': 0, 'name': 'Interact'},
-    'run': {'val': 1, 'name': 'Run'},
-    'reload': {'val': 3, 'name': 'Reload Weapon'},
-    'vehicle_engine': {'val': 4, 'name': 'Toggle Engine'},
-    'action_shove': {'val': 5, 'name': 'Shove / Brake'},
+    'move_up': {'val': 11, 'name': 'Move Up (D-Pad)'},
+    'move_down': {'val': 12, 'name': 'Move Down (D-Pad)'},
+    'move_left': {'val': 13, 'name': 'Move Left (D-Pad)'},
+    'move_right': {'val': 14, 'name': 'Move Right (D-Pad)'},
+    'interact': {'val': 0, 'name': 'Interact (A)'},
+    'run': {'val': 1, 'name': 'Run (B)'},
+    'reload': {'val': 3, 'name': 'Reload Weapon (Y)'},
+    'vehicle_engine': {'val': 4, 'name': 'Toggle Engine (LB)'},
+    'action_shove': {'val': 5, 'name': 'Shove / Brake (RB)'},
+    
+    # ---> ADDED: System Controls for Joystick <---
+    'fast_forward': {'val': 6, 'name': 'Fast Forward'},
+    'toggle_modals': {'val': 7, 'name': 'Toggle Modals'},
+    'pause': {'val': 8, 'name': 'Pause Game'},
+    
+    # Fake IDs for Triggers so they display in UI
     'shoot': {'val': 15, 'name': 'Shoot / Attack'},
-    'aim': {'val': 16, 'name': 'Aim Weapon'}
+    'aim_trigger': {'val': 16, 'name': 'Aim Weapon'}
 }
 
 JOYSTICK_BTN_NAMES = {

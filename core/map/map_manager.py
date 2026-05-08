@@ -403,6 +403,9 @@ class MapManager:
         if not current_def or not current_def.get('is_statable'):
             return
 
+        if 'barricate' in current_char or 'barricad' in current_char:
+            return
+
         current_state = current_def.get('state')
         new_state = "open" if current_state == "close" else "close"
 
