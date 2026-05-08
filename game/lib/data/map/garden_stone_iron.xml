@@ -1,0 +1,11 @@
+<map name="garden_stone_iron" type="maptile" char="garden_stone_iron" is_obstacle="true" destructible="true" is_visible="true">
+    <visuals>
+        <sprite file="garden_stone_iron.png" />
+    </visuals>
+    <properties>
+        <health min="200" max="400" />
+    </properties>
+    <drop>
+        <item item="Iron" chance="1" />
+    </drop>
+</map>

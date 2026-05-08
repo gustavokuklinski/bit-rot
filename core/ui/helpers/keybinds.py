@@ -29,25 +29,38 @@ DEFAULT_KB_MOUSE_BINDS = {
 }
 
 # Joystick uses button integers directly (0, 1, 2, 3...)
+# Note: LT (Shoot), RT (Aim), and X (Context Menu) are handled natively via hardware axes/overrides
 DEFAULT_JOYSTICK_BINDS = {
-    'move_up': {'val': 11, 'name': 'Move Up (D-Pad)'},
-    'move_down': {'val': 12, 'name': 'Move Down (D-Pad)'},
-    'move_left': {'val': 13, 'name': 'Move Left (D-Pad)'},
-    'move_right': {'val': 14, 'name': 'Move Right (D-Pad)'},
-    'run': {'val': 8, 'name': 'Run (L3)'},
-    'aim': {'val': 6, 'name': 'Aim (L2)'},
-    'interact': {'val': 0, 'name': 'Interact (A/Cross)'},
-    'chat': {'val': 4, 'name': 'Chat (Select)'},
-    'toggle_inventory': {'val': 3, 'name': 'Toggle Inventory (Y)'},
-    'toggle_crafting': {'val': 1, 'name': 'Toggle Crafting (B)'},
-    'toggle_status': {'val': 10, 'name': 'Toggle Status'},
-    'toggle_gear': {'val': 9, 'name': 'Toggle Gear'},
-    'toggle_nearby': {'val': 2, 'name': 'Toggle Nearby (X)'},
-    'toggle_messages': {'val': 5, 'name': 'Toggle Messages'},
-    'toggle_slots': {'val': 7, 'name': 'Toggle Slots'},
-    'reload': {'val': 2, 'name': 'Reload Weapon (X)'},
+    'move_up': {'val': 11, 'name': 'Move Up (Scroll)'},
+    'move_down': {'val': 12, 'name': 'Move Down (Scroll)'},
+    'move_left': {'val': 13, 'name': 'Move Left (Belt/Context Menu)'},
+    'move_right': {'val': 14, 'name': 'Move Right (Belt/Context Menu)'},
+    'interact': {'val': 0, 'name': 'Interact'},
+    'run': {'val': 1, 'name': 'Run'},
+    'reload': {'val': 3, 'name': 'Reload Weapon'},
     'vehicle_engine': {'val': 4, 'name': 'Toggle Engine'},
-    'action_shove': {'val': 5, 'name': 'Shove / Brake (R1)'},
+    'action_shove': {'val': 5, 'name': 'Shove / Brake'},
+    'shoot': {'val': 15, 'name': 'Shoot / Attack'},
+    'aim': {'val': 16, 'name': 'Aim Weapon'}
+}
+
+JOYSTICK_BTN_NAMES = {
+    0: 'A',
+    1: 'B',
+    2: 'X',
+    3: 'Y',
+    4: 'LB',
+    5: 'RB',
+    6: 'SELECT',
+    7: 'START',
+    8: 'L3',
+    9: 'R3',
+    11: 'D-PAD UP',
+    12: 'D-PAD DOWN',
+    13: 'D-PAD LEFT',
+    14: 'D-PAD RIGHT',
+    15: 'LT',
+    16: 'RT'
 }
 
 class KeybindManager:
@@ -93,12 +106,18 @@ class KeybindManager:
                 node = ET.SubElement(kb_node, 'bind')
                 node.set('action', action)
                 node.set('key', str(key))
+                # Add default attribute when rewriting
+                if action in DEFAULT_KB_MOUSE_BINDS:
+                    node.set('default', str(DEFAULT_KB_MOUSE_BINDS[action]['val']))
 
             joy_node = ET.SubElement(root, 'joystick')
             for action, key in self.joy_binds.items():
                 node = ET.SubElement(joy_node, 'bind')
                 node.set('action', action)
                 node.set('key', str(key))
+                # Add default attribute when rewriting
+                if action in DEFAULT_JOYSTICK_BINDS:
+                    node.set('default', str(DEFAULT_JOYSTICK_BINDS[action]['val']))
 
             raw_xml = ET.tostring(root, 'utf-8')
             pretty_xml = xml.dom.minidom.parseString(raw_xml).toprettyxml(indent="    ")
@@ -134,7 +153,7 @@ class KeybindsMenuUI:
         self.content_drag_last_y = 0
 
         self.item_height = int(45 * config.UI_SCALE)
-        self.modal_state = {}  # Dictionary to interface with draw_scrollbar
+        self.modal_state = {}
 
     def toggle(self):
         self.active = not self.active
@@ -160,7 +179,6 @@ class KeybindsMenuUI:
             self.scroll_offset_y = 0
             return
             
-        # Updated to match the max(20, ...) logic used in modals.py draw_scrollbar
         thumb_h = max(20, (visible_h / total_h) * bar_rect.height)
         track_h = bar_rect.height - thumb_h
         
@@ -210,14 +228,14 @@ class KeybindsMenuUI:
             if event.type == pygame.MOUSEMOTION:
                 if self.is_dragging_scrollbar:
                     self._handle_scroll_drag(event.pos[1])
-                    continue # Swapped 'return True' for 'continue'
+                    continue 
 
                 elif self.is_scrolling_content:
                     delta_y = event.pos[1] - self.content_drag_last_y
                     self.content_drag_last_y = event.pos[1]
                     self.scroll_offset_y -= delta_y 
                     self._clamp_scroll()
-                    continue # Swapped 'return True' for 'continue'
+                    continue 
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.is_dragging_scrollbar = False
@@ -232,7 +250,6 @@ class KeybindsMenuUI:
                     self.active = False
                     continue
 
-                # ---> ADDED: Handle Reset Default Button Click <---
                 if reset_btn_rect.collidepoint(mouse_pos):
                     if self.active_tab == 'keyboard_mouse':
                         for action, data in DEFAULT_KB_MOUSE_BINDS.items():
@@ -242,7 +259,6 @@ class KeybindsMenuUI:
                             keybind_manager.joy_binds[action] = data['val']
                     keybind_manager.save()
                     continue
-                # --------------------------------------------------
 
                 if bar_rect.collidepoint(mouse_pos):
                     self.is_dragging_scrollbar = True
@@ -259,7 +275,6 @@ class KeybindsMenuUI:
                     self.scroll_offset_y = 0
                     continue
 
-                # --- Verify if a button was clicked so we don't accidentally scroll ---
                 clicked_button = False
                 if list_rect.collidepoint(mouse_pos):
                     y_offset = list_rect.y - self.scroll_offset_y
@@ -278,12 +293,10 @@ class KeybindsMenuUI:
                                 break
                         y_offset += self.item_height
 
-                # Only start scrolling if we are in the list AND we didn't just press an assign button
                 if list_rect.collidepoint(mouse_pos) and not clicked_button:
                     self.is_scrolling_content = True
                     self.content_drag_last_y = mouse_pos[1]
 
-        # Return True at the very end to signal the UI is active and consumed events
         return True
 
     def _attempt_bind(self, new_val, conflict_action):
@@ -328,13 +341,11 @@ class KeybindsMenuUI:
         list_rect = pygame.Rect(bg_rect.x + padding, list_y, bg_rect.width - (padding * 2) - scrollbar_width - S(10), list_height)
         bar_rect = pygame.Rect(list_rect.right + S(10), list_y, scrollbar_width, list_height)
 
-        # ---> ADDED: Calculate rects for both buttons side-by-side <---
         btn_width = S(200)
         btn_height = S(45)
         spacing = S(20)
         back_btn_rect = pygame.Rect(center_x - btn_width - spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
         reset_btn_rect = pygame.Rect(center_x + spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
-        # --------------------------------------------------------------
         
         return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect
 
@@ -343,14 +354,11 @@ class KeybindsMenuUI:
 
         center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect = self.get_rects()
 
-        # 1. Solid Menu Background
         screen.fill(config.DARK_GRAY)
 
-        # 2. Main Rounded Modal Framework (WITH BORDERS)
         pygame.draw.rect(screen, (35, 35, 35), bg_rect, border_radius=10)
         pygame.draw.rect(screen, config.GRAY_80, bg_rect, width=2, border_radius=10)
 
-        # Draw Header
         header_rect = pygame.Rect(bg_rect.x, bg_rect.y, bg_rect.width, int(50 * config.UI_SCALE))
         pygame.draw.rect(screen, (45, 45, 45), header_rect, border_top_left_radius=10, border_top_right_radius=10)
         pygame.draw.line(screen, config.GRAY_80, header_rect.bottomleft, header_rect.bottomright, 2)
@@ -358,7 +366,6 @@ class KeybindsMenuUI:
         title_surf = config.font_14.render("Controls Configuration", True, config.WHITE)
         screen.blit(title_surf, (header_rect.x + 20, header_rect.centery - title_surf.get_height() // 2))
 
-        # 3. Classic Tabs with Complete Borders
         kb_is_active = self.active_tab == 'keyboard_mouse'
         joy_is_active = self.active_tab == 'joystick'
 
@@ -371,7 +378,6 @@ class KeybindsMenuUI:
         pygame.draw.rect(screen, kb_color, tab_kb_rect)
         pygame.draw.rect(screen, joy_color, tab_joy_rect)
 
-        # Draw Tab Borders around the tabs. Removed bottom-line erasure logic to ensure borders display on all sides.
         pygame.draw.rect(screen, config.WHITE, tab_kb_rect, width=1)
         pygame.draw.rect(screen, config.WHITE, tab_joy_rect, width=1)
 
@@ -380,7 +386,6 @@ class KeybindsMenuUI:
         screen.blit(kb_surf, kb_surf.get_rect(center=tab_kb_rect.center))
         screen.blit(joy_surf, joy_surf.get_rect(center=tab_joy_rect.center))
 
-        # 4. Content List
         old_clip = screen.get_clip()
         screen.set_clip(list_rect)
 
@@ -404,20 +409,18 @@ class KeybindsMenuUI:
                 else:
                     key_name = pygame.key.name(current_key).upper()
             else:
-                key_name = f"JOY BUTTON {current_key}"
+                # Use the lookup dictionary, or fallback to the raw number if it's an unknown button
+                key_name = JOYSTICK_BTN_NAMES.get(current_key, f"JOY BUTTON {current_key}")
 
             row_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, self.item_height)
             
             if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
                 
-                # Draw subtle row separator lines matching the UI aesthetic
                 pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
 
-                # Text Render
                 name_surf = config.font_14.render(name, True, config.WHITE)
                 screen.blit(name_surf, (row_rect.x + int(10 * config.UI_SCALE), row_rect.centery - name_surf.get_height() // 2))
                 
-                # Interactive Assign Button
                 btn_w = int(250 * config.UI_SCALE)
                 btn_h = int(35 * config.UI_SCALE)
                 key_btn_rect = pygame.Rect(row_rect.right - btn_w, row_rect.centery - btn_h//2, btn_w, btn_h)
@@ -426,7 +429,6 @@ class KeybindsMenuUI:
                 
                 draw_btn(screen, key_btn_rect, display_text, mouse_pos, enabled=True)
                 
-                # Apply visual focus state (Blue selection with border) if waiting for input
                 if self.waiting_for_key == action:
                     pygame.draw.rect(screen, config.BLUE, key_btn_rect, border_radius=6)
                     pygame.draw.rect(screen, config.WHITE, key_btn_rect, width=2, border_radius=6)
@@ -437,23 +439,18 @@ class KeybindsMenuUI:
 
         screen.set_clip(old_clip)
 
-        # 5. Clean Modern Scrollbar using the imported function
         total_h = len(binds_ref) * self.item_height
         draw_scrollbar(screen, self.modal_state, bar_rect, list_rect.height, total_h, self.scroll_offset_y)
 
-        # 6. External Back Button
         draw_btn(screen, back_btn_rect, "Back", mouse_pos, enabled=True)
 
-        # ---> ADDED: Draw Red Reset Default Button <---
         hovered = reset_btn_rect.collidepoint(mouse_pos)
         reset_color = (220, 70, 70) if hovered else (200, 50, 50)
         pygame.draw.rect(screen, reset_color, reset_btn_rect, border_radius=4)
         pygame.draw.rect(screen, config.WHITE, reset_btn_rect, width=1, border_radius=4)
         reset_txt = config.font_14.render("Reset Default", True, config.WHITE)
         screen.blit(reset_txt, (reset_btn_rect.centerx - reset_txt.get_width()//2, reset_btn_rect.centery - reset_txt.get_height()//2))
-        # ----------------------------------------------
 
-        # 7. Error Overlay
         if self.error_message:
             if pygame.time.get_ticks() - self.error_timer < 3000:
                 err_surf = config.font_14.render(self.error_message, True, config.RED)

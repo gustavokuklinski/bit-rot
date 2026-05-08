@@ -122,7 +122,19 @@ def draw_game(game):
     joy_run, joy_aim = False, False
     if getattr(game, 'joystick_handler', None):
         joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
-        joy_run, joy_aim = game.joystick_handler.get_action_states()
+        
+        # 1. Check RT for Aiming
+        if hasattr(game.joystick_handler, 'is_rt_pressed'):
+            joy_aim = game.joystick_handler.is_rt_pressed()
+            
+        # 2. Check XML Keybinds for Running
+        if game.joystick_handler.active_controller:
+            joy_run_btn = keybind_manager.joy_binds.get('run')
+            if joy_run_btn is not None:
+                try:
+                    joy_run = game.joystick_handler.active_controller.get_button(joy_run_btn)
+                except pygame.error:
+                    pass
 
     is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
     game.player.is_running = is_running

@@ -52,10 +52,6 @@ class JoystickHandler:
         self.c_main_idx = None 
         self.c_sub_idx = -1
         
-        # Combo state tracking
-        self.y_pressed = False
-        self.b_pressed = False
-        
         self.set_xbox_controller(logger)
 
     def set_xbox_controller(self, logger):
@@ -85,23 +81,18 @@ class JoystickHandler:
             self.set_xbox_controller(logger)
 
     def get_all_ui_slots(self, game):
-        """Dynamically fetches active window control rects for cursor snapping"""
-        
         if getattr(game, 'context_menu', {}).get('active', False):
             return game.context_menu.get('rects', [])
             
         rects = []
-            
         if hasattr(game, 'modal_buttons'):
             for b in game.modal_buttons:
                 if b:
                     if isinstance(b, pygame.Rect): rects.append(b)
                     elif isinstance(b, dict) and 'rect' in b: rects.append(b['rect'])
-                    
         return rects
 
     def _set_mouse_pos_scaled(self, game, logic_x, logic_y):
-        """Calculates exact letterbox scaling offsets to permanently prevent Tooltip desynchronization"""
         phys_x, phys_y = logic_x, logic_y
         
         if hasattr(game, 'game_screen') and pygame.display.get_surface():
@@ -129,31 +120,24 @@ class JoystickHandler:
         ))
 
     def update_cursor(self, game):
-        """Updates mouse position using Free Cursor or UI Snap Logic"""
         self.last_game_ref = game 
         
         if not getattr(game, 'context_menu', {}).get('active', False):
             self.c_main_idx = None 
 
-        # ---------------------------------------------------------
-        # UNIFIED SNAP CURSOR (Keyboard Arrows & Joystick)
-        # ---------------------------------------------------------
         keys = pygame.key.get_pressed()
         rx, ry = 0.0, 0.0
         
-        # 1. Read Keyboard Arrows natively into analog values
         if keys[pygame.K_LEFT]:  rx -= 1.0
         if keys[pygame.K_RIGHT]: rx += 1.0
         if keys[pygame.K_UP]:    ry -= 1.0
         if keys[pygame.K_DOWN]:  ry += 1.0
         
-        # Normalize diagonal keyboard movement
         if rx != 0 and ry != 0:
             length = math.hypot(rx, ry)
             rx /= length
             ry /= length
 
-        # 2. Read Joystick (Overrides keyboard if actively past deadzone)
         joy_numaxes = 4 if not self.active_controller else self.active_controller.get_numaxes()
         if self.active_controller and joy_numaxes >= 4:
             j_rx = self.active_controller.get_axis(AXIS_RX)
@@ -161,7 +145,6 @@ class JoystickHandler:
             if abs(j_rx) >= self.deadzone: rx = j_rx
             if abs(j_ry) >= self.deadzone: ry = j_ry
 
-        # 3. Process identical snap physics for both inputs
         if joy_numaxes >= 4:
             if rx != 0 or ry != 0:
                 self.c_main_idx = None 
@@ -174,7 +157,6 @@ class JoystickHandler:
                 is_aiming = False
                 joy = self.active_controller
                 
-                # ADD 'joy and' to ensure it doesn't crash when using keyboard only
                 if joy and joy.get_numaxes() > AXIS_RT and joy.get_axis(AXIS_RT) > 0.0:
                     is_aiming = True
                 elif hasattr(game, 'player') and getattr(game.player, 'is_aiming', False):
@@ -258,7 +240,6 @@ class JoystickHandler:
                     else:
                         self._set_mouse_pos_scaled(game, new_x, new_y)
 
-            # Make Hovered Modal Active (Bring to Front)
             if hasattr(game, 'modals') and game.modals:
                 if hasattr(game, '_get_scaled_mouse_pos'):
                     logic_x, logic_y = game._get_scaled_mouse_pos()
@@ -276,7 +257,6 @@ class JoystickHandler:
                     game.modals.append(hovered_modal)
 
     def get_movement_axes(self):
-        """Returns Left Analog Stick X and Y for free player movement"""
         if not self.active_controller:
             return 0, 0
             
@@ -292,54 +272,14 @@ class JoystickHandler:
         
         return lx, ly
 
-    def get_action_states(self):
-        joy_run = False
-        joy_aim = False
-        
-        # Check if there is an active controller, rather than the list
-        if not self.active_controller:
-            return joy_run, joy_aim
-
-        try:
-            # Ask the active controller how many buttons it actually has before checking them
-            num_buttons = self.active_controller.get_numbuttons()
-            
-            # Replace BTN_RUN / BTN_AIM with whatever your actual button variables are called
-            if hasattr(self, 'BTN_RUN') and self.BTN_RUN < num_buttons:
-                joy_run = self.active_controller.get_button(self.BTN_RUN)
-                
-            if hasattr(self, 'BTN_AIM') and self.BTN_AIM < num_buttons:
-                joy_aim = self.active_controller.get_button(self.BTN_AIM)
-                
-        except pygame.error:
-            # If the controller drops connection or bugs out, just ignore it
-            pass
-            
-        return joy_run, joy_aim
+    def is_rt_pressed(self):
+        """Checks if the Right Trigger is being pulled for Aiming"""
+        if self.active_controller and self.active_controller.get_numaxes() > AXIS_RT:
+            return self.active_controller.get_axis(AXIS_RT) > 0.2
+        return False
 
     def process_event(self, event):
         """Translates joystick hardware events into standard keyboard/mouse events"""
-        
-        # --- GLOBAL KEYBOARD CLICK INTERCEPTION ---
-        #if event.type == pygame.KEYDOWN:
-        #    if event.key == pygame.K_SPACE:
-        #        game = getattr(self, 'last_game_ref', None)
-        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 1}))
-        #    elif event.key == pygame.K_RALT: # ALT GR for Right Click
-        #        game = getattr(self, 'last_game_ref', None)
-        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
-        #        
-        #elif event.type == pygame.KEYUP:
-        #    if event.key == pygame.K_SPACE:
-        #        game = getattr(self, 'last_game_ref', None)
-        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 1}))
-        #    elif event.key == pygame.K_RALT:
-        #        game = getattr(self, 'last_game_ref', None)
-        #        mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-        #        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
 
         if event.type == pygame.JOYAXISMOTION:
             if event.axis == AXIS_LT: 
@@ -360,8 +300,6 @@ class JoystickHandler:
                             in_ui_bounds = True
                             break
                             
-                    
-                                
                     if not in_ui_bounds and getattr(game, 'context_menu', {}).get('active', False):
                         in_ui_bounds = True
 
@@ -399,29 +337,11 @@ class JoystickHandler:
             mouse_pos = pygame.mouse.get_pos()
             game = getattr(self, 'last_game_ref', None)
             
-            # ---> Y Button: Strictly Interact (No Modal Closing) <---
-            if event.button == BTN_Y: 
-                self.y_pressed = True
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_e, 'unicode': 'e'}))
-                    
-            elif event.button == BTN_B: 
-                self.b_pressed = True
+            # ---> X Button (2): Open Context Menu (Simulates Right Click) <---
+            if event.button == BTN_X:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
-            elif event.button == BTN_X: 
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_r, 'unicode': 'r'}))
             
-            # ---> BTN 8 (L3): Pause Game (F2) <---
-            elif event.button == BTN_L3: 
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_F2, 'unicode': ''}))
-            
-            # ---> BTN 7 (START): Toggle Modals (TAB) <---
-            elif event.button == BTN_START: 
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_TAB, 'unicode': '\t'}))
-                
-            # ---> BTN 6 (SELECT): Fast Forward (F) <---
-            elif event.button == BTN_SELECT: 
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_f, 'unicode': 'f'}))
-                
+            # ---> Navigation triggers not natively covered by Keybinds.xml <---
             elif event.button in (BTN_LB, BTN_RB):
                 handled_tab = False
                 
@@ -483,32 +403,14 @@ class JoystickHandler:
         elif event.type == pygame.JOYBUTTONUP:
             mouse_pos = pygame.mouse.get_pos()
             
-            if event.button == BTN_B: 
-                self.b_pressed = False
+            # ---> Release Right Click <---
+            if event.button == BTN_X:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
-            elif event.button == BTN_Y: 
-                self.y_pressed = False
-                pygame.event.post(pygame.event.Event(pygame.KEYUP, {'key': pygame.K_e, 'unicode': 'e'}))
                 
         elif event.type == pygame.JOYHATMOTION:
             x, y = event.value
             mouse_pos = pygame.mouse.get_pos()
             game = getattr(self, 'last_game_ref', None)
-            
-            if x != 0 or y != 0:
-                if getattr(self, 'y_pressed', False):
-                    if y == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_h, 'unicode': 'h'})) # Status
-                    elif y == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_g, 'unicode': 'g'})) # Gear
-                    elif x == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_i, 'unicode': 'i'})) # Inventory
-                    elif x == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_n, 'unicode': 'n'})) # Nearby
-                    return 
-                    
-                if getattr(self, 'b_pressed', False):
-                    if y == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_m, 'unicode': 'm'})) # Messages
-                    elif y == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_c, 'unicode': 'c'})) # Crafting
-                    elif x == -1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_m, 'unicode': 'm'})) # Messages
-                    elif x == 1: pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_SLASH, 'unicode': '?'})) # Help
-                    return 
             
             if game and getattr(game, 'context_menu', {}).get('active', False):
                 options = game.context_menu.get('options', [])

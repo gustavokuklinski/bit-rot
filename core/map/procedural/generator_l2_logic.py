@@ -74,7 +74,7 @@ class ProceduralGeneratorL2:
         h = len(ground)
         w = len(ground[0])
         
-        veg_options = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_stone', 'garden_tree_11', 'garden_tall_grass','garden_stone_powder']
+        veg_options = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_stone', 'garden_tree_11', 'garden_tall_grass','garden_stone_powder','garden_stone_iron']
 
         print("Decorating L2 Pathways with vegetation...")
 

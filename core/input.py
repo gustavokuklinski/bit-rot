@@ -12,8 +12,8 @@ from core.ui.helpers.keybinds import keybind_manager
 
 keys_held = {}
 
-def is_action_held(action, keys, mouse_buttons):
-    """Safely checks continuous input across Keyboard and Mouse."""
+def is_action_held(game, action, keys, mouse_buttons):
+    """Safely checks continuous input across Keyboard, Mouse, and Joystick."""
     kb_val = keybind_manager.kb_binds.get(action)
     
     if kb_val is not None:
@@ -22,12 +22,19 @@ def is_action_held(action, keys, mouse_buttons):
             if 0 <= btn_idx < len(mouse_buttons) and mouse_buttons[btn_idx]:
                 return True
         else:  # It's a normal keyboard key
-            # Remove length barrier! High keycodes like LSHIFT (1073742049) are completely safe in Pygame 2
             try:
                 if keys[kb_val]:
                     return True
             except IndexError:
                 pass
+
+    joy_val = keybind_manager.joy_binds.get(action)
+    if joy_val is not None and getattr(game, 'joystick_handler', None) and game.joystick_handler.active_controller:
+        try:
+            if game.joystick_handler.active_controller.get_button(joy_val):
+                return True
+        except pygame.error:
+            pass
 
     return False
 
@@ -59,10 +66,10 @@ def handle_movement(game):
     mouse_buttons = pygame.mouse.get_pressed()
 
     # Turn off fast forward when movement keys are pressed
-    if (is_action_held('move_up', keys, mouse_buttons) or 
-        is_action_held('move_down', keys, mouse_buttons) or 
-        is_action_held('move_left', keys, mouse_buttons) or 
-        is_action_held('move_right', keys, mouse_buttons)):
+    if (is_action_held(game, 'move_up', keys, mouse_buttons) or 
+        is_action_held(game, 'move_down', keys, mouse_buttons) or 
+        is_action_held(game, 'move_left', keys, mouse_buttons) or 
+        is_action_held(game, 'move_right', keys, mouse_buttons)):
         if game.player and not game.player.is_sleeping:
             game.is_fast_forwarding = False
     
@@ -83,14 +90,15 @@ def handle_movement(game):
 
     # ---> 1. FETCH JOYSTICK DATA <---
     joy_lx, joy_ly = 0, 0
-    joy_run, joy_aim = False, False
+    joy_aim = False
     
     if getattr(game, 'joystick_handler', None):
         joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
-        joy_run, joy_aim = game.joystick_handler.get_action_states()
+        if hasattr(game.joystick_handler, 'is_rt_pressed'):
+            joy_aim = game.joystick_handler.is_rt_pressed()
 
     # ---> 2. APPLY RUNNING AND AIMING <---
-    is_running = (is_action_held('run', keys, mouse_buttons) or keys[pygame.K_RSHIFT] or joy_run)
+    is_running = (is_action_held(game, 'run', keys, mouse_buttons) or keys[pygame.K_RSHIFT])
     game.player.is_running = is_running
 
     mouse_pos = game._get_scaled_mouse_pos()
@@ -101,7 +109,7 @@ def handle_movement(game):
                 is_over_ui = True
                 break
 
-    game.player.is_aiming = (is_action_held('aim', keys, mouse_buttons) or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim) and not is_over_ui
+    game.player.is_aiming = (is_action_held(game, 'aim', keys, mouse_buttons) or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim) and not is_over_ui
 
     if game.player.stamina <= 0:
         current_speed = final_base_speed / 3
@@ -118,10 +126,10 @@ def handle_movement(game):
     
     # 3. Read Keyboard Input
     kb_dx, kb_dy = 0, 0
-    if is_action_held('move_up', keys, mouse_buttons): kb_dy -= 1
-    if is_action_held('move_down', keys, mouse_buttons): kb_dy += 1
-    if is_action_held('move_left', keys, mouse_buttons): kb_dx -= 1
-    if is_action_held('move_right', keys, mouse_buttons): kb_dx += 1
+    if is_action_held(game, 'move_up', keys, mouse_buttons): kb_dy -= 1
+    if is_action_held(game, 'move_down', keys, mouse_buttons): kb_dy += 1
+    if is_action_held(game, 'move_left', keys, mouse_buttons): kb_dx -= 1
+    if is_action_held(game, 'move_right', keys, mouse_buttons): kb_dx += 1
 
     dx, dy = 0, 0
 
@@ -302,26 +310,17 @@ def handle_input(game):
                             ignore = True
                         
                 if not ignore:
-                    # --- BELT HUD DUPLICATION FIX ---
-                    # 1. Cache the drag state BEFORE the drop is processed
                     was_dragging = getattr(game, 'is_dragging', False)
                     origin = getattr(game, 'drag_origin', None)
                     dragged_item_ref = getattr(game, 'dragged_item', None)
 
-                    # 2. Let the game process the drop normally
                     handle_mouse_up(game, event, mouse_pos)
 
-                    # 3. If the drop was successful, the game will have set 'is_dragging' to False
                     if was_dragging and not getattr(game, 'is_dragging', False):
-                        # Verify the origin is our expected tuple safely
                         if isinstance(origin, tuple) and len(origin) == 2:
                             origin_type, origin_index = origin
-                            
-                            # If it came from the belt, clear the original slot to prevent duplication
                             if origin_type in ('belt_hud', 'belt'):
                                 game.player.belt[origin_index] = None 
-                                
-                                # Reset the weight property if applicable
                                 if hasattr(dragged_item_ref, 'in_belt'):
                                     dragged_item_ref.in_belt = False
                     

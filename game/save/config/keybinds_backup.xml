@@ -1,43 +1,43 @@
 <?xml version="1.0" ?>
 <keybinds>
     <keyboard_mouse>
-        <bind action="move_up" key="119"/>
-        <bind action="move_down" key="115"/>
-        <bind action="move_left" key="97"/>
-        <bind action="move_right" key="100"/>
-        <bind action="run" key="1073742049"/>
-        <bind action="aim" key="1073742048"/>
-        <bind action="interact" key="101"/>
-        <bind action="chat" key="116"/>
-        <bind action="toggle_inventory" key="105"/>
-        <bind action="toggle_crafting" key="99"/>
-        <bind action="toggle_status" key="104"/>
-        <bind action="toggle_gear" key="103"/>
-        <bind action="toggle_nearby" key="110"/>
-        <bind action="toggle_messages" key="109"/>
-        <bind action="toggle_slots" key="121"/>
-        <bind action="reload" key="114"/>
-        <bind action="vehicle_engine" key="113"/>
-        <bind action="action_shove" key="32"/>
+        <bind action="move_up" key="119" default="119"/>
+        <bind action="move_down" key="115" default="115"/>
+        <bind action="move_left" key="97" default="97"/>
+        <bind action="move_right" key="100" default="100"/>
+        <bind action="run" key="1073742049" default="1073742049"/>
+        <bind action="aim" key="1073742048" default="1073742048"/>
+        <bind action="interact" key="101" default="101"/>
+        <bind action="chat" key="116" default="116"/>
+        <bind action="toggle_inventory" key="105" default="105"/>
+        <bind action="toggle_crafting" key="99" default="99"/>
+        <bind action="toggle_status" key="104" default="104"/>
+        <bind action="toggle_gear" key="103" default="103"/>
+        <bind action="toggle_nearby" key="110" default="110"/>
+        <bind action="toggle_messages" key="109" default="109"/>
+        <bind action="toggle_slots" key="121" default="121"/>
+        <bind action="reload" key="114" default="114"/>
+        <bind action="vehicle_engine" key="113" default="113"/>
+        <bind action="action_shove" key="32" default="32"/>
     </keyboard_mouse>
     <joystick>
-        <bind action="move_up" key="11"/>
-        <bind action="move_down" key="12"/>
-        <bind action="move_left" key="13"/>
-        <bind action="move_right" key="14"/>
-        <bind action="run" key="8"/>
-        <bind action="aim" key="6"/>
-        <bind action="interact" key="0"/>
-        <bind action="chat" key="4"/>
-        <bind action="toggle_inventory" key="3"/>
-        <bind action="toggle_crafting" key="1"/>
-        <bind action="toggle_status" key="10"/>
-        <bind action="toggle_gear" key="9"/>
-        <bind action="toggle_nearby" key="2"/>
-        <bind action="toggle_messages" key="5"/>
-        <bind action="toggle_slots" key="7"/>
-        <bind action="reload" key="2"/>
-        <bind action="vehicle_engine" key="4"/>
-        <bind action="action_shove" key="5"/>
+        <bind action="move_up" key="11" default="11"/>
+        <bind action="move_down" key="12" default="12"/>
+        <bind action="move_left" key="13" default="13"/>
+        <bind action="move_right" key="14" default="14"/>
+        <bind action="run" key="8" default="8"/>
+        <bind action="aim" key="6" default="6"/>
+        <bind action="interact" key="0" default="0"/>
+        <bind action="chat" key="4" default="4"/>
+        <bind action="toggle_inventory" key="3" default="3"/>
+        <bind action="toggle_crafting" key="1" default="1"/>
+        <bind action="toggle_status" key="10" default="10"/>
+        <bind action="toggle_gear" key="9" default="9"/>
+        <bind action="toggle_nearby" key="2" default="2"/>
+        <bind action="toggle_messages" key="5" default="5"/>
+        <bind action="toggle_slots" key="7" default="7"/>
+        <bind action="reload" key="2" default="2"/>
+        <bind action="vehicle_engine" key="4" default="4"/>
+        <bind action="action_shove" key="5" default="5"/>
     </joystick>
 </keybinds>
