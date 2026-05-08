@@ -438,7 +438,7 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                         npc.is_static = False     
                     elif npc_type == 'SNPC':
                         npc.is_friendly = True    
-                        npc.is_static = True      
+                        npc.is_static = True       
                         
                     free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
                     if free_pos:

@@ -1,0 +1,9 @@
+<item name="38 Bullet" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <weight weight="0.0001"/>
+        <load min="1" max="150" />
+        <capacity value="150" />
+        <sprite file="resource_ammo_38_bullet.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

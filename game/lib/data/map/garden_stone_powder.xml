@@ -1,0 +1,12 @@
+<map name="garden_stone_powder" type="maptile" char="garden_stone_powder" is_obstacle="false" destructible="true" is_visible="true">
+    <visuals>
+        <sprite file="garden_stone_powder.png" />
+    </visuals>
+    <properties>
+        <health min="200" max="400" />
+    </properties>
+    <drop>
+        <item item="Powder" chance="0.7" />
+        <item item="Stone" chance="0.3" />
+    </drop>
+</map>

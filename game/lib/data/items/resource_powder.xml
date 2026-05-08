@@ -1,0 +1,9 @@
+<item name="Powder" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="100" />
+        <weight weight="0.001"/>
+        <capacity value="1" />
+        <sprite file="resource_powder.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

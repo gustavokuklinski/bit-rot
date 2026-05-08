@@ -296,19 +296,20 @@ class JoystickHandler:
         joy_run = False
         joy_aim = False
         
-        if not self.joysticks:
+        # Check if there is an active controller, rather than the list
+        if not self.active_controller:
             return joy_run, joy_aim
 
         try:
-            # Ask the joystick how many buttons it actually has before checking them
-            num_buttons = self.joysticks.get_numbuttons()
+            # Ask the active controller how many buttons it actually has before checking them
+            num_buttons = self.active_controller.get_numbuttons()
             
             # Replace BTN_RUN / BTN_AIM with whatever your actual button variables are called
             if hasattr(self, 'BTN_RUN') and self.BTN_RUN < num_buttons:
-                joy_run = self.joysticks.get_button(self.BTN_RUN)
+                joy_run = self.active_controller.get_button(self.BTN_RUN)
                 
             if hasattr(self, 'BTN_AIM') and self.BTN_AIM < num_buttons:
-                joy_aim = self.joysticks.get_button(self.BTN_AIM)
+                joy_aim = self.active_controller.get_button(self.BTN_AIM)
                 
         except pygame.error:
             # If the controller drops connection or bugs out, just ignore it
