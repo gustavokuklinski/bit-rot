@@ -50,6 +50,14 @@ jobs:
           zip -r ../bitrot_linux.zip .
           cd ..
 
+      # NEW: Upload the artifact
+      - name: Upload Linux Standalone Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitrot-linux-standalone-build
+          path: bitrot_linux.zip
+          retention-days: 5
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

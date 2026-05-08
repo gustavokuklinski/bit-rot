@@ -45,6 +45,14 @@ jobs:
           zip -r ../bitrot_macos.zip .
           cd ..
 
+      # NEW: Upload the artifact
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitrot-macos-build
+          path: bitrot_macos.zip
+          retention-days: 5
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
