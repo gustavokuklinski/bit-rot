@@ -19,7 +19,6 @@ GAME_OFFSET_X = 0
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
-# BASE_DIR = os.path.abspath(".")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
 
@@ -148,16 +147,19 @@ def generate_random_seed(chunks=None):
         chunks = MAP_CHUNKS
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
-def load_settings(preset="default"):
+def get_active_config_path(preset="default"):
+    """Returns the path to the writable config if it exists, otherwise falls back to Nuitka assets."""
     writable_root = get_writable_dir()
     filepath = os.path.join(writable_root, "game", "save", "config", f"{preset}.xml")
     
     if not os.path.exists(filepath):
-        print(f"Modified config not found. Loading default from read-only assets.")
         filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
         if not os.path.exists(filepath):
             filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
+            
+    return filepath
 
+def load_settings(preset="default"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
     global font, font_14
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
@@ -179,9 +181,7 @@ def load_settings(preset="default"):
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
 
-    #filepath = f'./game/save/config/{preset}.xml'
-    #if not os.path.exists(filepath):
-    #    filepath = './game/save/config/config.xml'
+    filepath = get_active_config_path(preset)
 
     try:
         tree = ET.parse(filepath)

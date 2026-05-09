@@ -2,6 +2,7 @@
 import pygame
 import sys
 import os
+import subprocess
 import core.data.config
 from core.data.config import *
 from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
@@ -41,6 +42,11 @@ def _get_friendly_value_display(key, value):
 
 
 def _draw_settings_screen(game, state, mouse_pos):
+    if not state.get('settings_data'):
+        preset_name = state.get('selected_config_preset', 'config')
+        correct_path = core.data.config.get_active_config_path(preset_name)
+        state['settings_data'] = load_config_data(correct_path)
+
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
@@ -349,7 +355,19 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             core.data.config.load_settings(preset_name)
             pygame.quit()
         
-            os.execv(sys.executable, ['python'] + sys.argv)
+            if sys.argv[0].endswith('.py'):
+                # Running from source code (IDE/Terminal)
+                subprocess.Popen([sys.executable] + sys.argv)
+            else:
+                # Running from compiled Nuitka executable
+                executable_path = os.path.abspath(sys.argv[0])
+                subprocess.Popen([executable_path] + sys.argv[1:])
+            
+            # 5. Exit immediately to trigger Nuitka's /tmp folder cleanup
+            sys.exit(0)
+                
+            # Note: os.execv completely replaces the current process. 
+            # Any code below this line will never execute!
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.set_volume(0.5 * core.data.config.VOLUME_MUSIC)
 
