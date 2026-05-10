@@ -35,10 +35,10 @@
         <bind action="reload" key="3" default="3"/>
         <bind action="vehicle_engine" key="4" default="4"/>
         <bind action="action_shove" key="5" default="5"/>
+        <bind action="shoot" key="15" default="15"/>
+        <bind action="aim" key="16" default="16"/>
         <bind action="fast_forward" key="6" default="6"/>
         <bind action="toggle_modals" key="7" default="7"/>
         <bind action="pause" key="8" default="8"/>
-        <bind action="shoot" key="15" default="15"/>
-        <bind action="aim_trigger" key="16" default="16"/>
     </joystick>
 </keybinds>

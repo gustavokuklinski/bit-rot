@@ -512,25 +512,34 @@ class Game:
         self._update_screen()
         
         if not self.loading_done:
-            if not hasattr(self, '_loading_thread'):
-                
+            # --- WEB-SAFE ASYNCIO FIX ---
+            if getattr(self, '_loading_task', None) is None:
                 if self.loading_data:
-                    self._loading_thread = threading.Thread(target=self.start_new_game, args=(self.loading_data,), daemon=True)
-                    self._loading_thread.start()
+                    self._loading_task = asyncio.create_task(self._async_start_new_game(self.loading_data))
                 elif self.loading_saved_game_folder:
-                    self._loading_thread = threading.Thread(target=self.load_game, args=(self.loading_saved_game_folder,), daemon=True)
-                    self._loading_thread.start()
+                    self._loading_task = asyncio.create_task(self._async_load_game(self.loading_saved_game_folder))
             else:
-                if not self._loading_thread.is_alive():
+                # Check if the async task is finished
+                if self._loading_task.done():
                     self.loading_done = True
-                    del self._loading_thread 
+                    self._loading_task = None 
                     self.loading_data = None 
                     self.loading_saved_game_folder = None
+            # ------------------------------
         else:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if start_btn and start_btn.collidepoint(mouse_pos):
                         self.game_state = 'PLAYING'
+
+    # --- NEW HELPER FUNCTIONS FOR ASYNC LOADING ---
+    async def _async_start_new_game(self, data):
+        await asyncio.sleep(0) # Yield to browser to draw the loading screen
+        self.start_new_game(data)
+
+    async def _async_load_game(self, folder):
+        await asyncio.sleep(0) # Yield to browser to draw the loading screen
+        self.load_game(folder)
                         
     def run_menu(self):
         events = self.get_events()

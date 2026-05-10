@@ -6,7 +6,7 @@
 # ///
 
 import asyncio
-# import pygame
+import pygame
 from core.game import Game
 
 async def main():
