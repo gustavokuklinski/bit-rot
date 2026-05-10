@@ -34,7 +34,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build bitrot.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build core/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash

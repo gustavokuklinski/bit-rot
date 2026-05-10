@@ -16,7 +16,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,csv,ttf,ogg,wav,xml,json,rot,md
 
 # (list) List of inclusions using pattern matching
-source.include_patterns = game/*
+source.include_patterns = core/game/*
 
 # (list) Source files to exclude (let empty to not exclude anything)
 #source.exclude_exts = spec

@@ -26,7 +26,7 @@ $ pip install -r requirements.txt
 Run locally
 ```shell
 $ python core/bitrot.py # Play the game
-$ python editor.py # Edit maps
+$ python core/editor.py # Edit maps
 ```
 
 Running on web browser
