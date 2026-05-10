@@ -1,5 +1,5 @@
 import asyncio
-from core.core.game import Game
+from core.game import Game
 
 async def main():
     game = Game()
