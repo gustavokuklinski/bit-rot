@@ -1,0 +1,127 @@
+[
+    {
+        "id": "62c4a04c-84e6-4b07-898f-a2b6ee15bdf9",
+        "x": 1424,
+        "y": 1168,
+        "health": 20,
+        "max_health": 20,
+        "name": "Boar",
+        "type": "animal",
+        "speed": 0.7271874297210191,
+        "loot_table": [
+            {
+                "item": "Rot Meat",
+                "chance": 100.0
+            },
+            {
+                "item": "Kukaroach (Bit Rot publisher)",
+                "chance": 100.0
+            }
+        ],
+        "inventory": [],
+        "clothes": {},
+        "sprites": {
+            "center": "boar.png"
+        }
+    },
+    {
+        "id": "e2468af4-a930-4fb9-bc4f-4341bc2328e1",
+        "x": 1808,
+        "y": 864,
+        "health": 28,
+        "max_health": 28,
+        "name": "Boar",
+        "type": "animal",
+        "speed": 0.7627967911624948,
+        "loot_table": [
+            {
+                "item": "Rot Meat",
+                "chance": 100.0
+            },
+            {
+                "item": "Kukaroach (Bit Rot publisher)",
+                "chance": 100.0
+            }
+        ],
+        "inventory": [],
+        "clothes": {},
+        "sprites": {
+            "center": "boar.png"
+        }
+    },
+    {
+        "id": "ef8e9112-36de-4f4f-bd4e-ace5e0bf6a25",
+        "x": 1472,
+        "y": 1808,
+        "health": 20,
+        "max_health": 20,
+        "name": "Rat",
+        "type": "animal",
+        "speed": 0.496406310056613,
+        "loot_table": [
+            {
+                "item": "Rot Meat",
+                "chance": 100.0
+            },
+            {
+                "item": "Kukaroach (Bit Rot publisher)",
+                "chance": 100.0
+            }
+        ],
+        "inventory": [],
+        "clothes": {},
+        "sprites": {
+            "center": "rat.png"
+        }
+    },
+    {
+        "id": "0d2e8d6e-c7ec-4735-a202-e73f3aaeea73",
+        "x": 1184,
+        "y": 1952,
+        "health": 30,
+        "max_health": 30,
+        "name": "Cow",
+        "type": "animal",
+        "speed": 0.48435194788262637,
+        "loot_table": [
+            {
+                "item": "Meat",
+                "chance": 100.0
+            },
+            {
+                "item": "Kukaroach (Bit Rot publisher)",
+                "chance": 100.0
+            }
+        ],
+        "inventory": [],
+        "clothes": {},
+        "sprites": {
+            "center": "cow.png"
+        }
+    },
+    {
+        "id": "7c0ecc3b-ec4d-4caf-b841-69c19045e46e",
+        "x": 1744,
+        "y": 1808,
+        "health": 33,
+        "max_health": 33,
+        "name": "Cow",
+        "type": "animal",
+        "speed": 0.46488172293219515,
+        "loot_table": [
+            {
+                "item": "Meat",
+                "chance": 100.0
+            },
+            {
+                "item": "Kukaroach (Bit Rot publisher)",
+                "chance": 100.0
+            }
+        ],
+        "inventory": [],
+        "clothes": {},
+        "sprites": {
+            "center": "cow.png"
+        }
+    }
+]

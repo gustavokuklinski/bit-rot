@@ -1,0 +1,421 @@
+[
+    {
+        "x": 304,
+        "y": 496,
+        "name": "car_pickup",
+        "facing": "left",
+        "inventory": [
+            {
+                "name": "Kukaroach (Bit Rot publisher)",
+                "durability": null,
+                "load": 1.0,
+                "state": null,
+                "inventory": []
+            }
+        ],
+        "equipment": {
+            "motor": {
+                "name": "Car Engine",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "key": null,
+            "fuel": null,
+            "battery": null,
+            "tire_fl": {
+                "name": "Car Tire",
+                "durability": 75.3878053339256,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fr": {
+                "name": "Car Tire",
+                "durability": 56.85767677656191,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_bl": {
+                "name": "Car Tire",
+                "durability": 34.739106328593074,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_br": {
+                "name": "Car Tire",
+                "durability": 78.51032020677113,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        },
+        "lights": "off"
+    },
+    {
+        "x": 464,
+        "y": 768,
+        "name": "car_pickup",
+        "facing": "top",
+        "inventory": [
+            {
+                "name": "Survivor Kit",
+                "durability": null,
+                "load": null,
+                "state": null,
+                "inventory": [
+                    {
+                        "name": "Survivor Guide Basic",
+                        "durability": null,
+                        "load": 1,
+                        "state": null,
+                        "inventory": []
+                    }
+                ]
+            }
+        ],
+        "equipment": {
+            "motor": {
+                "name": "Car Engine",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "key": null,
+            "fuel": null,
+            "battery": {
+                "name": "Car Battery",
+                "durability": 37.427206149719495,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fl": {
+                "name": "Car Tire",
+                "durability": 70.32611068186367,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fr": {
+                "name": "Car Tire",
+                "durability": 58.21870304741422,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_bl": {
+                "name": "Car Tire",
+                "durability": 30.9836433109019,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_br": {
+                "name": "Car Tire",
+                "durability": 97.45886424681366,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        },
+        "lights": "off"
+    },
+    {
+        "x": 1056,
+        "y": 768,
+        "name": "car_pickup",
+        "facing": "top",
+        "inventory": [
+            {
+                "name": "Car Battery",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        ],
+        "equipment": {
+            "motor": {
+                "name": "Car Engine",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "key": null,
+            "fuel": {
+                "name": "Fuel Unit",
+                "durability": null,
+                "load": 85.10338401679587,
+                "state": null,
+                "inventory": []
+            },
+            "battery": null,
+            "tire_fl": {
+                "name": "Car Tire",
+                "durability": 61.293071407855834,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fr": {
+                "name": "Car Tire",
+                "durability": 36.279239229887,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_bl": {
+                "name": "Car Tire",
+                "durability": 44.57912769348954,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_br": {
+                "name": "Car Tire",
+                "durability": 51.01197964265374,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        },
+        "lights": "off"
+    },
+    {
+        "x": 960,
+        "y": 1072,
+        "name": "car_jeep",
+        "facing": "top",
+        "inventory": [
+            {
+                "name": "Car Key Jeep",
+                "durability": null,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            {
+                "name": "Car Tire",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        ],
+        "equipment": {
+            "motor": {
+                "name": "Car Engine",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "key": null,
+            "fuel": null,
+            "battery": null,
+            "tire_fl": {
+                "name": "Car Tire",
+                "durability": 55.365643341122805,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fr": {
+                "name": "Car Tire",
+                "durability": 87.26090368407908,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_bl": {
+                "name": "Car Tire",
+                "durability": 32.518850623789966,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_br": {
+                "name": "Car Tire",
+                "durability": 94.25390387044351,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        },
+        "lights": "off"
+    },
+    {
+        "x": 816,
+        "y": 1136,
+        "name": "car_ambulance",
+        "facing": "down",
+        "inventory": [
+            {
+                "name": "Toolkit",
+                "durability": null,
+                "load": null,
+                "state": null,
+                "inventory": [
+                    {
+                        "name": "Screwdriver",
+                        "durability": 91.7020551943083,
+                        "load": null,
+                        "state": null,
+                        "inventory": [],
+                        "tip": "Use as weapon or craft resource"
+                    },
+                    {
+                        "name": "Wrench",
+                        "durability": 77.55207741350986,
+                        "load": null,
+                        "state": null,
+                        "inventory": [],
+                        "tip": "Use as weapon or craft resource"
+                    },
+                    {
+                        "name": "Saw",
+                        "durability": null,
+                        "load": 1,
+                        "state": null,
+                        "inventory": [],
+                        "tip": "Use to craft"
+                    },
+                    {
+                        "name": "Nails",
+                        "durability": null,
+                        "load": 98,
+                        "state": null,
+                        "inventory": [],
+                        "tip": "Use to craft"
+                    },
+                    {
+                        "name": "Hammer",
+                        "durability": 83.70067509874822,
+                        "load": null,
+                        "state": null,
+                        "inventory": [],
+                        "tip": "Use as weapon or craft resource"
+                    },
+                    {
+                        "name": "Picaxe",
+                        "durability": 30.389043132606798,
+                        "load": null,
+                        "state": null,
+                        "inventory": []
+                    },
+                    {
+                        "name": "Knife",
+                        "durability": 35.627398124493276,
+                        "load": null,
+                        "state": null,
+                        "inventory": []
+                    }
+                ]
+            },
+            {
+                "name": "Medical Kit",
+                "durability": null,
+                "load": null,
+                "state": null,
+                "inventory": [
+                    {
+                        "name": "Medical Bandage",
+                        "durability": null,
+                        "load": 7,
+                        "state": null,
+                        "inventory": []
+                    },
+                    {
+                        "name": "Infection Pills",
+                        "durability": null,
+                        "load": 1.0,
+                        "state": null,
+                        "inventory": []
+                    }
+                ]
+            },
+            {
+                "name": "Medical Kit",
+                "durability": null,
+                "load": null,
+                "state": null,
+                "inventory": [
+                    {
+                        "name": "Medical Bandage",
+                        "durability": null,
+                        "load": 16,
+                        "state": null,
+                        "inventory": []
+                    },
+                    {
+                        "name": "Infection Pills",
+                        "durability": null,
+                        "load": 1.0,
+                        "state": null,
+                        "inventory": []
+                    }
+                ]
+            },
+            {
+                "name": "Car Tire",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        ],
+        "equipment": {
+            "motor": {
+                "name": "Car Engine",
+                "durability": 100.0,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "key": null,
+            "fuel": null,
+            "battery": {
+                "name": "Car Battery",
+                "durability": 35.4512820016519,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fl": {
+                "name": "Car Tire",
+                "durability": 21.808466543710594,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_fr": {
+                "name": "Car Tire",
+                "durability": 62.13476854993323,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_bl": {
+                "name": "Car Tire",
+                "durability": 80.41707504814252,
+                "load": null,
+                "state": null,
+                "inventory": []
+            },
+            "tire_br": {
+                "name": "Car Tire",
+                "durability": 26.44612066667267,
+                "load": null,
+                "state": null,
+                "inventory": []
+            }
+        },
+        "lights": "off"
+    }
+]

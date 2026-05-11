@@ -29,13 +29,13 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --macos-create-app-bundle --macos-app-icon=./core/game/icons/favicon.icns core/bitrot.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash
         run: |
           mkdir release
-          cp -r game release/game
+          cp -r bitrot/game release/game
           mv build/bitrot.app release/bitrot.app
 
       - name: Zip Artifacts for Release

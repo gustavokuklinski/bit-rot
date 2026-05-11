@@ -29,7 +29,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --standalone --assume-yes-for-downloads --output-dir=./build --include-data-dir=game=game --windows-console-mode=disable --windows-icon-from-ico=./game/icons/favicon.ico bitrot.py
+          nuitka --standalone --assume-yes-for-downloads --output-dir=./build --include-data-dir=bitrot/game=game --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash

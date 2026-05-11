@@ -1,0 +1,287 @@
+[2026-05-08 18:30:24] [INFO] 
+[2026-05-08 18:30:24] [INFO] ==================================================
+[2026-05-08 18:30:24] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 18:30:24] [INFO] ==================================================
+[2026-05-08 18:30:24] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 18:30:24] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 18:30:24] [INFO] Initializing Rot Engine...
+[2026-05-08 18:30:24] [INFO] [Joystick] No controllers detected.
+[2026-05-08 18:30:24] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 18:30:24] [INFO] Entering Main Game Loop
+[2026-05-08 18:30:26] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_183026/map
+[2026-05-08 18:30:26] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-08 18:30:26] [INFO] Generating world with Seed Pattern: 2-D0E2CC89
+[2026-05-08 18:30:29] [INFO] Starting map set to generated file: map_L1_0_1_map.csv
+[2026-05-08 18:30:30] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-08 18:30:30] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-08 18:30:30] [INFO] House spawn point found at (816, 1120). Setting player position.
+[2026-05-08 18:30:30] [INFO] Initial Start Chunk Population: Spawned 90 zombies around player.
+[2026-05-08 18:30:30] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_183026...
+[2026-05-08 18:30:30] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-08 18:30:31] [INFO] Game saved successfully!
+[2026-05-08 18:32:26] [INFO] Game Execution Ended safely.
+[2026-05-08 18:35:56] [INFO] 
+[2026-05-08 18:35:56] [INFO] ==================================================
+[2026-05-08 18:35:56] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 18:35:56] [INFO] ==================================================
+[2026-05-08 18:35:56] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 18:35:56] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 18:35:56] [INFO] Initializing Rot Engine...
+[2026-05-08 18:35:56] [INFO] [Joystick] No controllers detected.
+[2026-05-08 18:35:56] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 18:35:56] [INFO] Entering Main Game Loop
+[2026-05-08 18:36:00] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_183600/map
+[2026-05-08 18:36:00] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-08 18:36:00] [INFO] Generating world with Seed Pattern: 2-98904F6A
+[2026-05-08 18:36:03] [INFO] Starting map set to generated file: map_L1_0_1_map.csv
+[2026-05-08 18:36:04] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-08 18:36:04] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-08 18:36:04] [INFO] House spawn point found at (528, 976). Setting player position.
+[2026-05-08 18:36:04] [INFO] Initial Start Chunk Population: Spawned 80 zombies around player.
+[2026-05-08 18:36:04] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_183600...
+[2026-05-08 18:36:04] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-08 18:36:05] [INFO] Game saved successfully!
+[2026-05-08 18:38:28] [INFO] Game Execution Ended safely.
+[2026-05-08 18:41:25] [INFO] 
+[2026-05-08 18:41:25] [INFO] ==================================================
+[2026-05-08 18:41:25] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 18:41:25] [INFO] ==================================================
+[2026-05-08 18:41:25] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 18:41:25] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 18:41:25] [INFO] Initializing Rot Engine...
+[2026-05-08 18:41:25] [INFO] [Joystick] No controllers detected.
+[2026-05-08 18:41:25] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 18:41:25] [INFO] Entering Main Game Loop
+[2026-05-08 18:41:31] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_184131/map
+[2026-05-08 18:41:31] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-08 18:41:31] [INFO] Generating world with Seed Pattern: 2-E7E7D9D3
+[2026-05-08 18:41:34] [INFO] Starting map set to generated file: map_L1_0_1_map.csv
+[2026-05-08 18:41:35] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-08 18:41:35] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-08 18:41:35] [INFO] House spawn point found at (1728, 1680). Setting player position.
+[2026-05-08 18:41:35] [INFO] Initial Start Chunk Population: Spawned 20 zombies around player.
+[2026-05-08 18:41:35] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/game/save/game/save_20260508_184131...
+[2026-05-08 18:41:35] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-08 18:41:35] [INFO] Game saved successfully!
+[2026-05-08 18:43:31] [INFO] Game Execution Ended safely.
+[2026-05-08 18:54:51] [INFO] 
+[2026-05-08 18:54:51] [INFO] ==================================================
+[2026-05-08 18:54:51] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 18:54:51] [INFO] ==================================================
+[2026-05-08 18:54:51] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 18:54:51] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 18:54:51] [INFO] Initializing Rot Engine...
+[2026-05-08 18:54:51] [INFO] [Joystick] No controllers detected.
+[2026-05-08 18:54:51] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 18:54:51] [INFO] Entering Main Game Loop
+[2026-05-08 18:54:56] [INFO] 
+[2026-05-08 18:54:56] [INFO] ==================================================
+[2026-05-08 18:54:56] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 18:54:56] [INFO] ==================================================
+[2026-05-08 18:54:56] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 18:54:56] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 18:54:56] [INFO] Initializing Rot Engine...
+[2026-05-08 18:54:56] [INFO] [Joystick] No controllers detected.
+[2026-05-08 18:54:56] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 18:54:56] [INFO] Entering Main Game Loop
+[2026-05-08 18:55:00] [INFO] Game Execution Ended safely.
+[2026-05-08 20:59:46] [INFO] 
+[2026-05-08 20:59:46] [INFO] ==================================================
+[2026-05-08 20:59:46] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 20:59:46] [INFO] ==================================================
+[2026-05-08 20:59:46] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 20:59:46] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 20:59:46] [INFO] Initializing Rot Engine...
+[2026-05-08 20:59:46] [INFO] [Joystick] No controllers detected.
+[2026-05-08 20:59:46] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 20:59:46] [INFO] Entering Main Game Loop
+[2026-05-08 20:59:51] [INFO] Game Execution Ended safely.
+[2026-05-08 21:21:29] [INFO] 
+[2026-05-08 21:21:29] [INFO] ==================================================
+[2026-05-08 21:21:29] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 21:21:29] [INFO] ==================================================
+[2026-05-08 21:21:29] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 21:21:29] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 21:21:29] [INFO] Initializing Rot Engine...
+[2026-05-08 21:21:29] [INFO] [Joystick] No controllers detected.
+[2026-05-08 21:21:29] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 21:21:29] [INFO] Entering Main Game Loop
+[2026-05-08 21:21:30] [INFO] Game Execution Ended safely.
+[2026-05-08 21:21:31] [INFO] 
+[2026-05-08 21:21:31] [INFO] ==================================================
+[2026-05-08 21:21:31] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-08 21:21:31] [INFO] ==================================================
+[2026-05-08 21:21:31] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/game/logs/rot_debug.log
+[2026-05-08 21:21:31] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-08 21:21:31] [INFO] Initializing Rot Engine...
+[2026-05-08 21:21:31] [INFO] [Joystick] No controllers detected.
+[2026-05-08 21:21:31] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-08 21:21:31] [INFO] Entering Main Game Loop
+[2026-05-08 21:21:32] [INFO] Game Execution Ended safely.
+[2026-05-10 14:05:40] [INFO] 
+[2026-05-10 14:05:40] [INFO] ==================================================
+[2026-05-10 14:05:40] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-10 14:05:40] [INFO] ==================================================
+[2026-05-10 14:05:40] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/core/game/logs/rot_debug.log
+[2026-05-10 14:05:40] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-10 14:05:40] [INFO] Initializing Rot Engine...
+[2026-05-10 14:05:40] [INFO] [Joystick] No controllers detected.
+[2026-05-10 14:05:40] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-10 14:05:40] [INFO] Entering Main Game Loop
+[2026-05-10 14:05:42] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core/game/save/game/save_20260510_140542/map
+[2026-05-10 14:05:42] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-10 14:05:43] [INFO] Generating world with Seed Pattern: 2-112A1E2D
+[2026-05-10 14:05:45] [INFO] Starting map set to generated file: map_L1_0_0_map.csv
+[2026-05-10 14:05:45] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-10 14:05:45] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-10 14:05:45] [INFO] House spawn point found at (1488, 1440). Setting player position.
+[2026-05-10 14:05:46] [INFO] Initial Start Chunk Population: Spawned 70 zombies around player.
+[2026-05-10 14:05:46] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/core/game/save/game/save_20260510_140542...
+[2026-05-10 14:05:46] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-10 14:05:46] [INFO] Game saved successfully!
+[2026-05-10 14:06:15] [INFO] Game Execution Ended safely.
+[2026-05-11 14:51:37] [INFO] 
+[2026-05-11 14:51:37] [INFO] ==================================================
+[2026-05-11 14:51:37] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-11 14:51:37] [INFO] ==================================================
+[2026-05-11 14:51:37] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/logs/rot_debug.log
+[2026-05-11 14:51:37] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-11 14:51:37] [INFO] Initializing Rot Engine...
+[2026-05-11 14:51:37] [INFO] [Joystick] No controllers detected.
+[2026-05-11 14:51:37] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-11 14:51:37] [INFO] Entering Main Game Loop
+[2026-05-11 15:12:36] [INFO] Game Execution Ended safely.
+[2026-05-11 15:43:11] [INFO] 
+[2026-05-11 15:43:11] [INFO] ==================================================
+[2026-05-11 15:43:11] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-11 15:43:11] [INFO] ==================================================
+[2026-05-11 15:43:11] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/logs/rot_debug.log
+[2026-05-11 15:43:11] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-11 15:43:11] [INFO] Initializing Rot Engine...
+[2026-05-11 15:43:11] [INFO] [Joystick] No controllers detected.
+[2026-05-11 15:43:11] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-11 15:43:11] [INFO] Entering Main Game Loop
+[2026-05-11 15:43:14] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154314/map
+[2026-05-11 15:43:14] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-11 15:43:14] [INFO] Generating world with Seed Pattern: 2-6E199F9E
+[2026-05-11 15:43:15] [INFO] Starting map set to generated file: map_L1_0_1_map.csv
+[2026-05-11 15:43:15] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-11 15:43:15] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-11 15:43:15] [INFO] House spawn point found at (1360, 1440). Setting player position.
+[2026-05-11 15:43:15] [INFO] Initial Start Chunk Population: Spawned 70 zombies around player.
+[2026-05-11 15:43:15] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154314...
+[2026-05-11 15:43:15] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-11 15:43:15] [INFO] Game saved successfully!
+[2026-05-11 15:43:17] [CRITICAL] CRITICAL GAME CRASH DETECTED
+Traceback (most recent call last):
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 481, in run
+    self.run_playing()
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 998, in run_playing
+    draw_game(self)
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/draw.py", line 516, in draw_game
+    game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/entities/player/player_graphics.py", line 212, in draw
+    if self.is_sleeping:
+       ^^^^^^^^^^^^^^^^
+AttributeError: 'Player' object has no attribute 'is_sleeping'
+
+[2026-05-11 15:43:17] [INFO] Game Execution Ended safely.
+[2026-05-11 15:44:40] [INFO] 
+[2026-05-11 15:44:40] [INFO] ==================================================
+[2026-05-11 15:44:40] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-11 15:44:40] [INFO] ==================================================
+[2026-05-11 15:44:40] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/logs/rot_debug.log
+[2026-05-11 15:44:40] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-11 15:44:40] [INFO] Initializing Rot Engine...
+[2026-05-11 15:44:40] [INFO] [Joystick] No controllers detected.
+[2026-05-11 15:44:40] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-11 15:44:40] [INFO] Entering Main Game Loop
+[2026-05-11 15:44:45] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154445/map
+[2026-05-11 15:44:45] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-11 15:44:45] [INFO] Generating world with Seed Pattern: 2-3A044398
+[2026-05-11 15:44:46] [INFO] Starting map set to generated file: map_L1_0_1_map.csv
+[2026-05-11 15:44:47] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-11 15:44:47] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-11 15:44:47] [INFO] House spawn point found at (960, 352). Setting player position.
+[2026-05-11 15:44:47] [INFO] Initial Start Chunk Population: Spawned 80 zombies around player.
+[2026-05-11 15:44:47] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154445...
+[2026-05-11 15:44:47] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-11 15:44:47] [INFO] Game saved successfully!
+[2026-05-11 15:44:48] [CRITICAL] CRITICAL GAME CRASH DETECTED
+Traceback (most recent call last):
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 481, in run
+    self.run_playing()
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 998, in run_playing
+    draw_game(self)
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/draw.py", line 718, in draw_game
+    if game.player and game.player.is_sleeping:
+                       ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Player' object has no attribute 'is_sleeping'
+
+[2026-05-11 15:44:48] [INFO] Game Execution Ended safely.
+[2026-05-11 15:45:04] [INFO] 
+[2026-05-11 15:45:04] [INFO] ==================================================
+[2026-05-11 15:45:04] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-11 15:45:04] [INFO] ==================================================
+[2026-05-11 15:45:04] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/logs/rot_debug.log
+[2026-05-11 15:45:04] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-11 15:45:04] [INFO] Initializing Rot Engine...
+[2026-05-11 15:45:04] [INFO] [Joystick] No controllers detected.
+[2026-05-11 15:45:04] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-11 15:45:04] [INFO] Entering Main Game Loop
+[2026-05-11 15:45:09] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509/map
+[2026-05-11 15:45:09] [INFO] Reloading game configuration from XML: config.xml
+[2026-05-11 15:45:09] [INFO] Generating world with Seed Pattern: 2-D1F2A9BF
+[2026-05-11 15:45:11] [INFO] Starting map set to generated file: map_L1_1_0_map.csv
+[2026-05-11 15:45:11] [INFO] Initializing Layer 1 Population (Vehicles, Animals)...
+[2026-05-11 15:45:11] [INFO] Initializing Layer 2 Population (Zombies, Animals)...
+[2026-05-11 15:45:11] [INFO] House spawn point found at (1568, 592). Setting player position.
+[2026-05-11 15:45:11] [INFO] Initial Start Chunk Population: Spawned 60 zombies around player.
+[2026-05-11 15:45:11] [INFO] Saving game to /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509...
+[2026-05-11 15:45:11] [INFO] Map folder is already in the save directory. Skipping map copy.
+[2026-05-11 15:45:11] [INFO] Game saved successfully!
+[2026-05-11 15:46:13] [INFO] Game Execution Ended safely.
+[2026-05-11 15:46:55] [INFO] 
+[2026-05-11 15:46:55] [INFO] ==================================================
+[2026-05-11 15:46:55] [INFO]  NEW GAME SESSION STARTED 
+[2026-05-11 15:46:55] [INFO] ==================================================
+[2026-05-11 15:46:55] [INFO] Logger initialized. Output file: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/logs/rot_debug.log
+[2026-05-11 15:46:55] [INFO] Bit Rot - Developed by Gustavo Kuklinski
+[2026-05-11 15:46:55] [INFO] Initializing Rot Engine...
+[2026-05-11 15:46:55] [INFO] [Joystick] No controllers detected.
+[2026-05-11 15:46:55] [INFO] PC detected: Hardware Joystick enabled.
+[2026-05-11 15:46:55] [INFO] Entering Main Game Loop
+[2026-05-11 15:46:57] [INFO] Loading game from /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509...
+[2026-05-11 15:46:57] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509/map
+[2026-05-11 15:46:57] [INFO] Generating world with Seed Pattern: 4-B1TR07
+[2026-05-11 15:46:57] [INFO] Starting map set to generated file: map_L1_0_0_map.csv
+[2026-05-11 15:46:57] [INFO] House spawn point found at (1232, 864). Setting player position.
+[2026-05-11 15:46:57] [INFO] Switching to saved map: map_L1_1_0_map.csv
+[2026-05-11 15:46:58] [INFO] Found 0 items to load from save file.
+[2026-05-11 15:46:58] [INFO] Loading zombies from zombies.rot...
+[2026-05-11 15:46:58] [INFO] Loading animals from animal.rot...
+[2026-05-11 15:46:58] [INFO] Game loaded successfully!
+[2026-05-11 15:46:58] [INFO] Loading game from /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509...
+[2026-05-11 15:46:58] [INFO] Created new save environment at: /home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/game/save/game/save_20260511_154509/map
+[2026-05-11 15:46:58] [INFO] Generating world with Seed Pattern: 4-B1TR07
+[2026-05-11 15:46:58] [INFO] Starting map set to generated file: map_L1_0_0_map.csv
+[2026-05-11 15:46:58] [INFO] House spawn point found at (1232, 752). Setting player position.
+[2026-05-11 15:46:58] [INFO] Switching to saved map: map_L1_1_0_map.csv
+[2026-05-11 15:46:58] [INFO] Found 0 items to load from save file.
+[2026-05-11 15:46:58] [INFO] Loading zombies from zombies.rot...
+[2026-05-11 15:46:58] [INFO] Loading animals from animal.rot...
+[2026-05-11 15:46:58] [INFO] Game loaded successfully!
+[2026-05-11 15:47:00] [CRITICAL] CRITICAL GAME CRASH DETECTED
+Traceback (most recent call last):
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 481, in run
+    self.run_playing()
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/game.py", line 836, in run_playing
+    handle_input(self)
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/input.py", line 295, in handle_input
+    handle_mouse_down(game, event, mouse_pos)
+  File "/home/gustavokuklinski/Projects/game-dev/bit-rot/bitrot/core/events/mouse.py", line 385, in handle_mouse_down
+    game.is_fast_forwarding = not game.is_fast_forwarding
+                                  ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Game' object has no attribute 'is_fast_forwarding'
+
+[2026-05-11 15:47:00] [INFO] Game Execution Ended safely.

@@ -29,7 +29,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --macos-create-app-bundle --macos-app-icon=./game/icons/favicon.icns --include-data-dir=game=game bitrot.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns --include-data-dir=bitrot/game=game bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash

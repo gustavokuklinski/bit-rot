@@ -34,13 +34,13 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build core/bitrot.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash
         run: |
           mkdir release
-          cp -r game release/game
+          cp -r bitrot/game release/game
           mv build/bitrot.bin release/bitrot.bin
 
       - name: Zip Artifacts for Release

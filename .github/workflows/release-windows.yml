@@ -29,13 +29,13 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./core/game/icons/favicon.ico core/bitrot.py
+          nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash
         run: |
           mkdir release
-          cp -r game release/game
+          cp -r bitrot/game release/game
           mv build/bitrot.exe release/bitrot.exe
 
       - name: Zip Artifacts for Release
