@@ -11,5 +11,5 @@ bitrot.onefile-build
 bitrot/game/save/player
 bitrot/game/save/game
 bitrot/game/save/server
-bitrot/game/logs
+bitrot/game/logs/*.log
 bitrot/game/lib/sfx/*/*-pygbag.ogg
