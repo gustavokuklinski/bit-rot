@@ -5,6 +5,7 @@
     <capacity value="10" />
     <loot>
         <item type="resource" min="1" max="2" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
         <item item="Toolkit" chance="1.0" />
         <item item="Car Engine" chance="1.0" />
         <item item="Car Battery" chance="1.0" />

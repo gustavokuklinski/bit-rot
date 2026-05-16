@@ -10,5 +10,6 @@
         <item type="resource" min="1" max="3" chance="1.0" />
         <item type="utility" min="1" max="2" chance="1.0" />
         <item type="recipe" min="1" max="1" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
     </loot>
 </map>

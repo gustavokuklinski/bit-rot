@@ -9,7 +9,7 @@
         <item type="consumable_book" min="1" max="2" chance="1.0" />
         <item type="consumable_ammo" min="1" max="2" chance="1.0" />
         <item type="weapon_ranged" min="1" max="1" chance="1.0" />
-
+        <item type="text" min="1" max="2" chance="1.0" />
         <item item="Medical Kit" chance="1.0" />
     </loot>
 </map>

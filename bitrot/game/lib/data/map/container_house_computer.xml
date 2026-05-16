@@ -5,5 +5,6 @@
     <capacity value="5" />
     <loot>
         <item type="sd_card" min="1" max="5" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
     </loot>
 </map>

@@ -7,6 +7,7 @@
         <item type="recipe" min="1" max="4" chance="1.0" />
         <item type="charm" min="1" max="4" chance="1.0" />
         <item type="consumable_book" min="1" max="2" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
         <item item="Lighter off" chance="1.0" />
         <item item="Cigarette Pack" chance="1.0" />
     </loot>
