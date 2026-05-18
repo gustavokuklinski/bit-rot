@@ -379,9 +379,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         search_range = self.base_search_range 
 
         if not self.is_friendly and game.player:
-            if getattr(game.player, 'is_sleeping', False):
-                search_range *= 0.3
-            elif getattr(game.player, 'is_aiming', False):
+            if getattr(game.player, 'is_aiming', False):
                 search_range *= 0.5
             elif getattr(game.player, 'is_running', False):
                 search_range *= 1.5

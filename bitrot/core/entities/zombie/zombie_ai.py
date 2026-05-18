@@ -173,8 +173,19 @@ class ZombieAI:
 
         base_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
 
-        if getattr(player, 'is_sleeping', False):
-            base_detection_radius *= 0.3  # Harder to detect sleeping players
+        in_camp_safe_zone = False
+        if hasattr(game, 'items_on_ground'):
+            for item in game.items_on_ground:
+                if getattr(item, 'item_type', '') == 'camp':
+                    dx = player.rect.centerx - item.rect.centerx
+                    dy = player.rect.centery - item.rect.centery
+                    if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:  # 5 tiles radius
+                        in_camp_safe_zone = True
+                        break
+
+        # Apply stealth modifiers
+        if in_camp_safe_zone:
+            base_detection_radius *= 0.3
         elif getattr(player, 'is_aiming', False):
             base_detection_radius *= 0.5  # Stealthy aiming
         elif getattr(player, 'is_running', False):
@@ -307,7 +318,35 @@ class ZombieAI:
             if self.state == 'chasing':
                 self.state = 'wandering'
 
+        in_camp_safe_zone = False
+        if target_entity == game.player and hasattr(game, 'items_on_ground'):
+            for item in game.items_on_ground:
+                if getattr(item, 'item_type', '') == 'camp':
+                    dx = game.player.rect.centerx - item.rect.centerx
+                    dy = game.player.rect.centery - item.rect.centery
+                    if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:
+                        in_camp_safe_zone = True
+                        break
+        
+        if in_camp_safe_zone and target_entity == game.player:
+            reduced_detection_sq = (core.data.config.ZOMBIE_DETECTION_RADIUS * 0.3) ** 2
+            # Drop aggro and go back to wandering if the enemy is outside the reduced radius
+            if dist_to_target_sq > reduced_detection_sq:
+                should_chase = False
+                is_aggroed = False
+                self.aggro_timer = 0
+                if self.state == 'chasing':
+                    self.state = 'wandering'
+
+        # [FIX] Ensure detection_radius_sq is scaled down so the immediate line-of-sight check 
+        # doesn't instantly re-aggro the zombie after breaking the chase state
         detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
+        if target_entity == game.player:
+            if in_camp_safe_zone:
+                detection_radius_sq = (core.data.config.ZOMBIE_DETECTION_RADIUS * 0.3) ** 2
+            elif getattr(game.player, 'is_aiming', False):
+                detection_radius_sq = (core.data.config.ZOMBIE_DETECTION_RADIUS * 0.5) ** 2
+
         if should_chase or is_aggroed or (dist_to_target_sq < detection_radius_sq and (can_see_target or self.state == 'chasing')):
             self.state = 'chasing'
             target_pos = target_rect.center
