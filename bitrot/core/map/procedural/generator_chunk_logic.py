@@ -21,7 +21,7 @@ class ProceduralGeneratorChunk:
                         total_area += (tw * th)
                         max_dim = max(max_dim, tw, th)
                 
-                area_based_size = int(math.ceil(math.sqrt(total_area * 4)))
+                area_based_size = int(math.ceil(math.sqrt(total_area * 1.5)))
                 min_fit_size = max_dim + 30 
                 base_size = max(base_size, area_based_size, min_fit_size)
                 base_size += random.randint(0, 15)

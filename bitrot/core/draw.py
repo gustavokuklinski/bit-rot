@@ -461,19 +461,28 @@ def draw_game(game):
         if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
-        if getattr(item, 'image', None):
-            # Cache the 8x8 scaled image directly on the item so we aren't transforming every frame
-            if not hasattr(item, 'ground_image_8x8'):
-                item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
-            
-            # Center the 8x8 image within its standard TILE_SIZE footprint
-            cx = draw_pos.x + (draw_pos.width // 2) - 4
-            cy = draw_pos.y + (draw_pos.height // 2) - 4
-            world_view_surface.blit(item.ground_image_8x8, (cx, cy))
+        
+        # --- NEW: Keep 'camp' items at full size (16x16) ---
+        if getattr(item, 'item_type', '') == 'camp':
+            if getattr(item, 'image', None):
+                world_view_surface.blit(item.image, draw_pos)
+            else:
+                pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), draw_pos)
+        # --- OLD: Shrink other normal items to 8x8 ---
         else:
-            cx = draw_pos.x + (draw_pos.width // 2) - 4
-            cy = draw_pos.y + (draw_pos.height // 2) - 4
-            pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), (cx, cy, 8, 8))
+            if getattr(item, 'image', None):
+                # Cache the 8x8 scaled image directly on the item so we aren't transforming every frame
+                if not hasattr(item, 'ground_image_8x8'):
+                    item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
+                
+                # Center the 8x8 image within its standard TILE_SIZE footprint
+                cx = draw_pos.x + (draw_pos.width // 2) - 4
+                cy = draw_pos.y + (draw_pos.height // 2) - 4
+                world_view_surface.blit(item.ground_image_8x8, (cx, cy))
+            else:
+                cx = draw_pos.x + (draw_pos.width // 2) - 4
+                cy = draw_pos.y + (draw_pos.height // 2) - 4
+                pygame.draw.rect(world_view_surface, getattr(item, 'color', WHITE), (cx, cy, 8, 8))
 
     # Draw Projectiles
     for p in game.projectiles:

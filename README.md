@@ -19,17 +19,23 @@ $python3 -m venv .venv$ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
+### Cache cleaning
+```shell
+$ chmod +x clean_cache.sh
+$ ./clean_cache.sh
+```
+
 ---
 
-## Running
+## Play
 
 Run locally
 
 ```shell
 $ python bitrot/bitrot.py # Play the game$ python bitrot/editor.py # Edit maps
 ```
-
-Running on web browser
+ 
+## Play on web browser
 
 ```shell
 $ pygbag bitrot/ # Open localhost:8000 (Uses the main.py default file)

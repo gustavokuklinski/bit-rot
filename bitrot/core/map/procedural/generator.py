@@ -364,7 +364,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                             total_area += (tw * th)
                             max_dim = max(max_dim, tw, th)
                     
-                    area_based_size = int(math.ceil(math.sqrt(total_area * 4)))
+                    area_based_size = int(math.ceil(math.sqrt(total_area * 1.5)))
                     min_fit_size = max_dim + 30 
                     
                     # Only increase base_size if the buildings physically cannot fit inside 128
