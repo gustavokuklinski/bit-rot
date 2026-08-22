@@ -1,0 +1,14 @@
+<item name="Baseball Bat" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="1.0"/>
+        <damage min="15" max="20" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_baseball_bat.png" />
+        <knockback value="1" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <swing src="batton.ogg" />
+    </sound>
+</item>

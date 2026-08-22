@@ -1,0 +1,3 @@
+<recipe type="resource" craft="create" output="Cup" gain_xp="[maintenance:0.1]" amount="1" time="1.0">
+    <ingredient name="Coffee Cup" destroy="true" amount="1" />
+</recipe>

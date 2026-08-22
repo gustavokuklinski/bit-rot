@@ -1,0 +1,9 @@
+<recipe type="cloth" craft="repair" output="Military Boots" magazine="Sewing Vol.1" gain_xp="[intelligence:0.5, maintenance:0.6]" amount="1" time="2.0">
+    <ingredient name="Military Boots" destroy="false" amount="1" />
+    <ingredient name="Line Twine" destroy="true" amount="3" />
+    <ingredient name="Needle" destroy="true" amount="1" />
+    <ingredient name="Ragged Cloth" destroy="true" amount="1" />
+    <ingredient name="Denim Stripes" destroy="true" amount="2" />
+    <ingredient name="Leather Piece" destroy="true" amount="4" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

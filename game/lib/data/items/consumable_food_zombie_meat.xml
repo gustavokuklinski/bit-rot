@@ -1,0 +1,13 @@
+<item name="Zombie Meat" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="3" />
+        <reduce status="[stamina]" value="50" />
+        <restore status="[infection]" value="80" />
+        <restore status="[anxiety]" value="90" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.2"/>
+        <sprite file="consumable_food_zombie_meat.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

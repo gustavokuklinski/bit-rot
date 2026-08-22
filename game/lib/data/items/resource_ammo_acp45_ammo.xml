@@ -1,0 +1,9 @@
+<item name="ACP45 Capsule" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <weight weight="0.002"/>
+        <load min="1" max="100" />
+        <capacity value="100" />
+        <sprite file="resource_ammo_acp45_ammo.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

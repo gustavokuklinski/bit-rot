@@ -1,0 +1,10 @@
+<item name="Medical Bandage" type="consumable_medication" allow_belt="true">
+    <properties>
+        <restore status="[health]" value="5" />
+        <load min="1" max="25" />
+        <weight weight="0.05"/>
+        <capacity value="25" />
+        <sprite file="consumable_medication_medical_bandage.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

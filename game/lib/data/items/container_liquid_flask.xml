@@ -1,0 +1,10 @@
+<item name="Flask" type="container" allow_liquid="true" allow_belt="true" tip="Only liquids allowed">
+    <properties>
+        <capacity value="1" />
+        <sprite file="container_liquid_flask.png" />
+        <weight weight="0.5" reduction="10%" />
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>

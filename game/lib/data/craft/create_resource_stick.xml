@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Stick" magazine="Carpentary Vol.1" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="5" time="3.0">
+    <ingredient name="[Plank, Tree Branch]" destroy="true" amount="1" />
+    <ingredient name="[Saw, Primitive Knife, Knife, Portable Hand Saw]" destroy="false" amount="1" />
+</recipe>

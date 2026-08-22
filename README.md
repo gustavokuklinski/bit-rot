@@ -11,15 +11,26 @@ Bit Rot is a zombie survivor game.
 **Resolution:** 1280x720
 **Disk:** 500MB
 
-**Hacking the game**
+## **Hacking the game**
 
-## Install on virtual environment
+### Rot Engine Wizard
+
+Use for faster start
+
+```bash
+$ chmod +x bitrot.sh scripts/*.sh # Pre-install, permissions
+$ ./bitrot.sh # Open the wizzard
+```
+
+### Manual mode
+
+#### Install on virtual environment
 ```shell
 $python3 -m venv .venv$ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-### Cache cleaning
+#### Cache cleaning
 ```shell
 $ chmod +x clean_cache.sh
 $ ./clean_cache.sh
@@ -27,7 +38,7 @@ $ ./clean_cache.sh
 
 ---
 
-## Play
+#### Play
 
 Run locally
 
@@ -35,7 +46,7 @@ Run locally
 $ python bitrot/bitrot.py # Play the game$ python bitrot/editor.py # Edit maps
 ```
  
-## Play on web browser
+#### Play on web browser
 
 ```shell
 $ pygbag bitrot/ # Open localhost:8000 (Uses the main.py default file)
@@ -43,7 +54,7 @@ $ pygbag bitrot/ # Open localhost:8000 (Uses the main.py default file)
 
 ---
 
-## Build executables (.bin, .exe, .app):
+#### Build executables (.bin, .exe, .app):
 
 **Linux**
 

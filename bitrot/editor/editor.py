@@ -5,17 +5,19 @@ import re
 import csv
 
 from editor.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
+    CODE_GLOBAL_ROOT, CODE_LOCAL_ROOT,SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
     MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT,
     LOG_WINDOW_HEIGHT
 )
+
 from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_items_from_xml
 from editor.map import Map
 from editor.ui import Sidebar, Toolbar, NewBuildingModal, LogConsole, MenuBar
 from editor.file_tree import FileTree
 from editor.dialog_editor import DialogEditor
 from editor.crafts import CraftEditor
+from editor.code_editor import CodeEditor
 
 # Initialize Pygame
 pygame.init()
@@ -182,8 +184,10 @@ def editor():
 
     all_render_tiles = {**map_tiles, **item_tiles}
 
+    code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
+
     # Primary Modes
-    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts"])
+    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "CODE"])
     editor_mode = "Building" 
 
     content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT
@@ -252,6 +256,7 @@ def editor():
                 toolbar.resize(current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH)
                 dialog_editor.resize(current_screen_width, current_screen_height)
                 craft_editor.resize(current_screen_width, current_screen_height)
+                code_editor.resize(current_screen_width, current_screen_height)
                 
                 map_view_rect = pygame.Rect(
                     FILE_TREE_WIDTH + 20, 
@@ -266,6 +271,7 @@ def editor():
                 editor_mode = menu_action
                 if editor_mode == "NPC Dialog": log_console.add_message("Switched to Dialog Editor")
                 elif editor_mode == "Crafts": log_console.add_message("Switched to Craft Editor")
+                elif editor_mode == "CODE": log_console.add_message("Switched to Code Editor")
                 else: log_console.add_message("Switched to Building Mode")
                 continue
 
@@ -276,6 +282,9 @@ def editor():
                 
             if editor_mode == "Crafts":
                 craft_editor.handle_event(event)
+                continue
+            if editor_mode == "CODE":
+                code_editor.handle_event(event)
                 continue
 
             # Keyboard Shortcuts (Building Mode Context)
@@ -470,6 +479,8 @@ def editor():
             dialog_editor.draw(screen)
         elif editor_mode == "Crafts":
             craft_editor.draw(screen)
+        elif editor_mode == "CODE":
+            code_editor.draw(screen)
         else:
             current_map_obj.render(screen, all_render_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
 

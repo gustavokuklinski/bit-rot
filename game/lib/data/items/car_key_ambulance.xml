@@ -1,0 +1,8 @@
+<item name="Car Key Ambulance" type="car_key" allow_belt="false">
+    <properties>
+        <key value="car_ambulance" />
+        <sprite file="car_key_ambulance.png" />
+        <weight weight="0.01" />
+    </properties>
+    <spawn chance="1" />
+</item>

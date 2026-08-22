@@ -1,0 +1,13 @@
+<item 
+    name="Laptop" 
+    type="quest" 
+    allow_belt="false"
+    tip="This item is used for quest"
+    spawn_amount_global="5"
+    spawn_maptile="[house_small_library]"
+    spawn_layer="[1]">
+    <properties>
+        <weight weight="1.5" />
+        <sprite file="quest_laptop.png" />
+    </properties>
+</item>

@@ -1,0 +1,5 @@
+<map name="petrol_top_01" type="maptile" char="petrol_top_01" is_obstacle="true">
+    <visuals>
+        <sprite id="close" file="petrol_top_01.png" />
+    </visuals>
+</map>

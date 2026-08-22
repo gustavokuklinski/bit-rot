@@ -1,0 +1,14 @@
+<item name="Carrot" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="3" />
+        <restore status="[water]" value="3" />
+        <restore status="[health]" value="2" />
+        <restore status="[stamina]" value="5" />
+        <reduce status="[anxiety]" value="1" />
+        <load value="1" />
+        <capacity value="3" />
+        <weight weight="0.1"/>
+        <sprite file="consumable_food_carrot.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

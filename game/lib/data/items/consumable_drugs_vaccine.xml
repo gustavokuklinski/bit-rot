@@ -1,0 +1,10 @@
+<item name="Vaccine" type="consumable_drugs" allow_belt="true">
+    <properties>
+        <reduce status="[infection]" value="15" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.02" />
+        <sprite file="consumable_drugs_vaccine.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

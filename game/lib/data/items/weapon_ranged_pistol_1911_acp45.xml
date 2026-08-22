@@ -1,0 +1,20 @@
+<item name="Pistol 1911" type="weapon_ranged" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="0" max="15" />
+        <weight weight="0.8"/>
+        <capacity value="15" />
+        <ammo type="ACP45 Ammo" />
+        <damage min="25" max="55" />
+        <firing pellets="1" spread_angle="0"  distance="20"/>
+        <skill type="range" />
+        <sprite file="weapon_ranged_pistol_1911_acp45.png" />
+        <knockback value="2" />
+    </properties>
+    <sound>
+        <shoot src="pistol_9mm.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>

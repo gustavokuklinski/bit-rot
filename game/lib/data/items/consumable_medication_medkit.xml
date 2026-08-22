@@ -1,0 +1,10 @@
+<item name="Medkit" type="consumable_medication" allow_belt="true">
+    <properties>
+        <restore status="[health]" value="25" />
+        <load min="1" max="25" />
+        <weight weight="0.1"/>
+        <capacity value="25" />
+        <sprite file="consumable_medication_medkit.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

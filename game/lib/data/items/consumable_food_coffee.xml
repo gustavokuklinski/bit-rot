@@ -1,0 +1,11 @@
+<item name="Coffee" type="consumable_food" allow_belt="false" tip="Craft your Coffee">
+    <properties>
+        <restore status="[anxiety]" value="2" />
+        <reduce status="[water]" value="10" />
+        <load value="5" />
+        <capacity value="5" />
+        <weight weight="0.05"/>
+        <sprite file="consumable_food_coffee.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

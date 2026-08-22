@@ -1,0 +1,8 @@
+<map name="wooden_door_01_broke_barricate" type="maptile" char="wooden_door_01_broke_barricate" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="50" max="80" />
+    </properties>
+    <visuals>
+        <sprite file="wooden_door_01_broke_barricate.png" />
+    </visuals>
+</map>

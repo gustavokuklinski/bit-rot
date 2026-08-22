@@ -1,0 +1,11 @@
+<item name="Crowbar" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="60" max="100" />
+        <weight weight="0.7"/>
+        <damage min="15" max="30" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_crowbar.png" />
+        <knockback value="0" />
+    </properties>
+    <spawn chance="1" />
+</item>

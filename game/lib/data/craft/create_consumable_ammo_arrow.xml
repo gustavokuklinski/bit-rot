@@ -1,0 +1,6 @@
+<recipe type="consumable_ammo" craft="create" magazine="Survivor Guide Basic" output="Arrow" gain_xp="[intelligence:1, maintenance:3]" amount="5" time="2.0">
+    <ingredient name="Stone Blade" destroy="true" amount="1" />
+    <ingredient name="Stick" destroy="true" amount="1" />
+    <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece, Duck Tape]" destroy="true" amount="1" />
+    <ingredient name="[Scissor, Primitive Knife, Knife]" destroy="false" amount="1" />
+</recipe>

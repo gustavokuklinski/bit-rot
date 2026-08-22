@@ -1,0 +1,5 @@
+<map name="wall_01" type="maptile" char="@" is_obstacle="true">
+    <visuals>
+        <sprite file="wall_01.png" />
+    </visuals>
+</map>

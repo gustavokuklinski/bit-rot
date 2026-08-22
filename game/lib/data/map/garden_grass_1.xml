@@ -1,0 +1,15 @@
+<map name="garden_grass_1" type="maptile" char="garden_grass_1" is_obstacle="false" destructible="true">
+    <visuals>
+        <sprite file="garden_grass_1.png" />
+    </visuals>
+    
+    <properties>
+        <health min="10" max="20" />
+    </properties>
+
+    <drop>
+        <item item="Stone" chance="0.1" min="1" max="1" />
+        <item item="Tree Branch" chance="0.1" min="1" max="1" />
+        <item item="Log" chance="0.1" min="1" max="1" />
+    </drop>
+</map>

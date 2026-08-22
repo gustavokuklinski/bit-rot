@@ -1,0 +1,10 @@
+<item name="Large Backpack" type="container" allow_belt="false">
+    <properties>
+        <capacity value="15" />
+        <weight weight="1.5" reduction="80%" />
+        <sprite file="container_large_backpack.png" />
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>

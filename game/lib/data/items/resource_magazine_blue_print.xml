@@ -1,0 +1,9 @@
+<item name="Blueprint" type="resource" allow_belt="false" tip="Used to Repair and Dismantle">
+    <properties>
+        <load min="100" max="350" />
+        <weight weight="0.001"/>
+        <capacity value="500" />
+        <sprite file="recipe_magazine_blue_print.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

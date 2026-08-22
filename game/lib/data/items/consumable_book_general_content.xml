@@ -1,0 +1,10 @@
+<item name="Magazine" type="consumable_book" allow_belt="false">
+    <properties>
+        <reduce status="[anxiety]" value="5" />
+        <weight weight="0.01"/>
+        <load min="2" max="20" />
+        <capacity value="20" />
+        <sprite file="consumable_book_general_content.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

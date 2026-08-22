@@ -1,0 +1,5 @@
+<recipe type="car_motor" craft="repair" output="Car Engine" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="2.0">
+    <ingredient name="Motor Repair Kit" destroy="true" amount="1" />
+    <ingredient name="Car Engine" destroy="false" amount="1" />
+    <ingredient name="Blueprint" destroy="true" amount="150" />
+</recipe>

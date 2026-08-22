@@ -1,0 +1,13 @@
+<item 
+    name="Harddrive" 
+    type="quest" 
+    allow_belt="false"
+    tip="This item is used for quest"
+    spawn_amount_global="10"
+    spawn_maptile="[lab_cupboard_01, house_computer, military_radio]"
+    spawn_layer="[1]">
+    <properties>
+        <weight weight="0.3" />
+        <sprite file="quest_harddrive.png" />
+    </properties>
+</item>

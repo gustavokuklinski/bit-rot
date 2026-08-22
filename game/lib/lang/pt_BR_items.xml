@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language name="pt_BR">
+
+    <item>
+        <item name="Wrench" translation_item="Chave Inglesa" />
+        <item name="Lug Wrench" translation_item="Chave de Roda" />
+        <item name="Screwdriver" translation_item="Chave de Fenda" />
+        <item name="Hammer" translation_item="Martelo" />
+        <item name="Primitive Hammer" translation_item="Martelo Primitivo" />
+        <item name="Axe" translation_item="Machado" />
+        <item name="Primitive Axe" translation_item="Machado Primitivo" />
+        <item name="Picaxe" translation_item="Picareta" />
+        <item name="Knife" translation_item="Faca" />
+        <item name="Primitive Knife" translation_item="Faca Primitiva" />
+        <item name="Stone Blade" translation_item="Lâmina de Pedra" />
+        <item name="Scissor" translation_item="Tesoura" />
+        <item name="Baseball Bat" translation_item="Taco de Beisebol" />
+        <item name="Baseball Bat with Nails" translation_item="Taco de Beisebol com Pregos" />
+        <item name="Metal Bar" translation_item="Barra de Metal" />
+        <item name="Tree Branch" translation_item="Galho de Árvore" />
+        <item name="Batton" translation_item="Cassetete" />
+        <item name="Spear" translation_item="Lança" />
+        <item name="Primitive Spear" translation_item="Lança Primitiva" />
+        <item name="Improvised Spear" translation_item="Lança Improvisada" />
+
+        <item name="Slingshot" translation_item="Estilingue" />
+        <item name="Pistol 9mm" translation_item="Pistola 9mm" />
+        <item name="38 Revolver" translation_item="Revólver .38" />
+        <item name="Shotgun" translation_item="Espingarda" />
+        <item name="Double Barrel Shotgun" translation_item="Espingarda de Cano Duplo" />
+        <item name="M4A1" translation_item="Rifle M4A1" />
+        <item name="MPK5" translation_item="Submetralhadora MPK5" />
+        <item name="MAC10" translation_item="Submetralhadora MAC-10" />
+
+        <item name="Slingshot Ammo" translation_item="Munição de Estilingue" />
+        <item name="9mm Ammo" translation_item="Munição 9mm" />
+        <item name="38 Ammo" translation_item="Munição .38" />
+        <item name="556 Ammo" translation_item="Munição 556" />
+        <item name="Shotgun Shells" translation_item="Cartuchos de Espingarda" />
+        <item name="Ammo Canister 9mm" translation_item="Lata de Munição 9mm" />
+        <item name="Ammo Canister 556" translation_item="Lata de Munição 556" />
+
+        <item name="Apple" translation_item="Maçã" />
+        <item name="Carrot" translation_item="Cenoura" />
+        <item name="Cheese" translation_item="Queijo" />
+        <item name="Fish" translation_item="Peixe" />
+        <item name="Meat" translation_item="Carne Crua" />
+        <item name="Chicken" translation_item="Frango Cru" />
+        <item name="Rat Meat" translation_item="Carne de Rato" />
+        <item name="Zombie Meat" translation_item="Carne de Zumbi" />
+        <item name="Kukaroach" translation_item="Barata" />
+        <item name="Canned Food" translation_item="Comida Enlatada" />
+        <item name="MRE" translation_item="Ração Militar (MRE)" />
+        <item name="Chocolate Bar" translation_item="Barra de Chocolate" />
+        <item name="Black Chocolate" translation_item="Chocolate Amargo" />
+        <item name="Water Unit" translation_item="Porção de Água" />
+        <item name="Energy Drink" translation_item="Bebida Energética" />
+        <item name="Cola Drink" translation_item="Refrigerante de Cola" />
+        <item name="Sparkling Water" translation_item="Água com Gás" />
+
+        <item name="Medical Bandage" translation_item="Bandagem Médica" />
+        <item name="Medical Kit" translation_item="Kit Médico" />
+        <item name="Medkit" translation_item="Kit de Primeiros Socorros" />
+        <item name="Infection Pills" translation_item="Pílulas de Infecção" />
+        <item name="Vaccine" translation_item="Vacina" />
+        <item name="Cigarette" translation_item="Cigarro" />
+        <item name="Cigarrete Pack" translation_item="Maço de Cigarros" />
+
+        <item name="Lantern off" translation_item="Lampeão (Desligado)" />
+        <item name="Lantern on" translation_item="Lampeão (Ligado)" />
+        <item name="Mobile off" translation_item="Celular (Desligado)" />
+        <item name="Mobile on" translation_item="Celular (Ligado)" />
+        <item name="Powerbank" translation_item="Carregador Portátil" />
+        <item name="Matches" translation_item="Fósforos" />
+        <item name="Lighter on" translation_item="Isqueiro aceso" />
+        <item name="Lighter off" translation_item="Isqueiro apagado" />
+        <item name="Lighter Fluid" translation_item="Fluido de Isqueiro" />
+        <item name="Campfire off" translation_item="Fogueira apagada" />
+        <item name="Campfire on" translation_item="Fogueira acesa" />
+        <item name="Camp Tent" translation_item="Barraca de Acampamento" />
+        <item name="Sleeping Bag" translation_item="Saco de Dormir" />
+
+        <item name="Ragged Cloth" translation_item="Pano Esfarrapado" />
+        <item name="Denim Stripes" translation_item="Tiras de Jeans" />
+        <item name="Leather Piece" translation_item="Pedaço de Couro" />
+        <item name="Log" translation_item="Tora de Madeira" />
+        <item name="Plank" translation_item="Tábua de Madeira" />
+        <item name="Stick" translation_item="Graveto" />
+        <item name="Half Stick" translation_item="Graveto Curto" />
+        <item name="Stone" translation_item="Pedra" />
+        <item name="Metal Scrap" translation_item="Sucata de Metal" />
+        <item name="Rubber Tire" translation_item="Pneu de Borracha" />
+        <item name="Slice Rubber" translation_item="Pedaço de Borracha" />
+        <item name="Screws" translation_item="Parafusos" />
+        <item name="Nails" translation_item="Pregos" />
+        <item name="Ducktape" translation_item="Fita Isolante" />
+        <item name="Twine" translation_item="Barbante" />
+        <item name="Needle" translation_item="Agulha" />
+        <item name="Weld" translation_item="Solda" />
+        <item name="Alcohol" translation_item="Álcool" />
+        <item name="Saw" translation_item="Serra" />
+        <item name="Portable Hand Saw" translation_item="Serra de Mão Portátil" />
+        <item name="Motor Repair Kit" translation_item="Kit de Reparo de Motor" />
+        <item name="Weapon Repair Kit" translation_item="Kit de Reparo de Armas" />
+
+        <item name="Car Engine" translation_item="Motor de Carro" />
+        <item name="Engine Parts" translation_item="Peças de Motor" />
+        <item name="Car Tire" translation_item="Pneu de Carro" />
+        <item name="Rim Tire" translation_item="Aro de Pneu" />
+        <item name="Car Oil" translation_item="Óleo de Motor" />
+        <item name="Fuel Unit" translation_item="Unidade de Combustível" />
+        <item name="Fuel Canister" translation_item="Galão de Combustível" />
+        <item name="Jeep Key" translation_item="Chave do Jeep" />
+        <item name="Pickup Key" translation_item="Chave da Caminhonete" />
+        <item name="Truck Key" translation_item="Chave do Caminhão" />
+        <item name="Ambulance Key" translation_item="Chave da Ambulância" />
+
+        <item name="Bag" translation_item="Sacola" />
+        <item name="Small Backpack" translation_item="Mochila Pequena" />
+        <item name="Large Backpack" translation_item="Mochila Grande" />
+        <item name="Small Satchel" translation_item="Pochete Pequena" />
+        <item name="Medium Satchel" translation_item="Bolsa Média" />
+        <item name="Large Satchel" translation_item="Bolsa Grande" />
+        <item name="Toolkit" translation_item="Caixa de Ferramentas" />
+        <item name="Sewing Kit" translation_item="Kit de Costura" />
+        <item name="Survivor Kit" translation_item="Kit de Sobrevivência" />
+        <item name="Wallet" translation_item="Carteira" />
+        <item name="Keyring" translation_item="Chaveiro" />
+        <item name="Plastic Bottle" translation_item="Garrafa de Plástico" />
+        <item name="Flask" translation_item="Cantil" />
+
+        <item name="General Magazine" translation_item="Revista de Variedades" />
+        <item name="Survivor Guide" translation_item="Guia de Sobrevivência" />
+        <item name="Blue Print" translation_item="Planta de Projeto" />
+        <item name="Medicine Vol 1" translation_item="Revista de Medicina Vol. 1" />
+        <item name="Carpentry Vol 1" translation_item="Revista de Carpintaria Vol. 1" />
+        <item name="Sewing Vol 1" translation_item="Revista de Costura Vol. 1" />
+        <item name="Vehicle Engineering Vol 1" translation_item="Engenharia de Veículos Vol. 1" />
+        <item name="Vehicle Engineering Vol 2" translation_item="Engenharia de Veículos Vol. 2" />
+        <item name="Vehicle Engineering Vol 3" translation_item="Engenharia de Veículos Vol. 3" />
+        <item name="Island Map" translation_item="Mapa da Ilha" />
+        <item name="Money" translation_item="Dinheiro" />
+        <item name="ID Card" translation_item="Identidade" />
+        <item name="Bible" translation_item="Bíblia" />
+        <item name="Family Photo" translation_item="Foto de Família" />
+    </item>
+
+</language>

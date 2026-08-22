@@ -1,0 +1,5 @@
+<map name="wooden_door_01_broke" type="maptile" char="wooden_door_01_broke" is_obstacle="false">
+    <visuals>
+        <sprite file="wooden_door_01_broke.png" />
+    </visuals>
+</map>

@@ -1,0 +1,10 @@
+<item name="Mobile on" type="mobile" state="on" allow_belt="true" tip="Use Powerbank to Reload">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="0.01"/>
+        <light min="1" max="5" />
+        <fuel type="Powerbank" />
+        <sprite file="mobile_on.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

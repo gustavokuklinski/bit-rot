@@ -1,0 +1,156 @@
+<player_traits>
+    <profession>
+        <trait id="Profession_Unemployed" name="Unemployed" cost="1" tooltip="Fast pick pocket" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:5, fitness:5, agility: 5]" />
+        </trait>
+        <trait id="Profession_Nurse" name="Nurse" cost="1" tooltip="Knows basic medicine" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Police_Officer]">
+            <attributes level="[strength:5, fitness:5, agility: 5, maintenance: 2, intelligence: 3, lucky: 1]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Medicine Vol.1" />
+        </trait>
+        <trait id="Profession_Police_Officer" name="Police Officer" cost="1" tooltip="The main security skills" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Nurse]">
+            <attributes level="[strength:5, fitness:5, agility: 3, maintenance: 1, intelligence: 1, ranged: 3, lucky: 2]" />
+            <recipe magazine="Survivor Guide Basic" />
+        </trait>
+        <trait id="Profession_Scientist" name="Scientist" cost="1" tooltip="Higher intelligence skills" disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:2, fitness:2, agility: 4, lucky: 3, maintenance: 2, intelligence: 5]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Medicine Vol.1" />
+        </trait>
+        <trait id="Profession_Mechanic" name="Mechanic" cost="1" tooltip="Knows how vehicles works" disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:5, fitness:5, agility: 5, maintenance: 1, intelligence: 2]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Vehicle Engineering Vol.1" />
+            <recipe magazine="Vehicle Engineering Vol.2" />
+            <recipe magazine="Vehicle Engineering Vol.3" />
+        </trait>
+        <trait id="Profession_Spy" name="Spy" cost="1" tooltip="Have soft skills to talk" disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:4, fitness:4, agility: 5, lucky: 5,maintenance: 1, intelligence: 3]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Medicine Vol.1" />
+            <recipe magazine="Vehicle Engineering Vol.1" />
+        </trait>
+        <trait id="Profession_CEO_assistant" name="CEO assistant" cost="1" tooltip="CEO assistant" disable="[Profession_Maintenance, Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
+            <attributes level="[strength:1, fitness:2, agility: 3, lucky: 3,maintenance: 2, intelligence: 4]" />
+            <recipe magazine="Survivor Guide Basic" />
+        </trait>
+        <trait id="Profession_Maintenance" name="Maintenance" cost="1" tooltip="Maintenance worker" disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer, Profession_CEO_assistant]">
+            <attributes level="[strength:2, fitness:3, agility: 4, lucky: 3, maintenance: 5, intelligence: 4]" />
+            <recipe magazine="Survivor Guide Basic" />
+            <recipe magazine="Carpentary Vol.1" />
+            <recipe magazine="Vehicle Engineering Vol.1" />
+        </trait>
+    </profession>
+    <traits>
+        <trait id="vaccine" name="Vaccine" cost="1" tooltip="-5% infection rate">
+            <stats infection="-5" />
+        </trait>
+
+        <trait id="athletic" name="Athletic" cost="2" tooltip="+10% stamina recovery, +5% Speed">
+            <stats stamina="10" />
+            <config set="PLAYER_SPEED:1.05" />
+        </trait>
+
+        <trait id="runner" name="Runner" cost="3" tooltip="+5% stamina recovery, +15% Speed">
+            <stats stamina="5" />
+            <config set="PLAYER_SPEED:1.15" />
+        </trait>
+
+        <trait id="strong" name="Strong" cost="2" tooltip="+5 Level and +2% XP on Strength | +2 Level and +1% XP on Fitness" disable="[fit, weak]">
+            <attributes strength="2" fitness="1" level="[strength:5, fitness:2]" />
+        </trait>
+
+        <trait id="luck" name="Luck" cost="2" tooltip="+1 Level and +2% XP on Lucky">
+            <attributes lucky="2" level="[lucky: 1]" />
+        </trait>
+
+        <trait id="light_hands" name="Light hands" cost="2" tooltip="+2% XP and +3 level Agility">
+            <attributes agility="2"  level="[agility: 3]" />
+        </trait>
+
+        <trait id="eagle_eyed" name="Eagle Eyed" cost="2" tooltip="+25% Vision Radius" disable="[myopia]">
+            <config set="BASE_PLAYER_VIEW_RADIUS:1.25" />
+        </trait>
+
+        <trait id="healthy" name="Healthy"  cost="2" tooltip="-15% Damage taken">
+            <stats health="15" />
+        </trait>
+
+        <trait id="rested" name="Rested" cost="1" tooltip="+15% stamina recovery">
+            <stats stamina="15" />
+        </trait>
+
+        <trait id="camel" name="Camel" cost="1" tooltip="20% faster water recovery">
+            <stats water="20" />
+        </trait>
+
+        <trait id="iron_stomach" name="Iron Stomach" cost="1" tooltip="15% faster food recovery">
+            <stats food="15" />
+        </trait>
+
+        <trait id="fit" name="Fit" cost="2" tooltip="+2 XP level fitness">
+            <attributes fitness="2" />
+        </trait>
+
+        <trait id="brawler" name="Brawler" cost="2" tooltip="+2% XP level melee">
+            <attributes melee="2" />
+        </trait>
+
+        <trait id="shooter" name="Shooter" cost="2" tooltip="+2 level and +2% XP on ranged weapons">
+            <attributes ranged="2" level="[ranged:2]" />
+        </trait>
+
+        <trait id="weak" name="Weak" cost="-2" tooltip="-2% XP level strength gain">
+            <attributes strength="-2" />
+        </trait>
+
+        <trait id="smoker" name="Smoker" cost="-1" tooltip="-15% slower recovery stamina and +15% faster increase anxiety">
+            <stats stamina="-15" anxiety="15" />
+        </trait>
+
+        <trait id="drunk" name="Drunk" cost="-1" tooltip="-15% XP agility penality and +15% faster increase anxiety">
+            <attributes agility="-15" />
+            <stats anxiety="15" />
+        </trait>
+
+        <trait id="illnes" name="Illnes" cost="-1" tooltip="+15% infection rate">
+            <stats infection="15" />
+        </trait>
+
+        <trait id="sedentary" name="Sedentary" cost="-2" tooltip="-30% stamina, -10% Speed">
+            <stats stamina="-30" />
+            <attributes strength="-1" />
+            <config set="PLAYER_SPEED:0.90" />
+        </trait>
+
+        <trait id="myopia" name="Myopia" cost="-2" tooltip="-20% Aiming XP, -35% View Radius" disable="[eagle_eyed]" >
+            <attributes ranged="-10" />
+            <config set="BASE_PLAYER_VIEW_RADIUS:0.65" />
+        </trait>
+
+        <trait id="frail" name="Frail" cost="-2" tooltip="+15% Damage taken">
+            <stats health="-15" />
+        </trait>
+
+        <trait id="sleepy" name="Sleepy" cost="-1" tooltip="-20% stamina recovery">
+            <stats stamina="-20" />
+        </trait>
+
+        <trait id="high_thirst" name="High thirst" cost="-1" tooltip="-25% water recovery">
+            <stats water="-25" />
+        </trait>
+
+        <trait id="sweet_tooth" name="Sweet tooth" cost="-1" tooltip="-20% food recovery">
+            <stats food="-20" />
+        </trait>
+
+        <trait id="unfit" name="Unfit" cost="-2"  tooltip="-2% XP fitness level">
+            <attributes fitness="-2" />
+        </trait>
+
+        <trait id="clumsy" name="Clumsy" cost="-2" tooltip="-2% XP melee level, -5% Speed">
+            <attributes melee="-2" />
+            <config set="PLAYER_SPEED:0.95" />
+        </trait>
+    </traits>
+</player_traits>

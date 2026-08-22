@@ -1,0 +1,8 @@
+<item name="Car Key Jeep" type="car_key" allow_belt="false">
+    <properties>
+        <key value="car_jeep" />
+        <sprite file="car_key_jeep.png" />
+        <weight weight="0.01" />
+    </properties>
+    <spawn chance="1" />
+</item>

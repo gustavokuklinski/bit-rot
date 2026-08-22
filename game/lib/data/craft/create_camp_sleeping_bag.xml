@@ -1,0 +1,5 @@
+<recipe type="camp" craft="create" output="Sleeping Bag" magazine="Survivor Guide Basic" req_level="[intelligence:1, maintenance:1]" gain_xp="[intelligence:0.5, maintenance:0.5]" amount="1" time="7.0">
+    <ingredient name="Denim Stripes" destroy="true" amount="15" />
+    <ingredient name="Line Twine" destroy="true" amount="10" />
+    <ingredient name="Needle" destroy="false" amount="1" />
+</recipe>

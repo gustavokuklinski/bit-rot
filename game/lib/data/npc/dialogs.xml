@@ -1,0 +1,420 @@
+<?xml version='1.0' encoding='utf-8'?>
+<npc_dialog>
+    <node id="hail" x="65" y="120">
+        <player_question p="Opa, you got a minute, brother?" />
+        <player_question p="Hey, you look alive... más o menos." />
+        <player_question p="Oi, don't shoot! I'm just a contractor, caramba." />
+        <player_question p="Hola mate, seen any patrols nearby?" />
+        <player_question p="Opa amigo, you have any spare credits?" />
+        <player_question p="Tudo bem? Or is the rot getting to you?" />
+        <player_question p="Psst, freelancer! Over here, rápido!" />
+        <player_question p="You work for Exxoil too, or are you free agent?" />
+        <player_question p="Ey, take it easy with that weapon, cara." />
+        <player_question p="Looking for work? Or just looking to die?" />
+        <player_question p="Opa, is it safe to talk in the open like this?" />
+        <player_question p="Hey man, you smell like kerosene and fear." />
+        <player_question p="Diga me, is the path to the jungle clear?" />
+        <player_question p="Hola, did Rosskrild and Silva send you to find me?" />
+        <player_question p="Brother, you look like you’ve seen a ghost." />
+        <player_question p="Oi, stop! I’m not one of them... yet." />
+        <player_question p="What’s the word? Is the base still holding?" />
+        <player_question p="Hey, you got any clean water? Pago bien." />
+        <player_question p="Com licença, are you the fix-it guy they mentioned?" />
+        <player_question p="Ey, stay back! Keep your distance, brother." />
+
+        <npc_awnser n="Calma, kid. I'm just trying to reach tomorrow." />
+        <npc_awnser n="Oi... you sound like you still think money matters." />
+        <npc_awnser n="Hola. Keep your voice down, the jungle is listening." />
+        <npc_awnser n="I don't care who signed your check, just stay away." />
+        <npc_awnser n="Tudo ruim, friend. Everything is rot and shadows now." />
+        <npc_awnser n="Mierda, another contractor. The island is full of ghosts." />
+        <npc_awnser n="I'm busy mourning the world, cara. What do you want?" />
+        <npc_awnser n="If you're looking for Gethulius, they’re all dead or hungry." />
+        <npc_awnser n="Look at you... fresh off the boat and ready to die." />
+        <npc_awnser n="Speak fast. Time is the only thing we don't have." />
+        <npc_awnser n="Opa, another soul for the grinder. Welcome to hell." />
+        <npc_awnser n="You want info? It's gonna cost you more than credits." />
+        <npc_awnser n="The only 'tudo bem' here is being six feet under." />
+        <npc_awnser n="Hola contractor. Try not to bleed on my boots." />
+        <npc_awnser n="I work for me now. The corporations are gone, buddy." />
+        <npc_awnser n="Don't touch me. The plague doesn't care about your job title." />
+        <npc_awnser n="Porra, I thought I was the last one in this sector." />
+        <npc_awnser n="You have the look of someone who wants to live. Bad luck." />
+        <npc_awnser n="Yeah, I'm here. But my help is expensive, entendeu?" />
+        <npc_awnser n="Whatever you're selling, I'm not buying. Vaza!" />
+    </node>
+
+    <node id="context" x="65" y="120">
+        <player_question p="The Exxoil rig is dark... what happened?" />
+        <player_question p="Why did they bring those 'survivors' here, porra?" />
+        <player_question p="I heard the vaccines were fake. Is it true?" />
+        <player_question p="We need to find the Gethulius vault, now!" />
+        <player_question p="Escucha, the infection is spreading to the coast." />
+        <player_question p="Is there any fuel left in the archipelago?" />
+        <player_question p="They said this was a paradise. Some joke, huh?" />
+        <player_question p="Where are the bosses? Rosskrild vanished!" />
+        <player_question p="The military facility fell in hours... how?" />
+        <player_question p="We can't stay here, the rotters are coming." />
+        <player_question p="Is it true the 'asymptomatic' guy is still out there?" />
+        <player_question p="People are killing each other for a bit of scrap." />
+        <player_question p="Can we trust the Silva family? I heard rumors." />
+        <player_question p="The jungle is moving, man. It’s not normal." />
+        <player_question p="They promised us safety and gave us a tomb." />
+        <player_question p="How much time do we have before the grid dies?" />
+        <player_question p="I saw the labs. It wasn't just a plague, was it?" />
+        <player_question p="The shadows... they move even when there’s no light." />
+        <player_question p="Everyone is greedy, even with the world ending." />
+        <player_question p="Mierda, we are just rats in a corporate cage." />
+
+        <npc_awnser n="Greed is a bitch, cara. They wanted more workers, they got monsters." />
+        <npc_awnser n="The grid is flickering because the workers are being eaten." />
+        <npc_awnser n="There are no vaccines, mate. Just stuff to keep you numb." />
+        <npc_awnser n="Rosskrild and Silva are probably halfway to the moon by now." />
+        <npc_awnser n="The 'survivors' were just a delivery system for the rot." />
+        <npc_awnser n="Safe? Nothing is safe when the air smells like rot." />
+        <npc_awnser n="Exxoil didn't care about us, only the barrels, mano." />
+        <npc_awnser n="I saw the military run. When they run, you should hide." />
+        <npc_awnser n="The jungle grows fast when it’s fed with human blood." />
+        <npc_awnser n="Money is just paper to burn for warmth now, amigo." />
+        <npc_awnser n="The asymptomatic one... he’s the king of this mess now." />
+        <npc_awnser n="The labs were making something else. Something worse." />
+        <npc_awnser n="Don't talk to me about trusts. Trust gets you killed." />
+        <npc_awnser n="The archipelago is a battery that’s finally run dry." />
+        <npc_awnser n="They called it 'Bit Rot' because it eats you from inside." />
+        <npc_awnser n="I heard the bosses locked themselves in the underwater bunker." />
+        <npc_awnser n="No fuel, no hope, just the tropical heat and the dead." />
+        <npc_awnser n="Every time a generator dies, a part of us dies too." />
+        <npc_awnser n="The alliance broke the moment the first scream started." />
+        <npc_awnser n="Stay low. If the rotters don't get you, the hunger will." />
+    </node>
+
+    <node id="end" x="65" y="120">
+        <player_question p="Is the radio still dead? No rescue?" />
+        <player_question p="I can't take the screaming anymore, caramba." />
+        <player_question p="They say the continent is just a big graveyard." />
+        <player_question p="If I die, don't let me turn into one of those." />
+        <player_question p="The helicopter pad is empty. We are stuck." />
+        <player_question p="I heard Brazil fell in three weeks. Is that true?" />
+        <player_question p="What if the rescue boat is just another trap?" />
+        <player_question p="I'm lucky to be alive, but for how long, mate?" />
+        <player_question p="The rotters... they almost got my arm back there." />
+        <player_question p="I want to go home, but there’s no home left." />
+        <player_question p="Those bastards at Gethulius deserve to rot too." />
+        <player_question p="Did you hear the signal? It sounded like a scream." />
+        <player_question p="I'm tired of running, brother. So tired." />
+        <player_question p="If we reach the signal tower, maybe someone hears us." />
+        <player_question p="They said the USA went dark first. No one is coming." />
+        <player_question p="Is there any land left that isn't infected, mano?" />
+        <player_question p="I have a family back in the mainland... are they...?" />
+        <player_question p="We are just ghosts waiting for our bodies to catch up." />
+        <player_question p="One last push to the docks. That’s all I got left." />
+        <player_question p="The world is dead, and we are just the maggots." />
+
+        <npc_awnser n="The radio only plays static and the sounds of the dying." />
+        <npc_awnser n="Rescue? Amigo, we are the ones the world forgot." />
+        <npc_awnser n="Brazil is a jungle of rotters now. There is no going back." />
+        <npc_awnser n="If you turn, I’ll be the one to put a bullet in your head." />
+        <npc_awnser n="The bosses took the last ships. We are the leftovers." />
+        <npc_awnser n="USA, Europe, Asia... it’s all dark. We are the last light." />
+        <npc_awnser n="Better to die here than to see what’s left of the cities." />
+        <npc_awnser n="Luck is just a fancy word for 'not my turn yet', cara." />
+        <npc_awnser n="I saw the satellite images. The world is black, brother." />
+        <npc_awnser n="The signal tower is a beacon for the monsters, nothing more." />
+        <npc_awnser n="We are contractors of the apocalypse now. No pay, just pain." />
+        <npc_awnser n="The mainland is gone. The sea is our only wall now." />
+        <npc_awnser n="Don't look back. There's nothing but fire behind us." />
+        <npc_awnser n="If there was a God, He left this island a long time ago." />
+        <npc_awnser n="Maybe the rot is the next step for us. A quiet end." />
+        <npc_awnser n="Don't talk about family. It makes the dying harder." />
+        <npc_awnser n="The corporations won. They owned our lives, now they own our deaths." />
+        <npc_awnser n="I heard a broadcast from a ship... it sounded like they were eating the captain." />
+        <npc_awnser n="There is no 'home', kid. This tropical hell is all we got." />
+        <npc_awnser n="Shut up and keep your gun ready. The sun is going down." />
+    </node>
+
+    <node id="proc_quest">
+        <player_question p="Ouvir na rádio that a group is starving in the jungle." />
+        <player_question p="Heard a signal... someone needs help near the rigs, cara." />
+        <player_question p="The survivors are desperate, mate. Any leads?" />
+        <player_question p="People are talking about a stash... is it real, amigo?" />
+        <player_question p="Diga me, who's the one looking for extra hands?" />
+        <player_question p="I heard a whisper on the comms about a supply run." />
+        <player_question p="Is there anyone left in this island worth saving, brother?" />
+        <player_question p="I found a note from a contractor. Something about a missing {item}." />
+        <player_question p="Opa, is it true the Gethulius guys left some gear behind?" />
+        <player_question p="The radio is static, but I caught a name. You know them?" />
+        <player_question p="Everyone is dying for a bit of scrap. What's the job?" />
+        <player_question p="Hola, are you the one looking for a fix-it guy?" />
+        <player_question p="They say the military left a {item} near the docks." />
+        <player_question p="I want to help, but only if the price is right, entendeu?" />
+        <player_question p="The jungle is screaming today. Any work to keep me busy?" />
+        <player_question p="Escucha, I heard a group is bunkered down in the lab." />
+        <player_question p="Is there a bounty for finding lost corporate property?" />
+        <player_question p="They said you have the coordinates for the supply drop." />
+        <player_question p="Pelo amor de Deus, someone has to do something about this." />
+        <player_question p="The archipelago is quiet... too quiet. Where are the survivors?" />
+
+        <npc_awnser n="Dios says we should share, but first, find me a {item}." />
+        <npc_awnser n="If you find a {item}, maybe I’ll tell you who’s still breathing." />
+        <npc_awnser n="Survival isn't free, cara. Go get me a {item} first." />
+        <npc_awnser n="The group is dead if they don't get a {item} soon, brother." />
+        <npc_awnser n="I don't trust the radio, but I trust a man with a {item}." />
+        <npc_awnser n="The Rosskrild vault is locked. We need a {item} to bypass it." />
+        <npc_awnser n="Mierda, everyone wants something. Find a {item} and we talk." />
+        <npc_awnser n="Charity died with the mainland. Get a {item} or vaza!" />
+        <npc_awnser n="God helps those who find a {item} for the group, amigo." />
+        <npc_awnser n="It’s a tropical hell out there. You'll need a {item} to survive." />
+        <npc_awnser n="The contract is simple: bring me a {item} and don't get bit." />
+        <npc_awnser n="I have the intel, but it’s gonna cost you one {item}." />
+        <npc_awnser n="Don't look at me like that. This island eats the weak without a {item}." />
+        <npc_awnser n="Exxoil left a lot of junk, but we specifically need a {item}." />
+        <npc_awnser n="You want to be a hero? Fine. Start by finding a {item}." />
+        <npc_awnser n="Tudo bem, freelancer. Find that {item} and I'll pay you in hope." />
+        <npc_awnser n="There’s a group in the shadows waiting for a {item} to move." />
+        <npc_awnser n="Pray all you want, but a {item} will save you faster than Jesus." />
+        <npc_awnser n="The alliance is watching. Show them you’re useful, find a {item}." />
+        <npc_awnser n="Greed is the only thing left. Bring a {item} and I'll share the loot." />
+    </node>
+
+    <node id="proc_end_quest">
+        <player_question p="Psst... look what I found. Ready to trade, brother?" />
+        <player_question p="I got the {item}. Now where’s my cut, caramba?" />
+        <player_question p="Ouvir, I have the goods. Is the coast clear?" />
+        <player_question p="Aqui está, one {item} as requested. Don't spend it all at once." />
+        <player_question p="The rotters almost got me for this {item}, amigo." />
+        <player_question p="I have the {item}. Tell me it was worth the blood." />
+        <player_question p="Check it out, the {item} is clean. Pay up, cara." />
+        <player_question p="Is this what you wanted? This {item} cost me a lot of sweat." />
+        <player_question p="Hola, I’m back from the jungle with your {item}." />
+        <player_question p="Business is booming, right? I got your {item} right here." />
+        <player_question p="Take this {item} and tell the group I’m not a rotter." />
+        <player_question p="The deal is done. I have the {item}, you have the rewards." />
+        <player_question p="Mierda, it was hard to find, but I have the {item}." />
+        <player_question p="One {item}, fresh from the ruins. What do I get?" />
+        <player_question p="I don't have all day, brother. Here is the {item}." />
+        <player_question p="You see this? This {item} is the ticket out of here." />
+        <player_question p="I risked my neck for this {item}. It better be worth it." />
+        <player_question p="The shadow partners will be happy. I have the {item}." />
+        <player_question p="Opa, mission accomplished. The {item} is yours." />
+        <player_question p="Let’s make this fast. Here is the {item}. Give me the goods." />
+
+        <npc_awnser n="The gambler always takes all... but you can have this {reward_item}." />
+        <npc_awnser n="Everything has a price for the bidder. Take this {reward_item}." />
+        <npc_awnser n="Opa! This {item} is perfect. Here’s a {reward_item} for your trouble." />
+        <npc_awnser n="You’re a good fix-it guy, cara. Take this {reward_item} and sume." />
+        <npc_awnser n="Mierda, you actually survived. Here, take this {reward_item}." />
+        <npc_awnser n="The corporate web is tangled, but this {reward_item} is yours." />
+        <npc_awnser n="Fair trade, amigo. A {reward_item} for a piece of the past." />
+        <npc_awnser n="Don't tell anyone where you got this {reward_item}, entendeu?" />
+        <npc_awnser n="God provides... through people like you. Take the {reward_item}." />
+        <npc_awnser n="Business is booming indeed. Here is your {reward_item}, brother." />
+        <npc_awnser n="The jungle didn't eat you? Impressive. Take this {reward_item}." />
+        <npc_awnser n="I hope this {reward_item} keeps you alive another hour, mate." />
+        <npc_awnser n="The Silva family sends their regards. Here’s a {reward_item}." />
+        <npc_awnser n="Take the {reward_item} and keep your mouth shut, okay?" />
+        <npc_awnser n="One man's trash is another man's {reward_item}. Vaza now." />
+        <npc_awnser n="You’ve earned this {reward_item}. Try not to die on the way back." />
+        <npc_awnser n="Greed is good, but staying alive is better. Have a {reward_item}." />
+        <npc_awnser n="Nice work, contractor. This {reward_item} should help you out." />
+        <npc_awnser n="The islands are hell, but at least you have this {reward_item} now." />
+        <npc_awnser n="Porra, finally! Take this {reward_item} and leave me alone." />
+    </node>
+
+    <node id="proc_items_quest">
+        <npc_rqst rqst_item="[Infection Pills]" />
+        <npc_rqst rqst_item="[Medical Bandage]" />
+        <npc_rqst rqst_item="[Plastic Bottle]" />
+        <npc_rqst rqst_item="[Canned Food]" />
+        <npc_rqst rqst_item="[Powerbank]" />
+        <npc_rqst rqst_item="[Pistol 9mm]" />
+        <npc_rqst rqst_item="[Shotgun Shells]" />
+        <npc_rqst rqst_item="[Blueprint]" />
+        <npc_rqst rqst_item="[Car Key Jeep]" />
+        <npc_rqst rqst_item="[Vaccine]" />
+        <npc_rqst rqst_item="[Car Key Ambulance]" />
+        <npc_rqst rqst_item="[Family Photo]" />
+
+        <player_award award_item="[Money WBRL]" />
+        <player_award award_item="[Medical Kit]" />
+        <player_award award_item="[Infection Pills]" />
+        <player_award award_item="[Medical Bandage]" />
+        <player_award award_item="[Plastic Bottle]" />
+        <player_award award_item="[Canned Food]" />
+        <player_award award_item="[Powerbank]" />
+        <player_award award_item="[Pistol 9mm]" />
+        <player_award award_item="[Shotgun Shells]" />
+        <player_award award_item="[Blueprint]" />
+        <player_award award_item="[Car Key Jeep]" />
+        <player_award award_item="[Vaccine]" />
+    </node>
+
+    <node id="greeting" x="65" y="120">
+        <options 
+            player_question="How's it going?" 
+            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
+            priority="50"
+            gain_xp="[lucky:1]" />
+
+        <options 
+            player_question="You look like you've been through hell." 
+            npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." 
+            priority="50" 
+            req_level="[lucky:1]" 
+            gain_xp="[lucky:50]" />
+    </node>
+
+    <node id="tips" x="443" y="140">
+        <options 
+            player_question="How do I stay alive out here?" 
+            npc_answer="Here's a map. This may save you." 
+            priority="10" 
+            req_level="[lucky:2]" 
+            gain_xp="[lucky:25]" 
+            dialog_type="once" 
+            award_item="[Island Map]" />
+
+        <options 
+            player_question="Any way to get around faster?" 
+            npc_answer="Exxoil left keys in all their jeeps. Same ignition. Corporate cost-cutting. Try these—they might work." 
+            priority="10" req_level="[lucky:3]" 
+            gain_xp="[lucky:25]" 
+            dialog_type="once" 
+            award_item="[Car Key Jeep]" />
+        
+        <options 
+            player_question="The tool here looks like garbage!" 
+            npc_answer="The main engineer of the Island build everything upon Blueprints, you can scavange for them. I have some, take it son..." 
+            priority="10" req_level="[lucky:3]" 
+            gain_xp="[lucky:5]" 
+            dialog_type="once" 
+            award_item="[Blueprint]" />
+    </node>
+
+    <node id="lore_branch" x="779" y="133">
+        <options 
+            player_question="I've heard a helicopter landed with survivors, is this true?" 
+            npc_answer="Sim... sí...yes? They brought the disgrace to us, some asymphomatic from the continent, it becomes a hell after them! cof...cof..." 
+            priority="10" 
+            gain_xp="[lucky:50]" />
+
+        <options 
+            player_question="What happened to the continent?" 
+            npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." 
+            priority="10" 
+            gain_xp="[lucky:50]" />
+
+        <options 
+            player_question="Why did the helicopters leave us?" 
+            npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." 
+            priority="10"
+            gain_xp="[lucky:50]" />
+    </node>
+
+    <!-- ======================================= -->
+    <!-- Begin Quests -->
+    <node id="quest_branch" x="779" y="133">
+        <options 
+            player_question="I have my ID, how to get faster to the helipoint?" 
+            npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here."
+            rqst_item="[ID]" 
+            priority="100" 
+            gain_xp="[lucky:100]" 
+            dialog_type="once"
+            unlock_flag="Quest: Mobile phone" />
+        <options 
+            player_question="Hey. You look like someone who knows a way off this rock. I'm... between contractors." 
+            npc_answer="WHa! Look at you – rags and desperation. Perfect. Listen, criança. I need a mule. There's a suitcase – old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?"
+            rqst_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]" 
+            priority="10" 
+            gain_xp="[lucky:100]" 
+            dialog_type="once"
+            unlock_flag="Quest: Find the Suitcase" />
+        <options 
+            player_question="I think I have something that may interest you..." 
+            npc_answer="Have you found the suitcase? Is there a laptop inside of it? This is research and it's valuable!"
+            rqst_item="[Suitcase, Laptop]"
+            priority="10" 
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Laptop" />
+        <options 
+            player_question="I've scavanging after the island falls." 
+            npc_answer="Everybody are. Have you found anything important?"
+            priority="10" 
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Harddrive" />
+        <options 
+            player_question="Do you know anything about the files?" 
+            npc_answer="I'm trying to get alive here, but people are talking about pharmas trying to stole some shit."
+            priority="10" 
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Pendrive" />
+    </node>
+
+    <node id="Quest: Mobile phone">
+        <options
+            player_question="If I have a mobile I could try to call someone..." 
+            npc_answer="Lucky for you, take my Mobile. It's useless right now."
+            rqst_item="[ID]"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            award_item="[Mobile off]"
+            tip="Your ID may save your life"
+            complete_flag="Quest: Mobile phone" />
+    </node>
+    <node id="Quest: Find the Suitcase">
+        <options
+            player_question="Yes, but looks useless right now. Do you have something to trade?" 
+            npc_answer="Well, well. The scarecrow delivers. Here's your payment. Don't spend it all in one grave. Some days you win, some days you lose. Today you're just... disposable. Hehehe. Now get lost before I decide you're worth more as bait."
+            rqst_item="[Suitcase]"
+            req_item="[Suitcase]"
+            npc_state_friendly="false"
+            npc_state_static="false"
+            gain_xp="[lucky:200]"
+            dialog_type="once"
+            tip="Scavange around to find the lost Suitcase."
+            complete_flag="Quest: Find the Suitcase" />
+    </node>
+    <node id="Quest: Laptop">
+        <options
+            player_question="The laptop is here, do you have something to trade?" 
+            npc_answer="Reasearch has it's price, take this and try to get out of here as fast as you can! Rotters and Rogues around, can't trust anyone anymore."
+            rqst_item="[Laptop]"
+            req_item="[Laptop]"
+            gain_xp="[lucky:200]"
+            award_item="[Pistol 9mm]"
+            dialog_type="once"
+            tip="This laptop contains simulation data of the virus."
+            complete_flag="Quest: Laptop" />
+    </node>
+
+    <node id="Quest: Harddrive">
+        <options
+            player_question="Just got this Harddrive" 
+            npc_answer="This is what people were saying about the black market pharmas around here. I dont have much, get this Blueprints"
+            rqst_item="[Harddrive]"
+            req_item="[Harddrive]"
+            gain_xp="[lucky:200]"
+            award_item="[Blueprint]"
+            dialog_type="once"
+            tip="The raw data gnome of the flu."
+            complete_flag="Quest: Harddrive" />
+    </node>
+
+    <node id="Quest: Pendrive">
+        <options
+            player_question="I don't know if you are the right person but here is it." 
+            npc_answer="The vaccine simulations! We need to get out of here fast."
+            rqst_item="[Pendrive]"
+            req_item="[Pendrive]"
+            gain_xp="[lucky:200]"
+            award_item="[Vaccine]"
+            dialog_type="once"
+            tip="Some presentations and leaked data due bad cleaning and public usage."
+            complete_flag="Quest: Pendrive" />
+    </node>
+    <!-- End Quests -->
+    <!-- ======================================= -->
+</npc_dialog>

@@ -1,0 +1,9 @@
+<cloth name="Belt" type="cloth" id="util" builder="true">
+    <properties>
+        <defence value="0.0" />
+        <capacity value="2" />
+        <sprite file="util_belt.png" />
+        <weight weight="0.1" reduction="5%" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

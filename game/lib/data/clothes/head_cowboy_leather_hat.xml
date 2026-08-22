@@ -1,0 +1,8 @@
+<cloth name="Cowboy Leather Hat" type="cloth" id="head" builder="true" hide_cloth="[hair]">
+    <properties>
+        <defence value="0" />
+        <sprite file="head_cowboy_leather_hat.png" />
+        <weight weight="0.1" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

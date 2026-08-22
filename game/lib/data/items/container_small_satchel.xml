@@ -1,0 +1,11 @@
+<item name="Small Satchel" type="container">
+    <properties>
+        <capacity value="4" />
+        <sprite file="container_small_satchel.png" />
+        <weight weight="0.5" reduction="10%" />
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>
+

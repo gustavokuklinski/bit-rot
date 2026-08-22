@@ -1,0 +1,10 @@
+<item name="Lighter on" type="utility" state="on" allow_belt="false" tip="Use Lighter Fluid to Reload">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="0.1"/>
+        <light min="1" max="2" />
+        <fuel type="Lighter Fluid" />
+        <sprite file="utility_lighter_on.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

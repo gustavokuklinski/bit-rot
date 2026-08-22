@@ -1,0 +1,10 @@
+<cloth name="Military Vest" type="cloth" id="util" builder="false">
+    <properties>
+        <defence value="0.0" />
+        <capacity value="4" />
+        <durability min="100" max="100" />
+        <sprite file="util_military_vest.png" />
+        <weight weight="0.2" reduction="5%" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

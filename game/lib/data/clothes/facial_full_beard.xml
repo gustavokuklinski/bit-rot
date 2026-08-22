@@ -1,0 +1,8 @@
+<cloth name="Full Beard" type="cloth" id="facial" builder="true">
+    <properties>
+        <defence value="0" />
+        <sprite file="facial_full_beard.png" />
+        <weight weight="0.0" /> 
+    </properties>
+    <spawn chance="1" />
+</cloth>

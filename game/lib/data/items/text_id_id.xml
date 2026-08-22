@@ -1,0 +1,17 @@
+<item name="ID" type="text" tip="Contains:\nPlayer: Name, Sex, Traits and Known Recipes\nZombie and NPC: Name, Sex">
+    <properties>
+        <sprite file="text_id_id.png" />
+        <weight weight="0.001"/>
+        <text>
+            Name: [PLAYER NAME]
+            Sex: [PLAYER SEX]
+            Traits:
+                - [LIST TO TRAITS]
+            Quests:
+                - [LIST OF QUEST]
+            Recipes:
+                - [LIST TO RECIPES]
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

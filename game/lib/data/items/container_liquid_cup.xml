@@ -1,0 +1,9 @@
+<item name="Cup" type="container" allow_liquid="true" allow_belt="true" tip="Use to craft.\nOnly liquids allowed">
+    <properties>
+        <load value="1" />
+        <weight weight="0.01" reduction="10%" />
+        <capacity value="5" />
+        <sprite file="container_liquid_cup.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

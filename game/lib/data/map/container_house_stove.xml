@@ -1,0 +1,11 @@
+<map name="house_stove" type="maptile_container" char="house_stove" is_obstacle="true" is_visible="true">
+    <visuals>
+        <sprite file="house_stove.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item type="consumable_food" min="1" max="8" chance="1.0" />
+        <item item="Matches" chance="1.0" />
+        <item item="Lighter off" chance="1.0" />
+    </loot>
+</map>

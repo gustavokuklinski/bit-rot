@@ -1,0 +1,9 @@
+<item name="Denim Stripes" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="20" />
+        <weight weight="0.04"/>
+        <capacity value="20" />
+        <sprite file="resource_denim_stripes.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

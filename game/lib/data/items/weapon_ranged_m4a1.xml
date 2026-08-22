@@ -1,0 +1,20 @@
+<item name="M4A1" type="weapon_ranged" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="0" max="30" />
+        <weight weight="1.5"/>
+        <capacity value="30" />
+        <ammo type="556 Ammo" />
+        <damage min="30" max="80" />
+        <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" distance="40" />
+        <skill type="range" />
+        <sprite file="weapon_ranged_m4a1.png" />
+        <knockback value="5" />
+    </properties>
+    <sound>
+        <shoot src="m4a1.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>

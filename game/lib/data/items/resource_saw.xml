@@ -1,0 +1,9 @@
+<item name="Saw" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="1" />
+        <weight weight="0.9"/>
+        <capacity value="1" />
+        <sprite file="resource_saw.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

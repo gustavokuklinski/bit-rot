@@ -1,0 +1,9 @@
+<item name="Powerbank" type="utility" allow_belt="false" tip="Use to recharge Mobile">
+    <properties>
+        <load min="1" max="100" />
+        <weight weight="0.001"/>
+        <capacity value="100" />
+        <sprite file="utility_powerbank.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

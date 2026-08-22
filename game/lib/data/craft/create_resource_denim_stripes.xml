@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Denim Stripes" gain_xp="[intelligence:0.1, maintenance:0.3]" amount="2" time="1.5">
+    <ingredient name="[Military Pants, Black Hat, Beret, Military Jacket, Jeans Pants, Jeans Short, Sneakers, Cowbow Hat]" destroy="true" amount="1" />
+    <ingredient name="Scissor" destroy="false" amount="1" />
+</recipe>

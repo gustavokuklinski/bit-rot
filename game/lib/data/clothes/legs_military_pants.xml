@@ -1,0 +1,10 @@
+<cloth name="Military Pants" type="cloth" id="legs" builder="false">
+    <properties>
+        <defence value="20" />
+        <capacity value="4" />
+        <durability min="1" max="100" />
+        <sprite file="legs_military_pants.png" />
+        <weight weight="0.2" reduction="2%" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

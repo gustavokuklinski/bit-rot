@@ -1,0 +1,9 @@
+<item name="Duck Tape" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load value="1" />
+        <weight weight="0.05"/>
+        <capacity value="60" />
+        <sprite file="resource_ducktape.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -1,0 +1,15 @@
+<item name="Survivor Kit" type="container" allow_belt="false">
+    <properties>
+        <capacity value="4" />
+        <sprite file="container_survivor_kit.png" />
+        <weight weight="1.5" reduction="10%" />
+    </properties>
+    <loot>
+        <item name="Survivor Guide Basic" chance="1.0" />
+        <item name="Flask" chance="1.0" />
+        <item name="Island Map" chance="1.0" />
+        <item name="Knife" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

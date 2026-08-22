@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Slice Rubber" gain_xp="[intelligence:0.2, maintenance:0.5]" amount="4" time="1.5">
+    <ingredient name="Car Tire Rubber" destroy="true" amount="1" />
+    <ingredient name="[Scissor, Primitive Knife, Knife]" destroy="false" amount="1" />
+</recipe>

@@ -1,0 +1,9 @@
+<item name="Money WBRL" type="currency" allow_belt="false">
+    <properties>
+        <sprite file="currency_money.png" />
+        <weight weight="0.001"/>
+        <load min="1" max="10" />
+        <capacity value="1000" />
+    </properties>
+    <spawn chance="0" />
+</item>

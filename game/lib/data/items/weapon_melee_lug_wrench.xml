@@ -1,0 +1,11 @@
+<item name="Lug Wrench" type="weapon_melee" allow_belt="true" tip="Use as weapon or craft resource">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="0.5"/>
+        <damage min="2" max="5" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_lug_wrench.png" />
+        <knockback value="1" />
+    </properties>
+    <spawn chance="1" />
+</item>

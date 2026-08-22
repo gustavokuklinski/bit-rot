@@ -1,0 +1,13 @@
+<item name="Ammo Box 556" type="container" disposable="true" allow_belt="false" tip="This container will be\ndestroyed when empty">
+    <properties>
+        <capacity value="2" />
+        <sprite file="container_ammo_box_multi.png" />
+        <weight weight="0.5" reduction="10%" />
+    </properties>
+    <loot>
+        <item name="556 Ammo" chance="1.0" />
+        <item name="556 Ammo" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

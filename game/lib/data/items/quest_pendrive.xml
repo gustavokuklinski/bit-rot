@@ -1,0 +1,13 @@
+<item 
+    name="Pendrive" 
+    type="quest" 
+    allow_belt="false"
+    tip="This item is used for quest"
+    spawn_amount_global="50"
+    spawn_maptile="[house_computer, military_radio]"
+    spawn_layer="[1]">
+    <properties>
+        <weight weight="0.01" />
+        <sprite file="quest_pendrive.png" />
+    </properties>
+</item>

@@ -1,0 +1,5 @@
+<recipe type="weapon_melee" craft="create" magazine="Carpentary Vol.1" output="Primitive Hammer" gain_xp="[intelligence:0.3, maintenance:0.3]" amount="1" time="3.0">
+    <ingredient name="Stone" destroy="true" amount="1" />
+    <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+    <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece, Duck Tape]" destroy="true" amount="1" />
+</recipe>

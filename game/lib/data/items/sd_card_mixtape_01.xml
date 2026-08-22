@@ -1,0 +1,20 @@
+<item name="Mixtape #0731" type="sd_card" tip="The Cringe\nPulse of the Roda\nBlack Water Pavements\n Use with Mobile > MP3">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <audio value="radio/mixtape_01.ogg" />
+    </properties>
+    <spawn chance="0" />
+</item>
+<!-- Transcript
+Attention all Level-A personnel. Code Black protocol initiated across the primary island facility. We have a confirmed, multi-sector containment breakout.
+
+Military divisions: Deploy immediately to the perimeter. Establish a hard quarantine line. Scientists of the RK Family: Report directly to the subterranean secure labs. We require immediate pathogen analysis. Do not engage the infected. Engineers: Mobilize to Sector 4. We are seeing structural failures. Reinforce all modular barricade systems immediately. Ensure all doors and ground-floor windows are locked down and boarded.
+
+Be advised. Intelligence indicates this breakout was not a systemic failure. We suspect direct sabotage by the unauthorized rogue cells operating in the sector. These mercenaries are actively seeking to destroy organized, humanitarian companies like Next Petrol. They want to see our world tear itself apart.
+
+Protect the headquarters. Protect the cure. Next Petrol Security is authorized to use lethal force on any unauthorized personnel. 
+
+Keep this message secret. 
+End of transmission.
+-->

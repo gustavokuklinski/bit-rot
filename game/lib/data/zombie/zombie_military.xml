@@ -1,0 +1,47 @@
+<zombie type="military" spawn_weight="20">
+    <name value="RANDOM" />
+    <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
+    
+    <stats>
+        <health min="10" max="100" />
+        <speed min="1" max="2" />
+        <attack min="1" max="15" />
+        <infection min="1" max="5" />
+    </stats>
+    
+    <clothes>
+        <head><cloth name="Beret" /></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
+        <feet><cloth name="Military Boots" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Military Tshirt" /></body>
+        <arms><cloth name="Military Jacket" /></arms>
+        <legs><cloth name="Military Pants" /></legs>
+    </clothes>
+
+    <visuals>
+        <sprite id="center" file="zombie.png" />
+        <sprite id="left" file="zombie_left.png" />
+        <sprite id="right" file="zombie_right.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="Knife" chance="1.0" />
+        <item item="M4A1" chance="0.1" />
+        <item item="Pistol 9mm" chance="0.2" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
+    </loot>
+
+    <sound>
+        <hit src="zombie_hit.ogg" />
+        <wander src="zombie_wandering.ogg" />
+        <dead src="zombie_dead.ogg" />
+        <attack src="zombie_attack.ogg" />
+        <steps src="zombie_steps.ogg" />
+    </sound>
+</zombie>

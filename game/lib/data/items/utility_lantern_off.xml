@@ -1,0 +1,10 @@
+<item name="Lantern off" type="utility" state="off" allow_belt="true" tip="Use Matches or Lighter on\n to Reload/Turn on">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="1.0"/>
+        <light min="0" max="0" />
+        <fuel type="[Matches, Lighter on]" />
+        <sprite file="utility_lantern_off.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

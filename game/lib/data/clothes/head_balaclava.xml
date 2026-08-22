@@ -1,0 +1,9 @@
+<cloth name="Balaclava" type="cloth" id="head" builder="true" hide_cloth="[hair, facial]">
+    <properties>
+        <defence value="1" />
+        <durability min="1" max="100" />
+        <sprite file="head_balaclava.png" />
+        <weight weight="0.1" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

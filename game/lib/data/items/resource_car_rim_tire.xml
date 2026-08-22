@@ -1,0 +1,9 @@
+<item name="Car Tire Rim" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="1" />
+        <weight weight="1.0"/>
+        <capacity value="1" />
+        <sprite file="resource_car_rim_tire.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

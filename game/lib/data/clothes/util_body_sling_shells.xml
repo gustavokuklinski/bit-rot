@@ -1,0 +1,12 @@
+<cloth name="Sling Shells" type="cloth" id="util" builder="false">
+    <properties>
+        <defence value="0.0" />
+        <capacity value="1" />
+        <sprite file="util_body_sling_shells.png" />
+        <weight weight="0.3" reduction="5%" />
+    </properties>
+    <spawn chance="1" />
+    <loot>
+        <item name="Shotgun Shells" chance="1.0" />
+    </loot>
+</cloth>

@@ -1,0 +1,5 @@
+<map name="dirty_top_01" type="maptile" char="dirty_top_01" is_obstacle="false">
+    <visuals>
+        <sprite id="close" file="dirty_top_01.png" />
+    </visuals>
+</map>

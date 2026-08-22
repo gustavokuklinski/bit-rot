@@ -1,0 +1,9 @@
+<item name="Leather Piece" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="20" />
+        <weight weight="0.05"/>
+        <capacity value="20" />
+        <sprite file="resource_leather_piece.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

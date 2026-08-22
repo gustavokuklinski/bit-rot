@@ -1,0 +1,9 @@
+<item name="Log" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="5" />
+        <weight weight="5.0"/>
+        <capacity value="5" />
+        <sprite file="resource_log.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

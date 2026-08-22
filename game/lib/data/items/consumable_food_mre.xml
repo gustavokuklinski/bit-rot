@@ -1,0 +1,14 @@
+<item name="MRE" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="30" />
+        <restore status="[water]" value="10" />
+        <restore status="[health]" value="10" />
+        <restore status="[stamina]" value="20" />
+        <reduce status="[anxiety]" value="20" />
+        <weight weight="0.1" />
+        <load value="1" />
+        <capacity value="3" />
+        <sprite file="consumable_food_mre.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

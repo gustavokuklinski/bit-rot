@@ -1,0 +1,9 @@
+<item name="Portable Hand Saw" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="1" />
+        <weight weight="0.07"/>
+        <capacity value="1" />
+        <sprite file="resource_portable_hand_saw.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

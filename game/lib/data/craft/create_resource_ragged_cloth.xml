@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
+<recipe type="resource" craft="create" output="Ragged Cloth" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="4" time="1.0">
+    <ingredient name="[Tshirt, Exxoil Tshirt, Gethulius Tshirt, Medical Tshirt, Military Tshirt, Next Petrol Tshirt, Medical Vest]" destroy="true" amount="1" />
+</recipe>

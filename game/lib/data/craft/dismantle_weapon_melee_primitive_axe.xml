@@ -1,0 +1,7 @@
+<recipe type="weapon_melee" craft="dismantle" magazine="Carpentary Vol.1" time="2.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+    <ingredient name="Primitive Axe" destroy="true" amount="1" />
+    <result name="Stone Blade" amount="1" />
+    <result name="[Stick, Tree Branch]" amount="1" />
+    <result name="[Ragged Cloth, Denim Stripes, Leather Piece]" amount="1" chance="0.5" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

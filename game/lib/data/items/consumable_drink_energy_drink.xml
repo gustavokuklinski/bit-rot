@@ -1,0 +1,12 @@
+<item name="Energy Drink" type="consumable_drink" allow_belt="false">
+    <properties>
+        <restore status="[water]" value="5" />
+        <restore status="[stamina]" value="8" />
+        <reduce status="[anxiety]" value="2" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.1"/>
+        <sprite file="consumable_drink_energy_drink.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

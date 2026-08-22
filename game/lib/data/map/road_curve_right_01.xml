@@ -1,0 +1,5 @@
+<map name="road_curve_right_01" type="maptile" char="road_curve_right_01" is_obstacle="false">
+    <visuals>
+        <sprite id="close" file="road_curve_right_01.png" />
+    </visuals>
+</map>

@@ -1,0 +1,9 @@
+<cloth name="Military Boots" type="cloth" id="feet" builder="false">
+    <properties>
+        <defence value="10" />
+        <durability min="100" max="100" />
+        <sprite file="foot_military_boots.png" />
+        <weight weight="0.2" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

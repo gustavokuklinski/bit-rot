@@ -1,0 +1,9 @@
+<item name="Line Twine" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="20" />
+        <weight weight="0.005"/>
+        <capacity value="20" />
+        <sprite file="resource_line_twine.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -1,0 +1,5 @@
+<map name="misc_dead" type="maptile" char="misc_dead" is_obstacle="false">
+    <visuals>
+        <sprite file="misc_dead.png" />
+    </visuals>
+</map>

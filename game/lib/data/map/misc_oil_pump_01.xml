@@ -1,0 +1,13 @@
+<map name="misc_oil_pump_01" type="maptile_container" char="misc_oil_pump_01" is_obstacle="true" allow_liquid="true">
+    <visuals>
+        <sprite file="misc_oil_pump_01.png" />
+    </visuals>
+    <capacity value="5" />
+    <loot>
+        <item item="Fuel Unit" chance="1.0" />
+        <item item="Fuel Unit" chance="1.0" />
+        <item item="Fuel Unit" chance="1.0" />
+        <item item="Fuel Unit" chance="1.0" />
+        <item item="Fuel Unit" chance="1.0" />
+    </loot>
+</map>

@@ -1,0 +1,9 @@
+<map name="house_toilet" type="maptile_container" char="house_toilet" is_obstacle="true" allow_liquid="true" is_visible="true">
+    <visuals>
+        <sprite file="house_toilet.png" />
+    </visuals>
+    <capacity value="1" />
+    <loot>
+        <item item="Water Unit" chance="1.0" />
+    </loot>
+</map>

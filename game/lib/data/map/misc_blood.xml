@@ -1,0 +1,5 @@
+<map name="misc_blood" type="maptile" char="misc_blood" is_obstacle="false">
+    <visuals>
+        <sprite file="misc_blood.png" />
+    </visuals>
+</map>

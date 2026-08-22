@@ -1,0 +1,40 @@
+<npc type="static" spawn_weight="55" is_friendly="true" is_static="true">
+    <name value="RANDOM" />
+    <sex value="RANDOM" />
+    
+    <stats>
+        <health min="100" max="100" />
+        <speed min="1" max="1" />
+        <attack min="1" max="15" />
+        <infection min="1" max="5" />
+    </stats>
+    
+    <clothes>
+        <head></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
+        <feet></feet>
+        <hand></hand>
+        <body></body>
+        <arms></arms>
+        <legs></legs>
+    </clothes>
+
+    <visuals>
+        <sprite id="center" file="player.png" />
+        <sprite id="left" file="player_left.png" />
+        <sprite id="right" file="player_right.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
+    </loot>
+
+    <sound>
+        <hit src="npc_hit.ogg" />
+        <attack src="npc_attack.ogg" />
+        <dead src="npc_dead.ogg" />
+        <steps src="npc_steps.ogg" />
+    </sound>
+</npc>

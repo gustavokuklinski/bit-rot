@@ -1,0 +1,13 @@
+<item name="Cheese" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="3" />
+        <restore status="[health]" value="1" />
+        <restore status="[stamina]" value="2" />
+        <reduce status="[anxiety]" value="1" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.1"/>
+        <sprite file="consumable_food_cheese.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

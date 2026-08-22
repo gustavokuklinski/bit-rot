@@ -1,0 +1,14 @@
+<map name="crate" type="maptile_container" char="crate" is_obstacle="true">
+    <visuals>
+        <sprite file="crate.png" />
+    </visuals>
+    <capacity value="15" />
+    <loot>
+        <item type="resource" min="1" max="5" chance="1.0" />
+        <item type="weapon_melee" min="1" max="5" chance="1.0" />
+        <item type="container" min="1" max="5" chance="1.0" />
+        <item type="camp" min="0" max="2" chance="1.0" />
+        
+        <item item="Cigarette Pack" chance="1.0" />
+    </loot>
+</map>

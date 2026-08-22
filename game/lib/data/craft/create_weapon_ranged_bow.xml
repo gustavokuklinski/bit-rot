@@ -1,0 +1,5 @@
+<recipe type="weapon_melee" craft="create" magazine="Survivor Guide Basic" output="Bow" gain_xp="[intelligence:0.3, maintenance:0.3]" amount="1" time="3.0">
+    <ingredient name="[Line Twine, Ragged Cloth]" destroy="true" amount="2" />
+    <ingredient name="[Stick, Tree Branch]" destroy="true" amount="1" />
+    <ingredient name="[Saw, Primitive Knife, Knife, Stone Blade, Portable Hand Saw]" destroy="false" amount="1" />
+</recipe>

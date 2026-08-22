@@ -1,0 +1,35 @@
+<vehicle name="car_ambulance" type="car" is_obstacle="true" spawn_weight="10">
+    <capacity value="20" />
+    <car>
+        <max_speed value="8" />
+        <key value="Car Key Ambulance" />
+        <fuel value="1.0" />
+        <motor value="1.0" />
+        <battery value="1.0" />
+        <tire_front_left value="Car tire" />
+        <tire_front_right value="Car tire" />
+        <tire_back_left value="Car tire" />
+        <tire_back_right value="Car tire" />
+        <lights min="5" max="100" radius="8" />
+        <seats value="2" /> 
+    </car>
+    <loot>
+        <item item="Powerbank" chance="0.1" />
+        <item item="Car Battery" chance="0.1" />
+        <item item="Motor Repair Kit" chance="0.1" />
+        <item item="Toolkit" chance="0.3" />
+        <item item="Survivor Kit" chance="0.2" />
+        <item item="Medical Kit" chance="0.5" />
+        <item item="Medical Kit" chance="0.5" />
+        <item item="Medical Kit" chance="0.5" />
+        <item item="Car Tire" chance="0.3" />
+        <item item="Car Key Ambulance" chance="0.1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
+    </loot>
+    <visuals>
+        <sprite id="top" file="car_ambulance_top.png" />
+        <sprite id="down" file="car_ambulance_down.png" />
+        <sprite id="left" file="car_ambulance_left.png" />
+        <sprite id="right" file="car_ambulance_right.png" />
+    </visuals>
+</vehicle>

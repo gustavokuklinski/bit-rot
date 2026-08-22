@@ -1,0 +1,9 @@
+<map name="wooden_window_01_close" type="maptile" char="wooden_window_01_close" state="close" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
+    <visuals>
+        <sprite id="close" file="wooden_window_01_close.png" />
+    </visuals>
+    <sound src="window_close.ogg" />
+</map>

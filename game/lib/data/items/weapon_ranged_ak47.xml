@@ -1,0 +1,20 @@
+<item name="AK47" type="weapon_ranged" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="0" max="30" />
+        <weight weight="1.7"/>
+        <capacity value="30" />
+        <ammo type="762 Ammo" />
+        <damage min="30" max="80" />
+        <firing pellets="1" spread_angle="3" machine_gun="true" firing_second="0.1" distance="40" />
+        <skill type="range" />
+        <sprite file="weapon_ranged_ak_47.png" />
+        <knockback value="5" />
+    </properties>
+    <sound>
+        <shoot src="ak47.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>

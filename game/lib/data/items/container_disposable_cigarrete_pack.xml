@@ -1,0 +1,11 @@
+<item name="Cigarette Pack" type="container" disposable="true" allow_belt="false" tip="This container will be\ndestroyed when empty">
+    <properties>
+        <capacity value="1" />
+        <sprite file="container_disposable_cigarrete_pack.png" />
+        <weight weight="0.02" reduction="10%" />
+    </properties>
+    <loot>
+        <item name="Cigarette" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</item>

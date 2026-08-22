@@ -1,0 +1,34 @@
+<vehicle name="car_jeep" type="car" is_obstacle="true"  spawn_weight="40">
+    <capacity value="10" />
+    <car>
+        <max_speed value="8" />
+        <key value="Car Key Jeep" />
+        <fuel value="1.0" />
+        <motor value="1.0" />
+        <battery value="1.0" />
+        <tire_front_left value="Car tire" />
+        <tire_front_right value="Car tire" />
+        <tire_back_left value="Car tire" />
+        <tire_back_right value="Car tire" />
+        <lights min="5" max="100" radius="8" />
+        <seats value="4" /> 
+    </car>
+    <loot>
+        <item item="Car Key Jeep" chance="0.1" />
+        <item item="Car Battery" chance="0.1" />
+        <item item="Fuel Canister" chance="0.1" />
+        <item item="Powerbank" chance="0.1" />
+        <item item="Motor Repair Kit" chance="0.1" />
+        <item item="Toolkit" chance="0.3" />
+        <item item="Survivor Kit" chance="0.2" />
+        <item item="Medical Kit" chance="0.2" />
+        <item item="Car Tire" chance="0.3" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
+    </loot>
+    <visuals>
+        <sprite id="top" file="car_jeep_top.png" />
+        <sprite id="down" file="car_jeep_down.png" />
+        <sprite id="left" file="car_jeep_left.png" />
+        <sprite id="right" file="car_jeep_right.png" />
+    </visuals>
+</vehicle>

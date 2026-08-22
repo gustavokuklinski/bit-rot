@@ -1,0 +1,14 @@
+<item name="Chicken" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="5" />
+        <restore status="[water]" value="1" />
+        <restore status="[health]" value="2" />
+        <restore status="[stamina]" value="5" />
+        <reduce status="[anxiety]" value="1" />
+        <load value="1" />
+        <capacity value="2" />
+        <weight weight="0.1"/>
+        <sprite file="consumable_food_chicken.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

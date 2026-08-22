@@ -1,0 +1,26 @@
+<animal name="Rat" attack_player="true" type="animal" spawn_weight="50" spawn_layer="[1, 2]">
+    <stats>
+        <health min="10" max="20" />
+        <speed min="0.3" max="0.5" />
+        <attack min="1" max="5" />
+        <infection min="10" max="25" />
+    </stats>
+    <capacity value="3" />
+    <visuals>
+        <sprite id="center" file="rat.png" />
+        <sprite id="left" file="rat.png" />
+        <sprite id="right" file="rat.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Rot Meat" chance="1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="1" />
+    </loot>
+
+    <sound>
+        <hit src="animal_rat_hit.ogg" />
+        <attack src="animal_rat_attack.ogg" />
+        <dead src="animal_dead.ogg" />
+        <steps src="animal_rat_steps.ogg" />
+    </sound>
+</animal>

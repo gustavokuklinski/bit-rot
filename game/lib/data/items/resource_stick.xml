@@ -1,0 +1,9 @@
+<item name="Stick" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="10" />
+        <weight weight="0.3"/>
+        <capacity value="10" />
+        <sprite file="resource_stick.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

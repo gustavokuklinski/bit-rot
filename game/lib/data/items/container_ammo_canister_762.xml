@@ -1,0 +1,14 @@
+<item name="Ammo Canister 762" type="container" allow_belt="false">
+    <properties>
+        <capacity value="3" />
+        <sprite file="container_ammo_canister_multi.png" />
+        <weight weight="1.5" reduction="10%" />
+    </properties>
+    <loot>
+        <item name="762 Ammo" chance="1.0" />
+        <item name="762 Ammo" chance="1.0" />
+        <item name="762 Ammo" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

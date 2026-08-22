@@ -1,0 +1,11 @@
+<item name="Sparkling Water" type="consumable_drink" allow_belt="false">
+    <properties>
+        <restore status="[water]" value="20" />
+        <restore status="[stamina]" value="8" />
+        <load min="1" max="25" />
+        <capacity value="25" />
+        <weight weight="0.1"/>
+        <sprite file="consumable_drink_sparkling_water.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

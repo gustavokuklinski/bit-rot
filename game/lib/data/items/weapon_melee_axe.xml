@@ -1,0 +1,14 @@
+<item name="Axe" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="2.5"/>
+        <damage min="20" max="50" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_axe.png" />
+        <knockback value="2" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <swing src="axe.ogg" />
+    </sound>
+</item>

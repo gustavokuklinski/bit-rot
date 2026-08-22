@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8'?>
+<recipe type="resource" craft="create" output="Plank" magazine="Carpentary Vol.1" gain_xp="[intelligence:0.1, maintenance:0.2]" amount="5" time="4.0">
+    <ingredient name="Log" destroy="true" amount="1" />
+    <ingredient name="[Saw, Portable Hand Saw]" destroy="false" amount="1" />
+</recipe>

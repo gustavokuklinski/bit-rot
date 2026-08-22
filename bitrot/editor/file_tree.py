@@ -3,7 +3,7 @@ import re
 import os
 
 from editor.assets import load_editor_icons
-from editor.config import ICON_SIZE, GAME_ROOT
+from editor.config import GAME_ROOT, ICON_SIZE, GAME_ROOT
 
 YELLOW = (255, 255, 0)
 LIGHT_BLUE = (180, 180, 220)
@@ -21,7 +21,9 @@ class FileTree:
         self.scroll_offset = 0
         self.icons = load_editor_icons("./game/lib/sprites/editor")
         self.show_saves = show_saves # New flag to control save folder visibility
-
+        icon_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'editor')
+        self.icons = load_editor_icons(icon_path)
+        
         # Data structures
         self.folders = []          # List of folder names (or absolute paths for saves). "" for root.
         self.map_data = {}         # { folder: { map_name: [files] } }

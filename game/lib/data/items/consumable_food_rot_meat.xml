@@ -1,0 +1,13 @@
+<item name="Rot Meat" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="5" />
+        <reduce status="[stamina]" value="30" />
+        <restore status="[infection]" value="25" />
+        <restore status="[anxiety]" value="60" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.2"/>
+        <sprite file="consumable_food_rot_meat.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

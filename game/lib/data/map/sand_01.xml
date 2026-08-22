@@ -1,0 +1,5 @@
+<map name="sand_01" type="maptile" char="sand_01" is_obstacle="false">
+    <visuals>
+        <sprite file="sand_01.png" />
+    </visuals>
+</map>

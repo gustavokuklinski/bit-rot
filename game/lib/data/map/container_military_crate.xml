@@ -1,0 +1,31 @@
+<map name="military_crate" type="maptile_container" char="military_crate" is_obstacle="true" is_visible="true">
+    <visuals>
+        <sprite file="military_crate.png" />
+    </visuals>
+    <capacity value="15" />
+    <loot>
+        <item type="consumable_ammo" min="1" max="4" chance="1.0" />
+        <item type="container" min="0" max="2" chance="1.0" />
+        <item type="camp" min="0" max="2" chance="1.0" />
+        <item type="weapon_ranged" min="1" max="2" chance="1.0" />
+        <item type="weapon_throw" min="0" max="2" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
+
+        <item item="Ammo Canister 556" chance="1.0" />
+        <item item="Ammo Canister 9mm" chance="1.0" />
+        <item item="Ammo Canister 762" chance="1.0" />
+        <item item="Ammo Canister ACP45" chance="1.0" />
+        <item item="MRE" chance="1.0" />
+        <item item="Military Pants" chance="1.0" />
+        <item item="Military Tshirt" chance="1.0" />
+        <item item="Leather Black Gloves" chance="1.0" />
+        <item item="Military Jacket" chance="1.0" />
+        <item item="Military Boots" chance="1.0" />
+        <item item="Tshirt" chance="1.0" />
+        <item item="Survivor Kit" chance="1.0" />
+        <item item="Medical Kit" chance="1.0" />
+        <item item="Sewing Kit" chance="1.0" />
+        <item item="Island Map" chance="1.0" />
+
+    </loot>
+</map>

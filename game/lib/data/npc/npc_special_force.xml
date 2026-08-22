@@ -1,0 +1,48 @@
+<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false">
+    <name value="RANDOM" />
+    <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
+    
+    <stats>
+        <health min="100" max="100" />
+        <speed min="1" max="1" />
+        <attack min="5" max="15" />
+        <infection min="2" max="5" />
+    </stats>
+    
+    <clothes>
+        <head><cloth name="Special Force Helmet" /></head>
+        <util><cloth name="Military Vest" /></util>
+        <hair></hair>
+        <facial></facial>
+        <feet><cloth name="Military Boots" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Military Tshirt" /></body>
+        <arms><cloth name="Special Force Jacket" /></arms>
+        <legs><cloth name="Special Force Pants" /></legs>
+    </clothes>
+
+    <visuals>
+        <sprite id="center" file="player.png" />
+        <sprite id="left" file="player_left.png" />
+        <sprite id="right" file="player_right.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="MPK5" chance="0.1" />
+        <item item="MAC10" chance="0.1" />
+        <item item="Large Backpack" chance="0.1" />
+        <item item="Knife" chance="0.6" />
+        <item item="Pistol 9mm" chance="0.5" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
+    </loot>
+
+    <sound>
+        <hit src="npc_hit.ogg" />
+        <attack src="npc_attack.ogg" />
+        <dead src="npc_dead.ogg" />
+        <steps src="npc_steps.ogg" />
+    </sound>
+</npc>

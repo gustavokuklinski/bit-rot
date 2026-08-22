@@ -1,0 +1,11 @@
+<item name="Improvised Spear" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="0.5"/>
+        <damage min="8" max="19" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_improvised_spear.png" />
+        <knockback value="2" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -1,0 +1,4 @@
+<recipe type="consumable_medication" craft="create" magazine="Survivor Guide Basic" gain_xp="[intelligence:2, maintenance:1]" output="Medical Bandage" amount="2" time="1.0">
+    <ingredient name="Ragged Cloth" destroy="true" amount="2" />
+    <ingredient name="Alcohol Bottle" destroy="true" amount="1" />
+</recipe>

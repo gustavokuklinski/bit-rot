@@ -1,0 +1,9 @@
+<cloth name="Special Force Helmet" type="cloth" id="head" builder="false" hide_cloth="[hair]">
+    <properties>
+        <defence value="20" />
+        <durability min="1" max="100" />
+        <sprite file="head_special_force_helmet.png" />
+        <weight weight="0.1" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

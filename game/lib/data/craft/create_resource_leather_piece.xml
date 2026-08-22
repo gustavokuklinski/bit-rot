@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Leather Piece" gain_xp="[intelligence:0.1, maintenance:0.3]" amount="2" time="2.5">
+    <ingredient name="[Leather Black Pants, Leather Black Jacket, Leather Black Gloves, Military Boots, Cowboy Leather Hat]" destroy="true" amount="1" />
+    <ingredient name="Scissor" destroy="false" amount="1" />
+</recipe>

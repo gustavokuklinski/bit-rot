@@ -1,0 +1,5 @@
+<map name="garden_mountain_fill" type="maptile" char="garden_mountain_fill" is_obstacle="true">
+    <visuals>
+        <sprite file="garden_mountain_fill.png" />
+    </visuals>
+</map> 

@@ -1,0 +1,10 @@
+@@,@@,@@,@@,@@,@@,window_02_close,@@,@@,@@
+@@,house_library,@@,house_bath,house_toilet,@@,house_bed,door_02_close,house_toilet,@@
+window_02_close,,@@,door_02_close,@@,@@,door_02_close,@@,@@,@@
+@@,house_bed,,,house_wardrobe,@@,,house_cupboard_01,house_fridge,@@
+@@,@@,door_02_open,@@,@@,@@,,,house_shink,@@
+@@,house_shink,,house_cupboard_01,house_cupboard_01,@@,house_wardrobe,,house_stove,@@
+@@,house_stove,,,house_bench,@@,house_small_library,,,@@
+@@,house_fridge,,,house_table,@@,@@,door_02_close,window_02_close,@@
+@@,@@,window_02_close,door_02_close,@@,@@,,,,
+,,,,,,,,,

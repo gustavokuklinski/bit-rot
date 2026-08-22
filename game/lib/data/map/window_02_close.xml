@@ -1,0 +1,9 @@
+<map name="window_02_close" type="maptile" char="window_02_close"  state="close" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
+    <visuals>
+        <sprite id="close" file="window_02_close.png" />
+    </visuals>
+    <sound src="window_close.ogg" />
+</map>

@@ -1,0 +1,14 @@
+<item name="Canned Food" type="consumable_food" allow_belt="false">
+    <properties>
+        <restore status="[food]" value="15" />
+        <restore status="[water]" value="3" />
+        <restore status="[health]" value="2" />
+        <restore status="[stamina]" value="5" />
+        <reduce status="[anxiety]" value="2" />
+        <load value="1" />
+        <capacity value="1" />
+        <weight weight="0.2"/>
+        <sprite file="consumable_food_canned_food.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -1,0 +1,5 @@
+<recipe type="weapon_melee" craft="repair" output="Improvised Spear" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="2.0">
+    <ingredient name="Duck Tape" destroy="true" amount="1" />
+    <ingredient name="Improvised Spear" destroy="false" amount="1" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

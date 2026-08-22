@@ -1,0 +1,5 @@
+<map name="beach_sand_bottom_01" type="maptile" char="beach_sand_bottom_01" is_obstacle="false">
+    <visuals>
+        <sprite file="beach_sand_bottom_01.png" />
+    </visuals>
+</map>

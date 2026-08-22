@@ -1,0 +1,9 @@
+<item name="Plank" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="6" />
+        <weight weight="1.0"/>
+        <capacity value="6" />
+        <sprite file="resource_plank.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

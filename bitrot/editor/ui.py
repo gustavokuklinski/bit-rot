@@ -3,7 +3,7 @@ import re
 import os
 import csv
 from datetime import datetime
-from editor.config import TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
+from editor.config import GAME_ROOT, TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
 from editor.assets import load_editor_icons
 
 class UITextBox:
@@ -396,6 +396,25 @@ class UITextArea:
         self.lines = []
         self.thumb_rect = None
         self._update_lines()
+        self.history = [text]          # stack of text snapshots
+        self.history_index = 0         # current position in history
+        self.undo_redo_suspended = False  # avoid re-triggering during undo/redo
+
+    def _push_history(self):
+        if self.undo_redo_suspended:
+            return
+        # If we are not at the end, truncate future
+        if self.history_index < len(self.history) - 1:
+            self.history = self.history[:self.history_index + 1]
+        # Avoid duplicate consecutive entries
+        if self.history and self.history[-1] == self.text:
+            return
+        self.history.append(self.text)
+        self.history_index = len(self.history) - 1
+        # Limit history size (optional)
+        if len(self.history) > 100:
+            self.history = self.history[-100:]
+            self.history_index = len(self.history) - 1
 
     def _update_lines(self):
         self.lines = []
@@ -528,6 +547,28 @@ class UITextArea:
                     try: pygame.scrap.put(pygame.SCRAP_TEXT, self.text[s:e].encode('utf-8'))
                     except: pass
                     self.delete_selection()
+            elif ctrl and event.key == pygame.K_z:
+                # Undo
+                if self.history_index > 0:
+                    self.undo_redo_suspended = True
+                    self.history_index -= 1
+                    self.text = self.history[self.history_index]
+                    self.cursor_pos = len(self.text)
+                    self.sel_start = None
+                    self._update_lines()
+                    self.undo_redo_suspended = False
+                    return True
+            elif ctrl and event.key == pygame.K_u:
+                # Redo
+                if self.history_index < len(self.history) - 1:
+                    self.undo_redo_suspended = True
+                    self.history_index += 1
+                    self.text = self.history[self.history_index]
+                    self.cursor_pos = len(self.text)
+                    self.sel_start = None
+                    self._update_lines()
+                    self.undo_redo_suspended = False
+                    return True
             elif event.key == pygame.K_LEFT:
                 if shift:
                     if self.sel_start is None: self.sel_start = self.cursor_pos
@@ -981,6 +1022,10 @@ class Toolbar:
         self.font = font
         self.buttons = []
         self.icons = load_editor_icons("./game/lib/sprites/editor")
+        self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
+        self.default_icon.fill((100, 100, 100))
+        pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
+
 
         button_definitions = [
             {"label": "NEW BUILDING", "icon": "building", "action": "NEW BUILDING"},
@@ -1001,12 +1046,22 @@ class Toolbar:
         padding = 5
 
         current_x = x + padding
+
+        icon_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'editor')
+        self.icons = load_editor_icons(icon_path)
+
+        # Create a default placeholder icon for missing files
+        self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
+        self.default_icon.fill((100, 100, 100))
+        pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
+
         for btn_def in button_definitions:
             rect = pygame.Rect(current_x, y + (height - button_height) // 2, button_width, button_height)
             self.buttons.append({
                 "rect": rect,
                 "label": btn_def["label"],
-                "icon": self.icons.get(btn_def["icon"], self.icons['new']),
+                #"icon": self.icons.get(btn_def["icon"], self.icons['new']),
+                "icon": self.icons.get(btn_def["icon"], self.default_icon),
                 "action": btn_def["action"]
             })
             current_x += button_width + padding

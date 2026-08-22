@@ -1,0 +1,5 @@
+<map name="water_river_cross" type="maptile" char="water_river_cross" is_obstacle="true">
+    <visuals>
+        <sprite id="close" file="water_river_cross.png" />
+    </visuals>
+</map>

@@ -1,0 +1,9 @@
+<cloth name="Shoes" type="cloth" id="feet" builder="true">
+    <properties>
+        <defence value="5" />
+        <durability min="100" max="100" />
+        <sprite file="foot_shoes.png" />
+        <weight weight="0.1" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

@@ -1,0 +1,5 @@
+<recipe type="weapon_ranged" craft="create" output="Slingshot" magazine="Survivor Guide Basic" gain_xp="[intelligence:0.4, maintenance:0.4, ranged:0.1]" amount="1" time="3.0">
+    <ingredient name="Slice Rubber" destroy="true" amount="1" />
+    <ingredient name="[Stick, Tree Branch]" destroy="true" amount="3" />
+    <ingredient name="[Ragged Cloth, Denim Stripes, Leather Piece]" destroy="true" amount="1" />
+</recipe>

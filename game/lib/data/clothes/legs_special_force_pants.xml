@@ -1,0 +1,14 @@
+<cloth name="Special Force Pants" type="cloth" id="legs" builder="false">
+    <properties>
+        <defence value="20" />
+        <capacity value="6" />
+        <durability min="50" max="100" />
+        <sprite file="legs_special_force_pants.png" />
+        <weight weight="0.2" reduction="10%" />
+    </properties>
+    <loot>
+        <item name="9mm Ammo" chance="1.0" />
+        <item name="Flask" chance="1.0" />
+    </loot>
+    <spawn chance="1" />
+</cloth>

@@ -1,0 +1,23 @@
+<item name="Emergency Maldives #0802" type="sd_card" tip="TMilitary transmission #0802">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <audio value="radio/radio_02.ogg" />
+    </properties>
+    <spawn chance="0" />
+</item>
+<!-- Transcript
+Next Petrol Archipelago, this is the Maldives Atoll Command broadcasting on an emergency high-band frequency. Do you copy?
+
+Your Globe World broadcast just went dark, but our satellites are picking up the thermal blooms across your main island sector. We see the fires. We are receiving your Code Black telemetry. We know the holding zones have fallen and the asymptomatic carriers have breached your perimeter.
+
+To the RK Family executives: Your 'continuous use' lies just caught up with you. But we are not going to let thousands of your workers become the Rotted just to prove a point to your board of directors. 
+
+Maldives Command is currently scrambling an emergency extraction fleet. ETA is 14 hours. We are sending heavily armed military convoys and bio-secure medical frigates. We are coming to pull your engineers, scientists, and civilians out of the fire.
+
+To the survivors trapped inside the facility listening to this: Hold your ground. Reinforce your modular barricades. Make sure every window and door on the ground level is boarded up tight. If you have to move through the facility, check your corners and stick to the strict X/Y axis corridors—do not get caught in a blind spot. 
+
+Do not trust anyone showing signs of the fever, and do not let them get close. Remember, every path leads to Rot if you drop your guard. 
+
+Hold the line. We are coming. Maldives out.
+-->

@@ -1,0 +1,47 @@
+<zombie type="worker">
+    <name value="RANDOM" />
+    <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
+    
+    <stats>
+        <health min="20" max="100" />
+        <speed min="1" max="2" />
+        <attack min="5" max="15" />
+        <infection min="2" max="5" />
+    </stats>
+    
+    <clothes>
+        <head><cloth name="Worker Helmet" /></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
+        <feet><cloth name="Shoes" /></feet>
+        <hand><cloth name="Leather Black Gloves" /></hand>
+        <body><cloth name="Next Petrol Tshirt" /></body>
+        <arms></arms>
+        <legs></legs>
+    </clothes>
+
+    <visuals>
+        <sprite id="center" file="zombie.png" />
+        <sprite id="left" file="zombie_left.png" />
+        <sprite id="right" file="zombie_right.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="Screwdriver" chance="1.0" />
+        <item item="Toolkit" chance="1.0" />
+        <item item="38 Revolver" chance="1.0" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
+    </loot>
+
+    <sound>
+        <hit src="zombie_hit.ogg" />
+        <wander src="zombie_wandering.ogg" />
+        <dead src="zombie_dead.ogg" />
+        <attack src="zombie_attack.ogg" />
+        <steps src="zombie_steps.ogg" />
+    </sound>
+</zombie>

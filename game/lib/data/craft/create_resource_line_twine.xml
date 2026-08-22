@@ -1,0 +1,4 @@
+<recipe type="resource" craft="create" output="Line Twine" magazine="Sewing Vol.1" gain_xp="[intelligence:0.1, maintenance:0.3]" amount="10" time="3.0">
+    <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
+    <ingredient name="Scissor" destroy="false" amount="1" />
+</recipe>

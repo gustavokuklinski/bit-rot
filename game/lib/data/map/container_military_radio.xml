@@ -1,0 +1,19 @@
+<map name="military_radio" type="maptile_container" char="military_radio" is_obstacle="true" is_visible="true">
+    <visuals>
+        <sprite file="military_radio.png" />
+    </visuals>
+    <capacity value="10" />
+    <loot>
+        <item type="weapon_ranged" min="0" max="1" chance="1.0" />
+        <item type="weapon_throw" min="0" max="2" chance="1.0" />
+        <item type="consumable_ammo" min="1" max="2" chance="1.0" />
+        <item type="consumable_drugs" min="1" max="2" chance="1.0" />
+        <item type="recipe" min="1" max="1" chance="1.0" />
+        <item type="text" min="1" max="2" chance="1.0" />
+        <item item="MRE" chance="1.0" />
+        <item item="Magazine" chance="1.0" />
+        <item item="Mobile off" chance="1.0" />
+        <item item="Flask" chance="1.0" />
+        <item item="Mobile off" chance="1.0" />
+    </loot>
+</map>

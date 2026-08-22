@@ -1,0 +1,3 @@
+<recipe type="weapon_melee" craft="create" output="Stone Blade" gain_xp="[intelligence:0.1, maintenance:0.1]"  amount="1" time="1.0">
+    <ingredient name="Stone" destroy="true" amount="2" />
+</recipe>

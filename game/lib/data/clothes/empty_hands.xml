@@ -1,0 +1,6 @@
+<cloth name="Empty Hands" type="cloth" id="hands">
+    <properties>
+        <sprite file="empty.png" />
+    </properties>
+    <spawn chance="0" />
+</cloth>

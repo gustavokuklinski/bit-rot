@@ -1,0 +1,14 @@
+<item name="Primitive Axe" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="1.2"/>
+        <damage min="6" max="9" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_primitive_axe.png" />
+        <knockback value="1" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <swing src="axe.ogg" />
+    </sound>
+</item>

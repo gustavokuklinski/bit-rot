@@ -1,0 +1,4 @@
+<recipe type="consumable_medication" craft="create" magazine="Medicine Vol.1" gain_xp="[intelligence:4, maintenance:4]" output="Medkit" amount="1" time="2.0">
+    <ingredient name="Medical Bandage" destroy="true" amount="2" />
+    <ingredient name="Alcohol Bottle" destroy="true" amount="1" />
+</recipe>

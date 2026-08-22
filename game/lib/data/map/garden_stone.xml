@@ -1,0 +1,11 @@
+<map name="garden_stone" type="maptile" char="garden_stone" is_obstacle="true" destructible="true" is_visible="true">
+    <visuals>
+        <sprite file="garden_stone.png" />
+    </visuals>
+    <properties>
+        <health min="200" max="400" />
+    </properties>
+    <drop>
+        <item item="Stone" chance="1" />
+    </drop>
+</map>

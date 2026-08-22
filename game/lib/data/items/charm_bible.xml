@@ -1,0 +1,11 @@
+<item name="Bible" type="charm">
+    <properties>
+        <sprite file="charm_bible_1.png" />
+        <weight weight="0.05" />
+    </properties>
+    <attributes>
+        <intelligence value="1" />
+        <lucky value="2" />
+    </attributes>
+    <spawn chance="0.1" />
+</item>

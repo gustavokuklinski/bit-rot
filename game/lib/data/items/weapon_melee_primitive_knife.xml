@@ -1,0 +1,14 @@
+<item name="Primitive Knife" type="weapon_melee" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <weight weight="0.4"/>
+        <damage min="3" max="8" />
+        <skill type="melee" />
+        <sprite file="weapon_melee_primitive_knife.png" />
+        <knockback value="0" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <swing src="knife.ogg" />
+    </sound>
+</item>

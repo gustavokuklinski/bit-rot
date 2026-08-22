@@ -1,0 +1,58 @@
+<player name="player">
+    <name value="Player" />
+    <sex value="Male" />
+
+    <traits>
+    </traits>
+
+    <stats>
+        <health value="100.0" />
+        <stamina value="100.0" />
+        <water value="100.0" />
+        <food value="100.0" />
+        <anxiety value="0.0" />
+        <infection value="0.0" />
+        <defence value="0.0" />
+        <weight value="0.0" />
+    </stats>
+
+    <attributes>
+        <strength value="0.0"/>
+        <fitness value="0.0" />
+        <melee value="0.0"  />
+        <ranged value="0.0" />
+        <maintenance value="0.0" />
+        <lucky value="0.0" />
+        <agility value="0.0" />
+        <intelligence value="0.0" />
+    </attributes>
+
+    <initial_loot>
+        <item name="ID" chance="1" />
+        <item name="Wallet" chance="1" />       
+    </initial_loot>
+
+    <visuals>
+        <sprite id="center" file="player.png" />
+        <sprite id="left" file="player_left.png" />
+        <sprite id="right" file="player_right.png" />
+    </visuals>
+
+    <clothes>
+        <head></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
+        <feet></feet>
+        <hand></hand>
+        <body></body>
+        <arms></arms>
+        <legs></legs>
+        <util2></util2>
+        <util3></util3>
+    </clothes>
+ 
+    <recipes>
+    </recipes>
+
+</player>

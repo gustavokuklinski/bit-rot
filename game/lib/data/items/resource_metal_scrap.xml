@@ -1,0 +1,9 @@
+<item name="Metal Scrap" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <load min="1" max="10" />
+        <weight weight="2.0"/>
+        <capacity value="10" />
+        <sprite file="resource_metal_scrap.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

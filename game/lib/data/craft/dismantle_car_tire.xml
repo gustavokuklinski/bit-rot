@@ -1,0 +1,7 @@
+<recipe type="resource" craft="dismantle" time="5.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+    <ingredient name="Car Tire" destroy="true" amount="1" />
+    <ingredient name="Screwdriver" destroy="false" amount="1" />
+    <ingredient name="Blueprint" destroy="true" amount="5" />
+    <result name="Car Tire Rubber" amount="1" />
+    <result name="Car Tire Rim" amount="1" />
+</recipe>

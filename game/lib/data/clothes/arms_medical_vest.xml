@@ -1,0 +1,10 @@
+<cloth name="Medical Vest" type="cloth" id="arms" builder="false">
+    <properties>
+        <defence value="1" />
+        <capacity value="2" />
+        <durability min="1" max="100" />
+        <sprite file="arms_medical_vest.png" />
+        <weight weight="0.1" reduction="1%" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

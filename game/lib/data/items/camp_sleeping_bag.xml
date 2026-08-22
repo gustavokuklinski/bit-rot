@@ -1,0 +1,9 @@
+<item name="Sleeping Bag" type="camp" allow_belt="false" tip="Drop and RMB to sleep anywhere">
+    <properties>
+        <capacity value="1" />
+        <allow_sleep value="true" />
+        <weight weight="1.0" />
+        <sprite file="camp_sleeping_bag.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

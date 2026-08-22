@@ -1,0 +1,6 @@
+<recipe type="weapon_melee" craft="repair" output="Lug Wrench" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="2.0">
+    <ingredient name="Metal Scrap" destroy="true" amount="1" />
+    <ingredient name="Lug Wrench" destroy="false" amount="1" />
+    <ingredient name="Weld" destroy="true" amount="2" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

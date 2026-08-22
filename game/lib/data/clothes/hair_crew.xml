@@ -1,0 +1,8 @@
+<cloth name="Crew" type="cloth" id="hair" builder="true">
+    <properties>
+        <defence value="0" />
+        <sprite file="hair_crew.png" />
+        <weight weight="0.0" /> 
+    </properties>
+    <spawn chance="1" />
+</cloth>

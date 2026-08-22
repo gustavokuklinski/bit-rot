@@ -1,0 +1,13 @@
+<item 
+    name="Reports" 
+    type="quest" 
+    allow_belt="false"
+    tip="This item is used for quest"
+    spawn_amount_global="5"
+    spawn_maptile="[military_radio]"
+    spawn_layer="[1]">
+    <properties>
+        <weight weight="0.2" />
+        <sprite file="quest_report.png" />
+    </properties>
+</item>

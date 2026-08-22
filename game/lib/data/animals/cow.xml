@@ -1,0 +1,24 @@
+<animal name="Cow" attack_player="false" type="animal" spawn_weight="10" spawn_layer="[1]">
+    <stats>
+        <health min="30" max="80" />
+        <speed min="0.3" max="0.5" />
+        <attack min="0" max="0" />
+        <infection min="0" max="0" />
+    </stats>
+    <capacity value="3" />
+    <visuals>
+        <sprite id="center" file="cow.png" />
+        <sprite id="left" file="cow.png" />
+        <sprite id="right" file="cow.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Meat" chance="1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="1" />
+    </loot>
+    <sound>
+        <hit src="animal_cow_hit.ogg" />
+        <dead src="animal_dead.ogg" />
+        <steps src="animal_cow_steps.ogg" />
+    </sound>
+</animal>

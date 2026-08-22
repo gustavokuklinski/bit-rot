@@ -1,0 +1,5 @@
+<recipe type="resource" craft="create" output="Engine Parts" magazine="Vehicle Engineering Vol.1" req_level="[intelligence:3, maintenance:6]" gain_xp="[intelligence:1.5, maintenance:2.5]" amount="5" time="60.0">
+        <ingredient name="[Wrench, Lug Wrench]" destroy="true" amount="1" />
+        <ingredient name="Screwdriver" destroy="true" amount="1" />
+        <ingredient name="Car Engine" destroy="true" amount="10" />
+    </recipe>

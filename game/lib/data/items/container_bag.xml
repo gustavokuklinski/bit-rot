@@ -1,0 +1,10 @@
+<item name="Bag" type="container" allow_belt="false">
+    <properties>
+        <capacity value="5" />
+        <sprite file="container_bag.png" />
+        <weight weight="0.6" reduction="80%" /> 
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>

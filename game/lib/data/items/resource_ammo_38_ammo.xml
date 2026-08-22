@@ -1,0 +1,9 @@
+<item name="38 Capsule" type="resource" allow_belt="false" tip="Use to craft">
+    <properties>
+        <weight weight="0.001"/>
+        <load min="1" max="150" />
+        <capacity value="150" />
+        <sprite file="resource_ammo_38_ammo.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

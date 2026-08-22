@@ -1,0 +1,20 @@
+<item name="Tactical Shotgun" type="weapon_ranged" allow_belt="true">
+    <properties>
+        <durability min="1" max="100" />
+        <load min="0" max="12" />
+        <weight weight="2.2"/>
+        <capacity value="12" />
+        <ammo type="Shotgun Shells" />
+        <damage min="65" max="150" />
+        <firing pellets="6" spread_angle="6" distance="15" />
+        <skill type="range" />
+        <sprite file="weapon_ranged_tactical_shotgun.png" />
+        <knockback value="7" />
+    </properties>
+    <sound>
+        <shoot src="shotgun.ogg" />
+        <reload src="reload.ogg" />
+        <noammo src="outofammo.ogg" />
+    </sound>
+    <spawn chance="1" />
+</item>

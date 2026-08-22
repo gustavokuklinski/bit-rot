@@ -1,0 +1,8 @@
+<cloth name="Medical Mask" type="cloth" id="head" builder="false" hide_cloth="[facial]">
+    <properties>
+        <defence value="0" />
+        <sprite file="head_medical_mask.png" />
+        <weight weight="0.0" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

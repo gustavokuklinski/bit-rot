@@ -1,0 +1,5 @@
+<recipe type="weapon_ranged" craft="repair" output="MPK5" gain_xp="[intelligence:0.5, maintenance:0.2, ranged:0.2]" amount="1" time="2.0">
+    <ingredient name="[Weapon Repair Kit, Duck Tape]" destroy="true" amount="1" />
+    <ingredient name="MPK5" destroy="false" amount="1" />
+    <ingredient name="Blueprint" destroy="true" amount="1" />
+</recipe>

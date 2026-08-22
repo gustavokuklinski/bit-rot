@@ -1,0 +1,10 @@
+garden_grass_1,,,,garden_dirty_2,,,,,garden_dirty_1
+,,,garden_stone,,,garden_grass_2,garden_grass_1,outside_metal_fence_1,
+garden_grass_1,garden_dirty_2,garden_tree_8,garden_grass_1,,garden_tree_8,garden_dirty_1,,outside_metal_fence_1,
+,garden_grass_2,garden_grass_3,,garden_dirty_2,garden_grass_1,,garden_grass_2,outside_metal_fence_1,garden_grass_1
+,,,garden_grass_1,garden_grass_1,,,,outside_metal_fence_1,
+,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,crate,crate,outside_metal_fence_1,garden_tree_6
+garden_grass_3,outside_metal_fence_1,garden_dirty_1,,garden_tree_1,wooden_wall_01,wooden_wall_01,wooden_window_01_broke,wooden_wall_01,garden_tree_3
+,,garden_grass_1,,garden_stone,wooden_wall_01,house_table,house_bed,wooden_wall_01,garden_grass_2
+garden_grass_1,garden_tree_8,garden_dirty_1,,,wooden_window_01_barricate,,,wooden_window_01_barricate,garden_dirty_2
+,garden_grass_3,,garden_grass_1,,wooden_wall_01,wooden_door_01_barricate,wooden_window_01_barricate,wooden_wall_01,

@@ -1,0 +1,11 @@
+<item name="Large Satchel" type="container">
+    <properties>
+        <capacity value="10" />
+        <sprite file="container_large_satchel.png" />
+        <weight weight="1.5" reduction="10%" />
+    </properties>
+    <loot>
+    </loot>
+    <spawn chance="1" />
+</item>
+

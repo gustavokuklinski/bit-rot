@@ -1,0 +1,18 @@
+<item name="Emergency Channel Record" type="sd_card" tip="Use with Mobile > MP3">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <audio value="radio/radio_emergency.ogg" />
+    </properties>
+    <spawn chance="0" />
+</item>
+<!-- Transcript
+English
+Emergency channel. This is not a drill. We had an incident at Next Petrol West Pacific, platform GTH56. All personnel, proceed to your closest bunker. Military, scientists, and engineers, go straight to the military base.
+
+Brazilian Portuguese
+Canal de emergência. Isto não é um treinamento. Tivemos um incidente na Next Petrol Pacífico Oeste, plataforma GTH56. Todo o pessoal, sigam ao bunker mais próximo. Militares, cientistas e engenheiros, vão à base militar.
+
+Spanish
+Canal de emergencia. Este no es un simulacro. Tuvimos un incidente en Next Petrol Pacífico Oeste, plataforma GTH56. Todo el personal, diríjase al búnker más cercano. Militares, científicos, ingenieros: a la base militar.
+-->

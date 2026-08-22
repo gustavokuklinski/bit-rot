@@ -1,0 +1,10 @@
+<item name="Water Unit" type="liquid" liquid="true">
+    <properties>
+        <restore status="[water]" value="15" />
+        <load min="1" max="100" />
+        <capacity value="100" />
+        <weight weight="0.001" />
+        <sprite file="liquid_water_unit.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

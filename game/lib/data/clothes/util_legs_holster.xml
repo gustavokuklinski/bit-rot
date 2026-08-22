@@ -1,0 +1,9 @@
+<cloth name="Leg Holster" type="cloth" id="util" builder="false">
+    <properties>
+        <defence value="0.0" />
+        <capacity value="1" />
+        <sprite file="util_legs_holster.png" />
+        <weight weight="0.1" reduction="5%" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

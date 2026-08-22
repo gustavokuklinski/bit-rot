@@ -1,0 +1,5 @@
+<map name="sand_left_01" type="maptile" char="sand_left_01" is_obstacle="false">
+    <visuals>
+        <sprite file="sand_left_01.png" />
+    </visuals>
+</map>

@@ -1,0 +1,9 @@
+<cloth name="Worker Helmet" type="cloth" id="head" builder="true" hide_cloth="[hair]">
+    <properties>
+        <defence value="10" />
+        <durability min="1" max="100" />
+        <sprite file="head_worker_helmet.png" />
+        <weight weight="0.1" />
+    </properties>
+    <spawn chance="1" />
+</cloth>

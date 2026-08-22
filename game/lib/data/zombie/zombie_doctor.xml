@@ -1,0 +1,48 @@
+<zombie type="doctor" spawn_weight="10">
+    <name value="RANDOM" />
+    <sex value="RANDOM" />
+
+    <xp min="1" max="15" />
+    
+    <stats>
+        <health min="10" max="100" />
+        <speed min="1" max="2" />
+        <attack min="1" max="15" />
+        <infection min="1" max="5" />
+    </stats>
+    
+    <clothes>
+        <head><cloth name="Medical Mask" /></head>
+        <util></util>
+        <hair></hair>
+        <facial></facial>
+        <feet><cloth name="Shoes" /></feet>
+        <hand></hand>
+        <body></body>
+        <arms><cloth name="Medical Vest" /></arms>
+        <legs><cloth name="Jeans Pants" /></legs>
+    </clothes>
+
+    <visuals>
+        <sprite id="center" file="zombie.png" />
+        <sprite id="left" file="zombie_left.png" />
+        <sprite id="right" file="zombie_right.png" />
+    </visuals>
+    
+    <loot>
+        <item item="Zombie Meat" chance="1.0" />
+        <item item="Vaccine" chance="1.0" />
+        <item item="Medicine Vol.1" chance="1.0" />
+        <item item="Sewing Kit" chance="1.0" />
+        <item item="Medical Kit" chance="1.0" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
+    </loot>
+
+    <sound>
+        <hit src="zombie_hit.ogg" />
+        <wander src="zombie_wandering.ogg" />
+        <dead src="zombie_dead.ogg" />
+        <attack src="zombie_attack.ogg" />
+        <steps src="zombie_steps.ogg" />
+    </sound>
+</zombie>

@@ -1,0 +1,8 @@
+<map name="window_01_barricate" type="maptile" char="window_01_barricate" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
+    <visuals>
+        <sprite file="window_01_barricate.png" />
+    </visuals>
+</map>

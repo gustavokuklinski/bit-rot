@@ -1,0 +1,15 @@
+<item name="Grenade" type="weapon_throw" allow_belt="true">
+    <properties>
+        <load min="1" max="5" />
+        <weight weight="0.2"/>
+        <capacity value="5" />
+        <damage min="40" max="90" />
+        <explosion value="2" />
+        <skill type="range" />
+        <sprite file="weapon_throw_grenade.png" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <explosion src="grenade.ogg" />
+    </sound>
+</item>
