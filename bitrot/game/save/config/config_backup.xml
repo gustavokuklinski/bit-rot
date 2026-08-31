@@ -10,7 +10,7 @@
     <audio>
         <volume_music value="0.5" name="Music Volume (Default: low)" default="0.5"/>
         <volume_background value="1.0" name="Background Volume: Items, Steps, Zombies (Default: Balanced)" default="1.0"/>
-        <volume_atmospheric value="0.50" name="Atmospheric Volume: Day, Rain, Cave (Default: Balanced)" default="0.50"/>
+        <volume_atmospheric value="1.0" name="Atmospheric Volume: Day, Rain, Cave (Default: Balanced)" default="1.0"/>
     </audio>
     <game>
         <time_daylength value="900000" name="Day length (Default: 15 minutes)" default="900000"/>

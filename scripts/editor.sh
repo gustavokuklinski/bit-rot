@@ -76,11 +76,6 @@ else
     fi
 fi
 
-# ----- Copy game assets to root (fresh copy) -----
-echo "Copying game assets from bitrot/game to ./game ..."
-rm -rf ./game
-cp -Rf bitrot/game ./game
-
 # ----- Change to the bitrot directory and run the editor -----
 cd "$(dirname "$APP_SCRIPT")"   # now in bitrot/
 echo "Running in directory: $(pwd)"

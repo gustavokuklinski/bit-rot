@@ -1,5 +1,0 @@
-<map name="bg" type="maptile" char="bg" is_obstacle="false">
-    <visuals>
-        <sprite file="bg.png" />
-    </visuals>
-</map>

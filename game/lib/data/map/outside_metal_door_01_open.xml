@@ -1,6 +1,0 @@
-<map name="outside_metal_door_01_open" type="maptile" char="outside_metal_door_01_open" state="open" is_obstacle="false">
-    <visuals>
-        <sprite id="open" file="outside_metal_door_01_open.png" />
-    </visuals>
-    <sound src="door_open.ogg" />
-</map>

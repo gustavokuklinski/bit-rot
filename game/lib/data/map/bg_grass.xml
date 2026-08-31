@@ -1,5 +1,0 @@
-<map name="bg_grass" type="maptile" char="bg_grass" is_obstacle="false">
-    <visuals>
-        <sprite file="bg_grass.png" />
-    </visuals>
-</map>

@@ -7,7 +7,7 @@ build
 bitrot.build
 bitrot.dist
 bitrot.onefile-build
-
+game
 bitrot/game/save/player
 bitrot/game/save/game
 bitrot/game/save/server

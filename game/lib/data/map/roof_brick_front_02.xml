@@ -1,5 +1,0 @@
-<map name="roof_brick_front_02" type="maptile" char="roof_brick_front_02" is_obstacle="false">
-    <visuals>
-        <sprite file="roof_brick_front_02.png" />
-    </visuals>
-</map>

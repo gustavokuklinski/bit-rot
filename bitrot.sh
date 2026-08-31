@@ -20,7 +20,7 @@ fi
 # Read version from game/lib/VERSION
 # ----------------------------------------------------------------------
 get_version() {
-    local version_file="$SCRIPT_DIR/bitrot/game/lib/VERSION"
+    local version_file="$SCRIPT_DIR/game/lib/VERSION"
     if [[ -f "$version_file" ]]; then
         # Read the first line, trim whitespace
         local ver=$(head -n1 "$version_file" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
