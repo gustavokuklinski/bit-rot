@@ -147,19 +147,36 @@ def generate_random_seed(chunks=None):
         chunks = MAP_CHUNKS
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
-def get_active_config_path(preset="default"):
-    """Returns the path to the writable config if it exists, otherwise falls back to Nuitka assets."""
+def get_active_config_path(preset="config"): # CHANGED "default" to "config"
+    """
+    Loading Logic:
+    1. Look for local user config: ./game/save/config/config.xml
+    2. Fallback to main game config: ./bitrot/game/save/config/config.xml
+    """
     writable_root = get_writable_dir()
+    # Local Path
     filepath = os.path.join(writable_root, "game", "save", "config", f"{preset}.xml")
     
+    if os.path.exists(filepath):
+        return filepath
+        
+    # Main Fallback Path
+    filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
+    
+    # Final safety fallback if the preset name is weird
     if not os.path.exists(filepath):
-        filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
-        if not os.path.exists(filepath):
-            filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
+        filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
             
     return filepath
 
-def load_settings(preset="default"):
+def get_save_config_path(preset="config"):
+    """
+    Saving Logic:
+    Always returns the path to the local folder, never the main game folder.
+    """
+    return os.path.join(get_writable_dir(), "game", "save", "config", f"{preset}.xml")
+
+def load_settings(preset="config"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
     global font, font_14
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
@@ -184,6 +201,7 @@ def load_settings(preset="default"):
     filepath = get_active_config_path(preset)
 
     try:
+        print(f"Loading config from: {filepath}")
         tree = ET.parse(filepath)
         root = tree.getroot()
 
