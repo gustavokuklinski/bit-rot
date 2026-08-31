@@ -5,7 +5,7 @@ import re
 import csv
 
 from editor.config import (
-    CODE_GLOBAL_ROOT, CODE_LOCAL_ROOT,SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
+    GAME_ROOT, CODE_GLOBAL_ROOT, CODE_LOCAL_ROOT,SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
     MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT, MAP_DIR, BUILDINGS_DIR, TAB_BAR_HEIGHT,
     LOG_WINDOW_HEIGHT
@@ -152,17 +152,16 @@ def editor():
     current_screen_width = SCREEN_WIDTH
     current_screen_height = SCREEN_HEIGHT
 
-    game_root = os.path.abspath(os.path.join('./game'))
-    xml_path = os.path.join(game_root, 'lib', 'data', 'map')
-    sprite_path = os.path.join(game_root, 'lib', 'sprites', 'map')
+    xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
+    sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
     
     # Standard Items Paths
-    item_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'items')
-    item_xml_path = os.path.join(game_root, 'lib', 'data', 'items')
+    item_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'items')
+    item_xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
     
     # Clothes Paths
-    clothes_sprite_path = os.path.join(game_root, 'lib', 'sprites', 'clothes')
-    clothes_xml_path = os.path.join(game_root, 'lib', 'data', 'clothes')
+    clothes_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
+    clothes_xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
     
     map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
     

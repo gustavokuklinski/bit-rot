@@ -3,7 +3,7 @@ import re
 import os
 import csv
 from datetime import datetime
-from editor.config import GAME_ROOT, TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
+from editor.config import GAME_ROOT,SPRITE_ROOT, TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
 from editor.assets import load_editor_icons
 
 class UITextBox:
@@ -1021,11 +1021,15 @@ class Toolbar:
         self.height = height
         self.font = font
         self.buttons = []
-        self.icons = load_editor_icons("./game/lib/sprites/editor")
+
+        # FIX: Only one path assignment, and it must be simply SPRITE_ROOT + 'editor'
+        icon_path = os.path.join(SPRITE_ROOT, 'editor')
+        self.icons = load_editor_icons(icon_path)
+
+        # Create a default placeholder icon for missing files
         self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
         self.default_icon.fill((100, 100, 100))
         pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
-
 
         button_definitions = [
             {"label": "NEW BUILDING", "icon": "building", "action": "NEW BUILDING"},
@@ -1047,20 +1051,11 @@ class Toolbar:
 
         current_x = x + padding
 
-        icon_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'editor')
-        self.icons = load_editor_icons(icon_path)
-
-        # Create a default placeholder icon for missing files
-        self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
-        self.default_icon.fill((100, 100, 100))
-        pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
-
         for btn_def in button_definitions:
             rect = pygame.Rect(current_x, y + (height - button_height) // 2, button_width, button_height)
             self.buttons.append({
                 "rect": rect,
                 "label": btn_def["label"],
-                #"icon": self.icons.get(btn_def["icon"], self.icons['new']),
                 "icon": self.icons.get(btn_def["icon"], self.default_icon),
                 "action": btn_def["action"]
             })
