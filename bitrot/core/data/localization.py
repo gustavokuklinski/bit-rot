@@ -10,16 +10,16 @@ def load_language(lang_code="pt_BR"):
     translations.clear()
     
     # 1. Carrega o arquivo principal (pt_BR.xml)
-    main_file = os.path.join(BASE_DIR, "game", "lib", "lang", f"{lang_code}.xml")
+    main_file = os.path.join(BASE_DIR, "data.rot", "lib", "lang", f"{lang_code}.xml")
     if os.path.exists(main_file):
         _parse_xml_to_dict(main_file)
         
     # 2. Carrega o arquivo de itens (pt_BR_items.xml)
-    items_file = os.path.join(BASE_DIR, "game", "lib", "lang", f"{lang_code}_items.xml")
+    items_file = os.path.join(BASE_DIR, "data.rot", "lib", "lang", f"{lang_code}_items.xml")
     if os.path.exists(items_file):
         _parse_xml_to_dict(items_file)
     
-    traits_file = os.path.join(BASE_DIR, "game", "lib", "lang", f"{lang_code}_traits.xml")
+    traits_file = os.path.join(BASE_DIR, "data.rot", "lib", "lang", f"{lang_code}_traits.xml")
     if os.path.exists(traits_file):
         _parse_xml_to_dict(traits_file)
 

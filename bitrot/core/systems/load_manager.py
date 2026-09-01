@@ -127,7 +127,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         should_initial_save = True
     game.current_save_folder_name = save_name
     
-    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_name)
+    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
     map_path = os.path.join(save_path, "map")
     
     try:
@@ -185,7 +185,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
     game.zombies_killed = 0
-    stat_pos = game.last_modal_positions.get('status', (65, 3))
+    stat_pos = game.last_modal_positions.get('status', (0, 0))
     inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
     nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
     msg_pos = game.last_modal_positions.get('messages', (3, 460))
@@ -361,7 +361,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         save_game(game)
 
 def load_game(game, save_folder_name):
-    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_folder_name)
+    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder_name)
     map_path = os.path.join(save_path, "map")
     
     game.logger.info(f"Loading game from {save_path}...")

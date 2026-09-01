@@ -8,7 +8,7 @@ bitrot.build
 bitrot.dist
 bitrot.onefile-build
 game
-./data.rot
+data.rot
 bitrot/data.rot/save/player
 bitrot/data.rot/save/game
 bitrot/data.rot/save/server

@@ -34,7 +34,7 @@ _CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
 # PROJECT_ROOT: .../bit-rot/
 PROJECT_ROOT = os.path.dirname(os.path.dirname(_CONFIG_DIR))      
 
-# GAME_ROOT: .../bit-rot/bitrot/game/
+# GAME_ROOT: .../bit-rot/bitrot/data.rot/
 GAME_ROOT = os.path.join(PROJECT_ROOT, 'bitrot', 'data.rot')
 
 # Asset sub-folders

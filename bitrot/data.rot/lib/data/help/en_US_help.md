@@ -4,7 +4,6 @@
 Welcome to the Survivor Guide! Use the tabs to navigate over this.
 
 **Fast Tips** 
-- Press TAB to toggle game HUD
 - Hover to get item tooltips and info
 - Click-Drag and place on player slots
 - Complete your first quest talking to a NPC

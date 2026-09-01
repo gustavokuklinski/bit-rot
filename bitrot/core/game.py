@@ -48,7 +48,7 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
 
-        display_flags = pygame.SCALED # | pygame.DOUBLEBUF
+        display_flags = pygame.SCALED | pygame.DOUBLEBUF
         
         if WINDOW_MODE.lower() == "fullscreen":
             display_flags |= pygame.FULLSCREEN
@@ -162,9 +162,9 @@ class Game:
             'container': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
             'text': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
             'mobile': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-            'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+            'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - VEHICLE_MODAL_HEIGHT),
             'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
-            'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
+            'help': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
         }
         if UI_SHOW_TUTORIAL_DEFAULT:
             help_pos = self.last_modal_positions['help']
@@ -277,6 +277,9 @@ class Game:
         
         self.world_time = WorldTime(self)
 
+        self.viewport_left_offset = 0
+        self.dynamic_w = GAME_WIDTH
+        self.dynamic_h = GAME_HEIGHT
 
     def get_events(self):
         return pygame.event.get()
@@ -533,7 +536,7 @@ class Game:
     def run_menu(self):
         events = self.get_events()
         mouse_pos = self._get_scaled_mouse_pos()
-        save_dir = os.path.join(get_writable_dir(), "game", "save", "game")
+        save_dir = os.path.join(get_writable_dir(), "data.rot", "save", "game")
         saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
         has_save = len(saves) > 0
 
@@ -1004,7 +1007,7 @@ class Game:
 
     def _update_screen(self):
         pygame.display.flip()
-        self.dt_ms = self.clock.tick(0) 
+        self.dt_ms = self.clock.tick(0)
         
         if self.dt_ms > 100: 
             self.dt_ms = 100 

@@ -346,12 +346,12 @@ def reset_modal_positions(game):
         'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
         'status': (0, 0),
         'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-        'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+        'container': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
         'text': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
         'mobile': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
         'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
         'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
-        'help': (GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 200),
+        'help': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
     }
     if hasattr(game, 'last_modal_positions'):
         game.last_modal_positions.update(default_positions)
@@ -629,14 +629,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
                                 break
                                 
                         if not modal_exists:
-                            default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
+                            default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
                             
                             new_modal = {
                                 'id': uuid.uuid4(),
                                 'type': 'container',
                                 'item': found_container,
                                 'position': default_pos,
-                                'rect': pygame.Rect(default_pos[0], default_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
+                                'rect': pygame.Rect(default_pos[0], default_pos[1], MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
                                 'is_dragging': False,
                                 'drag_offset': (0, 0)
                             }

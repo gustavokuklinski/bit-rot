@@ -7,7 +7,7 @@ from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
 
 def get_save_files():
-    save_dir = os.path.join(get_writable_dir(), "game", "save", "game")
+    save_dir = os.path.join(get_writable_dir(), "data.rot", "save", "game")
     if not os.path.exists(save_dir):
         return []
     
@@ -42,7 +42,7 @@ def get_save_files():
     return saves
 
 def delete_save(filename):
-    path = os.path.join(get_writable_dir(), "game", "save", "game", filename)
+    path = os.path.join(get_writable_dir(), "data.rot", "save", "game", filename)
     try:
         if os.path.exists(path):
             shutil.rmtree(path)

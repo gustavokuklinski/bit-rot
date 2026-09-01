@@ -1017,52 +1017,65 @@ def check_dynamic_zombie_spawns(game, grid_size=128):
     spawn_grid = getattr(game, 'spawn_point_grid', {})
 
     potential_spawns = []
-    # Expanded search range to ensure we find spawn points that are further away
-    for i in range(-3, 4):
-        for j in range(-3, 4):
+    # OPTIMIZATION: Reduced range from 7x7 to 4x4. 
+    # 4 cells * 512px = 2048px, which already covers your 1440px activation radius.
+    for i in range(-2, 3):
+        for j in range(-2, 3):
             cell = (player_grid_x + i, player_grid_y + j)
             if cell in spawn_grid:
                 potential_spawns.extend(spawn_grid[cell])
     
     if not potential_spawns: return
 
+    # Global limit check
     current_zombie_count = len(game.zombies)
     if current_zombie_count >= core.data.config.MAX_ZOMBIES_GLOBAL: return
 
     SPAWN_ACTIVATION_RADIUS = 90 * TILE_SIZE 
     MIN_SPAWN_DISTANCE = 50 * TILE_SIZE
+    MAX_SPAWNS_PER_FRAME = 1 # <--- CRITICAL: Only spawn at 1 location per frame
 
-    entities_to_avoid = game.items_on_ground + game.zombies + [game.player]
-
+    # 1. Filter only the points that are actually in range and not yet triggered
+    valid_points = []
     for spawn_pos in potential_spawns:
         if spawn_pos in triggered_spawns_for_layer: continue
+        dist = math.hypot(player_pos[0] - spawn_pos[0], player_pos[1] - spawn_pos[1])
+        if MIN_SPAWN_DISTANCE < dist < SPAWN_ACTIVATION_RADIUS:
+            valid_points.append((dist, spawn_pos))
 
-        dist_to_player = math.hypot(player_pos[0] - spawn_pos[0], player_pos[1] - spawn_pos[1])
+    # 2. SORT by distance (Closest points spawn first)
+    valid_points.sort(key=lambda x: x[0])
+
+    entities_to_avoid = game.items_on_ground + game.zombies + [game.player]
+    spawns_this_frame = 0
+
+    # 3. Process the sorted list, but STOP once we hit the per-frame limit
+    for dist, spawn_pos in valid_points:
+        if spawns_this_frame >= MAX_SPAWNS_PER_FRAME:
+            break
+            
+        zombie_spawn_limit = max(0, core.data.config.MAX_ZOMBIES_GLOBAL - len(game.zombies))
+        if zombie_spawn_limit == 0: break 
+
+        triggered_spawns_for_layer.add(spawn_pos)
         
-        # Spawn logic: Outside min view distance, inside activation radius
-        if dist_to_player < SPAWN_ACTIVATION_RADIUS and dist_to_player > MIN_SPAWN_DISTANCE: 
-            zombie_spawn_limit = max(0, core.data.config.MAX_ZOMBIES_GLOBAL - len(game.zombies))
-            if zombie_spawn_limit == 0: break 
-
-            triggered_spawns_for_layer.add(spawn_pos)
-            
-            # Passing cached_obstacle_grid and grid_size
-            new_zombies = spawn_initial_zombies(
-                game.obstacles, 
-                [spawn_pos], 
-                entities_to_avoid,
-                zombie_spawn_limit, 
-                spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
-                map_width_px=game.map_width_pixels,
-                map_height_px=game.map_height_pixels,
-                obstacle_grid=getattr(game, 'cached_obstacle_grid', None),
-                grid_size=grid_size
-            )
-            
-            if new_zombies:
-                game.zombies.extend(new_zombies)
-                entities_to_avoid.extend(new_zombies) 
-                game.layer_zombies[game.current_layer_index] = game.zombies[:]
+        new_zombies = spawn_initial_zombies(
+            game.obstacles, 
+            [spawn_pos], 
+            entities_to_avoid,
+            zombie_spawn_limit, 
+            spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
+            map_width_px=game.map_width_pixels,
+            map_height_px=game.map_height_pixels,
+            obstacle_grid=getattr(game, 'cached_obstacle_grid', None),
+            grid_size=grid_size
+        )
+        
+        if new_zombies:
+            game.zombies.extend(new_zombies)
+            entities_to_avoid.extend(new_zombies) 
+            game.layer_zombies[game.current_layer_index] = game.zombies[:]
+            spawns_this_frame += 1
 
 def check_zombie_respawn(game):
     current_time = pygame.time.get_ticks()

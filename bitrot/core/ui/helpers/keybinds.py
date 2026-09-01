@@ -81,7 +81,7 @@ class KeybindManager:
     def __init__(self):
         self.kb_binds = {k: v['val'] for k, v in DEFAULT_KB_MOUSE_BINDS.items()}
         self.joy_binds = {k: v['val'] for k, v in DEFAULT_JOYSTICK_BINDS.items()}
-        self.filepath = os.path.join(config.get_writable_dir(), "game", "save", "config", "keybinds.xml")
+        self.filepath = os.path.join(config.get_writable_dir(), "data.rot", "save", "config", "keybinds.xml")
         self.load()
 
     def load(self):

@@ -141,7 +141,7 @@ class NPCDialog:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 game.current_save_folder_name = f"save_{timestamp}"
             
-            save_path = os.path.join("game", "save", "game", game.current_save_folder_name)
+            save_path = os.path.join("data.rot", "save", "game", game.current_save_folder_name)
             os.makedirs(save_path, exist_ok=True)
             NPCDialog.QUESTS_FILE_PATH = os.path.join(save_path, "quests.rot")
         else:

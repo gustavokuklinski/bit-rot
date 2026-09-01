@@ -310,7 +310,7 @@ def draw_game(game):
 
     # [OPTIMIZATION] Cleanup light_mask_cache to prevent memory bloat
     # Keep only the most recently used entries (max 20)
-    MAX_LIGHT_CACHE_ENTRIES = 20
+    MAX_LIGHT_CACHE_ENTRIES = 256
     if len(game.light_mask_cache) > MAX_LIGHT_CACHE_ENTRIES:
         # Remove oldest entries (keep last N)
         keys = list(game.light_mask_cache.keys())
@@ -714,7 +714,7 @@ def draw_game(game):
                     # Replace this path with your actual rain PNG path
                     raw_rain = game.assets.get('rain_texture')
                     # Scale it to cover the screen
-                    game.rain_texture = pygame.transform.scale(raw_rain, (GAME_WIDTH, GAME_HEIGHT))
+                    game.rain_texture = pygame.transform.scale(raw_rain, (GAME_WIDTH, GAME_HEIGHT)).convert_alpha()
                 except Exception as e:
                     print(f"Could not load rain texture: {e}")
                     game.rain_texture = None
@@ -749,12 +749,9 @@ def draw_game(game):
                 try:
                     # Load from assets
                     raw_crt = game.assets.get('crt_texture') 
-                    # If not in assets, try loading directly
-                    if not raw_crt:
-                        raw_crt = pygame.image.load(SPRITE_PATH + 'ui/crt_overlay.png').convert_alpha()
-                    
+                   
                     # Scale to cover the screen + a small margin to prevent gaps during shaking
-                    game.crt_texture = pygame.transform.scale(raw_crt, (GAME_WIDTH + 20, GAME_HEIGHT + 20))
+                    game.crt_texture = pygame.transform.scale(raw_crt, (GAME_WIDTH + 20, GAME_HEIGHT + 20)).convert_alpha()
                 except Exception as e:
                     print(f"Could not load CRT texture: {e}")
                     game.crt_texture = None

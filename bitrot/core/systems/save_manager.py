@@ -15,7 +15,7 @@ def save_game(game):
         save_name = f"save_{timestamp}"
         game.current_save_folder_name = save_name
 
-    save_path = os.path.join(get_writable_dir(), "game", "save", "game", save_name)
+    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
     game.logger.info(f"Saving game to {save_path}...")
 
     try:
