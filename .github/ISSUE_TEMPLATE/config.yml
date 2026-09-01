@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing Guidelines
+    url: https://github.com/your-username/your-repo/blob/main/CONTRIBUTING.md
+    about: Please read our contributing guide before opening an issue.
+  - name: Code of Conduct
+    url: https://github.com/your-username/your-repo/blob/main/CODE_OF_CONDUCT.md
+    about: Please review our Code of Conduct before interacting with the community.
+  - name: AI Disclosure
+    url: https://github.com/your-username/your-repo/blob/main/AI_DISCLOSURE.md
+    about: See which AI models are used in this project.
