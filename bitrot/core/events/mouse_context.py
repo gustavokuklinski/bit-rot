@@ -1157,7 +1157,7 @@ def handle_right_click(game, mouse_pos):
     click_container_item = None
 
     for i, item in enumerate(game.player.belt):
-        if item and get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+        if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
             clicked_item = item
             click_source = 'belt'
             click_index = i
@@ -1283,7 +1283,8 @@ def handle_right_click(game, mouse_pos):
     is_over_any_modal = any(modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
     if not clicked_item and not is_over_any_modal:
-        world_pos = game.screen_to_world(mouse_pos)
+        adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+        world_pos = game.screen_to_world(adjusted_mouse_pos)
 
         max_interact_dist_sq = (TILE_SIZE * 2) ** 2
         for i, ground_item in enumerate(game.items_on_ground):

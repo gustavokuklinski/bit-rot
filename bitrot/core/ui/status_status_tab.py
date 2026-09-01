@@ -14,37 +14,26 @@ class StatusTooltipItem:
 
 def draw_status_tab(surface, player, modal, assets, zombies_killed):
     padding = 10
-    col_width = (modal['rect'].width - (padding * 3)) // 2
+    col_width = modal['rect'].width - (padding * 2)
     
     start_y = modal['rect'].y + 80
     col1_x = modal['rect'].x + padding
-    col2_x = modal['rect'].x + col_width + (padding * 2)
     
     mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
     
     stat_icons = {}
     icon_files = {
-        "HP": SPRITE_PATH + "ui/hp.png", 
-        "STM": SPRITE_PATH + "ui/stamina.png",
-        "WTR": SPRITE_PATH + "ui/water.png", 
-        "FOD": SPRITE_PATH + "ui/food.png", 
-        "INF": SPRITE_PATH + "ui/infection.png", 
-        "XP": SPRITE_PATH + "ui/xp.png", 
-        "ANX": SPRITE_PATH + "ui/axiety.png", 
-        "DEF": SPRITE_PATH + "ui/defence.png", 
+        "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
+        "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", 
+        "INF": SPRITE_PATH + "ui/infection.png", "XP": SPRITE_PATH + "ui/xp.png", 
+        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png", 
         "WGT": SPRITE_PATH + "ui/weight.png"
     }
     
     stat_names = {
-        "HP": "Health", 
-        "STM": "Stamina", 
-        "WTR": "Water",
-        "FOD": "Food", 
-        "INF": "Sickness", 
-        "ANX": "Anxiety", 
-        "DEF": "Defence", 
-        "WGT": "Weight"
+        "HP": "Health", "STM": "Stamina", "WTR": "Water", "FOD": "Food", 
+        "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence", "WGT": "Weight"
     }
 
     for k, path in icon_files.items():
@@ -65,26 +54,22 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
-        is_col2 = i >= 4
-        x_col = col2_x if is_col2 else col1_x
-        row_idx = i - 4 if is_col2 else i
-        
-        y_pos = start_y + (row_idx * 28)
+        y_pos = start_y + (i * 28)
         
         icon = stat_icons.get(name)
         if icon:
-            surface.blit(icon, (x_col, y_pos))
-            label_x = x_col + 28
+            surface.blit(icon, (col1_x, y_pos))
+            label_x = col1_x + 28
         else:
             text = font_14.render(f"{name}:", True, WHITE)
-            surface.blit(text, (x_col, y_pos))
-            label_x = x_col + 40
+            surface.blit(text, (col1_x, y_pos))
+            label_x = col1_x + 40
 
         bar_x = label_x + 10
         ratio = value / max_value if max_value > 0 else 0
         draw_color = RED if name == "WGT" and ratio > 1.0 else color
             
-        max_bar_width = int(col_width - 60)
+        max_bar_width = int(col_width - (label_x - col1_x) - 10)
         bar_width = int(max_bar_width * min(1.0, ratio))
         
         bar_rect = pygame.Rect(bar_x, y_pos + 5, bar_width, 10)

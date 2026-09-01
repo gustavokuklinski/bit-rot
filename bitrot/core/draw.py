@@ -63,35 +63,46 @@ def draw_game(game):
     zoom = getattr(game, 'zoom_level', 1.0)
     
     # --- DYNAMIC VIEWPORT RESIZING START ---
-    dynamic_w = GAME_WIDTH
+    # We calculate how much space is taken by modals on the left and right
+    left_encroachment = 0
+    right_encroachment = 0
     dynamic_h = GAME_HEIGHT
-    
-    is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
 
-    # Modals that should never shrink the viewport
+    is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
     ignored_modals = {'big_map', 'npc_dialog', 'crafting'}
     
     for modal in getattr(game, 'modals', []):
         if 'rect' in modal and modal.get('type') not in ignored_modals:
-            # Dynamically shrink width if the modal is snapped to the right
-            if modal['rect'].left >= GAME_WIDTH - 244:
-                dynamic_w = min(dynamic_w, modal['rect'].left)
+            # 1. Check for Right-Snapped Modals
+            if modal['rect'].left >= GAME_WIDTH - 256:
+                # The encroachment is the distance from the right edge of the screen to the left edge of the modal
+                encroach = GAME_WIDTH - modal['rect'].left
+                right_encroachment = max(right_encroachment, encroach)
             
-            # Dynamically shrink height if the modal is snapped to the bottom
-            # ONLY apply this if we are NOT on Android
+            # 2. Check for Left-Snapped Modals
+            if modal['rect'].right <= 256:
+                # The encroachment is simply the right edge of the modal
+                left_encroachment = max(left_encroachment, modal['rect'].right)
+
+            # 3. Bottom Snap (PC only)
             if not is_android:
-                if modal['rect'].top >= GAME_HEIGHT - 240:
+                if modal['rect'].top >= GAME_HEIGHT - 256:
                     dynamic_h = min(dynamic_h, modal['rect'].top)
                     
+    # Final width is the total screen minus both sides
+    final_w = GAME_WIDTH - left_encroachment - right_encroachment
+    final_h = dynamic_h
+    
     # Safeties to ensure the viewport never collapses completely
-    dynamic_w = max(GAME_WIDTH // 3, dynamic_w)
-    dynamic_h = max(GAME_HEIGHT // 3, dynamic_h)
+    final_w = max(GAME_WIDTH // 3, final_w)
+    final_h = max(GAME_HEIGHT // 3, final_h)
 
-    game.dynamic_w = dynamic_w
-    game.dynamic_h = dynamic_h
+    game.dynamic_w = final_w
+    game.dynamic_h = final_h
+    game.viewport_left_offset = left_encroachment # This is the X coordinate for the blit
 
-    view_w = int(dynamic_w / zoom)
-    view_h = int(dynamic_h / zoom)
+    view_w = int(final_w / zoom)
+    view_h = int(final_h / zoom)
     # --- DYNAMIC VIEWPORT RESIZING END ---
 
     if not hasattr(game, 'cached_view_surface') or \
@@ -146,7 +157,8 @@ def draw_game(game):
     target_pan_y = 0
 
     if game.player:
-        world_mouse_pos = game.screen_to_world(mouse_pos)
+        adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+        world_mouse_pos = game.screen_to_world(adjusted_mouse_pos)
         dx = world_mouse_pos[0] - game.player.rect.centerx
         dy = world_mouse_pos[1] - game.player.rect.centery
         game.player.aim_angle = math.atan2(-dy, dx)
@@ -621,7 +633,9 @@ def draw_game(game):
             hover_rect = game.hovered_container.rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, YELLOW, hover_rect, 2)
 
-    world_mouse_pos = game.screen_to_world(mouse_pos)
+    adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+    world_mouse_pos = game.screen_to_world(adjusted_mouse_pos)
+
 
     # Draw hover border on NPCs (Light Blue for all NPCs)
     for npc in game.npcs:
@@ -671,7 +685,7 @@ def draw_game(game):
     world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     # Use the new dynamic bounds for the draw rect
-    game_rect = pygame.Rect(GAME_OFFSET_X, 0, dynamic_w, dynamic_h)
+    game_rect = pygame.Rect(game.viewport_left_offset, 0, final_w, final_h)
     
     retro_bit_surface = world_view_surface.convert()
 
@@ -680,7 +694,7 @@ def draw_game(game):
         game.game_screen.blit(retro_bit_surface, game_rect)
     else:
         # Scale the 8-bit surface up using nearest-neighbor (crisp pixelation)
-        scaled_world = pygame.transform.scale(retro_bit_surface, (dynamic_w, dynamic_h))
+        scaled_world = pygame.transform.scale(retro_bit_surface, (final_w, final_h))
         game.game_screen.blit(scaled_world, game_rect)
 
 
@@ -731,7 +745,7 @@ def draw_game(game):
         player_view_x = game.player.rect.centerx + offset_x
         player_view_y = game.player.rect.centery + offset_y
         
-        screen_x = (player_view_x * zoom) + GAME_OFFSET_X
+        screen_x = (player_view_x * zoom) + GAME_OFFSET_X + game.viewport_left_offset
         screen_y = (player_view_y * zoom)
 
         flash_distance = (TILE_SIZE * 1.4) * zoom 
@@ -756,7 +770,7 @@ def draw_game(game):
         bubble_w = text_surf.get_width() + 20
         bubble_h = text_surf.get_height() + 10
         
-        bubble_x = screen_x - (bubble_w / 2) + (TILE_SIZE * zoom / 2)
+        bubble_x = screen_x - (bubble_w / 2) + (TILE_SIZE * zoom / 2) + game.viewport_left_offset
         bubble_y = screen_y - bubble_h - 15 
         
         bubble_rect = pygame.Rect(bubble_x, bubble_y, bubble_w, bubble_h)
@@ -887,7 +901,7 @@ def draw_game(game):
                 focused_tip = item['tip']
             
             # Position '!' top middle of the entity/tile
-            screen_x = ((world_rect.centerx + offset_x) * zoom) + GAME_OFFSET_X
+            screen_x = ((world_rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
             screen_y = ((world_rect.top + offset_y) * zoom) - 5
             
             box_rect = pygame.Rect(0, 0, 20, 20)
@@ -1138,7 +1152,8 @@ def draw_game(game):
                 tt_h = len(lines) * 20 + (padding * 2)
                 
                 # Center using GAME_WIDTH to match the Belt HUD perfectly
-                tt_x = (GAME_WIDTH // 2) - (tt_w // 2)
+                viewport_center_x = game.viewport_left_offset + (game.dynamic_w // 2)
+                tt_x = viewport_center_x - (tt_w // 2)
                 tt_y = dynamic_h - 70 - tt_h
                 
                 tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
@@ -1304,15 +1319,20 @@ def draw_game(game):
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
 
-    game.pause_button_rect = draw_pause_button(game.game_screen)
-    game.status_button_rect = draw_status_button(game.game_screen)
-    game.inventory_button_rect = draw_inventory_button(game.game_screen)
-    game.nearby_button_rect = draw_nearby_button(game.game_screen)
-    game.gear_button_rect = draw_gear_button(game.game_screen)
-    game.slots_button_rect = draw_slots_button(game.game_screen)
-    game.messages_button_rect = draw_messages_button(game.game_screen)
-    game.crafting_button_rect = draw_crafting_button(game.game_screen)
-    game.help_button_rect = draw_help_button(game.game_screen)
+    view_left = game.viewport_left_offset
+    view_right = game.viewport_left_offset + game.dynamic_w
+    view_bottom = game.dynamic_h
+
+    game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, view_bottom)
+    game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, view_bottom)
+    game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, view_bottom)
+    game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, view_bottom)
+    game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, view_bottom)
+    game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, view_bottom)
+    game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, view_bottom)
+    game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, view_bottom)
+    game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, view_bottom)
+
     highlighted_rect = None
     highlighted_allowed = False
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):

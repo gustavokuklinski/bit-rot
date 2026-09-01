@@ -12,7 +12,7 @@ _forward_img = None
 _help_img = None
 _slots_img = None
 
-def draw_pause_button(surface):
+def draw_pause_button(surface, view_left, view_right, view_bottom):
     global _pause_img
     if _pause_img is None:
         try:
@@ -22,12 +22,12 @@ def draw_pause_button(surface):
             _pause_img = pygame.Surface((15, 15), pygame.SRCALPHA)
             _pause_img.fill(GRAY)
     
-    # Position: 10 (Top)
-    button_rect = pygame.Rect(10, 10, 15, 15)
+    # Position relative to view_left
+    button_rect = pygame.Rect(view_left + 10, 10, 15, 15)
     surface.blit(_pause_img, button_rect)
     return button_rect
 
-def draw_forward_button(surface):
+def draw_forward_button(surface, view_left, view_right, view_bottom):
     global _forward_img
     if _forward_img is None:
         try:
@@ -37,13 +37,12 @@ def draw_forward_button(surface):
             _forward_img = pygame.Surface((15, 15), pygame.SRCALPHA)
             _forward_img.fill(GRAY)
     
-    # Position: 10 (Top)
-    button_rect = pygame.Rect(30, 10, 15, 15)
+    # Position relative to view_left
+    button_rect = pygame.Rect(view_left + 30, 10, 15, 15)
     surface.blit(_forward_img, button_rect)
     return button_rect
 
-
-def draw_status_button(surface):
+def draw_status_button(surface, view_left, view_right, view_bottom):
     global _status_img
     if _status_img is None:
         try:
@@ -53,12 +52,12 @@ def draw_status_button(surface):
             _status_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _status_img.fill(GRAY)
     
-    # Position: 10 (Top)
-    button_rect = pygame.Rect(10, 40, 40, 40)
+    # Position relative to view_left
+    button_rect = pygame.Rect(view_left + 10, 40, 40, 40)
     surface.blit(_status_img, button_rect)
     return button_rect
 
-def draw_inventory_button(surface):
+def draw_inventory_button(surface, view_left, view_right, view_bottom):
     global _inventory_img
     if _inventory_img is None:
         try:
@@ -68,12 +67,12 @@ def draw_inventory_button(surface):
             _inventory_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _inventory_img.fill(GRAY)
             
-    # Previous: 50. New: 60 (Status 10+40=50 + 10 gap)
-    button_inventory_rect = pygame.Rect(10, 90, 40, 40)
+    # Position relative to view_left
+    button_inventory_rect = pygame.Rect(view_left + 10, 90, 40, 40)
     surface.blit(_inventory_img, button_inventory_rect)
     return button_inventory_rect
 
-def draw_gear_button(surface):
+def draw_gear_button(surface, view_left, view_right, view_bottom):
     global _gear_img
     if _gear_img is None:
         try:
@@ -83,12 +82,12 @@ def draw_gear_button(surface):
             _gear_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _gear_img.fill(GRAY)
             
-    # Previous: 90 (Overlap). New: 130 (Inventory 60+60=120 + 10 gap)
-    button_gear_rect = pygame.Rect(10, 140, 40, 40)
+    # Position relative to view_left
+    button_gear_rect = pygame.Rect(view_left + 10, 140, 40, 40)
     surface.blit(_gear_img, button_gear_rect)
     return button_gear_rect
 
-def draw_slots_button(surface):
+def draw_slots_button(surface, view_left, view_right, view_bottom):
     global _slots_img
     if _slots_img is None:
         try:
@@ -98,12 +97,12 @@ def draw_slots_button(surface):
             _slots_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _slots_img.fill(GRAY)
             
-    # Position: 190 (Gear is at 140 + 40 height + 10 gap)
-    button_slots_rect = pygame.Rect(10, 190, 40, 40)
+    # Position relative to view_left
+    button_slots_rect = pygame.Rect(view_left + 10, 190, 40, 40)
     surface.blit(_slots_img, button_slots_rect)
     return button_slots_rect
 
-def draw_nearby_button(surface):
+def draw_nearby_button(surface, view_left, view_right, view_bottom):
     global _nearby_img
     if _nearby_img is None:
         try:
@@ -113,12 +112,12 @@ def draw_nearby_button(surface):
             _nearby_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _nearby_img.fill(GRAY)
             
-    # Previous: 145. New: 200 (Gear 130+60=190 + 10 gap)
-    button_nearby_rect = pygame.Rect(10, 240, 40, 40)
+    # Position relative to view_left
+    button_nearby_rect = pygame.Rect(view_left + 10, 240, 40, 40)
     surface.blit(_nearby_img, button_nearby_rect)
     return button_nearby_rect
 
-def draw_messages_button(surface):
+def draw_messages_button(surface, view_left, view_right, view_bottom):
     global _message_img
     if _message_img is None:
         try:
@@ -129,29 +128,28 @@ def draw_messages_button(surface):
             _message_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _message_img.fill(GRAY)
     
-    # Previous: 200. New: 270 (Nearby 200+60=260 + 10 gap)
-    button_messages_rect = pygame.Rect(10, 290, 40, 40)
+    # Position relative to view_left
+    button_messages_rect = pygame.Rect(view_left + 10, 290, 40, 40)
     surface.blit(_message_img, button_messages_rect)
     return button_messages_rect
 
-def draw_crafting_button(surface):
+def draw_crafting_button(surface, view_left, view_right, view_bottom):
     global _crafting_img
     if _crafting_img is None:
         try:
-            # Assumes you have a crafting.png or uses gray placeholder
             _crafting_img = pygame.image.load(SPRITE_PATH + 'ui/craft.png').convert_alpha()
             _crafting_img = pygame.transform.scale(_crafting_img, (40, 40))
         except pygame.error:
             _crafting_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _crafting_img.fill(GRAY)
-            pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1) # Simple icon
+            pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1)
             
-    # Position: 260 (Messages 210 + 40 + 10 gap)
-    button_rect = pygame.Rect(10, 340, 40, 40)
+    # Position relative to view_left
+    button_rect = pygame.Rect(view_left + 10, 340, 40, 40)
     surface.blit(_crafting_img, button_rect)
     return button_rect
 
-def draw_help_button(surface):
+def draw_help_button(surface, view_left, view_right, view_bottom):
     global _help_img
     if _help_img is None:
         try:
@@ -161,7 +159,7 @@ def draw_help_button(surface):
             _help_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _help_img.fill(GRAY)
             
-    # Position: 340 (Crafting 290 + 40 + 10 gap)
-    button_rect = pygame.Rect(10, 390, 40, 40)
+    # Position relative to view_left
+    button_rect = pygame.Rect(view_left + 10, 390, 40, 40)
     surface.blit(_help_img, button_rect)
     return button_rect

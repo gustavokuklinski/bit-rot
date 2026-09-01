@@ -1,3 +1,5 @@
+# core/ui/status_record_tab.py
+
 import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
@@ -9,28 +11,19 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
 
     attributes_to_draw = [
-        ("Strength", "strength"),
-        ("Fitness", "fitness"),
-        ("Agility", "agility"),
-        ("Luck", "lucky"),
-        ("Melee", "melee"),
-        ("Ranged", "ranged"),
-        ("Maintenance", "maintenance"),
-        ("Intelligence", "intelligence")
+        ("Strength", "strength"), ("Fitness", "fitness"), ("Agility", "agility"),
+        ("Luck", "lucky"), ("Melee", "melee"), ("Ranged", "ranged"),
+        ("Maintenance", "maintenance"), ("Intelligence", "intelligence")
     ]
 
-    start_x_1 = modal_rect.left + 15
-    start_x_2 = modal_rect.left + modal_rect.width // 2 + 5
+    start_x = modal_rect.left + 15
     start_y = modal_rect.top + 75
     line_height = 30
     
     pending_tooltip = None
 
     for i, (label, attr_id) in enumerate(attributes_to_draw):
-        is_col2 = i >= 4
-        current_x = start_x_2 if is_col2 else start_x_1
-        row_idx = i - 4 if is_col2 else i
-        current_y = start_y + (row_idx * line_height)
+        current_y = start_y + (i * line_height)
         
         if hasattr(player.progression, "get_level"):
             level = player.progression.get_level(attr_id)
@@ -41,8 +34,6 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         image_rel_path = attr_config.get('image')
         
         icon_size = 24
-        icon_x = current_x
-        
         if image_rel_path:
             if image_rel_path not in _SKILL_ICON_CACHE:
                 try:
@@ -54,16 +45,16 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
 
             icon_surf = _SKILL_ICON_CACHE.get(image_rel_path)
             if icon_surf:
-                surface.blit(icon_surf, (icon_x - 5, current_y - 3))
+                surface.blit(icon_surf, (start_x - 5, current_y - 3))
 
         bonus_perc = player.progression.get_total_attribute_bonus(player, attr_id)
         
-        text_x = icon_x + icon_size + 10
+        text_x = start_x + icon_size + 10
         label_surf = font_14.render(f"{tr('ui', label)}:", True, WHITE)
         surface.blit(label_surf, (text_x - 3, current_y + 2))
 
-        # Adjusted horizontal position to fit the 50% column constraint nicely
-        value_x = text_x + 95 
+        # Adjusted for narrow width: values aligned to the right of the label
+        value_x = text_x + 80 
         value_surf = font_14.render(f"{str(level)}/10", True, WHITE)
         value_pos = (value_x, current_y + 2)
         surface.blit(value_surf, value_pos)
@@ -81,7 +72,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                         "label": label, 
                         "curr_xp": int(curr_xp), 
                         "req_xp": req_xp,
-                        "bonus_perc": bonus_perc  # Pass the bonus down to the tooltip
+                        "bonus_perc": bonus_perc
                     }
 
     if pending_tooltip:
@@ -89,12 +80,9 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
             def __init__(self, data):
                 self.name = f"{tr('ui', data['label'])} {tr('ui', 'Experience')}"
                 self.tooltip_text = f"{tr('ui', 'Progress:')} {data['curr_xp']} / {data['req_xp']} XP"
-                
-                # Check for a bonus and append it to the tooltip text on a new line
                 bonus = data.get('bonus_perc', 0)
                 if bonus != 0:
                     self.tooltip_text += f"\n{tr('ui', 'Boost:')} {int(bonus):+}%"
-
                 self.item_type = self.durability = self.max_durability = None
                 self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
                 

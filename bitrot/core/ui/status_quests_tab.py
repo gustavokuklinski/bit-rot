@@ -129,10 +129,10 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     total_global, comp_global, in_prog_count = len(quests), len(completed_quests), len(in_progress)
 
     start_x = modal_rect.left + 15
-    base_y = modal_rect.top + 70  # Shifted up to match shorter modal
+    base_y = modal_rect.top + 70 
     slot_size = 40
     gap = 10
-    cols = 7 # Increased for wider horizontal fit
+    cols = 4 # Changed from 7 to 4 to fit 244px width
     
     def get_section_height(items):
         if not items: return 0
@@ -169,12 +169,10 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     handle_rect = pygame.Rect(scrollbar_x, handle_y, scrollbar_w, handle_h)
     track_rect = pygame.Rect(scrollbar_x, base_y, scrollbar_w, visible_height)
     
-    # NEW: Define clip_rect before input processing to map touch boundaries
     clip_rect = pygame.Rect(modal_rect.left + 5, base_y, modal_rect.width - 25, visible_height)
     
     if mouse_pressed:
         if not modal.get('quest_was_pressed', False):
-            # inflated handle rect slightly to make it easier to grab on touch screens
             if handle_rect.inflate(20, 0).collidepoint(mouse_pos):
                 modal['quest_is_dragging'] = True
                 modal['quest_drag_offset'] = mouse_pos[1] - handle_y
@@ -182,7 +180,6 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
                 new_y = mouse_pos[1] - (handle_h / 2)
                 percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
                 modal['quest_scroll_y'] = percent * max_scroll
-            # --- NEW KINETIC START ---
             elif clip_rect.collidepoint(mouse_pos) and max_scroll > 0:
                 modal['quest_is_scrolling_content'] = True
                 modal['quest_content_last_y'] = mouse_pos[1]
@@ -191,8 +188,6 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             new_y = mouse_pos[1] - modal.get('quest_drag_offset', 0)
             percent = max(0, min(1, (new_y - base_y) / (visible_height - handle_h)))
             modal['quest_scroll_y'] = percent * max_scroll
-            
-        # --- NEW KINETIC DRAG MATH ---
         elif modal.get('quest_is_scrolling_content'):
             delta_y = mouse_pos[1] - modal['quest_content_last_y']
             modal['quest_scroll_y'] -= delta_y
@@ -212,57 +207,39 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
 
     def draw_quest_section(title, items, y_offset, outline_color):
         if not items: return y_offset
-        
         title_surf = font_14.render(title, True, WHITE)
         surface.blit(title_surf, (start_x, y_offset))
         y_offset += 25
-        
         nonlocal pending_tooltip
-        
         for i, q in enumerate(items):
             row = i // cols
             col = i % cols
-            
             x = start_x + col * (slot_size + gap)
             y = y_offset + row * (slot_size + gap)
-            
             slot_rect = pygame.Rect(x, y, slot_size, slot_size)
-            
             if y > base_y + visible_height or y + slot_size < base_y: continue
-            
             pygame.draw.rect(surface, GRAY_40, slot_rect)
-            
             item = q['item_obj']
             if item and getattr(item, 'image', None):
                 img = item.image.copy()
                 if outline_color == GRAY_60: img.set_alpha(100)
                 scaled_img = pygame.transform.scale(img, (32, 32))
-                img_rect = scaled_img.get_rect(center=slot_rect.center)
-                surface.blit(scaled_img, img_rect)
+                surface.blit(scaled_img, scaled_img.get_rect(center=slot_rect.center))
             else:
                 fallback_text = font_14.render("?", True, WHITE)
                 if outline_color == GRAY_60: fallback_text.set_alpha(100)
                 surface.blit(fallback_text, fallback_text.get_rect(center=slot_rect.center))
-                
-            border_width = 2 if outline_color != GRAY_60 else 1
-            pygame.draw.rect(surface, outline_color, slot_rect, border_width)
-            
+            pygame.draw.rect(surface, outline_color, slot_rect, 2 if outline_color != GRAY_60 else 1)
             if slot_rect.collidepoint(mouse_pos) and clip_rect.collidepoint(mouse_pos):
-                # Suppress tooltip display if user is actively dragging the screen
                 if not modal.get('quest_is_scrolling_content') and not modal.get('quest_is_dragging'):
                     class QuestTooltipDummy:
                         def __init__(self, q_data):
                             self.name = tr('ui', q_data['name'])
-                            if outline_color == GREEN: status = 'Completed'
-                            elif outline_color == YELLOW: status = 'In Progress'
-                            else: status = 'Locked'
-                            
+                            status = 'Completed' if outline_color == GREEN else ('In Progress' if outline_color == YELLOW else 'Locked')
                             self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
                             self.item_type = self.durability = self.max_durability = None
                             self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
-                            
                     pending_tooltip = QuestTooltipDummy(q)
-
         rows = (len(items) + cols - 1) // cols
         return y_offset + (rows * (slot_size + gap)) + 15
         
@@ -272,7 +249,6 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     current_y = draw_quest_section(f"Completed ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
 
     surface.set_clip(None)
-    
     bar_rect = pygame.Rect(modal_rect.right - 10, base_y, 8, visible_height)
     draw_scrollbar(surface, modal, bar_rect, visible_height, total_content_height, current_scroll)
 

@@ -55,7 +55,8 @@ def handle_attack(game, mouse_pos):
                     )
 
                 aim_pos = game._get_scaled_mouse_pos()
-                target_world_x, target_world_y = game.screen_to_world(aim_pos)
+                adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
+                target_world_x, target_world_y = game.screen_to_world(adjusted_aim_pos)
                 
                 dx = target_world_x - game.player.rect.centerx
                 dy = target_world_y - game.player.rect.centery
@@ -158,7 +159,8 @@ def handle_attack(game, mouse_pos):
                     )
 
                 aim_pos = game._get_scaled_mouse_pos()
-                target_world_x, target_world_y = game.screen_to_world(aim_pos)
+                adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
+                target_world_x, target_world_y = game.screen_to_world(adjusted_aim_pos)
                 
                 dx = target_world_x - game.player.rect.centerx
                 dy = target_world_y - game.player.rect.centery
@@ -225,7 +227,8 @@ def handle_attack(game, mouse_pos):
                 game.player.melee_swing_timer = 10
                 
                 aim_pos = game._get_scaled_mouse_pos()
-                world_pos = game.screen_to_world(aim_pos)
+                adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
+                world_pos = game.screen_to_world(adjusted_aim_pos)
                 
                 dx_swing = world_pos[0] - game.player.rect.centerx
                 dy_swing = world_pos[1] - game.player.rect.centery

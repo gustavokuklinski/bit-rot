@@ -208,7 +208,7 @@ def handle_mouse_up(game, event, mouse_pos):
                 # --- Drop on BELT ---
                 for i_target in range(len(game.player.belt)):
                     is_modal_slot = any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals))
-                    is_hud_slot = get_belt_hud_slot_rect(i_target).collidepoint(mouse_pos)
+                    is_hud_slot = get_belt_hud_slot_rect(i_target, game=game).collidepoint(mouse_pos)
 
                     if is_modal_slot or is_hud_slot:
                         if not getattr(game.dragged_item, 'allow_belt', False):
