@@ -133,7 +133,6 @@ VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 UI_BACKGROUND_MUSIC = True
 UI_SHOW_TUTORIAL_DEFAULT = True
-UI_CRT_FILTER = True
 RESOLUTION = "1280x720"
 WINDOW_MODE = "fullscreen"
 UI_SCALE = 1
@@ -197,7 +196,7 @@ def load_settings(preset="config"):
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
-    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, UI_CRT_FILTER, RESOLUTION, WINDOW_MODE
+    global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
     global GAME_LANGUAGE 
@@ -312,12 +311,6 @@ def load_settings(preset="config"):
             font     = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
             font_14  = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
 
-
-        val_crt = ui_config.find('crt_filter')
-        if val_crt is not None:
-            UI_CRT_FILTER = str(val_crt.get('value')).lower() == 'true'
-        else:
-            UI_CRT_FILTER = True
             
         val_lang = ui_config.find('language')
         if val_lang is not None:

@@ -1,10 +1,12 @@
 # core/entities/animal/animal_loader.py
 import os
 import xml.etree.ElementTree as ET
+from core.data.config import DATA_PATH
 
 class AnimalLoader:
     definitions = {}
-    DATA_PATH = "game/lib/data/animals"
+    animal_folder = os.path.join(DATA_PATH, 'animals')
+
 
     @staticmethod
     def load_animals():
@@ -14,10 +16,10 @@ class AnimalLoader:
         loaded_from_files = False
 
         # 1. Try to load from the specified directory
-        if os.path.exists(AnimalLoader.DATA_PATH):
-            for filename in os.listdir(AnimalLoader.DATA_PATH):
+        if os.path.exists(AnimalLoader.animal_folder):
+            for filename in os.listdir(AnimalLoader.animal_folder):
                 if filename.endswith(".xml"):
-                    full_path = os.path.join(AnimalLoader.DATA_PATH, filename)
+                    full_path = os.path.join(AnimalLoader.animal_folder, filename)
                     try:
                         tree = ET.parse(full_path)
                         root = tree.getroot()

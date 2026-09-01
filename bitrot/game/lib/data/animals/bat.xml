@@ -1,4 +1,5 @@
 <animal name="Bat" attack_player="true" type="animal" spawn_weight="50" spawn_layer="[2]">
+    <name value="Bat" />
     <stats>
         <health min="1" max="5" />
         <speed min="0.5" max="0.8" />

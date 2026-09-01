@@ -577,18 +577,18 @@ def update_game_state(game):
 
                 dx = zombie.rect.centerx - other_entity.rect.centerx
                 dy = zombie.rect.centery - other_entity.rect.centery
-                dist = math.hypot(dx, dy)
+                dist_sq = dx*dx + dy*dy
                 
                 # We can loosen the distance check a bit since the mask confirms they are actually touching
-                if dist < TILE_SIZE: 
+                if dist_sq < TILE_SIZE**2: 
                     push_mag = 1.0 # Gentle repulsive force
                     
                     if not hasattr(zombie, 'knockback_velocity') or isinstance(zombie.knockback_velocity, tuple):
                         zombie.knockback_velocity = [0.0, 0.0]
                         
-                    if dist > 0:
-                        zombie.knockback_velocity[0] += (dx / dist) * push_mag
-                        zombie.knockback_velocity[1] += (dy / dist) * push_mag
+                    if dist_sq > 0:
+                        zombie.knockback_velocity[0] += (dx / dist_sq) * push_mag
+                        zombie.knockback_velocity[1] += (dy / dist_sq) * push_mag
                     else:
                         zombie.knockback_velocity[0] += random.uniform(-1.0, 1.0)
                         zombie.knockback_velocity[1] += random.uniform(-1.0, 1.0)
@@ -710,17 +710,17 @@ def update_game_state(game):
 
                 dx = animal.rect.centerx - other_entity.rect.centerx
                 dy = animal.rect.centery - other_entity.rect.centery
-                dist = math.hypot(dx, dy)
+                dist_sq = dx*dx + dy*dy
                 
-                if dist < TILE_SIZE:
+                if dist_sq < TILE_SIZE**2:
                     push_mag = 1.0
                     
                     if not hasattr(animal, 'knockback_velocity') or isinstance(animal.knockback_velocity, tuple):
                         animal.knockback_velocity = [0.0, 0.0]
                         
-                    if dist > 0:
-                        animal.knockback_velocity[0] += (dx / dist) * push_mag
-                        animal.knockback_velocity[1] += (dy / dist) * push_mag
+                    if dist_sq > 0:
+                        animal.knockback_velocity[0] += (dx / dist_sq) * push_mag
+                        animal.knockback_velocity[1] += (dy / dist_sq) * push_mag
                     else:
                         animal.knockback_velocity[0] += random.uniform(-1.0, 1.0)
                         animal.knockback_velocity[1] += random.uniform(-1.0, 1.0)
