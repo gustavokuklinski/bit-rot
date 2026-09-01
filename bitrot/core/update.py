@@ -225,7 +225,7 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
 
     # 6. Alert nearby entities (Sound logic)
     ALARM_RADIUS = TILE_SIZE * 30
-    for other_zombie in game.zombies:
+    for other_zombie in getattr(game, 'active_zombies', game.zombies):
         if not getattr(other_zombie, 'is_dead', False):
             dist_sq = (other_zombie.rect.centerx - x)**2 + (other_zombie.rect.centery - y)**2
             if dist_sq < ALARM_RADIUS ** 2:

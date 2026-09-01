@@ -21,7 +21,7 @@
         <map_chunks value="2" name="Map size (Default: 2)" default="2"/>
     </map>
     <player>
-        <view_radius value="10" name="View radius tiles (Default: 10)" default="10"/>
+        <view_radius value="9" name="View radius tiles (Default: 9)" default="9"/>
         <zoom_start value="3.0" name="Zoom start (Default: 3.0)" default="3.0"/>
         <zoom_far value="2.0" name="Zoom max far (Default: 2.0)" default="2.0"/>
         <zoom_near value="3.5" name="Zoom max near (Default: 3.5)" default="3.5"/>

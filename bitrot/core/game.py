@@ -59,7 +59,7 @@ class Game:
         
         pygame.display.set_caption("Bit Rot")
         try:
-            icon_image = pygame.image.load('./data.rot/icons/favicon.png')
+            icon_image = pygame.image.load('./data.rot/icons/favicon.png').convert_alpha()
             pygame.display.set_icon(icon_image)
         except:
             pass
@@ -832,7 +832,8 @@ class Game:
         handle_input(self)
         self.frame_count += 1
 
-        self.rebuild_zombie_grid()
+        if self.frame_count % 30 == 0:
+            self.rebuild_zombie_grid()
         
         if self.frame_count % 60 == 0:
             self.rebuild_item_grid()
@@ -841,9 +842,9 @@ class Game:
         px, py = self.player.rect.center
         
 
-        BASE_SIMULATION_DISTANCE = 500
+        BASE_SIMULATION_DISTANCE = 250
         MAX_ACTIVE_ENTITIES_TARGET = 60
-        MAX_ACTIVE_ZOMBIES = 40
+        MAX_ACTIVE_ZOMBIES = 20
         MAX_ACTIVE_ANIMALS = 10
         
 
@@ -852,7 +853,7 @@ class Game:
         if total_nearby_entities > MAX_ACTIVE_ENTITIES_TARGET:
             SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 0.75  
         elif total_nearby_entities < MAX_ACTIVE_ENTITIES_TARGET * 0.5:
-            SIMULATION_DISTANCE = min(1200, BASE_SIMULATION_DISTANCE * 1.25)  
+            SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 1.25
         else:
             SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE
         
@@ -940,6 +941,7 @@ class Game:
         
         if self.player:
             base_radius = core.data.config.BASE_PLAYER_VIEW_RADIUS
+
             radius_mult = 1.0
 
             for trait_id in self.player.traits:
@@ -1007,7 +1009,7 @@ class Game:
 
     def _update_screen(self):
         pygame.display.flip()
-        self.dt_ms = self.clock.tick(0)
+        self.dt_ms = self.clock.tick(60)
         
         if self.dt_ms > 100: 
             self.dt_ms = 100 

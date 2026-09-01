@@ -320,10 +320,18 @@ def draw_game(game):
     divisor = 2
     low_res_w = max(1, view_w // divisor)
     low_res_h = max(1, view_h // divisor)
-    light_mask_low = pygame.Surface((low_res_w, low_res_h))
 
-    light_mask_low.fill((30, 30, 30))
+    if not hasattr(game, 'light_mask_low_cache') or game.light_mask_low_cache.get_size() != (low_res_w, low_res_h):
+        game.light_mask_low_cache = pygame.Surface((low_res_w, low_res_h)).convert()
+        
     ambient = int(game.world_time.current_ambient_light)
+
+    light_mask_low = game.light_mask_low_cache
+    
+    # Scale the unseen world darkness with ambient light so it is always darker than the view radius
+    # At day (ambient=255), unseen is 30. At night (ambient low), unseen gets closer to 0 (pitch black).
+    unseen_val = max(0, min(30, int((ambient / 255.0) * 30)))
+    light_mask_low.fill((unseen_val, unseen_val, unseen_val))
 
     light_texture = game.assets.get('light_texture')
     light_sources = []
@@ -335,17 +343,21 @@ def draw_game(game):
 
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
-                
-                # Cache player vision texture at this radius
-                cache_key = ('vision', radius_low)
-                if cache_key not in game.light_mask_cache:
-                    game.light_mask_cache[cache_key] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                player_vision_tex = game.light_mask_cache[cache_key].copy()
-                
-                ambient_color = (ambient, ambient, ambient)
-                player_vision_tex.fill(ambient_color, special_flags=pygame.BLEND_RGBA_MULT)
 
+                radius_low = max(16, round(radius_low / 16) * 16)
+                
+                # Ensure the player view radius always has a minimum brightness so it doesn't disappear at night
+                view_brightness = max(40, ambient)
+                
+                cache_key = ('vision', radius_low, view_brightness)
+                if cache_key not in game.light_mask_cache:
+                    base = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                    base.fill((view_brightness, view_brightness, view_brightness), special_flags=pygame.BLEND_RGBA_MULT)
+                    game.light_mask_cache[cache_key] = base
+                    
+                player_vision_tex = game.light_mask_cache[cache_key]
                 light_rect = player_vision_tex.get_rect()
+                # -----------------------------------------------------------------------------------------
 
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
@@ -394,6 +406,7 @@ def draw_game(game):
 
             radius_low = int(radius_world / 2)
             if radius_low <= 0: continue
+            radius_low = max(16, round(radius_low / 16) * 16)
 
             try:
                 # Cache light source texture at this radius
@@ -417,28 +430,34 @@ def draw_game(game):
                 light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
             except Exception: pass
 
-        for light in game.map_lights:
-            if not light.get('active', True): continue
-            if 'rect' in light and not screen_rect.colliderect(light['rect']): continue
 
-            radius_low = int(light['radius'] / 2)
-            if radius_low <= 0: continue
+        is_dark_outside = getattr(game.world_time, 'state', 'DAY') != 'DAY'
 
-            try:
-                # Cache map light texture at this radius
-                cache_key = ('map_light', radius_low)
-                if cache_key not in game.light_mask_cache:
-                    game.light_mask_cache[cache_key] = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                scaled_light_tex = game.light_mask_cache[cache_key].copy()
-                light_opacity = 80
-                scaled_light_tex.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
-                light_rect = scaled_light_tex.get_rect()
-                
-                pos_x_view = (light['rect'].centerx + offset_x) / 2
-                pos_y_view = (light['rect'].centery + offset_y) / 2
-                light_rect.center = (pos_x_view, pos_y_view)
-                light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
-            except Exception: pass
+        if is_dark_outside:
+            for light in game.map_lights:
+                if not light.get('active', True): continue
+                if 'rect' in light and not screen_rect.colliderect(light['rect']): continue
+
+                radius_low = 32
+
+                try:
+                    # Cache map light texture at this radius
+                    cache_key = ('map_light_darkened', radius_low)
+                    if cache_key not in game.light_mask_cache:
+                        base_scaled = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                        light_opacity = 80
+                        base_scaled.fill((light_opacity, light_opacity, light_opacity, 255), special_flags=pygame.BLEND_RGBA_MULT)
+                        game.light_mask_cache[cache_key] = base_scaled
+                    
+                    # Instantly retrieve the ready-to-blit surface
+                    scaled_light_tex = game.light_mask_cache[cache_key]
+                    light_rect = scaled_light_tex.get_rect()
+                    
+                    pos_x_view = (light['rect'].centerx + offset_x) / 2
+                    pos_y_view = (light['rect'].centery + offset_y) / 2
+                    light_rect.center = (pos_x_view, pos_y_view)
+                    light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+                except Exception: pass
     
     # [OPTIMIZATION] strict view radius squared
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
@@ -503,6 +522,9 @@ def draw_game(game):
     
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
     current_time = pygame.time.get_ticks()
+
+    if not hasattr(game, 'screen_obstacles') or game.frame_count % 15 == 0:
+        game.screen_obstacles = [ob for ob in game.obstacles if screen_rect.inflate(200, 200).colliderect(ob)]
     
     for entity in visible_entities:
         if isinstance(entity, (Zombie, NPC, Animal)):
@@ -513,19 +535,19 @@ def draw_game(game):
             if dist_sq > view_radius_sq: continue
 
             if screen_rect.colliderect(entity.rect):
-                # [OPTIMIZATION] Cached LOS check every 500ms
                 opacity = 255
                 
                 if not hasattr(entity, 'last_los_draw_check'):
-                    entity.last_los_draw_check = 0
+                    entity.last_los_draw_check = random.randint(0, 500) # Stagger initial checks
                     entity.cached_los_draw_result = True
                 
                 if current_time - entity.last_los_draw_check > 500:
                     entity.last_los_draw_check = current_time
-                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.obstacles, game)
+                    # --- NEW: Pass only screen_obstacles instead of game.obstacles! ---
+                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.screen_obstacles, game)
                 
                 if not entity.cached_los_draw_result:
-                    opacity = 80  # Dark/silhouette for entities not in line of sight
+                    opacity = 80  
                 
                 entity.draw(world_view_surface, offset_x, offset_y, opacity)
 
@@ -678,21 +700,25 @@ def draw_game(game):
             hover_rect = target_world_rect.move(offset_x, offset_y)
             pygame.draw.rect(world_view_surface, target_color, hover_rect, 2)
 
-    light_mask_upscaled = pygame.transform.scale(light_mask_low, (view_w, view_h))
-    world_view_surface.blit(light_mask_upscaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    if not hasattr(game, 'light_upscaled_cache') or game.light_upscaled_cache.get_size() != (view_w, view_h):
+        game.light_upscaled_cache = pygame.Surface((view_w, view_h)).convert()
 
-    # Use the new dynamic bounds for the draw rect
+    # Scale the light directly onto the cached surface
+    pygame.transform.scale(light_mask_low, (view_w, view_h), game.light_upscaled_cache)
+    world_view_surface.blit(game.light_upscaled_cache, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
     game_rect = pygame.Rect(game.viewport_left_offset, 0, final_w, final_h)
     
-    retro_bit_surface = world_view_surface.convert()
-
-    # Check zoom directly to determine if scaling is required
     if zoom == 1.0:
-        game.game_screen.blit(retro_bit_surface, game_rect)
+        # Blit directly to the screen! No need for .convert()!
+        game.game_screen.blit(world_view_surface, game_rect)
     else:
-        # Scale the 8-bit surface up using nearest-neighbor (crisp pixelation)
-        scaled_world = pygame.transform.scale(retro_bit_surface, (final_w, final_h))
-        game.game_screen.blit(scaled_world, game_rect)
+        if not hasattr(game, 'scaled_world_cache') or game.scaled_world_cache.get_size() != (final_w, final_h):
+            game.scaled_world_cache = pygame.Surface((final_w, final_h)).convert()
+            
+        # Scale the world directly onto the cached surface
+        pygame.transform.scale(world_view_surface, (final_w, final_h), game.scaled_world_cache)
+        game.game_screen.blit(game.scaled_world_cache, game_rect)
 
 
     if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
@@ -720,11 +746,9 @@ def draw_game(game):
                     game.rain_texture = None
 
             if game.rain_texture:
-                # Initialize and update rain offset
                 if not hasattr(game, 'rain_offset'):
                     game.rain_offset = 0
                 
-                # Move the rain down based on delta time
                 rain_speed = 15 * getattr(game, 'dt_mult', 1.0)
                 game.rain_offset += rain_speed
                 
