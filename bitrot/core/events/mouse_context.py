@@ -1324,7 +1324,8 @@ def handle_right_click(game, mouse_pos):
                 click_container_item = None
 
         if not clicked_item:
-            world_pos = game.screen_to_world(mouse_pos)
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
             for npc in game.npcs:
                 if npc.rect.collidepoint(world_pos) and npc.is_friendly and npc.aggro_timer <= 0:
                     clicked_item = npc
@@ -1333,7 +1334,8 @@ def handle_right_click(game, mouse_pos):
                     break
 
         if not clicked_item:
-            world_pos = game.screen_to_world(mouse_pos)
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
@@ -1370,7 +1372,8 @@ def handle_right_click(game, mouse_pos):
                         display_message(game, tr('msg', "Too far away to interact."))
 
     if not clicked_item:
-        world_pos = game.screen_to_world(mouse_pos)
+        adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+        world_pos = game.screen_to_world(adjusted_mouse_pos)
         for light in game.map_lights:
             if light['rect'].collidepoint(world_pos):
                 clicked_item = light
@@ -1379,7 +1382,8 @@ def handle_right_click(game, mouse_pos):
                 break
 
     if not clicked_item:
-        world_pos = game.screen_to_world(mouse_pos)
+        adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+        world_pos = game.screen_to_world(adjusted_mouse_pos)
         for npc in game.npcs:
             if npc.rect.collidepoint(world_pos) and npc.is_friendly:
                 clicked_item = npc

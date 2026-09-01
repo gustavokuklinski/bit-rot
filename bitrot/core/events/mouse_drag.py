@@ -1431,7 +1431,8 @@ def handle_mouse_motion(game, event, mouse_pos):
 
     game.hovered_container = None
 
-    world_pos = game.screen_to_world(mouse_pos)
+    adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+    world_pos = game.screen_to_world(adjusted_mouse_pos)
     
 
     for container in game.containers:

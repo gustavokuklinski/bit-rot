@@ -20,7 +20,8 @@ def handle_mouse_down(game, event, mouse_pos):
 
     if event.button == 1:
         if getattr(game, 'item_to_place', None):
-            world_pos = game.screen_to_world(mouse_pos)
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
             dx = world_pos[0] - game.player.rect.centerx
             dy = world_pos[1] - game.player.rect.centery
             dist_sq = dx*dx + dy*dy
