@@ -46,11 +46,11 @@ def toggle_status_modal(game):
             'id': uuid.uuid4(),
             'type': 'status',
             'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT)),
+            'position': getattr(game, 'last_modal_positions', {}).get('status', (0, 0)),
             'is_dragging': False,
             'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('status', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT))[1], 
+            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('status', (0, 0))[0], 
+                                getattr(game, 'last_modal_positions', {}).get('status', (0, 0))[1], 
                                 STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
         }
         game.modals.append(new_status_modal)
@@ -344,7 +344,7 @@ def reset_modal_positions(game):
         'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
         'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
         'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-        'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+        'status': (0, 0),
         'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
         'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
         'text': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
@@ -383,7 +383,7 @@ def toggle_default_ui(game):
             'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
             'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
             'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-            'status': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - STATUS_MODAL_HEIGHT),
+            'status': (0,0),
             'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
         }
         game.last_modal_positions.update(default_positions)

@@ -116,7 +116,7 @@ class RecipeManager:
 
     @staticmethod
     def load_recipes():
-        # Points to ./game/lib/data/craft/
+        # Points to ./data.rot/lib/data/craft/
         craft_path = os.path.join(DATA_PATH, 'craft') 
         
         if not os.path.exists(craft_path):

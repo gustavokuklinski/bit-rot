@@ -29,12 +29,12 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --standalone --assume-yes-for-downloads --output-dir=./build --include-data-dir=bitrot/game=game --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico bitrot/bitrot.py
+          nuitka --standalone --assume-yes-for-downloads --output-dir=./build --include-data-dir=bitrot/data.rot=data.rot --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico bitrot/bitrot.py
 
       - name: Prepare Staging Directory
         shell: bash
         run: |
-          # Nuitka --standalone generates a folder named 'bitrot.dist' containing the .exe, DLLs, and the bundled game/ folder.
+          # Nuitka --standalone generates a folder named 'bitrot.dist' containing the .exe, DLLs, and the bundled data.rot/ folder.
           # We simply rename this master folder to 'release' for zipping.
           mv build/bitrot.dist release
 

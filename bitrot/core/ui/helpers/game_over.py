@@ -37,7 +37,7 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     global _logo_img
     try:
         if _logo_img is None:
-            logo_path = os.path.join(BASE_DIR, 'game', 'icons', 'logo.png')
+            logo_path = os.path.join(BASE_DIR, 'data.rot', 'icons', 'logo.png')
             _logo_img = pygame.image.load(logo_path).convert_alpha()
             logo_w = S(500)
             logo_h = int(_logo_img.get_height() * (logo_w / _logo_img.get_width()))

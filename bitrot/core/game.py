@@ -39,8 +39,6 @@ from core.entities.animal.animal import Animal
 from core.data.localization import load_language, tr
 from core.map.world_time import WorldTime
 from core.events.joystick import JoystickHandler
-from core.android.virtual_controller import VirtualAndroidController
-from core.android.ui_adapter import adapt_modals_for_mobile
 from core.ui.helpers.keybinds import keybinds_ui
 
 class Game:
@@ -61,7 +59,7 @@ class Game:
         
         pygame.display.set_caption("Bit Rot")
         try:
-            icon_image = pygame.image.load('./game/icons/favicon.png')
+            icon_image = pygame.image.load('./data.rot/icons/favicon.png')
             pygame.display.set_icon(icon_image)
         except:
             pass
@@ -71,14 +69,9 @@ class Game:
         self.logger.info("Initializing Rot Engine...")
         
         # Hard initialization for PC control schemes
-        self.is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
-
-        if self.is_android:
-            self.joystick_handler = VirtualAndroidController(logger=self.logger)
-            self.logger.info("Android detected: Virtual Gamepad enabled.")
-        else:
-            self.joystick_handler = JoystickHandler(logger=self.logger)
-            self.logger.info("PC detected: Hardware Joystick enabled.")
+        
+        self.joystick_handler = JoystickHandler(logger=self.logger)
+        self.logger.info("PC detected: Hardware Joystick enabled.")
 
         try:
             cursor_surface = pygame.image.load(SPRITE_PATH + 'ui/cursor.png').convert_alpha()
@@ -253,7 +246,7 @@ class Game:
         self.sound_manager = SoundManager()
         
         if core.data.config.UI_BACKGROUND_MUSIC:
-            self.sound_manager.play_music('game/lib/sfx/ui/music.ogg', volume=core.data.config.VOLUME_MUSIC)
+            self.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=core.data.config.VOLUME_MUSIC)
 
         self.world_min_x = 0
         self.world_min_y = 0
@@ -953,6 +946,9 @@ class Game:
                     if mod is not None:
                         radius_mult *= mod
 
+            health_ratio = max(0.1, self.player.health / self.player.max_health)
+            radius_mult *= health_ratio
+
             self.player_view_radius = base_radius * radius_mult
         
         self.npc_spawn_timer += 1
@@ -992,8 +988,7 @@ class Game:
         if self.player:
              self.map_manager.update_chunks(self.player.rect.center)
         
-        if getattr(self, 'is_android', False):
-            adapt_modals_for_mobile(self)
+        
 
         draw_game(self)
 

@@ -138,9 +138,9 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     if 'status_icons' not in modal:
         modal['status_icons'] = {}
         icon_paths = {
-            'motor': 'game/lib/sprites/items/car_motor.png',
-            'fuel': 'game/lib/sprites/items/car_fuel_unit.png',
-            'battery': 'game/lib/sprites/items/car_battery.png'
+            'motor': SPRITE_PATH + '/items/car_motor.png',
+            'fuel': SPRITE_PATH + '/items/car_fuel_unit.png',
+            'battery': SPRITE_PATH + 'items/car_battery.png'
         }
         for key, path in icon_paths.items():
             try:

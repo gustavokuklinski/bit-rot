@@ -8,8 +8,9 @@ bitrot.build
 bitrot.dist
 bitrot.onefile-build
 game
-bitrot/game/save/player
-bitrot/game/save/game
-bitrot/game/save/server
-bitrot/game/logs/*.log
-bitrot/game/lib/sfx/*/*-pygbag.ogg
+./data.rot
+bitrot/data.rot/save/player
+bitrot/data.rot/save/game
+bitrot/data.rot/save/server
+bitrot/data.rot/logs/*.log
+bitrot/data.rot/lib/sfx/*/*-pygbag.ogg

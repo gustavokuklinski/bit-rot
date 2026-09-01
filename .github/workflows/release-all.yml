@@ -19,7 +19,7 @@ jobs:
           - os: windows-latest
             executable_ext: .exe
             asset_name: bitrot_windows
-            nuitka_flags: --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico
+            nuitka_flags: --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico
           
           - os: ubuntu-latest
             executable_ext: .bin
@@ -29,7 +29,7 @@ jobs:
           - os: macos-latest
             executable_ext: .app
             asset_name: bitrot_macos
-            nuitka_flags: --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns
+            nuitka_flags: --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns
 
     steps:
       - name: Checkout Code
@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           mkdir release
-          cp -r bitrot/game release/game
+          cp -r bitrot/data.rot release/data.rot
           mv build/bitrot${{ matrix.executable_ext }} release/bitrot${{ matrix.executable_ext }}
 
       - name: Upload Artifacts

@@ -46,11 +46,6 @@ Run locally
 $ python bitrot/bitrot.py # Play the game$ python bitrot/editor.py # Edit maps
 ```
  
-#### Play on web browser
-
-```shell
-$ pygbag bitrot/ # Open localhost:8000 (Uses the main.py default file)
-```
 
 ---
 
@@ -84,10 +79,3 @@ $ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/game/icon
 ```
 
 After finish, open a terminal and type: `xattr -cr bitrot.app`
-
-**Android**
-
-```shell
-$ buildozer -v android debug # Build APK to ./bin/
-$ buildozer -v android debug deploy run logcat -s "python" # Send the APK to Device and get the full log
-```

@@ -11,6 +11,3 @@ Read the full code to make it understandfull and do not make unecessary changes 
 This is my updated code Update your context with it. Never make any unnecessary changes. Read and understand it's design patterns and do what is being told:
 
 ---
-This is my updated code folder located at: /home/gustavokuklinski/Projects/game-dev/bit-rot/core.
-
----

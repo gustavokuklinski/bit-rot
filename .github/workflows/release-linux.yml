@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           mkdir release
-          cp -r bitrot/game release/game
+          cp -r bitrot/data.rot release/data.rot
           mv build/bitrot.bin release/bitrot.bin
 
       - name: Zip Artifacts for Release

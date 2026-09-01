@@ -22,11 +22,12 @@ GAME_HEIGHT = 720
 current_dir = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
 
-MAP_DIR = os.path.join(BASE_DIR, "game", "lib", "map") + os.sep
-DATA_PATH = os.path.join(BASE_DIR, "game", "lib", "data") + os.sep
-SPRITE_PATH = os.path.join(BASE_DIR, "game", "lib", "sprites") + os.sep
-SOUND_PATH = os.path.join(BASE_DIR, "game", "lib", "sfx") + os.sep
-FONT_FACE = os.path.join(BASE_DIR, "game", "lib", "font", "Oxanium-Regular.ttf")
+VERSION_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "VERSION")
+MAP_DIR = os.path.join(BASE_DIR, "data.rot", "lib", "map") + os.sep
+DATA_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
+SPRITE_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
+SOUND_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
+FONT_FACE = os.path.join(BASE_DIR, "data.rot", "lib", "font", "Oxanium-Regular.ttf")
 
 # Colors
 TRANSPARENT = (0, 0, 0, 0)
@@ -153,22 +154,22 @@ def generate_random_seed(chunks=None):
 def get_active_config_path(preset="config"): # CHANGED "default" to "config"
     """
     Loading Logic:
-    1. Look for local user config: ./game/save/config/config.xml
-    2. Fallback to main game config: ./bitrot/game/save/config/config.xml
+    1. Look for local user config: ./data.rot/save/config/config.xml
+    2. Fallback to main game config: ./bitrot/data.rot/save/config/config.xml
     """
     writable_root = get_writable_dir()
     # Local Path
-    filepath = os.path.join(writable_root, "game", "save", "config", f"{preset}.xml")
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml")
     
     if os.path.exists(filepath):
         return filepath
         
     # Main Fallback Path
-    filepath = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
+    filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
     
     # Final safety fallback if the preset name is weird
     if not os.path.exists(filepath):
-        filepath = os.path.join(BASE_DIR, "game", "save", "config", "config.xml")
+        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", "config.xml")
             
     return filepath
 
@@ -177,7 +178,7 @@ def get_save_config_path(preset="config"):
     Saving Logic:
     Always returns the path to the local folder, never the main game folder.
     """
-    return os.path.join(get_writable_dir(), "game", "save", "config", f"{preset}.xml")
+    return os.path.join(get_writable_dir(), "data.rot", "save", "config", f"{preset}.xml")
 
 def load_settings(preset="config"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
@@ -287,9 +288,7 @@ def load_settings(preset="config"):
         RESOLUTION = "1280x720"
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
-        if hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ:
-            RESOLUTION = "1067x480"
-            WINDOW_MODE = "fullscreen"
+        
 
         try:
             parts = RESOLUTION.split('x')
@@ -339,13 +338,13 @@ def save_language_to_config(lang_code, preset="config"):
     global GAME_LANGUAGE
     GAME_LANGUAGE = lang_code
     writable_root = get_writable_dir()
-    config_dir = os.path.join(writable_root, "game", "save", "config")
+    config_dir = os.path.join(writable_root, "data.rot", "save", "config")
     os.makedirs(config_dir, exist_ok=True) 
     
     filepath = os.path.join(config_dir, f"{preset}.xml")
     
     if not os.path.exists(filepath):
-        bundled_path = os.path.join(BASE_DIR, "game", "save", "config", f"{preset}.xml")
+        bundled_path = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
         if os.path.exists(bundled_path):
             import shutil
             shutil.copy(bundled_path, filepath)
@@ -376,7 +375,7 @@ def save_language_to_config(lang_code, preset="config"):
     except Exception as e:
         print(f"Error saving language to config: {e}")
 
-version_file_path = "game/lib/VERSION"
+version_file_path = VERSION_PATH
 
 try:
     with open(version_file_path, "r") as f:

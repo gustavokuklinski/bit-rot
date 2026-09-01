@@ -345,7 +345,7 @@ def handle_settings_events(game, state, event, mouse_pos, clickable_rects):
             # Call the function from config.py to get the correct LOCAL path
             save_path = core.data.config.get_save_config_path(preset_name)
             
-            # Create the folders (./game/save/config/) if they don't exist
+            # Create the folders (./data.rot/save/config/) if they don't exist
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             
             # Save the data

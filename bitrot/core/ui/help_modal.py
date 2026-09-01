@@ -47,13 +47,13 @@ def draw_help_modal(surface, game, modal, assets):
         tabs.append(current_tab)
         
         if current_lang == "en_US":
-            target_path = os.path.join(config_module.BASE_DIR, "game", "lib", "data", "help", "en_US_help.md")
+            target_path = os.path.join(config_module.BASE_DIR, "data.rot", "lib", "data", "help", "en_US_help.md")
         else:
-            target_path = os.path.join(config_module.BASE_DIR, "game", "lib", "lang", f"{current_lang}_help.md")
+            target_path = os.path.join(config_module.BASE_DIR, "data.rot", "lib", "lang", f"{current_lang}_help.md")
             
         if not os.path.exists(target_path):
             print(f"[Help Modal] Warning: {target_path} not found. Falling back to default EN.")
-            target_path = os.path.join(config_module.BASE_DIR, "game", "lib", "data", "help", "en_US_help.md")
+            target_path = os.path.join(config_module.BASE_DIR, "data.rot", "lib", "data", "help", "en_US_help.md")
 
         try:
             with open(target_path, "r", encoding="utf-8") as f:

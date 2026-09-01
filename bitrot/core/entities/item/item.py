@@ -270,7 +270,7 @@ class Item:
             return SPRITE_CACHE[sprite_file]
 
         try:
-            if sprite_file.startswith("./game/"):
+            if sprite_file.startswith("./data.rot/"):
                 path = sprite_file
             else:
                 if self.item_type == 'cloth':

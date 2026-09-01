@@ -35,7 +35,7 @@ _CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(_CONFIG_DIR))      
 
 # GAME_ROOT: .../bit-rot/bitrot/game/
-GAME_ROOT = os.path.join(PROJECT_ROOT, 'bitrot', 'game')
+GAME_ROOT = os.path.join(PROJECT_ROOT, 'bitrot', 'data.rot')
 
 # Asset sub-folders
 MAP_DIR = os.path.join(GAME_ROOT, 'lib', 'map')
@@ -44,7 +44,7 @@ XML_DATA_ROOT = os.path.join(GAME_ROOT, 'lib', 'data')
 SPRITE_ROOT = os.path.join(GAME_ROOT, 'lib', 'sprites')
 
 # Code Editor roots
-CODE_GLOBAL_ROOT = os.path.join(PROJECT_ROOT, 'bitrot')
+CODE_GLOBAL_ROOT = os.path.join(PROJECT_ROOT, 'data.rot')
 CODE_LOCAL_ROOT = GAME_ROOT
 
 # Preview settings

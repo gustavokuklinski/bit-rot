@@ -68,6 +68,20 @@ def load_assets():
     except pygame.error as e:
         print(f"Error loading light texture: {e}")
         assets['light_texture'] = None
+    
+    try:
+        # This image should be a white circle fading to transparent
+        assets['rain_texture'] = pygame.image.load(SPRITE_PATH + 'ui/rain_texture.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading rain texture: {e}")
+        assets['rain_texture'] = None
+    
+    try:
+        # This image should be a white circle fading to transparent
+        assets['crt_texture'] = pygame.image.load(SPRITE_PATH + 'ui/crt_overlay.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading CRT texture: {e}")
+        assets['crt_texture'] = None
 
     assets['font'] = font_14
 

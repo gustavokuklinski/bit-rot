@@ -183,7 +183,7 @@ def save_config_xml(data, filepath):
         print(f"Error saving config XML: {e}")
 
 def _load_config_presets(state):
-    preset_dir = "./game/save/config"
+    preset_dir = "./data.rot/save/config"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
     presets = ["default"] 

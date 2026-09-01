@@ -56,8 +56,6 @@ def get_key_name(action):
 def draw_game(game):
     # Clear the main screen
     game.game_screen.fill(PANEL_COLOR)
-    if hasattr(game, 'virtual_controller') and game.virtual_controller.enabled:
-        game.virtual_controller.draw(game.game_screen)
 
     # World Rendering with Pixelated Zoom
     zoom = getattr(game, 'zoom_level', 1.0)
@@ -68,7 +66,6 @@ def draw_game(game):
     right_encroachment = 0
     dynamic_h = GAME_HEIGHT
 
-    is_android = hasattr(sys, 'getandroidapilevel') or 'ANDROID_ARGUMENT' in os.environ
     ignored_modals = {'big_map', 'npc_dialog', 'crafting'}
     
     for modal in getattr(game, 'modals', []):
@@ -85,9 +82,8 @@ def draw_game(game):
                 left_encroachment = max(left_encroachment, modal['rect'].right)
 
             # 3. Bottom Snap (PC only)
-            if not is_android:
-                if modal['rect'].top >= GAME_HEIGHT - 256:
-                    dynamic_h = min(dynamic_h, modal['rect'].top)
+            if modal['rect'].top >= GAME_HEIGHT - 256:
+                dynamic_h = min(dynamic_h, modal['rect'].top)
                     
     # Final width is the total screen minus both sides
     final_w = GAME_WIDTH - left_encroachment - right_encroachment
@@ -321,7 +317,7 @@ def draw_game(game):
         for key in keys[:-MAX_LIGHT_CACHE_ENTRIES]:
             del game.light_mask_cache[key]
 
-    divisor = 4 if getattr(game, 'is_android', False) else 2
+    divisor = 2
     low_res_w = max(1, view_w // divisor)
     low_res_h = max(1, view_h // divisor)
     light_mask_low = pygame.Surface((low_res_w, low_res_h))
@@ -607,7 +603,8 @@ def draw_game(game):
                 pygame.draw.circle(world_view_surface, (255, 100, 0, base_opacity), (int(impact_x), int(impact_y)), int(splash['radius']))
             continue
 
-        num_particles = 4 if getattr(game, 'is_android', False) else 10
+        num_particles = 4
+
         for i in range(num_particles):
             offset_dist = (1.0 - fade_factor) * (TILE_SIZE / 3) * random.uniform(0.7, 1.3)
             angle = math.radians(i * (360 / num_particles) + random.randint(-45, 45))
@@ -698,10 +695,8 @@ def draw_game(game):
         game.game_screen.blit(scaled_world, game_rect)
 
 
-    if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' or len(getattr(game, 'rain_particles', [])) > 0:
-        if not hasattr(game, 'rain_particles'):
-            game.rain_particles = []
-            
+    if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
+        # 1. Check if player is under roof
         is_under_roof = False
         if getattr(game, 'roof_data', None) and game.player:
             px = int(game.player.rect.centerx // TILE_SIZE)
@@ -710,35 +705,72 @@ def draw_game(game):
                 r_key = game.roof_data[py][px]
                 if r_key and r_key != ' ':
                     is_under_roof = True
-            
-        if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof:
-            for _ in range(10): 
-                game.rain_particles.append({
-                    'x': random.randint(0, GAME_WIDTH + 200),
-                    'y': random.randint(-50, 0),
-                    'speed': random.randint(25, 35),
-                    'length': random.randint(15, 30)
-                })
         
-        active_rain = []
-        rain_color = (130, 150, 180)
-        dt_mult = getattr(game, 'dt_mult', 1.0)
-        for p in game.rain_particles:
-            p['y'] += p['speed'] * dt_mult
-            p['x'] -= (p['speed'] * 0.15) * dt_mult 
-            
-            start_pos = (int(p['x']), int(p['y']))
-            end_pos = (int(p['x'] + p['speed'] * 0.15), int(p['y'] - p['length']))
-            
-            if not is_under_roof:
-                pygame.draw.line(game.game_screen, rain_color, start_pos, end_pos, 1)
-            
-            if p['y'] < GAME_HEIGHT:
-                active_rain.append(p)
-        
-        game.rain_particles = active_rain
+        # Only draw rain if not under a roof (consistent with original logic)
+        if not is_under_roof and getattr(game, 'current_layer_index', 1) != 2:
+            # Load and cache the rain texture
+            if not hasattr(game, 'rain_texture'):
+                try:
+                    # Replace this path with your actual rain PNG path
+                    raw_rain = game.assets.get('rain_texture')
+                    # Scale it to cover the screen
+                    game.rain_texture = pygame.transform.scale(raw_rain, (GAME_WIDTH, GAME_HEIGHT))
+                except Exception as e:
+                    print(f"Could not load rain texture: {e}")
+                    game.rain_texture = None
 
-    
+            if game.rain_texture:
+                # Initialize and update rain offset
+                if not hasattr(game, 'rain_offset'):
+                    game.rain_offset = 0
+                
+                # Move the rain down based on delta time
+                rain_speed = 15 * getattr(game, 'dt_mult', 1.0)
+                game.rain_offset += rain_speed
+                
+                # Reset offset when it moves past the screen height for seamless looping
+                if game.rain_offset >= GAME_HEIGHT:
+                    game.rain_offset = 0
+                
+                # Blit the texture twice to cover the gap during the scroll
+                # First copy (the one moving down)
+                game.game_screen.blit(game.rain_texture, (0, game.rain_offset))
+                # Second copy (the one following right behind it)
+                game.game_screen.blit(game.rain_texture, (0, game.rain_offset - GAME_HEIGHT))
+
+    if hasattr(game, 'player'):
+        # Assume game.player.anxiety is a value from 0 to 100
+        # If the variable name is different, change 'anxiety' to the correct one
+        anxiety_level = getattr(game.player, 'anxiety', 0)
+        
+        # Only apply effect if anxiety is above a certain threshold (e.g., 20)
+        if anxiety_level > 20:
+            if not hasattr(game, 'crt_texture'):
+                try:
+                    # Load from assets
+                    raw_crt = game.assets.get('crt_texture') 
+                    # If not in assets, try loading directly
+                    if not raw_crt:
+                        raw_crt = pygame.image.load(SPRITE_PATH + 'ui/crt_overlay.png').convert_alpha()
+                    
+                    # Scale to cover the screen + a small margin to prevent gaps during shaking
+                    game.crt_texture = pygame.transform.scale(raw_crt, (GAME_WIDTH + 20, GAME_HEIGHT + 20))
+                except Exception as e:
+                    print(f"Could not load CRT texture: {e}")
+                    game.crt_texture = None
+
+            if game.crt_texture:
+                # Calculate shake intensity based on anxiety
+                # 0 anxiety = 0px shake | 100 anxiety = 5px shake
+                shake_intensity = int((anxiety_level / 100) * 5)
+                
+                # Create a random jitter offset
+                offset_x = random.randint(-shake_intensity, shake_intensity)
+                offset_y = random.randint(-shake_intensity, shake_intensity)
+                
+                # Draw the overlay centered with the jitter
+                # We subtract 10 to account for the +20 margin we added during scaling
+                game.game_screen.blit(game.crt_texture, (offset_x - 10, offset_y - 10))
 
     if game.player.gun_flash_timer > 0:
         # [FIX] Calculate based on actual player world position + camera offset
@@ -1133,9 +1165,6 @@ def draw_game(game):
     mouse_pos = game._get_scaled_mouse_pos()
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
-    if getattr(game, 'is_android', False) and getattr(game, 'joystick_handler', None):
-        game.joystick_handler.draw(game.game_screen)
-
     for modal in game.modals:
         modal['is_active'] = (modal['id'] == topmost_modal_id)
         
@@ -1492,5 +1521,3 @@ def draw_game(game):
             fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
             game.game_screen.blit(fps_surface, fps_rect)
     
-    if hasattr(game, 'virtual_controller') and getattr(game.virtual_controller, 'enabled', False):
-        game.virtual_controller.draw(game.game_screen)

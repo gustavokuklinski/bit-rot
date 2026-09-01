@@ -17,7 +17,7 @@ def get_available_languages():
         return _language_cache
     
     _language_cache = []
-    xml_path = os.path.join(BASE_DIR, 'game', 'lib', 'lang', 'languages.xml')
+    xml_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'lang', 'languages.xml')
     
     if os.path.exists(xml_path):
         try:
@@ -34,15 +34,15 @@ def get_available_languages():
                     wip_val = wip_node.get('value').lower() == 'true' if wip_node is not None else False
                     
                     if sprite_file:
-                        full_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', sprite_file)
+                        full_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', sprite_file)
                         _language_cache.append({'name': name, 'sprite_path': full_path, 'wip': wip_val, 'img': None})
         except Exception as e:
             print(f"Error parsing languages.xml: {e}")
     
     if not _language_cache:
         _language_cache = [
-            {'name': 'en_US', 'sprite_path': os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'lang_en.png'), 'wip': False, 'img': None},
-            {'name': 'pt_BR', 'sprite_path': os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'lang_pt_BR.png'), 'wip': True, 'img': None}
+            {'name': 'en_US', 'sprite_path': os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'lang_en.png'), 'wip': False, 'img': None},
+            {'name': 'pt_BR', 'sprite_path': os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'lang_pt_BR.png'), 'wip': True, 'img': None}
         ]
             
     for lang in _language_cache:
@@ -83,7 +83,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
 
     try:
         if _logo_img is None:
-            logo_path = os.path.join(BASE_DIR, 'game', 'icons', 'logo.png')
+            logo_path = os.path.join(BASE_DIR, 'data.rot', 'icons', 'logo.png')
             _logo_img = pygame.image.load(logo_path).convert_alpha()
             target_w = S(500)
             scale_factor = target_w / _logo_img.get_width()
@@ -94,7 +94,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
         
     try:
         if _help_img_menu is None:
-            help_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'help.png')
+            help_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'help.png')
             _help_img_menu = pygame.image.load(help_path).convert_alpha()
             _help_img_menu = pygame.transform.scale(_help_img_menu, (S(32), S(32)))
     except Exception as e:
@@ -102,7 +102,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
 
     try:
         if _controls_img_menu is None:
-            controls_path = os.path.join(BASE_DIR, 'game', 'lib', 'sprites', 'ui', 'controls.png')
+            controls_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'controls.png')
             _controls_img_menu = pygame.image.load(controls_path).convert_alpha()
             _controls_img_menu = pygame.transform.scale(_controls_img_menu, (S(32), S(32)))
     except Exception as e:

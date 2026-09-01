@@ -1146,7 +1146,7 @@ def run_player_setup(game):
         if 'current_tab' not in state:
              state['current_tab'] = 'Player'
 
-        state['settings_data'] = load_config_data("./game/save/config/config.xml")
+        state['settings_data'] = load_config_data("./data.rot/save/config/config.xml")
         state['config_name'] = ""
         state['config_name_active'] = False
         state['settings_scroll_y'] = 0
@@ -1242,7 +1242,7 @@ def run_player_setup(game):
     game._update_screen()
 
 def _load_presets(state):
-    preset_dir = "./game/save/player"
+    preset_dir = "./data.rot/save/player"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
     
@@ -1261,7 +1261,7 @@ def _save_preset(state):
         print("Cannot save preset with default name.")
         return 
 
-    preset_dir = "./game/save/player"
+    preset_dir = "./data.rot/save/player"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
         
@@ -1299,7 +1299,7 @@ def _load_preset(state):
     if not preset_name or preset_name == "None":
         return
 
-    filepath = os.path.join("./game/save/player", f"{preset_name}.xml")
+    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return
@@ -1347,7 +1347,7 @@ def _delete_preset(state):
         print("No preset selected to delete.")
         return
 
-    filepath = os.path.join("./game/save/player", f"{preset_name}.xml")
+    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return

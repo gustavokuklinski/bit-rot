@@ -52,16 +52,6 @@ build_macos() {
     echo "After build, run: xattr -cr bitrot.app"
 }
 
-build_android() {
-    if ! command -v buildozer &> /dev/null; then
-        echo "buildozer not found. Please install buildozer."
-        exit 1
-    fi
-    echo "Building Android APK..."
-    buildozer -v android debug
-    echo "APK built in ./bin/"
-}
-
 # ----------------------------------------------------------------------
 # Parse target
 # ----------------------------------------------------------------------
@@ -81,7 +71,6 @@ Targets:
   --linux      Build for Linux (onefile)
   --windows    Build for Windows (onefile, console disabled)
   --macos      Build for macOS (app bundle)
-  --android    Build Android APK (requires buildozer)
   --all        Build all of the above
 
 EOF
@@ -96,7 +85,7 @@ EOF
 done
 
 if [[ -z "$TARGET" ]]; then
-    echo "Please specify a target (--linux, --windows, --macos, --android, --all)."
+    echo "Please specify a target (--linux, --windows, --macos, --all)."
     exit 1
 fi
 
@@ -107,12 +96,10 @@ case "$TARGET" in
     linux) build_linux ;;
     windows) build_windows ;;
     macos) build_macos ;;
-    android) build_android ;;
     all)
         build_linux
         build_windows
         build_macos
-        build_android
         ;;
 esac
 
