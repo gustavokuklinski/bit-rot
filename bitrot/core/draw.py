@@ -768,7 +768,7 @@ def draw_game(game):
         anxiety_level = getattr(game.player, 'anxiety', 0)
         
         # Only apply effect if anxiety is above a certain threshold (e.g., 20)
-        if anxiety_level > 20:
+        if anxiety_level > 10:
             if not hasattr(game, 'crt_texture'):
                 try:
                     # Load from assets

@@ -6,8 +6,8 @@ if [[ $# -gt 0 ]]; then
         --full)
             find . -type d -name "__pycache__" -exec rm -rf {} +
             rm -Rf build/
-            rm -Rf game/
-            echo "Full clean done (removed __pycache__, build/ and game/)."
+            rm -Rf data.rot/
+            echo "Full clean done (removed __pycache__, build/ and data.rot/)."
             exit 0
             ;;
         --cache)
@@ -20,9 +20,9 @@ if [[ $# -gt 0 ]]; then
             echo "build/ directory removed."
             exit 0
             ;;
-        --game)
-            rm -Rf game/
-            echo "game/ directory removed."
+        --datarot)
+            rm -Rf data.rot/
+            echo "data.rot/ directory removed."
             exit 0
             ;;
         --help)
@@ -30,10 +30,10 @@ if [[ $# -gt 0 ]]; then
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --full      Remove all __pycache__ folders, build/ and game/.
+  --full      Remove all __pycache__ folders, build/ and data.rot/.
   --cache     Remove only all __pycache__ folders.
   --build     Remove only the build/ directory.
-  --game      Remove only the game/ directory.
+  --datarot      Remove only the data.rot/ directory.
   --help      Show this help.
 
 If no options are given, an interactive menu will be shown.
