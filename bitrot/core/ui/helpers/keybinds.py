@@ -30,6 +30,7 @@ DEFAULT_KB_MOUSE_BINDS = {
     # ---> ADDED: System Controls for Keyboard <---
     'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals'},
     'pause': {'val': pygame.K_F2, 'name': 'Pause Game'},
+    'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals'},
     
     # Fake Keyboard keys just so the UI has something to show for triggers
     'shoot': {'val': -1, 'name': 'Shoot / Attack'}, # -1 is Left Click
@@ -52,6 +53,7 @@ DEFAULT_JOYSTICK_BINDS = {
     # ---> ADDED: System Controls for Joystick <---
     'toggle_modals': {'val': 7, 'name': 'Toggle Modals'},
     'pause': {'val': 8, 'name': 'Pause Game'},
+    'reset_modals': {'val': 9, 'name': 'Reset Modals'},
     
     # Fake IDs for Triggers so they display in UI
     'shoot': {'val': 15, 'name': 'Shoot / Attack'},

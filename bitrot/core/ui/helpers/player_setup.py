@@ -20,7 +20,7 @@ from core.ui.modals import draw_scrollbar
 fake = Faker()
 _stat_icons_cache = {}
 
-STARTING_POINTS = 5
+STARTING_POINTS = 6
 
 CLOTHING_COLORS = [
     (255, 255, 255), # White
@@ -667,7 +667,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
             pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
-        start_text = font_12.render(tr('ui', "START GAME"), True, WHITE)
+        start_text = font_16.render(tr('ui', "START GAME"), True, WHITE)
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
         pygame.draw.rect(game.game_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)

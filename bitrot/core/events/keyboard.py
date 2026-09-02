@@ -446,11 +446,11 @@ def handle_keyboard_events(game, event, action_triggered=None):
             return 
             
         if event.key == pygame.K_TAB:
-            mods = pygame.key.get_mods()
-            if mods & pygame.KMOD_SHIFT:
-                reset_modal_positions(game)
-            else:
-                toggle_default_ui(game)
+            toggle_default_ui(game)
+            return
+        
+        if event.key == pygame.K_F4:
+            reset_modal_positions(game)
             return
 
         if game.modals and not getattr(game, 'hide_modals', False):

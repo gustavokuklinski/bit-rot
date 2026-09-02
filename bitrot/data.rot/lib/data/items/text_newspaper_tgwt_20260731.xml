@@ -1,4 +1,4 @@
-<item name="TGWT-20260731" type="text" tip="Contains:\nPlayer: Name, Sex, Traits and Known Recipes\nZombie and NPC: Name, Sex">
+<item name="TGWT-20260731" type="text" tip="Newspaper The Globe World Tribute. Issue: 2026-07-31">
     <properties>
         <sprite file="text_newspaper.png" />
         <weight weight="0.001"/>
