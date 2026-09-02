@@ -1,6 +1,5 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/docs/resources/logo-transparent.png" alt="Bit Rot Logo" width="400"><br /><br />
-  <img src="https://img.shields.io/badge/version-0.0.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg" alt="License">
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey" alt="Platform">
 </p>
@@ -149,7 +148,7 @@ Please note that this project has a [Code of Conduct](CODE_OF_CONDUCT.md). By in
 
 ## 📬 Contact
 
-The best way to reach us is through [GitHub Issues](https://github.com/gustavokuklinski/bit-rot/issues).
+The best way to reach us is through [GitHub Issues](https://github.com/gustavokuklinski/bit-rot/issues) or [Discord](https://discord.gg/SK4s7V6mEZ).
 
 ---
 

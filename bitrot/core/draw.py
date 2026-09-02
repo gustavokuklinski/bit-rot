@@ -17,7 +17,7 @@ from core.ui.container_modal import draw_container_view, get_container_slot_rect
 from core.ui.status_modal import draw_status_modal
 from core.ui.dropdown import draw_context_menu
 from core.ui.nearby_modal import draw_nearby_modal
-from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_forward_button, draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button, draw_help_button, draw_slots_button
+from core.ui.helpers.buttons import draw_inventory_button, draw_status_button, draw_pause_button, draw_nearby_button, draw_messages_button, draw_gear_button, draw_crafting_button, draw_help_button, draw_slots_button
 from core.ui.tooltip import draw_tooltip
 from core.ui.help_modal import draw_help_modal
 from core.ui.gear_modal import draw_gear_modal
@@ -842,6 +842,23 @@ def draw_game(game):
         game.game_screen.blit(text_surf, text_rect)
 
     if game.game_state == 'PLAYING':
+        view_left = game.viewport_left_offset
+        view_right = game.viewport_left_offset + game.dynamic_w
+        view_bottom = game.dynamic_h
+
+        game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, view_bottom)
+        game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, view_bottom)
+        game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, view_bottom)
+        game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, view_bottom)
+        game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, view_bottom)
+        game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, view_bottom)
+        game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, view_bottom)
+        game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, view_bottom)
+        game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, view_bottom)
+
+        highlighted_rect = None
+        highlighted_allowed = False
+        
         interactables = []
         # 1. Check NPCs
         for npc in game.npcs:
@@ -1246,22 +1263,7 @@ def draw_game(game):
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
 
-    view_left = game.viewport_left_offset
-    view_right = game.viewport_left_offset + game.dynamic_w
-    view_bottom = game.dynamic_h
-
-    game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, view_bottom)
-    game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, view_bottom)
-    game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, view_bottom)
-    game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, view_bottom)
-    game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, view_bottom)
-    game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, view_bottom)
-    game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, view_bottom)
-    game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, view_bottom)
-    game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, view_bottom)
-
-    highlighted_rect = None
-    highlighted_allowed = False
+    
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
         

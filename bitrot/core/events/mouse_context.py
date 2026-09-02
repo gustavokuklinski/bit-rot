@@ -974,7 +974,7 @@ def handle_context_menu_click(game, mouse_pos):
                 if getattr(item, 'item_type', None) == 'map':
                     game.modals = [m for m in game.modals if m['type'] != 'big_map']
                     
-                    default_pos = (GAME_WIDTH // 2 - 450, GAME_HEIGHT // 2 - 350)
+                    default_pos = (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2)
                     
                     new_map_modal = {
                         'id': uuid.uuid4(), 

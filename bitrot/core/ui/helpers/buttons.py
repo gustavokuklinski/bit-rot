@@ -27,21 +27,6 @@ def draw_pause_button(surface, view_left, view_right, view_bottom):
     surface.blit(_pause_img, button_rect)
     return button_rect
 
-def draw_forward_button(surface, view_left, view_right, view_bottom):
-    global _forward_img
-    if _forward_img is None:
-        try:
-            _forward_img = pygame.image.load(SPRITE_PATH + 'ui/fast_forward.png').convert_alpha()
-            _forward_img = pygame.transform.scale(_forward_img, (15, 15))
-        except pygame.error:
-            _forward_img = pygame.Surface((15, 15), pygame.SRCALPHA)
-            _forward_img.fill(GRAY)
-    
-    # Position relative to view_left
-    button_rect = pygame.Rect(view_left + 30, 10, 15, 15)
-    surface.blit(_forward_img, button_rect)
-    return button_rect
-
 def draw_status_button(surface, view_left, view_right, view_bottom):
     global _status_img
     if _status_img is None:
