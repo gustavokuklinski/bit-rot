@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/docs/resources/logo-transparent.png" alt="Bit Rot Logo" width="400"><br /><br />
+  <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/blob/main/bitrot/data.rot/icons/logo.png" alt="Bit Rot Logo" width="400"><br /><br />
+
   <img src="https://img.shields.io/badge/license-All%20Rights%20Reserved-red.svg" alt="License">
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey" alt="Platform">
 </p>
