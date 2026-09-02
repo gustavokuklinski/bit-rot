@@ -207,7 +207,7 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
 
     def draw_quest_section(title, items, y_offset, outline_color):
         if not items: return y_offset
-        title_surf = font_14.render(title, True, WHITE)
+        title_surf = font_14.render(title, False, WHITE)
         surface.blit(title_surf, (start_x, y_offset))
         y_offset += 25
         nonlocal pending_tooltip
@@ -226,7 +226,7 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
                 scaled_img = pygame.transform.scale(img, (32, 32))
                 surface.blit(scaled_img, scaled_img.get_rect(center=slot_rect.center))
             else:
-                fallback_text = font_14.render("?", True, WHITE)
+                fallback_text = font_14.render("?", False, WHITE)
                 if outline_color == GRAY_60: fallback_text.set_alpha(100)
                 surface.blit(fallback_text, fallback_text.get_rect(center=slot_rect.center))
             pygame.draw.rect(surface, outline_color, slot_rect, 2 if outline_color != GRAY_60 else 1)

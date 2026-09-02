@@ -20,7 +20,7 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
 
     pygame.draw.rect(surface, bg_color, rect, border_radius=6)
     
-    txt_surf = font_14.render(text, True, text_color)
+    txt_surf = font_14.render(text, False, text_color)
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
@@ -52,16 +52,16 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
         screen.blit(_logo_img, title_rect)
     else:
         # --- CHANGED: Changed the title text ---
-        title_text = font_14.render(tr('ui', "YOU ROTTED"), True, RED)
+        title_text = font_14.render(tr('ui', "YOU ROTTED"), False, RED)
         title_rect = title_text.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(title_text, title_rect)
 
-    score_text = font_14.render(f"{tr('ui', 'Rotters Dead:')} {zombies_killed}", True, WHITE)
+    score_text = font_14.render(f"{tr('ui', 'Rotters Dead:')} {zombies_killed}", False, WHITE)
     score_rect = score_text.get_rect(center=(center_x, center_offset_y + S(324)))
     screen.blit(score_text, score_rect)
     
     # --- CHANGED: Render the days survived below the kills ---
-    days_text = font_14.render(f"{tr('ui', 'Days Survived:')} {days_survived}", True, WHITE)
+    days_text = font_14.render(f"{tr('ui', 'Days Survived:')} {days_survived}", False, WHITE)
     days_rect = days_text.get_rect(center=(center_x, center_offset_y + S(350)))
     screen.blit(days_text, days_rect)
 
@@ -74,7 +74,7 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
 
     current_year = datetime.now().year
     footer_str = f"Bit Rot - All Rights Reserved - 2025 - {current_year} | version: {GAME_VERSION}"
-    footer_text = font_14.render(footer_str, True, (100, 100, 100))
+    footer_text = font_14.render(footer_str, False, (100, 100, 100))
     footer_rect = footer_text.get_rect(center=(center_x, center_offset_y + S(700)))
     screen.blit(footer_text, footer_rect)
 

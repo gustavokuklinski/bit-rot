@@ -138,7 +138,7 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
         pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # Draw label, shifting slightly up into the smaller square 
-        label_text = font_14.render(slot_name.capitalize(), True, GRAY)
+        label_text = font_14.render(slot_name.capitalize(), False, GRAY)
         label_rect = label_text.get_rect(centerx=slot_rect.centerx, y=slot_rect.top + 13)
         surface.blit(label_text, label_rect)
 

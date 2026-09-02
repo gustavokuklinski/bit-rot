@@ -232,16 +232,16 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
         
         # Label (Driver vs Passenger)
         if i == 0:
-            lbl = font_14.render(tr('vehicle', "D"), True, STYLE["DRIVER_LBL"])
+            lbl = font_14.render(tr('vehicle', "D"), False, STYLE["DRIVER_LBL"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
         else:
-            lbl = font_14.render(str(i+1), True, STYLE["TEXT_DIM"])
+            lbl = font_14.render(str(i+1), False, STYLE["TEXT_DIM"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
 
         # Render Occupant
         if occupant:
             if type(occupant).__name__ == 'Player':
-                txt = font.render(tr('vehicle', "YOU"), True, (0, 255, 255))
+                txt = font.render(tr('vehicle', "YOU"), False, (0, 255, 255))
                 txt_rect = txt.get_rect(center=slot_rect.center)
                 surface.blit(txt, txt_rect)
             elif hasattr(occupant, 'image') and occupant.image:
@@ -275,7 +275,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         lbl_text = tr('vehicle', slot_name.capitalize())
-        lbl = font_14.render(lbl_text, True, STYLE["TEXT_DIM"])
+        lbl = font_14.render(lbl_text, False, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -320,7 +320,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         
         # Format "tire_fl" -> "FL TIRE", etc.
         lbl_text = slot_name.split('_')[1].upper() + " " + tr('vehicle', 'TIRE')
-        lbl = font_14.render(lbl_text, True, STYLE["TEXT_DIM"])
+        lbl = font_14.render(lbl_text, False, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)

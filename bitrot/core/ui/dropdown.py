@@ -69,11 +69,11 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             pygame.draw.rect(surface, GRAY_80, option_rect)
             text_color = YELLOW
             
-        text_surf = font.render(label, True, text_color)
+        text_surf = font.render(label, False, text_color)
         surface.blit(text_surf, (option_rect.x + padding, option_rect.y + (item_height - text_surf.get_height()) // 2))
         
         if has_sub[i]:
-            arrow_surf = font.render(">", True, text_color)
+            arrow_surf = font.render(">", False, text_color)
             surface.blit(arrow_surf, (option_rect.right - padding - arrow_surf.get_width(), option_rect.y + (item_height - arrow_surf.get_height()) // 2))
             
         if not has_sub[i]:
@@ -129,9 +129,9 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             # Highlight parent if we are in the submenu
             if in_sub:
                 pygame.draw.rect(surface, GRAY_80, parent_rect)
-                text_surf = font.render(main_labels[active_sub_idx], True, YELLOW)
+                text_surf = font.render(main_labels[active_sub_idx], False, YELLOW)
                 surface.blit(text_surf, (parent_rect.x + padding, parent_rect.y + (item_height - text_surf.get_height()) // 2))
-                arrow_surf = font.render(">", True, YELLOW)
+                arrow_surf = font.render(">", False, YELLOW)
                 surface.blit(arrow_surf, (parent_rect.right - padding - arrow_surf.get_width(), parent_rect.y + (item_height - arrow_surf.get_height()) // 2))
 
             # Draw submenu
@@ -163,18 +163,18 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                     elif sub_tooltip:
                         active_tooltip = (tr('msg', sub_tooltip), mouse_pos)
                     
-                text_surf = font.render(sub_label, True, text_color)
+                text_surf = font.render(sub_label, False, text_color)
                 surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
                 
                 # Draw the little red *
                 if replace_name:
-                    ast_surf = font.render("*", True, (255, 100, 100)) # Light Red asterisk
+                    ast_surf = font.render("*", False, (255, 100, 100)) # Light Red asterisk
                     surface.blit(ast_surf, (sub_opt_rect.right - padding - ast_surf.get_width(), sub_opt_rect.y + (item_height - ast_surf.get_height()) // 2))
 
     # [NEW] Draw the tooltip globally on top of everything
     if active_tooltip:
         t_text, t_pos = active_tooltip
-        t_surf = font.render(t_text, True, WHITE)
+        t_surf = font.render(t_text, False, WHITE)
         t_rect = t_surf.get_rect()
         t_rect.topleft = (t_pos[0] + 15, t_pos[1] + 15) # Offset below mouse
         

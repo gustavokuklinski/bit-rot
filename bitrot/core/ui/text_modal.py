@@ -126,7 +126,7 @@ def draw_text_modal(surface, game, modal, assets):
 
         y_pos = 0 - scroll_offset_y
         for line in wrapped_lines:
-            text_surface = font_14.render(line, True, WHITE)
+            text_surface = font_14.render(line, False, WHITE)
             draw_pos_in_subsurface = (0, y_pos)
             content_surface.blit(text_surface, draw_pos_in_subsurface)
             y_pos += line_height

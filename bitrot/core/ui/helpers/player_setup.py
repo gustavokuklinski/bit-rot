@@ -123,15 +123,15 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), preset_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, preset_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, preset_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Preset"), True, WHITE), (preset_header_rect.x + S(10), preset_header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Preset"), False, WHITE), (preset_header_rect.x + S(10), preset_header_rect.y + S(7)))
 
-    game.game_screen.blit(font.render(tr('ui', "Player Name:"), True, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + S(10)))
+    game.game_screen.blit(font.render(tr('ui', "Player Name:"), False, WHITE), (preset_body_rect.x + padding, preset_body_rect.y + S(10)))
     name_input_rect = pygame.Rect(preset_body_rect.x + padding, preset_body_rect.y + S(35), preset_body_rect.width - padding*2, S(30))
     pygame.draw.rect(game.game_screen, (50, 50, 50), name_input_rect)
     pygame.draw.rect(game.game_screen, WHITE, name_input_rect, 1)
     
     name_text = state.get('player_name', tr('ui', "Survivor"))
-    text_surf = font.render(name_text, True, WHITE)
+    text_surf = font.render(name_text, False, WHITE)
     game.game_screen.blit(text_surf, (name_input_rect.x + S(5), name_input_rect.y + S(5)))
     
     if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
@@ -150,19 +150,19 @@ def _draw_player_build_screen(game, state, mouse_pos):
     
     save_btn_rect = pygame.Rect(start_btn_x, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
-    save_text = font.render(tr('ui', "Save"), True, WHITE)
+    save_text = font.render(tr('ui', "Save"), False, WHITE)
     game.game_screen.blit(save_text, save_text.get_rect(center=save_btn_rect.center))
     clickable_rects['save_button'] = save_btn_rect
     
     random_btn_rect = pygame.Rect(save_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
-    random_text = font.render(tr('ui', "Random"), True, WHITE)
+    random_text = font.render(tr('ui', "Random"), False, WHITE)
     game.game_screen.blit(random_text, random_text.get_rect(center=random_btn_rect.center))
     clickable_rects['random_button'] = random_btn_rect
 
     delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
     pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
-    delete_text = font.render(tr('ui', "Delete"), True, WHITE)
+    delete_text = font.render(tr('ui', "Delete"), False, WHITE)
     game.game_screen.blit(delete_text, delete_text.get_rect(center=delete_btn_rect.center))
     clickable_rects['delete_button'] = delete_btn_rect
     
@@ -171,11 +171,11 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
     pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
     selected_preset = state.get('selected_preset', "None")
-    game.game_screen.blit(font.render(selected_preset, True, WHITE), (load_dd_rect.x + S(5), load_dd_rect.y + S(5)))
+    game.game_screen.blit(font.render(selected_preset, False, WHITE), (load_dd_rect.x + S(5), load_dd_rect.y + S(5)))
     pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - S(15), load_dd_rect.y + S(10)), (load_dd_rect.right - S(5), load_dd_rect.y + S(10)), (load_dd_rect.right - S(10), load_dd_rect.y + S(15))])
     
     sex_y = load_dd_rect.bottom + S(10)
-    game.game_screen.blit(font.render(tr('ui', "Sex:"), True, WHITE), (preset_body_rect.x + padding, sex_y))
+    game.game_screen.blit(font.render(tr('ui', "Sex:"), False, WHITE), (preset_body_rect.x + padding, sex_y))
     
     sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
     sex_gap = padding
@@ -196,7 +196,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, (50, 50, 50), male_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, male_btn_rect, 1, border_radius=3)
         
-    male_text = font.render(tr('ui', "Male"), True, WHITE)
+    male_text = font.render(tr('ui', "Male"), False, WHITE)
     game.game_screen.blit(male_text, male_text.get_rect(center=male_btn_rect.center))
     
     if current_sex == 'Female':
@@ -206,7 +206,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, (50, 50, 50), female_btn_rect, 0, border_radius=3)
         pygame.draw.rect(game.game_screen, WHITE, female_btn_rect, 1, border_radius=3)
         
-    female_text = font.render(tr('ui', "Female"), True, WHITE)
+    female_text = font.render(tr('ui', "Female"), False, WHITE)
     game.game_screen.blit(female_text, female_text.get_rect(center=female_btn_rect.center))
     
     clickable_rects['sex_buttons'] = {'Male': male_btn_rect, 'Female': female_btn_rect}
@@ -219,7 +219,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), gear_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, gear_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, gear_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Clothes"), True, WHITE), (gear_header_rect.x + S(10), gear_header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Clothes"), False, WHITE), (gear_header_rect.x + S(10), gear_header_rect.y + S(7)))
 
     gear_content_rect = pygame.Rect(
         gear_rect.x + padding,
@@ -249,7 +249,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
             cycle_rect_abs = pygame.Rect(gear_content_rect.x + label_width + (padding * 2), gear_content_rect.y + y_offset, cycle_width, S(25))
             
             if cycle_rect_abs.bottom > gear_content_rect.top and cycle_rect_abs.top < gear_content_rect.bottom:
-                gear_content_surface.blit(font.render(f"{tr('ui', slot_name.capitalize())}:", True, WHITE), (0, y_offset + S(5)))
+                gear_content_surface.blit(font.render(f"{tr('ui', slot_name.capitalize())}:", False, WHITE), (0, y_offset + S(5)))
                 
                 cycle_rect_rel = pygame.Rect(cycle_rect_abs.x - gear_content_rect.x, y_offset, cycle_width, S(25))
                 
@@ -264,7 +264,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     template = ITEM_TEMPLATES.get(selected_item, {})
                     display_item_name = template.get('name', selected_item.replace("_", " ").title())
 
-                text = font.render(display_item_name, True, WHITE)
+                text = font.render(display_item_name, False, WHITE)
                 text_x = cycle_rect_rel.x + (cycle_rect_rel.width - text.get_width()) // 2
                 text_y = cycle_rect_rel.y + (cycle_rect_rel.height - text.get_height()) // 2
                 gear_content_surface.blit(text, (text_x, text_y))
@@ -293,7 +293,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), prof_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, prof_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, prof_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Available Professions"), True, WHITE), (prof_header_rect.x + S(10), prof_header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Professions"), False, WHITE), (prof_header_rect.x + S(10), prof_header_rect.y + S(7)))
     
     prof_content_rect = pygame.Rect(prof_rect.x + padding, prof_rect.y + header_height + padding, prof_rect.width - (padding * 2) - S(10), prof_rect.height - header_height - (padding * 2))
     state['prof_content_rect'] = prof_content_rect
@@ -324,13 +324,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 trait_cost = TRAIT_DEFINITIONS.get(p_id, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
                 base_name = TRAIT_DEFINITIONS[p_id].get('name', p_id)
-                name_surf = font.render(tr('trait', base_name), True, WHITE)
-                cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
+                name_surf = font.render(tr('trait', base_name), False, WHITE)
+                cost_surf = font.render(f"({trait_cost:+})", False, cost_color)
                 
                 prof_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
                 prof_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + S(5), row_rect_rel.y))
                 pygame.draw.rect(prof_surface, GREEN, add_btn_rect_rel, border_radius=4)
-                prof_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
+                prof_surface.blit(font.render(">", False, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
                 
             clickable_rects["add_trait"].append((p_id, add_btn_rect_abs))
             y_off += line_height
@@ -348,7 +348,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), avail_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, avail_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, available_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Available Traits"), True, WHITE), (avail_header_rect.x + S(10), avail_header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Traits"), False, WHITE), (avail_header_rect.x + S(10), avail_header_rect.y + S(7)))
     
     traits_content_rect = pygame.Rect(available_rect.x + padding, available_rect.y + header_height + padding, available_rect.width - (padding * 2) - S(10), available_rect.height - header_height - (padding * 2))
     state['traits_content_rect'] = traits_content_rect
@@ -382,13 +382,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 trait_cost = TRAIT_DEFINITIONS.get(trait_name, {}).get('cost', 0)
                 cost_color = (100, 255, 100) if trait_cost > 0 else (255, 100, 100) if trait_cost < 0 else WHITE
                 base_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
-                name_surf = font.render(tr('trait', base_name), True, WHITE)
-                cost_surf = font.render(f"({trait_cost:+})", True, cost_color)
+                name_surf = font.render(tr('trait', base_name), False, WHITE)
+                cost_surf = font.render(f"({trait_cost:+})", False, cost_color)
                 
                 content_surface.blit(name_surf, (row_rect_rel.x, row_rect_rel.y))
                 content_surface.blit(cost_surf, (row_rect_rel.x + name_surf.get_width() + S(5), row_rect_rel.y))
                 pygame.draw.rect(content_surface, GREEN, add_btn_rect_rel, border_radius=4)
-                content_surface.blit(font.render(">", True, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
+                content_surface.blit(font.render(">", False, WHITE), (add_btn_rect_rel.x + S(7), add_btn_rect_rel.y + S(2)))
                 
             clickable_rects["add_trait"].append((trait_name, add_btn_rect_abs))
             y_offset += line_height
@@ -406,7 +406,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, chosen_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Chosen Traits"), True, WHITE), (header_rect.x + S(10), header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', ""), False, WHITE), (header_rect.x + S(10), header_rect.y + S(7)))
     total_cost = sum(TRAIT_DEFINITIONS.get(t, {}).get('cost', 0) for t in state['chosen_traits'])
     state['total_trait_cost'] = total_cost
     
@@ -414,7 +414,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     cost_text = f"{tr('ui', 'Points:')} {points_remaining}"
     cost_color = (100, 255, 100) if points_remaining >= 0 else (255, 100, 100)
     
-    cost_surf = font.render(cost_text, True, cost_color)
+    cost_surf = font.render(cost_text, False, cost_color)
     cost_rect = cost_surf.get_rect(right=header_rect.right - padding, centery=header_rect.centery)
     game.game_screen.blit(cost_surf, cost_rect)
     
@@ -453,10 +453,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 if row_rect_abs.collidepoint(mouse_pos):
                     hovered_trait_id = trait_name
                 pygame.draw.rect(content_surface, RED, remove_btn_rect_rel, border_radius=4)
-                content_surface.blit(font.render("<", True, WHITE), (remove_btn_rect_rel.x + S(7), remove_btn_rect_rel.y + S(2)))
+                content_surface.blit(font.render("<", False, WHITE), (remove_btn_rect_rel.x + S(7), remove_btn_rect_rel.y + S(2)))
                 
                 display_name = TRAIT_DEFINITIONS.get(trait_name, {}).get('name', trait_name.capitalize())
-                content_surface.blit(font.render(tr('trait', display_name), True, WHITE), (remove_btn_rect_rel.right + S(10), row_rect_rel.y))
+                content_surface.blit(font.render(tr('trait', display_name), False, WHITE), (remove_btn_rect_rel.right + S(10), row_rect_rel.y))
 
             clickable_rects["remove_trait"].append((trait_name, remove_btn_rect_abs))
             y_offset += S(35)
@@ -504,7 +504,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, (30, 30, 30), stats_body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, GRAY_60, stats_header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, stats_rect, 1, border_radius=border_radius)
-    game.game_screen.blit(font.render(tr('ui', "Current Stats"), True, WHITE), (stats_header_rect.x + S(10), stats_header_rect.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Current Stats"), False, WHITE), (stats_header_rect.x + S(10), stats_header_rect.y + S(7)))
     stats_content_rect = pygame.Rect(stats_rect.x + padding, stats_rect.y + S(40), stats_rect.width - (padding * 2) - S(10), stats_rect.height - (padding * 2) - S(30))
     state['stats_content_rect'] = stats_content_rect
 
@@ -577,8 +577,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
             else: text_x = 0
 
             if stat == 'defence':
-                text_surf = font.render(f"{tr('ui', 'Defence')}", True, WHITE)
-                val_surf = font.render(f"{int(value)}%", True, WHITE)
+                text_surf = font.render(f"{tr('ui', 'Defence')}", False, WHITE)
+                val_surf = font.render(f"{int(value)}%", False, WHITE)
                 
                 content_surface.blit(text_surf, (text_x, y_offset + S(3)))
                 content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
@@ -586,13 +586,13 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 continue
                 
             elif stat == 'weight':
-                text_surf = font.render(f"{tr('ui', 'Weight')}", True, WHITE)
+                text_surf = font.render(f"{tr('ui', 'Weight')}", False, WHITE)
                 str_val = current_attrs.get('strength', 5)
                 str_level = str_val.get('level', 5) if isinstance(str_val, dict) else int(str_val)
                 final_str = str_level + level_modifiers.get('strength', 0)
                 max_wgt = state['base_data'].get('max_carry_weight', 10.0 + final_str)
                 
-                val_surf = font.render(f"{value:.2f} / {max_wgt:.2f}", True, WHITE)
+                val_surf = font.render(f"{value:.2f} / {max_wgt:.2f}", False, WHITE)
                 
                 content_surface.blit(text_surf, (text_x, y_offset + S(3)))
                 content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
@@ -608,10 +608,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
             if trait_mod > 0: mod_color = (100, 255, 100) 
             elif trait_mod < 0: mod_color = (255, 100, 100) 
 
-            text_surf = font.render(f"{stat_name_str}", True, WHITE)
+            text_surf = font.render(f"{stat_name_str}", False, WHITE)
             
             if trait_mod != 0:
-                mod_surf = font.render(f"{trait_str}", True, mod_color)
+                mod_surf = font.render(f"{trait_str}", False, mod_color)
                 content_surface.blit(text_surf, (text_x, y_offset + S(3)))
                 content_surface.blit(mod_surf, (text_x + S(100), y_offset + S(3)))
             else:
@@ -636,19 +636,19 @@ def _draw_player_build_screen(game, state, mouse_pos):
             
             stat_name_str = f"{tr('ui', attr.capitalize())}"
             
-            text_surf = font.render(f"{stat_name_str}", True, WHITE)
+            text_surf = font.render(f"{stat_name_str}", False, WHITE)
             content_surface.blit(text_surf, (text_x, y_offset + S(3)))
             
             current_draw_x = text_x + S(100)
             
             if lvl_mod > 0:
-                lvl_surf = font.render(f"+{lvl_mod} {tr('ui', 'Level')}", True, (100, 255, 100)) 
+                lvl_surf = font.render(f"+{lvl_mod}Lv", False, (100, 255, 100)) 
                 content_surface.blit(lvl_surf, (current_draw_x, y_offset + S(3)))
                 current_draw_x += lvl_surf.get_width() + S(8)
             
             if xp_mod != 0:
                 mod_color = (100, 255, 100) if xp_mod > 0 else (255, 100, 100)
-                mod_surf = font.render(f"{int(xp_mod):+}% {tr('ui', 'XP')}", True, mod_color)
+                mod_surf = font.render(f"{int(xp_mod):+}% {tr('ui', 'XP')}", False, mod_color)
                 content_surface.blit(mod_surf, (current_draw_x, y_offset + S(3)))
             
             y_offset += line_height
@@ -671,7 +671,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
         pygame.draw.rect(game.game_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)
-        start_text = font_14.render(tr('ui', "START GAME"), True, (100, 100, 100))
+        start_text = font_14.render(tr('ui', "START GAME"), False, (100, 100, 100))
     text_rect = start_text.get_rect(center=start_btn_rect.center)
     game.game_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
@@ -712,7 +712,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 if row_rect_rel.bottom > 0 and row_rect_rel.top < list_rect.height:
                     if row_rect_abs.collidepoint(mouse_pos):
                         pygame.draw.rect(list_surface, (70, 70, 70), row_rect_rel)
-                    list_surface.blit(font.render(option_name, True, WHITE), (row_rect_rel.x + S(5), row_rect_rel.y + S(2)))
+                    list_surface.blit(font.render(option_name, False, WHITE), (row_rect_rel.x + S(5), row_rect_rel.y + S(2)))
                     clickable_rects["load_dropdown_options"].append((option_name, row_rect_abs))
                     
                 y_offset += option_height
@@ -1189,15 +1189,15 @@ def run_player_setup(game):
     s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
     pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
-    game.game_screen.blit(font.render(tr('tab', "Player"), True, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
+    game.game_screen.blit(font.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
     pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
-    game.game_screen.blit(font.render(tr('tab', "Settings"), True, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
+    game.game_screen.blit(font.render(tr('tab', "Settings"), False, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
 
     b_col = GRAY_80
     pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
   
-    back_txt = font.render(tr('ui', "Back"), True, WHITE)
+    back_txt = font.render(tr('ui', "Back"), False, WHITE)
     txt_rect = back_txt.get_rect(center=back_btn.center)
     game.game_screen.blit(back_txt, txt_rect)
 

@@ -8,8 +8,8 @@ from core.data.localization import tr
 
 def draw_text_shadow(surface, font, text, color, pos, align='topleft', shadow_color=BLACK, offset=(1, 1)):
     """Draws text with a drop shadow for better readability."""
-    shadow_surf = font.render(text, True, shadow_color)
-    text_surf = font.render(text, True, color)
+    shadow_surf = font.render(text, False, shadow_color)
+    text_surf = font.render(text, False, color)
     
     # Calculate rect based on alignment
     if align == 'bottomright':

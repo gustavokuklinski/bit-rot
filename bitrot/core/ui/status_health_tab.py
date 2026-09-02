@@ -45,7 +45,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     active_tooltip_item = None
 
     # --- 1. PLAYER NAME (Centered) ---
-    section_title = font.render(f"{player.name}", True, WHITE)
+    section_title = font.render(f"{player.name}", False, WHITE)
     # Center horizontally relative to the modal rect
     name_x = modal['rect'].x + (modal['rect'].width - section_title.get_width()) // 2
     surface.blit(section_title, (name_x, current_y))
@@ -117,7 +117,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             surface.blit(icon, (start_x, y_pos - 4))
             label_x = start_x + 30
         else:
-            text = font_14.render(f"{name}:", True, WHITE)
+            text = font_14.render(f"{name}:", False, WHITE)
             surface.blit(text, (start_x, y_pos))
             label_x = start_x + 40
             
@@ -181,7 +181,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             (weather_icon, "", f"{day_night_str} - Rain in: {rain_val}", rain_color, None),
         ]
         
-        status_title = font.render("World Info", True, WHITE)
+        status_title = font.render("World Info", False, WHITE)
         surface.blit(status_title, (start_x, current_y))
         
         text_y = current_y + 35
@@ -202,11 +202,11 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             
             current_x = start_x + 25 
             if label:
-                lbl_surf = font_14.render(f"{label}: ", True, (160, 160, 160))
+                lbl_surf = font_14.render(f"{label}: ", False, (160, 160, 160))
                 surface.blit(lbl_surf, (current_x, text_y))
                 current_x += lbl_surf.get_width()
                 
-            val_surf = font_14.render(val, True, val_color)
+            val_surf = font_14.render(val, False, val_color)
             surface.blit(val_surf, (current_x, text_y))
             text_y += 24
             

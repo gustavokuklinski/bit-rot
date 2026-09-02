@@ -65,7 +65,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         nearby_containers.insert(0, VirtualGroundContainer(ground_items))
 
     if not nearby_containers:
-        no_containers_text = font.render("", True, WHITE)
+        no_containers_text = font.render("", False, WHITE)
         surface.blit(no_containers_text, (base_modal.modal_x + 10, base_modal.modal_y + base_modal.header_h + 30 + 10))
         modal['content_rect'] = None
         modal['tabs_data'] = []

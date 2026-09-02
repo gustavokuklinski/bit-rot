@@ -82,7 +82,7 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
                                    (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
                 except ImportError:
                     from core.data.config import font
-                    stack_text = font.render(str(int(item.load)), True, WHITE)
+                    stack_text = font.render(str(int(item.load)), False, WHITE)
                     text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
                     surface.blit(stack_text, text_rect)
 

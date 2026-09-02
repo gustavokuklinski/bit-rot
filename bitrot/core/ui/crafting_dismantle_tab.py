@@ -23,7 +23,7 @@ class CraftingDismantleTab:
         r = self.modal.selected_recipe
         surface = self.modal.surface
 
-        title_surf = font.render(r.output_name, True, WHITE)
+        title_surf = font.render(r.output_name, False, WHITE)
         surface.blit(title_surf, (details_x, details_y))
         
         sel_id = self.modal.selected_ingredients.get(0)
@@ -44,7 +44,7 @@ class CraftingDismantleTab:
         # Ingredients list
         # Ingredients list
         ing_y = details_y + 50
-        lbl = font_14.render(tr('ui', "Required Ingredients:"), True, GRAY)
+        lbl = font_14.render(tr('ui', "Required Ingredients:"), False, GRAY)
         surface.blit(lbl, (details_x, ing_y))
         
         curr_y = ing_y + 30
@@ -89,7 +89,7 @@ class CraftingDismantleTab:
             current_x = (details_x + 10 + col_width) if is_right_col else (details_x + 10)
 
             txt_str = f" {name_display}: {int(have)}/{needed}"
-            text_width = font_14.render(txt_str, True, color).get_width()
+            text_width = font_14.render(txt_str, False, color).get_width()
             
             # Calculate item width, but cap it so hover bounds don't leak into the next column
             item_width = min((35 if img else 0) + text_width + 10, col_width - 15)
@@ -123,7 +123,7 @@ class CraftingDismantleTab:
                 surface.blit(scaled_icon, (draw_x, curr_y))
                 draw_x += 35
 
-            ing_surf = font_14.render(txt_str, True, color)
+            ing_surf = font_14.render(txt_str, False, color)
             surface.blit(ing_surf, (draw_x, curr_y + 8))
             
             # 3. ONLY drop down to the next line if we just finished the Right Column
@@ -169,7 +169,7 @@ class CraftingDismantleTab:
             
             # 2. Draw the Header on the left
             head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
-            head_surf = font_14.render(head_txt, True, WHITE)
+            head_surf = font_14.render(head_txt, False, WHITE)
             surface.blit(head_surf, (details_x, element_cursor_y))
             
             # 3. Start drawing the skills exactly to the right of the Header
@@ -184,7 +184,7 @@ class CraftingDismantleTab:
                 
                 # Render Skill Text
                 txt = f"{attr_name_tr}: {p_lvl}/{int(lvl)}"
-                s_surf = font_14.render(txt, True, s_color)
+                s_surf = font_14.render(txt, False, s_color)
                 
                 # Notice how Y never changes here, only X!
                 surface.blit(s_surf, (current_skill_x, element_cursor_y))
@@ -192,13 +192,13 @@ class CraftingDismantleTab:
                 
                 # Draw the " - " separator if there are more skills
                 if idx < len(items) - 1:
-                    sep_surf = font_14.render(" - ", True, GRAY)
+                    sep_surf = font_14.render(" - ", False, GRAY)
                     surface.blit(sep_surf, (current_skill_x, element_cursor_y))
                     current_skill_x += sep_surf.get_width()
             
             # 3. Draw the Header ABOVE the skills line
             head_txt = tr('ui', "OR Skills:") if r.magazine else tr('ui', "Requires Skills:")
-            head_surf = font_14.render(head_txt, True, WHITE)
+            head_surf = font_14.render(head_txt, False, WHITE)
             element_cursor_y -= 20
             surface.blit(head_surf, (details_x, element_cursor_y))
             element_cursor_y -= 5
@@ -206,18 +206,18 @@ class CraftingDismantleTab:
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED
             mag_text = f"{tr('ui', 'Requires Magazine:')} {r.magazine}"
-            mag_surf = font_14.render(mag_text, True, mag_color)
+            mag_surf = font_14.render(mag_text, False, mag_color)
             element_cursor_y -= 20
             surface.blit(mag_surf, (details_x, element_cursor_y))
             element_cursor_y -= 5 
 
         time_text = f"{tr('ui', 'Time:')} {r.time_required}s"
-        time_surf = font_14.render(time_text, True, GRAY)
+        time_surf = font_14.render(time_text, False, GRAY)
         element_cursor_y -= 20
         surface.blit(time_surf, (details_x, element_cursor_y))
 
         if self.modal.warning_message:
-            warn_surf = font_14.render(self.modal.warning_message, True, RED)
+            warn_surf = font_14.render(self.modal.warning_message, False, RED)
             element_cursor_y -= 20
             surface.blit(warn_surf, (details_x, element_cursor_y))
 
@@ -237,7 +237,7 @@ class CraftingDismantleTab:
         else:
             btn_text = tr('ui', "MISSING RESOURCES")
 
-        lbl = font.render(btn_text, True, WHITE if can_craft else GRAY)
+        lbl = font.render(btn_text, False, WHITE if can_craft else GRAY)
         text_rect = lbl.get_rect(center=btn_rect.center)
         surface.blit(lbl, text_rect)
         

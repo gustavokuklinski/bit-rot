@@ -196,7 +196,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
             else: col = (255, 0, 0) # Red
 
             # Render Label "Durability:"
-            label_surf = font_14.render("", True, WHITE)
+            label_surf = font_14.render("", False, WHITE)
             
             # Create Surface for the whole line (Text + Spacing + Bar)
             total_w = label_surf.get_width() + 5 + bar_w
@@ -256,7 +256,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
 
         elif isinstance(line, list):
             # Handle composite line: [(text, color), (text, color)]
-            parts = [font_14.render(text, True, color) for text, color in line]
+            parts = [font_14.render(text, False, color) for text, color in line]
             total_w = sum(p.get_width() for p in parts)
             max_h = max(p.get_height() for p in parts)
             
@@ -269,7 +269,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
             rendered_lines.append(line_surf)
         else:
             # Handle standard string line (Default White)
-            rendered_lines.append(font_14.render(str(line), True, WHITE))
+            rendered_lines.append(font_14.render(str(line), False, WHITE))
     
     if not rendered_lines:
         return

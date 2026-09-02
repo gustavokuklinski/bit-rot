@@ -27,7 +27,7 @@ MAP_DIR = os.path.join(BASE_DIR, "data.rot", "lib", "map") + os.sep
 DATA_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
 SPRITE_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
 SOUND_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
-FONT_FACE = os.path.join(BASE_DIR, "data.rot", "lib", "font", "Oxanium-Regular.ttf")
+FONT_FACE = os.path.join(BASE_DIR, "data.rot", "lib", "font", "PixelOperator8.ttf") # Oxanium-Regular.ttf
 
 # Colors
 TRANSPARENT = (0, 0, 0, 0)
@@ -175,6 +175,33 @@ def get_save_config_path(preset="config"):
     """
     return os.path.join(get_writable_dir(), "data.rot", "save", "config", f"{preset}.xml")
 
+
+class ImageFontWrapper:
+    """
+    A wrapper that acts exactly like a pygame Font but forces antialias=False 
+    and caches the resulting surfaces. This dynamically converts the TTF into a pure 
+    Pixel/Image font, preventing distortion when SDL_RENDER_SCALE_QUALITY is '0'.
+    """
+    def __init__(self, font_path, size, is_sysfont=False):
+        if is_sysfont:
+            self.font = pygame.font.SysFont(font_path, size)
+        else:
+            self.font = pygame.font.Font(font_path, size)
+        self.cache = {}
+
+    def render(self, text, antialias, color, background=None):
+        text_str = str(text)
+        cache_key = (text_str, color, background)
+        if cache_key not in self.cache:
+            # Force antialias to False to act as a crisp image font
+            self.cache[cache_key] = self.font.render(text_str, False, color, background)
+        return self.cache[cache_key]
+
+    def __getattr__(self, name):
+        # Delegate all other standard font methods (size, get_height, etc.) to Pygame
+        return getattr(self.font, name)
+
+
 def load_settings(preset="config"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
     global font, font_14
@@ -285,25 +312,11 @@ def load_settings(preset="config"):
 
         
 
-        try:
-            parts = RESOLUTION.split('x')
-            GAME_WIDTH = int(parts[0])
-            GAME_HEIGHT = int(parts[1])
-        except (ValueError, IndexError):
-            GAME_WIDTH = 1280
-            GAME_HEIGHT = 720
         
-        UI_SCALE = min(GAME_WIDTH / 1280, GAME_HEIGHT / 720)
-        RESOLUTION_VALUE = 1.0 + (UI_SCALE - 1.0) * 0.3
 
         # --- 3. Lock-in the True Font Render right here ---
-        try:
-            font     = pygame.font.Font(FONT_FACE, max(1, int(14 * RESOLUTION_VALUE)))
-            font_14  = pygame.font.Font(FONT_FACE, max(1, int(14 * RESOLUTION_VALUE)))
-        except Exception as e:
-            print(f"Font Error: {e}. Falling back to default system font.")
-            font     = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
-            font_14  = pygame.font.SysFont("arial", max(1, int(14 * RESOLUTION_VALUE)))
+        font     = ImageFontWrapper(FONT_FACE, 14)
+        font_14  = ImageFontWrapper(FONT_FACE, 14)
 
             
         val_lang = ui_config.find('language')

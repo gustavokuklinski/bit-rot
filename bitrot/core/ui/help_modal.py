@@ -81,7 +81,7 @@ def draw_help_modal(surface, game, modal, assets):
                     title_txt = line[2:].strip().replace("**", "")
                     
                     font_14.set_bold(True)
-                    title_surf = font_14.render(title_txt, True, WHITE)
+                    title_surf = font_14.render(title_txt, False, WHITE)
                     font_14.set_bold(False)
                     
                     current_tab['layout'].append({
@@ -101,7 +101,7 @@ def draw_help_modal(surface, game, modal, assets):
                             desc_txt = desc_txt[1:].strip()
                             
                         font_14.set_bold(True)
-                        key_surf = font_14.render(key_txt, True, WHITE)
+                        key_surf = font_14.render(key_txt, False, WHITE)
                         font_14.set_bold(False)
                         
                         current_tab['layout'].append({
@@ -116,7 +116,7 @@ def draw_help_modal(surface, game, modal, assets):
                         
                         temp_y = current_tab['curr_y']
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, False, WHITE)
                             current_tab['layout'].append({
                                 'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y),
                                 'bottom_y': temp_y + l_surf.get_height()
@@ -128,7 +128,7 @@ def draw_help_modal(surface, game, modal, assets):
                         i_txt = "• " + line[2:].strip().replace("**", "")
                         wrapped = wrap_text(i_txt, usable_w - 30, font_14)
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, True, WHITE)
+                            l_surf = font_14.render(w_line, False, WHITE)
                             current_tab['layout'].append({
                                 'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
                                 'bottom_y': current_tab['curr_y'] + l_surf.get_height()
@@ -160,7 +160,7 @@ def draw_help_modal(surface, game, modal, assets):
                     p_txt = line.replace("**", "")
                     wrapped = wrap_text(p_txt, usable_w - 30, font_14)
                     for w_line in wrapped:
-                        l_surf = font_14.render(w_line, True, WHITE)
+                        l_surf = font_14.render(w_line, False, WHITE)
                         current_tab['layout'].append({
                             'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
                             'bottom_y': current_tab['curr_y'] + l_surf.get_height()
@@ -228,7 +228,7 @@ def draw_help_modal(surface, game, modal, assets):
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1) 
                 
-                tab_text = font_14.render(tab['title'], True, WHITE)
+                tab_text = font_14.render(tab['title'], False, WHITE)
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
@@ -238,7 +238,7 @@ def draw_help_modal(surface, game, modal, assets):
             pygame.draw.rect(surface, GRAY_60, tab_rect)
             pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
-            tab_text = font_14.render(tabs[active_tab_idx]['title'], True, WHITE)
+            tab_text = font_14.render(tabs[active_tab_idx]['title'], False, WHITE)
             text_rect = tab_text.get_rect(center=tab_rect.center)
             surface.blit(tab_text, text_rect)
 

@@ -107,7 +107,7 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
             pygame.draw.rect(surface, getattr(c, 'color', WHITE), icon_rect)
             
         name_text = tr('item', c.name) if hasattr(c, 'name') else "Unknown"
-        text_surf = font_14.render(name_text, True, WHITE)
+        text_surf = font_14.render(name_text, False, WHITE)
         surface.blit(text_surf, (start_x + 30, current_y + 4))
         
         # Cache the header rect for the breadcrumb tooltip
@@ -145,7 +145,7 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
     if hovered_header and not getattr(game, 'is_dragging', False) and not modal.get('is_dragging_scrollbar') and not modal.get('is_dragging', False):
         # Draw Breadcrumb Tooltip on Container Header
         bc_text = hovered_header['breadcrumb']
-        bc_surf = font_14.render(bc_text, True, YELLOW)
+        bc_surf = font_14.render(bc_text, False, YELLOW)
         bc_rect = bc_surf.get_rect(midbottom=(mouse_pos[0], mouse_pos[1] - 15))
         
         if bc_rect.left < 0: bc_rect.left = 5

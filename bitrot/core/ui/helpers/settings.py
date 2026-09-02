@@ -79,7 +79,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, control_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, control_rect, 1, border_radius=border_radius)
     
-    game.game_screen.blit(font.render(tr('ui', "Settings Control"), True, WHITE), (control_header.x + S(10), control_header.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Settings Control"), False, WHITE), (control_header.x + S(10), control_header.y + S(7)))
 
     btn_w = S(130)
     apply_rect = pygame.Rect(0, 0, btn_w, S(35))
@@ -89,7 +89,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     apply_rect.centery = control_body.centery - S(8)
     
     pygame.draw.rect(game.game_screen, BTN_BLUE, apply_rect, border_radius=4)
-    apply_txt = font.render(tr('ui', "Apply"), True, WHITE)
+    apply_txt = font.render(tr('ui', "Apply"), False, WHITE)
     game.game_screen.blit(apply_txt, (apply_rect.centerx - apply_txt.get_width()//2, apply_rect.centery - apply_txt.get_height()//2))
     clickable_rects['apply_settings'] = apply_rect
 
@@ -100,11 +100,11 @@ def _draw_settings_screen(game, state, mouse_pos):
     reset_rect.centery = control_body.centery - S(8)
     
     pygame.draw.rect(game.game_screen, BTN_RED, reset_rect, border_radius=4)
-    reset_txt = font.render(tr('ui', "Reset Default"), True, WHITE)
+    reset_txt = font.render(tr('ui', "Reset Default"), False, WHITE)
     game.game_screen.blit(reset_txt, (reset_rect.centerx - reset_txt.get_width()//2, reset_rect.centery - reset_txt.get_height()//2))
     clickable_rects['reset_default'] = reset_rect
 
-    warning_text = font_14.render(tr('ui', "Requires a restart to apply."), True, GRAY)
+    warning_text = font_14.render(tr('ui', "Requires a restart to apply."), False, GRAY)
     warning_x = control_body.centerx - (warning_text.get_width() // 2)
     warning_y = apply_rect.bottom + S(5)
     game.game_screen.blit(warning_text, (warning_x, warning_y + S(20)))
@@ -120,7 +120,7 @@ def _draw_settings_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, settings_header, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, settings_rect, 1, border_radius=border_radius)
     
-    game.game_screen.blit(font.render(tr('ui', "Configuration Values"), True, WHITE), (settings_header.x + S(10), settings_header.y + S(7)))
+    game.game_screen.blit(font.render(tr('ui', "Configuration Values"), False, WHITE), (settings_header.x + S(10), settings_header.y + S(7)))
     
     content_rect = settings_body.inflate(-S(20), -S(20))
     line_h = S(40)
@@ -155,7 +155,7 @@ def _draw_settings_screen(game, state, mouse_pos):
         for item in draw_items:
             if item[0] == 'header':
                 header_name = tr('ui', item[1].capitalize())
-                text = font.render(header_name.upper(), True, YELLOW)
+                text = font.render(header_name.upper(), False, YELLOW)
                 sub.blit(text, (0, y_off + S(10)))
             else:
                 block, key, val_data = item[1], item[2], item[3]
@@ -183,12 +183,12 @@ def _draw_settings_screen(game, state, mouse_pos):
                 is_display_cycle = (key in ['resolution', 'window_mode']) 
                 is_cycle_setting = is_percentage_cycle or is_time_cycle or is_language_cycle or is_display_cycle
 
-                lbl = font_14.render(display_label + ":", True, WHITE)
+                lbl = font_14.render(display_label + ":", False, WHITE)
                 sub.blit(lbl, (0, y_off + S(12))) 
                 
                 friendly_text = _get_friendly_value_display(key, val)
                 if friendly_text and not is_bool and not is_cycle_setting:
-                    info_surf = font_14.render(friendly_text, True, GRAY)
+                    info_surf = font_14.render(friendly_text, False, GRAY)
                     info_pos_x = input_rect.x - info_surf.get_width() - S(15)
                     sub.blit(info_surf, (info_pos_x, y_off + S(12)))
 
@@ -199,7 +199,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, WHITE, input_rect, 1, border_radius=3)
                     
                     val_text = tr('ui', "True") if str_val == "true" else tr('ui', "False")
-                    txt_surf = font_14.render(val_text, True, WHITE)
+                    txt_surf = font_14.render(val_text, False, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
@@ -237,12 +237,12 @@ def _draw_settings_screen(game, state, mouse_pos):
                             if not 'volume' in key and comp_val <= 0.0: comp_val = 0.01
                             comp_val = round(comp_val, 2)
 
-                            if 'volume' in key and abs(comp_val - 0.0) < 0.001: label = tr('ui', "Muted (0%)")
-                            elif abs(comp_val - 0.01) < 0.001: label = tr('ui', "Extreme Low (1%)")
-                            elif abs(comp_val - 0.25) < 0.001: label = tr('ui', "Low (25%)")
-                            elif abs(comp_val - 0.50) < 0.001: label = tr('ui', "Balanced (50%)")
-                            elif abs(comp_val - 0.75) < 0.001: label = tr('ui', "High (75%)")
-                            elif abs(comp_val - 1.0) < 0.001: label = tr('ui', "Extreme High (100%)")
+                            if 'volume' in key and abs(comp_val - 0.0) < 0.001: label = tr('ui', "Muted")
+                            elif abs(comp_val - 0.01) < 0.001: label = tr('ui', "Extreme Low")
+                            elif abs(comp_val - 0.25) < 0.001: label = tr('ui', "Low")
+                            elif abs(comp_val - 0.50) < 0.001: label = tr('ui', "Balanced")
+                            elif abs(comp_val - 0.75) < 0.001: label = tr('ui', "High")
+                            elif abs(comp_val - 1.0) < 0.001: label = tr('ui', "Extreme High")
                             else: label = f"{tr('ui', 'Custom')} ({comp_val*100:.0f}%)"
                         elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
                             mins = int(current_val_float / 60000)
@@ -255,7 +255,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                         else:
                             label = str(current_val_float)
                     
-                    txt_surf = font_14.render(label, True, WHITE)
+                    txt_surf = font_14.render(label, False, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
@@ -271,7 +271,7 @@ def _draw_settings_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, (50, 50, 50), input_rect)
                     pygame.draw.rect(sub, col, input_rect, 1)
                     
-                    txt_surf = font_14.render(str(val), True, WHITE)
+                    txt_surf = font_14.render(str(val), False, WHITE)
                     sub.blit(txt_surf, (input_rect.x + S(5), input_rect.y + S(7)))
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
