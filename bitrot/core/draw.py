@@ -980,7 +980,7 @@ def draw_game(game):
             pygame.draw.rect(game.game_screen, (0, 0, 0), box_rect)
             pygame.draw.rect(game.game_screen, (255, 255, 255), box_rect, 1)
             
-            excl_surf = font_14.render("!", False, (255, 255, 255))
+            excl_surf = font_12.render("!", False, (255, 255, 255))
             excl_rect = excl_surf.get_rect(center=box_rect.center)
             game.game_screen.blit(excl_surf, excl_rect)
             
@@ -992,7 +992,7 @@ def draw_game(game):
         if tooltip_to_draw:
             if isinstance(tooltip_to_draw, str):
                 lines = tooltip_to_draw.split('\n')
-                max_w = max((font_14.render(line, False, WHITE).get_width() for line in lines), default=0)
+                max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
                 tt_w = max_w + 10
                 tt_h = len(lines) * 20 + 10
@@ -1014,7 +1014,7 @@ def draw_game(game):
                 
                 curr_y = tt_y + 5
                 for line in lines:
-                    ls = font_14.render(line, False, WHITE)
+                    ls = font_12.render(line, False, WHITE)
                     game.game_screen.blit(ls, (tt_x + 5, curr_y))
                     curr_y += 20
                     
@@ -1036,7 +1036,7 @@ def draw_game(game):
                             game.vehicle_icons[k] = None
 
                 lines = tooltip_to_draw['text_lines']
-                max_w = max((font_14.render(line, False, WHITE).get_width() for line in lines), default=0)
+                max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
                 # Calculate the width of the dynamic stats line
                 stats_w = 0
@@ -1045,8 +1045,8 @@ def draw_game(game):
                     if icon_img:
                         stats_w += 16 + 4  # 16px icon + spacing
                     else:
-                        stats_w += font_14.render(stat['text'] + ": ", False, WHITE).get_width()
-                    stats_w += font_14.render(stat['val'], False, WHITE).get_width() + 10
+                        stats_w += font_12.render(stat['text'] + ": ", False, WHITE).get_width()
+                    stats_w += font_12.render(stat['val'], False, WHITE).get_width() + 10
                 
                 max_w = max(max_w, stats_w)
                 
@@ -1067,7 +1067,7 @@ def draw_game(game):
                 # Draw main text lines
                 curr_y = tt_y + 5
                 for line in lines:
-                    ls = font_14.render(line, False, WHITE)
+                    ls = font_12.render(line, False, WHITE)
                     game.game_screen.blit(ls, (tt_x + 5, curr_y))
                     curr_y += 20
                 
@@ -1080,11 +1080,11 @@ def draw_game(game):
                         game.game_screen.blit(icon_img, (curr_x, curr_y))
                         curr_x += 20
                     else:
-                        text_s = font_14.render(stat['text'] + ": ", False, WHITE)
+                        text_s = font_12.render(stat['text'] + ": ", False, WHITE)
                         game.game_screen.blit(text_s, (curr_x, curr_y + 2))
                         curr_x += text_s.get_width()
                     
-                    val_s = font_14.render(stat['val'], False, WHITE)
+                    val_s = font_12.render(stat['val'], False, WHITE)
                     game.game_screen.blit(val_s, (curr_x, curr_y + 2))
                     curr_x += val_s.get_width() + 10
 
@@ -1092,7 +1092,7 @@ def draw_game(game):
             padding = 5
             if isinstance(focused_tip, str):
                 lines = focused_tip.split('\n')
-                max_w = max((font_14.render(line, False, WHITE).get_width() for line in lines), default=0)
+                max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
                 # Apply 5px padding on all sides
                 tt_w = max_w + (padding * 2)
@@ -1112,7 +1112,7 @@ def draw_game(game):
                 
                 curr_y = tt_y + padding
                 for line in lines:
-                    ls = font_14.render(line, False, WHITE)
+                    ls = font_12.render(line, False, WHITE)
                     # Center align the text horizontally
                     line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
                     game.game_screen.blit(ls, (line_x, curr_y))
@@ -1135,7 +1135,7 @@ def draw_game(game):
                             game.vehicle_icons[k] = None
 
                 lines = focused_tip['text_lines']
-                max_w = max((font_14.render(line, False, WHITE).get_width() for line in lines), default=0)
+                max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
                 stats_w = 0
                 for stat in focused_tip['stats']:
@@ -1143,8 +1143,8 @@ def draw_game(game):
                     if icon_img:
                         stats_w += 16 + 4
                     else:
-                        stats_w += font_14.render(stat['text'] + ": ", False, WHITE).get_width()
-                    stats_w += font_14.render(stat['val'], False, WHITE).get_width() + 10
+                        stats_w += font_12.render(stat['text'] + ": ", False, WHITE).get_width()
+                    stats_w += font_12.render(stat['val'], False, WHITE).get_width() + 10
                 
                 # Remove the trailing 10px spacing from the last stat for perfect centering
                 if stats_w > 0:
@@ -1169,7 +1169,7 @@ def draw_game(game):
                 
                 curr_y = tt_y + padding
                 for line in lines:
-                    ls = font_14.render(line, False, WHITE)
+                    ls = font_12.render(line, False, WHITE)
                     # Center align the text horizontally
                     line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
                     game.game_screen.blit(ls, (line_x, curr_y))
@@ -1184,11 +1184,11 @@ def draw_game(game):
                         game.game_screen.blit(icon_img, (curr_x, curr_y))
                         curr_x += 20
                     else:
-                        text_s = font_14.render(stat['text'] + ": ", False, WHITE)
+                        text_s = font_12.render(stat['text'] + ": ", False, WHITE)
                         game.game_screen.blit(text_s, (curr_x, curr_y + 2))
                         curr_x += text_s.get_width()
                     
-                    val_s = font_14.render(stat['val'], False, WHITE)
+                    val_s = font_12.render(stat['val'], False, WHITE)
                     game.game_screen.blit(val_s, (curr_x, curr_y + 2))
                     curr_x += val_s.get_width() + 10
 
@@ -1363,8 +1363,8 @@ def draw_game(game):
         game.game_screen.blit(tip_s, tip_rect.topleft)
         pygame.draw.rect(game.game_screen, WHITE, tip_rect, 1)
 
-        name_surf = game.assets['font'].render(f"{tr('item', item.name)}", True, WHITE)
-        type_surf = game.assets['font'].render(f"Type: {item.item_type}", True, GRAY)
+        name_surf = font_12.render(f"{tr('item', item.name)}", True, WHITE)
+        type_surf = font_12.render(f"Type: {item.item_type}", True, GRAY)
         game.game_screen.blit(name_surf, (tip_rect.x + 8, tip_rect.y + 6))
         game.game_screen.blit(type_surf, (tip_rect.x + 8, tip_rect.y + 26))
 
@@ -1395,27 +1395,25 @@ def draw_game(game):
         
         for rect, label in ui_buttons:
             if rect and rect.collidepoint(mouse_pos):
-                font_tip = globals().get('font_14', game.assets.get('font'))
-                if font_tip:
-                    text_surf = font_tip.render(label, True, WHITE)
-                    padding = 8
-                    width = text_surf.get_width() + padding * 2
-                    height = text_surf.get_height() + padding * 2
-                    
-                    tip_x = mouse_pos[0] + 10
-                    tip_y = mouse_pos[1] + 10
-                    
-                    if tip_x + width > GAME_WIDTH:
-                        tip_x = mouse_pos[0] - width - 5
-                    if tip_y + height > GAME_HEIGHT:
-                        tip_y = mouse_pos[1] - height - 5
-                    
-                    tooltip_rect = pygame.Rect(tip_x, tip_y, width, height)
-                    
-                    pygame.draw.rect(game.game_screen, (0, 0, 0, 220), tooltip_rect)
-                    pygame.draw.rect(game.game_screen, WHITE, tooltip_rect, 1)
-                    game.game_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
-                break
+                text_surf = font_12.render(label, True, WHITE)
+                padding = 8
+                width = text_surf.get_width() + padding * 2
+                height = text_surf.get_height() + padding * 2
+                
+                tip_x = mouse_pos[0] + 10
+                tip_y = mouse_pos[1] + 10
+                
+                if tip_x + width > GAME_WIDTH:
+                    tip_x = mouse_pos[0] - width - 5
+                if tip_y + height > GAME_HEIGHT:
+                    tip_y = mouse_pos[1] - height - 5
+                
+                tooltip_rect = pygame.Rect(tip_x, tip_y, width, height)
+                
+                pygame.draw.rect(game.game_screen, (0, 0, 0, 220), tooltip_rect)
+                pygame.draw.rect(game.game_screen, WHITE, tooltip_rect, 1)
+                game.game_screen.blit(text_surf, (tip_x + padding, tip_y + padding))
+               
 
     if game.player.is_aiming:
         pygame.mouse.set_visible(False) 
@@ -1458,7 +1456,7 @@ def draw_game(game):
                     total_ammo += _count_in_list(game.player.inventory)
                     total_ammo += _count_in_list(game.player.clothes.values())
                     
-                font_ammo = globals().get('font_14', game.assets.get('font'))
+                font_ammo = font_12
                 if not font_ammo: font_ammo = pygame.font.Font(None, 24)
                 
                 # Visual combat flair: shift color based on gun load
@@ -1538,9 +1536,7 @@ def draw_game(game):
         # Append it to the FPS string
         fps_text = f"FPS: {fps} | Build: {game_version}"
         
-        font = game.assets.get('font')
-        if font:
-            fps_surface = font.render(fps_text, False, (255, 255, 255))
-            fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
-            game.game_screen.blit(fps_surface, fps_rect)
+        fps_surface = font_12.render(fps_text, False, (255, 255, 255))
+        fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
+        game.game_screen.blit(fps_surface, fps_rect)
     

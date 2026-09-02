@@ -6,10 +6,10 @@ from core.ui.container_modal import _draw_slots
 from core.data.localization import tr
 # --- NEW: Belt HUD Functions ---
 
-def draw_text_shadow(surface, font, text, color, pos, align='topleft', shadow_color=BLACK, offset=(1, 1)):
+def draw_text_shadow(surface, font_12, text, color, pos, align='topleft', shadow_color=BLACK, offset=(1, 1)):
     """Draws text with a drop shadow for better readability."""
-    shadow_surf = font.render(text, False, shadow_color)
-    text_surf = font.render(text, False, color)
+    shadow_surf = font_12.render(text, False, shadow_color)
+    text_surf = font_12.render(text, False, color)
     
     # Calculate rect based on alignment
     if align == 'bottomright':
@@ -42,7 +42,7 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
             pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # Draw Hotkey Number (Inside, Gray)
-        num_text = font_14.render(str(i + 1), True, GRAY)
+        num_text = font_12.render(str(i + 1), True, GRAY)
         surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
 
         if item:
@@ -77,7 +77,7 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_14,
+                    font_12,
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
@@ -179,7 +179,7 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_14, 
+                    font_12, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
@@ -203,7 +203,7 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
 
         # --- MATCH HUD STYLE: Number inside slot ---
-        num_text = font_14.render(str(i + 1), True, GRAY)
+        num_text = font_12.render(str(i + 1), True, GRAY)
         surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
 
         if item:
@@ -237,7 +237,7 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_14, 
+                    font_12, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 

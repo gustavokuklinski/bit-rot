@@ -31,12 +31,12 @@ def draw_clock_tab(surface, game, modal, assets):
         surface.blit(icon, icon_rect)
         
         # Draw Label next to icon
-        label_surf = font.render(label_text, False, WHITE)
+        label_surf = font_12.render(label_text, False, WHITE)
         label_rect = label_surf.get_rect(midleft=(icon_rect.right + 10, icon_rect.centery))
         surface.blit(label_surf, label_rect)
     else:
         # Fallback text if icons fail
-        label_surf = font.render(label_text, False, WHITE)
+        label_surf = font_12.render(label_text, False, WHITE)
         label_rect = label_surf.get_rect(center=(center_x, y_offset))
         surface.blit(label_surf, label_rect)
 
@@ -57,7 +57,7 @@ def draw_clock_tab(surface, game, modal, assets):
         time_str = "00:00"
     
     # Render Large Text
-    base_time_surf = font_14.render(time_str, True, WHITE)
+    base_time_surf = font_12.render(time_str, True, WHITE)
     # Scale up by 1.8x for visibility
     scaled_w = int(base_time_surf.get_width() * 1.8)
     scaled_h = int(base_time_surf.get_height() * 1.8)
@@ -71,7 +71,7 @@ def draw_clock_tab(surface, game, modal, assets):
     # --- 3. Stats (Kills) ---
     zombies_killed = game.zombies_killed
     kills_text = f"{tr('ui', 'Kills:')} {zombies_killed}"
-    kills_surf = font.render(kills_text, False, WHITE) 
+    kills_surf = font_12.render(kills_text, False, WHITE) 
     kills_rect = kills_surf.get_rect(center=(center_x, y_offset))
     surface.blit(kills_surf, kills_rect)
 
@@ -87,7 +87,7 @@ def draw_clock_tab(surface, game, modal, assets):
     except Exception:
         alive_text = f"{tr('ui', 'Survived:')} --"
         
-    alive_surf = font.render(alive_text, False, WHITE)
+    alive_surf = font_12.render(alive_text, False, WHITE)
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
     surface.blit(alive_surf, alive_rect)
 
@@ -111,6 +111,6 @@ def draw_clock_tab(surface, game, modal, assets):
     except Exception:
         weather_text = tr('ui', "Weather: Unknown")
         
-    weather_surf = font.render(weather_text, False, WHITE)
+    weather_surf = font_12.render(weather_text, False, WHITE)
     weather_rect = weather_surf.get_rect(center=(center_x, y_offset))
     surface.blit(weather_surf, weather_rect)

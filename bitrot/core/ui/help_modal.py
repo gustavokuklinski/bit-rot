@@ -80,9 +80,9 @@ def draw_help_modal(surface, game, modal, assets):
                 elif line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
                     
-                    font_14.set_bold(True)
-                    title_surf = font_14.render(title_txt, False, WHITE)
-                    font_14.set_bold(False)
+                    font_16.set_bold(True)
+                    title_surf = font_16.render(title_txt, False, WHITE)
+                    font_16.set_bold(False)
                     
                     current_tab['layout'].append({
                         'type': 'text', 
@@ -100,9 +100,9 @@ def draw_help_modal(surface, game, modal, assets):
                         if desc_txt.startswith(":"):
                             desc_txt = desc_txt[1:].strip()
                             
-                        font_14.set_bold(True)
-                        key_surf = font_14.render(key_txt, False, WHITE)
-                        font_14.set_bold(False)
+                        font_16.set_bold(True)
+                        key_surf = font_16.render(key_txt, False, WHITE)
+                        font_16.set_bold(False)
                         
                         current_tab['layout'].append({
                             'type': 'text', 'surf': key_surf, 'pos': (15, current_tab['curr_y']),
@@ -112,28 +112,28 @@ def draw_help_modal(surface, game, modal, assets):
                         ALIGN_X = 240 
                         desc_x = 15 + max(ALIGN_X, key_surf.get_width() + 15)
                         
-                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_14)
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - 15, font_16)
                         
                         temp_y = current_tab['curr_y']
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, False, WHITE)
+                            l_surf = font_16.render(w_line, False, WHITE)
                             current_tab['layout'].append({
                                 'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y),
                                 'bottom_y': temp_y + l_surf.get_height()
                             })
-                            temp_y += font_14.get_height() + 4
+                            temp_y += font_16.get_height() + 4
                             
-                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_14.get_height() + 4, temp_y) + 6
+                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_16.get_height() + 4, temp_y) + 6
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
-                        wrapped = wrap_text(i_txt, usable_w - 30, font_14)
+                        wrapped = wrap_text(i_txt, usable_w - 30, font_16)
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, False, WHITE)
+                            l_surf = font_16.render(w_line, False, WHITE)
                             current_tab['layout'].append({
                                 'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
                                 'bottom_y': current_tab['curr_y'] + l_surf.get_height()
                             })
-                            current_tab['curr_y'] += font_14.get_height() + 4
+                            current_tab['curr_y'] += font_16.get_height() + 4
                     current_tab['curr_y'] += 6
 
                 elif line.startswith("![") and "](" in line and line.endswith(")"):
@@ -158,14 +158,14 @@ def draw_help_modal(surface, game, modal, assets):
 
                 else:
                     p_txt = line.replace("**", "")
-                    wrapped = wrap_text(p_txt, usable_w - 30, font_14)
+                    wrapped = wrap_text(p_txt, usable_w - 30, font_16)
                     for w_line in wrapped:
-                        l_surf = font_14.render(w_line, False, WHITE)
+                        l_surf = font_16.render(w_line, False, WHITE)
                         current_tab['layout'].append({
                             'type': 'text', 'surf': l_surf, 'pos': (15, current_tab['curr_y']),
                             'bottom_y': current_tab['curr_y'] + l_surf.get_height()
                         })
-                        current_tab['curr_y'] += font_14.get_height() + 4
+                        current_tab['curr_y'] += font_16.get_height() + 4
                     current_tab['curr_y'] += 6
 
             current_tab['total_h'] = current_tab['curr_y']
@@ -228,7 +228,7 @@ def draw_help_modal(surface, game, modal, assets):
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1) 
                 
-                tab_text = font_14.render(tab['title'], False, WHITE)
+                tab_text = font_16.render(tab['title'], False, WHITE)
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
@@ -238,7 +238,7 @@ def draw_help_modal(surface, game, modal, assets):
             pygame.draw.rect(surface, GRAY_60, tab_rect)
             pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
-            tab_text = font_14.render(tabs[active_tab_idx]['title'], False, WHITE)
+            tab_text = font_16.render(tabs[active_tab_idx]['title'], False, WHITE)
             text_rect = tab_text.get_rect(center=tab_rect.center)
             surface.blit(tab_text, text_rect)
 

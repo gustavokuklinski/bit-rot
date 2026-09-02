@@ -51,15 +51,15 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # ==========================================
     
     # Engine
-    eng_lbl = font.render(tr('vehicle', "Engine:"), True, STYLE["TEXT_MAIN"])
+    eng_lbl = font_12.render(tr('vehicle', "Engine:"), True, STYLE["TEXT_MAIN"])
     surface.blit(eng_lbl, (left_x, y_base))
     
     is_engine_on = vehicle.active
     e_on_color = STYLE["ACTIVE"] if is_engine_on else STYLE["TEXT_DIM"]
     e_off_color = STYLE["INACTIVE"] if not is_engine_on else STYLE["TEXT_DIM"]
     
-    e_on_txt = font.render(tr('vehicle', "[ON]"), True, e_on_color)
-    e_off_txt = font.render(tr('vehicle', "[OFF]"), True, e_off_color)
+    e_on_txt = font_12.render(tr('vehicle', "[ON]"), True, e_on_color)
+    e_off_txt = font_12.render(tr('vehicle', "[OFF]"), True, e_off_color)
     
     e_on_rect = e_on_txt.get_rect(topleft=(left_x, y_base + 25))
     surface.blit(e_on_txt, e_on_rect)
@@ -67,15 +67,15 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     surface.blit(e_off_txt, e_off_rect)
     
     # Lights
-    lht_lbl = font.render(tr('vehicle', "Lights:"), True, STYLE["TEXT_MAIN"])
+    lht_lbl = font_12.render(tr('vehicle', "Lights:"), True, STYLE["TEXT_MAIN"])
     surface.blit(lht_lbl, (left_x, y_base + 65))
     
     is_lights_on = getattr(vehicle, 'lights', 'off') == 'on'
     l_on_color = STYLE["ACTIVE"] if is_lights_on else STYLE["TEXT_DIM"]
     l_off_color = STYLE["INACTIVE"] if not is_lights_on else STYLE["TEXT_DIM"]
     
-    l_on_txt = font.render(tr('vehicle', "[ON]"), True, l_on_color)
-    l_off_txt = font.render(tr('vehicle', "[OFF]"), True, l_off_color)
+    l_on_txt = font_12.render(tr('vehicle', "[ON]"), True, l_on_color)
+    l_off_txt = font_12.render(tr('vehicle', "[OFF]"), True, l_off_color)
     
     l_on_rect = l_on_txt.get_rect(topleft=(left_x, y_base + 90))
     surface.blit(l_on_txt, l_on_rect)
@@ -127,7 +127,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     pygame.draw.circle(surface, STYLE["ACTIVE"], (speedo_cx, speedo_cy), 6)
     
     # Current Speed Text
-    speed_surf = font.render(f"{speed_kmh} {tr('vehicle', 'km/h')}", True, needle_color)
+    speed_surf = font_12.render(f"{speed_kmh} {tr('vehicle', 'km/h')}", True, needle_color)
     surface.blit(speed_surf, speed_surf.get_rect(center=(speedo_cx, speedo_cy + 20)))
 
     # ==========================================
@@ -178,9 +178,9 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         if hasattr(fuel_item, 'capacity'): fuel_max = float(fuel_item.capacity)
 
     # Text rendering
-    m_txt = font.render(f"{motor_pct}%", True, STYLE["TEXT_MAIN"])
-    b_txt = font.render(f"{batt_pct}%", True, STYLE["TEXT_MAIN"])
-    f_txt = font.render(f"{int(fuel_val)}/{int(fuel_max)}", True, STYLE["TEXT_MAIN"])
+    m_txt = font_12.render(f"{motor_pct}%", True, STYLE["TEXT_MAIN"])
+    b_txt = font_12.render(f"{batt_pct}%", True, STYLE["TEXT_MAIN"])
+    f_txt = font_12.render(f"{int(fuel_val)}/{int(fuel_max)}", True, STYLE["TEXT_MAIN"])
     
     m_ico = modal['status_icons'].get('motor')
     b_ico = modal['status_icons'].get('battery')
@@ -232,23 +232,23 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
         
         # Label (Driver vs Passenger)
         if i == 0:
-            lbl = font_14.render(tr('vehicle', "D"), False, STYLE["DRIVER_LBL"])
+            lbl = font_12.render(tr('vehicle', "D"), False, STYLE["DRIVER_LBL"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
         else:
-            lbl = font_14.render(str(i+1), False, STYLE["TEXT_DIM"])
+            lbl = font_12.render(str(i+1), False, STYLE["TEXT_DIM"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
 
         # Render Occupant
         if occupant:
             if type(occupant).__name__ == 'Player':
-                txt = font.render(tr('vehicle', "YOU"), False, (0, 255, 255))
+                txt = font_12.render(tr('vehicle', "YOU"), False, (0, 255, 255))
                 txt_rect = txt.get_rect(center=slot_rect.center)
                 surface.blit(txt, txt_rect)
             elif hasattr(occupant, 'image') and occupant.image:
                 icon = pygame.transform.scale(occupant.image, (32, 32))
                 surface.blit(icon, icon.get_rect(center=slot_rect.center))
                 if hasattr(occupant, 'load') and occupant.load > 1:
-                     draw_text_shadow(surface, font_14, str(int(occupant.load)), STYLE["TEXT_MAIN"], 
+                     draw_text_shadow(surface, font_12, str(int(occupant.load)), STYLE["TEXT_MAIN"], 
                                     (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['seat_rects'][i] = slot_rect
@@ -275,7 +275,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
         lbl_text = tr('vehicle', slot_name.capitalize())
-        lbl = font_14.render(lbl_text, False, STYLE["TEXT_DIM"])
+        lbl = font_12.render(lbl_text, False, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -302,7 +302,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                      pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
              elif hasattr(item, 'load') and item.load is not None and item.load > 0:
                  # Fallback to text if no 'capacity' property is present to build a bar
-                 draw_text_shadow(surface, font_14, str(int(item.load)), STYLE["TEXT_MAIN"], 
+                 draw_text_shadow(surface, font_12, str(int(item.load)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
              # -----------------------------------
 
@@ -320,7 +320,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         
         # Format "tire_fl" -> "FL TIRE", etc.
         lbl_text = slot_name.split('_')[1].upper() + " " + tr('vehicle', 'TIRE')
-        lbl = font_14.render(lbl_text, False, STYLE["TEXT_DIM"])
+        lbl = font_12.render(lbl_text, False, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
         item = vehicle.equipment.get(slot_name)
@@ -346,7 +346,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                      pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
              elif hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
                  # Fallback to text if no 'max_durability' property is present to build a bar
-                 draw_text_shadow(surface, font_14, str(int(item.durability)), STYLE["TEXT_MAIN"], 
+                 draw_text_shadow(surface, font_12, str(int(item.durability)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
         modal['equipment_rects'][slot_name] = slot_rect

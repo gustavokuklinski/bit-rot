@@ -11,7 +11,7 @@ def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, heig
     
     if not special_dialogs:
         empty_text = tr('dialog', "No special memories recorded.")
-        empty_surf = font.render(empty_text, True, GRAY)
+        empty_surf = font_12.render(empty_text, True, GRAY)
         surface.blit(empty_surf, (start_x, start_y))
         return
         
@@ -29,8 +29,8 @@ def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, heig
         q_text = f"{player_name}: {dialog['q']}"
         a_text = f"{stored_npc_name}: {dialog['a']}"
         
-        q_lines = get_wrapped_lines(q_text, font, width - 20)
-        a_lines = get_wrapped_lines(a_text, font, width - 20)
+        q_lines = get_wrapped_lines(q_text, font_12, width - 20)
+        a_lines = get_wrapped_lines(a_text, font_12, width - 20)
         
         drawn_items.append({
             'q_lines': q_lines,
@@ -57,12 +57,12 @@ def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, heig
     for item in drawn_items:
         item_y = item['y']
         for line in item['q_lines']:
-            line_surf = font.render(line, True, YELLOW)
+            line_surf = font_12.render(line, True, YELLOW)
             content_surf.blit(line_surf, (0, item_y))
             item_y += 20
             
         for line in item['a_lines']:
-            line_surf = font.render(line, True, WHITE)
+            line_surf = font_12.render(line, True, WHITE)
             content_surf.blit(line_surf, (0, item_y))
             item_y += 20
             

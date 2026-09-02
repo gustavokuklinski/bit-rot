@@ -50,12 +50,12 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         bonus_perc = player.progression.get_total_attribute_bonus(player, attr_id)
         
         text_x = start_x + icon_size + 10
-        label_surf = font_14.render(f"{tr('ui', label)}:", False, WHITE)
+        label_surf = font_12.render(f"{tr('ui', label)}:", False, WHITE)
         surface.blit(label_surf, (text_x - 3, current_y + 2))
 
         # Adjusted for narrow width: values aligned to the right of the label
         value_x = text_x + 80 
-        value_surf = font_14.render(f"{str(level)}/10", False, WHITE)
+        value_surf = font_12.render(f"{str(level)}/10", False, WHITE)
         value_pos = (value_x, current_y + 2)
         surface.blit(value_surf, value_pos)
 

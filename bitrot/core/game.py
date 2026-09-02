@@ -412,7 +412,7 @@ class Game:
         overlay.fill((0, 0, 0, 150))
         self.game_screen.blit(overlay, (0, 0))
 
-        text = font_14.render(tr('ui', "GAME PAUSED AND SAVED"), False, WHITE)
+        text = font_16.render(tr('ui', "GAME PAUSED AND SAVED"), False, WHITE)
         text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
         self.game_screen.blit(text, text_rect)
 
@@ -428,7 +428,7 @@ class Game:
             is_hovered = rect.collidepoint(mouse_pos)
             bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
             pygame.draw.rect(surface, bg_color, rect, border_radius=6)
-            txt_surf = font_14.render(text, False, WHITE)
+            txt_surf = font_16.render(text, False, WHITE)
             txt_rect = txt_surf.get_rect(center=rect.center)
             surface.blit(txt_surf, txt_rect)
 

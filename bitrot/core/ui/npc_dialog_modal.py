@@ -8,14 +8,14 @@ from core.ui.npc_special_dialogs_tab import draw_special_dialogs_tab
 COL_1_WIDTH = 180  
 PADDING = 20
 
-def get_wrapped_lines(text, font, max_width):
+def get_wrapped_lines(text, font_12, max_width):
     words = str(text).split(' ')
     lines = []
     current_line = []
     
     for word in words:
         current_line.append(word)
-        test_surf = font.render(' '.join(current_line), True, WHITE)
+        test_surf = font_12.render(' '.join(current_line), True, WHITE)
         if test_surf.get_width() > max_width:
             if len(current_line) > 1: 
                 current_line.pop()
@@ -43,16 +43,16 @@ def get_npc_dialog_option_rect(modal_pos, index, dialogs, scroll_offset_y=0):
             
             if j < index:
                 q_text = f"- {dialogs[j]['q']}"
-                lines = get_wrapped_lines(q_text, font, option_width - 20)
+                lines = get_wrapped_lines(q_text, font_12, option_width - 20)
                 extra_y += max(30, len(lines) * 20 + 10)
                 
     current_q_text = f"- {dialogs[index]['q']}"
-    current_lines = get_wrapped_lines(current_q_text, font, option_width - 20)
+    current_lines = get_wrapped_lines(current_q_text, font_12, option_width - 20)
     current_height = max(30, len(current_lines) * 20 + 10)
                 
     return pygame.Rect(start_x, start_y + extra_y, option_width, current_height)
 
-def draw_tabs(surface, font, x, y, tabs, active_index, total_width):
+def draw_tabs(surface, font_12, x, y, tabs, active_index, total_width):
     """A standalone tab drawing function for custom column layouts."""
     tab_rects = []
     tab_width = total_width // len(tabs)
@@ -69,7 +69,7 @@ def draw_tabs(surface, font, x, y, tabs, active_index, total_width):
         pygame.draw.rect(surface, WHITE, rect, 1)
         
         # Draw text centered in the tab
-        text_surf = font.render(tab_name, True, WHITE)
+        text_surf = font_12.render(tab_name, True, WHITE)
         text_rect = text_surf.get_rect(center=rect.center)
         surface.blit(text_surf, text_rect)
         
@@ -117,7 +117,7 @@ def draw_npc_dialog_modal(surface, modal, game):
     ]
     
     for i, stat in enumerate(stats):
-        stat_surf = font.render(stat, True, WHITE)
+        stat_surf = font_12.render(stat, True, WHITE)
         surface.blit(stat_surf, (stats_x, stats_start_y + (i * line_height)))
 
     # Right Column (Tabs & Content)
@@ -127,7 +127,7 @@ def draw_npc_dialog_modal(surface, modal, game):
     # --- [NEW] Draw Tabs ---
     active_tab = modal.get('active_tab_index', 0)
     tabs = [tr('dialog', 'Current Dialog'), tr('dialog', 'Special Dialogs')]
-    tab_rects = draw_tabs(surface, font, col2_x, y + 40, tabs, active_tab, text_area_width)
+    tab_rects = draw_tabs(surface, font_12, col2_x, y + 40, tabs, active_tab, text_area_width)
     modal['tab_rects'] = tab_rects
     
     content_y = tab_rects[0].bottom + 15
@@ -164,7 +164,7 @@ def draw_npc_dialog_modal(surface, modal, game):
                         last_node = node_id
                         
                     q_text_str = f"- {option['q']}"
-                    lines = get_wrapped_lines(q_text_str, font, opt_width)
+                    lines = get_wrapped_lines(q_text_str, font_12, opt_width)
                     current_height = max(30, len(lines) * 20 + 10)
                     
                     layout_data.append({
@@ -221,14 +221,14 @@ def draw_npc_dialog_modal(surface, modal, game):
                         'quest_branch': 'Quest'
                     }
                     raw_title = title_map.get(lay['node_id'], lay['node_id'].replace('_', ' ').title())
-                    title_surf = font.render(tr('dialog', raw_title), True, (170, 170, 170)) 
+                    title_surf = font_12.render(tr('dialog', raw_title), True, (170, 170, 170)) 
                     surface.blit(title_surf, (col2_x, rect.y - 22))
                     
                 is_hovered = rect.collidepoint(mouse_pos)
                 color = YELLOW if is_hovered else WHITE
                 
                 for line_idx, line in enumerate(lay['lines']):
-                    q_line_surf = font.render(line, True, color)
+                    q_line_surf = font_12.render(line, True, color)
                     surface.blit(q_line_surf, (rect.x + 10, rect.y + 5 + (line_idx * 20)))
 
             # Restore original clip so we don't mess up other rendering
@@ -245,10 +245,10 @@ def draw_npc_dialog_modal(surface, modal, game):
             cache_key = f"dialog_active_{id(selected_opt)}_{text_area_width}"
             if modal.get('dialog_active_cache_key') != cache_key:
                 q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
-                q_lines = get_wrapped_lines(q_text_str, font, text_area_width)
+                q_lines = get_wrapped_lines(q_text_str, font_12, text_area_width)
                 
                 a_text_str = f"{npc.name}: {selected_opt['a']}"
-                a_lines = get_wrapped_lines(a_text_str, font, text_area_width)
+                a_lines = get_wrapped_lines(a_text_str, font_12, text_area_width)
                 
                 total_height = (len(q_lines) * 20) + 10 + (len(a_lines) * 20) + 40
                 
@@ -286,15 +286,15 @@ def draw_npc_dialog_modal(surface, modal, game):
             draw_y = content_y - scroll_offset_y
             
             for i, line in enumerate(q_lines):
-                line_surf = font.render(line, True, GRAY)
+                line_surf = font_12.render(line, True, GRAY)
                 surface.blit(line_surf, (col2_x, draw_y + (i * 20)))
             
             start_text_y = draw_y + (len(q_lines) * 20) + 10
             for i, line in enumerate(a_lines):
-                line_surf = font.render(line, True, WHITE)
+                line_surf = font_12.render(line, True, WHITE)
                 surface.blit(line_surf, (col2_x, start_text_y + (i * 20)))
                 
-            back_hint = font.render(tr('dialog', "[Click anywhere to go back]"), True, YELLOW)
+            back_hint = font_12.render(tr('dialog', "[Click anywhere to go back]"), True, YELLOW)
             hint_y = start_text_y + (len(a_lines) * 20) + 20
             surface.blit(back_hint, (col2_x, hint_y))
             

@@ -67,8 +67,8 @@ VEHICLE_MODAL_HEIGHT = 240
 MESSAGES_MODAL_WIDTH = 512
 MESSAGES_MODAL_HEIGHT = 240
 
-CRAFTING_MODAL_WIDTH = 720
-CRAFTING_MODAL_HEIGHT = 450
+CRAFTING_MODAL_WIDTH = 820
+CRAFTING_MODAL_HEIGHT = 600
 MAP_MODAL_WIDTH = 720
 MAP_MODAL_HEIGHT = 450
 HELP_MODAL_WIDTH = 720
@@ -76,8 +76,9 @@ HELP_MODAL_HEIGHT = 450
 NPC_DIALOG_MODAL_WIDTH = 720
 NPC_DIALOG_MODAL_HEIGHT = 450
 
-font = None
+font_16 = None
 font_14 = None
+font_12 = None
 
 TILE_SIZE = 16
 
@@ -204,7 +205,7 @@ class ImageFontWrapper:
 
 def load_settings(preset="config"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
-    global font, font_14
+    global font_16, font_14, font_12
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
     global MAX_DARKNESS_OPACITY, START_ZOOM, FAR_ZOOM, NEAR_ZOOM, PLAYER_SPEED
     global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
@@ -315,9 +316,9 @@ def load_settings(preset="config"):
         
 
         # --- 3. Lock-in the True Font Render right here ---
-        font     = ImageFontWrapper(FONT_FACE, 14)
-        font_14  = ImageFontWrapper(FONT_FACE, 14)
-
+        font_16  = ImageFontWrapper(FONT_FACE, 16)
+        font_14  = ImageFontWrapper(FONT_FACE, 8)
+        font_12  = ImageFontWrapper(FONT_FACE, 12)
             
         val_lang = ui_config.find('language')
         if val_lang is not None:

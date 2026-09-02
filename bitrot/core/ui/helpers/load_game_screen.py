@@ -93,7 +93,7 @@ def draw_load_game_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
     pygame.draw.rect(game.game_screen, WHITE, panel_rect, 1, border_radius=border_radius)
 
-    title_surf = font.render(tr('ui', "Load Game"), False, WHITE)
+    title_surf = font_16.render(tr('ui', "Load Game"), False, WHITE)
     game.game_screen.blit(title_surf, (header_rect.x + S(15), header_rect.y + S(10)))
 
     list_rect = pygame.Rect(body_rect.x + padding, body_rect.y + padding, body_rect.width - (padding * 2), body_rect.height - S(70))
@@ -134,7 +134,7 @@ def draw_load_game_screen(game, state, mouse_pos):
                 pygame.draw.rect(sub, bg_color, row_rect_rel)
                 
                 text_color = WHITE if is_selected else GRAY
-                name_surf = font.render(save['display_name'], False, text_color)
+                name_surf = font_16.render(save['display_name'], False, text_color)
                 sub.blit(name_surf, (S(10), y_offset + S(8)))
                 
                 clickable_rects['save_items'].append((i, save['filename'], row_rect_abs))
@@ -155,7 +155,7 @@ def draw_load_game_screen(game, state, mouse_pos):
     load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
     load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
     pygame.draw.rect(game.game_screen, load_color, load_btn_rect, border_radius=4)
-    load_txt = font_14.render(tr('ui', "LOAD GAME"), False, WHITE)
+    load_txt = font_16.render(tr('ui', "LOAD GAME"), False, WHITE)
     game.game_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
     if state['selected_save_index'] is not None:
         clickable_rects['load_button'] = load_btn_rect
@@ -163,13 +163,13 @@ def draw_load_game_screen(game, state, mouse_pos):
     del_btn_rect = pygame.Rect(panel_rect.x + padding, button_area_y, btn_width - S(20), btn_height)
     if state['selected_save_index'] is not None:
         pygame.draw.rect(game.game_screen, RED, del_btn_rect, border_radius=4)
-        del_txt = font.render(tr('ui', "Delete"), False, WHITE)
+        del_txt = font_16.render(tr('ui', "Delete"), False, WHITE)
         game.game_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
         clickable_rects['delete_button'] = del_btn_rect
     
     back_btn_rect = pygame.Rect(panel_rect.right - padding - (btn_width - S(20)), button_area_y, btn_width - S(20), btn_height)
     pygame.draw.rect(game.game_screen, GRAY_80, back_btn_rect, border_radius=4)
-    back_txt = font.render(tr('ui', "Back"), False, WHITE)
+    back_txt = font_16.render(tr('ui', "Back"), False, WHITE)
     game.game_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
     clickable_rects['back_button'] = back_btn_rect
 

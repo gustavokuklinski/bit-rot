@@ -83,6 +83,6 @@ def load_assets():
         print(f"Error loading CRT texture: {e}")
         assets['crt_texture'] = None
 
-    assets['font'] = font_14
+    assets['font'] = font_16
 
     return assets

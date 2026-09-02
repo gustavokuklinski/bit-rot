@@ -108,7 +108,7 @@ class Tabs:
             self.surface.blit(tab['icon'], icon_rect)
         else:
             # Fallback to text if icon fails to load or not provided
-            text = font_14.render(tab['label'], False, WHITE)
+            text = font_12.render(tab['label'], False, WHITE)
             text_rect = text.get_rect(center=rect.center)
             self.surface.blit(text, text_rect)
 

@@ -377,7 +377,7 @@ class KeybindsMenuUI:
         pygame.draw.rect(screen, (45, 45, 45), header_rect, border_top_left_radius=10, border_top_right_radius=10)
         pygame.draw.line(screen, config.GRAY_80, header_rect.bottomleft, header_rect.bottomright, 2)
         
-        title_surf = config.font_14.render("Controls Configuration", False, config.WHITE)
+        title_surf = config.font_16.render("Controls Configuration", False, config.WHITE)
         screen.blit(title_surf, (header_rect.x + 20, header_rect.centery - title_surf.get_height() // 2))
 
         kb_is_active = self.active_tab == 'keyboard_mouse'
@@ -395,8 +395,8 @@ class KeybindsMenuUI:
         pygame.draw.rect(screen, config.WHITE, tab_kb_rect, width=1)
         pygame.draw.rect(screen, config.WHITE, tab_joy_rect, width=1)
 
-        kb_surf = config.font_14.render("Keyboard & Mouse", False, config.WHITE)
-        joy_surf = config.font_14.render("Controller Joystick", False, config.WHITE)
+        kb_surf = config.font_16.render("Keyboard & Mouse", False, config.WHITE)
+        joy_surf = config.font_16.render("Controller Joystick", False, config.WHITE)
         screen.blit(kb_surf, kb_surf.get_rect(center=tab_kb_rect.center))
         screen.blit(joy_surf, joy_surf.get_rect(center=tab_joy_rect.center))
 
@@ -432,7 +432,7 @@ class KeybindsMenuUI:
                 
                 pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
 
-                name_surf = config.font_14.render(name, False, config.WHITE)
+                name_surf = config.font_16.render(name, False, config.WHITE)
                 screen.blit(name_surf, (row_rect.x + int(10 * config.UI_SCALE), row_rect.centery - name_surf.get_height() // 2))
                 
                 btn_w = int(250 * config.UI_SCALE)
@@ -446,7 +446,7 @@ class KeybindsMenuUI:
                 if self.waiting_for_key == action:
                     pygame.draw.rect(screen, config.BLUE, key_btn_rect, border_radius=6)
                     pygame.draw.rect(screen, config.WHITE, key_btn_rect, width=2, border_radius=6)
-                    active_surf = config.font_14.render(display_text, False, config.WHITE)
+                    active_surf = config.font_16.render(display_text, False, config.WHITE)
                     screen.blit(active_surf, active_surf.get_rect(center=key_btn_rect.center))
 
             y_offset += self.item_height
@@ -462,12 +462,12 @@ class KeybindsMenuUI:
         reset_color = (220, 70, 70) if hovered else (200, 50, 50)
         pygame.draw.rect(screen, reset_color, reset_btn_rect, border_radius=4)
         pygame.draw.rect(screen, config.WHITE, reset_btn_rect, width=1, border_radius=4)
-        reset_txt = config.font_14.render("Reset Default", False, config.WHITE)
+        reset_txt = config.font_16.render("Reset Default", False, config.WHITE)
         screen.blit(reset_txt, (reset_btn_rect.centerx - reset_txt.get_width()//2, reset_btn_rect.centery - reset_txt.get_height()//2))
 
         if self.error_message:
             if pygame.time.get_ticks() - self.error_timer < 3000:
-                err_surf = config.font_14.render(self.error_message, False, config.RED)
+                err_surf = config.font_16.render(self.error_message, False, config.RED)
                 err_bg = pygame.Rect(0, 0, err_surf.get_width() + 40, err_surf.get_height() + 20)
                 err_bg.center = (center_x, back_btn_rect.bottom + int(30 * config.UI_SCALE)) 
                 

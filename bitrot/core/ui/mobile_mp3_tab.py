@@ -80,7 +80,7 @@ def draw_mp3_tab(surface, game, modal, assets):
             if getattr(item, 'image', None):
                 surface.blit(pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8)), slot_rect.move(4, 4))
             else:
-                text_surf = font_14.render("SD", False, YELLOW)
+                text_surf = font_12.render("SD", False, YELLOW)
                 surface.blit(text_surf, text_surf.get_rect(center=slot_rect.center))
                 
             if slot_rect.collidepoint(mouse_pos) and is_top_modal:
@@ -121,7 +121,7 @@ def draw_mp3_tab(surface, game, modal, assets):
         pygame.draw.rect(surface, color, ctrl_rect, 0, 3)
         pygame.draw.rect(surface, WHITE, ctrl_rect, 1, 3)
 
-        text_surf = font_14.render(ctrl['label'], False, WHITE)
+        text_surf = font_12.render(ctrl['label'], False, WHITE)
         surface.blit(text_surf, text_surf.get_rect(center=ctrl_rect.center))
 
     y_offset += control_h + 15
@@ -131,7 +131,7 @@ def draw_mp3_tab(surface, game, modal, assets):
     vol_h = 25
     vol_padding = 10
     vol_text = f"Vol: {int(state['volume'] * 100)}%"
-    vol_text_surf = font_14.render(vol_text, False, WHITE)
+    vol_text_surf = font_12.render(vol_text, False, WHITE)
     
     total_vol_w = vol_w * 2 + vol_padding * 2 + vol_text_surf.get_width()
     vol_start_x = center_x - (total_vol_w // 2)
@@ -141,7 +141,7 @@ def draw_mp3_tab(surface, game, modal, assets):
     col_down = GRAY_40 if btn_down.collidepoint(mouse_pos) and is_top_modal else GRAY_60
     pygame.draw.rect(surface, col_down, btn_down, 0, 3)
     pygame.draw.rect(surface, WHITE, btn_down, 1, 3)
-    lbl_down = font_14.render("-", False, WHITE)
+    lbl_down = font_12.render("-", False, WHITE)
     surface.blit(lbl_down, lbl_down.get_rect(center=btn_down.center))
     if clicked and btn_down.collidepoint(mouse_pos) and is_top_modal:
         handle_control(game, 'vol_down')
@@ -155,7 +155,7 @@ def draw_mp3_tab(surface, game, modal, assets):
     col_up = GRAY_40 if btn_up.collidepoint(mouse_pos) and is_top_modal else GRAY_60
     pygame.draw.rect(surface, col_up, btn_up, 0, 3)
     pygame.draw.rect(surface, WHITE, btn_up, 1, 3)
-    lbl_up = font_14.render("+", False, WHITE)
+    lbl_up = font_12.render("+", False, WHITE)
     surface.blit(lbl_up, lbl_up.get_rect(center=btn_up.center))
     if clicked and btn_up.collidepoint(mouse_pos) and is_top_modal:
         handle_control(game, 'vol_up')
@@ -187,7 +187,7 @@ def draw_mp3_tab(surface, game, modal, assets):
             
         display_text += length_str
             
-        track_surf = font_14.render(display_text, False, WHITE)
+        track_surf = font_12.render(display_text, False, WHITE)
         surface.blit(track_surf, track_surf.get_rect(center=(center_x, y_offset)))
         
     # --- Render Tooltip over everything else ---

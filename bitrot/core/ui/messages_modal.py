@@ -45,13 +45,13 @@ def draw_messages_modal(surface, game, modal, assets):
     
     modal['content_rect'] = content_rect 
 
-    def wrap_text(text, font, max_width):
+    def wrap_text(text, font_12, max_width):
         words = text.split(' ')
         lines = []
         current_line = []
         for word in words:
             test_line = ' '.join(current_line + [word]) if current_line else word
-            if font.size(test_line)[0] <= max_width:
+            if font_12.size(test_line)[0] <= max_width:
                 current_line.append(word)
             else:
                 if current_line:
@@ -67,10 +67,10 @@ def draw_messages_modal(surface, game, modal, assets):
     max_text_width = max(50, content_width - 15)
     wrapped_log = []
     for msg in active_log:
-        wrapped_log.extend(wrap_text(msg, font_14, max_text_width))
+        wrapped_log.extend(wrap_text(msg, font_12, max_text_width))
 
     # --- Draw Messages (Bottom-Up Alignment) ---
-    line_height = font_14.get_height() + 4
+    line_height = font_12.get_height() + 4
     total_text_height = len(wrapped_log) * line_height
     
     # Calculate max scroll (how much we CAN scroll)
@@ -131,7 +131,7 @@ def draw_messages_modal(surface, game, modal, assets):
             if y_pos > content_height:
                 break
                 
-            txt_surf = font_14.render(msg, False, WHITE)
+            txt_surf = font_12.render(msg, False, WHITE)
             content_surface.blit(txt_surf, (5, y_pos))
             y_pos += line_height
 
@@ -147,7 +147,7 @@ def draw_messages_modal(surface, game, modal, assets):
     pygame.draw.rect(surface, (0, 0, 0), input_rect)
     pygame.draw.rect(surface, border_col, input_rect, 1)
     
-    input_surf = font_14.render(game.chat_input_text, False, WHITE)
+    input_surf = font_12.render(game.chat_input_text, False, WHITE)
     area_width = input_rect.width - 10
     if input_surf.get_width() > area_width:
         crop_area = pygame.Rect(input_surf.get_width() - area_width, 0, area_width, input_surf.get_height())
@@ -166,7 +166,7 @@ def draw_messages_modal(surface, game, modal, assets):
     pygame.draw.rect(surface, btn_col, send_btn_rect, border_radius=4)
     pygame.draw.rect(surface, WHITE, send_btn_rect, 1, border_radius=4)
     
-    send_txt = font_14.render("Send", False, WHITE)
+    send_txt = font_12.render("Send", False, WHITE)
     txt_rect = send_txt.get_rect(center=send_btn_rect.center)
     surface.blit(send_txt, txt_rect)
 

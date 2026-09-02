@@ -72,7 +72,7 @@ class BaseModal:
         pygame.draw.rect(self.surface, header_color, header_rect, 0, border_top_left_radius=4, border_top_right_radius=4)
         pygame.draw.rect(self.surface, border_color, header_rect, 1, border_top_left_radius=4, border_top_right_radius=4)
         
-        title_text = font.render(self.title, False, WHITE)
+        title_text = font_12.render(self.title, False, WHITE)
         self.surface.blit(title_text, (self.modal_x + 10, self.modal_y + 10))
         self.surface.blit(self.assets['close_button'], self.close_button_rect)
 

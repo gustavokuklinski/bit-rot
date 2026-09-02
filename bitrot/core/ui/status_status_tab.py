@@ -61,7 +61,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
             surface.blit(icon, (col1_x, y_pos))
             label_x = col1_x + 28
         else:
-            text = font_14.render(f"{name}:", False, WHITE)
+            text = font_12.render(f"{name}:", False, WHITE)
             surface.blit(text, (col1_x, y_pos))
             label_x = col1_x + 40
 

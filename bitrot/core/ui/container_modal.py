@@ -77,12 +77,12 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
             
             if show_count:
                 try:
-                    from core.ui.inventory_modal import draw_text_shadow, font_14
-                    draw_text_shadow(surface, font_14, str(int(item.load)), WHITE, 
+                    from core.ui.inventory_modal import draw_text_shadow, font_12
+                    draw_text_shadow(surface, font_12, str(int(item.load)), WHITE, 
                                    (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
                 except ImportError:
-                    from core.data.config import font
-                    stack_text = font.render(str(int(item.load)), False, WHITE)
+                    from core.data.config import font_12
+                    stack_text = font_12.render(str(int(item.load)), False, WHITE)
                     text_rect = stack_text.get_rect(bottomright=(slot_rect.right - 5, slot_rect.bottom - 2))
                     surface.blit(stack_text, text_rect)
 

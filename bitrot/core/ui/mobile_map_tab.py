@@ -409,8 +409,8 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                         pygame.draw.circle(surface, (0, 0, 0), (int(q_center_x), int(q_center_y)), int(marker_radius), 1)
                         
                         # Add the '!' in the center
-                        if 'font_14' in globals():
-                            excl_surf = font_14.render("!", False, (0, 0, 0))
+                        if 'font_12' in globals():
+                            excl_surf = font_12.render("!", False, (0, 0, 0))
                             excl_rect = excl_surf.get_rect(center=(int(q_center_x), int(q_center_y)))
                             surface.blit(excl_surf, excl_rect)
 

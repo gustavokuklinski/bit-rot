@@ -83,7 +83,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
 
                 elif line.startswith("# "):
                     title_txt = line[2:].strip().replace("**", "")
-                    title_surf = font_14.render(title_txt, False, WHITE)
+                    title_surf = font_16.render(title_txt, False, WHITE)
                     current_tab['layout'].append({
                         'type': 'text', 
                         'surf': title_surf, 
@@ -98,31 +98,31 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
                         desc_txt = bold_match.group(2).strip()
                         if desc_txt.startswith(":"): desc_txt = desc_txt[1:].strip()
                             
-                        font_14.set_bold(True)
-                        key_surf = font_14.render(key_txt, False, WHITE)
-                        font_14.set_bold(False)
+                        font_16.set_bold(True)
+                        key_surf = font_16.render(key_txt, False, WHITE)
+                        font_16.set_bold(False)
                         
                         current_tab['layout'].append({'type': 'text', 'surf': key_surf, 'pos': (S(30), current_tab['curr_y'])})
                         
                         ALIGN_X = S(240)
                         desc_x = S(30) + max(ALIGN_X, key_surf.get_width() + S(15))
                         
-                        wrapped = wrap_text(desc_txt, usable_w - desc_x - S(15), font_14)
+                        wrapped = wrap_text(desc_txt, usable_w - desc_x - S(15), font_16)
                         
                         temp_y = current_tab['curr_y']
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, False, WHITE)
+                            l_surf = font_16.render(w_line, False, WHITE)
                             current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (desc_x, temp_y)})
-                            temp_y += font_14.get_height() + S(4)
+                            temp_y += font_16.get_height() + S(4)
                             
-                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_14.get_height() + S(4), temp_y) + S(6)
+                        current_tab['curr_y'] = max(current_tab['curr_y'] + font_16.get_height() + S(4), temp_y) + S(6)
                     else:
                         i_txt = "• " + line[2:].strip().replace("**", "")
-                        wrapped = wrap_text(i_txt, usable_w - S(30), font_14)
+                        wrapped = wrap_text(i_txt, usable_w - S(30), font_16)
                         for w_line in wrapped:
-                            l_surf = font_14.render(w_line, False, WHITE)
+                            l_surf = font_16.render(w_line, False, WHITE)
                             current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (S(30), current_tab['curr_y'])})
-                            current_tab['curr_y'] += font_14.get_height() + S(4)
+                            current_tab['curr_y'] += font_16.get_height() + S(4)
                         current_tab['curr_y'] += S(6)
 
                 elif line.startswith("![") and "](" in line and line.endswith(")"):
@@ -172,11 +172,11 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
 
                 else:
                     p_txt = line.replace("**", "")
-                    wrapped = wrap_text(p_txt, usable_w - S(30), font_14)
+                    wrapped = wrap_text(p_txt, usable_w - S(30), font_16)
                     for w_line in wrapped:
-                        l_surf = font_14.render(w_line, False, WHITE)
+                        l_surf = font_16.render(w_line, False, WHITE)
                         current_tab['layout'].append({'type': 'text', 'surf': l_surf, 'pos': (S(15), current_tab['curr_y'])})
-                        current_tab['curr_y'] += font_14.get_height() + S(4)
+                        current_tab['curr_y'] += font_16.get_height() + S(4)
                     current_tab['curr_y'] += S(6)
 
             current_tab['total_h'] = current_tab['curr_y']
@@ -242,7 +242,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1)
                 
-                tab_text = font_14.render(tab['title'], False, WHITE)
+                tab_text = font_16.render(tab['title'], False, WHITE)
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
@@ -251,7 +251,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             pygame.draw.rect(surface, GRAY_60, tab_rect)
             pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
-            tab_text = font_14.render(tabs[active_tab_idx]['title'], False, WHITE)
+            tab_text = font_16.render(tabs[active_tab_idx]['title'], False, WHITE)
             text_rect = tab_text.get_rect(center=tab_rect.center)
             surface.blit(tab_text, text_rect)
 
@@ -337,7 +337,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         bar_bg_rect = pygame.Rect(0, 0, bar_w, bar_h)
         bar_bg_rect.center = (center_x, center_offset_y + S(640))
                
-        loading_text = font_14.render(tr('ui', "Loading..."), False, WHITE)
+        loading_text = font_16.render(tr('ui', "Loading..."), False, WHITE)
         loading_rect = loading_text.get_rect(center=bar_bg_rect.center)
         surface.blit(loading_text, loading_rect)
         return None
@@ -354,7 +354,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         pygame.draw.rect(surface, bg_color, btn_rect, border_radius=6)
         
         btn_text_str = tr('ui', "Back") if is_main_menu_help else tr('ui', "Click to start")
-        btn_text = font_14.render(btn_text_str, False, text_color)
+        btn_text = font_16.render(btn_text_str, False, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
         surface.blit(btn_text, text_rect)
         
