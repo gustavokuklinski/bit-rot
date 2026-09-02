@@ -1,6 +1,8 @@
 # Controls
 
 ### System controls
+- **F2 / ESC**: Pause and save
+- **F4**: Default modal positions
 - **F11**: Toggle full screen (works in game)
 
 ### In game controls
@@ -19,7 +21,7 @@
 - **E**: open or close door, enter vehicle
 - **R**: Reload weapon
 - **Q**: Start vehicle engine
-- **SPACE**: Break vehicle, wake up from sleep
+- **SPACE**: Stop/Break vehicle
 
 **Modals**
 - **I**: Opens Inventory
@@ -29,9 +31,6 @@
 - **C**: Open Craft
 - **M / ENTER**: Open Messages (enter enable chat mode)
 - **TAB**: Close/Open latest open modals
-
-**System**
-- **F2 / ESC**: Pause and save
 
 ## Chat debug commands (Cheat codes):
 * `%rot item "[Item name]" [number]`: Spawn an item to player inventory;
