@@ -4,7 +4,7 @@
         <weight weight="0.001" />
     </properties>
     <attributes>
-        <lucky value="2" />
+        <lucky value="1" />
     </attributes>
     <spawn chance="10" />
 </item>

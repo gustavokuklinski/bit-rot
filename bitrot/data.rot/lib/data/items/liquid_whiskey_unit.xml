@@ -1,6 +1,7 @@
 <item name="Whiskey Unit" type="liquid" liquid="true">
     <properties>
-        <restore status="[water]" value="5" />
+        <restore status="[water]" value="2" />
+        <reduce status="[anxiety]" value="8" />
         <load min="1" max="100" />
         <capacity value="100" />
         <weight weight="0.001" />

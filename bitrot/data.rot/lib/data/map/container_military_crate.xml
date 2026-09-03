@@ -26,6 +26,7 @@
         <item item="Medical Kit" chance="1.0" />
         <item item="Sewing Kit" chance="1.0" />
         <item item="Island Map" chance="1.0" />
-
+        <item item="Whiskey Bottle" chance="1.0" />
+        <item item="Flask" chance="1.0" />
     </loot>
 </map>

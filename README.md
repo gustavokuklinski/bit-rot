@@ -47,7 +47,7 @@ Double click on: `BITROT.bat`
 
 ```shell
 # Open CMD or Powershell
-C:\bit-rot\: BITROT.bat
+C:\bit-rot\> BITROT.bat
 ```
 
 ---

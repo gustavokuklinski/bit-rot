@@ -1,4 +1,7 @@
-<map name="outside_wooden_door_01_close" type="maptile" char="outside_wooden_door_01_close" state="close" is_obstacle="true">
+<map name="outside_wooden_door_01_close" type="maptile" char="outside_wooden_door_01_close" state="close" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
     <visuals>
         <sprite id="close" file="outside_wooden_door_01_close.png" />
     </visuals>

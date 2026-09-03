@@ -14,6 +14,7 @@
         <item item="Magazine" chance="1.0" />
         <item item="Mobile off" chance="1.0" />
         <item item="Flask" chance="1.0" />
+        <item item="Whiskey Bottle" chance="1.0" />
         <item item="Mobile off" chance="1.0" />
     </loot>
 </map>
