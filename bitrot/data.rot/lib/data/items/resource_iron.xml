@@ -2,7 +2,7 @@
     <properties>
         <load min="1" max="100" />
         <weight weight="0.001"/>
-        <capacity value="1" />
+        <capacity value="100" />
         <sprite file="resource_iron.png" />
     </properties>
     <spawn chance="1" />

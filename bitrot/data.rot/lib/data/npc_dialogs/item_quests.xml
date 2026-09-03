@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='utf-8'?>
+<npc_dialog>
+    <node id="proc_quest">
+        <player_question p="Ouvir na rádio that a group is starving in the jungle." />
+        <player_question p="Heard a signal... someone needs help near the rigs, cara." />
+        <player_question p="The survivors are desperate, mate. Any leads?" />
+        <player_question p="People are talking about a stash... is it real, amigo?" />
+        <player_question p="Diga me, who's the one looking for extra hands?" />
+        <player_question p="I heard a whisper on the comms about a supply run." />
+        <player_question p="Is there anyone left in this island worth saving, brother?" />
+        <player_question p="I found a note from a contractor. Something about a missing {item}." />
+        <player_question p="Opa, is it true the Gethulius guys left some gear behind?" />
+        <player_question p="The radio is static, but I caught a name. You know them?" />
+        <player_question p="Everyone is dying for a bit of scrap. What's the job?" />
+        <player_question p="Hola, are you the one looking for a fix-it guy?" />
+        <player_question p="They say the military left a {item} near the docks." />
+        <player_question p="I want to help, but only if the price is right, entendeu?" />
+        <player_question p="The jungle is screaming today. Any work to keep me busy?" />
+        <player_question p="Escucha, I heard a group is bunkered down in the lab." />
+        <player_question p="Is there a bounty for finding lost corporate property?" />
+        <player_question p="They said you have the coordinates for the supply drop." />
+        <player_question p="Pelo amor de Deus, someone has to do something about this." />
+        <player_question p="The archipelago is quiet... too quiet. Where are the survivors?" />
+
+        <npc_awnser n="Dios says we should share, but first, find me a {item}." />
+        <npc_awnser n="If you find a {item}, maybe I’ll tell you who’s still breathing." />
+        <npc_awnser n="Survival isn't free, cara. Go get me a {item} first." />
+        <npc_awnser n="The group is dead if they don't get a {item} soon, brother." />
+        <npc_awnser n="I don't trust the radio, but I trust a man with a {item}." />
+        <npc_awnser n="The Rosskrild vault is locked. We need a {item} to bypass it." />
+        <npc_awnser n="Mierda, everyone wants something. Find a {item} and we talk." />
+        <npc_awnser n="Charity died with the mainland. Get a {item} or vaza!" />
+        <npc_awnser n="God helps those who find a {item} for the group, amigo." />
+        <npc_awnser n="It’s a tropical hell out there. You'll need a {item} to survive." />
+        <npc_awnser n="The contract is simple: bring me a {item} and don't get bit." />
+        <npc_awnser n="I have the intel, but it’s gonna cost you one {item}." />
+        <npc_awnser n="Don't look at me like that. This island eats the weak without a {item}." />
+        <npc_awnser n="Exxoil left a lot of junk, but we specifically need a {item}." />
+        <npc_awnser n="You want to be a hero? Fine. Start by finding a {item}." />
+        <npc_awnser n="Tudo bem, freelancer. Find that {item} and I'll pay you in hope." />
+        <npc_awnser n="There’s a group in the shadows waiting for a {item} to move." />
+        <npc_awnser n="Pray all you want, but a {item} will save you faster than Jesus." />
+        <npc_awnser n="The alliance is watching. Show them you’re useful, find a {item}." />
+        <npc_awnser n="Greed is the only thing left. Bring a {item} and I'll share the loot." />
+    </node>
+
+    <node id="proc_end_quest">
+        <player_question p="Psst... look what I found. Ready to trade, brother?" />
+        <player_question p="I got the {item}. Now where’s my cut, caramba?" />
+        <player_question p="Ouvir, I have the goods. Is the coast clear?" />
+        <player_question p="Aqui está, one {item} as requested. Don't spend it all at once." />
+        <player_question p="The rotters almost got me for this {item}, amigo." />
+        <player_question p="I have the {item}. Tell me it was worth the blood." />
+        <player_question p="Check it out, the {item} is clean. Pay up, cara." />
+        <player_question p="Is this what you wanted? This {item} cost me a lot of sweat." />
+        <player_question p="Hola, I’m back from the jungle with your {item}." />
+        <player_question p="Business is booming, right? I got your {item} right here." />
+        <player_question p="Take this {item} and tell the group I’m not a rotter." />
+        <player_question p="The deal is done. I have the {item}, you have the rewards." />
+        <player_question p="Mierda, it was hard to find, but I have the {item}." />
+        <player_question p="One {item}, fresh from the ruins. What do I get?" />
+        <player_question p="I don't have all day, brother. Here is the {item}." />
+        <player_question p="You see this? This {item} is the ticket out of here." />
+        <player_question p="I risked my neck for this {item}. It better be worth it." />
+        <player_question p="The shadow partners will be happy. I have the {item}." />
+        <player_question p="Opa, mission accomplished. The {item} is yours." />
+        <player_question p="Let’s make this fast. Here is the {item}. Give me the goods." />
+
+        <npc_awnser n="The gambler always takes all... but you can have this {reward_item}." />
+        <npc_awnser n="Everything has a price for the bidder. Take this {reward_item}." />
+        <npc_awnser n="Opa! This {item} is perfect. Here’s a {reward_item} for your trouble." />
+        <npc_awnser n="You’re a good fix-it guy, cara. Take this {reward_item} and sume." />
+        <npc_awnser n="Mierda, you actually survived. Here, take this {reward_item}." />
+        <npc_awnser n="The corporate web is tangled, but this {reward_item} is yours." />
+        <npc_awnser n="Fair trade, amigo. A {reward_item} for a piece of the past." />
+        <npc_awnser n="Don't tell anyone where you got this {reward_item}, entendeu?" />
+        <npc_awnser n="God provides... through people like you. Take the {reward_item}." />
+        <npc_awnser n="Business is booming indeed. Here is your {reward_item}, brother." />
+        <npc_awnser n="The jungle didn't eat you? Impressive. Take this {reward_item}." />
+        <npc_awnser n="I hope this {reward_item} keeps you alive another hour, mate." />
+        <npc_awnser n="The Silva family sends their regards. Here’s a {reward_item}." />
+        <npc_awnser n="Take the {reward_item} and keep your mouth shut, okay?" />
+        <npc_awnser n="One man's trash is another man's {reward_item}. Vaza now." />
+        <npc_awnser n="You’ve earned this {reward_item}. Try not to die on the way back." />
+        <npc_awnser n="Greed is good, but staying alive is better. Have a {reward_item}." />
+        <npc_awnser n="Nice work, contractor. This {reward_item} should help you out." />
+        <npc_awnser n="The islands are hell, but at least you have this {reward_item} now." />
+        <npc_awnser n="Porra, finally! Take this {reward_item} and leave me alone." />
+    </node>
+
+    <node id="proc_items_quest">
+        <npc_rqst rqst_item="[Infection Pills]" />
+        <npc_rqst rqst_item="[Medical Bandage]" />
+        <npc_rqst rqst_item="[Plastic Bottle]" />
+        <npc_rqst rqst_item="[Canned Food]" />
+        <npc_rqst rqst_item="[Powerbank]" />
+        <npc_rqst rqst_item="[Pistol 9mm]" />
+        <npc_rqst rqst_item="[Shotgun Shells]" />
+        <npc_rqst rqst_item="[Blueprint]" />
+        <npc_rqst rqst_item="[Car Key Jeep]" />
+        <npc_rqst rqst_item="[Vaccine]" />
+        <npc_rqst rqst_item="[Car Key Ambulance]" />
+        <npc_rqst rqst_item="[Family Photo]" />
+
+        <player_award award_item="[Money WBRL]" />
+        <player_award award_item="[Medical Kit]" />
+        <player_award award_item="[Infection Pills]" />
+        <player_award award_item="[Medical Bandage]" />
+        <player_award award_item="[Plastic Bottle]" />
+        <player_award award_item="[Canned Food]" />
+        <player_award award_item="[Powerbank]" />
+        <player_award award_item="[Pistol 9mm]" />
+        <player_award award_item="[Shotgun Shells]" />
+        <player_award award_item="[Blueprint]" />
+        <player_award award_item="[Car Key Jeep]" />
+        <player_award award_item="[Vaccine]" />
+    </node>
+</npc_dialog>

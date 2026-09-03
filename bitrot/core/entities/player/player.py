@@ -179,9 +179,11 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
     def current_weight(self):
         total = 0.0
         for item in self.belt:
-             if item: total += item.get_total_weight()* 0.85
+             if item: # FIX: Check if item exists before calling method
+                total += item.get_total_weight()* 0.85
         for item in self.inventory:
-             total += item.get_total_weight() 
+             if item: # FIX: Check if item exists before calling method
+                total += item.get_total_weight() 
         for item in self.clothes.values():
              if item: total += item.get_total_weight()* 0.85
         return total

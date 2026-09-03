@@ -294,6 +294,28 @@ def handle_mouse_up(game, event, mouse_pos):
 
                 # --- Drop on INVENTORY/MODALS ---
                 for modal in reversed(game.modals):
+                    if modal.get('type') == 'npc_dialog' and modal.get('active_tab_index') == 2:
+                        drop_zone = modal.get('trade_drop_zone_rect')
+                        if drop_zone and drop_zone.collidepoint(mouse_pos):
+                            # We accept ANY item into the offer zone, validate upon trade click!
+                            modal['trade_offered_item'] = game.dragged_item
+                            modal['trade_message'] = ""
+                            
+                            # Safely return the item to its original slot in the background
+                            # to prevent data loss if the player closes the window mid-trade.
+                            if type_orig == 'inventory':
+                                game.player.inventory.insert(i_orig, game.dragged_item)
+                            elif type_orig == 'belt':
+                                game.player.belt[i_orig] = game.dragged_item
+                                game.dragged_item.in_belt = True
+                            elif type_orig == 'gear':
+                                game.player.clothes[i_orig] = game.dragged_item
+                            else:
+                                game.player.inventory.append(game.dragged_item)
+                                
+                            dropped_successfully = True
+                            break
+
                     tab_drop_handled = False
                     if 'tab_rects' in modal and modal['tab_rects']:
                         for i, tab_rect in enumerate(modal['tab_rects']):
@@ -1388,6 +1410,19 @@ def find_item_at_pos(game, mouse_pos):
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             return item
+
+        elif modal['type'] == 'npc_dialog':
+            if modal.get('active_tab_index') == 2:
+                # Check NPC tradable items
+                for slot_data in modal.get('trade_slot_rects', []):
+                    if slot_data['rect'].collidepoint(mouse_pos):
+                        return slot_data['item']
+                # Check player's offered item
+                drop_zone = modal.get('trade_drop_zone_rect')
+                if drop_zone and drop_zone.collidepoint(mouse_pos):
+                    offered_item = modal.get('trade_offered_item')
+                    if offered_item:
+                        return offered_item
 
         elif modal['type'] == 'nearby':
             active_tab_label = modal.get('active_tab')

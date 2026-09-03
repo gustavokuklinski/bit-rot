@@ -91,9 +91,12 @@ $ python bitrot/editor.py
 
 ## 📦 Building Executables
 
-Compile the game into standalone executables (`.bin`, `.exe`, or `.app`) using [Nuitka](https://nuitka.net/).
+You can compile the game into standalone executables (`.bin`, `.exe`, or `.app`) using either Nuitka or PyInstaller.
 
-### 🐧 Linux
+### 🛠️ Option 1: Using Nuitka (Recommended for Performance)
+Compile the game using [Nuitka](https://nuitka.net/).
+
+#### 🐧 Linux
 ```bash
 # Build the game (packed into a single file)
 $ nuitka --onefile --include-data-dir=./bitrot/game=game ./bitrot/bitrot.py
@@ -106,30 +109,53 @@ $ nuitka --onefile --output-dir=./build ./bitrot/bitrot.py
 $ nuitka --onefile --output-dir=./build ./bitrot/editor.py
 ```
 
-### 🪟 Windows
+#### 🪟 Windows
 ```bash
 # Build the game with a custom icon and no console window
-$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
+$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
 
 # Build the editor with a custom icon and no console window
-$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
+$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
+```
+
+#### 🍎 macOS
+```bash
+# Build the game as an application bundle
+$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
+
+# Build the editor as an application bundle
+$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
 ```
 
 > **⚠️ Note:** Windows Defender may flag the executable as a false positive due to Nuitka's packaging method. This is normal—you can safely add an exception.
 
-### 🍎 macOS
-```bash
-# Build the game as an application bundle
-$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
+---
 
-# Build the editor as an application bundle
-$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
+### 🛠️ Option 2: Using PyInstaller
+If you prefer [PyInstaller](https://pyinstaller.org/), follow these steps. First, install the package:
+```bash
+$ pip install pyinstaller
 ```
 
-After the build finishes, you may need to remove the quarantine attribute before running the `.app`:
+#### 🐧 Linux & 🍎 macOS
 ```bash
-$ xattr -cr bitrot.app
+# Build the game
+$ pyinstaller --onefile --add-data "bitrot/game:game" bitrot/bitrot.py
+
+# Build the editor
+$ pyinstaller --onefile --add-data "bitrot/game:game" bitrot/editor.py
 ```
+
+#### 🪟 Windows
+```bash
+# Build the game (no console, custom icon)
+$ pyinstaller --onefile --noconsole --add-data "bitrot/game;game" --icon=./bitrot/data.rot/icons/favicon.ico bitrot/bitrot.py
+
+# Build the editor (no console, custom icon)
+$ pyinstaller --onefile --noconsole --add-data "bitrot/game;game" --icon=./bitrot/data.rot/icons/favicon.ico bitrot/editor.py
+```
+
+*Note: PyInstaller outputs the final executable in the `dist/` folder.*
 
 ---
 

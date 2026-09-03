@@ -17,46 +17,48 @@ def load_quests():
         return _QUESTS_CACHE
         
     _QUESTS_CACHE = []
-   
 
-    # 1. Load Standard Handcrafted Quests from XML
-    dialogs_path = os.path.join(DATA_PATH, 'npc/dialogs.xml')
-    if os.path.exists(dialogs_path):
-        try:
-            tree = ET.parse(dialogs_path)
-            root = tree.getroot()
-            for node in root.iter('node'):
-                node_id = node.get('id', '')
-                if node_id.lower().startswith('quest:'):
-                    quest_name = node_id[6:].strip() 
-                    raw_item_str = None
-                    tip = "No tip provided"
-                    complete_flag = quest_name
-                    
-                    for options in node.findall('options') + node.findall('option'):
-                        if options.get('rqst_item'): raw_item_str = options.get('rqst_item')
-                        elif not raw_item_str and options.get('award_item'): raw_item_str = options.get('award_item')
-                        if options.get('tip'): tip = options.get('tip')
-                        if options.get('complete_flag'): complete_flag = options.get('complete_flag').strip()
-                        
-                    rqst_item = None
-                    if raw_item_str:
-                        cleaned_str = raw_item_str.replace('[', '').replace(']', '')
-                        rqst_item = cleaned_str.split(',')[0].strip()
-                        
-                    item = Item.create_from_name(rqst_item) if rqst_item else None
-                        
-                    _QUESTS_CACHE.append({
-                        'node_id': node_id,  
-                        'name': quest_name,
-                        'rqst_item_name': rqst_item,
-                        'item_obj': item,
-                        'tip': tip,
-                        'complete_flag': complete_flag,
-                        'is_procedural': False 
-                    })
-        except Exception as e:
-            print(f"Error loading quests from dialogs.xml: {e}")
+    # 1. Load Standard Handcrafted Quests from XML (Now iterates through npc_dialogs)
+    dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
+    if os.path.exists(dialogs_dir):
+        for filename in os.listdir(dialogs_dir):
+            if filename.endswith('.xml'):
+                filepath = os.path.join(dialogs_dir, filename)
+                try:
+                    tree = ET.parse(filepath)
+                    root = tree.getroot()
+                    for node in root.iter('node'):
+                        node_id = node.get('id', '')
+                        if node_id.lower().startswith('quest:'):
+                            quest_name = node_id[6:].strip() 
+                            raw_item_str = None
+                            tip = "No tip provided"
+                            complete_flag = quest_name
+                            
+                            for options in node.findall('options') + node.findall('option'):
+                                if options.get('rqst_item'): raw_item_str = options.get('rqst_item')
+                                elif not raw_item_str and options.get('award_item'): raw_item_str = options.get('award_item')
+                                if options.get('tip'): tip = options.get('tip')
+                                if options.get('complete_flag'): complete_flag = options.get('complete_flag').strip()
+                                
+                            rqst_item = None
+                            if raw_item_str:
+                                cleaned_str = raw_item_str.replace('[', '').replace(']', '')
+                                rqst_item = cleaned_str.split(',')[0].strip()
+                                
+                            item = Item.create_from_name(rqst_item) if rqst_item else None
+                                
+                            _QUESTS_CACHE.append({
+                                'node_id': node_id,  
+                                'name': quest_name,
+                                'rqst_item_name': rqst_item,
+                                'item_obj': item,
+                                'tip': tip,
+                                'complete_flag': complete_flag,
+                                'is_procedural': False 
+                            })
+                except Exception as e:
+                    print(f"Error loading quests from {filename}: {e}")
 
     # 2. Load Procedural Quests directly from the dynamic quests.rot
     quests_rot_path = NPCDialog.QUESTS_FILE_PATH

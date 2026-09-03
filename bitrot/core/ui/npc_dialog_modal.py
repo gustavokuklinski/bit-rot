@@ -5,6 +5,9 @@ from core.data.localization import tr
 from core.ui.tabs import Tabs
 from core.ui.npc_special_dialogs_tab import draw_special_dialogs_tab
 
+# --- [NEW] Import Trade Tab ---
+from core.ui.npc_trade_tab import draw_trade_tab
+
 COL_1_WIDTH = 180  
 PADDING = 20
 
@@ -29,7 +32,7 @@ def get_wrapped_lines(text, font_12, max_width):
 def get_npc_dialog_option_rect(modal_pos, index, dialogs, scroll_offset_y=0):
     x, y = modal_pos
     start_x = x + COL_1_WIDTH + PADDING
-    start_y = y + 80 - scroll_offset_y  # Subtract the offset so it scrolls up
+    start_y = y + 80 - scroll_offset_y  
     option_width = NPC_DIALOG_MODAL_WIDTH - COL_1_WIDTH - PADDING - 20
     
     extra_y = 0
@@ -60,19 +63,12 @@ def draw_tabs(surface, font_12, x, y, tabs, active_index, total_width):
     
     for i, tab_name in enumerate(tabs):
         rect = pygame.Rect(x + (i * tab_width), y, tab_width, tab_height)
-        
-        # Determine tab color
         color = GRAY_60 if i == active_index else DARK_GRAY
-        
-        # Draw background and border
         pygame.draw.rect(surface, color, rect)
         pygame.draw.rect(surface, WHITE, rect, 1)
-        
-        # Draw text centered in the tab
         text_surf = font_12.render(tab_name, True, WHITE)
         text_rect = text_surf.get_rect(center=rect.center)
         surface.blit(text_surf, text_rect)
-        
         tab_rects.append(rect)
         
     return tab_rects
@@ -88,7 +84,6 @@ def draw_npc_dialog_modal(surface, modal, game):
     width, height = modal['rect'].size
     npc = modal['npc']
     
-    # Left Column (Stats/Portrait)
     scale_factor = 10
     if hasattr(npc, 'image') and npc.image:
         portrait_size = (npc.image.get_width() * scale_factor, npc.image.get_height() * scale_factor)
@@ -120,13 +115,13 @@ def draw_npc_dialog_modal(surface, modal, game):
         stat_surf = font_12.render(stat, True, WHITE)
         surface.blit(stat_surf, (stats_x, stats_start_y + (i * line_height)))
 
-    # Right Column (Tabs & Content)
     col2_x = x + COL_1_WIDTH + PADDING
     text_area_width = width - COL_1_WIDTH - PADDING - 20
     
-    # --- [NEW] Draw Tabs ---
     active_tab = modal.get('active_tab_index', 0)
-    tabs = [tr('dialog', 'Current Dialog'), tr('dialog', 'Special Dialogs')]
+    
+    # --- [NEW] Add Trade to tabs list ---
+    tabs = [tr('dialog', 'Current Dialog'), tr('dialog', 'Special Dialogs'), tr('dialog', 'Trade')]
     tab_rects = draw_tabs(surface, font_12, col2_x, y + 40, tabs, active_tab, text_area_width)
     modal['tab_rects'] = tab_rects
     
@@ -136,18 +131,15 @@ def draw_npc_dialog_modal(surface, modal, game):
     if active_tab == 0:
         active_index = modal.get('active_dialog_index', -1)
         
-        # [FIX 2] Prevent crash if a new NPC has fewer dialogs than the previous one
         if active_index >= len(dialogs):
             active_index = -1
             modal['active_dialog_index'] = -1
             
-        # Determine scrollbar viewport
         viewport_height = height - (content_y - y) - PADDING
             
         if active_index == -1:
             mouse_pos = pygame.mouse.get_pos()
             
-            # --- [OPTIMIZATION] Cache Layout and Wrapped Lines ---
             opt_width = text_area_width - 20
             cache_key = f"dialog_list_{id(dialogs)}_{opt_width}"
             
@@ -186,7 +178,6 @@ def draw_npc_dialog_modal(surface, modal, game):
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
 
-            # --- [ADDED] Mouse Drag Math ---
             mouse_pressed = pygame.mouse.get_pressed()[0]
             if not mouse_pressed:
                 modal['is_dragging_scrollbar'] = False
@@ -201,7 +192,6 @@ def draw_npc_dialog_modal(surface, modal, game):
             scroll_offset_y = max(0, min(modal.get('scroll_offset_y', 0), max_scroll))
             modal['scroll_offset_y'] = scroll_offset_y
 
-            # --- Apply Surface Clipping ---
             clip_rect = pygame.Rect(col2_x, content_y, text_area_width + 15, viewport_height)
             original_clip = surface.get_clip()
             surface.set_clip(clip_rect)
@@ -231,17 +221,14 @@ def draw_npc_dialog_modal(surface, modal, game):
                     q_line_surf = font_12.render(line, True, color)
                     surface.blit(q_line_surf, (rect.x + 10, rect.y + 5 + (line_idx * 20)))
 
-            # Restore original clip so we don't mess up other rendering
             surface.set_clip(original_clip)
             
-            # --- Draw the visible Scrollbar ---
             bar_rect = pygame.Rect(col2_x + text_area_width + 2, content_y, 8, viewport_height)
             draw_scrollbar(surface, modal, bar_rect, viewport_height, total_height, scroll_offset_y)
                 
         else:
             selected_opt = dialogs[active_index]
             
-            # --- [OPTIMIZATION] Cache Active Dialog Text Wrapping ---
             cache_key = f"dialog_active_{id(selected_opt)}_{text_area_width}"
             if modal.get('dialog_active_cache_key') != cache_key:
                 q_text_str = f"{tr('dialog', 'You:')} {selected_opt['q']}"
@@ -264,7 +251,6 @@ def draw_npc_dialog_modal(surface, modal, game):
             max_scroll = max(0, total_height - viewport_height)
             modal['max_scroll_offset'] = max_scroll
             
-            # --- [ADDED] Mouse Drag Math ---
             mouse_pressed = pygame.mouse.get_pressed()[0]
             if not mouse_pressed:
                 modal['is_dragging_scrollbar'] = False
@@ -305,5 +291,9 @@ def draw_npc_dialog_modal(surface, modal, game):
 
     elif active_tab == 1:
         draw_special_dialogs_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
+        
+    # --- [NEW] Draw Trade Tab ---
+    elif active_tab == 2:
+        draw_trade_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
 
     return close_button

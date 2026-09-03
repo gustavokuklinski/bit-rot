@@ -10,128 +10,133 @@ class NPCDialog:
     QUESTS_FILE_PATH = None  
 
     PROCEDURAL_ITEM_POOL = []
-    MAX_PROCEDURAL_QUESTS = 12
+    MAX_PROCEDURAL_QUESTS = CHUNK_SIZE * 5
 
     @staticmethod
     def load_dialogs(game=None):
         if NPCDialog.NPC_DIALOGS is not None: return
         
         NPCDialog.NPC_DIALOGS = {} 
-        path = os.path.join(DATA_PATH, 'npc', 'dialogs.xml')
         
-        if not os.path.exists(path):
-            print(f"NPC Warning: Dialog file not found at {path}")
+        # [UPDATED] - Point to the new modular directory
+        dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
+        
+        if not os.path.exists(dialogs_dir):
+            print(f"NPC Warning: Dialogs directory not found at {dialogs_dir}")
             return
 
         fragments = {}
 
-        try:
-            tree = ET.parse(path)
-            root = tree.getroot()
+        # [NEW] - Loop through all XML files in the directory
+        for filename in os.listdir(dialogs_dir):
+            if filename.endswith('.xml'):
+                filepath = os.path.join(dialogs_dir, filename)
+                try:
+                    tree = ET.parse(filepath)
+                    root = tree.getroot()
+                    
+                    for node in root.findall('node'):
+                        node_id = node.get('id')
+                        if not node_id: continue
+                        
+                        # ==========================================================
+                        # Intercept the procedural items pool node
+                        # ==========================================================
+                        if node_id == "proc_items_quest":
+                            rqsts = [e.get('rqst_item', '').replace('[', '').replace(']', '') for e in node.findall('npc_rqst')]
+                            awards = [e.get('award_item', '').replace('[', '').replace(']', '') for e in node.findall('player_award')]
+                            
+                            # Combine all items into a single unique pool for 1:1 swapping
+                            pool = [i for i in rqsts + awards if i]
+                            if pool:
+                                NPCDialog.PROCEDURAL_ITEM_POOL = list(set(pool))
+                            continue
+                        
+                        options_elements = node.findall('options')
+                        if options_elements:
+                            if node_id not in NPCDialog.NPC_DIALOGS:
+                                NPCDialog.NPC_DIALOGS[node_id] = []
+                            
+                            def parse_option(opt):
+                                question = opt.get('player_question')
+                                answer = opt.get('npc_answer')
+                                
+                                if question and answer:
+                                    try:
+                                        priority = int(opt.get('priority', '100'))
+                                    except ValueError:
+                                        priority = 100
+
+                                    NPCDialog.NPC_DIALOGS[node_id].append({
+                                        'q': question, 
+                                        'a': answer,
+                                        'priority': priority,
+                                        'unlock_flag': opt.get('unlock_flag'),
+                                        'npc_state_friendly': opt.get('npc_state_friendly'),
+                                        'npc_state_static': opt.get('npc_state_static'),
+                                        'award_item': opt.get('award_item'),
+                                        'rqst_item': opt.get('rqst_item'),
+                                        'complete_flag': opt.get('complete_flag'),
+                                        'req_item': opt.get('req_item'),
+                                        'req_level': opt.get('req_level'),
+                                        'gain_xp': opt.get('gain_xp'),
+                                        'dialog_type': opt.get('dialog_type'),
+                                        'node_id': node_id
+                                    })
+
+                            for opt in options_elements:
+                                parse_option(opt)
+                                
+                        else:
+                            p_elements = node.findall('player_question')
+                            n_elements = node.findall('npc_answer') + node.findall('npc_awnser')
+                            
+                            if p_elements or n_elements:
+                                fragments[node_id] = {
+                                    'p': [e.get('p') for e in p_elements if e.get('p')],
+                                    'n': [e.get('n') for e in n_elements if e.get('n')]
+                                }
+                except Exception as e:
+                    print(f"NPC Error: Could not load dialog file {filename}: {e}")
+                        
+        # ==========================================================
+        # PROCEDURAL DIALOG COMPILER
+        # ==========================================================
+        if fragments and 'hail' in fragments and 'context' in fragments and 'end' in fragments:
+            if "small_talk" not in NPCDialog.NPC_DIALOGS:
+                NPCDialog.NPC_DIALOGS["small_talk"] = []
+                
+            def pick_frag(frag_dict, key):
+                lst = frag_dict.get(key, [])
+                return random.choice(lst) if lst else ""
+
+            unique_combinations = set()
             
-            for node in root.findall('node'):
-                node_id = node.get('id')
-                if not node_id: continue
+            for _ in range(20):
+                pq = f"{pick_frag(fragments['hail'], 'p')} {pick_frag(fragments['context'], 'p')} {pick_frag(fragments['end'], 'p')}".strip()
+                na = f"{pick_frag(fragments['hail'], 'n')} {pick_frag(fragments['context'], 'n')} {pick_frag(fragments['end'], 'n')}".strip()
                 
-                # ==========================================================
-                # [NEW] Intercept the procedural items pool node
-                # ==========================================================
-                if node_id == "proc_items_quest":
-                    rqsts = [e.get('rqst_item', '').replace('[', '').replace(']', '') for e in node.findall('npc_rqst')]
-                    awards = [e.get('award_item', '').replace('[', '').replace(']', '') for e in node.findall('player_award')]
-                    
-                    # Combine all items into a single unique pool for 1:1 swapping
-                    pool = [i for i in rqsts + awards if i]
-                    if pool:
-                        NPCDialog.PROCEDURAL_ITEM_POOL = list(set(pool))
-                    continue
+                pq = " ".join(pq.split())
+                na = " ".join(na.split())
                 
-                options_elements = node.findall('options')
-                if options_elements:
-                    if node_id not in NPCDialog.NPC_DIALOGS:
-                        NPCDialog.NPC_DIALOGS[node_id] = []
-                    
-                    def parse_option(opt):
-                        question = opt.get('player_question')
-                        answer = opt.get('npc_answer')
-                        
-                        if question and answer:
-                            try:
-                                priority = int(opt.get('priority', '100'))
-                            except ValueError:
-                                priority = 100
-
-                            NPCDialog.NPC_DIALOGS[node_id].append({
-                                'q': question, 
-                                'a': answer,
-                                'priority': priority,
-                                'unlock_flag': opt.get('unlock_flag'),
-                                'npc_state_friendly': opt.get('npc_state_friendly'),
-                                'npc_state_static': opt.get('npc_state_static'),
-                                'award_item': opt.get('award_item'),
-                                'rqst_item': opt.get('rqst_item'),
-                                'complete_flag': opt.get('complete_flag'),
-                                'req_item': opt.get('req_item'),
-                                'req_level': opt.get('req_level'),
-                                'gain_xp': opt.get('gain_xp'),
-                                'dialog_type': opt.get('dialog_type'),
-                                'node_id': node_id
-                            })
-
-                    for opt in options_elements:
-                        parse_option(opt)
-                        
-                else:
-                    p_elements = node.findall('player_question')
-                    n_elements = node.findall('npc_answer') + node.findall('npc_awnser')
-                    
-                    if p_elements or n_elements:
-                        fragments[node_id] = {
-                            'p': [e.get('p') for e in p_elements if e.get('p')],
-                            'n': [e.get('n') for e in n_elements if e.get('n')]
-                        }
-                        
-            # ==========================================================
-            # PROCEDURAL DIALOG COMPILER
-            # ==========================================================
-            if fragments and 'hail' in fragments and 'context' in fragments and 'end' in fragments:
-                if "small_talk" not in NPCDialog.NPC_DIALOGS:
-                    NPCDialog.NPC_DIALOGS["small_talk"] = []
-                    
-                def pick_frag(frag_dict, key):
-                    lst = frag_dict.get(key, [])
-                    return random.choice(lst) if lst else ""
-
-                unique_combinations = set()
-                
-                for _ in range(20):
-                    pq = f"{pick_frag(fragments['hail'], 'p')} {pick_frag(fragments['context'], 'p')} {pick_frag(fragments['end'], 'p')}".strip()
-                    na = f"{pick_frag(fragments['hail'], 'n')} {pick_frag(fragments['context'], 'n')} {pick_frag(fragments['end'], 'n')}".strip()
-                    
-                    pq = " ".join(pq.split())
-                    na = " ".join(na.split())
-                    
-                    if pq and na and (pq, na) not in unique_combinations:
-                        unique_combinations.add((pq, na))
-                        NPCDialog.NPC_DIALOGS["small_talk"].append({
-                            'q': pq, 
-                            'a': na,
-                            'priority': 90,
-                            'unlock_flag': None,
-                            'npc_state_friendly': None,
-                            'npc_state_static': None,
-                            'award_item': None,
-                            'rqst_item': None,
-                            'complete_flag': None,
-                            'req_item': None,
-                            'req_level': None,
-                            'gain_xp': None,
-                            'dialog_type': 'procedural',
-                            'node_id': 'small_talk'
-                        })
-                        
-        except Exception as e:
-            print(f"NPC Error: Could not load dialogs: {e}")
+                if pq and na and (pq, na) not in unique_combinations:
+                    unique_combinations.add((pq, na))
+                    NPCDialog.NPC_DIALOGS["small_talk"].append({
+                        'q': pq, 
+                        'a': na,
+                        'priority': 90,
+                        'unlock_flag': None,
+                        'npc_state_friendly': None,
+                        'npc_state_static': None,
+                        'award_item': None,
+                        'rqst_item': None,
+                        'complete_flag': None,
+                        'req_item': None,
+                        'req_level': None,
+                        'gain_xp': None,
+                        'dialog_type': 'procedural',
+                        'node_id': 'small_talk'
+                    })
 
         # ==========================================================
         # DYNAMIC SAVE DIRECTORY RESOLUTION
@@ -187,13 +192,13 @@ class NPCDialog:
 
             pool = NPCDialog.PROCEDURAL_ITEM_POOL
             
-            # [NEW] Sample up to MAX distinct requested items
+            # Sample up to MAX distinct requested items
             request_items = random.sample(pool, min(NPCDialog.MAX_PROCEDURAL_QUESTS, len(pool)))
 
             for item in request_items:
                 quest_node_id = f"Quest: Proc_{item}"
                 
-                # [NEW] Pick a random reward that is NOT the currently requested item
+                # Pick a random reward that is NOT the currently requested item
                 possible_rewards = [r for r in pool if r != item]
                 reward_item = random.choice(possible_rewards) if possible_rewards else item
                 
@@ -269,7 +274,7 @@ class NPCDialog:
         
         completed_procs = [q for q in completed_quests if str(q).startswith("Quest: Proc_")]
         
-        # [NEW] Clear up quests once the dynamic limit is hit
+        # Clear up quests once the dynamic limit is hit
         if len(completed_procs) >= NPCDialog.MAX_PROCEDURAL_QUESTS:
             for q in completed_procs:
                 if q in completed_quests: completed_quests.remove(q)

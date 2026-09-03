@@ -7,8 +7,7 @@
         <item type="consumable_drink" min="1" max="5" chance="1.0" />
         <item type="consumable_food" min="1" max="5" chance="1.0" />
         <item item="Whiskey Bottle" chance="1.0" />
-        <item item="Water Bottle" chance="1.0" />
-        <item item="Whiskey Bottle" chance="1.0" />
+        <item item="Plastic Bottle" chance="1.0" />
         <item item="Red Wine Bottle" chance="1.0" />
         <item item="White Wine Bottle" chance="1.0" />
     </loot>

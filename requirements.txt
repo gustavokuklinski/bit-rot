@@ -1,4 +1,5 @@
 pygame-ce
 Nuitka
+pyinstaller
 faker
 numpy
