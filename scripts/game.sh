@@ -76,8 +76,6 @@ else
     fi
 fi
 
-# ----- Change to the bitrot directory and run the game -----
-cd "$(dirname "$APP_SCRIPT")"   # now in bitrot/
 echo "Running in directory: $(pwd)"
-echo "Running: $PYTHON_EXEC $(basename "$APP_SCRIPT") ${APP_ARGS[@]}"
-exec "$PYTHON_EXEC" "$(basename "$APP_SCRIPT")" "${APP_ARGS[@]}"
+echo "Running: $PYTHON_EXEC $APP_SCRIPT ${APP_ARGS[@]}"
+exec "$PYTHON_EXEC" "$APP_SCRIPT" "${APP_ARGS[@]}"

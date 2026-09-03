@@ -49,11 +49,10 @@ if defined VIRTUAL_ENV (
     )
 )
 
-:: ----- Change to the bitrot directory and run the editor -----
-cd bitrot
+:: ----- Run the application from the project root -----
 echo Running in directory: %CD%
-echo Running: !PYTHON_EXEC! editor.py %*
-"!PYTHON_EXEC!" editor.py %*
+echo Running: !PYTHON_EXEC! %APP_SCRIPT% %*
+"!PYTHON_EXEC!" "%APP_SCRIPT%" %*
 exit /b %ERRORLEVEL%
 
 :show_help
