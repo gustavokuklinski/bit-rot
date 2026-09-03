@@ -1,0 +1,9 @@
+<map name="outside_metal_door_01_barricate" type="maptile" char="outside_metal_door_01_barricate" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="90" max="160" />
+    </properties>
+    <visuals>
+        <sprite id="open" file="outside_metal_door_01_barricate.png" />
+    </visuals>
+    <sound src="door_open.ogg" />
+</map>

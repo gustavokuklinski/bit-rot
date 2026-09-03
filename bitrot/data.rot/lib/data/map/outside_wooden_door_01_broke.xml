@@ -1,0 +1,6 @@
+<map name="outside_wooden_door_01_broke" type="maptile" char="outside_wooden_door_01_broke" is_obstacle="false">
+    <visuals>
+        <sprite id="close" file="outside_wooden_door_01_broke.png" />
+    </visuals>
+    <sound src="door_close.ogg" />
+</map>
