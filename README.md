@@ -21,7 +21,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Processor** | Intel Core i3 or Apple Silicon M-series |
 | **Video** | Intel HD Graphics 3000 |
 | **OS** | Ubuntu/Debian, Windows 7, or macOS |
-| **Software** | Python 3 |
+| **Software** | Python 3.14 |
 | **Resolution** | 1280x720 |
 | **Disk Space** | 500 MB |
 

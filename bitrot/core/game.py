@@ -57,12 +57,10 @@ class Game:
         
         self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
         
-        pygame.display.set_caption("Bit Rot")
-        try:
-            icon_image = pygame.image.load('./data.rot/icons/favicon.png').convert_alpha()
-            pygame.display.set_icon(icon_image)
-        except:
-            pass
+        pygame.display.set_caption("Bit Rot - v." + GAME_VERSION)
+        icon_image = pygame.image.load(os.path.join(BASE_DIR, "data.rot", "icons", "favicon.png")).convert_alpha()
+        pygame.display.set_icon(icon_image)
+        
         
         self.logger = GameLogger()
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")

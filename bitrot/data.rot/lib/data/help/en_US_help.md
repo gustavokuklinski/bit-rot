@@ -38,7 +38,7 @@ You have three objectives. Choose wisely, because the island is listening.
 ### [ Inventory ]
 
 * **Managing Items** : Left-click and hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
-* **Quick Access Belt** : Drop essential tools or weapons into your Belt slots to quickly equip them using keys 1-5.
+* **Quick Access Belt** : Drop essential weapons into your Belt slots to quickly equip them using keys 1-5.
 * **Gear & Armor** : Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 * **Carry Weight** : Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
 

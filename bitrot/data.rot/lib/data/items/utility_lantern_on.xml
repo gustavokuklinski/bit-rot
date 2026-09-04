@@ -2,7 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <weight weight="1.0"/>
-        <light min="5" max="10" />
+        <light min="1" max="5" />
         <fuel type="[Matches, Lighter on]" />
         <sprite file="utility_lantern_on.png" />
     </properties>
