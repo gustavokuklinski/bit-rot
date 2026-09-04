@@ -348,7 +348,7 @@ def draw_game(game):
                 # --- 1. DAYLIGHT GLOW (The subtle circular aura) ---
                 # We want this to be faint. We take a fraction of the ambient light.
                 # This ensures that even behind the player, there is a "daytime" feel.
-                day_glow_brightness = max(30, ambient // 3) 
+                day_glow_brightness = max(50, ambient // 2) 
                 
                 # Use the standard circular light_texture for the day glow
                 day_glow_surf = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
@@ -364,7 +364,7 @@ def draw_game(game):
 
                 # --- 2. DIRECTIONAL VISION (The strong cone) ---
                 # Ensure the cone is significantly brighter than the day glow
-                view_brightness = max(60, ambient)
+                view_brightness = max(50, ambient)
                 
                 cache_key_cone = ('soft_cone_tex', radius_low, view_brightness)
                 if cache_key_cone not in game.light_mask_cache:
