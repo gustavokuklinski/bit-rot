@@ -3,3 +3,4 @@ Nuitka
 pyinstaller
 faker
 numpy
+pillow

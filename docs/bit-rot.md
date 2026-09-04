@@ -45,9 +45,12 @@ Software:
         - pygame-ce
         - numpy
         - faker
-        - Nuitka
+        - nuitka
+        - pyinstaller
+        - pillow
     - Pygame-CE
     - GIMP
+    - Aseprite
 
 Sounds:
     - Pixabay
@@ -60,7 +63,7 @@ Sprites
     - Kenney: 1 bit pack
 
 External tools:
-    - Icons - PixelForge by Butterfly (https://www.youtube.com/@butterflyx1811)
+    - Icons - PixelForge by Butterfly (https://wwwI want to I  .youtube.com/@butterflyx1811)
 
 Play tester:
     - Spoken (https://www.youtube.com/@spoken-cafe)

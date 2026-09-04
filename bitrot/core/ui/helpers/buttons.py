@@ -8,7 +8,6 @@ _message_img = None
 _gear_img = None
 _crafting_img = None
 _pause_img = None
-_forward_img = None
 _help_img = None
 _slots_img = None
 

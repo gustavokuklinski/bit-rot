@@ -197,7 +197,6 @@ class Game:
         self.DRAG_THRESHOLD = 5
 
         self.pause_button_rect = None
-        self.forward_button_rect = None
         self.status_button_rect = None
         self.inventory_button_rect = None
         self.nearby_button_rect = None
@@ -830,12 +829,23 @@ class Game:
         handle_input(self)
         self.frame_count += 1
 
-        if self.frame_count % 30 == 0:
-            self.rebuild_zombie_grid()
+        # --- OPTIMIZATION & BUGFIX: Instantly rebuild grids when entities die/spawn ---
+        current_z_count = len(self.zombies)
+        current_i_count = len(self.items_on_ground)
+        current_c_count = len(self.containers)
         
-        if self.frame_count % 60 == 0:
-            self.rebuild_item_grid()
+        if self.frame_count % 30 == 0 or current_z_count != getattr(self, '_cached_z_count', -1):
+            self.rebuild_zombie_grid()
+            self._cached_z_count = current_z_count
+            self.last_quadtree_player_pos = (999999, 999999) # Forces immediate quadtree rebuild
+        
+        if self.frame_count % 60 == 0 or current_i_count != getattr(self, '_cached_i_count', -1):
+            self.rebuild_item_grid(force=True)
+            self._cached_i_count = current_i_count
+
+        if self.frame_count % 60 == 0 or current_c_count != getattr(self, '_cached_c_count', -1):
             self.rebuild_container_grid()
+            self._cached_c_count = current_c_count
 
         px, py = self.player.rect.center
         

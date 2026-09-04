@@ -343,27 +343,45 @@ def draw_game(game):
 
             if radius_view_pixels > 0:
                 radius_low = radius_view_pixels // 2
-
                 radius_low = max(16, round(radius_low / 16) * 16)
                 
-                # Ensure the player view radius always has a minimum brightness so it doesn't disappear at night
-                view_brightness = max(40, ambient)
+                # --- 1. DAYLIGHT GLOW (The subtle circular aura) ---
+                # We want this to be faint. We take a fraction of the ambient light.
+                # This ensures that even behind the player, there is a "daytime" feel.
+                day_glow_brightness = max(30, ambient // 3) 
                 
-                cache_key = ('vision', radius_low, view_brightness)
-                if cache_key not in game.light_mask_cache:
-                    base = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                    base.fill((view_brightness, view_brightness, view_brightness), special_flags=pygame.BLEND_RGBA_MULT)
-                    game.light_mask_cache[cache_key] = base
-                    
-                player_vision_tex = game.light_mask_cache[cache_key]
-                light_rect = player_vision_tex.get_rect()
-                # -----------------------------------------------------------------------------------------
-
+                # Use the standard circular light_texture for the day glow
+                day_glow_surf = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                day_glow_surf.fill((day_glow_brightness, day_glow_brightness, day_glow_brightness), special_flags=pygame.BLEND_RGBA_MULT)
+                
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
+                
+                day_glow_rect = day_glow_surf.get_rect(center=(p_screen_x, p_screen_y))
+                # Blit the subtle circle first
+                light_mask_low.blit(day_glow_surf, day_glow_rect, special_flags=pygame.BLEND_RGB_ADD)
 
-                light_rect.center = (p_screen_x, p_screen_y)
-                light_mask_low.blit(player_vision_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
+
+                # --- 2. DIRECTIONAL VISION (The strong cone) ---
+                # Ensure the cone is significantly brighter than the day glow
+                view_brightness = max(60, ambient)
+                
+                cache_key_cone = ('soft_cone_tex', radius_low, view_brightness)
+                if cache_key_cone not in game.light_mask_cache:
+                    cone_img = game.assets.get('cone_texture', light_texture)
+                    scaled_cone = pygame.transform.smoothscale(cone_img, (radius_low * 2, radius_low * 2))
+                    scaled_cone.fill((view_brightness, view_brightness, view_brightness), special_flags=pygame.BLEND_RGBA_MULT)
+                    game.light_mask_cache[cache_key_cone] = scaled_cone
+
+                base_cone_tex = game.light_mask_cache[cache_key_cone]
+                aim_angle_degrees = math.degrees(getattr(game.player, 'aim_angle', 0))
+                rotated_cone = pygame.transform.rotate(base_cone_tex, aim_angle_degrees)
+                
+                light_rect = rotated_cone.get_rect(center=(p_screen_x, p_screen_y))
+                
+                # Blit the strong cone on top of the day glow
+                light_mask_low.blit(rotated_cone, light_rect, special_flags=pygame.BLEND_RGB_ADD)
+                
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
@@ -480,6 +498,9 @@ def draw_game(game):
 
     # Draw Items
     for item in game.visible_items:
+        # Prevent Animals from being drawn as shrunk ground items (they are handled properly by the Entity renderer!)
+        if isinstance(item, Animal): continue
+        
         if not screen_rect.colliderect(item.rect): continue
         
         # Strict Radius Check
@@ -528,28 +549,71 @@ def draw_game(game):
     
     for entity in visible_entities:
         if isinstance(entity, (Zombie, NPC, Animal)):
-            # Strict Radius Check
+            if getattr(entity, 'is_dead', False): 
+                continue # Immediately hide dead entities so they don't delay disappearing!
+
             dx = entity.rect.centerx - game.player.rect.centerx
             dy = entity.rect.centery - game.player.rect.centery
             dist_sq = dx*dx + dy*dy
-            if dist_sq > view_radius_sq: continue
+            dist = math.sqrt(dist_sq)
+
+            # 1. Determine if entity is inside the player's vision
+            in_vision = True
+            
+            if dist_sq > view_radius_sq:
+                in_vision = False
+            else:
+                peripheral_radius_world = min(game.player_view_radius * 0.35, 100)
+                # Apply cone filter if they are outside the tiny "always visible" circle behind the player
+                if dist > peripheral_radius_world:
+                    aim_angle = getattr(game.player, 'aim_angle', 0)
+                    angle_to_entity = math.atan2(-dy, dx)
+                    angle_diff = (angle_to_entity - aim_angle + math.pi) % (2 * math.pi) - math.pi
+                    
+                    # Dynamic FOV matching the light cone (with 10 deg buffer)
+                    fov_degrees = min(160, 50 + (game.player_view_radius * 0.1))
+                    fov = math.radians(fov_degrees + 10)
+                    
+                    if abs(angle_diff) > fov / 2:
+                        in_vision = False
+
+            # 2. Calculate LOS if inside vision (or periodically update it)
+            if not hasattr(entity, 'last_los_draw_check'):
+                entity.last_los_draw_check = random.randint(0, 500) # Stagger initial checks
+                entity.cached_los_draw_result = True
+            
+            if in_vision and (current_time - entity.last_los_draw_check > 500):
+                entity.last_los_draw_check = current_time
+                # --- NEW: Pass only screen_obstacles instead of game.obstacles! ---
+                entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.screen_obstacles, game)
+
+            # 3. Determine Target Opacity
+            target_opacity = 0
+            if in_vision:
+                target_opacity = 255 if entity.cached_los_draw_result else 80
+
+            # 4. Smooth Fade Logic
+            current_opacity = getattr(entity, 'render_opacity', 0.0)
+            
+            # [FIXED] 25 was way too fast (0.16 seconds). 
+            # Lowered to 6.0 for a slow, cinematic fade-in (~0.7s) 
+            # and 10.0 for a slightly faster fade-out (~0.4s).
+            fade_in_speed = 6.0 * getattr(game, 'dt_mult', 1.0)
+            fade_out_speed = 10.0 * getattr(game, 'dt_mult', 1.0)
+            
+            if current_opacity < target_opacity:
+                current_opacity = min(float(target_opacity), current_opacity + fade_in_speed)
+            elif current_opacity > target_opacity:
+                current_opacity = max(float(target_opacity), current_opacity - fade_out_speed)
+                
+            entity.render_opacity = current_opacity
+
+            # Skip drawing entirely if invisible and fully faded out
+            if current_opacity <= 0:
+                continue
 
             if screen_rect.colliderect(entity.rect):
-                opacity = 255
-                
-                if not hasattr(entity, 'last_los_draw_check'):
-                    entity.last_los_draw_check = random.randint(0, 500) # Stagger initial checks
-                    entity.cached_los_draw_result = True
-                
-                if current_time - entity.last_los_draw_check > 500:
-                    entity.last_los_draw_check = current_time
-                    # --- NEW: Pass only screen_obstacles instead of game.obstacles! ---
-                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.screen_obstacles, game)
-                
-                if not entity.cached_los_draw_result:
-                    opacity = 80  
-                
-                entity.draw(world_view_surface, offset_x, offset_y, opacity)
+                entity.draw(world_view_surface, offset_x, offset_y, int(current_opacity))
 
     game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)

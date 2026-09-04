@@ -35,10 +35,13 @@ For the fastest setup, use the included engine scripts:
 
 ```bash
 # Pre-install: Set execute permissions for all scripts
-$ chmod +x bitrot.sh scripts/*.sh
+$ chmod +x BITROT.sh scripts/*.sh
 
 # Launch the game engine
-$ ./bitrot.sh
+$ ./BITROT.sh
+
+# Launch the game
+$ ./BITROT.sh shell
 ```
 
 **Windows**
