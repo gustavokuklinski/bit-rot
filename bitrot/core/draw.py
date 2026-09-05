@@ -324,14 +324,21 @@ def draw_game(game):
     if not hasattr(game, 'light_mask_low_cache') or game.light_mask_low_cache.get_size() != (low_res_w, low_res_h):
         game.light_mask_low_cache = pygame.Surface((low_res_w, low_res_h)).convert()
         
-    ambient = int(game.world_time.current_ambient_light)
+    # --- PERSISTENT EXPLORATION MASK SETUP ---
+    exp_w = max(1, map_pixel_w // divisor)
+    exp_h = max(1, map_pixel_h // divisor)
+    curr_map = getattr(game.map_manager, 'current_map_filename', 'unknown')
+    
+    if not hasattr(game, 'world_explored_mask') or game.world_explored_mask.get_size() != (exp_w, exp_h) or getattr(game, 'explored_map_name', '') != curr_map:
+        game.world_explored_mask = pygame.Surface((exp_w, exp_h)).convert()
+        game.world_explored_mask.fill((0, 0, 0))
+        game.explored_map_name = curr_map
 
+    ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache
     
-    # Scale the unseen world darkness with ambient light so it is always darker than the view radius
-    # At day (ambient=255), unseen is 30. At night (ambient low), unseen gets closer to 0 (pitch black).
-    unseen_val = max(0, min(30, int((ambient / 255.0) * 30)))
-    light_mask_low.fill((unseen_val, unseen_val, unseen_val))
+    # Fog is instantly active at the start
+    light_mask_low.fill((0, 0, 0)) # Pure black fog
 
     light_texture = game.assets.get('light_texture')
     light_sources = []
@@ -345,27 +352,18 @@ def draw_game(game):
                 radius_low = radius_view_pixels // 2
                 radius_low = max(16, round(radius_low / 16) * 16)
                 
-                # --- 1. DAYLIGHT GLOW (The subtle circular aura) ---
-                # We want this to be faint. We take a fraction of the ambient light.
-                # This ensures that even behind the player, there is a "daytime" feel.
-                day_glow_brightness = max(50, ambient // 2) 
-                
-                # Use the standard circular light_texture for the day glow
-                day_glow_surf = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                day_glow_surf.fill((day_glow_brightness, day_glow_brightness, day_glow_brightness), special_flags=pygame.BLEND_RGBA_MULT)
-                
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
-                
+
+                # 1. DAYLIGHT GLOW
+                day_glow_brightness = max(50, ambient // 2) 
+                day_glow_surf = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                day_glow_surf.fill((day_glow_brightness, day_glow_brightness, day_glow_brightness), special_flags=pygame.BLEND_RGBA_MULT)
                 day_glow_rect = day_glow_surf.get_rect(center=(p_screen_x, p_screen_y))
-                # Blit the subtle circle first
                 light_mask_low.blit(day_glow_surf, day_glow_rect, special_flags=pygame.BLEND_RGB_ADD)
 
-
-                # --- 2. DIRECTIONAL VISION (The strong cone) ---
-                # Ensure the cone is significantly brighter than the day glow
+                # 2. DIRECTIONAL VISION CONE
                 view_brightness = max(50, ambient)
-                
                 cache_key_cone = ('soft_cone_tex', radius_low, view_brightness)
                 if cache_key_cone not in game.light_mask_cache:
                     cone_img = game.assets.get('cone_texture', light_texture)
@@ -378,10 +376,79 @@ def draw_game(game):
                 rotated_cone = pygame.transform.rotate(base_cone_tex, aim_angle_degrees)
                 
                 light_rect = rotated_cone.get_rect(center=(p_screen_x, p_screen_y))
-                
-                # Blit the strong cone on top of the day glow
                 light_mask_low.blit(rotated_cone, light_rect, special_flags=pygame.BLEND_RGB_ADD)
+
+                # 3. SOFT SHADOW CASTING (With Fast Blur)
+                shadow_mask = pygame.Surface((low_res_w, low_res_h))
+                shadow_mask.fill((255, 255, 255))
                 
+                p_pos_low = (p_screen_x, p_screen_y)
+                shadow_color = (0, 0, 0)
+                
+                for ob in getattr(game, 'screen_obstacles', []):
+                    gx = ob.x // TILE_SIZE
+                    gy = ob.y // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    
+                    if tile_def and tile_def.get('is_visible'):
+                        continue
+
+                    ob_low_x = (ob.x + offset_x) / 2
+                    ob_low_y = (ob.y + offset_y) / 2
+                    ob_w_low = ob.width / 2
+                    ob_h_low = ob.height / 2
+                    
+                    corners = [
+                        (ob_low_x, ob_low_y),
+                        (ob_low_x + ob_w_low, ob_low_y),
+                        (ob_low_x + ob_w_low, ob_low_y + ob_h_low),
+                        (ob_low_x, ob_low_y + ob_h_low)
+                    ]
+                    
+                    for i in range(4):
+                        p1 = corners[i]
+                        p2 = corners[(i + 1) % 4]
+                        mid_x, mid_y = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
+                        edge_vec_x, edge_vec_y = mid_x - p_pos_low[0], mid_y - p_pos_low[1]
+                        edge_dx, edge_dy = p2[0] - p1[0], p2[1] - p1[1]
+                        normal = (-edge_dy, edge_dx)
+                        
+                        if (normal[0] * edge_vec_x + normal[1] * edge_vec_y) < 0:
+                            shadow_dist = radius_low * 1.5 
+                            
+                            v1_x, v1_y = p1[0] - p_pos_low[0], p1[1] - p_pos_low[1]
+                            v2_x, v2_y = p2[0] - p_pos_low[0], p2[1] - p_pos_low[1]
+                            mag1, mag2 = math.hypot(v1_x, v1_y) or 1, math.hypot(v2_x, v2_y) or 1
+                            
+                            proj1 = (p1[0] + (v1_x / mag1) * shadow_dist, p1[1] + (v1_y / mag1) * shadow_dist)
+                            proj2 = (p2[0] + (v2_x / mag2) * shadow_dist, p2[1] + (v2_y / mag2) * shadow_dist)
+                            
+                            pygame.draw.polygon(shadow_mask, shadow_color, [p1, p2, proj2, proj1])
+                
+                # Shrink and expand the shadow mask to naturally blur the sharp polygon edges
+                blur_scale = 4
+                shrunk = pygame.transform.smoothscale(shadow_mask, (max(1, low_res_w // blur_scale), max(1, low_res_h // blur_scale)))
+                blurred_shadows = pygame.transform.smoothscale(shrunk, (low_res_w, low_res_h))
+                
+                # Multiply the beautifully blurred shadows onto the light mask
+                light_mask_low.blit(blurred_shadows, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+                # --- RADIUS REVEAL (FOG OF WAR HISTORY) ---
+                # 1. Take what the player can currently see (including shadows!) and cap its brightness to a dim grey (40)
+                current_vision = light_mask_low.copy()
+                current_vision.fill((40, 40, 40), special_flags=pygame.BLEND_RGB_MIN)
+                
+                # 2. Stamp this dim vision permanently onto the world exploration mask
+                world_stamp_x = int(-offset_x // divisor)
+                world_stamp_y = int(-offset_y // divisor)
+                game.world_explored_mask.blit(current_vision, (world_stamp_x, world_stamp_y), special_flags=pygame.BLEND_RGB_MAX)
+                
+                # 3. Apply the entire world exploration mask back to the screen
+                # This ensures areas we explored previously but are currently looking away from are still dimly visible
+                screen_stamp_x = int(offset_x // divisor)
+                screen_stamp_y = int(offset_y // divisor)
+                light_mask_low.blit(game.world_explored_mask, (screen_stamp_x, screen_stamp_y), special_flags=pygame.BLEND_RGB_MAX)
+
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
@@ -618,9 +685,19 @@ def draw_game(game):
     game.player.draw_highlight_stairs(world_view_surface, game, offset_x, offset_y)
     game.player.draw(world_view_surface, offset_x, offset_y, is_aiming)
 
-    player_tile_x = game.player.rect.centerx // tile_size
-    player_tile_y = game.player.rect.centery // tile_size
-    roof_hide_radius = 3
+    player_tile_x = int(game.player.rect.centerx // tile_size)
+    player_tile_y = int(game.player.rect.centery // tile_size)
+    
+    is_under_roof = False
+    if getattr(game, 'roof_data', None):
+        if 0 <= player_tile_y < len(game.roof_data) and 0 <= player_tile_x < len(game.roof_data[player_tile_y]):
+            r_key = game.roof_data[player_tile_y][player_tile_x]
+            if r_key and r_key != ' ':
+                is_under_roof = True
+
+    # --- NEW: Dynamic Roof Hiding ---
+    # Radius 4 (large room view) if inside. Radius 1 (adjacent tiles only) if outside.
+    roof_hide_radius = 4 if is_under_roof else 1
 
     if getattr(game, 'roof_data', None):
         hide_min_tx = player_tile_x - roof_hide_radius
@@ -637,7 +714,13 @@ def draw_game(game):
             for gx in range(min_grid_x, max_grid_x):
                 r_key = game.roof_data[gy][gx]
                 if r_key and r_key != ' ':
-                    if not (hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty):
+                    should_draw = True
+                    
+                    # We always punch a hole so the player can see walls/doors right next to them
+                    if hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty:
+                        should_draw = False
+                            
+                    if should_draw:
                         r_def = tm.definitions.get(r_key)
                         if r_def:
                              screen_px = int(gx * tile_size + offset_x)
