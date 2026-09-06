@@ -1,4 +1,4 @@
-<map name="wall_glass_01" type="maptile" char="wall_glass_01" is_obstacle="true">
+<map name="wall_glass_01" type="maptile" char="wall_glass_01" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="wall_glass_01.png" />
     </visuals>
