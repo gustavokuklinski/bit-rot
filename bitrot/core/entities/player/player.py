@@ -238,21 +238,19 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.saved_detection_radius = None
             print(f"Stealth Mode Over: Radius restored to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
-        stamina_regen = PROGRESSION_CONFIG.get_stat('stamina', 'regen_base', 0.02)
+        stamina_regen = self.progression.get_stamina_regeneration(self)
 
-        # Automatic stamina recovery when on a bed or bench
         if is_recovery_tile:
-            stam_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_recovery_mult', 5.0) # Boosted for fast recovery
+            stam_mult = PROGRESSION_CONFIG.get_stat('stamina', 'bed_recovery_mult', 3.0) 
             if self.stamina < self.max_stamina:
                 self.stamina = min(self.max_stamina, self.stamina + (stamina_regen * stam_mult * game.dt_mult))
-                
-            # Optional: Add minor health regen on bed
-            base_health_regen = PROGRESSION_CONFIG.get_stat('health', 'bed_sleep_regen', 0.01)
-            self.health = min(self.max_health, self.health + (base_health_regen * game.dt_mult))
         else:
-            # Normal stamina logic
             if is_moving and self.is_running:
-                stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
+                # CHANGE THIS:
+                # stamina_drain = PROGRESSION_CONFIG.get_stat('stamina', 'run_drain', 0.15)
+                # TO THIS:
+                stamina_drain = self.progression.get_stamina_consumption(True, self)
+                
                 self.stamina = max(0.0, self.stamina - (stamina_drain * game.dt_mult))
             else:
                 if self.stamina < self.max_stamina:

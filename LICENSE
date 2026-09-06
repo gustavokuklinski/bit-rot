@@ -1,69 +1,11 @@
-Copyright (c) 2025 Gustavo Kuklinski
+Copyright 2025 Gustavo Kuklinski <https://github.com/gustavokuklinski/bit-rot>
 
-All Rights Reserved.
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to download,
-view, run, and modify the Software **for personal, educational, or internal
-non‑commercial use**, subject to the following conditions:
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
----
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-### 1. Forking and Contribution Rights
-You are expressly permitted to **fork** the repository on GitHub (or the
-primary hosting platform where the Software is published) for the sole purpose
-of proposing changes, improvements, or bug fixes back to the original
-repository via **Pull Requests**, **Issues**, or similar contribution
-mechanisms.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
-All contributions submitted via Pull Requests or other means become the
-property of Gustavo Kuklinski and may be incorporated into the Software at the
-Owner's sole discretion. By submitting a contribution, you agree to grant the
-Owner a perpetual, worldwide, royalty‑free, irrevocable license to use,
-modify, and distribute your contribution under the terms of this license.
-
----
-
-### 2. No Unauthorized Redistribution / Re‑uploading
-You may **NOT**:
-- Publish, upload, host, or distribute the Software (whether in original or
-  modified form) to any public repository, server, website, or platform
-  **other than** the official original repository, unless explicitly authorized
-  in writing by [Owner Name].
-- Maintain a public, permanently separate, or independently distributed fork
-  of the Software. Forks must remain tied to the original repository and be
-  intended solely for contributing back.
-
----
-
-### 3. No Claim of Ownership
-You may **NOT**:
-- Remove, obscure, or alter any copyright, trademark, or proprietary notices
-  contained in the Software.
-- Claim ownership, authorship, or exclusive rights over the Software or any
-  derivative work based upon it.
-- Use the Software to imply endorsement by [Owner Name] without prior written
-  permission.
-
----
-
-### 4. No Commercial Use
-You may **NOT** use the Software for commercial purposes, including but not
-limited to:
-- Selling, licensing, or sublicensing the Software.
-- Incorporating the Software into a product or service offered for sale.
-- Using the Software to provide a hosted or managed service to third parties.
-
-Commercial licenses are available upon request. Please contact
-[Your Contact Email or Website] for inquiries.
-
----
-
-### 5. Disclaimer of Warranty
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
