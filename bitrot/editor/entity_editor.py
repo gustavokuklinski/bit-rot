@@ -70,7 +70,7 @@ class UIStepButton:
 BOILERPLATES = {
     "Animal": """<animal name="Boar" attack_player="true" type="animal" spawn_weight="20" spawn_layer="[1, 2]">
     <name value="Boar" />
-    <stats><health min="20" max="30" /><speed min="0.6" max="0.8" /><attack min="6" max="15" /><infection min="15" max="35" /></stats>
+    <stats><health min="20" max="30" /><speed min="1" max="2" /><attack min="6" max="15" /><infection min="15" max="35" /></stats>
     <capacity value="3" />
     <visuals><sprite id="center" file="boar.png" /><sprite id="left" file="boar_left.png" /><sprite id="right" file="boar_right.png" /></visuals>
     <loot><item item="Rot Meat" chance="1.0" /></loot>
@@ -195,8 +195,8 @@ class EntityEditor:
                         sprite_node = root.find("properties/sprite")
                         sprite_file = sprite_node.get("file") if sprite_node is not None else ""
                         if name:
-                            c_key = os.path.splitext(sprite_file)[0]
-                            icon = self.all_sprites.get(c_key)
+                            # FIX: The sprite dict maps by the actual Cloth Name, not the sprite filename
+                            icon = self.all_sprites.get(name)
                             self.cloth_opts.append({"label": name, "value": name, "icon": icon})
                             self.cloth_sprites[name] = sprite_file
                     except: pass
@@ -219,7 +219,6 @@ class EntityEditor:
             self.layout_form()
 
     def refresh_files(self):
-        """Reloads file list and correctly resets all scroll bounds to avoid blank screens."""
         cat_dir = self.categories[self.active_category]
         if os.path.exists(cat_dir):
             self.files = sorted([f for f in os.listdir(cat_dir) if f.endswith('.xml')])
@@ -227,8 +226,8 @@ class EntityEditor:
             self.files = []
             
         self.selected_file = None
-        self.sidebar_scroll = 0      # <--- FIX: Forces sidebar scroll back to top
-        self.max_sidebar_scroll = 0  # <--- FIX: Resets max bounds
+        self.sidebar_scroll = 0      
+        self.max_sidebar_scroll = 0  
         
         self.fields.clear()
         self.loot_rows.clear()
@@ -236,7 +235,7 @@ class EntityEditor:
         if self.files:
             self.select_file(self.files[0])
         else:
-            self.layout_form() # Recalculate empty scroll limits
+            self.layout_form() 
 
     def flatten_xml(self, root):
         self.fields.clear()
@@ -245,6 +244,7 @@ class EntityEditor:
         self.root_tag_input.text = root.tag
         
         HEALTH_STEPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+        SPEED_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         STAT_STEPS = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
         def create_field(path, attr, val, opts=None):
@@ -257,6 +257,8 @@ class EntityEditor:
                 ui_elem = UIToggle(0, 0, 100, 28, self.font, t_val == "true")
             elif tag_name == "health":
                 ui_elem = UIStepButton(0, 0, 100, 28, self.font, val, HEALTH_STEPS)
+            elif tag_name in ["speed", "max_speed"]:
+                ui_elem = UIStepButton(0, 0, 100, 28, self.font, val, SPEED_STEPS)
             elif tag_name in ["attack", "xp", "infection"]:
                 ui_elem = UIStepButton(0, 0, 100, 28, self.font, val, STAT_STEPS)
             else:
@@ -329,7 +331,6 @@ class EntityEditor:
         self.layout_form()
 
     def layout_form(self):
-        # Always update max scroll bounds, even if file is missing, to keep UI stable
         content_h = len(self.files) * 30 + 130
         self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset))
         
@@ -721,6 +722,7 @@ class EntityEditor:
             if self.selected_file:
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 
+            # Draw Overlays (Dropdowns last so they sit on top)
             for row in self.fields:
                 if isinstance(row["input"], UIDropdown): row["input"].draw_list(surface)
             for row in self.loot_rows:
