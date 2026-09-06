@@ -18,7 +18,7 @@
 - **SHIFT + LMB + Drag**: Get/drop only one item from stack
 - **LMB + Drag**: Place or Drop
 - **RMC**: Opens context menu 
-- **E**: open or close door, enter vehicle
+- **E**: Interact, open/close door, enter/exit vehicle
 - **R**: Reload weapon
 - **Q**: Start vehicle engine
 - **SPACE**: Stop/Break vehicle
@@ -29,7 +29,8 @@
 - **N**: Open Nearby
 - **G**: Open Clothes
 - **C**: Open Craft
-- **M / ENTER**: Open Messages (enter enable chat mode)
+- **M**: Open Messages
+- **T**: Type message on message modal
 - **TAB**: Close/Open latest open modals
 
 ## Chat debug commands (Cheat codes):

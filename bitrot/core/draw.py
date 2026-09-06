@@ -1024,17 +1024,16 @@ def draw_game(game):
                 if not screen_rect.colliderect(obj.rect): continue
                 dist = math.hypot(game.player.rect.centerx - obj.rect.centerx, game.player.rect.centery - obj.rect.centery)
                 if dist < TILE_SIZE * 2.0:
-                    # Safely extract vehicle stats
                     equip = getattr(obj, 'equipment', {})
                     motor_pct = int(getattr(obj, 'motor', 0.0) * 100)
                     fuel_val = int(getattr(obj, 'fuel', 0))
                     power_val = int(getattr(obj, 'battery', 0))
                     
-                    # Count valid tires
-                    tires_count = sum(1 for t in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br'] 
-                                      if equip.get(t) and getattr(equip.get(t), 'durability', 0) > 0)
+                    # [NEW] Check required tires dynamically for the tooltip
+                    req_tires = getattr(obj, 'required_tires', [])
+                    max_tires = len(req_tires) if req_tires else 4
+                    tires_count = sum(1 for t in req_tires if equip.get(t) and getattr(equip.get(t), 'durability', 0) > 0)
                     
-                    # Determine Key status
                     if not getattr(obj, 'required_key_id', None):
                         key_status = tr('tooltip', "Not Req")
                     else:
@@ -1052,15 +1051,14 @@ def draw_game(game):
                     t_tire = tr('tooltip', "Tires")
                     t_key = tr('tooltip', "Key")
                     
-                    # Store as structured data so the renderer can insert images
                     tip_data = {
                         'type': 'vehicle',
                         'text_lines': [t_enter, t_engine, t_rmb, ""],
                         'stats': [
                             {'icon': 'motor', 'text': t_mot, 'val': f"{motor_pct}%"},
                             {'icon': 'fuel', 'text': t_fuel, 'val': f"{fuel_val}"},
-                            {'icon': 'power', 'text': t_pow, 'val': f"{power_val}"}, # Will fallback to text since no icon was provided
-                            {'icon': 'tires', 'text': t_tire, 'val': f"{tires_count}/4"},
+                            {'icon': 'power', 'text': t_pow, 'val': f"{power_val}"}, 
+                            {'icon': 'tires', 'text': t_tire, 'val': f"{tires_count}/{max_tires}"},
                             {'icon': 'key', 'text': t_key, 'val': f"{key_status}"}
                         ]
                     }
@@ -1108,16 +1106,14 @@ def draw_game(game):
         mouse_pos = game._get_scaled_mouse_pos()
         
         tooltip_to_draw = None
-        focused_tip = None # NEW: Store the tooltip data for the focused object
+        focused_tip = None 
         
         for item in interactables:
             world_rect = item['rect']
             
-            # Match target_world_rect with the interactables list to grab its tooltip text
             if target_world_rect and world_rect == target_world_rect:
                 focused_tip = item['tip']
             
-            # Position '!' top middle of the entity/tile
             screen_x = ((world_rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
             screen_y = ((world_rect.top + offset_y) * zoom) - 5
             
@@ -1144,7 +1140,6 @@ def draw_game(game):
                 tt_w = max_w + 10
                 tt_h = len(lines) * 20 + 10
                 
-                # --- ELEGANT JOYSTICK FIX ---
                 tt_x = mouse_pos[0] + 15
                 tt_y = mouse_pos[1] + 15
                 
@@ -1153,7 +1148,6 @@ def draw_game(game):
                 
                 tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
                 
-                # Temporary surface for transparent background
                 tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
                 tip_bg.fill((0, 0, 0, 220))
                 game.game_screen.blit(tip_bg, (tt_x, tt_y))
@@ -1166,7 +1160,6 @@ def draw_game(game):
                     curr_y += 20
                     
             elif isinstance(tooltip_to_draw, dict) and tooltip_to_draw.get('type') == 'vehicle':
-                # Load and Cache images to prevent loading them every frame
                 if not hasattr(game, 'vehicle_icons'):
                     game.vehicle_icons = {}
                     icon_paths = {
@@ -1185,12 +1178,11 @@ def draw_game(game):
                 lines = tooltip_to_draw['text_lines']
                 max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
-                # Calculate the width of the dynamic stats line
                 stats_w = 0
                 for stat in tooltip_to_draw['stats']:
                     icon_img = game.vehicle_icons.get(stat['icon'])
                     if icon_img:
-                        stats_w += 16 + 4  # 16px icon + spacing
+                        stats_w += 16 + 4 
                     else:
                         stats_w += font_12.render(stat['text'] + ": ", False, WHITE).get_width()
                     stats_w += font_12.render(stat['val'], False, WHITE).get_width() + 10
@@ -1198,7 +1190,7 @@ def draw_game(game):
                 max_w = max(max_w, stats_w)
                 
                 tt_w = max_w + 10
-                tt_h = len(lines) * 20 + 20 + 10 # Extra 20 pixels for the stats line
+                tt_h = len(lines) * 20 + 20 + 10 
                 tt_x, tt_y = mouse_pos[0], mouse_pos[1]
                 
                 if tt_x + tt_w > GAME_WIDTH: tt_x = mouse_pos[0] - tt_w - 5
@@ -1211,14 +1203,12 @@ def draw_game(game):
                 game.game_screen.blit(tip_bg, (tt_x, tt_y))
                 pygame.draw.rect(game.game_screen, WHITE, tt_rect, 1)
                 
-                # Draw main text lines
                 curr_y = tt_y + 5
                 for line in lines:
                     ls = font_12.render(line, False, WHITE)
                     game.game_screen.blit(ls, (tt_x + 5, curr_y))
                     curr_y += 20
                 
-                # Draw inline icons and values
                 curr_x = tt_x + 5
                 for stat in tooltip_to_draw['stats']:
                     icon_img = game.vehicle_icons.get(stat['icon'])
@@ -1241,11 +1231,9 @@ def draw_game(game):
                 lines = focused_tip.split('\n')
                 max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
                 
-                # Apply 5px padding on all sides
                 tt_w = max_w + (padding * 2)
                 tt_h = len(lines) * 20 + (padding * 2)
                 
-                # Center using GAME_WIDTH to match the Belt HUD perfectly
                 viewport_center_x = game.viewport_left_offset + (game.dynamic_w // 2)
                 tt_x = viewport_center_x - (tt_w // 2)
                 tt_y = dynamic_h - 70 - tt_h
@@ -1260,7 +1248,6 @@ def draw_game(game):
                 curr_y = tt_y + padding
                 for line in lines:
                     ls = font_12.render(line, False, WHITE)
-                    # Center align the text horizontally
                     line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
                     game.game_screen.blit(ls, (line_x, curr_y))
                     curr_y += 20
@@ -1293,17 +1280,14 @@ def draw_game(game):
                         stats_w += font_12.render(stat['text'] + ": ", False, WHITE).get_width()
                     stats_w += font_12.render(stat['val'], False, WHITE).get_width() + 10
                 
-                # Remove the trailing 10px spacing from the last stat for perfect centering
                 if stats_w > 0:
                     stats_w -= 10
                 
                 max_w = max(max_w, stats_w)
                 
-                # Apply 5px padding on all sides, plus 20px height for the stats row
                 tt_w = max_w + (padding * 2)
                 tt_h = len(lines) * 20 + 20 + (padding * 2)
                 
-                # Center using GAME_WIDTH to match the Belt HUD perfectly
                 tt_x = (GAME_WIDTH // 2) - (tt_w // 2)
                 tt_y = dynamic_h - 70 - tt_h
                 
@@ -1317,12 +1301,10 @@ def draw_game(game):
                 curr_y = tt_y + padding
                 for line in lines:
                     ls = font_12.render(line, False, WHITE)
-                    # Center align the text horizontally
                     line_x = tt_x + (tt_w // 2) - (ls.get_width() // 2)
                     game.game_screen.blit(ls, (line_x, curr_y))
                     curr_y += 20
                 
-                # Center align the entire stats row horizontally
                 curr_x = tt_x + (tt_w // 2) - (stats_w // 2)
                 for stat in focused_tip['stats']:
                     icon_img = game.vehicle_icons.get(stat['icon'])
@@ -1375,13 +1357,13 @@ def draw_game(game):
 
         elif modal['type'] == 'messages':
             result = draw_messages_modal(game.game_screen, game, modal, game.assets)
-            if len(result) == 4: # Changed to 4 to match the actual return statement
+            if len(result) == 4: 
                 _, close_button, send_btn, input_box = result
                 if send_btn: game.modal_buttons.append(send_btn)
                 if input_box: game.modal_buttons.append(input_box)
             else:
                 _, close_button = result
-            if close_button: game.modal_buttons.extend(close_button) # Use extend because get_buttons() returns a tuple now
+            if close_button: game.modal_buttons.extend(close_button) 
 
         elif modal['type'] == 'text':
             _, close_button = draw_text_modal(game.game_screen, game, modal, game.assets)
@@ -1441,12 +1423,10 @@ def draw_game(game):
                             item_slot = getattr(preview_item, 'slot', None)
                             if item_slot == 'hand': item_slot = 'hands'
                             
-                            # --- NEW CODE: Allow containers in util slots ---
                             is_util_slot = slot_name in ['util', 'util2', 'util3']
                             is_container = getattr(preview_item, 'item_type', '') == 'container'
                             is_util_item = item_slot == 'util'
                             highlighted_allowed = (item_slot == slot_name) or (is_util_slot and (is_container or is_util_item))
-                            # ------------------------------------------------
                             
                             break
                 if highlighted_rect: break
@@ -1526,7 +1506,7 @@ def draw_game(game):
 
     elif not game.context_menu['active']:
         ui_buttons = [
-            (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), # *Update key name if you make a specific 'pause' action
+            (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), 
 
             (game.status_button_rect, tr('ui', f"Player Status ({get_key_name('toggle_status')})")),
             (game.inventory_button_rect, tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")),
@@ -1580,7 +1560,6 @@ def draw_game(game):
             rect = scaled_reticle.get_rect(center=game._get_scaled_mouse_pos())
             game.game_screen.blit(scaled_reticle, rect)
 
-            # --- ELEGANT AMMO COUNTER NEAR RETICLE ---
             if game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
                 ammo_in_gun = getattr(game.player.active_weapon, 'load', 0)
                 if ammo_in_gun is None: ammo_in_gun = 0
@@ -1588,7 +1567,6 @@ def draw_game(game):
                 
                 total_ammo = 0
                 if ammo_type:
-                    # Recursive function to check all nested containers/gear for the correct bullet
                     def _count_in_list(item_list):
                         count = 0
                         for item in item_list:
@@ -1606,29 +1584,25 @@ def draw_game(game):
                 font_ammo = font_12
                 if not font_ammo: font_ammo = pygame.font.Font(None, 24)
                 
-                # Visual combat flair: shift color based on gun load
                 max_cap = getattr(game.player.active_weapon, 'capacity', 1)
                 if max_cap is None or max_cap <= 0: max_cap = 1
                 
-                text_color = (255, 255, 255) # White
+                text_color = (255, 255, 255) 
                 if ammo_in_gun == 0:
-                    text_color = (255, 50, 50) # Red
+                    text_color = (255, 50, 50) 
                 elif (ammo_in_gun / max_cap) <= 0.25:
-                    text_color = (255, 200, 50) # Yellow
+                    text_color = (255, 200, 50) 
                     
                 ammo_text = f"{int(ammo_in_gun)} / {int(total_ammo)}"
                 text_surf = font_ammo.render(ammo_text, True, text_color)
                 
-                # Position it elegantly to the right of the reticle
                 bg_rect = text_surf.get_rect(topleft=(rect.right + 12, rect.centery - text_surf.get_height() // 2))
                 
-                # Safety check: If it clips off the right side of the screen, flip it to the left side
                 if bg_rect.right > game.game_screen.get_width() - 5:
                     bg_rect.right = rect.left - 12
                 
                 bg_pad = bg_rect.inflate(12, 6)
                 
-                # Draw a sleek, semi-transparent pill background for readability against any terrain
                 pill_surface = pygame.Surface((bg_pad.width, bg_pad.height), pygame.SRCALPHA)
                 pygame.draw.rect(pill_surface, (0, 0, 0, 160), pill_surface.get_rect(), border_radius=4)
                 pygame.draw.rect(pill_surface, (150, 150, 150, 100), pill_surface.get_rect(), 1, border_radius=4)
@@ -1636,16 +1610,13 @@ def draw_game(game):
                 game.game_screen.blit(pill_surface, bg_pad.topleft)
                 game.game_screen.blit(text_surf, bg_rect)
     else:
-        # --- UPDATED: Custom Cursor or Placement Preview ---
         item_to_place_data = getattr(game, 'item_to_place', None)
         
         if item_to_place_data:
-            # Hide default cursor and draw the item being placed
             pygame.mouse.set_visible(False)
             item = item_to_place_data['item']
             m_pos = game._get_scaled_mouse_pos()
             
-            # Calculate distance to see if it's a valid placement (green = good, red = too far)
             world_mouse_pos = game.screen_to_world(m_pos)
             dx = world_mouse_pos[0] - game.player.rect.centerx
             dy = world_mouse_pos[1] - game.player.rect.centery
@@ -1656,7 +1627,6 @@ def draw_game(game):
                 img_rect = item.image.get_rect(center=m_pos)
                 game.game_screen.blit(item.image, img_rect)
                 
-                # Draw a helpful tint over the item
                 tint = pygame.Surface(img_rect.size, pygame.SRCALPHA)
                 tint.fill((0, 255, 0, 80) if in_range else (255, 0, 0, 80))
                 game.game_screen.blit(tint, img_rect.topleft)
@@ -1666,7 +1636,6 @@ def draw_game(game):
                 pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), rect)
                 pygame.draw.rect(game.game_screen, (0, 255, 0) if in_range else (255, 0, 0), rect, 2)
         else:
-            # Standard custom cursor logic
             pygame.mouse.set_visible(True)
             keys = pygame.key.get_pressed()
             if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
@@ -1677,13 +1646,10 @@ def draw_game(game):
     if hasattr(game, 'clock'):
         fps = int(game.clock.get_fps())
         
-        # Pull the GAME_VERSION already loaded in config.py
         game_version = getattr(core.data.config, 'GAME_VERSION', 'Unknown')
         
-        # Append it to the FPS string
         fps_text = f"FPS: {fps} | Build: {game_version}"
         
         fps_surface = font_12.render(fps_text, False, (255, 255, 255))
         fps_rect = fps_surface.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5))
         game.game_screen.blit(fps_surface, fps_rect)
-    

@@ -39,7 +39,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     Draws the content of the vehicle info tab in a 3-column dashboard layout.
     Left: Controls | Center: Speedometer | Right: Statuses
     """
-    # Define the three column X positions
     center_x = start_x - STYLE["MARGIN_LEFT"] + (modal_w // 2)
     left_x = start_x
     right_x = start_x - STYLE["MARGIN_LEFT"] + modal_w - 110
@@ -50,7 +49,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # --- 1. LEFT COLUMN: ENGINE & LIGHTS ---
     # ==========================================
     
-    # Engine
     eng_lbl = font_12.render(tr('vehicle', "Engine:"), True, STYLE["TEXT_MAIN"])
     surface.blit(eng_lbl, (left_x, y_base))
     
@@ -66,7 +64,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     e_off_rect = e_off_txt.get_rect(topleft=(left_x + e_on_txt.get_width() + 10, y_base + 25))
     surface.blit(e_off_txt, e_off_rect)
     
-    # Lights
     lht_lbl = font_12.render(tr('vehicle', "Lights:"), True, STYLE["TEXT_MAIN"])
     surface.blit(lht_lbl, (left_x, y_base + 65))
     
@@ -82,7 +79,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     l_off_rect = l_off_txt.get_rect(topleft=(left_x + l_on_txt.get_width() + 10, y_base + 90))
     surface.blit(l_off_txt, l_off_rect)
     
-    # Store rects for click interaction
     modal['rects'] = {
         'engine_on': e_on_rect,
         'engine_off': e_off_rect,
@@ -97,11 +93,9 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     speedo_cx = center_x
     speedo_cy = y_base + 80
     
-    # Draw Background Arc
     arc_rect = pygame.Rect(speedo_cx - radius, speedo_cy - radius, radius * 2, radius * 2)
     pygame.draw.arc(surface, STYLE["BORDER"], arc_rect, 0, math.pi, 4)
     
-    # Draw Gauge Ticks
     for i in range(11):
         angle = math.pi - (i / 10.0) * math.pi
         tick_len = 12 if i % 5 == 0 else 6
@@ -111,22 +105,18 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
         inner_y = speedo_cy - (radius - tick_len) * math.sin(angle)
         pygame.draw.line(surface, STYLE["BORDER"], (inner_x, inner_y), (outer_x, outer_y), 2)
 
-    # Speed & Needle calculations
     speed_kmh = int(vehicle.current_speed_val * 10)
     max_speed_kmh = max(int(vehicle.max_speed * 10), 1)
     clamped_speed = min(speed_kmh, max_speed_kmh)
     
-    # Angle maps from Pi (0 speed) to 0 (Max speed)
     theta = math.pi - (clamped_speed / max_speed_kmh) * math.pi
     needle_x = speedo_cx + (radius * 0.85) * math.cos(theta)
     needle_y = speedo_cy - (radius * 0.85) * math.sin(theta)
     
-    # Draw Needle and Base
     needle_color = STYLE["WARN"] if speed_kmh > max_speed_kmh * 0.75 else STYLE["TEXT_MAIN"]
     pygame.draw.line(surface, needle_color, (speedo_cx, speedo_cy), (needle_x, needle_y), 3)
     pygame.draw.circle(surface, STYLE["ACTIVE"], (speedo_cx, speedo_cy), 6)
     
-    # Current Speed Text
     speed_surf = font_12.render(f"{speed_kmh} {tr('vehicle', 'km/h')}", True, needle_color)
     surface.blit(speed_surf, speed_surf.get_rect(center=(speedo_cx, speedo_cy + 20)))
 
@@ -134,7 +124,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     # --- 3. RIGHT COLUMN: STATUSES ---
     # ==========================================
     
-    # Cache icons to prevent reloading every frame
     if 'status_icons' not in modal:
         modal['status_icons'] = {}
         icon_paths = {
@@ -150,7 +139,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
                 print(f"Error loading {key} icon: {e}")
                 modal['status_icons'][key] = None
 
-    # Motor Data
     motor_item = vehicle.equipment.get('motor')
     motor_val, motor_max = 0.0, 100.0
     if motor_item:
@@ -160,7 +148,6 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
              motor_val, motor_max = float(motor_item.durability), float(getattr(motor_item, 'max_durability', 100.0))
     motor_pct = int((motor_val / motor_max * 100) if motor_max > 0 else 0)
 
-    # Battery Data
     batt_item = vehicle.equipment.get('battery')
     batt_val, batt_max = 0.0, 100.0
     if batt_item:
@@ -170,14 +157,12 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
              batt_val, batt_max = float(batt_item.load), float(getattr(batt_item, 'capacity', 100.0))
     batt_pct = int((batt_val / batt_max * 100) if batt_max > 0 else 0)
 
-    # Fuel Data
     fuel_item = vehicle.equipment.get('fuel')
     fuel_val, fuel_max = 0.0, 100.0
     if fuel_item:
         if hasattr(fuel_item, 'load'): fuel_val = float(fuel_item.load)
         if hasattr(fuel_item, 'capacity'): fuel_max = float(fuel_item.capacity)
 
-    # Text rendering
     m_txt = font_12.render(f"{motor_pct}%", True, STYLE["TEXT_MAIN"])
     b_txt = font_12.render(f"{batt_pct}%", True, STYLE["TEXT_MAIN"])
     f_txt = font_12.render(f"{int(fuel_val)}/{int(fuel_max)}", True, STYLE["TEXT_MAIN"])
@@ -188,23 +173,19 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     
     icon_w = 26
     inner_gap = 8
-    
     ry = y_base + 10
     ry_gap = 35
     
-    # Motor Block
     if m_ico: surface.blit(m_ico, (right_x, ry))
     else: pygame.draw.rect(surface, STYLE["BORDER"], (right_x, ry, icon_w, icon_w), 1)
     surface.blit(m_txt, (right_x + icon_w + inner_gap, ry + (icon_w - m_txt.get_height())//2))
     ry += ry_gap
     
-    # Fuel Block
     if f_ico: surface.blit(f_ico, (right_x, ry))
     else: pygame.draw.rect(surface, STYLE["WARN"], (right_x, ry, icon_w, icon_w), 1)
     surface.blit(f_txt, (right_x + icon_w + inner_gap, ry + (icon_w - f_txt.get_height())//2))
     ry += ry_gap
 
-    # Battery Block
     if b_ico: surface.blit(b_ico, (right_x, ry))
     else: pygame.draw.rect(surface, (0, 255, 255), (right_x, ry, icon_w, icon_w), 1)
     surface.blit(b_txt, (right_x + icon_w + inner_gap, ry + (icon_w - b_txt.get_height())//2))
@@ -221,7 +202,6 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
     seat_gap = STYLE["SLOT_GAP"]
     
     for i, occupant in enumerate(vehicle.seats):
-        # Position seats in a single horizontal row
         slot_x = x + (i * (seat_size + seat_gap))
         slot_y = y 
         
@@ -230,7 +210,6 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
         pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
-        # Label (Driver vs Passenger)
         if i == 0:
             lbl = font_12.render(tr('vehicle', "D"), False, STYLE["DRIVER_LBL"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
@@ -238,7 +217,6 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
             lbl = font_12.render(str(i+1), False, STYLE["TEXT_DIM"])
             surface.blit(lbl, (slot_rect.x + 3, slot_rect.y + 3))
 
-        # Render Occupant
         if occupant:
             if type(occupant).__name__ == 'Player':
                 txt = font_12.render(tr('vehicle', "YOU"), False, (0, 255, 255))
@@ -260,9 +238,10 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
     x = start_x + 45
     y = start_y + 7
 
-    # Equipment Slots
     slots_row_1 = ['motor','key', 'fuel', 'battery']
-    slots_row_2 = ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']
+    # [NEW] Dynamically use the required tires for this specific vehicle model
+    slots_row_2 = getattr(vehicle, 'required_tires', [])
+    
     slot_size = STYLE["SLOT_SIZE"]
     slot_gap = STYLE["SLOT_GAP"]
     
@@ -283,7 +262,7 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
              if getattr(item, 'image', None):
                  icon = pygame.transform.scale(item.image, (32, 32))
                  surface.blit(icon, icon.get_rect(center=slot_rect.center))
-             # --- Durability / Load Bar Logic ---
+                 
              cur_val, max_val = None, None
              if hasattr(item, 'durability') and item.durability is not None and getattr(item, 'max_durability', None) is not None:
                  cur_val, max_val = item.durability, item.max_durability
@@ -301,25 +280,26 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                  if pct > 0: 
                      pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
              elif hasattr(item, 'load') and item.load is not None and item.load > 0:
-                 # Fallback to text if no 'capacity' property is present to build a bar
                  draw_text_shadow(surface, font_12, str(int(item.load)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
-             # -----------------------------------
 
         modal['equipment_rects'][slot_name] = slot_rect
         current_x += slot_size + slot_gap
 
-    # Draw Row 2 (Tires)
+    # Draw Row 2 (Dynamic Tires)
     current_x = x
-    y += slot_size + 35 # Move down for the next row
+    y += slot_size + 35 
     for slot_name in slots_row_2:
         slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
         
         pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
         pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
         
-        # Format "tire_fl" -> "FL TIRE", etc.
-        lbl_text = slot_name.split('_')[1].upper() + " " + tr('vehicle', 'TIRE')
+        # [NEW] Format "tire_front_left" -> "FL TIRE", "tire_back" -> "B TIRE" dynamically
+        name_parts = slot_name.split('_')[1:] 
+        short_name = "".join([p[0].upper() for p in name_parts]) 
+        lbl_text = short_name + " " + tr('vehicle', 'TIRE')
+        
         lbl = font_12.render(lbl_text, False, STYLE["TEXT_DIM"])
         surface.blit(lbl, lbl.get_rect(midtop=(slot_rect.centerx, slot_rect.top - 14)))
         
@@ -345,7 +325,6 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
                  if pct > 0: 
                      pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
              elif hasattr(item, 'durability') and item.durability is not None and item.durability > 0:
-                 # Fallback to text if no 'max_durability' property is present to build a bar
                  draw_text_shadow(surface, font_12, str(int(item.durability)), STYLE["TEXT_MAIN"], 
                                 (slot_rect.right - 2, slot_rect.bottom - 2), align='bottomright')
 
@@ -360,8 +339,6 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     
     close_btn = base_modal.get_buttons()
 
-
-    # Initialize tabs data if not already set (Added 'Seats')
     tabs_data = [
         {'label': 'Vehicle', 'icon': assets.get('vehicle_icon')},
         {'label': 'Mechanics', 'icon': assets.get('mechanics_icon')},
@@ -371,22 +348,18 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     if 'active_tab' not in modal or modal['active_tab'] not in ['Vehicle', 'Mechanics', 'Seats']:
         modal['active_tab'] = 'Vehicle'
         
-    # Draw Tabs
     tabs = Tabs(surface, modal, tabs_data, assets)
     tabs.draw(game, mouse_pos)
 
-    # Shift content down to account for the tab bar height (roughly 30px)
     content_y = base_modal.modal_y + STYLE["MARGIN_TOP"] + 30
     content_x = base_modal.modal_x + STYLE["MARGIN_LEFT"]
     
-    # Clean up old rects to avoid ghost clicks/interactions across tabs
     modal['seat_rects'] = {}
     modal['equipment_rects'] = {}
     modal.setdefault('rects', {})
     
     active_tab = modal.get('active_tab')
     
-    # Route drawing logic based on the active tab
     if active_tab == 'Vehicle':
         draw_vehicle_info_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
     elif active_tab == 'Mechanics':
@@ -394,11 +367,9 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     elif active_tab == 'Seats':
         draw_vehicle_seats_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
     
-    # Draw hover tooltips for equipment
     if 'equipment_rects' in modal:
         for slot_name, rect in modal['equipment_rects'].items():
             if rect.collidepoint(mouse_pos):
-                # Retrieve the actual item object from the vehicle's equipment
                 item = vehicle.equipment.get(slot_name)
                 if item:
                     draw_tooltip(surface, item, mouse_pos)

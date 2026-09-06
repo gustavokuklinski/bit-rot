@@ -263,3 +263,56 @@ class SoundManager:
                 print(f"Warning: Music file not found at '{path}'")
         except pygame.error as e:
             print(f"Warning: Could not load music '{path}': {e}")
+    
+    def update_spatial_volume(self, channel, source_pos, game, base_volume=1.0, subdir=None):
+        """
+        Updates the volume and panning of an existing channel based on source position.
+        """
+        if not channel or not game or not game.player:
+            return
+
+        # 1. Volume Modifiers (Matches play_sound logic)
+        volume_modifier = core.data.config.VOLUME_BACKGROUND
+        if subdir:
+            subdir_lower = subdir.lower()
+            if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment', 'vehicles']:
+                volume_modifier = core.data.config.VOLUME_ATMOSPHERIC
+            elif subdir_lower in ['music']:
+                volume_modifier = core.data.config.VOLUME_MUSIC
+
+        # 2. Distance Calculation
+        player_pos = game.player.rect.center
+        dx = source_pos[0] - player_pos[0]
+        dy = source_pos[1] - player_pos[1]
+        distance = math.hypot(dx, dy)
+
+        # 3. Falloff Logic (Matches play_sound logic)
+        max_dist = GAME_WIDTH * 0.6 
+        if distance > max_dist:
+            channel.set_volume(0, 0)
+            return
+
+        volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
+        
+        # Zoom Multiplier
+        zoom_multiplier = 1.0 
+        MAX_ZOOM_VOLUME = 1.0 
+        MIN_ZOOM_VOLUME = 0.75 
+        current_zoom = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
+        if (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM) != 0:
+            zoom_progress = (current_zoom - core.data.config.FAR_ZOOM) / (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM)
+        else:
+            zoom_progress = 1.0 
+        zoom_multiplier = MIN_ZOOM_VOLUME + (zoom_progress * (MAX_ZOOM_VOLUME - MIN_ZOOM_VOLUME))
+
+        final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
+        final_volume = min(1.0, final_volume) 
+
+        # 4. Panning Logic (Matches play_sound logic)
+        pan_range = TILE_SIZE * 15
+        pan_factor = max(-1.0, min(1.0, dx / pan_range))
+        angle = (pan_factor + 1.0) * math.pi / 4.0
+        left_vol = final_volume * math.cos(angle)
+        right_vol = final_volume * math.sin(angle)
+        
+        channel.set_volume(left_vol, right_vol)

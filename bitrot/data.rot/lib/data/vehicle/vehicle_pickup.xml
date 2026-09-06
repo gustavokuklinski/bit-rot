@@ -1,7 +1,7 @@
 <vehicle name="car_pickup" type="car" is_obstacle="true" spawn_weight="40">
     <capacity value="10" />
     <car>
-        <max_speed value="8" />
+        <max_speed value="7" />
         <key value="Car Key Pickup" />
         <fuel value="1.0" />
         <motor value="1.0" />
@@ -31,4 +31,11 @@
         <sprite id="left" file="car_pickup_left.png" />
         <sprite id="right" file="car_pickup_right.png" />
     </visuals>
+    <sound>
+        <idle src="vehicle_idle.ogg" />
+        <on src="vehicle_on.ogg" />
+        <off src="vehicle_on.ogg" />
+        <fail src="vehicle_fail.ogg" />
+        <moving src="vehicle_moving.ogg" />
+    </sound>
 </vehicle>

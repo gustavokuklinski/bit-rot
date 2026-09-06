@@ -81,13 +81,20 @@ class VehicleData:
                                 'chance': float(item.get('chance', 0.0))
                             })
 
+                    sounds = {}
+                    sound_node = root.find('sound')
+                    if sound_node is not None:
+                        for s_node in sound_node:
+                            sounds[s_node.tag] = s_node.get('src')
+
                     VehicleData.VEHICLE_TEMPLATES.append({
                         'name': name,
-                        'spawn_weight': spawn_weight, # [NEW] Storing spawn_weight
+                        'spawn_weight': spawn_weight,
                         'images': images,
                         'stats': stats,
                         'capacity': capacity,
-                        'loot_table': loot_table
+                        'loot_table': loot_table,
+                        'sounds': sounds  # [NEW] Storing sounds
                     })
 
                 except Exception as e:

@@ -33,6 +33,8 @@
 
 - [Spoken](https://www.youtube.com/@spoken-cafe)
 - [Butterfly](https://www.youtube.com/@butterflyx1811)
+- Samuel Dias
+
 ---
 
 ## 🙏 Thank You

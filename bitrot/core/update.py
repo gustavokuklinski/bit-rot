@@ -824,7 +824,7 @@ def update_game_state(game):
         # [OPTIMIZATION] Only update vehicles near player?
         # For now we assume active_zombies logic covers the expensive parts.
         for vehicle in game.map_manager.vehicles:
-            vehicle.update(dt_mult=game.dt_mult * multiplier)
+            vehicle.update(game=game, dt_mult=game.dt_mult * multiplier)
 
             # Apply fast forward to vehicle physics
             #if multiplier > 1.0:

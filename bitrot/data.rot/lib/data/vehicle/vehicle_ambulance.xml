@@ -1,7 +1,7 @@
 <vehicle name="car_ambulance" type="car" is_obstacle="true" spawn_weight="10">
     <capacity value="20" />
     <car>
-        <max_speed value="8" />
+        <max_speed value="5" />
         <key value="Car Key Ambulance" />
         <fuel value="1.0" />
         <motor value="1.0" />
@@ -32,4 +32,11 @@
         <sprite id="left" file="car_ambulance_left.png" />
         <sprite id="right" file="car_ambulance_right.png" />
     </visuals>
+    <sound>
+        <idle src="vehicle_idle.ogg" />
+        <on src="vehicle_on.ogg" />
+        <off src="vehicle_on.ogg" />
+        <fail src="vehicle_fail.ogg" />
+        <moving src="vehicle_moving.ogg" />
+    </sound>
 </vehicle>

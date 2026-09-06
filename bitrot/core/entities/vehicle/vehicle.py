@@ -26,6 +26,12 @@ class Vehicle:
                     merged_stats.update(stats)
                 stats = merged_stats
 
+        # [NEW] Dynamically map required tires from the XML stats
+        self.required_tires = [k for k in stats.keys() if k.startswith('tire_')]
+        if not self.required_tires:
+            # Fallback for older saves without tire data
+            self.required_tires = ['tire_front_left', 'tire_front_right', 'tire_back_left', 'tire_back_right']
+
         self.x = x
         self.y = y
         self.width = width
@@ -34,23 +40,18 @@ class Vehicle:
         self.images = {}
         self.facing = facing # Default direction
         
-        # 'image' param is now actually the dict of images from the loader
         if isinstance(image, dict):
             self.images = image
         elif image:
-            # Fallback for save states that might have saved a single surface
             self.images['right'] = image
         
         self.rect = pygame.Rect(x, y, width, height)
         self.color = (0, 0, 255)
         
         self.capacity = capacity
-
         self.inventory = items if items is not None else []
-       
         self.max_speed = float(stats.get('max_speed', 10))
         
-        # Initial stats
         self.fuel = float(stats.get('fuel', 0.0))
         self.battery = float(stats.get('battery', 0.0))
         self.motor = float(stats.get('motor', 0.0))
@@ -68,16 +69,15 @@ class Vehicle:
         else:
             self.required_key_id = key_val
         
+        # [NEW] Initialize equipment with dynamic tires
         self.equipment = {
             'motor': None,
             'key': None,
             'fuel': None,
-            'battery': None,
-            'tire_fl': None,
-            'tire_fr': None,
-            'tire_bl': None,
-            'tire_br': None
+            'battery': None
         }
+        for t_slot in self.required_tires:
+            self.equipment[t_slot] = None
         
         self.velocity = [0, 0]
         self.acceleration = 0.4
@@ -91,40 +91,40 @@ class Vehicle:
             
         self.seats = [None] * self.seat_count
 
-        # Track entities hit during movement for processing in update.py
         self.hit_entities = []
 
         self._spawn_random_equipment()
         self.generate_trunk_loot(loot_table)
         self.update_stats_from_equipment()
         
-        # [NEW] Generate mask
         if self.image:
              self.mask = pygame.mask.from_surface(self.image)
         else:
              self.mask = pygame.mask.Mask((width, height))
              self.mask.fill()
+        
+        self.engine_channel = None
+        self.sounds = {}
+        
+        # Load sound paths from definition
+        if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates()
+        definition = VehicleData.get_definition_by_name(name)
+        if definition and 'sounds' in definition:
+            self.sounds = definition['sounds']
 
     @property
     def image(self):
-        """
-        [UPDATED] Returns the sprite based on current facing direction.
-        Auto-restores the images dictionary if missing (e.g., after loading a save).
-        """
         if not self.images:
-            if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates() # Auto-load safely
+            if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates()
             definition = VehicleData.get_definition_by_name(self.name)
             if definition and definition.get('images'):
                 self.images = definition['images']
         
         img = self.images.get(self.facing)
-        
-        # Fallback to the first available image if 'facing' id is missing
         if not img and self.images:
             img = next(iter(self.images.values()))
             
         if img:
-            # Update dimensions and mask dynamically if orientation changed the dimensions
             if self.width != img.get_width() or self.height != img.get_height():
                  self.width = img.get_width()
                  self.height = img.get_height()
@@ -136,7 +136,6 @@ class Vehicle:
 
     @image.setter
     def image(self, value):
-        # Allow setting a single image dynamically, replacing the dictionary
         if isinstance(value, dict):
             self.images = value
         else:
@@ -151,11 +150,7 @@ class Vehicle:
 
     def brake(self, brake_force=0.9, game=None): 
         if not self.active: return
-        # [FIX] If you can pass 'game' into this function from input.py, use dt_mult.
-        # Otherwise, scale it down manually if you want a flat deceleration:
         multiplier = game.dt_mult if game else 1.0
-        
-        # Convert exponential decay to be frame-independent
         scale = math.pow(brake_force, multiplier)
         
         self.velocity[0] *= scale
@@ -165,13 +160,11 @@ class Vehicle:
             self.velocity = [0, 0]
 
     def _spawn_random_equipment(self):
-        # 1. Spawn Key (30% chance)
         if self.required_key_id and random.random() < VEH_HAS_KEY:
             key_item = Item.create_from_name(self.required_key_id)
             if key_item:
                 self.equipment['key'] = key_item
 
-        # 2. Spawn Fuel (50% chance)
         if random.random() < VEH_HAS_FUEL:
             fuel_item = Item.create_from_name("Fuel Unit") 
             if fuel_item:
@@ -185,11 +178,9 @@ class Vehicle:
                  motor_item.durability = float(motor_item.durability)
             self.equipment['motor'] = motor_item
 
-        # 3. Spawn Battery (50% chance)
         if random.random() < VEH_HAS_BATTERY:
             batt_item = Item.create_from_name("Car Battery")
             if batt_item:
-                # Car Battery uses durability, whereas old items might have used capacity/load
                 if hasattr(batt_item, 'durability') and hasattr(batt_item, 'max_durability'):
                     batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
                 elif hasattr(batt_item, 'capacity') and batt_item.capacity:
@@ -197,8 +188,9 @@ class Vehicle:
                         batt_item.load = random.uniform(1.0, float(batt_item.capacity))
                 self.equipment['battery'] = batt_item
 
-        for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
-            if random.random() < VEH_HAS_TIRES: # 85% chance to have each tire initially
+        # [NEW] Dynamic tire spawning
+        for tire_slot in self.required_tires:
+            if random.random() < VEH_HAS_TIRES:
                 tire_item = Item.create_from_name("Car Tire")
                 if tire_item:
                     if hasattr(tire_item, 'durability') and hasattr(tire_item, 'max_durability'):
@@ -207,13 +199,10 @@ class Vehicle:
 
     def generate_trunk_loot(self, loot_table=None):
         if not loot_table: return
-            
-        if not ITEM_TEMPLATES:
-            load_item_templates_data()
+        if not ITEM_TEMPLATES: load_item_templates_data()
             
         for entry in loot_table:
             if len(self.inventory) >= self.capacity: break
-            
             chance = entry.get('chance', 0)
             try: chance = float(chance)
             except (ValueError, TypeError): chance = 0.0
@@ -223,7 +212,6 @@ class Vehicle:
                     min_qty = entry.get('min', 1)
                     max_qty = entry.get('max', 1)
                     qty = random.randint(min_qty, max_qty)
-                    
                     matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == entry['type']]
                     if matching_items:
                         for _ in range(qty):
@@ -256,8 +244,14 @@ class Vehicle:
                 has_power = True
             elif hasattr(battery_item, 'load') and battery_item.load is not None and battery_item.load > 0:
                 has_power = True
-        
         if not has_power: return False
+        
+        # [NEW] Check if driveable based on having all required tires
+        for t_slot in self.required_tires:
+            tire = self.equipment.get(t_slot)
+            if not tire or getattr(tire, 'durability', 0) <= 0:
+                return False
+                
         return True
 
     def damage_motor(self, amount):
@@ -291,9 +285,10 @@ class Vehicle:
 
         dist = math.hypot(dx, dy)
         if dist > 0:
-            tire_degradation = dist * 0.0005 # Adjust degradation rate as needed
+            tire_degradation = dist * 0.0005 
             broken_tire = False
-            for tire_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+            # [NEW] Degrade dynamic tires
+            for tire_slot in self.required_tires:
                 tire = self.equipment.get(tire_slot)
                 if tire and hasattr(tire, 'durability'):
                     tire.durability -= tire_degradation
@@ -306,14 +301,11 @@ class Vehicle:
                 self.velocity = [0, 0]
                 self.active = False
                 self.car_state = "Off"
-                return # Stop the car immediately
+                return 
         
-        # --- COLLISION HELPER ---
         def check_collision(rect_check):
-            # Check Tiles (Obstacles)
             for obstacle in obstacles:
                 if rect_check.colliderect(obstacle):
-                    # Pixel Perfect Check
                     if game:
                         gx = obstacle.x // TILE_SIZE
                         gy = obstacle.y // TILE_SIZE
@@ -323,18 +315,15 @@ class Vehicle:
                             if self.mask.overlap(tile_def['mask'], offset):
                                 return True, obstacle
                         else:
-                            # Fallback for tiles without masks
                             return True, obstacle
                     else:
-                        # Fallback if game ref is missing
                         return True, obstacle
 
-            # Check Entities (if game ref available)
             if game:
                 entities = game.zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else []) + [game.player]
                 for entity in entities:
-                    if entity == self: continue # Should not happen, but safe
-                    if entity in self.seats: continue # Ignore passengers in the vehicle
+                    if entity == self: continue 
+                    if entity in self.seats: continue 
                     
                     if rect_check.colliderect(entity.rect):
                         if hasattr(entity, 'mask') and entity.mask:
@@ -345,13 +334,11 @@ class Vehicle:
                              return True, entity
             return False, None
 
-        # Move X
         self.x += dx
         self.rect.x = int(self.x)
         collision, collider = check_collision(self.rect)
         
         if collision:
-            # Handle Entity Hit
             is_entity = False
             if hasattr(collider, 'take_damage') or hasattr(collider, 'health') or type(collider).__name__ in ['Zombie', 'NPC', 'Player']:
                 is_entity = True
@@ -361,18 +348,15 @@ class Vehicle:
                 if collider not in self.hit_entities:
                     self.hit_entities.append(collider)
             else:
-                # Wall/Tile Hit
                 if dx > 0: self.rect.right = collider.left
                 elif dx < 0: self.rect.left = collider.right
                 self.x = self.rect.x
 
-        # Move Y
         self.y += dy
         self.rect.y = int(self.y)
         collision, collider = check_collision(self.rect)
         
         if collision:
-            # Handle Entity Hit
             is_entity = False
             if hasattr(collider, 'take_damage') or hasattr(collider, 'health') or type(collider).__name__ in ['Zombie', 'NPC', 'Player']:
                 is_entity = True
@@ -380,15 +364,13 @@ class Vehicle:
             if is_entity:
                 self.damage_motor(1.0)
                 if collider not in self.hit_entities:
-                     if collider not in self.hit_entities: # Double check to avoid dupes from x-axis hit
+                     if collider not in self.hit_entities: 
                         self.hit_entities.append(collider)
             else:
-                # Wall/Tile Hit
                 if dy > 0: self.rect.bottom = collider.top
                 elif dy < 0: self.rect.top = collider.bottom
                 self.y = self.rect.y
         
-        # Hard Stop logic for high speed wall impacts
         if collision and not is_entity:
              current_speed = self.current_speed_val
              if current_speed > 2.0:
@@ -420,18 +402,25 @@ class Vehicle:
             else:
                 display_message(tr('msg', "Cannot turn on lights: No Battery Power."))
 
-    def toggle_engine(self):
+    def toggle_engine(self, game=None):
         driver_seat = self.seats[0]
         if not driver_seat or type(driver_seat).__name__ != 'Player':
             display_message("Cannot start engine: No driver in the driver's seat.")
             return
 
+        if game is None and hasattr(driver_seat, 'game'):
+            game = driver_seat.game
+
         if self.active:
             self.active = False
             self.car_state = "Off"
+
+            if self.engine_channel:
+                self.engine_channel.stop()
+                self.engine_channel = None
+
             display_message(f"{self.name} {tr('msg', 'engine turned OFF.')}")
             
-            # [NEW] Return key to its exact previous location
             if getattr(self, '_auto_key_inserted', False) and self.equipment.get('key'):
                 key_item = self.equipment.get('key')
                 target_list = getattr(self, '_auto_key_container', driver_seat.inventory)
@@ -454,10 +443,9 @@ class Vehicle:
                                 driver_seat.stack_item_in_inventory(key_item)
                             returned = True
                     else:
-                        target_list.append(key_item) # Inner container (like backpack)
+                        target_list.append(key_item) 
                         returned = True
                         
-                # Fallback to general inventory or ground if original location is blocked
                 if not returned:
                     if len(driver_seat.inventory) < driver_seat.get_total_inventory_slots():
                         driver_seat.inventory.append(key_item)
@@ -471,7 +459,6 @@ class Vehicle:
             has_key = self.equipment.get('key') is not None
             
             if not has_key:
-                # [NEW] Deep Search Algorithm to scan through all bags and pockets
                 def recursive_search_key(item_list):
                     for i, it in enumerate(item_list):
                         if not it: continue
@@ -499,7 +486,6 @@ class Vehicle:
                             found_key, src_list, idx = recursive_search_key(v.inventory)
                             if found_key: break
                             
-                # Pull the key and memory-map its source
                 if found_key:
                     if src_list == driver_seat.belt:
                         driver_seat.belt[idx] = None
@@ -525,22 +511,45 @@ class Vehicle:
             fuel_item = self.equipment.get('fuel')
             has_fuel = fuel_item and (not hasattr(fuel_item, 'load') or fuel_item.load > 0)
             
+            # [NEW] Check required tires explicitly to block engine ignition
             missing_tires = []
-            for t_slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+            for t_slot in self.required_tires:
                 tire = self.equipment.get(t_slot)
                 if not tire or getattr(tire, 'durability', 0) <= 0:
                     missing_tires.append(t_slot)
             has_all_tires = len(missing_tires) == 0
 
-            if has_key and has_power and has_fuel:
+            if has_key and has_power and has_fuel and has_all_tires:
                 self.active = True
                 self.car_state = "On"
+
+                if game and 'on' in self.sounds:
+                    game.sound_manager.play_sound(
+                        self.sounds['on'], 
+                        subdir='vehicles', 
+                        game=game, 
+                        source_pos=self.rect.center, # <--- Spatial
+                        base_volume=0.5,             # <--- Lowered
+                        is_critical=True
+                    )
+
                 print(f"{self.name} engine turned ON.")
             else:
+                if game and 'fail' in self.sounds:
+                    game.sound_manager.play_sound(
+                        self.sounds['fail'], 
+                        subdir='vehicles', 
+                        game=game, 
+                        source_pos=self.rect.center, # <--- Spatial
+                        base_volume=0.5,             # <--- Lowered
+                        is_critical=True
+                    )
+
                 missing = []
                 if not has_key: missing.append("Key")
                 if not has_power: missing.append("Battery Power")
                 if not has_fuel: missing.append("Fuel")
+                if not has_all_tires: missing.append("Tires")
                 display_message(f"{tr('msg', 'Cannot start. Missing/Empty:')} {', '.join(missing)}")
 
     def can_equip(self, item, slot):
@@ -550,30 +559,19 @@ class Vehicle:
             if not self.required_key_id:
                 item_key_id = getattr(item, 'key_id', getattr(item, 'key', None))
                 if item_key_id and str(item_key_id).strip().lower() == self.name.lower():
-                    print(f"[DEBUG] REPAIR: Auto-assigning key requirement '{item_key_id}' to legacy vehicle.")
                     self.required_key_id = str(item_key_id).strip()
                 else:
-                    print(f"[DEBUG] Vehicle '{self.name}' has no key requirement (ID is None).")
                     return False
 
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
-            if item_type != 'car_key':
-                print(f"[DEBUG] Item '{tr('item', item.name)}' rejected. Type is '{item_type}', expected 'car_key'.")
-                return False
+            if item_type != 'car_key': return False
 
             required_val = str(self.required_key_id).strip().lower()
             item_name = getattr(item, 'name', '').strip().lower()
             item_key_id = getattr(item, 'key_id', '')
-            if item_key_id:
-                item_key_id = str(item_key_id).strip().lower()
+            if item_key_id: item_key_id = str(item_key_id).strip().lower()
 
-            matches_name = (item_name == required_val)
-            matches_id = (item_key_id and item_key_id == required_val)
-
-            if matches_name or matches_id:
-                return True
-            else:
-                return False
+            return (item_name == required_val) or (item_key_id and item_key_id == required_val)
             
         elif slot == 'fuel': 
             return getattr(item, 'status_effect', None) == 'fuel' or getattr(item, 'name', '') == 'Fuel Unit'
@@ -584,10 +582,10 @@ class Vehicle:
         
         elif slot == 'motor':
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
-            # Relaxed the check to look at name and type safely
             return item_type == 'car_motor' or getattr(item, 'name', '') == 'Car Engine' or getattr(item, 'status', None) == 'motor'
         
-        elif slot in ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']:
+        # [NEW] Dynamic tire checks
+        elif slot in self.required_tires:
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
             return item_type == 'car_tire' or getattr(item, 'name', '') == 'Car Tire'
 
@@ -598,7 +596,6 @@ class Vehicle:
             display_message(f"{tr('msg', 'Cannot equip')} {tr('item', item.name)} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
             return False
 
-        # Use .get() instead of .pop() so we don't accidentally destroy the slot definition
         old_item = self.equipment.get(slot)
         self.equipment[slot] = item
         self.update_stats_from_equipment()
@@ -607,73 +604,176 @@ class Vehicle:
     def remove_equipment(self, slot):
         if slot in self.equipment:
             item = self.equipment[slot]
-            # Safely empty the slot by setting it to None instead of completely removing the key from the dictionary
             self.equipment[slot] = None 
             self.update_stats_from_equipment()
             return item
         return None
 
     def update_stats_from_equipment(self):
+        # --- Battery Check ---
         battery_item = self.equipment.get('battery')
         if battery_item:
+            # Prioritize durability as per your XML
             if hasattr(battery_item, 'durability') and battery_item.durability is not None:
                  self.battery = float(battery_item.durability)
             elif hasattr(battery_item, 'load') and battery_item.load is not None:
                  self.battery = float(battery_item.load)
-            else:
-                 self.battery = 0.0 
-        else:
-            self.battery = 0 
+            else: self.battery = 0.0 
+        else: self.battery = 0 
         
+        # --- Fuel Check ---
         fuel_item = self.equipment.get('fuel')
         if fuel_item:
-            if hasattr(fuel_item, 'load') and fuel_item.load is not None:
-                self.fuel = float(fuel_item.load)
-            else:
-                self.fuel = 0.0 
-        else:
-            self.fuel = 0
+            if hasattr(fuel_item, 'load') and fuel_item.load is not None: self.fuel = float(fuel_item.load)
+            else: self.fuel = 0.0 
+        else: self.fuel = 0
         
+        # --- Motor Check ---
         motor_item = self.equipment.get('motor')
         if motor_item:
             current = 0.0
             maximum = 100.0
-            if hasattr(motor_item, 'load') and motor_item.load is not None:
-                current = float(motor_item.load)
-                maximum = float(motor_item.capacity) if hasattr(motor_item, 'capacity') and motor_item.capacity else 100.0
-            elif hasattr(motor_item, 'durability') and motor_item.durability is not None:
+            # Check durability first as per your XML
+            if hasattr(motor_item, 'durability') and motor_item.durability is not None:
                 current = float(motor_item.durability)
-                maximum = float(motor_item.max_durability) if hasattr(motor_item, 'max_durability') else 100.0
+                maximum = float(getattr(motor_item, 'max_durability', 100.0))
+            elif hasattr(motor_item, 'load') and motor_item.load is not None:
+                current = float(motor_item.load)
+                maximum = float(getattr(motor_item, 'capacity', 100.0))
             
-            if maximum > 0:
-                self.motor = max(0.0, min(1.0, current / maximum))
-            else:
-                self.motor = 0.0
-        else:
-            self.motor = 0.0
+            if maximum > 0: self.motor = max(0.0, min(1.0, current / maximum))
+            else: self.motor = 0.0
+        else: self.motor = 0.0
 
-    def update(self, game_map=None, dt_mult=1.0):
+    def update(self, game=None, game_map=None, dt_mult=1.0):
         self.update_stats_from_equipment()
         battery_item = self.equipment.get('battery')
         fuel_item = self.equipment.get('fuel')
 
         if self.active:
-             fuel_drain = 0.0001 * dt_mult
-             if self.fuel > 0:
-                 self.fuel -= fuel_drain
-                 if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
-                     fuel_item.load = max(0, fuel_item.load - fuel_drain)
-             else:
-                 self.active = False
-                 self.car_state = "Off"
-                 display_message(tr('msg', "Engine died (No Fuel)."))
+            # 1. Fuel Drain
+            fuel_drain = 0.0001 * dt_mult
+            if self.fuel > 0:
+                self.fuel -= fuel_drain
+                if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
+                    fuel_item.load = max(0, fuel_item.load - fuel_drain)
+            else:
+                self.active = False
+                self.car_state = "Off"
+                display_message(tr('msg', "Engine died (No Fuel)."))
+                return # Exit early if engine stopped
+
+            # 2. STRICT BATTERY CHECK
+            # If the battery is removed or durability hits 0, the electrical system fails
+            if self.battery <= 0:
+                self.active = False
+                self.car_state = "Off"
+                display_message(tr('msg', "Engine stopped (Battery Dead/Missing)."))
+                return
+
+            # 3. STRICT ENGINE (MOTOR) CHECK
+            # If the motor durability is 0 or it's removed, the car stops
+            if self.motor <= 0:
+                self.active = False
+                self.car_state = "Off"
+                display_message(tr('msg', "Engine failed (Motor Destroyed/Missing)."))
+                return
+
+            # 4. STRICT TIRE CHECK
+            # Ensure all required tires are present and have durability > 0
+            for t_slot in self.required_tires:
+                tire = self.equipment.get(t_slot)
+                if not tire or getattr(tire, 'durability', 0) <= 0:
+                    self.active = False
+                    self.car_state = "Off"
+                    display_message(tr('msg', f"Engine stopped ({t_slot.replace('_', ' ')} Broken/Missing)."))
+                    return
+
+             # --- FIXED ENGINE SOUND LOGIC ---
+            if game:
+                current_speed = self.current_speed_val
+                VEHICLE_BASE_VOL = 0.4 # <--- Global lower volume for engine loops
+                
+                if current_speed < 0.5:
+                    # IDLE SOUND
+                    if 'idle' in self.sounds:
+                        if not self.engine_channel or not self.engine_channel.get_busy():
+                            self.engine_channel = game.sound_manager.play_sound(
+                                self.sounds['idle'], 
+                                subdir='vehicles', 
+                                game=game, 
+                                source_pos=self.rect.center,
+                                base_volume=VEHICLE_BASE_VOL, 
+                                loops=-1
+                            )
+                else:
+                    # MOVING SOUND
+                    if 'moving' in self.sounds:
+                        pitch_factor = 1.0 + (min(current_speed / self.max_speed, 1.0) * 0.5)
+                        pitch_factor = round(pitch_factor * 20) / 20.0
+                        
+                        base_sound_key = f"vehicles/{self.sounds['moving']}"
+                        if base_sound_key not in game.sound_manager.sounds:
+                            game.sound_manager.load_sound(base_sound_key, os.path.join('vehicles', self.sounds['moving']))
+
+                        base_sound = game.sound_manager.sounds.get(base_sound_key)
+                        pitched_sound = game.sound_manager.get_pitched_sound(base_sound_key, base_sound, pitch_factor)
+
+                        if not self.engine_channel or self.engine_channel.get_sound() != pitched_sound:
+                            if self.engine_channel:
+                                self.engine_channel.stop()
+                            
+                            self.engine_channel = game.sound_manager.play_sound(
+                                self.sounds['moving'], 
+                                subdir='vehicles', 
+                                game=game, 
+                                source_pos=self.rect.center,
+                                base_volume=VEHICLE_BASE_VOL, 
+                                loops=-1
+                            )
+                            if self.engine_channel:
+                                self.engine_channel.play(pitched_sound, loops=-1)
+
+                # --- CRITICAL: Update volume/panning every frame as vehicle moves ---
+                if self.engine_channel:
+                    game.sound_manager.update_spatial_volume(
+                        self.engine_channel, 
+                        self.rect.center, 
+                        game, 
+                        base_volume=VEHICLE_BASE_VOL, 
+                        subdir='vehicles'
+                    )
+
+        # If engine dies, stop the sound
+        if not self.active and self.engine_channel:
+            self.engine_channel.stop()
+            self.engine_channel = None
+
+            fuel_drain = 0.0001 * dt_mult
+            if self.fuel > 0:
+                self.fuel -= fuel_drain
+                if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
+                    fuel_item.load = max(0, fuel_item.load - fuel_drain)
+            else:
+                self.active = False
+                self.car_state = "Off"
+                display_message(tr('msg', "Engine died (No Fuel)."))
+
+            # [NEW] Turn off engine immediately if a tire goes missing or breaks while active
+            for t_slot in self.required_tires:
+                tire = self.equipment.get(t_slot)
+                if not tire or getattr(tire, 'durability', 0) <= 0:
+                    self.active = False
+                    self.car_state = "Off"
+                    display_message(tr('msg', "Engine stopped (Missing Tire)."))
+                    break
 
         if self.lights == 'on':
             drain_amount = 0.0005 * dt_mult
             if self.battery > 0:
                 self.battery -= drain_amount
                 if battery_item:
-                    if battery_item.durability is not None:
+                    if hasattr(battery_item, 'durability') and battery_item.durability is not None:
                         battery_item.durability = max(0, battery_item.durability - drain_amount)
                     elif hasattr(battery_item, 'load') and battery_item.load is not None:
                         battery_item.load = max(0, battery_item.load - drain_amount)
@@ -705,8 +805,6 @@ class Vehicle:
         return self.capacity * 10
         
     def draw(self, surface, offset_x, offset_y):
-        # NOTE: self.image is now a property that auto-restores. 
-        # Accessing it here triggers the restore if needed.
         if self.image:
             surface.blit(self.image, (self.rect.x + offset_x, self.rect.y + offset_y))
         else:
