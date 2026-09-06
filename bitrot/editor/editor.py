@@ -19,6 +19,9 @@ from editor.dialog_editor import DialogEditor
 from editor.crafts import CraftEditor
 from editor.code_editor import CodeEditor
 
+# --> NEW: Import the EntityEditor
+from editor.entity_editor import EntityEditor
+
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
@@ -158,6 +161,13 @@ def editor():
     clothes_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
     clothes_xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
     
+    # NEW: Fetch paths for entity sprites to populate the live preview
+    zombie_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'zombie')
+    vehicle_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'vehicle')
+    animal_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'animals')
+    npc_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'npc')
+    player_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'player')
+    
     map_tiles = load_map_tiles_from_xml(xml_path, sprite_path)
     
     if not os.path.exists(item_sprite_path):
@@ -174,11 +184,25 @@ def editor():
         clothes_tiles = load_items_from_xml(clothes_xml_path, clothes_sprite_path) 
         item_tiles.update(clothes_tiles)
 
+    # Load additional sprites for the Entity Editor
+    zombie_sprites = load_sprite_images(zombie_sprite_path)
+    vehicle_sprites = load_sprite_images(vehicle_sprite_path)
+    animal_sprites = load_sprite_images(animal_sprite_path)
+    npc_sprites = load_sprite_images(npc_sprite_path)
+    player_sprites = load_sprite_images(player_sprite_path)
+
+    # Combine everything for the UI and the unified preview dictionary
     all_render_tiles = {**map_tiles, **item_tiles}
+    all_sprites_dict = {
+        **map_tiles, **item_tiles, **zombie_sprites, **vehicle_sprites, 
+        **animal_sprites, **npc_sprites, **player_sprites
+    }
 
+    # Modules
     code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
-
-    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "CODE"])
+    
+    # --> NEW: Added "Entities" to the Top Menu Bar Array
+    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "Entities", "CODE"])
     editor_mode = "Building" 
 
     content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT
@@ -192,6 +216,9 @@ def editor():
 
     dialog_editor = DialogEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
     craft_editor = CraftEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
+    
+    # --> NEW: Init Entity Editor with the all_sprites dictionary
+    entity_editor = EntityEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, all_sprites_dict)
 
     building_map = Map(width=20, height=20) 
     current_map_obj = building_map
@@ -249,6 +276,9 @@ def editor():
                 craft_editor.resize(current_screen_width, current_screen_height)
                 code_editor.resize(current_screen_width, current_screen_height)
                 
+                # --> NEW: Resize the Entity Editor
+                entity_editor.resize(current_screen_width, current_screen_height)
+                
                 map_view_rect = pygame.Rect(
                     FILE_TREE_WIDTH + 20, 
                     content_y + 20, 
@@ -262,20 +292,25 @@ def editor():
                 if editor_mode == "NPC Dialog": log_console.add_message("Switched to Dialog Editor")
                 elif editor_mode == "Crafts": log_console.add_message("Switched to Craft Editor")
                 elif editor_mode == "CODE": log_console.add_message("Switched to Code Editor")
+                elif editor_mode == "Entities": log_console.add_message("Switched to Entity Editor")
                 else: log_console.add_message("Switched to Building Mode")
                 continue
 
             if editor_mode == "NPC Dialog":
                 dialog_editor.handle_event(event)
                 continue
-                
             if editor_mode == "Crafts":
                 craft_editor.handle_event(event)
+                continue
+            # --> NEW: Route events to Entity Editor
+            if editor_mode == "Entities":
+                entity_editor.handle_event(event)
                 continue
             if editor_mode == "CODE":
                 code_editor.handle_event(event)
                 continue
 
+            # Core Building Logic Keybinds
             if event.type == pygame.KEYDOWN:
                 ctrl_held = (event.mod & pygame.KMOD_CTRL)
                 if ctrl_held and event.key == pygame.K_z: 
@@ -466,6 +501,9 @@ def editor():
             dialog_editor.draw(screen)
         elif editor_mode == "Crafts":
             craft_editor.draw(screen)
+        # --> NEW: Draw Entity Editor mode
+        elif editor_mode == "Entities":
+            entity_editor.draw(screen)
         elif editor_mode == "CODE":
             code_editor.draw(screen)
         else:
@@ -489,8 +527,6 @@ def editor():
             if new_building_modal.active: new_building_modal.draw(screen)
 
         menu_bar.draw(screen) 
-        
-        # Tooltips overlay
         draw_tooltips(screen, FONT)
         
         pygame.display.flip()

@@ -2,7 +2,7 @@
     <name value="Boar" />
     <stats>
         <health min="20" max="30" />
-        <speed min="0.6" max="0.8" />
+        <speed min="1" max="1" />
         <attack min="6" max="15" />
         <infection min="15" max="35" />
     </stats>

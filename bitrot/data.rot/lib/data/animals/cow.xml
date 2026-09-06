@@ -2,7 +2,7 @@
     <name value="Cow" />
     <stats>
         <health min="30" max="80" />
-        <speed min="0.3" max="0.5" />
+        <speed min="1" max="1" />
         <attack min="0" max="0" />
         <infection min="0" max="0" />
     </stats>
