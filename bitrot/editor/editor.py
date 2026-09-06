@@ -13,7 +13,7 @@ from editor.config import (
 
 from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_items_from_xml
 from editor.map import Map
-from editor.ui import Sidebar, Toolbar, NewBuildingModal, LogConsole, MenuBar
+from editor.ui import Sidebar, Toolbar, NewBuildingModal, LogConsole, MenuBar, UITheme, draw_tooltips
 from editor.file_tree import FileTree
 from editor.dialog_editor import DialogEditor
 from editor.crafts import CraftEditor
@@ -23,7 +23,6 @@ from editor.code_editor import CodeEditor
 pygame.init()
 pygame.font.init()
 
-# Initialize Clipboard safety for Pygame Scrap 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rot Engine - Game Editor")
 
@@ -32,15 +31,15 @@ try:
 except Exception:
     pass
 
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREY = (200, 200, 200)
-DARK_GREY = (100, 100, 100)
-LIGHT_GREY = (220, 220, 220)
-YELLOW = (255, 255, 0)
-
-FONT = pygame.font.Font(None, 24)
+# Custom Font Loading
+font_path = os.path.join(GAME_ROOT, 'lib', 'font', 'PixelOperator8.ttf')
+try:
+    if os.path.exists(font_path):
+        FONT = pygame.font.Font(font_path, 16)
+    else:
+        FONT = pygame.font.Font(None, 24)
+except Exception:
+    FONT = pygame.font.Font(None, 24)
 
 # Regex Patterns
 MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_ground)?\.csv")
@@ -94,29 +93,27 @@ def load_map_layers(game_map, map_name, map_dir):
             game_map.layers[l] = [[None for _ in range(game_map.width)] for _ in range(game_map.height)]
         game_map.set_active_layer('map')
 
-
 def save_map_layers(game_map, map_name, map_dir):
     for layer in game_map.layers.keys():
         path = os.path.join(map_dir, f"{map_name}_{layer}.csv")
         game_map.save_to_csv(path, layer)
         print(f"Saved {path}")
-        
 
 def draw_rulers(surface, ox, oy, scale, w, h, view_rect, font):
     size = int(TILE_SIZE * scale)
     top_y = view_rect.top - 20
-    pygame.draw.rect(surface, DARK_GREY, (view_rect.left, top_y, view_rect.width, 20))
+    pygame.draw.rect(surface, UITheme.PANEL_BG, (view_rect.left, top_y, view_rect.width, 20))
     for x in range(w):
         px = int(x * size + ox)
         if view_rect.left <= px <= view_rect.right:
-            surface.blit(font.render(str(x), True, WHITE), (px+2, top_y+2))
+            surface.blit(font.render(str(x), True, UITheme.TEXT), (px+2, top_y+2))
 
     left_x = view_rect.left - 20
-    pygame.draw.rect(surface, DARK_GREY, (left_x, view_rect.top, 20, view_rect.height))
+    pygame.draw.rect(surface, UITheme.PANEL_BG, (left_x, view_rect.top, 20, view_rect.height))
     for y in range(h):
         py = int(y * size + oy)
         if view_rect.top <= py <= view_rect.bottom:
-            surface.blit(font.render(str(y), True, WHITE), (left_x+2, py+2))
+            surface.blit(font.render(str(y), True, UITheme.TEXT), (left_x+2, py+2))
 
 def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, map_view_rect):
     scaled_tile_size = int(TILE_SIZE * zoom_scale)
@@ -126,14 +123,14 @@ def draw_grid(surface, offset_x, offset_y, zoom_scale, map_width, map_height, ma
         if map_view_rect.left <= line_x <= map_view_rect.right:
             start_y = max(map_view_rect.top, offset_y)
             end_y = min(map_view_rect.bottom, offset_y + map_height * scaled_tile_size)
-            if start_y < end_y: pygame.draw.line(surface, LIGHT_GREY, (line_x, start_y), (line_x, end_y))
+            if start_y < end_y: pygame.draw.line(surface, UITheme.BORDER, (line_x, start_y), (line_x, end_y))
 
     for y in range(map_height + 1):
         line_y = offset_y + y * scaled_tile_size
         if map_view_rect.top <= line_y <= map_view_rect.bottom:
             start_x = max(map_view_rect.left, offset_x)
             end_x = min(map_view_rect.right, offset_x + map_width * scaled_tile_size)
-            if start_x < end_x: pygame.draw.line(surface, LIGHT_GREY, (start_x, line_y), (end_x, line_y))
+            if start_x < end_x: pygame.draw.line(surface, UITheme.BORDER, (start_x, line_y), (end_x, line_y))
 
 def paste_building_on_map(game_map, building_name, building_dir, target_x, target_y):
     if not os.path.exists(building_dir): return
@@ -155,11 +152,9 @@ def editor():
     xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
     sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
     
-    # Standard Items Paths
     item_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'items')
     item_xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
     
-    # Clothes Paths
     clothes_sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
     clothes_xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
     
@@ -173,10 +168,8 @@ def editor():
         try: os.makedirs(item_xml_path)
         except OSError: pass
 
-    # Load standard items
     item_tiles = load_items_from_xml(item_xml_path, item_sprite_path)
     
-    # Load clothes with their correct dedicated sprite path
     if os.path.exists(clothes_xml_path):
         clothes_tiles = load_items_from_xml(clothes_xml_path, clothes_sprite_path) 
         item_tiles.update(clothes_tiles)
@@ -185,7 +178,6 @@ def editor():
 
     code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
 
-    # Primary Modes
     menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "CODE"])
     editor_mode = "Building" 
 
@@ -264,7 +256,6 @@ def editor():
                     current_screen_height - content_y - LOG_WINDOW_HEIGHT - 20
                 )
 
-            # GLOBAL Menu Bar Routing (Fixes mode switching bug)
             menu_action = menu_bar.handle_event(event)
             if menu_action:
                 editor_mode = menu_action
@@ -274,7 +265,6 @@ def editor():
                 else: log_console.add_message("Switched to Building Mode")
                 continue
 
-            # Route to respective full-screen handlers
             if editor_mode == "NPC Dialog":
                 dialog_editor.handle_event(event)
                 continue
@@ -286,7 +276,6 @@ def editor():
                 code_editor.handle_event(event)
                 continue
 
-            # Keyboard Shortcuts (Building Mode Context)
             if event.type == pygame.KEYDOWN:
                 ctrl_held = (event.mod & pygame.KMOD_CTRL)
                 if ctrl_held and event.key == pygame.K_z: 
@@ -320,7 +309,6 @@ def editor():
                     sidebar.selected_item = None
                     sidebar.selected_building = None
                     
-            # Modal Handling (Eats events if active)
             if new_building_modal.active:
                 res = new_building_modal.handle_event(event)
                 if res and res['action'] == 'create_building':
@@ -472,7 +460,7 @@ def editor():
                         selection_rect = pygame.Rect(min(x1, x2), min(y1, y2), abs(x2-x1)+1, abs(y2-y1)+1)
 
         # Render
-        screen.fill(GREY)
+        screen.fill(UITheme.BG)
         
         if editor_mode == "NPC Dialog":
             dialog_editor.draw(screen)
@@ -482,7 +470,6 @@ def editor():
             code_editor.draw(screen)
         else:
             current_map_obj.render(screen, all_render_tiles, FONT, (camera_offset_x, camera_offset_y), current_zoom)
-
             draw_grid(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect)
 
             if selection_rect: 
@@ -490,7 +477,7 @@ def editor():
                  sy = selection_rect.y * TILE_SIZE * current_zoom + camera_offset_y 
                  sw = selection_rect.width * TILE_SIZE * current_zoom 
                  sh = selection_rect.height * TILE_SIZE * current_zoom 
-                 pygame.draw.rect(screen, YELLOW, (sx, sy, sw, sh), 2)
+                 pygame.draw.rect(screen, UITheme.WARNING, (sx, sy, sw, sh), 2)
 
             draw_rulers(screen, camera_offset_x, camera_offset_y, current_zoom, current_map_obj.width, current_map_obj.height, map_view_rect, FONT)
             
@@ -499,11 +486,13 @@ def editor():
             log_console.draw(screen)
             toolbar.draw(screen)
 
-            # ONLY drawn during building
             if new_building_modal.active: new_building_modal.draw(screen)
 
-        menu_bar.draw(screen) # ALWAYS drawn at the top
-
+        menu_bar.draw(screen) 
+        
+        # Tooltips overlay
+        draw_tooltips(screen, FONT)
+        
         pygame.display.flip()
 
 if __name__ == "__main__":

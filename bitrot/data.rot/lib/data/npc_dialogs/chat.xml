@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <npc_dialog>
-    <node id="hail" x="65" y="120">
+    <node id="hail">
         <player_question p="Opa, you got a minute, brother?" />
         <player_question p="Hey, you look alive... más o menos." />
         <player_question p="Oi, don't shoot! I'm just a contractor, caramba." />
@@ -21,7 +21,6 @@
         <player_question p="Hey, you got any clean water? Pago bien." />
         <player_question p="Com licença, are you the fix-it guy they mentioned?" />
         <player_question p="Ey, stay back! Keep your distance, brother." />
-
         <npc_awnser n="Calma, kid. I'm just trying to reach tomorrow." />
         <npc_awnser n="Oi... you sound like you still think money matters." />
         <npc_awnser n="Hola. Keep your voice down, the jungle is listening." />
@@ -43,8 +42,7 @@
         <npc_awnser n="Yeah, I'm here. But my help is expensive, entendeu?" />
         <npc_awnser n="Whatever you're selling, I'm not buying. Vaza!" />
     </node>
-
-    <node id="context" x="65" y="120">
+    <node id="context">
         <player_question p="The Exxoil rig is dark... what happened?" />
         <player_question p="Why did they bring those 'survivors' here, porra?" />
         <player_question p="I heard the vaccines were fake. Is it true?" />
@@ -65,7 +63,6 @@
         <player_question p="The shadows... they move even when there’s no light." />
         <player_question p="Everyone is greedy, even with the world ending." />
         <player_question p="Mierda, we are just rats in a corporate cage." />
-
         <npc_awnser n="Greed is a bitch, cara. They wanted more workers, they got monsters." />
         <npc_awnser n="The grid is flickering because the workers are being eaten." />
         <npc_awnser n="There are no vaccines, mate. Just stuff to keep you numb." />
@@ -87,8 +84,7 @@
         <npc_awnser n="The alliance broke the moment the first scream started." />
         <npc_awnser n="Stay low. If the rotters don't get you, the hunger will." />
     </node>
-
-    <node id="end" x="65" y="120">
+    <node id="end">
         <player_question p="Is the radio still dead? No rescue?" />
         <player_question p="I can't take the screaming anymore, caramba." />
         <player_question p="They say the continent is just a big graveyard." />
@@ -109,7 +105,6 @@
         <player_question p="We are just ghosts waiting for our bodies to catch up." />
         <player_question p="One last push to the docks. That’s all I got left." />
         <player_question p="The world is dead, and we are just the maggots." />
-
         <npc_awnser n="The radio only plays static and the sounds of the dying." />
         <npc_awnser n="Rescue? Amigo, we are the ones the world forgot." />
         <npc_awnser n="Brazil is a jungle of rotters now. There is no going back." />
@@ -131,40 +126,13 @@
         <npc_awnser n="There is no 'home', kid. This tropical hell is all we got." />
         <npc_awnser n="Shut up and keep your gun ready. The sun is going down." />
     </node>
-
-    <node id="greeting" x="65" y="120">
-        <options 
-            player_question="How's it going?" 
-            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
-            priority="50"
-            gain_xp="[lucky:1]" />
-
-        <options 
-            player_question="You look like you've been through hell." 
-            npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." 
-            priority="50" 
-            dialog_type="once"
-            req_level="[lucky:1]" 
-            gain_xp="[lucky:50]" />
+    <node id="greeting">
+        <options player_question="How's it going?" npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." priority="50" gain_xp="[lucky:1]" />
+        <options player_question="You look like you've been through hell." npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." priority="50" dialog_type="once" req_level="[lucky:1]" gain_xp="[lucky:50]" />
     </node>
-
-    <node id="lore_branch" x="779" y="133">
-        <options 
-            player_question="I've heard a helicopter landed with survivors, is this true?" 
-            npc_answer="Sim... sí...yes? They brought the disgrace to us, some asymphomatic from the continent, it becomes a hell after them! cof...cof..." 
-            priority="10" 
-            gain_xp="[lucky:10]" />
-
-        <options 
-            player_question="What happened to the continent?" 
-            npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." 
-            priority="10" 
-            gain_xp="[lucky:10]" />
-
-        <options 
-            player_question="Why did the helicopters leave us?" 
-            npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." 
-            priority="10"
-            gain_xp="[lucky:10]" />
+    <node id="lore_branch">
+        <options player_question="I've heard a helicopter landed with survivors, is this true?" npc_answer="Sim... sí...yes? They brought the disgrace to us, some asymphomatic from the continent, it becomes a hell after them! cof...cof..." priority="10" gain_xp="[lucky:10]" />
+        <options player_question="What happened to the continent?" npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." priority="10" gain_xp="[lucky:10]" />
+        <options player_question="Why did the helicopters leave us?" npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." priority="10" gain_xp="[lucky:10]" />
     </node>
 </npc_dialog>

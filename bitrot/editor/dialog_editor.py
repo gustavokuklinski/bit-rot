@@ -2,7 +2,7 @@ import pygame
 import os
 import xml.etree.ElementTree as ET
 from editor.config import GAME_ROOT
-from editor.ui import UITextBox, UIDropdown, UITextArea, UIAttributeList
+from editor.ui import UITextBox, UIDropdown, UITextArea, UIAttributeList, UITheme, draw_styled_button
 
 class FormModal:
     """A dynamic modal using UITextBox and UIDropdown to handle Node and Option editing."""
@@ -17,9 +17,9 @@ class FormModal:
         self.inputs = {}
         self.context = {}
 
-        self.save_btn = pygame.Rect(0, 0, 80, 30)
-        self.delete_btn = pygame.Rect(0, 0, 80, 30)
-        self.cancel_btn = pygame.Rect(0, 0, 80, 30)
+        self.save_btn = pygame.Rect(0, 0, 90, 30)
+        self.delete_btn = pygame.Rect(0, 0, 90, 30)
+        self.cancel_btn = pygame.Rect(0, 0, 90, 30)
 
         self.scroll_y = 0
         self.max_scroll = 0
@@ -41,21 +41,18 @@ class FormModal:
         for f in self.fields:
             val = str(values_dict.get(f, ""))
             
-            # Inject spacing for the group headers
             if f in ["req_level", "gain_xp"]:
                 current_y += 30
                 
-            # Height allocation logic
             if f in ["player_question", "npc_answer", "tip"]:
                 f_height = 80
             elif f in ["req_level", "gain_xp"]:
-                f_height = 145  # FIXED: Matches UIAttributeList hardcoded height
+                f_height = 145 
             else:
                 f_height = 28
                 
             f_rect = pygame.Rect(140, current_y, self.rect.width - 160, f_height)
             
-            # Component assignment based on field name
             if f == "_tag":
                 opts = [
                     {"label": "options", "value": "options"},
@@ -129,7 +126,6 @@ class FormModal:
                     self.update_layout()
                 return True
                 
-        # Handle active dropdowns first (z-index priority)
         for f, box in self.inputs.items():
             if hasattr(box, 'expanded') and box.expanded:
                 if box.handle_event(event): return True
@@ -140,7 +136,6 @@ class FormModal:
             if box.handle_event(event): consumed = True
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Handle Modal Scroll wheel
             if self.rect.collidepoint(event.pos):
                 if event.button == 4:
                     self.scroll_y = max(0, self.scroll_y - 30)
@@ -152,13 +147,12 @@ class FormModal:
                     return True
                     
             if event.button == 1:
-                # Custom Modal Drag Scrollbar check
                 if self.max_scroll > 0:
-                    track_rect = pygame.Rect(self.rect.right - 12, self.rect.y + 40, 12, self.rect.height - 90)
+                    track_rect = pygame.Rect(self.rect.right - 8, self.rect.y + 40, 8, self.rect.height - 90)
                     content_h = (self.rect.height - 90) + self.max_scroll
                     thumb_h = max(20, ((self.rect.height - 90) / content_h) * (self.rect.height - 90))
                     thumb_y = self.rect.y + 40 + (self.scroll_y / self.max_scroll) * (self.rect.height - 90 - thumb_h) if self.max_scroll > 0 else self.rect.y + 40
-                    thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
+                    thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
                     
                     if thumb_rect.collidepoint(event.pos):
                         self.dragging_scroll = True
@@ -187,7 +181,6 @@ class FormModal:
         return consumed
 
     def _shift_component(self, comp, dx, dy):
-        """Recursively shifts components to local coordinates for off-screen rendering."""
         comp.rect.x += dx
         comp.rect.y += dy
         if hasattr(comp, 'list_rect'):
@@ -206,31 +199,30 @@ class FormModal:
 
     def draw(self, surface):
         if not self.active: return
-
-        # 1. Base Modal Background
-        pygame.draw.rect(surface, (40, 40, 50), self.rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
-        surface.blit(self.font.render(self.title, True, (255, 255, 0)), (self.rect.x + 20, self.rect.y + 15))
         
-        # 2. OFF-SCREEN SANDBOX FOR HARD CLIPPING
+        shadow = self.rect.copy()
+        shadow.y += 10
+        pygame.draw.rect(surface, (0, 0, 0, 150), shadow, border_radius=8)
+
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.rect, 2, border_radius=8)
+        surface.blit(self.font.render(self.title, True, UITheme.WARNING), (self.rect.x + 20, self.rect.y + 15))
+        pygame.draw.line(surface, UITheme.BORDER, (self.rect.x, self.rect.y + 40), (self.rect.right, self.rect.y + 40))
+        
         clip_rect = pygame.Rect(self.rect.x, self.rect.y + 40, self.rect.width, self.rect.height - 90)
         content_surf = pygame.Surface((clip_rect.width, clip_rect.height), pygame.SRCALPHA)
-        content_surf.fill((40, 40, 50)) # Match modal background
+        content_surf.fill((37, 37, 40)) 
         
-        # Shift all elements to local subsurface coordinates
         dx, dy = -clip_rect.x, -clip_rect.y
         for f, box in self.inputs.items():
             self._shift_component(box, dx, dy)
 
-        # Draw components onto the sandboxed surface
         for f in self.fields:
             box = self.inputs[f]
-            
-            # Custom Headers
             if f == "req_level":
-                content_surf.blit(self.font.render("Required Level:", True, (255, 200, 0)), (10, box.rect.y - 25))
+                content_surf.blit(self.font.render("Required Level:", True, UITheme.WARNING), (10, box.rect.y - 25))
             elif f == "gain_xp":
-                content_surf.blit(self.font.render("Gain XP:", True, (255, 200, 0)), (10, box.rect.y - 25))
+                content_surf.blit(self.font.render("Gain XP:", True, UITheme.WARNING), (10, box.rect.y - 25))
             
             if f in ["req_level", "gain_xp"]:
                 lbl = "" 
@@ -238,40 +230,26 @@ class FormModal:
                 lbl = f.replace("_", " ").title()[:15] + ":"
                 
             if lbl: 
-                content_surf.blit(self.font.render(lbl, True, (180, 180, 180)), (10, box.rect.y + 5))
+                content_surf.blit(self.font.render(lbl, True, UITheme.TEXT_DIM), (10, box.rect.y + 5))
             
-            # Since content_surf is physically sized to the clip rect, un-setting clips inside components won't matter
             box.draw(content_surf)
 
-        # Blit perfectly clipped content back to the screen
         surface.blit(content_surf, clip_rect.topleft)
-        
-        # Restore all coordinates back to global space instantly
         self.update_layout()
         
-        # 3. Action Buttons & Scrollbar 
         if self.max_scroll > 0:
-            track_rect = pygame.Rect(self.rect.right - 12, self.rect.y + 40, 12, self.rect.height - 90)
-            pygame.draw.rect(surface, (30, 30, 35), track_rect)
-            
+            track_rect = pygame.Rect(self.rect.right - 8, self.rect.y + 40, 8, self.rect.height - 90)
             content_h = (self.rect.height - 90) + self.max_scroll
             thumb_h = max(20, ((self.rect.height - 90) / content_h) * (self.rect.height - 90))
             thumb_y = self.rect.y + 40 + (self.scroll_y / self.max_scroll) * (self.rect.height - 90 - thumb_h)
-            
-            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
-            pygame.draw.rect(surface, (150, 150, 150), thumb_rect)
+            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, thumb_rect, border_radius=4)
 
-        pygame.draw.rect(surface, (0, 150, 0), self.save_btn)
-        surface.blit(self.font.render("Save", True, (255, 255, 255)), (self.save_btn.x + 20, self.save_btn.y + 5))
+        mouse_pos = pygame.mouse.get_pos()
+        draw_styled_button(surface, self.save_btn, "Save", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+        draw_styled_button(surface, self.cancel_btn, "Cancel", self.font, mouse_pos, UITheme.BORDER, UITheme.BORDER_ACTIVE)
 
-        pygame.draw.rect(surface, (150, 0, 0), self.delete_btn)
-        surface.blit(self.font.render("Delete", True, (255, 255, 255)), (self.delete_btn.x + 15, self.delete_btn.y + 5))
-
-        pygame.draw.rect(surface, (100, 100, 100), self.cancel_btn)
-        surface.blit(self.font.render("Cancel", True, (255, 255, 255)), (self.cancel_btn.x + 15, self.cancel_btn.y + 5))
-
-        # 4. Dropdown Menus
-        # Drawn directly to the global surface so they correctly overflow modal borders
         for f in self.fields:
             box = self.inputs[f]
             if hasattr(box, 'draw_list'):
@@ -287,7 +265,6 @@ class DialogEditor:
         self.nodes = {} 
         self.selected_node = None
         
-        # Sidebar State
         self.sidebar_w = 300
         self.sidebar_scroll = 0
         self.max_sidebar_scroll = 0
@@ -296,7 +273,6 @@ class DialogEditor:
         self.sidebar_start_offset = 0
         self.sidebar_thumb_rect = None
         
-        # Form State
         self.form_scroll = 0
         self.max_form_scroll = 0
         self.dragging_form = False
@@ -304,13 +280,26 @@ class DialogEditor:
         self.form_start_offset = 0
         self.form_thumb_rect = None
         
-        self.xml_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'npc')
-        self.xml_path = os.path.join(self.xml_dir, 'dialogs.xml')
+        self.xml_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'npc_dialogs')
+        self.current_file = None
+        self.files = []
+        
+        # Build dialog directory & defaults if they don't exist
+        if not os.path.exists(self.xml_dir):
+            os.makedirs(self.xml_dir)
+            
+        default_files = ["chat.xml", "item_quests.xml", "quests.xml", "tips.xml"]
+        for df in default_files:
+            df_path = os.path.join(self.xml_dir, df)
+            if not os.path.exists(df_path):
+                root = ET.Element("npc_dialog")
+                ET.ElementTree(root).write(df_path)
         
         self.modal = FormModal(400, 300, font, item_tiles)
         
-        self.new_node_btn = pygame.Rect(20, y_offset + 40, self.sidebar_w - 40, 30)
-        self.save_xml_btn = pygame.Rect(self.sidebar_w + 300, y_offset + 15, 120, 30)
+        self.file_dropdown = UIDropdown(10, self.y_offset + 35, self.sidebar_w - 20, 30, self.font, [])
+        self.new_node_btn = pygame.Rect(10, self.y_offset + 75, self.sidebar_w - 20, 32)
+        self.save_xml_btn = pygame.Rect(self.sidebar_w + 300, y_offset + 12, 120, 35)
         
         self.opt_fields = [
             "_tag", "player_question", "npc_answer", "unlock_flag", "priority", "dialog_type", 
@@ -318,23 +307,32 @@ class DialogEditor:
             "npc_state_static", "req_level", "gain_xp"
         ]
         
-        self.load_xml()
+        self.refresh_files()
 
     def resize(self, width, height):
         self.width = width
         self.height = height
 
+    def refresh_files(self):
+        self.files = sorted([f for f in os.listdir(self.xml_dir) if f.endswith('.xml')])
+        opts = [{"label": f, "value": f} for f in self.files]
+        self.file_dropdown.options = opts
+        if not self.current_file and self.files:
+            self.current_file = self.files[0]
+            self.file_dropdown.selected_value = self.current_file
+            self.file_dropdown._update_label()
+        self.load_xml()
+
     def load_xml(self):
         self.nodes.clear()
-        if not os.path.exists(self.xml_dir): os.makedirs(self.xml_dir)
+        self.selected_node = None
+        if not self.current_file: return
         
-        if not os.path.exists(self.xml_path):
-            root = ET.Element("npc_dialog")
-            tree = ET.ElementTree(root)
-            tree.write(self.xml_path)
+        path = os.path.join(self.xml_dir, self.current_file)
+        if not os.path.exists(path): return
 
         try:
-            tree = ET.parse(self.xml_path)
+            tree = ET.parse(path)
             root = tree.getroot()
             for node_el in root.findall('node'):
                 n_id = node_el.get('id')
@@ -343,8 +341,6 @@ class DialogEditor:
                 for child in node_el:
                     d = child.attrib.copy()
                     d["_tag"] = child.tag
-                    
-                    # Normalize differing keys to a standard UI dictionary
                     if child.tag == "player_question" and "p" in d:
                         d["player_question"] = d.pop("p")
                     elif child.tag == "npc_awnser" and "n" in d:
@@ -354,9 +350,11 @@ class DialogEditor:
                     
                 self.nodes[n_id] = {"options": options}
         except Exception as e:
-            print(f"Error loading dialogs XML: {e}")
+            pass
 
     def save_xml(self):
+        if not self.current_file: return
+        path = os.path.join(self.xml_dir, self.current_file)
         root = ET.Element("npc_dialog")
         for n_id, data in self.nodes.items():
             node_el = ET.SubElement(root, "node", {"id": n_id})
@@ -365,7 +363,6 @@ class DialogEditor:
                 tag = opt.get("_tag", "options")
                 clean_opt = {k: v for k, v in opt.items() if str(v).strip() and k != "_tag"}
                 
-                # De-normalize keys mapping back to specialized XML formats
                 if tag == "player_question" and "player_question" in clean_opt:
                     clean_opt["p"] = clean_opt.pop("player_question")
                 elif tag == "npc_awnser" and "npc_answer" in clean_opt:
@@ -375,26 +372,24 @@ class DialogEditor:
                 
         tree = ET.ElementTree(root)
         ET.indent(tree, space="    ", level=0) 
-        tree.write(self.xml_path, encoding="utf-8", xml_declaration=True)
-        print(f"Saved Dialog XML to {self.xml_path}")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
 
     def get_layout_rects(self):
-        """Calculates dynamic positioning for the selected node's options."""
         if not self.selected_node: return [], None, None, 0
         
         current_y = self.y_offset + 70 - self.form_scroll
-        del_node_btn = pygame.Rect(self.width - 140, self.y_offset + 15, 110, 30)
+        del_node_btn = pygame.Rect(self.width - 150, self.y_offset + 12, 130, 35)
         
         rects = []
         for i, opt in enumerate(self.nodes[self.selected_node]["options"]):
-            card_rect = pygame.Rect(self.sidebar_w + 20, current_y, self.width - self.sidebar_w - 60, 70)
-            edit_btn = pygame.Rect(card_rect.right - 140, card_rect.y + 20, 60, 30)
-            del_btn = pygame.Rect(card_rect.right - 70, card_rect.y + 20, 60, 30)
+            card_rect = pygame.Rect(self.sidebar_w + 20, current_y, self.width - self.sidebar_w - 60, 75)
+            edit_btn = pygame.Rect(card_rect.right - 150, card_rect.y + 22, 60, 30)
+            del_btn = pygame.Rect(card_rect.right - 80, card_rect.y + 22, 60, 30)
             
             rects.append({"card": card_rect, "edit": edit_btn, "delete": del_btn, "idx": i})
-            current_y += 80
+            current_y += 85
             
-        add_btn = pygame.Rect(self.sidebar_w + 20, current_y, 120, 30)
+        add_btn = pygame.Rect(self.sidebar_w + 20, current_y, 140, 35)
         return rects, add_btn, del_node_btn, current_y + 50
 
     def handle_event(self, event):
@@ -423,6 +418,15 @@ class DialogEditor:
                         
                 return True
 
+        # Process the Dropdown before other clicks, prioritizing it if it's expanded
+        old_file = self.current_file
+        if self.file_dropdown.handle_event(event):
+            if self.file_dropdown.text != old_file:
+                self.save_xml()
+                self.current_file = self.file_dropdown.text
+                self.load_xml()
+            return True
+
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging_sidebar = False
             self.dragging_form = False
@@ -430,7 +434,7 @@ class DialogEditor:
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
                 dy = event.pos[1] - self.sidebar_start_y
-                track_h = self.height - self.y_offset - 80
+                track_h = self.height - self.y_offset - 115
                 thumb_h = self.sidebar_thumb_rect.height
                 track_space = track_h - thumb_h
                 if track_space > 0:
@@ -448,8 +452,6 @@ class DialogEditor:
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
-            
-            # Sidebar Scrolling & Clicks
             if mx <= self.sidebar_w:
                 if event.button == 4:
                     self.sidebar_scroll = max(0, self.sidebar_scroll - 40)
@@ -469,16 +471,15 @@ class DialogEditor:
                         self.modal.open("New Node", ["id"], {"id": "new_node"}, {"type": "new_node"}, self.width//2, self.height//2)
                         return True
                         
-                    list_y = self.y_offset + 80 - self.sidebar_scroll
+                    list_y = self.y_offset + 120 - self.sidebar_scroll
                     for n_id in self.nodes.keys():
                         if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                            if list_y > self.y_offset + 70:
+                            if list_y > self.y_offset + 115:
                                 self.selected_node = n_id
                                 self.form_scroll = 0
                             return True
                         list_y += 30
             
-            # Form Panel Scrolling & Clicks
             else:
                 if event.button == 4:
                     self.form_scroll = max(0, self.form_scroll - 40)
@@ -517,48 +518,46 @@ class DialogEditor:
                             if r["delete"].collidepoint(mx, my):
                                 self.nodes[self.selected_node]["options"].pop(r["idx"])
                                 return True
-
         return False
 
     def draw(self, surface):
         bg_rect = pygame.Rect(0, self.y_offset, self.width, self.height - self.y_offset)
-        pygame.draw.rect(surface, (30, 30, 40), bg_rect)
+        pygame.draw.rect(surface, UITheme.BG, bg_rect)
         
-        # --- 1. SCROLLED LEFT SIDEBAR ---
-        list_view_rect = pygame.Rect(0, self.y_offset + 80, self.sidebar_w, self.height - self.y_offset - 80)
+        list_view_rect = pygame.Rect(0, self.y_offset + 115, self.sidebar_w, self.height - self.y_offset - 115)
         surface.set_clip(list_view_rect)
         
-        list_y = self.y_offset + 80 - self.sidebar_scroll
+        mouse_pos = pygame.mouse.get_pos()
+        list_y = self.y_offset + 120 - self.sidebar_scroll
         for n_id in self.nodes.keys():
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
             if n_id == self.selected_node:
-                pygame.draw.rect(surface, (80, 80, 150), r)
+                pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
+            elif r.collidepoint(mouse_pos):
+                pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
+                
             lbl = (n_id[:25] + '..') if len(n_id) > 27 else n_id
-            surface.blit(self.font.render(lbl, True, (220, 220, 220)), (15, list_y + 3))
+            surface.blit(self.font.render(lbl, True, UITheme.TEXT), (15, list_y + 4))
             list_y += 30
             
         surface.set_clip(None)
         
-        # Overlay Sidebar Header
-        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 80)
-        pygame.draw.rect(surface, (40, 40, 45), sidebar_header_rect)
-        pygame.draw.line(surface, (80, 80, 90), (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
-        surface.blit(self.font.render("Dialog Nodes", True, (255, 255, 0)), (20, self.y_offset + 10))
+        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 115)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
+        pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
+        surface.blit(self.font.render("Dialog Nodes", True, UITheme.WARNING), (20, self.y_offset + 10))
         
-        pygame.draw.rect(surface, (0, 150, 0), self.new_node_btn)
-        surface.blit(self.font.render("+ New Node", True, (255, 255, 255)), (self.new_node_btn.x + 80, self.new_node_btn.y + 5))
+        self.file_dropdown.draw(surface)
+        draw_styled_button(surface, self.new_node_btn, "+ New Node", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
 
-        # Sidebar Scrollbar
-        self.max_sidebar_scroll = max(0, len(self.nodes) * 30 + 80 - list_view_rect.height)
+        self.max_sidebar_scroll = max(0, len(self.nodes) * 30 + 10 - list_view_rect.height)
         if self.max_sidebar_scroll > 0:
-            track_rect = pygame.Rect(self.sidebar_w - 12, list_view_rect.y, 12, list_view_rect.height)
-            pygame.draw.rect(surface, (30, 30, 35), track_rect)
+            track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             thumb_h = max(20, (list_view_rect.height / (list_view_rect.height + self.max_sidebar_scroll)) * list_view_rect.height)
             thumb_y = list_view_rect.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_view_rect.height - thumb_h)
-            self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
-            pygame.draw.rect(surface, (100, 100, 100), self.sidebar_thumb_rect)
+            self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
 
-        # --- 2. SCROLLED RIGHT PANEL ---
         if self.selected_node:
             rects, add_btn, del_node_btn, total_h = self.get_layout_rects()
             
@@ -566,8 +565,8 @@ class DialogEditor:
             surface.set_clip(form_view_rect)
             
             for r in rects:
-                pygame.draw.rect(surface, (50, 50, 60), r["card"])
-                pygame.draw.rect(surface, (100, 100, 110), r["card"], 1)
+                pygame.draw.rect(surface, UITheme.PANEL_BG, r["card"], border_radius=6)
+                pygame.draw.rect(surface, UITheme.BORDER, r["card"], 1, border_radius=6)
                 
                 opt = self.nodes[self.selected_node]["options"][r["idx"]]
                 tag = opt.get("_tag", "options")
@@ -580,40 +579,33 @@ class DialogEditor:
                     
                 if len(snippet) > 85: snippet = snippet[:82] + "..."
                 
-                surface.blit(self.font.render(f"[{tag}]", True, (255, 255, 100)), (r["card"].x + 10, r["card"].y + 10))
-                surface.blit(self.font.render(snippet, True, (200, 200, 200)), (r["card"].x + 10, r["card"].y + 35))
+                surface.blit(self.font.render(f"[{tag}]", True, UITheme.WARNING), (r["card"].x + 10, r["card"].y + 10))
+                surface.blit(self.font.render(snippet, True, UITheme.TEXT), (r["card"].x + 10, r["card"].y + 40))
                 
-                pygame.draw.rect(surface, (100, 100, 150), r["edit"])
-                surface.blit(self.font.render("Edit", True, (255, 255, 255)), (r["edit"].x + 15, r["edit"].y + 5))
+                draw_styled_button(surface, r["edit"], "Edit", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
+                draw_styled_button(surface, r["delete"], "Del", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 
-                pygame.draw.rect(surface, (150, 50, 50), r["delete"])
-                surface.blit(self.font.render("Del", True, (255, 255, 255)), (r["delete"].x + 15, r["delete"].y + 5))
-                
-            pygame.draw.rect(surface, (50, 150, 50), add_btn)
-            surface.blit(self.font.render("+ Add Option", True, (255, 255, 255)), (add_btn.x + 10, add_btn.y + 5))
-            
+            draw_styled_button(surface, add_btn, "+ Add Option", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
             surface.set_clip(None)
 
-            # Overlay Right Panel Header
             right_header_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, 60)
-            pygame.draw.rect(surface, (30, 30, 40), right_header_rect) # Matches bg
+            pygame.draw.rect(surface, UITheme.BG, right_header_rect) 
+            pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset + 59), (self.width, self.y_offset + 59))
             
-            surface.blit(self.font.render(f"Node: {self.selected_node}", True, (255, 200, 0)), (self.sidebar_w + 20, self.y_offset + 20))
+            surface.blit(self.font.render(f"Node: {self.selected_node}", True, UITheme.WARNING), (self.sidebar_w + 20, self.y_offset + 22))
             
-            pygame.draw.rect(surface, (0, 100, 200), self.save_xml_btn)
-            surface.blit(self.font.render("Save XML", True, (255, 255, 255)), (self.save_xml_btn.x + 20, self.save_xml_btn.y + 5))
-            
-            pygame.draw.rect(surface, (150, 0, 0), del_node_btn)
-            surface.blit(self.font.render("Delete Node", True, (255, 255, 255)), (del_node_btn.x + 5, del_node_btn.y + 5))
+            draw_styled_button(surface, self.save_xml_btn, "Save XML", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
+            draw_styled_button(surface, del_node_btn, "Delete Node", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
 
-            # Form Scrollbar
             self.max_form_scroll = max(0, total_h - (self.y_offset + 60 + form_view_rect.height))
             if self.max_form_scroll > 0:
-                track_rect = pygame.Rect(self.width - 12, form_view_rect.y, 12, form_view_rect.height)
-                pygame.draw.rect(surface, (30, 30, 35), track_rect)
+                track_rect = pygame.Rect(self.width - 8, form_view_rect.y, 8, form_view_rect.height)
                 thumb_h = max(20, (form_view_rect.height / (form_view_rect.height + self.max_form_scroll)) * form_view_rect.height)
                 thumb_y = form_view_rect.y + (self.form_scroll / self.max_form_scroll) * (form_view_rect.height - thumb_h)
-                self.form_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
-                pygame.draw.rect(surface, (100, 100, 100), self.form_thumb_rect)
+                self.form_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+                pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.form_thumb_rect, border_radius=4)
 
+        if self.file_dropdown.expanded:
+            self.file_dropdown.draw_list(surface)
+            
         if self.modal.active: self.modal.draw(surface)

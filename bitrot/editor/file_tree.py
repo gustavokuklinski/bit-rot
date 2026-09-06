@@ -4,9 +4,7 @@ import os
 
 from editor.assets import load_editor_icons
 from editor.config import GAME_ROOT, SPRITE_ROOT, ICON_SIZE
-
-YELLOW = (255, 255, 0)
-LIGHT_BLUE = (180, 180, 220)
+from editor.ui import UITheme
 
 class FileTree:
     def __init__(self, x, y, width, height, root_dir, file_pattern, font, show_saves=True):
@@ -17,20 +15,17 @@ class FileTree:
         self.font = font
         self.root_dir = root_dir
         self.file_pattern = file_pattern
-        self.line_height = 25
+        self.line_height = 28
         self.scroll_offset = 0
         self.show_saves = show_saves 
         
-        # FIX: Load icons using the absolute global path
         icon_path = os.path.join(SPRITE_ROOT, 'editor')
         self.icons = load_editor_icons(icon_path)
         
-        # FIX: Create a default placeholder icon so the editor NEVER crashes if a .png is missing
         self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
         self.default_icon.fill((100, 100, 100))
         pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 1)
         
-        # Data structures
         self.folders = []          
         self.map_data = {}         
         self.expanded_folders = {} 
@@ -39,7 +34,6 @@ class FileTree:
         
         self.selected_map = None   
         
-        # Scrollbar State
         self.max_scroll = 0
         self.dragging_scroll = False
         self.scrollbar_track_rect = None
@@ -53,7 +47,6 @@ class FileTree:
         self.height = height
 
     def refresh(self):
-        """Refreshes the file list from the directory."""
         if not os.path.exists(self.root_dir):
             os.makedirs(self.root_dir)
             
@@ -158,9 +151,10 @@ class FileTree:
         if modified_maps is None:
             modified_maps = set()
             
-        pygame.draw.rect(surface, (200, 200, 200), (self.x, self.y, self.width, self.height))
+        pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, self.width, self.height))
+        pygame.draw.line(surface, UITheme.BORDER, (self.x + self.width - 1, self.y), (self.x + self.width - 1, self.y + self.height))
 
-        map_info_y = self.y + 5
+        map_info_y = self.y + 10
         display_current_folder = current_folder
         if os.path.isabs(current_folder) and current_folder.endswith("map"):
              try:
@@ -168,8 +162,8 @@ class FileTree:
              except: pass
 
         disp_name = f"{display_current_folder}/{current_map_name}" if display_current_folder else current_map_name
-        surface.blit(self.font.render(f"Active: {disp_name}", True, (0, 0, 0)), (self.x + 10, map_info_y))
-        surface.blit(self.font.render(f"Layer: {active_layer_name}", True, (0, 0, 0)), (self.x + 10, map_info_y + self.line_height))
+        surface.blit(self.font.render(f"Active: {disp_name}", True, UITheme.TEXT), (self.x + 10, map_info_y))
+        surface.blit(self.font.render(f"Layer: {active_layer_name}", True, UITheme.TEXT_DIM), (self.x + 10, map_info_y + self.line_height))
 
         list_rect = pygame.Rect(self.x, self.y + (self.line_height * 2.5), self.width, self.height - (self.line_height * 2.5))
         content_height = self._get_content_height()
@@ -178,6 +172,7 @@ class FileTree:
 
         surface.set_clip(list_rect)
         display_y = list_rect.y - self.scroll_offset
+        mouse_pos = pygame.mouse.get_pos()
         
         for folder in self.folders:
             indent = 10
@@ -191,7 +186,9 @@ class FileTree:
                 
                 icon = "[-]" if self.expanded_folders.get(folder) else "[+]"
                 if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                    surface.blit(self.font.render(f"{icon} {display_folder}", True, (0, 0, 0)), (self.x + 10, display_y))
+                    row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
+                    if row_rect.collidepoint(mouse_pos): pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
+                    surface.blit(self.font.render(f"{icon} {display_folder}", True, UITheme.TEXT), (self.x + 10, display_y + 4))
                 display_y += self.line_height
                 indent = 25
 
@@ -202,13 +199,16 @@ class FileTree:
                     is_modified = map_key in modified_maps
                     modified_indicator = "*" if is_modified else ""
                     
-                    if map_name == current_map_name and folder == current_folder: 
-                        if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                            pygame.draw.rect(surface, (150, 150, 250), (self.x + 5, display_y, self.width - 15, self.line_height - 2))
+                    if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                        row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
+                        if map_name == current_map_name and folder == current_folder: 
+                            pygame.draw.rect(surface, UITheme.LIST_HOVER, row_rect)
+                        elif row_rect.collidepoint(mouse_pos):
+                            pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
                     
                     icon = "[-]" if self.expanded_maps.get(map_key) else "[+]"
                     if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                        surface.blit(self.font.render(f"{icon} {map_name}{modified_indicator}", True, (0, 0, 0)), (self.x + indent, display_y))
+                        surface.blit(self.font.render(f"{icon} {map_name}{modified_indicator}", True, UITheme.TEXT), (self.x + indent, display_y + 4))
                     display_y += self.line_height
 
                     if self.expanded_maps.get(map_key):
@@ -229,14 +229,16 @@ class FileTree:
                             prop = self.layer_properties[rel_path]
                             
                             if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                                row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
                                 if layer_name == active_layer_name and map_name == current_map_name and folder == current_folder:
-                                    pygame.draw.rect(surface, LIGHT_BLUE, (self.x + indent + 5, display_y, self.width - (indent + 25), self.line_height - 2))
+                                    pygame.draw.rect(surface, UITheme.ACCENT, row_rect)
+                                elif row_rect.collidepoint(mouse_pos):
+                                    pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
 
-                                surface.blit(self.font.render(f"    {layer_name}", True, (50, 50, 50)), (self.x + indent + 5, display_y))
+                                surface.blit(self.font.render(f"    {layer_name}", True, UITheme.TEXT_DIM), (self.x + indent + 5, display_y + 4))
 
-                                # FIX: Use .get() with fallback default_icon to prevent KeyError crash
                                 icon_img = self.icons.get("hide" if prop["visible"] else "view", self.default_icon)
-                                vh_rect = pygame.Rect(self.x + self.width - 165, display_y - 6, ICON_SIZE, ICON_SIZE)
+                                vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, display_y, ICON_SIZE, ICON_SIZE)
                                 surface.blit(icon_img, vh_rect)
 
                             display_y += self.line_height
@@ -244,15 +246,14 @@ class FileTree:
         surface.set_clip(None)
 
         if self.max_scroll > 0:
-            track_rect = pygame.Rect(self.x + self.width - 12, list_rect.y, 12, list_rect.height)
+            track_rect = pygame.Rect(self.x + self.width - 8, list_rect.y, 8, list_rect.height)
             self.scrollbar_track_rect = track_rect
-            pygame.draw.rect(surface, (180, 180, 180), track_rect)
             thumb_height = max(20, (list_rect.height / content_height) * list_rect.height)
             scroll_ratio = self.scroll_offset / self.max_scroll
             thumb_y = list_rect.y + scroll_ratio * (list_rect.height - thumb_height)
-            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_height)
+            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_height)
             self.scrollbar_thumb_rect = thumb_rect
-            pygame.draw.rect(surface, (100, 100, 100), thumb_rect)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, thumb_rect, border_radius=4)
         else:
             self.scrollbar_track_rect = None
             self.scrollbar_thumb_rect = None
@@ -328,7 +329,7 @@ class FileTree:
                                             self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
                                         layer_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
                                         if layer_rect.collidepoint(mx, my):
-                                            vh_rect = pygame.Rect(self.x + self.width - 165, current_y, ICON_SIZE, ICON_SIZE)
+                                            vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, current_y, ICON_SIZE, ICON_SIZE)
                                             if vh_rect.collidepoint(mx, my):
                                                 self.layer_properties[rel_path]["visible"] = not self.layer_properties[rel_path]["visible"]
                                                 return {"action": "toggle_visibility", "layer_name": layer_name, "properties": self.layer_properties[rel_path]}

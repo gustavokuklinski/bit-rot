@@ -3,11 +3,84 @@ import re
 import os
 import csv
 from datetime import datetime
-from editor.config import GAME_ROOT,SPRITE_ROOT, TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
+from editor.config import GAME_ROOT, SPRITE_ROOT, TILE_SIZE, SIDEBAR_WIDTH, SCREEN_HEIGHT, FILE_TREE_WIDTH, SCREEN_WIDTH, ICON_SIZE, BUILDINGS_DIR, BUILDING_PREVIEW_SIZE, TAB_BAR_HEIGHT
 from editor.assets import load_editor_icons
 
+# ----------------------------------------------------------------------
+# UI THEME & MODULAR UI UTILS
+# ----------------------------------------------------------------------
+class UITheme:
+    BG = (30, 30, 32)
+    PANEL_BG = (37, 37, 40)
+    BORDER = (60, 60, 65)
+    BORDER_ACTIVE = (100, 100, 110)
+    TEXT = (220, 220, 220)
+    TEXT_DIM = (150, 150, 150)
+    
+    # Modern Editor Accents
+    ACCENT = (14, 99, 156)
+    ACCENT_HOVER = (17, 119, 187)
+    DANGER = (200, 50, 50)
+    DANGER_HOVER = (220, 70, 70)
+    SUCCESS = (50, 150, 50)
+    SUCCESS_HOVER = (60, 170, 60)
+    WARNING = (200, 150, 0)
+    WARNING_HOVER = (220, 170, 20)
+    
+    HOVER_BG = (50, 50, 55)
+    LIST_HOVER = (9, 71, 113)
+    RADIUS = 6
+
+_active_tooltip = None
+
+def register_tooltip(pos, text):
+    global _active_tooltip
+    _active_tooltip = (pos, text)
+
+def draw_styled_button(surface, rect, text, font, mouse_pos, base_color=UITheme.ACCENT, hover_color=UITheme.ACCENT_HOVER, tooltip=None, text_color=UITheme.TEXT, radius=UITheme.RADIUS):
+    hovered = rect.collidepoint(mouse_pos)
+    color = hover_color if hovered else base_color
+    
+    # Drop Shadow
+    shadow_rect = rect.copy()
+    shadow_rect.y += 2
+    pygame.draw.rect(surface, (15, 15, 15), shadow_rect, border_radius=radius)
+    
+    pygame.draw.rect(surface, color, rect, border_radius=radius)
+    pygame.draw.rect(surface, UITheme.BORDER, rect, 1, border_radius=radius)
+    
+    text_surf = font.render(text, True, text_color)
+    text_rect = text_surf.get_rect(center=rect.center)
+    surface.blit(text_surf, text_rect)
+    
+    if hovered and tooltip:
+        register_tooltip(mouse_pos, tooltip)
+
+def draw_tooltips(surface, font):
+    global _active_tooltip
+    if _active_tooltip:
+        pos, text = _active_tooltip
+        text_surf = font.render(text, True, UITheme.TEXT)
+        pad_x, pad_y = 8, 6
+        tt_rect = pygame.Rect(pos[0] + 15, pos[1] + 15, text_surf.get_width() + pad_x*2, text_surf.get_height() + pad_y*2)
+        
+        # Screen bounds constraint
+        if tt_rect.right > surface.get_width(): tt_rect.right = surface.get_width() - 5
+        if tt_rect.bottom > surface.get_height(): tt_rect.bottom = surface.get_height() - 5
+        
+        # Shadow & Box
+        shadow = tt_rect.copy()
+        shadow.y += 3
+        pygame.draw.rect(surface, (10, 10, 10, 128), shadow, border_radius=4)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, tt_rect, border_radius=4)
+        pygame.draw.rect(surface, UITheme.BORDER, tt_rect, 1, border_radius=4)
+        surface.blit(text_surf, (tt_rect.x + pad_x, tt_rect.y + pad_y))
+        _active_tooltip = None
+
+# ----------------------------------------------------------------------
+# COMPONENTS
+# ----------------------------------------------------------------------
 class UITextBox:
-    """A robust text input handling drag selection, cursor blinking, and clipboard."""
     def __init__(self, x, y, width, height, font, text=""):
         self.rect = pygame.Rect(x, y, width, height)
         self.font = font
@@ -120,32 +193,33 @@ class UITextBox:
     def draw(self, surface):
         cursor_x = self.font.size(self.text[:self.cursor_pos])[0]
         if cursor_x - self.scroll_x < 0: self.scroll_x = cursor_x
-        elif cursor_x - self.scroll_x > self.rect.width - 10: self.scroll_x = cursor_x - self.rect.width + 10
+        elif cursor_x - self.scroll_x > self.rect.width - 15: self.scroll_x = cursor_x - self.rect.width + 15
 
-        pygame.draw.rect(surface, (40, 40, 40), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255) if self.active else (100, 100, 100), self.rect, 2)
+        # Background and Border
+        pygame.draw.rect(surface, UITheme.BG, self.rect, border_radius=4)
+        border_color = UITheme.ACCENT if self.active else UITheme.BORDER
+        pygame.draw.rect(surface, border_color, self.rect, max(1, 2 if self.active else 1), border_radius=4)
         
-        surface.set_clip(self.rect.inflate(-4, -4))
+        surface.set_clip(self.rect.inflate(-8, -4))
         
         if self.sel_start is not None and self.sel_start != self.cursor_pos:
             s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
-            sx = self.font.size(self.text[:s])[0] - self.scroll_x + self.rect.x + 5
+            sx = self.font.size(self.text[:s])[0] - self.scroll_x + self.rect.x + 8
             sw = self.font.size(self.text[s:e])[0]
-            pygame.draw.rect(surface, (0, 100, 200), (sx, self.rect.y + 2, sw, self.rect.height - 4))
+            pygame.draw.rect(surface, UITheme.LIST_HOVER, (sx, self.rect.y + 2, sw, self.rect.height - 4))
         
-        ts = self.font.render(self.text, True, (255, 255, 255))
-        surface.blit(ts, (self.rect.x + 5 - self.scroll_x, self.rect.y + (self.rect.height - ts.get_height())//2))
+        ts = self.font.render(self.text, True, UITheme.TEXT)
+        surface.blit(ts, (self.rect.x + 8 - self.scroll_x, self.rect.y + (self.rect.height - ts.get_height())//2))
         
         if self.active:
             self.blink_timer += 1
             if (self.blink_timer // 30) % 2 == 0:
-                cx = self.rect.x + 5 + cursor_x - self.scroll_x
-                pygame.draw.line(surface, (255, 255, 255), (cx, self.rect.y + 4), (cx, self.rect.bottom - 4), 2)
+                cx = self.rect.x + 8 + cursor_x - self.scroll_x
+                pygame.draw.line(surface, UITheme.TEXT, (cx, self.rect.y + 6), (cx, self.rect.bottom - 6), 2)
                 
         surface.set_clip(None)
 
 class UIDropdown:
-    """A dropdown menu component handling text, selection, icons, and scroll dragging."""
     def __init__(self, x, y, width, height, font, options, selected_value="", searchable=False):
         self.rect = pygame.Rect(x, y, width, height)
         self.font = font
@@ -157,10 +231,9 @@ class UIDropdown:
         
         self.scroll_offset = 0
         self.item_height = 30
-        self.max_visible_items = 5 # Reduced to 5 to keep it compact
+        self.max_visible_items = 5
         
         self.list_rect = pygame.Rect(x, y + height, width, 0)
-        
         self.selected_label = ""
         self.dragging_scroll = False
         self.scroll_start_y = 0
@@ -193,15 +266,12 @@ class UIDropdown:
             
         from editor.config import SCREEN_HEIGHT
         self.list_rect.height = base_h
-        
-        # Smart positioning: If it clips the bottom, open upwards!
         if self.rect.bottom + base_h > SCREEN_HEIGHT - 10:
             self.list_rect.bottom = self.rect.top
         else:
             self.list_rect.top = self.rect.bottom
 
     def handle_event(self, event):
-        # Handle typing for search filter
         if event.type == pygame.KEYDOWN and self.expanded and self.searchable:
             if event.key == pygame.K_BACKSPACE:
                 self.search_text = self.search_text[:-1]
@@ -219,7 +289,6 @@ class UIDropdown:
                 list_view_h = self.list_rect.height - (self.item_height if self.searchable else 0)
                 max_scroll = max(0, content_h - list_view_h)
                 
-                # Scrollbar drag click
                 if max_scroll > 0:
                     sb_rect = pygame.Rect(self.list_rect.right - 8, self.list_rect.y + (self.item_height if self.searchable else 0), 8, list_view_h)
                     if sb_rect.collidepoint(event.pos):
@@ -228,10 +297,9 @@ class UIDropdown:
                         self.scroll_start_offset = self.scroll_offset
                         return True
 
-                # Option or Search bar click
                 if self.list_rect.collidepoint(event.pos):
                     if self.searchable and event.pos[1] < self.list_rect.y + self.item_height:
-                        return True # Clicked the search bar, don't close
+                        return True 
 
                     start_y = self.list_rect.y + (self.item_height if self.searchable else 0)
                     rel_y = event.pos[1] - start_y + self.scroll_offset
@@ -295,46 +363,52 @@ class UIDropdown:
         return False
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (40, 40, 40), self.rect)
-        pygame.draw.rect(surface, (255, 255, 0) if self.expanded else (100, 100, 100), self.rect, 2)
+        hover = self.rect.collidepoint(pygame.mouse.get_pos())
+        bg_color = UITheme.HOVER_BG if hover else UITheme.BG
         
-        lbl_surf = self.font.render(self.selected_label or "None", True, (255, 255, 255))
+        pygame.draw.rect(surface, bg_color, self.rect, border_radius=4)
+        border_color = UITheme.ACCENT if self.expanded else UITheme.BORDER
+        pygame.draw.rect(surface, border_color, self.rect, 1 if not self.expanded else 2, border_radius=4)
+        
+        lbl_surf = self.font.render(self.selected_label or "None", True, UITheme.TEXT)
         selected_icon = next((opt.get('icon') for opt in self.options if opt['value'] == self.selected_value), None)
         
-        draw_x = self.rect.x + 5
+        draw_x = self.rect.x + 8
         if selected_icon:
-            ic_size = self.rect.height - 6
+            ic_size = self.rect.height - 8
             scaled_ic = pygame.transform.scale(selected_icon, (ic_size, ic_size))
-            surface.blit(scaled_ic, (draw_x, self.rect.y + 3))
+            surface.blit(scaled_ic, (draw_x, self.rect.y + 4))
             draw_x += ic_size + 8
             
-        surface.set_clip(self.rect.inflate(-4, -4))
+        surface.set_clip(self.rect.inflate(-8, -4))
         surface.blit(lbl_surf, (draw_x, self.rect.y + (self.rect.height - lbl_surf.get_height())//2))
         surface.set_clip(None)
         
-        pygame.draw.polygon(surface, (150, 150, 150), [
-            (self.rect.right - 18, self.rect.centery - 2),
-            (self.rect.right - 6, self.rect.centery - 2),
-            (self.rect.right - 12, self.rect.centery + 4)
-        ])
+        # Draw Arrow
+        arrow_x = self.rect.right - 14
+        arrow_y = self.rect.centery
+        if self.expanded:
+            pygame.draw.polygon(surface, UITheme.TEXT_DIM, [(arrow_x-5, arrow_y+2), (arrow_x+5, arrow_y+2), (arrow_x, arrow_y-3)])
+        else:
+            pygame.draw.polygon(surface, UITheme.TEXT_DIM, [(arrow_x-5, arrow_y-2), (arrow_x+5, arrow_y-2), (arrow_x, arrow_y+3)])
 
     def draw_list(self, surface):
         if not self.expanded: return
         
-        pygame.draw.rect(surface, (50, 50, 50), self.list_rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.list_rect, 1)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.list_rect, border_radius=4)
+        pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.list_rect, 1, border_radius=4)
         
         start_y = self.list_rect.y
         if self.searchable:
             search_rect = pygame.Rect(self.list_rect.x, self.list_rect.y, self.list_rect.width, self.item_height)
-            pygame.draw.rect(surface, (30, 30, 40), search_rect)
-            pygame.draw.rect(surface, (150, 150, 150), search_rect, 1)
+            pygame.draw.rect(surface, UITheme.BG, search_rect, border_top_left_radius=4, border_top_right_radius=4)
+            pygame.draw.rect(surface, UITheme.BORDER, search_rect, 1)
             
             self.blink_timer += 1
             cursor = "|" if (self.blink_timer // 30) % 2 == 0 else ""
-            s_txt = self.font.render("Search: " + self.search_text + cursor, True, (255, 255, 100))
-            surface.set_clip(search_rect.inflate(-4, -4))
-            surface.blit(s_txt, (search_rect.x + 5, search_rect.y + (self.item_height - s_txt.get_height())//2))
+            s_txt = self.font.render("Search: " + self.search_text + cursor, True, UITheme.WARNING)
+            surface.set_clip(search_rect.inflate(-8, -4))
+            surface.blit(s_txt, (search_rect.x + 8, search_rect.y + (self.item_height - s_txt.get_height())//2))
             surface.set_clip(None)
             start_y += self.item_height
 
@@ -352,16 +426,18 @@ class UIDropdown:
             opt_rect = pygame.Rect(self.list_rect.x, opt_y, self.list_rect.width, self.item_height)
             
             if opt_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(surface, (70, 70, 90), opt_rect)
+                pygame.draw.rect(surface, UITheme.LIST_HOVER, opt_rect)
+            elif opt['value'] == self.selected_value:
+                pygame.draw.rect(surface, UITheme.HOVER_BG, opt_rect)
             
-            draw_x = opt_rect.x + 5
+            draw_x = opt_rect.x + 8
             if opt.get('icon'):
-                ic_size = self.item_height - 6
+                ic_size = self.item_height - 8
                 scaled_ic = pygame.transform.scale(opt.get('icon'), (ic_size, ic_size))
-                surface.blit(scaled_ic, (draw_x, opt_rect.y + 3))
+                surface.blit(scaled_ic, (draw_x, opt_rect.y + 4))
                 draw_x += ic_size + 8
                 
-            opt_lbl = self.font.render(opt['label'], True, (255, 255, 255))
+            opt_lbl = self.font.render(opt['label'], True, UITheme.TEXT)
             surface.blit(opt_lbl, (draw_x, opt_rect.y + (self.item_height - opt_lbl.get_height())//2))
 
         surface.set_clip(None)
@@ -371,14 +447,13 @@ class UIDropdown:
         max_scroll = max(0, content_h - list_view_h)
         
         if max_scroll > 0:
-            sb_rect = pygame.Rect(self.list_rect.right - 8, start_y, 8, list_view_h)
-            pygame.draw.rect(surface, (30, 30, 30), sb_rect)
+            sb_rect = pygame.Rect(self.list_rect.right - 6, start_y, 6, list_view_h)
+            pygame.draw.rect(surface, UITheme.BG, sb_rect)
             thumb_h = max(10, list_view_h * (list_view_h / content_h))
             thumb_y = start_y + (self.scroll_offset / max_scroll) * (list_view_h - thumb_h)
-            pygame.draw.rect(surface, (150, 150, 150), pygame.Rect(sb_rect.x, thumb_y, 8, thumb_h))
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, pygame.Rect(sb_rect.x, thumb_y, 6, thumb_h), border_radius=3)
 
 class UITextArea:
-    """A multi-line text input field supporting word wrap and scrollbars."""
     def __init__(self, x, y, width, height, font, text=""):
         self.rect = pygame.Rect(x, y, width, height)
         self.font = font
@@ -392,26 +467,21 @@ class UITextArea:
         self.dragging_scroll = False
         self.scroll_start_y = 0
         self.scroll_start_offset = 0
-        self.line_height = self.font.get_linesize() + 2
+        self.line_height = self.font.get_linesize() + 4
         self.lines = []
         self.thumb_rect = None
         self._update_lines()
-        self.history = [text]          # stack of text snapshots
-        self.history_index = 0         # current position in history
-        self.undo_redo_suspended = False  # avoid re-triggering during undo/redo
+        self.history = [text]          
+        self.history_index = 0         
+        self.undo_redo_suspended = False  
 
     def _push_history(self):
-        if self.undo_redo_suspended:
-            return
-        # If we are not at the end, truncate future
+        if self.undo_redo_suspended: return
         if self.history_index < len(self.history) - 1:
             self.history = self.history[:self.history_index + 1]
-        # Avoid duplicate consecutive entries
-        if self.history and self.history[-1] == self.text:
-            return
+        if self.history and self.history[-1] == self.text: return
         self.history.append(self.text)
         self.history_index = len(self.history) - 1
-        # Limit history size (optional)
         if len(self.history) > 100:
             self.history = self.history[-100:]
             self.history_index = len(self.history) - 1
@@ -463,12 +533,12 @@ class UITextArea:
         return False
 
     def _get_idx_from_pos(self, x, y):
-        rel_y = y - self.rect.y + self.scroll_y - 5
+        rel_y = y - self.rect.y + self.scroll_y - 8
         line_idx = int(rel_y // self.line_height)
         line_idx = max(0, min(len(self.lines) - 1, line_idx))
         
         line_text, start_idx, end_idx = self.lines[line_idx]
-        rel_x = x - self.rect.x - 5
+        rel_x = x - self.rect.x - 8
         
         for i in range(len(line_text)):
             w = self.font.size(line_text[:i])[0]
@@ -485,7 +555,7 @@ class UITextArea:
                     self.scroll_start_offset = self.scroll_y
                     return True
                     
-                sb_track = pygame.Rect(self.rect.right - 12, self.rect.y, 12, self.rect.height)
+                sb_track = pygame.Rect(self.rect.right - 10, self.rect.y, 10, self.rect.height)
                 if sb_track.collidepoint(event.pos) and self._max_scroll > 0:
                     return True
 
@@ -548,7 +618,6 @@ class UITextArea:
                     except: pass
                     self.delete_selection()
             elif ctrl and event.key == pygame.K_z:
-                # Undo
                 if self.history_index > 0:
                     self.undo_redo_suspended = True
                     self.history_index -= 1
@@ -559,7 +628,6 @@ class UITextArea:
                     self.undo_redo_suspended = False
                     return True
             elif ctrl and event.key == pygame.K_u:
-                # Redo
                 if self.history_index < len(self.history) - 1:
                     self.undo_redo_suspended = True
                     self.history_index += 1
@@ -635,10 +703,11 @@ class UITextArea:
         return False
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (40, 40, 40), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255) if self.active else (100, 100, 100), self.rect, 2)
+        pygame.draw.rect(surface, UITheme.BG, self.rect, border_radius=4)
+        border_color = UITheme.ACCENT if self.active else UITheme.BORDER
+        pygame.draw.rect(surface, border_color, self.rect, max(1, 2 if self.active else 1), border_radius=4)
         
-        surface.set_clip(self.rect.inflate(-4, -4))
+        surface.set_clip(self.rect.inflate(-8, -4))
         
         cursor_y, cursor_x = 0, 0
         for i, (l_text, s_idx, e_idx) in enumerate(self.lines):
@@ -655,7 +724,7 @@ class UITextArea:
                 self.scroll_y = cursor_y + self.line_height - self.rect.height + 10
         
         for i, (l_text, s_idx, e_idx) in enumerate(self.lines):
-            y_pos = self.rect.y + 5 + i * self.line_height - self.scroll_y
+            y_pos = self.rect.y + 8 + i * self.line_height - self.scroll_y
             if y_pos + self.line_height < self.rect.y or y_pos > self.rect.bottom:
                 continue
                 
@@ -667,28 +736,28 @@ class UITextArea:
                     h_x = self.font.size(l_text[:h_start - s_idx])[0]
                     h_w = self.font.size(l_text[h_start - s_idx : h_end - s_idx])[0]
                     if e > e_idx: h_w += 5 
-                    pygame.draw.rect(surface, (0, 100, 200), (self.rect.x + 5 + h_x, y_pos, h_w, self.line_height))
+                    pygame.draw.rect(surface, UITheme.LIST_HOVER, (self.rect.x + 8 + h_x, y_pos, h_w, self.line_height))
                     
-            ts = self.font.render(l_text, True, (255, 255, 255))
-            surface.blit(ts, (self.rect.x + 5, y_pos))
+            ts = self.font.render(l_text, True, UITheme.TEXT)
+            surface.blit(ts, (self.rect.x + 8, y_pos))
             
         if self.active:
             self.blink_timer += 1
             if (self.blink_timer // 30) % 2 == 0:
-                cx = self.rect.x + 5 + cursor_x
-                cy = self.rect.y + 5 + cursor_y - self.scroll_y
-                pygame.draw.line(surface, (255, 255, 255), (cx, cy), (cx, cy + self.line_height - 2), 2)
+                cx = self.rect.x + 8 + cursor_x
+                cy = self.rect.y + 8 + cursor_y - self.scroll_y
+                pygame.draw.line(surface, UITheme.TEXT, (cx, cy), (cx, cy + self.line_height - 2), 2)
                 
         surface.set_clip(None)
         
         if self._max_scroll > 0:
-            sb_rect = pygame.Rect(self.rect.right - 12, self.rect.y, 12, self.rect.height)
-            pygame.draw.rect(surface, (30, 30, 30), sb_rect)
+            sb_rect = pygame.Rect(self.rect.right - 8, self.rect.y + 2, 6, self.rect.height - 4)
+            pygame.draw.rect(surface, UITheme.BG, sb_rect, border_radius=3)
             content_h = len(self.lines) * self.line_height + 10
             thumb_h = max(15, self.rect.height * (self.rect.height / content_h))
-            thumb_y = self.rect.y + (self.scroll_y / self._max_scroll) * (self.rect.height - thumb_h)
-            self.thumb_rect = pygame.Rect(sb_rect.x + 2, thumb_y, 8, thumb_h)
-            pygame.draw.rect(surface, (150, 150, 150), self.thumb_rect)
+            thumb_y = self.rect.y + 2 + (self.scroll_y / self._max_scroll) * (self.rect.height - 4 - thumb_h)
+            self.thumb_rect = pygame.Rect(sb_rect.x, thumb_y, 6, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.thumb_rect, border_radius=3)
         else:
             self.thumb_rect = None
 
@@ -707,7 +776,7 @@ class MenuBar:
 
     def _update_tabs(self):
         self.tabs = []
-        tab_w = 150
+        tab_w = 160
         for i, mode in enumerate(self.modes):
             self.tabs.append({
                 "mode": mode,
@@ -716,14 +785,21 @@ class MenuBar:
             })
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (30, 30, 30), self.rect)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect)
+        pygame.draw.line(surface, UITheme.BORDER, self.rect.bottomleft, self.rect.bottomright, 2)
+        
+        mouse_pos = pygame.mouse.get_pos()
         for tab in self.tabs:
             is_active = (tab["mode"] == self.active_mode)
-            color = (70, 70, 90) if is_active else (40, 40, 40)
-            pygame.draw.rect(surface, color, tab["rect"])
-            pygame.draw.rect(surface, (0, 0, 0), tab["rect"], 1)
+            hovered = tab["rect"].collidepoint(mouse_pos)
             
-            text_color = (255, 255, 255) if is_active else (150, 150, 150)
+            bg_color = UITheme.BG if is_active else (UITheme.HOVER_BG if hovered else UITheme.PANEL_BG)
+            pygame.draw.rect(surface, bg_color, tab["rect"])
+            
+            if is_active:
+                pygame.draw.rect(surface, UITheme.ACCENT, (tab["rect"].x, tab["rect"].bottom - 2, tab["rect"].width, 2))
+            
+            text_color = UITheme.TEXT if is_active or hovered else UITheme.TEXT_DIM
             lbl = self.font.render(tab["label"], True, text_color)
             surface.blit(lbl, (tab["rect"].centerx - lbl.get_width()//2, tab["rect"].centery - lbl.get_height()//2))
 
@@ -736,7 +812,6 @@ class MenuBar:
                         return self.active_mode
         return None
 
-# --- Log Console ---
 class LogConsole:
     def __init__(self, x, y, width, height, font):
         self.rect = pygame.Rect(x, y, width, height)
@@ -759,36 +834,37 @@ class LogConsole:
 
     def add_message(self, text):
         timestamp = datetime.now().strftime("%H:%M:%S")
-        full_msg = f"<{timestamp}> {text}"
+        full_msg = f"[{timestamp}] {text}"
         self.messages.append(full_msg)
         total_h = len(self.messages) * self.line_height
         if total_h > self.rect.height:
             self.scroll_offset = total_h - self.rect.height
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (20, 20, 20), self.rect)
-        pygame.draw.line(surface, (100, 100, 100), self.rect.topleft, self.rect.topright)
+        pygame.draw.rect(surface, (20, 20, 22), self.rect)
+        pygame.draw.line(surface, UITheme.BORDER, self.rect.topleft, self.rect.topright)
+        
         surface.set_clip(self.rect)
         start_y = self.rect.y + 5 - self.scroll_offset
         for i, msg in enumerate(self.messages):
             y = start_y + i * self.line_height
             if y + self.line_height > self.rect.y and y < self.rect.bottom:
-                text_surf = self.font.render(msg, True, (200, 200, 200))
+                text_surf = self.font.render(msg, True, UITheme.TEXT_DIM)
                 surface.blit(text_surf, (self.rect.x + 10, y))
         surface.set_clip(None)
+        
         content_height = len(self.messages) * self.line_height + 10
         self.max_scroll = max(0, content_height - self.rect.height)
         
         if self.max_scroll > 0:
-            track_x = self.rect.right - 12
-            self.scrollbar_track_rect = pygame.Rect(track_x, self.rect.y, 12, self.rect.height)
-            pygame.draw.rect(surface, (40, 40, 40), self.scrollbar_track_rect)
+            track_x = self.rect.right - 8
+            self.scrollbar_track_rect = pygame.Rect(track_x, self.rect.y, 8, self.rect.height)
             view_h = self.rect.height
             thumb_h = max(20, (view_h / content_height) * view_h)
             ratio = self.scroll_offset / self.max_scroll
             thumb_y = self.rect.y + ratio * (view_h - thumb_h)
-            self.scrollbar_thumb_rect = pygame.Rect(track_x, thumb_y, 12, thumb_h)
-            pygame.draw.rect(surface, (100, 100, 100), self.scrollbar_thumb_rect)
+            self.scrollbar_thumb_rect = pygame.Rect(track_x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER, self.scrollbar_thumb_rect, border_radius=4)
         else:
             self.scrollbar_thumb_rect = None
             self.scrollbar_track_rect = None
@@ -822,7 +898,6 @@ class LogConsole:
                     return True
         return False
 
-# --- New Building Modal ---
 class NewBuildingModal:
     def __init__(self, x, y, width, height, font):
         self.rect = pygame.Rect(x, y, width, height)
@@ -833,8 +908,8 @@ class NewBuildingModal:
         self.width_input = UITextBox(x + 70, y + 100, 80, 30, font, "10")
         self.height_input = UITextBox(x + 70, y + 150, 80, 30, font, "10")
         
-        self.create_btn = pygame.Rect(x + 50, y + 200, 80, 30)
-        self.cancel_btn = pygame.Rect(x + 170, y + 200, 80, 30)
+        self.create_btn = pygame.Rect(x + 50, y + 220, 80, 35)
+        self.cancel_btn = pygame.Rect(x + 170, y + 220, 80, 35)
 
     def handle_event(self, event):
         if not self.active: return None
@@ -859,27 +934,30 @@ class NewBuildingModal:
     def draw(self, surface):
         if not self.active: return
         
-        s = pygame.Surface((self.rect.width, self.rect.height))
-        s.fill((60, 60, 60))
-        surface.blit(s, self.rect.topleft)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        # Shadow
+        shadow = self.rect.copy()
+        shadow.y += 10
+        pygame.draw.rect(surface, (0, 0, 0, 150), shadow, border_radius=8)
         
-        surface.blit(self.font.render("New Building", True, (255, 255, 255)), (self.rect.x + 20, self.rect.y + 10))
+        # Modal Background
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.rect, 2, border_radius=8)
         
-        surface.blit(self.font.render("Name:", True, (200, 200, 200)), (self.rect.x + 10, self.name_input.rect.y + 5))
+        # Title
+        surface.blit(self.font.render("New Building", True, UITheme.TEXT), (self.rect.x + 20, self.rect.y + 15))
+        pygame.draw.line(surface, UITheme.BORDER, (self.rect.x, self.rect.y + 40), (self.rect.right, self.rect.y + 40))
+        
+        # Inputs
+        surface.blit(self.font.render("Name:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.name_input.rect.y + 5))
         self.name_input.draw(surface)
-        surface.blit(self.font.render("W:", True, (200, 200, 200)), (self.rect.x + 10, self.width_input.rect.y + 5))
+        surface.blit(self.font.render("W:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.width_input.rect.y + 5))
         self.width_input.draw(surface)
-        surface.blit(self.font.render("H:", True, (200, 200, 200)), (self.rect.x + 10, self.height_input.rect.y + 5))
+        surface.blit(self.font.render("H:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.height_input.rect.y + 5))
         self.height_input.draw(surface)
 
-        pygame.draw.rect(surface, (0, 150, 0), self.create_btn)
-        create_txt = self.font.render("Create", True, (255, 255, 255))
-        surface.blit(create_txt, (self.create_btn.centerx - create_txt.get_width()//2, self.create_btn.centery - create_txt.get_height()//2))
-
-        pygame.draw.rect(surface, (150, 0, 0), self.cancel_btn)
-        cancel_txt = self.font.render("Cancel", True, (255, 255, 255))
-        surface.blit(cancel_txt, (self.cancel_btn.centerx - cancel_txt.get_width()//2, self.cancel_btn.centery - cancel_txt.get_height()//2))
+        mouse_pos = pygame.mouse.get_pos()
+        draw_styled_button(surface, self.create_btn, "Create", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, self.cancel_btn, "Cancel", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
 
 class NewMapModal:
     def __init__(self, x, y, width, height, font, current_map_name):
@@ -968,51 +1046,33 @@ class NewMapModal:
     def draw(self, surface):
         if not self.active: return
         s = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        s.fill((50, 50, 50, 230))
+        s.fill((37, 37, 40, 245))
         surface.blit(s, self.rect.topleft)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.rect, 2, border_radius=8)
 
-        title_surf = self.font.render("Create New Map", True, (255, 255, 255))
-        surface.blit(title_surf, (self.rect.x + 20, self.rect.y + 20))
-
-        help_surf = self.font.render(f"Source: {self.current_map_name}", True, (200, 200, 200))
-        surface.blit(help_surf, (self.rect.x + 20, self.rect.y + 45))
-
-        conn_title = self.font.render("Select connection:", True, (255, 255, 255))
-        surface.blit(conn_title, (self.rect.x + 20, self.conn_title_y))
+        surface.blit(self.font.render("Create New Map", True, UITheme.TEXT), (self.rect.x + 20, self.rect.y + 20))
+        surface.blit(self.font.render(f"Source: {self.current_map_name}", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 45))
+        surface.blit(self.font.render("Select connection:", True, UITheme.TEXT), (self.rect.x + 20, self.conn_title_y))
         
+        mouse_pos = pygame.mouse.get_pos()
         for direction, rect in self.conn_buttons.items():
-            color = (80, 80, 80)
-            text_color = (100, 100, 100)
             if self.current_connections[direction] == 0:
-                text_color = (255, 255, 255)
-                if self.connection == direction: color = (0, 150, 0)
-                else: color = (50, 50, 50)
-            pygame.draw.rect(surface, color, rect)
-            pygame.draw.rect(surface, (255, 255, 255), rect, 1)
-            text_surf = self.font.render(direction, True, text_color)
-            surface.blit(text_surf, (rect.centerx - text_surf.get_width() // 2, rect.centery - text_surf.get_height() // 2))
+                base_color = UITheme.SUCCESS if self.connection == direction else UITheme.BG
+                draw_styled_button(surface, rect, direction, self.font, mouse_pos, base_color, UITheme.SUCCESS_HOVER)
+            else:
+                pygame.draw.rect(surface, UITheme.BORDER, rect, border_radius=UITheme.RADIUS)
+                text_surf = self.font.render(direction, True, UITheme.TEXT_DIM)
+                surface.blit(text_surf, (rect.centerx - text_surf.get_width() // 2, rect.centery - text_surf.get_height() // 2))
 
-        layer_title = self.font.render("Select Layer:", True, (255, 255, 255))
-        surface.blit(layer_title, (self.rect.x + 20, self.layer_title_y))
+        surface.blit(self.font.render("Select Layer:", True, UITheme.TEXT), (self.rect.x + 20, self.layer_title_y))
         
         for layer_num, rect in self.layer_buttons.items():
-            color = (50, 50, 50)
-            text_color = (255, 255, 255)
-            if self.layer == layer_num: color = (0, 150, 0)
-            pygame.draw.rect(surface, color, rect)
-            pygame.draw.rect(surface, (255, 255, 255), rect, 1)
-            text_surf = self.font.render(f"[{layer_num}]", True, text_color)
-            surface.blit(text_surf, (rect.centerx - text_surf.get_width() // 2, rect.centery - text_surf.get_height() // 2))
+            base_color = UITheme.SUCCESS if self.layer == layer_num else UITheme.BG
+            draw_styled_button(surface, rect, f"[{layer_num}]", self.font, mouse_pos, base_color, UITheme.SUCCESS_HOVER)
 
-        pygame.draw.rect(surface, (0, 200, 0), self.create_button_rect)
-        create_text = self.font.render("Create", True, (255, 255, 255))
-        surface.blit(create_text, (self.create_button_rect.centerx - create_text.get_width() // 2, self.create_button_rect.centery - create_text.get_height() // 2))
+        draw_styled_button(surface, self.create_button_rect, "Create", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, self.cancel_button_rect, "Cancel", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
 
-        pygame.draw.rect(surface, (200, 0, 0), self.cancel_button_rect)
-        cancel_text = self.font.render("Cancel", True, (255, 255, 255))
-        surface.blit(cancel_text, (self.cancel_button_rect.centerx - cancel_text.get_width() // 2, self.cancel_button_rect.centery - cancel_text.get_height() // 2))
-        
 class Toolbar:
     def __init__(self, x, y, width, height, font):
         self.x = x
@@ -1022,11 +1082,9 @@ class Toolbar:
         self.font = font
         self.buttons = []
 
-        # FIX: Only one path assignment, and it must be simply SPRITE_ROOT + 'editor'
         icon_path = os.path.join(SPRITE_ROOT, 'editor')
         self.icons = load_editor_icons(icon_path)
 
-        # Create a default placeholder icon for missing files
         self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
         self.default_icon.fill((100, 100, 100))
         pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
@@ -1045,10 +1103,9 @@ class Toolbar:
             {"label": "CLEAR", "icon": "clear", "action": "CLEAR"},
         ]
         
-        button_width = ICON_SIZE + 10
-        button_height = ICON_SIZE + 10
-        padding = 5
-
+        button_width = ICON_SIZE + 8
+        button_height = ICON_SIZE + 8
+        padding = 6
         current_x = x + padding
 
         for btn_def in button_definitions:
@@ -1065,24 +1122,20 @@ class Toolbar:
         self.width = width
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (80, 80, 80), (self.x, self.y, self.width, self.height))
+        pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, self.width, self.height))
+        pygame.draw.line(surface, UITheme.BORDER, (self.x, self.y + self.height - 1), (self.x + self.width, self.y + self.height - 1))
 
         mouse_pos = pygame.mouse.get_pos()
-        hovered_button = None
-
         for button in self.buttons:
-            pygame.draw.rect(surface, (120, 120, 120), button["rect"])
-            surface.blit(button["icon"], (button["rect"].x + 5, button["rect"].y + 5))
-
-            if button["rect"].collidepoint(mouse_pos):
-                hovered_button = button
-
-        if hovered_button:
-            pygame.draw.rect(surface, (150, 150, 150), hovered_button["rect"], 2)
-            text_surf = self.font.render(hovered_button["label"], True, (255, 255, 255))
-            tooltip_rect = text_surf.get_rect(center=(mouse_pos[0], mouse_pos[1] + 20))
-            pygame.draw.rect(surface, (0, 0, 0), tooltip_rect.inflate(10, 5))
-            surface.blit(text_surf, tooltip_rect)
+            hovered = button["rect"].collidepoint(mouse_pos)
+            bg = UITheme.HOVER_BG if hovered else UITheme.BG
+            
+            pygame.draw.rect(surface, bg, button["rect"], border_radius=4)
+            if hovered:
+                pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, button["rect"], 1, border_radius=4)
+                register_tooltip((button["rect"].centerx, button["rect"].bottom), button["label"])
+                
+            surface.blit(button["icon"], (button["rect"].x + 4, button["rect"].y + 4))
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -1108,7 +1161,7 @@ class Sidebar:
 
         self.tabs = ["Tiles", "Items"]
         self.active_tab = "Tiles"
-        self.tab_height = 30
+        self.tab_height = 35
         
         tab_w = SIDEBAR_WIDTH // 2
         self.tab_rects = {
@@ -1161,29 +1214,39 @@ class Sidebar:
         self.scroll_offset = 0
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, SIDEBAR_WIDTH, self.height))
+        pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, SIDEBAR_WIDTH, self.height))
+        pygame.draw.line(surface, UITheme.BORDER, (self.x, self.y), (self.x, self.y + self.height))
 
+        mouse_pos = pygame.mouse.get_pos()
         for tab in self.tabs:
             rect = self.tab_rects[tab]
             is_active = (self.active_tab == tab)
-            color = (80, 80, 80) if is_active else (40, 40, 40)
+            hovered = rect.collidepoint(mouse_pos)
+            
+            color = UITheme.BG if is_active else (UITheme.HOVER_BG if hovered else UITheme.PANEL_BG)
             pygame.draw.rect(surface, color, rect)
-            pygame.draw.rect(surface, (0, 0, 0), rect, 1)
+            
+            if is_active:
+                pygame.draw.rect(surface, UITheme.ACCENT, (rect.x, rect.bottom - 2, rect.width, 2))
 
-            text_color = (255, 255, 255) if is_active else (150, 150, 150)
+            text_color = UITheme.TEXT if is_active or hovered else UITheme.TEXT_DIM
             text = self.font.render(tab, True, text_color)
             surface.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
 
-        border_color = (255, 255, 0) if self.search_active else (0, 0, 0)
-        pygame.draw.rect(surface, (255, 255, 255), self.search_rect)
-        pygame.draw.rect(surface, border_color, self.search_rect, 2)
+        # Search Bar
+        border_color = UITheme.ACCENT if self.search_active else UITheme.BORDER
+        pygame.draw.rect(surface, UITheme.BG, self.search_rect, border_radius=4)
+        pygame.draw.rect(surface, border_color, self.search_rect, 1 if not self.search_active else 2, border_radius=4)
         
-        if self.search_text: search_surf = self.font.render(self.search_text, True, (0, 0, 0))
-        else: search_surf = self.font.render("Search...", True, (150, 150, 150))
+        if self.search_text:
+            self.blink_timer = getattr(self, 'blink_timer', 0) + 1
+            cursor = "|" if self.search_active and (self.blink_timer // 30) % 2 == 0 else ""
+            search_surf = self.font.render(self.search_text + cursor, True, UITheme.TEXT)
+        else: search_surf = self.font.render("Search...", True, UITheme.TEXT_DIM)
         
         text_rect = search_surf.get_rect(centery=self.search_rect.centery)
-        text_rect.x = self.search_rect.x + 5
-        surface.set_clip(self.search_rect.inflate(-10, -10))
+        text_rect.x = self.search_rect.x + 8
+        surface.set_clip(self.search_rect.inflate(-8, -4))
         surface.blit(search_surf, text_rect)
         surface.set_clip(None)
         
@@ -1208,13 +1271,23 @@ class Sidebar:
             tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
 
             if tile_y + TILE_SIZE > self.content_area_y and tile_y < self.y + self.height:
+                t_rect = pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE)
+                
+                # Checkered background for transparency preview
+                pygame.draw.rect(surface, (100, 100, 100), t_rect)
+                pygame.draw.rect(surface, (150, 150, 150), (t_rect.x, t_rect.y, TILE_SIZE//2, TILE_SIZE//2))
+                pygame.draw.rect(surface, (150, 150, 150), (t_rect.x + TILE_SIZE//2, t_rect.y + TILE_SIZE//2, TILE_SIZE//2, TILE_SIZE//2))
+                
                 surface.blit(image, (tile_x, tile_y))
 
                 if selected_name == name:
-                    pygame.draw.rect(surface, (255, 255, 0), (tile_x, tile_y, TILE_SIZE, TILE_SIZE), 3)
+                    pygame.draw.rect(surface, UITheme.ACCENT, t_rect, 2)
+                elif t_rect.collidepoint(mouse_pos):
+                    pygame.draw.rect(surface, UITheme.TEXT, t_rect, 1)
+                    register_tooltip(mouse_pos, name)
 
             col += 1
-            if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
+            if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH - 15:
                 col = 0
                 row += 1
                 
@@ -1222,18 +1295,17 @@ class Sidebar:
         surface.set_clip(None)
 
         self.max_scroll = max(0, content_height - view_rect.height)
-
-        self.scrollbar_track_rect = pygame.Rect(self.x + SIDEBAR_WIDTH - 10, self.content_area_y, 10, view_rect.height)
         
         if self.max_scroll > 0:
-            pygame.draw.rect(surface, (40, 40, 40), self.scrollbar_track_rect)
+            self.scrollbar_track_rect = pygame.Rect(self.x + SIDEBAR_WIDTH - 10, self.content_area_y, 8, view_rect.height)
             thumb_h = max(20, (view_rect.height / (content_height + view_rect.height)) * view_rect.height)
             ratio = self.scroll_offset / self.max_scroll if self.max_scroll > 0 else 0
             thumb_y = self.content_area_y + ratio * (view_rect.height - thumb_h)
-            self.scrollbar_thumb_rect = pygame.Rect(self.scrollbar_track_rect.x, thumb_y, 10, thumb_h)
-            pygame.draw.rect(surface, (100, 100, 100), self.scrollbar_thumb_rect)
+            self.scrollbar_thumb_rect = pygame.Rect(self.scrollbar_track_rect.x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER, self.scrollbar_thumb_rect, border_radius=4)
         else:
             self.scrollbar_thumb_rect = None
+            self.scrollbar_track_rect = None
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONUP: self.dragging_scroll = False
@@ -1251,7 +1323,6 @@ class Sidebar:
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
-
             if self.x <= mx <= self.x + SIDEBAR_WIDTH:
                 if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
                     self.dragging_scroll = True
@@ -1313,10 +1384,9 @@ class Sidebar:
                             return True
 
                         col += 1
-                        if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH:
+                        if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH - 15:
                             col = 0
                             row += 1
-
                 return True
                 
         if event.type == pygame.KEYDOWN and self.search_active:
@@ -1324,14 +1394,11 @@ class Sidebar:
             else: self.search_text += event.unicode
             self._filter_content()
             return True
-
         return False
 
-# --- New UIAttributeList Component ---
-# --- New UIAttributeList Component ---
+
 class UIAttributeList:
     def __init__(self, x, y, width, height, font, text=""):
-        # height parameter is ignored intentionally as this component is fixed in size (145px)
         self.rect = pygame.Rect(x, y, width, 145)
         self.font = font
         self.attributes = ["strength", "fitness", "melee", "ranged", "maintenance", "lucky", "agility", "intelligence"]
@@ -1371,10 +1438,7 @@ class UIAttributeList:
             bx = self.rect.x + col * col_w
             by = self.rect.y + row * 35
             
-            # Checkbox rect
             self.data[attr]["cb_rect"] = pygame.Rect(bx, by + 4, 20, 20)
-            
-            # Textbox rect (Dynamically anchored to the right side of its assigned column width)
             self.data[attr]["box"].rect.x = bx + col_w - 65
             self.data[attr]["box"].rect.y = by + 2
 
@@ -1397,16 +1461,13 @@ class UIAttributeList:
             info = self.data[attr]
             cb = info["cb_rect"]
             
-            # Draw Checkbox
-            pygame.draw.rect(surface, (60, 60, 70), cb)
+            pygame.draw.rect(surface, UITheme.BG, cb, border_radius=4)
             if info["enabled"]:
-                pygame.draw.rect(surface, (0, 200, 0), cb.inflate(-4, -4))
-            pygame.draw.rect(surface, (150, 150, 150), cb, 1)
+                pygame.draw.rect(surface, UITheme.ACCENT, cb.inflate(-4, -4), border_radius=2)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, cb, 1, border_radius=4)
             
-            # Draw Label
             lbl = attr.capitalize()
-            surface.blit(self.font.render(lbl, True, (200, 200, 200)), (cb.right + 10, cb.y + 2))
+            surface.blit(self.font.render(lbl, True, UITheme.TEXT), (cb.right + 10, cb.y + 2))
             
-            # Draw Textbox
             if info["enabled"]:
                 info["box"].draw(surface)

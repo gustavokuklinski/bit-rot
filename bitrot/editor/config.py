@@ -1,4 +1,3 @@
-# editor/config.py
 import os
 
 # Screen dimensions
@@ -10,8 +9,8 @@ MAP_DEFAULT_WIDTH = 100
 MAP_DEFAULT_HEIGHT = 100
 
 # UI Dimensions
-TAB_BAR_HEIGHT = 30
-TOOLBAR_HEIGHT = 40
+TAB_BAR_HEIGHT = 40
+TOOLBAR_HEIGHT = 45
 LOG_WINDOW_HEIGHT = 150
 
 # Tile size

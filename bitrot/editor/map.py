@@ -26,7 +26,6 @@ class Map:
             self.active_layer_name = default_layers[0]
 
     def resize(self, new_width, new_height):
-        """Resizes the map and all its layers to the new dimensions."""
         self.width = new_width
         self.height = new_height
         
@@ -41,19 +40,16 @@ class Map:
         self.undo_stack.clear()
 
     def _push_to_undo(self, changes):
-        """Internal helper to add a list of changes as a single undo step."""
         if changes:
             self.undo_stack.append(changes)
             
     def undo(self):
-        """Undoes the last action."""
         if not self.undo_stack:
             return
 
         last_changes = self.undo_stack.pop()
         for (x, y, layer_name, old_tile_name) in last_changes:
             self.set_tile(x, y, old_tile_name, layer_name, undoing=True)
-
 
     def set_active_layer(self, layer_name):
         if layer_name in self.layers:
@@ -102,8 +98,6 @@ class Map:
                     self._push_to_undo([(x, y, layer_name, old_tile_name)])
             
             self.layers[layer_name][y][x] = tile_name
-        else:
-            pass
     
     def clear_rect(self, rect, layer_name):
         if layer_name not in self.layers:
@@ -159,7 +153,6 @@ class Map:
         
         for y_offset, row in enumerate(clipboard_data):
             for x_offset, tile_name in enumerate(row):
-                
                 map_x = start_x + x_offset
                 map_y = start_y + y_offset
 
@@ -173,9 +166,9 @@ class Map:
 
     def render(self, surface, tiles, font, offset=(0, 0), zoom_scale=1.0):
         scaled_tile_size = int(TILE_SIZE * zoom_scale)
-        
-        # Render Order: Bottom -> Top
         render_order = ['ground', 'map', 'spawn', 'light', 'roof']
+
+        from editor.ui import UITheme # Safe import
 
         for layer_name in render_order:
             if layer_name not in self.layers:
@@ -197,13 +190,11 @@ class Map:
                     tile_rect = pygame.Rect(x * scaled_tile_size, y * scaled_tile_size, scaled_tile_size, scaled_tile_size)
 
                     if tile_name in tiles:
-                        # Items usually have transparency, so this will blend correctly onto the layer surface
                         scaled_image = pygame.transform.scale(tiles[tile_name], (scaled_tile_size, scaled_tile_size))
                         layer_surface.blit(scaled_image, tile_rect.topleft)
                     else:
-                        # Fallback for missing textures (including items if 'all_render_tiles' wasn't passed)
-                        pygame.draw.rect(layer_surface, (240, 240, 240, 100), tile_rect)
-                        text_surf = font.render(tile_name, True, (0, 0, 0))
+                        pygame.draw.rect(layer_surface, (200, 200, 200, 100), tile_rect)
+                        text_surf = font.render(tile_name, True, UITheme.TEXT)
                         text_rect = text_surf.get_rect(center=tile_rect.center)
                         layer_surface.blit(text_surf, text_rect)
             

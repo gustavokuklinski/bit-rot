@@ -1,6 +1,6 @@
 import os
 import pygame
-from editor.ui import UITextArea, UITextBox, UIDropdown
+from editor.ui import UITextArea, UITextBox, UIDropdown, UITheme, draw_styled_button
 from editor.config import XML_DATA_ROOT, ICON_SIZE
 
 # ----------------------------------------------------------------------
@@ -12,7 +12,6 @@ class CodeTextArea(UITextArea):
         self.line_number_width = 50
 
     def _update_lines(self):
-        # We override this to disable word-wrap for code (essential for XML/Code)
         self.lines = []
         if not self.text:
             self.lines.append(("", 0, 0))
@@ -26,20 +25,16 @@ class CodeTextArea(UITextArea):
         self.lines.append((self.text[start_idx:], start_idx, len(self.text)))
 
     def draw(self, surface):
-        # 1. Background
-        pygame.draw.rect(surface, (30, 30, 35), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255) if self.active else (80, 80, 80), self.rect, 1)
+        pygame.draw.rect(surface, UITheme.BG, self.rect)
+        pygame.draw.rect(surface, UITheme.ACCENT if self.active else UITheme.BORDER, self.rect, 1)
 
-        # 2. Line Number Gutter
         gutter_rect = pygame.Rect(self.rect.x, self.rect.y, self.line_number_width, self.rect.height)
-        pygame.draw.rect(surface, (40, 40, 45), gutter_rect)
-        pygame.draw.line(surface, (60, 60, 70), (gutter_rect.right, gutter_rect.top), (gutter_rect.right, gutter_rect.bottom), 1)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, gutter_rect)
+        pygame.draw.line(surface, UITheme.BORDER, (gutter_rect.right, gutter_rect.top), (gutter_rect.right, gutter_rect.bottom), 1)
 
-        # 3. Clip text area
         text_clip = pygame.Rect(gutter_rect.right, self.rect.y, self.rect.width - self.line_number_width, self.rect.height)
         surface.set_clip(text_clip)
 
-        # Calculate Cursor Position for auto-scroll
         cursor_y = 0
         cursor_x = 0
         for i, (l_text, s_idx, e_idx) in enumerate(self.lines):
@@ -53,13 +48,11 @@ class CodeTextArea(UITextArea):
             elif cursor_y + self.line_height > self.scroll_y + self.rect.height - 20:
                 self.scroll_y = cursor_y + self.line_height - self.rect.height + 20
 
-        # Draw Text and Selection
         for i, (l_text, s_idx, e_idx) in enumerate(self.lines):
-            y_pos = self.rect.y + 5 + i * self.line_height - self.scroll_y
+            y_pos = self.rect.y + 8 + i * self.line_height - self.scroll_y
             if y_pos + self.line_height < self.rect.y or y_pos > self.rect.bottom:
                 continue
 
-            # Selection
             if self.sel_start is not None and self.sel_start != self.cursor_pos:
                 s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
                 if s <= e_idx and e >= s_idx:
@@ -67,34 +60,31 @@ class CodeTextArea(UITextArea):
                     h_end = min(e, e_idx)
                     h_x = self.font.size(l_text[:h_start - s_idx])[0]
                     h_w = self.font.size(l_text[h_start - s_idx : h_end - s_idx])[0]
-                    pygame.draw.rect(surface, (0, 80, 150), (text_clip.x + 5 + h_x, y_pos, h_w, self.line_height))
+                    pygame.draw.rect(surface, UITheme.LIST_HOVER, (text_clip.x + 8 + h_x, y_pos, h_w, self.line_height))
 
-            ts = self.font.render(l_text, True, (220, 220, 220))
-            surface.blit(ts, (text_clip.x + 5, y_pos))
+            ts = self.font.render(l_text, True, UITheme.TEXT)
+            surface.blit(ts, (text_clip.x + 8, y_pos))
 
-        # Cursor
         if self.active and (self.blink_timer // 30) % 2 == 0:
-            cx = text_clip.x + 5 + cursor_x
-            cy = self.rect.y + 5 + cursor_y - self.scroll_y
-            pygame.draw.line(surface, (255, 255, 255), (cx, cy), (cx, cy + self.line_height - 2), 2)
+            cx = text_clip.x + 8 + cursor_x
+            cy = self.rect.y + 8 + cursor_y - self.scroll_y
+            pygame.draw.line(surface, UITheme.TEXT, (cx, cy), (cx, cy + self.line_height - 2), 2)
 
         surface.set_clip(None)
 
-        # 4. Draw Line Numbers (on top of gutter)
         for i in range(len(self.lines)):
-            y_pos = self.rect.y + 5 + i * self.line_height - self.scroll_y
+            y_pos = self.rect.y + 8 + i * self.line_height - self.scroll_y
             if y_pos + self.line_height > self.rect.y and y_pos < self.rect.bottom:
-                num_surf = self.font.render(str(i + 1), True, (100, 100, 110))
-                surface.blit(num_surf, (self.rect.x + 5, y_pos))
+                num_surf = self.font.render(str(i + 1), True, UITheme.TEXT_DIM)
+                surface.blit(num_surf, (self.rect.x + 8, y_pos))
 
-        # 5. Scrollbar
         if self._max_scroll > 0:
-            sb_rect = pygame.Rect(self.rect.right - 10, self.rect.y, 10, self.rect.height)
-            pygame.draw.rect(surface, (20, 20, 25), sb_rect)
+            sb_rect = pygame.Rect(self.rect.right - 8, self.rect.y + 2, 6, self.rect.height - 4)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, sb_rect, border_radius=3)
             thumb_h = max(20, self.rect.height * (self.rect.height / (len(self.lines) * self.line_height + 10)))
-            thumb_y = self.rect.y + (self.scroll_y / self._max_scroll) * (self.rect.height - thumb_h)
-            self.thumb_rect = pygame.Rect(sb_rect.x + 2, thumb_y, 6, thumb_h)
-            pygame.draw.rect(surface, (120, 120, 130), self.thumb_rect)
+            thumb_y = self.rect.y + 2 + (self.scroll_y / self._max_scroll) * (self.rect.height - 4 - thumb_h)
+            self.thumb_rect = pygame.Rect(sb_rect.x, thumb_y, 6, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.thumb_rect, border_radius=3)
 
 # ----------------------------------------------------------------------
 # CodeFileTree – XML specific file tree
@@ -170,22 +160,30 @@ class CodeFileTree:
         return False
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (40, 40, 45), self.rect)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect)
+        pygame.draw.line(surface, UITheme.BORDER, (self.rect.right - 1, self.rect.y), (self.rect.right - 1, self.rect.bottom))
+        
         surface.set_clip(self.rect)
         flat = self._flatten(self.tree_data)
         y = self.rect.y - self.scroll_offset
+        mouse_pos = pygame.mouse.get_pos()
+        
         for node in flat:
             if y + self.line_height < self.rect.y or y > self.rect.bottom:
                 y += self.line_height
                 continue
             
             x = self.rect.x + 10 + node['depth'] * 15
+            row_rect = pygame.Rect(self.rect.x, y, self.rect.width, self.line_height)
+            
             if self.selected_path == node['path'] and not node['is_dir']:
-                pygame.draw.rect(surface, (60, 60, 120), (self.rect.x + 2, y, self.rect.width - 4, self.line_height))
+                pygame.draw.rect(surface, UITheme.LIST_HOVER, row_rect)
+            elif row_rect.collidepoint(mouse_pos):
+                pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
 
-            icon = "📂" if node['is_dir'] and node['expanded'] else ("📁" if node['is_dir'] else "📄")
-            txt = self.font.render(f"{icon} {node['name']}", True, (200, 200, 200))
-            surface.blit(txt, (x, y + 3))
+            icon = "[-]" if node['is_dir'] and node['expanded'] else ("[+]" if node['is_dir'] else "")
+            txt = self.font.render(f"{icon} {node['name']}", True, UITheme.TEXT)
+            surface.blit(txt, (x, y + 4))
             y += self.line_height
         surface.set_clip(None)
 
@@ -199,28 +197,23 @@ class CodeEditor:
         self.height = height
         self.font = font
         
-        # File System
         self.current_root = XML_DATA_ROOT
         self.file_tree = CodeFileTree(0, y_offset + 40, 250, height - y_offset - 40, font, self.current_root)
         
-        # Tabs System
-        self.open_files = [] # List of file paths
+        self.open_files = []
         self.active_tab_idx = -1
-        self.tab_width = 120
-        self.tab_height = 30
+        self.tab_width = 140
+        self.tab_height = 40
 
-        # Text Area
-        self.text_area = CodeTextArea(255, y_offset + 40, width - 255 - 10, height - y_offset - 40, font)
-        
-        # UI Buttons
-        self.save_btn = pygame.Rect(270, y_offset + 5, 80, 30)
+        self.text_area = CodeTextArea(250, y_offset + 40, width - 250, height - y_offset - 40, font)
+        self.save_btn = pygame.Rect(260, y_offset + 5, 100, 30)
 
     def resize(self, width, height):
         self.width = width
         self.height = height
         self.file_tree.rect.width = 250
-        self.text_area.rect.x = 255
-        self.text_area.rect.width = width - 255 - 10
+        self.text_area.rect.x = 250
+        self.text_area.rect.width = width - 250
 
     def open_file(self, path):
         if path not in self.open_files:
@@ -259,41 +252,36 @@ class CodeEditor:
                 print(f"Save error: {e}")
 
     def handle_event(self, event):
-        # 1. Handle Tab clicks
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, path in enumerate(self.open_files):
-                tab_rect = pygame.Rect(255 + i * self.tab_width, self.y_offset, self.tab_width, self.tab_height)
-                if tab_rect.collidepoint(event.pos):
-                    self.active_tab_idx = i
-                    self._sync_text_area()
-                    return True
+                tab_rect = pygame.Rect(250 + i * self.tab_width, self.y_offset, self.tab_width, self.tab_height)
                 
-                # Close Tab (X)
-                close_rect = pygame.Rect(tab_rect.right - 20, tab_rect.y + 5, 15, 15)
+                close_rect = pygame.Rect(tab_rect.right - 20, tab_rect.y + 10, 16, 16)
                 if close_rect.collidepoint(event.pos):
                     self.open_files.pop(i)
                     if self.active_tab_idx == i:
                         self.active_tab_idx = len(self.open_files) - 1 if self.open_files else -1
                     self._sync_text_area()
                     return True
+                    
+                if tab_rect.collidepoint(event.pos):
+                    self.active_tab_idx = i
+                    self._sync_text_area()
+                    return True
 
-        # 2. Handle File Tree
         if self.file_tree.handle_event(event):
             if self.file_tree.selected_path:
                 self.open_file(self.file_tree.selected_path)
             return True
 
-        # 3. Handle Save Button
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.save_btn.collidepoint(event.pos):
                 self._save_current_file()
                 return True
 
-        # 4. Handle Text Area
         if self.text_area.handle_event(event):
             return True
 
-        # Ctrl+S Shortcut
         if event.type == pygame.KEYDOWN:
             if (event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_s:
                 self._save_current_file()
@@ -302,27 +290,37 @@ class CodeEditor:
         return False
 
     def draw(self, surface):
-        # Background
-        pygame.draw.rect(surface, (25, 25, 30), (0, self.y_offset, self.width, self.height - self.y_offset))
-        
-        # Header / Toolbar
-        pygame.draw.rect(surface, (35, 35, 40), (0, self.y_offset, self.width, 40))
-        pygame.draw.rect(surface, (0, 120, 0), self.save_btn)
-        surface.blit(self.font.render("SAVE FILE", True, (255, 255, 255)), (self.save_btn.x + 5, self.save_btn.y + 5))
+        pygame.draw.rect(surface, UITheme.BG, (0, self.y_offset, self.width, self.height - self.y_offset))
+        pygame.draw.rect(surface, UITheme.PANEL_BG, (0, self.y_offset, self.width, 40))
+        pygame.draw.line(surface, UITheme.BORDER, (0, self.y_offset + 39), (self.width, self.y_offset + 39))
 
-        # Draw Tabs
+        mouse_pos = pygame.mouse.get_pos()
+        if self.open_files:
+            self.save_btn.x = 250 + len(self.open_files) * self.tab_width + 10
+            draw_styled_button(surface, self.save_btn, "Save File", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+
         for i, path in enumerate(self.open_files):
-            tab_rect = pygame.Rect(255 + i * self.tab_width, self.y_offset, self.tab_width, self.tab_height)
-            color = (60, 60, 80) if i == self.active_tab_idx else (40, 40, 50)
+            tab_rect = pygame.Rect(250 + i * self.tab_width, self.y_offset, self.tab_width, self.tab_height)
+            is_active = (i == self.active_tab_idx)
+            hovered = tab_rect.collidepoint(mouse_pos)
+            
+            color = UITheme.BG if is_active else (UITheme.HOVER_BG if hovered else UITheme.PANEL_BG)
             pygame.draw.rect(surface, color, tab_rect)
-            pygame.draw.rect(surface, (100, 100, 120), tab_rect, 1)
+            pygame.draw.rect(surface, UITheme.BORDER, tab_rect, 1)
             
+            if is_active:
+                pygame.draw.rect(surface, UITheme.ACCENT, (tab_rect.x, tab_rect.y, tab_rect.width, 2))
+                
             fname = os.path.basename(path)
-            txt = self.font.render(fname[:15], True, (200, 200, 200))
-            surface.blit(txt, (tab_rect.x + 5, tab_rect.y + 5))
+            txt_color = UITheme.TEXT if is_active or hovered else UITheme.TEXT_DIM
+            txt = self.font.render(fname[:12], True, txt_color)
+            surface.blit(txt, (tab_rect.x + 10, tab_rect.centery - txt.get_height()//2))
             
-            # Close X
-            pygame.draw.circle(surface, (150, 50, 50), (tab_rect.right - 10, tab_rect.centery), 5)
+            close_rect = pygame.Rect(tab_rect.right - 20, tab_rect.y + 12, 16, 16)
+            c_hover = close_rect.collidepoint(mouse_pos)
+            pygame.draw.rect(surface, UITheme.DANGER if c_hover else UITheme.BORDER, close_rect, border_radius=3)
+            surface.blit(self.font.render("x", True, UITheme.TEXT), (close_rect.x + 4, close_rect.y + 1))
 
         self.file_tree.draw(surface)
-        self.text_area.draw(surface)
+        if self.open_files:
+            self.text_area.draw(surface)

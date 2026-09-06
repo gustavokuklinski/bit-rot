@@ -2,7 +2,7 @@ import pygame
 import os
 import xml.etree.ElementTree as ET
 from editor.config import GAME_ROOT
-from editor.ui import UITextBox, UIDropdown, UIAttributeList
+from editor.ui import UITextBox, UIDropdown, UIAttributeList, UITheme, draw_styled_button
 
 class CraftEditor:
     def __init__(self, y_offset, width, height, font, item_tiles):
@@ -16,7 +16,6 @@ class CraftEditor:
         self.recipes = {} 
         self.selected_file = None
         
-        # Form Scrolling State
         self.form_scroll = 0
         self.max_scroll = 0
         self.dragging_form = False
@@ -25,7 +24,6 @@ class CraftEditor:
         self.form_thumb_rect = None
         self.form_track_rect = None
         
-        # Sidebar Scrolling State
         self.sidebar_w = 300
         self.sidebar_scroll = 0
         self.max_sidebar_scroll = 0
@@ -35,15 +33,14 @@ class CraftEditor:
         self.sidebar_thumb_rect = None
         self.sidebar_track_rect = None
         
-        # Form Components
         self.base_inputs = {}
         self.ing_rows = [] 
         self.res_rows = []
         
-        self.save_btn = pygame.Rect(0, 0, 120, 30)
-        self.delete_btn = pygame.Rect(0, 0, 100, 30)
-        self.add_ing_btn = pygame.Rect(0, 0, 80, 25)
-        self.add_res_btn = pygame.Rect(0, 0, 80, 25)
+        self.save_btn = pygame.Rect(0, 0, 120, 35)
+        self.delete_btn = pygame.Rect(0, 0, 100, 35)
+        self.add_ing_btn = pygame.Rect(0, 0, 80, 28)
+        self.add_res_btn = pygame.Rect(0, 0, 80, 28)
         
         self.type_opts = []
         self.item_opts = []
@@ -58,7 +55,6 @@ class CraftEditor:
             self.layout_form()
 
     def build_dynamic_options(self):
-        """Scrapes existing XMLs and game assets to build complete dropdown options."""
         types = set()
         for info in self.recipes.values():
             t = info.get("data", {}).get("type", "")
@@ -99,16 +95,13 @@ class CraftEditor:
                     try:
                         tree = ET.parse(os.path.join(item_xml_dir, filename))
                         root = tree.getroot()
-                        # Filter for items specifically tagged as a recipe
                         if root.tag in ['item', 'cloth'] and root.get('type') == 'recipe':
                             name = root.get('name', '')
                             if name:
                                 icon = self.item_tiles.get(name)
                                 self.magazine_opts.append({"label": name, "value": name, "icon": icon})
-                    except Exception as e:
-                        print(f"Error parsing item for magazine: {e}")
+                    except Exception as e: pass
                         
-        # Safely update existing inputs if they are already active
         if "type" in self.base_inputs: self.base_inputs["type"].options = self.type_opts
         if "output" in self.base_inputs: self.base_inputs["output"].options = self.item_opts
         if "magazine" in self.base_inputs: self.base_inputs["magazine"].options = self.magazine_opts
@@ -150,13 +143,11 @@ class CraftEditor:
                     
                     self.recipes[filename] = {"data": data}
                         
-                except Exception as e:
-                    print(f"Error loading craft XML {filename}: {e}")
+                except Exception as e: pass
                     
         self.build_dynamic_options()
 
     def generate_auto_filename(self):
-        """Automatically generates the filename matching the pattern: [craft]_[type]_[item].xml"""
         if self.selected_file is False:
             c = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
             t = self.base_inputs.get("type").text.lower().replace(" ", "_") if "type" in self.base_inputs else ""
@@ -179,17 +170,17 @@ class CraftEditor:
         
         data = self.recipes.get(filename, {}).get("data", {}) if filename else {}
         
-        self.base_inputs["filename"] = UITextBox(0, 0, 480, 28, self.font, filename or "")
+        self.base_inputs["filename"] = UITextBox(0, 0, 480, 30, self.font, filename or "")
         
         craft_opts = [{"label": "Create", "value": "create"}, {"label": "Repair", "value": "repair"}, {"label": "Dismantle", "value": "dismantle"}]
-        self.base_inputs["craft"] = UIDropdown(0, 0, 480, 28, self.font, craft_opts, data.get("craft", "create"))
-        self.base_inputs["type"] = UIDropdown(0, 0, 480, 28, self.font, self.type_opts, data.get("type", ""), searchable=True)
-        self.base_inputs["output"] = UIDropdown(0, 0, 480, 28, self.font, self.item_opts, data.get("output", ""), searchable=True)
+        self.base_inputs["craft"] = UIDropdown(0, 0, 480, 30, self.font, craft_opts, data.get("craft", "create"))
+        self.base_inputs["type"] = UIDropdown(0, 0, 480, 30, self.font, self.type_opts, data.get("type", ""), searchable=True)
+        self.base_inputs["output"] = UIDropdown(0, 0, 480, 30, self.font, self.item_opts, data.get("output", ""), searchable=True)
         
-        self.base_inputs["magazine"] = UIDropdown(0, 0, 480, 28, self.font, self.magazine_opts, data.get("magazine", ""), searchable=True)
+        self.base_inputs["magazine"] = UIDropdown(0, 0, 480, 30, self.font, self.magazine_opts, data.get("magazine", ""), searchable=True)
         
         for f in ["time", "amount"]:
-            self.base_inputs[f] = UITextBox(0, 0, 480, 28, self.font, data.get(f, ""))
+            self.base_inputs[f] = UITextBox(0, 0, 480, 30, self.font, data.get(f, ""))
             
         self.base_inputs["req_level"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("req_level", ""))
         self.base_inputs["gain_xp"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("gain_xp", ""))
@@ -250,7 +241,7 @@ class CraftEditor:
         if self.selected_file is None: return
         
         form_x = self.sidebar_w
-        start_x = form_x + 120 
+        start_x = form_x + 150 
         current_y = self.y_offset + 20 - self.form_scroll
         
         for f in ["filename", "craft", "type", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
@@ -264,9 +255,9 @@ class CraftEditor:
                 self.base_inputs[f].list_rect.x = self.base_inputs[f].rect.x
                 self.base_inputs[f].list_rect.y = self.base_inputs[f].rect.bottom
                 
-            current_y += self.base_inputs[f].rect.height + 7
+            current_y += self.base_inputs[f].rect.height + 10
             
-        current_y += 60 # Extra spacing for the Ingredients Titles
+        current_y += 50 
         
         for row in self.ing_rows:
             row["group_btn"].topleft = (form_x + 20, current_y)
@@ -278,13 +269,12 @@ class CraftEditor:
             current_y += 35
             
         self.add_ing_btn.topleft = (form_x + 20, current_y)
-        current_y += 35 # Move past Add button
+        current_y += 35 
         
-        # Determine if Results should be shown
         is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
         
         if is_dismantle:
-            current_y += 60 # Extra spacing for the Results Titles
+            current_y += 50
             for row in self.res_rows:
                 row["group_btn"].topleft = (form_x + 20, current_y)
                 row["item"].rect.topleft = (form_x + 90, current_y)
@@ -295,15 +285,13 @@ class CraftEditor:
                 current_y += 35
                 
             self.add_res_btn.topleft = (form_x + 20, current_y)
-            current_y += 35 # Move past Add button
+            current_y += 35 
             
-        current_y += 25 # Padding before save
+        current_y += 25 
         self.save_btn.topleft = (form_x + 20, current_y)
         self.delete_btn.topleft = (form_x + 160, current_y)
         
         self.max_scroll = max(0, current_y + self.form_scroll - self.height + 40)
-        
-        # Sidebar Scroll Layout
         content_h = len(self.recipes) * 30 + 80
         self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset))
 
@@ -328,10 +316,8 @@ class CraftEditor:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="    ", level=0)
         tree.write(path, encoding="utf-8", xml_declaration=True)
-        print(f"Saved Craft XML to {path}")
 
     def handle_event(self, event):
-        # Handle Scroll Drags
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging_sidebar = False
             self.dragging_form = False
@@ -362,7 +348,6 @@ class CraftEditor:
             old_craft = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
             is_dismantle = old_craft == "dismantle"
             
-            # 1. Expand dropdown checks first (top layer priority)
             dropdowns = [f for f in self.base_inputs.values() if isinstance(f, UIDropdown)]
             dropdowns += [r["item"] for r in self.ing_rows]
             if is_dismantle:
@@ -395,18 +380,15 @@ class CraftEditor:
                         if r["chance"].handle_event(event): consumed = True
                               
             if consumed: 
-                # Trigger a layout update instantly if craft type changed
                 new_craft = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
                 if old_craft != new_craft:
                     self.layout_form()
                 return True
             
-            # Form button/scroll clicks
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 if mx > self.sidebar_w:
                     
-                    # Form Scrollbar Click
                     if self.form_thumb_rect and self.form_thumb_rect.collidepoint(mx, my):
                         self.dragging_form = True
                         self.form_start_y = my
@@ -448,7 +430,6 @@ class CraftEditor:
                         self.delete_current()
                         return True
                         
-            # Mouse Wheel Scrolling Form Area
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
                 if event.button == 4:
                     self.form_scroll = max(0, self.form_scroll - 40)
@@ -459,18 +440,15 @@ class CraftEditor:
                     self.layout_form()
                     return True
 
-        # 2. Sidebar interactions
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
             if mx <= self.sidebar_w:
-                # Sidebar scroll drag
                 if event.button == 1 and self.sidebar_thumb_rect and self.sidebar_thumb_rect.collidepoint(mx, my):
                     self.dragging_sidebar = True
                     self.sidebar_start_y = my
                     self.sidebar_start_offset = self.sidebar_scroll
                     return True
                 
-                # Sidebar mouse wheel scroll
                 if event.button == 4:
                     self.sidebar_scroll = max(0, self.sidebar_scroll - 40)
                     return True
@@ -478,16 +456,15 @@ class CraftEditor:
                     self.sidebar_scroll = min(self.max_sidebar_scroll, self.sidebar_scroll + 40)
                     return True
                 
-                # Clicks
                 if event.button == 1:
                     if pygame.Rect(10, self.y_offset + 40, 230, 30).collidepoint(mx, my):
                         self.select_recipe(False)
                         return True
                     
-                    list_y = self.y_offset + 80 - self.sidebar_scroll
+                    list_y = self.y_offset + 85 - self.sidebar_scroll
                     for fname in self.recipes.keys():
                         if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                            if list_y > self.y_offset + 70: # Ensure it doesn't click under the fixed header
+                            if list_y > self.y_offset + 70:
                                 self.select_recipe(fname)
                             return True
                         list_y += 30
@@ -503,7 +480,6 @@ class CraftEditor:
         for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
             data[attr] = self.base_inputs[attr].text
 
-        # Group Ingredients Logic
         merged_ings = []
         for r in self.ing_rows:
             item_val = r["item"].text.strip()
@@ -522,7 +498,6 @@ class CraftEditor:
             name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
             data["ingredients"].append({"name": name_str, "destroy": m["destroy"], "amount": m["amount"]})
 
-        # Group Results Logic (Only run if dismantle)
         is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
         data["results"] = []
         
@@ -564,49 +539,45 @@ class CraftEditor:
 
     def draw(self, surface):
         bg_rect = pygame.Rect(0, self.y_offset, self.width, self.height - self.y_offset)
-        pygame.draw.rect(surface, (30, 30, 35), bg_rect) 
+        pygame.draw.rect(surface, UITheme.BG, bg_rect) 
         
-        # ------------------ SIDEBAR ------------------
         sidebar_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, self.height - self.y_offset)
-        pygame.draw.rect(surface, (40, 40, 45), sidebar_rect)
-        pygame.draw.line(surface, (80, 80, 90), (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_rect)
+        pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
         
-        # Header (Fixed)
-        surface.blit(self.font.render("Crafting Recipes", True, (255, 255, 0)), (10, self.y_offset + 10))
-        new_color = (0, 150, 0) if self.selected_file is False else (40, 100, 40)
-        pygame.draw.rect(surface, new_color, pygame.Rect(10, self.y_offset + 40, self.sidebar_w - 20, 30))
-        surface.blit(self.font.render("+ New Craft", True, (255, 255, 255)), (75, self.y_offset + 45))
+        surface.blit(self.font.render("Crafting Recipes", True, UITheme.WARNING), (10, self.y_offset + 10))
         
-        # Scrollable List
+        mouse_pos = pygame.mouse.get_pos()
+        new_btn_rect = pygame.Rect(10, self.y_offset + 40, self.sidebar_w - 20, 32)
+        btn_color = UITheme.SUCCESS if self.selected_file is False else UITheme.BG
+        draw_styled_button(surface, new_btn_rect, "+ New Craft", self.font, mouse_pos, btn_color, UITheme.SUCCESS_HOVER)
+        
         list_view_rect = pygame.Rect(0, self.y_offset + 80, self.sidebar_w, self.height - self.y_offset - 80)
         surface.set_clip(list_view_rect)
         
-        list_y = self.y_offset + 80 - self.sidebar_scroll
+        list_y = self.y_offset + 85 - self.sidebar_scroll
         for fname in self.recipes.keys():
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
             if fname == self.selected_file:
-                pygame.draw.rect(surface, (80, 80, 150), r)
+                pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
+            elif r.collidepoint(mouse_pos):
+                pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
             
             lbl = (fname[:25] + '..') if len(fname) > 27 else fname
-            surface.blit(self.font.render(lbl, True, (220, 220, 220)), (15, list_y + 3))
+            surface.blit(self.font.render(lbl, True, UITheme.TEXT), (15, list_y + 5))
             list_y += 30
             
         surface.set_clip(None)
         
-        # Sidebar Scrollbar
         if self.max_sidebar_scroll > 0:
-            track_rect = pygame.Rect(self.sidebar_w - 12, list_view_rect.y, 12, list_view_rect.height)
+            track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             self.sidebar_track_rect = track_rect
-            pygame.draw.rect(surface, (30, 30, 35), track_rect)
-            
             content_h = len(self.recipes) * 30 + 80
             thumb_h = max(20, (list_view_rect.height / content_h) * list_view_rect.height)
             thumb_y = list_view_rect.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_view_rect.height - thumb_h)
+            self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
             
-            self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
-            pygame.draw.rect(surface, (100, 100, 100), self.sidebar_thumb_rect)
-            
-        # ------------------ FORM AREA ------------------
         if self.selected_file is not None:
             form_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.height - self.y_offset)
             surface.set_clip(form_view_rect)
@@ -614,84 +585,64 @@ class CraftEditor:
             form_x = self.sidebar_w
             is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
             
-            # Base Fields
             for f in ["filename", "craft", "type", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
                 lbl = f.replace("_", " ").title() + ":"
                 y_pos = self.base_inputs[f].rect.y
-                surface.blit(self.font.render(lbl, True, (180, 180, 180)), (form_x + 20, y_pos + 5))
+                surface.blit(self.font.render(lbl, True, UITheme.TEXT_DIM), (form_x + 20, y_pos + 6))
                 self.base_inputs[f].draw(surface)
                 
-            # Ingredients Section
             ing_title_y = self.base_inputs["amount"].rect.bottom + 15
-            surface.blit(self.font.render("Ingredients:", True, (255, 200, 0)), (form_x + 20, ing_title_y))
-            surface.blit(self.font.render("Link", True, (150, 150, 150)), (form_x + 20, ing_title_y + 25))
-            surface.blit(self.font.render("Item", True, (150, 150, 150)), (form_x + 90, ing_title_y + 25))
-            surface.blit(self.font.render("Destroy", True, (150, 150, 150)), (form_x + 400, ing_title_y + 25))
-            surface.blit(self.font.render("Amount", True, (150, 150, 150)), (form_x + 480, ing_title_y + 25))
+            surface.blit(self.font.render("Ingredients:", True, UITheme.WARNING), (form_x + 20, ing_title_y))
+            surface.blit(self.font.render("Link", True, UITheme.TEXT_DIM), (form_x + 20, ing_title_y + 25))
+            surface.blit(self.font.render("Item", True, UITheme.TEXT_DIM), (form_x + 90, ing_title_y + 25))
+            surface.blit(self.font.render("Destroy", True, UITheme.TEXT_DIM), (form_x + 400, ing_title_y + 25))
+            surface.blit(self.font.render("Amount", True, UITheme.TEXT_DIM), (form_x + 480, ing_title_y + 25))
             
             for row in self.ing_rows:
-                # Link / Group Btn
-                pygame.draw.rect(surface, (70, 70, 80), row["group_btn"])
-                pygame.draw.rect(surface, (100, 100, 110), row["group_btn"], 1)
-                g_txt = "L OR" if row["group"] else "---"
-                surface.blit(self.font.render(g_txt, True, (255, 255, 100) if row["group"] else (150, 150, 150)), (row["group_btn"].x + 6, row["group_btn"].y + 5))
-                
+                g_txt = "└ OR" if row["group"] else "---"
+                g_color = UITheme.WARNING if row["group"] else UITheme.BG
+                draw_styled_button(surface, row["group_btn"], g_txt, self.font, mouse_pos, g_color, UITheme.WARNING_HOVER)
                 row["item"].draw(surface)
                 
-                # Only draw other fields if NOT grouped
                 if not row["group"]:
-                    btn_color = (150, 50, 50) if row["destroy"] else (50, 150, 50)
-                    pygame.draw.rect(surface, btn_color, row["destroy_btn"])
-                    txt = "True" if row["destroy"] else "False"
-                    surface.blit(self.font.render(txt, True, (255, 255, 255)), (row["destroy_btn"].x + 12, row["destroy_btn"].y + 5))
+                    btn_color = UITheme.DANGER if row["destroy"] else UITheme.SUCCESS
+                    draw_styled_button(surface, row["destroy_btn"], "True" if row["destroy"] else "False", self.font, mouse_pos, btn_color, btn_color)
                     row["amount"].draw(surface)
                 else:
-                    # Visual grouping line to link it upwards
-                    pygame.draw.line(surface, (150, 150, 150), (form_x + 40, row["group_btn"].y - 7), (form_x + 40, row["group_btn"].y), 2)
+                    pygame.draw.line(surface, UITheme.BORDER_ACTIVE, (form_x + 50, row["group_btn"].y - 7), (form_x + 50, row["group_btn"].y), 2)
                     
-                pygame.draw.rect(surface, (200, 50, 50), row["del_btn"])
-                surface.blit(self.font.render("X", True, (255, 255, 255)), (row["del_btn"].x + 8, row["del_btn"].y + 5))
+                draw_styled_button(surface, row["del_btn"], "X", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 
-            pygame.draw.rect(surface, (50, 100, 150), self.add_ing_btn)
-            surface.blit(self.font.render("+ Add", True, (255, 255, 255)), (self.add_ing_btn.x + 15, self.add_ing_btn.y + 4))
+            draw_styled_button(surface, self.add_ing_btn, "+ Add", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
 
-            # Results Section (Only if Dismantle is selected)
             if is_dismantle:
                 res_title_y = self.add_ing_btn.bottom + 15
-                surface.blit(self.font.render("Results:", True, (255, 200, 0)), (form_x + 20, res_title_y))
-                surface.blit(self.font.render("Link", True, (150, 150, 150)), (form_x + 20, res_title_y + 25))
-                surface.blit(self.font.render("Item", True, (150, 150, 150)), (form_x + 90, res_title_y + 25))
-                surface.blit(self.font.render("Amount", True, (150, 150, 150)), (form_x + 400, res_title_y + 25))
-                surface.blit(self.font.render("Chance", True, (150, 150, 150)), (form_x + 470, res_title_y + 25))
+                surface.blit(self.font.render("Results:", True, UITheme.WARNING), (form_x + 20, res_title_y))
+                surface.blit(self.font.render("Link", True, UITheme.TEXT_DIM), (form_x + 20, res_title_y + 25))
+                surface.blit(self.font.render("Item", True, UITheme.TEXT_DIM), (form_x + 90, res_title_y + 25))
+                surface.blit(self.font.render("Amount", True, UITheme.TEXT_DIM), (form_x + 400, res_title_y + 25))
+                surface.blit(self.font.render("Chance", True, UITheme.TEXT_DIM), (form_x + 470, res_title_y + 25))
                 
                 for row in self.res_rows:
-                    pygame.draw.rect(surface, (70, 70, 80), row["group_btn"])
-                    pygame.draw.rect(surface, (100, 100, 110), row["group_btn"], 1)
                     g_txt = "└ OR" if row["group"] else "---"
-                    surface.blit(self.font.render(g_txt, True, (255, 255, 100) if row["group"] else (150, 150, 150)), (row["group_btn"].x + 6, row["group_btn"].y + 5))
-                    
+                    g_color = UITheme.WARNING if row["group"] else UITheme.BG
+                    draw_styled_button(surface, row["group_btn"], g_txt, self.font, mouse_pos, g_color, UITheme.WARNING_HOVER)
                     row["item"].draw(surface)
                     
                     if not row["group"]:
                         row["amount"].draw(surface)
                         row["chance"].draw(surface)
                     else:
-                        pygame.draw.line(surface, (150, 150, 150), (form_x + 40, row["group_btn"].y - 7), (form_x + 40, row["group_btn"].y), 2)
+                        pygame.draw.line(surface, UITheme.BORDER_ACTIVE, (form_x + 50, row["group_btn"].y - 7), (form_x + 50, row["group_btn"].y), 2)
                         
-                    pygame.draw.rect(surface, (200, 50, 50), row["del_btn"])
-                    surface.blit(self.font.render("X", True, (255, 255, 255)), (row["del_btn"].x + 8, row["del_btn"].y + 5))
+                    draw_styled_button(surface, row["del_btn"], "X", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                     
-                pygame.draw.rect(surface, (50, 100, 150), self.add_res_btn)
-                surface.blit(self.font.render("+ Add", True, (255, 255, 255)), (self.add_res_btn.x + 15, self.add_res_btn.y + 4))
+                draw_styled_button(surface, self.add_res_btn, "+ Add", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 
-            # Action Buttons
-            pygame.draw.rect(surface, (0, 150, 0), self.save_btn)
-            surface.blit(self.font.render("Save XML", True, (255, 255, 255)), (self.save_btn.x + 20, self.save_btn.y + 5))
+            draw_styled_button(surface, self.save_btn, "Save XML", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
             if self.selected_file:
-                pygame.draw.rect(surface, (150, 0, 0), self.delete_btn)
-                surface.blit(self.font.render("Delete", True, (255, 255, 255)), (self.delete_btn.x + 160, self.delete_btn.y + 5))
+                draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 
-            # OVERLAYS (Draw Dropdowns last so they render on top)
             for f in self.base_inputs.values():
                 if isinstance(f, UIDropdown): f.draw_list(surface)
             for row in self.ing_rows: row["item"].draw_list(surface)
@@ -700,15 +651,11 @@ class CraftEditor:
                 
             surface.set_clip(None)
             
-            # Draw Form Scrollbar overlay
             if self.max_scroll > 0:
-                track_rect = pygame.Rect(self.width - 12, form_view_rect.y, 12, form_view_rect.height)
+                track_rect = pygame.Rect(self.width - 8, form_view_rect.y, 8, form_view_rect.height)
                 self.form_track_rect = track_rect
-                pygame.draw.rect(surface, (30, 30, 35), track_rect)
-                
                 content_h = form_view_rect.height + self.max_scroll
                 thumb_h = max(20, (form_view_rect.height / content_h) * form_view_rect.height)
                 thumb_y = form_view_rect.y + (self.form_scroll / self.max_scroll) * (form_view_rect.height - thumb_h)
-                
-                self.form_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 12, thumb_h)
-                pygame.draw.rect(surface, (100, 100, 100), self.form_thumb_rect)
+                self.form_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+                pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.form_thumb_rect, border_radius=4)

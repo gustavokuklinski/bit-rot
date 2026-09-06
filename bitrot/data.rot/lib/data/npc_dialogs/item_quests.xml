@@ -21,7 +21,6 @@
         <player_question p="They said you have the coordinates for the supply drop." />
         <player_question p="Pelo amor de Deus, someone has to do something about this." />
         <player_question p="The archipelago is quiet... too quiet. Where are the survivors?" />
-
         <npc_awnser n="Dios says we should share, but first, find me a {item}." />
         <npc_awnser n="If you find a {item}, maybe I’ll tell you who’s still breathing." />
         <npc_awnser n="Survival isn't free, cara. Go get me a {item} first." />
@@ -43,7 +42,6 @@
         <npc_awnser n="The alliance is watching. Show them you’re useful, find a {item}." />
         <npc_awnser n="Greed is the only thing left. Bring a {item} and I'll share the loot." />
     </node>
-
     <node id="proc_end_quest">
         <player_question p="Psst... look what I found. Ready to trade, brother?" />
         <player_question p="I got the {item}. Now where’s my cut, caramba?" />
@@ -65,7 +63,6 @@
         <player_question p="The shadow partners will be happy. I have the {item}." />
         <player_question p="Opa, mission accomplished. The {item} is yours." />
         <player_question p="Let’s make this fast. Here is the {item}. Give me the goods." />
-
         <npc_awnser n="The gambler always takes all... but you can have this {reward_item}." />
         <npc_awnser n="Everything has a price for the bidder. Take this {reward_item}." />
         <npc_awnser n="Opa! This {item} is perfect. Here’s a {reward_item} for your trouble." />
@@ -87,7 +84,6 @@
         <npc_awnser n="The islands are hell, but at least you have this {reward_item} now." />
         <npc_awnser n="Porra, finally! Take this {reward_item} and leave me alone." />
     </node>
-
     <node id="proc_items_quest">
         <npc_rqst rqst_item="[Infection Pills]" />
         <npc_rqst rqst_item="[Medical Bandage]" />
@@ -101,7 +97,6 @@
         <npc_rqst rqst_item="[Vaccine]" />
         <npc_rqst rqst_item="[Car Key Ambulance]" />
         <npc_rqst rqst_item="[Family Photo]" />
-
         <player_award award_item="[Money WBRL]" />
         <player_award award_item="[Medical Kit]" />
         <player_award award_item="[Infection Pills]" />
