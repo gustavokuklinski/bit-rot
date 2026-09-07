@@ -81,28 +81,49 @@ class NPCGraphics:
 
         weapon = self.equipped_weapon
         if weapon and weapon.image:
-            angle_rad = math.radians(self.angle)
-            angle_deg = -self.angle
+            # 1. Determine the target angle
+            current_angle = getattr(self, 'aim_angle', self.angle)
+            
+            # 2. MIRRORING LOGIC: Fix the "upside down" look
+            # If the angle is between 90 and 270, the NPC is facing Left.
+            # We flip the image vertically and adjust the angle to keep it pointing correctly.
+            base_weapon_img = weapon.image
+            rot_angle = current_angle
 
+            if 90 < current_angle < 270:
+                # Flip image vertically (True for Y-axis flip)
+                base_weapon_img = pygame.transform.flip(base_weapon_img, False, True)
+                # Adjust angle by 180 degrees because the flip mirrored the direction
+                rot_angle = current_angle - 180
+
+            # 3. HANDLE MELEE SWING vs RANGED/IDLE
             if weapon.item_type == 'weapon_melee' and self.melee_swing_timer > 0:
                 SWING_DURATION = 15
                 swing_progress = (SWING_DURATION - self.melee_swing_timer) / SWING_DURATION
-                base_angle_rad = self.melee_swing_angle
-                SWING_ARC_RADIANS = math.pi / 2
-                swing_offset = (swing_progress * SWING_ARC_RADIANS) - (SWING_ARC_RADIANS / 2) 
-                current_weapon_angle_rad = base_angle_rad + swing_offset 
+                
+                SWING_ARC = math.pi / 2
+                swing_offset = (swing_progress * SWING_ARC) - (SWING_ARC / 2) 
+                
+                # We use the adjusted rot_angle for the swing calculation
+                current_weapon_angle_rad = math.radians(rot_angle) + swing_offset
+                
                 weapon_distance_from_center = TILE_SIZE * 0.7 
                 weapon_center_x = self.rect.centerx + math.cos(current_weapon_angle_rad) * weapon_distance_from_center
                 weapon_center_y = self.rect.centery - math.sin(current_weapon_angle_rad) * weapon_distance_from_center
-                angle_deg = -math.degrees(current_weapon_angle_rad)
+                
+                # Convert back to degrees for the final rotate call
+                final_angle = math.degrees(current_weapon_angle_rad)
             else:
+                # Standard tracking (Ranged or Idle)
                 hand_offset_dist = TILE_SIZE * 0.4
-                angle_rad = math.radians(self.angle)
+                angle_rad = math.radians(rot_angle)
                 weapon_center_x = self.rect.centerx + math.cos(angle_rad) * hand_offset_dist
                 weapon_center_y = self.rect.centery - math.sin(angle_rad) * hand_offset_dist
-                angle_deg = -self.angle
+                final_angle = rot_angle
 
-            rotated_image = pygame.transform.rotate(weapon.image, angle_deg)
-            # Add wiggle_y so the weapon bounces naturally in their hands
+            # 4. FINAL ROTATION AND BLIT
+            # Use the base_weapon_img (which might be flipped) and the final_angle
+            rotated_image = pygame.transform.rotate(base_weapon_img, final_angle)
+            
             new_rect = rotated_image.get_rect(center=(weapon_center_x + offset_x, weapon_center_y + offset_y + wiggle_y))
             surface.blit(rotated_image, new_rect.topleft)

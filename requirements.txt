@@ -4,3 +4,4 @@ pyinstaller
 faker
 numpy
 pillow
+cryptography

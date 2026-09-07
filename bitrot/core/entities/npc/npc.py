@@ -439,8 +439,16 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if target_entity:
             target_pos = target_entity.rect.center
+            # Calculate aim_angle: atan2(-dy, dx) gives the correct Pygame rotation angle
+            dx_target = target_pos[0] - self.rect.centerx
+            dy_target = target_pos[1] - self.rect.centery
+            self.aim_angle = math.degrees(math.atan2(-dy_target, dx_target))
+            
             self.idle_timer = 0
         else:
+            # Reset to movement angle if not targeting anyone
+            self.aim_angle = self.angle
+            
             if self.is_static:
                 target_pos = None
                 self.state = 'idle'
@@ -464,6 +472,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                             self._pick_patrol_point(game)
                         target_pos = self.patrol_target
                         self.state = 'wandering'
+
+            
 
         self.dx, self.dy = 0, 0
         
@@ -753,18 +763,30 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         dy = target_entity.rect.centery - self.rect.centery
         dist = math.hypot(dx, dy)
         
+        # [NEW] Calculate Angle to Target for the facing check
+        angle_to_target = math.degrees(math.atan2(-dy, dx))
+        # Calculate difference between where NPC is facing (self.angle) and where target is
+        angle_diff = (angle_to_target - self.angle + 180) % 360 - 180
+        
         effective_attack_range = self.attack_range
         attack_cooldown = self.attack_cooldown / multiplier 
         if is_ranged_weapon:
             effective_attack_range = TILE_SIZE * 8
             attack_cooldown = 500 / multiplier
         
+        # [MODIFIED] Add a facing check for melee: abs(angle_diff) < 45 means target is in a 90-degree cone
+        is_in_front = abs(angle_diff) < 45 
+
         if dist <= effective_attack_range and (current_time - self.last_attack_time > attack_cooldown):
             weapon_is_ready = True
              
             has_los = True
             if is_ranged_weapon:
                 has_los = self.check_line_of_sight(target_entity, game)
+
+            # [MODIFIED] Only allow melee hits if the target is actually in front of the NPC
+            if not is_ranged_weapon and not is_in_front:
+                return # NPC is facing the wrong way, cannot hit
 
             if weapon_is_ready and has_los:
                 self.last_attack_time = current_time
