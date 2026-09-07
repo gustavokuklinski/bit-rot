@@ -13,6 +13,7 @@
 
 ## 📖 Table of Contents
 - [📋 Minimum Requirements](#-minimum-requirements)
+- [🎮 Controls and Keybinds](#-controls-and-keybinds)
 - [🚀 Using the Rot Engine (Tutorial)](#-using-the-rot-engine-tutorial)
   - [Interactive Mode (TUI)](#interactive-mode-tui)
   - [Command Line Mode (CLI)](#command-line-mode-cli)
@@ -41,6 +42,38 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Software** | Python 3.14 |
 | **Resolution** | 1280x720 |
 | **Disk Space** | 500 MB |
+
+---
+
+## 🎮 Controls and Keybinds
+
+| Action               | Keyboard / Mouse      | Joystick (Xbox-style) | Joystick Compatible |
+| :------------------- | :-------------------- | :-------------------- | :-----------------: |
+| **Move Up**          | `W`                   | `D-Pad Up`            | ✅                   |
+| **Move Down**        | `S`                   | `D-Pad Down`          | ✅                   |
+| **Move Left**        | `A`                   | `D-Pad Left`          | ✅                   |
+| **Move Right**       | `D`                   | `D-Pad Right`         | ✅                   |
+| **Run**              | `Left Shift`          | `B Button`            | ✅                   |
+| **Interact**         | `E`                   | `A Button`            | ✅                   |
+| **Reload**           | `R`                   | `X Button`            | ✅                   |
+| **Vehicle Engine**   | `Q`                   | `Y Button`            | ✅                   |
+| **Shove**            | `Space`               | `LB (Left Bumper)`    | ✅                   |
+| **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✅                   |
+| **Pause**            | `Esc`                 | `Start`               | ✅                   |
+| **Reset Modals**     | `Caps Lock/Special`   | `Back`                | ✅                   |
+| **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✅                   |
+| **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✅                   |
+| **Chat**             | `T`                   | —                     | ❌                   |
+| **Toggle Inventory** | `I`                   | —                     | ❌                   |
+| **Toggle Crafting**  | `C`                   | —                     | ❌                   |
+| **Toggle Status**    | `H`                   | —                     | ❌                   |
+| **Toggle Gear**      | `G`                   | —                     | ❌                   |
+| **Toggle Nearby**    | `N`                   | —                     | ❌                   |
+| **Toggle Messages**  | `M`                   | —                     | ❌                   |
+| **Toggle Slots**     | `Y`                   | —                     | ❌                   |
+
+
+*Controllers can be edited `data.rot/save/config/keybinds.xml` XML file*
 
 ---
 
