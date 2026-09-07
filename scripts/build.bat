@@ -17,22 +17,12 @@ if "%TARGET%"=="--windows" (
     call :build_windows
     goto done
 )
-if "%TARGET%"=="--linux" (
-    call :build_linux
-    goto done
-)
-if "%TARGET%"=="--macos" (
-    call :build_macos
-    goto done
-)
 if "%TARGET%"=="--android" (
     echo Android builds are not supported via Nuitka.
     goto done
 )
 if "%TARGET%"=="--all" (
-    call :build_linux
     call :build_windows
-    call :build_macos
     goto done
 )
 
@@ -42,29 +32,42 @@ goto help
 :build_windows
 call :check_nuitka
 if %ERRORLEVEL% NEQ 0 exit /b 1
-echo Building Windows executable...
-nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=.\bitrot\game\icons\favicon.ico --output-dir=.\build .\bitrot\bitrot.py
-nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=.\bitrot\game\icons\favicon.ico --output-dir=.\build .\bitrot\editor.py
-echo Windows builds ready in .\build\
-exit /b 0
 
-:build_linux
-call :check_nuitka
-if %ERRORLEVEL% NEQ 0 exit /b 1
-echo Building Linux executable...
-nuitka --onefile --include-data-dir=.\bitrot\game=game --output-dir=.\build .\bitrot\bitrot.py
-nuitka --onefile --include-data-dir=.\bitrot\game=game --output-dir=.\build .\bitrot\editor.py
-echo Linux builds ready in .\build\
-exit /b 0
+:: 1. Generate Certificate
+echo Generating signing certificate...
+python bitrot/tools/windows_certificate.py cert.pfx
+if %ERRORLEVEL% NEQ 0 (
+    echo Failed to generate certificate.
+    exit /b 1
+)
 
-:build_macos
-call :check_nuitka
-if %ERRORLEVEL% NEQ 0 exit /b 1
-echo Building macOS executable...
-nuitka --onefile --macos-create-app-bundle --macos-app-icon=.\bitrot\game\icons\favicon.icns --output-dir=.\build .\bitrot\bitrot.py
-nuitka --onefile --macos-create-app-bundle --macos-app-icon=.\bitrot\game\icons\favicon.icns --output-dir=.\build .\bitrot\editor.py
-echo macOS builds ready in .\build\
-echo After build, run: xattr -cr bitrot.app
+:: 2. Build with Nuitka
+echo Building Windows executables...
+nuitka --standalone --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --windows-company-name="Gustavo Kuklinski" --windows-product-name="Bit Rot" --windows-product-version="1.0.0" --windows-file-description="Bit Rot Game Engine" bitrot/bitrot.py
+nuitka --standalone --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --windows-company-name="Gustavo Kuklinski" --windows-product-name="Bit Rot" --windows-product-version="1.0.0" --windows-file-description="Bit Rot Game Engine" bitrot/editor.py
+
+:: 3. Find Signtool.exe (specifically the x64 version)
+echo Searching for x64 signtool.exe...
+set "SIGNTOOL_PATH="
+for /r "C:\Program Files (x86)\Windows Kits\10\bin" %%f in (signtool.exe) do (
+    echo %%f | findstr /i "\x64\" >nul
+    if !errorlevel! EQU 0 (
+        set "SIGNTOOL_PATH=%%f"
+    )
+)
+
+if "%SIGNTOOL_PATH%"=="" (
+    echo ERROR: x64 signtool.exe not found! Please install Windows SDK.
+    exit /b 1
+)
+echo Found x64 signtool at: %SIGNTOOL_PATH%
+
+:: 4. Sign the binaries
+echo Signing binaries...
+"%SIGNTOOL_PATH%" sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\bitrot.dist\bitrot.exe"
+"%SIGNTOOL_PATH%" sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\editor.dist\editor.exe"
+
+echo Windows builds ready and signed in .\build\
 exit /b 0
 
 :check_nuitka
@@ -79,10 +82,7 @@ exit /b 0
 echo Usage: build.bat [TARGET]
 echo.
 echo Targets:
-echo   --linux      Build for Linux (onefile^)
-echo   --windows    Build for Windows (onefile, console disabled^)
-echo   --macos      Build for macOS (app bundle^)
-echo   --all        Build all of the above
+echo   --windows    Build and Sign for Windows (standalone)
 exit /b 1
 
 :done

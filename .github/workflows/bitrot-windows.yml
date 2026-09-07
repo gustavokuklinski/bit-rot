@@ -46,18 +46,21 @@ jobs:
       - name: Sign Executable
         shell: pwsh
         run: |
-          # 1. Dynamically find the path to signtool.exe in the Windows SDK
-          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter signtool.exe -Recurse | Select-Object -First 1
-          if ($null -eq $signtool) { throw "signtool.exe not found!" }
+          # 1. Specifically look for the x64 version of signtool.exe
+          # We filter the path to ensure it contains '\x64\' and ends with 'signtool.exe'
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse | 
+                      Where-Object { $_.FullName -like "*\x64\signtool.exe" } | 
+                      Select-Object -First 1
+          
+          if ($null -eq $signtool) { throw "x64 signtool.exe not found!" }
           
           $signtoolPath = $signtool.FullName
           $exePath = "build\bitrot.dist\bitrot.exe"
           
-          Write-Host "Using signtool at: $signtoolPath"
+          Write-Host "Using x64 signtool at: $signtoolPath"
           
-          # 2. Execute the sign command using the full path
+          # 2. Execute the sign command
           & $signtoolPath sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$exePath"
-
       - name: Package Game Folder
         shell: pwsh
         run: |

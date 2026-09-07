@@ -27,15 +27,22 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build bitrot/bitrot.py
+          nuitka --standalone \
+          --macos-create-app-bundle \
+          --macos-app-icon=./bitrot/data.rot/icons/favicon.icns \
+          --assume-yes-for-downloads \
+          --output-dir=./build \
+          --static-libpython=yes \
+          bitrot/bitrot.py
 
       - name: Package Game
         shell: bash
         run: |
           mkdir release
-          # Copy executable and data
-          cp -r bitrot/data.rot release/data.rot
-          mv build/bitrot.app release/bitrot.app
+          
+          cp -r build/bitrot.app release/
+          
+          cp -r bitrot/data.rot release/
           
           # Generate readme.txt
           cat <<EOF > release/readme.txt
@@ -102,7 +109,8 @@ jobs:
           THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           EOF
           
-          cd release && zip -r ../bitrot_linux.zip . && cd ..
+
+          cd release && zip -r ../bitrot_macos.zip . && cd ..
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

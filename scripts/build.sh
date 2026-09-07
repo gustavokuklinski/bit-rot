@@ -30,24 +30,16 @@ check_nuitka() {
 build_linux() {
     check_nuitka
     echo "Building Linux executable..."
-    nuitka --onefile --include-data-dir=./bitrot/game=game --output-dir=./build ./bitrot/bitrot.py
-    nuitka --onefile --include-data-dir=./bitrot/game=game --output-dir=./build ./bitrot/editor.py
+    nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
+    nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
     echo "Linux builds ready in ./build/"
-}
-
-build_windows() {
-    check_nuitka
-    echo "Building Windows executable..."
-    nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
-    nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/game/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
-    echo "Windows builds ready in ./build/"
 }
 
 build_macos() {
     check_nuitka
     echo "Building macOS executable..."
-    nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
-    nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/game/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
+    nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build --static-libpython=yes bitrot/bitrot.py
+    nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build --static-libpython=yes bitrot/editor.py
     echo "macOS builds ready in ./build/"
     echo "After build, run: xattr -cr bitrot.app"
 }
@@ -59,19 +51,14 @@ TARGET=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --linux) TARGET="linux"; shift ;;
-        --windows) TARGET="windows"; shift ;;
         --macos) TARGET="macos"; shift ;;
-        --android) TARGET="android"; shift ;;
-        --all) TARGET="all"; shift ;;
         --help)
             cat << EOF
 Usage: $(basename "$0") [TARGET]
 
 Targets:
   --linux      Build for Linux (onefile)
-  --windows    Build for Windows (onefile, console disabled)
   --macos      Build for macOS (app bundle)
-  --all        Build all of the above
 
 EOF
             exit 0
@@ -85,7 +72,7 @@ EOF
 done
 
 if [[ -z "$TARGET" ]]; then
-    echo "Please specify a target (--linux, --windows, --macos, --all)."
+    echo "Please specify a target (--linux, --macos)."
     exit 1
 fi
 
@@ -94,11 +81,9 @@ fi
 # ----------------------------------------------------------------------
 case "$TARGET" in
     linux) build_linux ;;
-    windows) build_windows ;;
     macos) build_macos ;;
     all)
         build_linux
-        build_windows
         build_macos
         ;;
 esac
