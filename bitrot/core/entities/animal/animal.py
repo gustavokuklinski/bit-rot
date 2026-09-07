@@ -193,7 +193,7 @@ class Animal(Zombie):
                     subdir='animals', 
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=1.0, 
+                    base_volume=0.3, 
                     pitch_variance=0.15
                 ) # Natural sound variation!
                 self.last_hit_sound_time = current_time
@@ -228,7 +228,7 @@ class Animal(Zombie):
                 subdir='animals', 
                 game=game, 
                 source_pos=self.rect.center, 
-                base_volume=1.0, 
+                base_volume=0.3, 
                 pitch_variance=0.15
             ) # Natural sound variation!
 

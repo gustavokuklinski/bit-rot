@@ -150,6 +150,15 @@ ANIMAL_RESPAWN_TIMER_MS = 0
 VOLUME_MUSIC = 0.50
 VOLUME_BACKGROUND = 0.50
 VOLUME_ATMOSPHERIC = 0.50
+VOLUME_ANIMAL = 0.50
+VOLUME_NPC = 0.50
+VOLUME_ZOMBIE = 0.50
+VOLUME_PLAYER = 0.50
+VOLUME_VEHICLE = 0.50
+VOLUME_ITEMS = 0.50
+VOLUME_MAP = 0.50
+
+
 
 GAME_LANGUAGE = "en_US"
 
@@ -233,7 +242,7 @@ def load_settings(preset="config"):
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
     global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
-    global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC
+    global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
 
     filepath = get_active_config_path(preset)
@@ -346,6 +355,27 @@ def load_settings(preset="config"):
         
         vol_a = audio_config.find('volume_atmospheric')
         VOLUME_ATMOSPHERIC = float(vol_a.get('value'))
+
+        vol_map = audio_config.find('volume_map')
+        VOLUME_MAP = float(vol_map.get('value'))
+
+        vol_items = audio_config.find('volume_items')
+        VOLUME_ITEMS = float(vol_items.get('value'))
+
+        vol_vehicle = audio_config.find('volume_vehicle')
+        VOLUME_VEHICLE = float(vol_vehicle.get('value'))
+
+        vol_player = audio_config.find('volume_player')
+        VOLUME_PLAYER = float(vol_player.get('value'))
+
+        vol_zombie = audio_config.find('volume_zombie')
+        VOLUME_ZOMBIE = float(vol_zombie.get('value'))
+
+        vol_npc = audio_config.find('volume_npc')
+        VOLUME_NPC = float(vol_npc.get('value'))
+
+        vol_animal = audio_config.find('volume_animal')
+        VOLUME_ANIMAL = float(vol_animal.get('value'))
 
         animal_config = root.find('animal')
         ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))

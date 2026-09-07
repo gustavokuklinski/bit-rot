@@ -102,12 +102,27 @@ class SoundManager:
         subdir_lower = subdir.lower() if subdir else ""
 
         # ---> NEW: EARLY VOLUME CHECK <---
-        # Pull master volume from XML config immediately
-        volume_modifier = core.data.config.VOLUME_BACKGROUND
+        # Pull master volume from XML config immediately based on the specific subdir
+        volume_modifier = 1.0
+        
         if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment']:
-            volume_modifier = core.data.config.VOLUME_ATMOSPHERIC
+            volume_modifier = getattr(core.data.config, 'VOLUME_ATMOSPHERIC', 1.0)
         elif subdir_lower in ['music']:
-            volume_modifier = core.data.config.VOLUME_MUSIC
+            volume_modifier = getattr(core.data.config, 'VOLUME_MUSIC', 1.0)
+        elif subdir_lower in ['map']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_MAP', 1.0)
+        elif subdir_lower in ['items', 'item']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_ITEMS', 1.0)
+        elif subdir_lower in ['vehicles', 'vehicle']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_VEHICLE', 1.0)
+        elif subdir_lower in ['player']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_PLAYER', 1.0)
+        elif subdir_lower in ['zombie', 'zombies']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_ZOMBIE', 1.0)
+        elif subdir_lower in ['npc', 'npcs']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_NPC', 1.0)
+        elif subdir_lower in ['animal', 'animals']:
+            volume_modifier = getattr(core.data.config, 'VOLUME_ANIMAL', 1.0)
 
         # If the volume is completely muted, exit instantly to guarantee absolute silence and save CPU!
         if volume_modifier <= 0.0 or base_volume <= 0.0:
@@ -272,13 +287,27 @@ class SoundManager:
             return
 
         # 1. Volume Modifiers (Matches play_sound logic)
-        volume_modifier = core.data.config.VOLUME_BACKGROUND
+        volume_modifier = 1.0
         if subdir:
             subdir_lower = subdir.lower()
-            if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment', 'vehicles']:
-                volume_modifier = core.data.config.VOLUME_ATMOSPHERIC
+            if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_ATMOSPHERIC', 1.0)
             elif subdir_lower in ['music']:
-                volume_modifier = core.data.config.VOLUME_MUSIC
+                volume_modifier = getattr(core.data.config, 'VOLUME_MUSIC', 1.0)
+            elif subdir_lower in ['map']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_MAP', 1.0)
+            elif subdir_lower in ['items', 'item']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_ITEMS', 1.0)
+            elif subdir_lower in ['vehicles', 'vehicle']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_VEHICLE', 1.0)
+            elif subdir_lower in ['player']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_PLAYER', 1.0)
+            elif subdir_lower in ['zombie', 'zombies']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_ZOMBIE', 1.0)
+            elif subdir_lower in ['npc', 'npcs']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_NPC', 1.0)
+            elif subdir_lower in ['animal', 'animals']:
+                volume_modifier = getattr(core.data.config, 'VOLUME_ANIMAL', 1.0)
 
         # 2. Distance Calculation
         player_pos = game.player.rect.center

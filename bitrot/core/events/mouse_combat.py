@@ -49,7 +49,7 @@ def handle_attack(game, mouse_pos):
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center,
-                        base_volume=1.0,
+                        base_volume=0.5,
                         pitch_variance=0.15,
                         is_critical=True
                     )
@@ -127,7 +127,7 @@ def handle_attack(game, mouse_pos):
                             subdir='items', 
                             game=game, 
                             source_pos=game.player.rect.center, 
-                            base_volume=1.0, 
+                            base_volume=0.5, 
                             pitch_variance=0.15, 
                             is_critical=True
                         )
@@ -153,7 +153,7 @@ def handle_attack(game, mouse_pos):
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center,
-                        base_volume=1.0,
+                        base_volume=0.5,
                         pitch_variance=0.15,
                         is_critical=True
                     )
@@ -219,7 +219,7 @@ def handle_attack(game, mouse_pos):
                         subdir='items',
                         game=game,
                         source_pos=game.player.rect.center,
-                        base_volume=1.0,
+                        base_volume=0.5,
                         pitch_variance=0.15,
                         is_critical=True
                     )

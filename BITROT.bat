@@ -171,37 +171,18 @@ cls
 echo %C_BLUE%┌──────────────────────────────────────────────────────────┐%C_RESET%
 echo %C_BLUE%│ %C_BOLD%BUILD EXECUTABLE%C_RESET%                                    %C_BLUE%│%C_RESET%
 echo %C_BLUE%├──────────────────────────────────────────────────────────┤%C_RESET%
-echo %C_BLUE%│%C_RESET%  %C_BOLD%1)%C_RESET% Linux                                          %C_BLUE%│%C_RESET%
 echo %C_BLUE%│%C_RESET%  %C_BOLD%2)%C_RESET% Windows                                        %C_BLUE%│%C_RESET%
-echo %C_BLUE%│%C_RESET%  %C_BOLD%3)%C_RESET% macOS                                          %C_BLUE%│%C_RESET%
-echo %C_BLUE%│%C_RESET%  %C_BOLD%4)%C_RESET% Android                                        %C_BLUE%│%C_RESET%
-echo %C_BLUE%│%C_RESET%  %C_BOLD%5)%C_RESET% All Platforms                                  %C_BLUE%│%C_RESET%
 echo %C_BLUE%│%C_RESET%  %C_BOLD%6)%C_RESET% Back to Main Menu                              %C_BLUE%│%C_RESET%
 echo %C_BLUE%└──────────────────────────────────────────────────────────┘%C_RESET%
 echo.
 set "choice="
 set /p choice="%C_BOLD%Selection [1-6]: %C_RESET%"
 
-if "%choice%"=="1" (
-    call :run_script "%SCRIPTS_DIR%\build.bat" "--linux"
-    goto build_menu
-)
 if "%choice%"=="2" (
     call :run_script "%SCRIPTS_DIR%\build.bat" "--windows"
     goto build_menu
 )
-if "%choice%"=="3" (
-    call :run_script "%SCRIPTS_DIR%\build.bat" "--macos"
-    goto build_menu
-)
-if "%choice%"=="4" (
-    call :run_script "%SCRIPTS_DIR%\build.bat" "--android"
-    goto build_menu
-)
-if "%choice%"=="5" (
-    call :run_script "%SCRIPTS_DIR%\build.bat" "--all"
-    goto build_menu
-)
+
 if "%choice%"=="6" goto main_menu
 
 echo %C_RED%Invalid option!%C_RESET%

@@ -11,6 +11,23 @@
 
 ---
 
+## 📖 Table of Contents
+- [📋 Minimum Requirements](#-minimum-requirements)
+- [🚀 Using the Rot Engine (Tutorial)](#-using-the-rot-engine-tutorial)
+  - [Interactive Mode (TUI)](#interactive-mode-tui)
+  - [Command Line Mode (CLI)](#command-line-mode-cli)
+- [🛠️ Manual Installation](#-manual-installation-virtual-environment)
+- [📦 Building Executables](#-building-executables)
+- [🔑 Windows Signing & Certificates](#-windows-signing--certificates)
+- [☁️ Cloud Builds (GitHub Actions)](#-cloud-builds-github-actions)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🔐 Security](#-security)
+- [👤 Code of Conduct](#-code-of-conduct)
+- [📬 Contact](#-contact)
+
+---
+
 ## 📋 Minimum Requirements
 
 Before diving in, ensure your system meets the following minimum specifications:
@@ -27,37 +44,43 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 ---
 
-## 🚀 Quick Start with Rot Engine Scripts
+## 🚀 Using the Rot Engine (Tutorial)
 
-For the fastest setup, use the included engine scripts:
+The **Rot Engine** scripts (`BITROT.sh` and `BITROT.bat`) are the primary control centers for the project. They act as wrappers for the specialized scripts located in the `./scripts/` directory.
 
-**Linux / Mac**
-
+### 🏁 Getting Started
+**Linux / macOS:**
 ```bash
-# Pre-install: Set execute permissions for all scripts
 $ chmod +x BITROT.sh scripts/*.sh
-
-# Launch the game engine
 $ ./BITROT.sh
-
-# Launch the game
-$ ./BITROT.sh shell
 ```
 
-**Windows**
-
-Double click on: `BITROT.bat`
-
-```shell
-# Open CMD or Powershell
+**Windows:**
+Simply double-click `BITROT.bat` or run it via CMD:
+```cmd
 C:\bit-rot\> BITROT.bat
 ```
+
+### 🕹️ Interactive Mode (TUI)
+If you run the scripts without any arguments, you will enter the **Interactive ASCII Menu**:
+1. **Play BitRot**: Launches the game.
+2. **Editor**: Launches the level editor.
+3. **Clean Project**: Deletes cache, build folders, or resets `data.rot`.
+4. **Build Executable**: Automates the Nuitka compilation and signing process.
+
+### ⌨️ Command Line Mode (CLI)
+| Command | Description | Example (Linux/Mac) | Example (Windows) |
+| :--- | :--- | :--- | :--- |
+| `shell` | Launches the game | `./BITROT.sh shell` | `BITROT.bat shell` |
+| `shell --editor` | Launches the editor | `./BITROT.sh shell --editor` | `BITROT.bat shell --editor` |
+| `clean` | Cleans project files | `./BITROT.sh clean --full` | `BITROT.bat clean --full` |
+| `build` | Compiles the game | `./BITROT.sh build --linux` / `--macos` | `BITROT.bat build --windows` |
 
 ---
 
 ## 🛠️ Manual Installation (Virtual Environment)
 
-If you prefer to set things up manually, follow these steps:
+If you prefer to set things up manually for development:
 
 ### 1. Create and activate a virtual environment
 ```bash
@@ -70,95 +93,56 @@ $ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 $ pip install -r requirements.txt
 ```
 
-### 3. Clean cache files (optional)
-```bash
-$ chmod +x scripts/clean.sh
-$ ./clean.sh
-```
-
----
-
-## 🎮 Run Locally
-
-Once installed, run the game or the editor:
-
-```bash
-# Play the game
-$ python bitrot/bitrot.py
-
-# Open the level editor
-$ python bitrot/editor.py
-```
-
 ---
 
 ## 📦 Building Executables
 
-You can compile the game into standalone executables (`.bin`, `.exe`, or `.app`) using either Nuitka or PyInstaller.
+We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
-### 🛠️ Option 1: Using Nuitka (Recommended for Performance)
-Compile the game using [Nuitka](https://nuitka.net/).
+**The easiest way to build is using the Rot Engine wrappers:**
+- **Windows**: `BITROT.bat build --windows` (triggers `./scripts/build.bat`)
+- **Linux**: `./BITROT.sh build --linux` (triggers `./scripts/build.sh`)
+- **macOS**: `./BITROT.sh build --macos` (triggers `./scripts/build.sh`)
 
-#### 🐧 Linux
-```bash
-# Build the game (packed into a single file)
-$ nuitka --onefile --include-data-dir=./bitrot/game=game ./bitrot/bitrot.py
-
-# Build the editor (packed into a single file)
-$ nuitka --onefile --include-data-dir=./bitrot/game=game ./bitrot/editor.py
-
-# Alternative: Output build artifacts to a specific directory
-$ nuitka --onefile --output-dir=./build ./bitrot/bitrot.py
-$ nuitka --onefile --output-dir=./build ./bitrot/editor.py
-```
-
-#### 🪟 Windows
-```bash
-# Build the game with a custom icon and no console window
-$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
-
-# Build the editor with a custom icon and no console window
-$ nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
-```
-
-#### 🍎 macOS
-```bash
-# Build the game as an application bundle
-$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
-
-# Build the editor as an application bundle
-$ nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
-```
-
-> **⚠️ Note:** Windows Defender may flag the executable as a false positive due to Nuitka's packaging method. This is normal—you can safely add an exception.
+This process will create a `build/` directory containing the standalone executable and all required dependencies.
 
 ---
 
-### 🛠️ Option 2: Using PyInstaller
-If you prefer [PyInstaller](https://pyinstaller.org/), follow these steps. First, install the package:
-```bash
-$ pip install pyinstaller
+## 🔑 Windows Signing & Certificates
+
+Windows Defender often flags unsigned Python executables as "Trojan" or "Unknown Malware." To prevent this, Bit Rot binaries are digitally signed.
+
+### 🛠️ Local Signing Requirements
+To build and sign binaries locally on Windows, you must have the **Windows SDK** installed (specifically `signtool.exe`).
+
+### ⚙️ How the Process Works
+When you run `BITROT.bat build --windows` (which executes `./scripts/build.bat`), the engine performs these steps automatically:
+1. **Certificate Generation**: It runs `python bitrot/tools/windows_certificate.py cert.pfx` to create a local self-signed certificate.
+2. **Compilation**: Nuitka compiles the `.py` files into `.exe`.
+3. **Binary Signing**: The engine locates `signtool.exe` (x64) and signs the binaries using the generated `.pfx` certificate and a secure password.
+
+**Manual Signing Command (Example):**
+```cmd
+signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\bitrot.dist\bitrot.exe"
 ```
 
-#### 🐧 Linux & 🍎 macOS
-```bash
-# Build the game
-$ pyinstaller --onefile --add-data "bitrot/game:game" bitrot/bitrot.py
+---
 
-# Build the editor
-$ pyinstaller --onefile --add-data "bitrot/game:game" bitrot/editor.py
-```
+## ☁️ Cloud Builds (GitHub Actions)
 
-#### 🪟 Windows
-```bash
-# Build the game (no console, custom icon)
-$ pyinstaller --onefile --noconsole --add-data "bitrot/game;game" --icon=./bitrot/data.rot/icons/favicon.ico bitrot/bitrot.py
+If you don't have the Windows SDK or Nuitka installed locally, you can use our **GitHub Actions Pipeline** to build the project in the cloud.
 
-# Build the editor (no console, custom icon)
-$ pyinstaller --onefile --noconsole --add-data "bitrot/game;game" --icon=./bitrot/data.rot/icons/favicon.ico bitrot/editor.py
-```
+### 🚀 How to trigger a build:
+1. Go to the **Actions** tab in this GitHub repository.
+2. Select the **"Build Project"** workflow from the left sidebar.
+3. Click the **"Run workflow"** dropdown.
+4. Select your target platform (Windows, Linux, or macOS).
+5. Click **Run workflow**.
 
-*Note: PyInstaller outputs the final executable in the `dist/` folder.*
+### 📦 Downloading the Build:
+Once the process is complete, GitHub will upload the compiled binaries as **Artifacts**. You can find them at the bottom of the specific Action run summary.
+
+**Note for Maintainers:** The GitHub Action uses **Repository Secrets** to store the certificate password and signing keys, ensuring that the public releases are signed without exposing sensitive passwords in the code.
 
 ---
 

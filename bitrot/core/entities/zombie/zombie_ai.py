@@ -385,7 +385,7 @@ class ZombieAI:
                         subdir=snd_dir, 
                         game=game, 
                         source_pos=self.rect.center, 
-                        base_volume=1.0,
+                        base_volume=0.3,
                         pitch_variance=0.15
                     )
                     self.last_wander_sound_time = current_time
@@ -549,7 +549,7 @@ class ZombieAI:
                     subdir=snd_dir, 
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=1.0, 
+                    base_volume=0.6, 
                     pitch_variance=0.15
                 )
                 self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))

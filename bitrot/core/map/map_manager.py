@@ -508,7 +508,7 @@ class MapManager:
                     subdir='map',
                     game=self.game,
                     source_pos=tile_rect.center,
-                    base_volume=1.0,
+                    base_volume=0.4,
                     pitch_variance=0.15,
                     is_critical=True
                 )
@@ -558,7 +558,7 @@ class MapManager:
                 subdir='map',
                 game=self.game,
                 source_pos=tile_rect.center,
-                base_volume=1.0,
+                base_volume=0.4,
                 pitch_variance=0.15
             )
 

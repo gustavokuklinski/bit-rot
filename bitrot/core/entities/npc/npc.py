@@ -812,7 +812,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                             subdir='items', 
                             game=game, 
                             source_pos=self.rect.center, 
-                            base_volume=1.0
+                            base_volume=0.5
                         )
 
                     projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
@@ -827,7 +827,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                             self.sound_attack, subdir='npc', 
                             game=game, 
                             source_pos=self.rect.center, 
-                            base_volume=1.0, 
+                            base_volume=0.3, 
                             pitch_variance=0.15
                         )
                     self.melee_swing_timer = 250

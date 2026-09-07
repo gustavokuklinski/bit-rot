@@ -6,10 +6,20 @@
         <language value="en_US" name="Language" default="en_US"/>
         <window_mode value="windowed" name="Window" default="windowed"/>
     </ui>
-    <audio>
+        <audio>
         <volume_music value="0.5" name="Music Volume" default="0.5"/>
-        <volume_background value="1.0" name="Background Volume: Items, Steps, Zombies" default="1.0"/>
-        <volume_atmospheric value="1.0" name="Atmospheric Volume: Day, Rain, Cave" default="1.0"/>
+        <volume_background value="1.0" name="Background Volume: Items, Steps, Zombies" default="0.5"/>
+        <volume_atmospheric value="1.0" name="Atmospheric Volume: Day, Rain, Cave" default="0.5"/>
+
+        <volume_map value="1.0" name="Map tiles (Windows, Doors, Trees)" default="0.5"/>
+        <volume_items value="1.0" name="Items volume (Weapons)" default="0.5"/>
+        <volume_vehicle value="1.0" name="Vehicle volume" default="0.5"/>
+
+        <volume_player value="1.0" name="Player volume (Steps, Items)" default="0.5"/>
+        <volume_zombie value="1.0" name="Zombie volume" default="0.5"/>
+        <volume_npc value="1.0" name="NPC volume" default="0.5"/>
+        <volume_animal value="1.0" name="Animal volume" default="0.5"/>
+        
     </audio>
     <game>
         <time_daylength value="900000" name="Day length" default="900000"/>
@@ -41,7 +51,7 @@
     </vehicle>
     <animal>
         <animal_spawn_per_chunk value="10" name="Max Animal spawn on chunk" default="10"/>
-        <animal_respawn_ms_timer value="30000" name="Animal respawn" default="30000"/>
+        <animal_respawn_ms_timer value="100000" name="Animal respawn" default="100000"/>
     </animal>
     <npc>
         <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk" default="10"/>
@@ -49,7 +59,7 @@
         <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk" default="10"/>
+        <zombie_spawn_per_chunk value="5" name="Max Zombie spawn on chunk" default="5"/>
         <spawn value="10" name="Zombies per spawn" default="10"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day" default="1"/>
         <wander value="true" name="Zombie wandering" default="true"/>

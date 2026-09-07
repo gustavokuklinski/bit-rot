@@ -113,7 +113,7 @@ class NPCCombat:
                     subdir='npc', 
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=1.0,
+                    base_volume=0.4,
                     pitch_variance=0.15
                 )
                 self.last_hit_sound_time = current_time
@@ -133,7 +133,7 @@ class NPCCombat:
                 subdir='npc', 
                 game=game, 
                 source_pos=self.rect.center, 
-                base_volume=1.0, 
+                base_volume=0.3, 
                 pitch_variance=0.15
             )
 
