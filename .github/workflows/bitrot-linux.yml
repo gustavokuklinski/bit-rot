@@ -51,8 +51,6 @@ jobs:
           
           # 3. Copy the data assets folder
           cp -r bitrot/data.rot release/data.rot
-          
-          mv release/bitrot release/bitrot.bin
 
           # Generate readme.txt
           cat <<EOF > release/readme.txt
