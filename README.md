@@ -69,7 +69,7 @@ If you run the scripts without any arguments, you will enter the **Interactive A
 4. **Build Executable**: Automates the Nuitka compilation and signing process.
 
 ### ⌨️ Command Line Mode (CLI)
-| Command | Description | Example (Linux/Mac) | Example (Windows) |
+| Command | Description | Linux/Mac | Windows |
 | :--- | :--- | :--- | :--- |
 | `shell` | Launches the game | `./BITROT.sh shell` | `BITROT.bat shell` |
 | `shell --editor` | Launches the editor | `./BITROT.sh shell --editor` | `BITROT.bat shell --editor` |
@@ -99,12 +99,46 @@ $ pip install -r requirements.txt
 
 We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
-**The easiest way to build is using the Rot Engine wrappers:**
+### ⚡ Automatic Build (Recommended)
+The easiest way to build is using the Rot Engine wrappers. These scripts handle dependencies, icons, and (on Windows) the digital signing process automatically.
+
 - **Windows**: `BITROT.bat build --windows` (triggers `./scripts/build.bat`)
 - **Linux**: `./BITROT.sh build --linux` (triggers `./scripts/build.sh`)
 - **macOS**: `./BITROT.sh build --macos` (triggers `./scripts/build.sh`)
 
-This process will create a `build/` directory containing the standalone executable and all required dependencies.
+---
+
+### 🛠️ Manual Build (Raw Commands)
+If you prefer to run the compilation manually or customize the build flags, use the following commands. Ensure you have `nuitka` installed via pip.
+
+#### 🐧 Linux
+```bash
+# Build the game as a standalone directory
+$ nuitka --standalone --include-data-dir=./bitrot/data.rot=data.rot --output-dir=./build ./bitrot/bitrot.py
+
+# Build the editor as a standalone directory
+$ nuitka --standalone --include-data-dir=./bitrot/data.rot=data.rot --output-dir=./build ./bitrot/editor.py
+```
+
+#### 🪟 Windows
+```bash
+# Build the game with a custom icon and no console window
+$ nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
+
+# Build the editor with a custom icon and no console window
+$ nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
+```
+
+#### 🍎 macOS
+```bash
+# Build the game as an application bundle
+$ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
+
+# Build the editor as an application bundle
+$ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
+```
+
+*This process will create a `build/` directory containing the standalone executable and all required dependencies.*
 
 ---
 
