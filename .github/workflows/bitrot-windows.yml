@@ -46,8 +46,17 @@ jobs:
       - name: Sign Executable
         shell: pwsh
         run: |
+          # 1. Dynamically find the path to signtool.exe in the Windows SDK
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter signtool.exe -Recurse | Select-Object -First 1
+          if ($null -eq $signtool) { throw "signtool.exe not found!" }
+          
+          $signtoolPath = $signtool.FullName
           $exePath = "build\bitrot.dist\bitrot.exe"
-          signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$exePath"
+          
+          Write-Host "Using signtool at: $signtoolPath"
+          
+          # 2. Execute the sign command using the full path
+          & $signtoolPath sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$exePath"
 
       - name: Package Game Folder
         shell: pwsh
@@ -55,7 +64,7 @@ jobs:
           # 1. Create release directory
           New-Item -ItemType Directory -Force -Path release
           
-          # 2. Copy build contents
+          # 2. Copy build contents (Including the now-signed .exe)
           Copy-Item -Path "build\bitrot.dist\*" -Destination "release" -Recurse -Force
           Copy-Item -Path "bitrot\data.rot" -Destination "release" -Recurse -Force
           
