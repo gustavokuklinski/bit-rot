@@ -404,54 +404,98 @@ class Game:
             self.modals.remove(modal)
 
     def run_paused(self):
+        from core.events.mouse import handle_mouse_down, handle_right_click
+        from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion
+
+        if not getattr(self, 'is_mixer_paused', False):
+            pygame.mixer.pause()
+            pygame.mixer.music.pause()
+            self.is_mixer_paused = True
+
+        # Enforce allowed modals during pause
+        allowed_modals = ['status', 'messages', 'nearby', 'inventory', 'gear', 'container', 'belt', 'slots']
+        self.modals = [m for m in self.modals if m.get('type') in allowed_modals]
+
+        # Draw the game state underneath (Overlay removed)
+        draw_game(self)
+
         # Create a darker overlay
         overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 150))
+        # overlay.fill((0, 0, 0, 200)) # Darker opacity
         self.game_screen.blit(overlay, (0, 0))
 
-        text = font_16.render(tr('ui', "GAME PAUSED AND SAVED"), False, WHITE)
-        text_rect = text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 3))
-        self.game_screen.blit(text, text_rect)
+        # Discrete Banner at the top
+        banner_rect = pygame.Rect(0, 0, GAME_WIDTH, 28)
+        pygame.draw.rect(self.game_screen, (20, 20, 20, 240), banner_rect)
+        pygame.draw.line(self.game_screen, (100, 100, 100), (0, 28), (GAME_WIDTH, 28), 1)
+
+        pause_text = font_12.render(tr('ui', "PAUSED"), False, (220, 70, 70))
+        self.game_screen.blit(pause_text, (10, 8))
+        
+        start_x = 10 + pause_text.get_width() + 10
+        sep = font_12.render("-", False, GRAY)
+        self.game_screen.blit(sep, (start_x, 8))
+        start_x += sep.get_width() + 10
 
         mouse_pos = self._get_scaled_mouse_pos()
-        
-        btn_w = 200
-        btn_h = 50
-        btn_continue = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2, btn_w, btn_h)
-        btn_save = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2 + 70, btn_w, btn_h)
-        btn_quit = pygame.Rect(GAME_WIDTH // 2 - btn_w // 2, GAME_HEIGHT // 2 + 140, btn_w, btn_h)
+        events = self.get_events()
 
-        def draw_btn(surface, rect, text, mouse_pos):
+        btn_continue = pygame.Rect(start_x, 4, 70, 20)
+        start_x += 80
+        btn_save = pygame.Rect(start_x, 4, 50, 20)
+        start_x += 60
+        btn_exit = pygame.Rect(start_x, 4, 50, 20)
+
+        def draw_banner_btn(rect, text):
             is_hovered = rect.collidepoint(mouse_pos)
-            bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
-            pygame.draw.rect(surface, bg_color, rect, border_radius=6)
-            txt_surf = font_16.render(text, False, WHITE)
-            txt_rect = txt_surf.get_rect(center=rect.center)
-            surface.blit(txt_surf, txt_rect)
+            color = WHITE if is_hovered else (150, 150, 150)
+            txt_surf = font_12.render(text, False, color)
+            self.game_screen.blit(txt_surf, (rect.x + (rect.width - txt_surf.get_width())//2, rect.y + (rect.height - txt_surf.get_height())//2))
+            return is_hovered
 
-        draw_btn(self.game_screen, btn_continue, tr('ui', "Continue"), mouse_pos)
-        draw_btn(self.game_screen, btn_save, tr('ui', "Save Game"), mouse_pos)
-        draw_btn(self.game_screen, btn_quit, tr('ui', "Quit"), mouse_pos)
+        hover_cont = draw_banner_btn(btn_continue, tr('ui', "Continue"))
+        hover_save = draw_banner_btn(btn_save, tr('ui', "Save"))
+        hover_exit = draw_banner_btn(btn_exit, tr('ui', "Exit"))
 
-        for event in self.get_events():
+        for event in events:
             if getattr(self, 'joystick_handler', None):
                 self.joystick_handler.process_event(event)
 
             if event.type == pygame.QUIT:
                 self.running = False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
-                self.game_state = 'PLAYING' 
-            
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if btn_continue.collidepoint(mouse_pos):
-                    self.game_state = 'PLAYING'
-                elif btn_save.collidepoint(mouse_pos):
-                    if self.save_game():
-                        pass
-                elif btn_quit.collidepoint(mouse_pos):
-                    if hasattr(self, 'world_time') and self.world_time:
-                        self.world_time.stop_all_sounds()
-                    self.game_state = 'MENU'
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
+                pygame.mixer.unpause()
+                pygame.mixer.music.unpause()
+                self.is_mixer_paused = False
+                self.game_state = 'PLAYING'
+                
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if btn_continue.collidepoint(mouse_pos):
+                        pygame.mixer.unpause()
+                        pygame.mixer.music.unpause()
+                        self.is_mixer_paused = False
+                        self.game_state = 'PLAYING'
+                    elif btn_save.collidepoint(mouse_pos):
+                        self.save_game()
+                    elif btn_exit.collidepoint(mouse_pos):
+                        pygame.mixer.unpause()
+                        pygame.mixer.music.unpause()
+                        self.is_mixer_paused = False
+                        if hasattr(self, 'world_time') and self.world_time:
+                            self.world_time.stop_all_sounds()
+                        self.game_state = 'MENU'
+                    else:
+                        handle_mouse_down(self, event, mouse_pos)
+                elif event.button in [4, 5]:
+                    handle_mouse_down(self, event, mouse_pos)
+                elif event.button == 3:
+                    handle_right_click(self, mouse_pos)
+                    
+            elif event.type == pygame.MOUSEBUTTONUP:
+                handle_mouse_up(self, event, mouse_pos)
+            elif event.type == pygame.MOUSEMOTION:
+                handle_mouse_motion(self, event, mouse_pos)
 
         self._update_screen()
 
@@ -825,6 +869,12 @@ class Game:
             self.container_grid[key].append(c)
 
     def run_playing(self):
+        # Fallback to ensure sound immediately unpauses if unpaused via UI buttons
+        if getattr(self, 'is_mixer_paused', False):
+            pygame.mixer.unpause()
+            pygame.mixer.music.unpause()
+            self.is_mixer_paused = False
+            
         self.world_time.update()
         handle_input(self)
         self.frame_count += 1

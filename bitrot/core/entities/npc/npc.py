@@ -65,11 +65,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 'sprites': {},
                 'clothes': {},
                 'is_friendly': False,
-                'is_static': False
+                'is_static': False,
+                'spawn_zombies': 0
             }
 
         Zombie.__init__(self, x, y, template)
-        
+        self.spawn_zombies_max = template.get('spawn_zombies', 0)
         if hasattr(self, 'loot_table'):
             self.loot_table = [loot for loot in self.loot_table if loot.get('item') not in ["Pants", "Jacket", "Tshirt", "TShirt", "Sneakers"]]
 
@@ -860,3 +861,21 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         super().die(game)
         self.kill()
+
+        # Make dead NPC become a Zombie and spawn an additional 1 to 10 Zombies instantly
+        import core.data.config as game_config
+        num_zombies_to_spawn = int((random.randint(1, game_config.ZOMBIE_MAX_CHUNK) * self.spawn_zombies_max))
+        for _ in range(num_zombies_to_spawn):
+            # Calculate a random position within a 3-tile radius
+            angle = random.uniform(0, math.pi * 2)
+            radius = random.uniform(TILE_SIZE * 2, TILE_SIZE * 5)
+            spawn_x = self.rect.centerx + math.cos(angle) * radius
+            spawn_y = self.rect.centery + math.sin(angle) * radius
+
+            zombie = Zombie.create_random(spawn_x, spawn_y)
+            
+            # Ensure the newly spawned zombies are immediately hostile and alert
+            zombie.aggro_timer = 10000
+            zombie.state = 'chasing'
+            
+            game.zombies.append(zombie)

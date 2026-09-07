@@ -668,3 +668,124 @@ Start: 20/10/2025
 - [x] Fix: Game scrollbars patterns
 - [x] Fix: Liquid system (Spill drops, make infinit water)
 - [x] Fix: Map tile for Player start in game
+- [x] Add: When the player start getting tired the game start getting black and white
+- [x] Add: When the player anxiety is getting high the CRT filter start glithing.
+- [x] Fix: If liquid is in maptile_container allowing liquid and player just grab and place it back, liquid spills.
+- [x] Add: Show how many bullets player have for a weapon (4/100 - for example)
+- [x] Add: Vehicle allow the context menu to vehicle mechanics.
+- [x] Fix: Fast forward when player exit game or die state at the end of game session.
+- [x] Fix: Ajust some default modal sizes
+- [x] Add: Vehicle show the durability for tires, motor and battery
+- [x] Fix: Vehicle enter and exit tiles
+- [x] Add: Player can overweight - Reducing Health, Stamina and Tiredness.
+- [x] Rem: Custom resolution. Make fixed to: 1280x720 and mobile to: 1067x480
+- [x] Fix: Player setup fixed centered buttons
+- [x] Fix: Vehicle items transfers
+- [x] Fix: Blueprint from Recipe to Resource
+- [x] Fix: Map modals do not overlap anymore
+- [x] Fix: Craft modal triggering clicks when below
+- [x] Fix: Items couldn't be repaired
+- [x] Fix: Player Health tab UI
+- [x] Fix: Ajust the Player Status elements organization
+- [x] Add: Item: Machine gun (AK47)
+- [x] Fix: Hostile NPC now wandering
+- [x] Fix: Theme based NPCs (Hostiles)
+- [x] Rem: Player passout when Tiredness reach Zero
+- [x] Fix: NPC clothes are being tinted
+- [x] Fix: Make all modals to be snapped in game
+- [x] Add: Item: Grenade (`type="weapon_throw"`)
+- [x] Add: Weapon_throw show it quantity in player inventory
+- [x] Add: Player auto reload
+- [x] Add: SPACEBAR can push enemies away
+- [x] Add: weapon_ranged Bow and Arrow and Quiver
+- [x] Fix: Crafting modal information on top of each other
+- [x] Add: New settings for controls via ./game/save/config/keybinds.xml
+- [x] Add: Show the encoded keybing on game UI
+- [x] Fix: Repair kits as resource, check the Durability (0) on tooltip - Verify Crafting
+- [x] Add: Destructable windows/doors
+- [x] Add: Zombies and animals can break destructable tiles
+- [x] Add: Barricade/Unbarricade Doors and Windows
+- [x] Add: New craft: Coffee Cup
+- [x] Add: New items: Coffee, Coffee Cup and Empty Cup
+- [x] Add: Melee weapons: Mace, Metal Hammer, Metal Axe
+- [x] Add: Repair clothes: Balaclava, Leather Black Gloves, Leather Black Pants, Special Force Jacket, Special Force Pants, Shoes, Military Boots, Sneakers, Military Pants, Military Jacket, Exxoil Tshirt, Gethulius Tshirt
+- [x] Add: Weapon: Glock 9mm, usp acp45, pistol 1911 acp45, ump acp45
+- [x] Add: New SD Card type item with audio
+- [x] Add: Newspaper
+- [x] Add: Computer tile where you can find sd_cards
+- [x] Fix: When zombie, animal, npc, bomb explodes near destructable tiles, player lose stamina/tiredness
+- [x] Fix: Make better pathfind for zombies and NPCs to seek doors and windows
+- [x] Fix: Zombies and NPCs cannot destroy environment (just player and bombs)
+- [x] Fix: Player preset dropdown with scrollbar, at least 10 entries
+- [x] Rem: Removed tireness - all placed to stamina
+- [x] Add: Belt HUD back
+- [x] Fix: Map black tile (#) set as obtacle
+- [x] Fix: Minimap constrast on Layer 2
+- [x] Fix: Reduce the zombie/npc/animal detection radius when player is Aiming and Sleeping
+- [x] Fix: Increase the zombie/npc/animal detection radius when player is Running
+- [x] Add: Added the tooltip in top of the player belt HUD
+- [x] Fix: Allow to drag items from Belt HUD
+- [x] Fix: Charm items allowed on player Clothes
+- [x] Fix: Boost now displays at the hover experience
+- [x] Fix: Game modal tiles Hotkeys
+- [x] Add: Context menu crafts shortcut if item have crafts
+- [x] Add: Player can interact with game map tile containers
+- [x] Fix: Removed the leak bloodstains on Layer 1 to Layer 2
+- [x] Fix: Allow scroll by click drag on settings
+- [x] Add: Default control button to keybinds
+- [x] Fix: Game sound - set pitch, random execution and channels
+    - [x] Zombie/NPC/Animal Sound
+    - [x] Item sound
+    - [x] Ambience sound
+    - [x] Add sd_cards telling game lore
+- [x] Add: New mineral: Powder resource
+- [x] Add: Craft: Ammo Bullet
+- [x] Add: Craft: Ammo Capsule
+- [x] Add: Disposable Box of Ammo: 38, ACP45, Shells, 556, 762
+- [x] Add: Resource Iron
+- [x] Fix: Leaking sound if it is OFF (0.0)
+- [x] Add: New separated github action for platforms
+- [x] Add: New single binary (packed assets) version
+- [x] Rem: Removed the Sleeping
+- [x] Rem: Removed the Fast Forwaring
+- [x] Add: When place a type camp reduce the visibility radius from enemies
+- [x] Rem: Black Whte filter and CRT due performance issues
+- [x] Rem: Android and Web Support no longer maintened
+- [x] Fix: New game ocupy Left and Right of the screen, place game at the middle
+- [x] Fix: New UI for player setup
+- [x] Fix: Rain is now a Texture instead hardcoded (performance improvement)
+- [x] Fix: CRT filter for anxiety is now a texture (performance improvement)
+- [x] Fix: Instead black/white, reduce the player view Radius when health depletead (performance improvement)
+- [x] Fix: Game Paths to start python scripts within the main game folder
+- [x] Fix: Version game path 
+- [x] Fix: Animals XML game path
+- [x] Fix: Game Editor assets (XML, PNG) file paths
+- [x] Chg: Changed the path from `game` to `data.rot`
+- [x] Fix: Set all the Github Actions and Editor to new path (game to data.rot)
+- [x] Add: Github code standards protocols
+- [x] Fix: Cache lights to 256 
+- [x] Fix: Setup the default modal positions
+- [x] Fix: Setup Day/Night view radius
+- [x] Fix: Left menu buttons at the bottom
+- [x] Add: Replace old game font to a new
+- [x] Fix: Maximize "blurry" image
+- [x] Chg: Font sizes during gameplay
+- [x] Fix: Settings buttons: Apply and Reset order
+- [x] Fix: Added separators on configs, just like controls options
+- [x] Fix: Reset modals now are F4 instead SHIFT+TAB
+- [x] Chg: New separated files for Quest system
+- [x] Add: Added NPC Trade system using `type="currency` and items
+- [x] Add: New FOG of war cone
+- [x] Fix: Delay to generate kills: Animal, NPC, Zombie
+- [x] Add: Version game to the title bar
+- [x] Add: `/docs/py_scripts/` to generate texture images helper
+- [x] Add: New Fog of War and game map reveal
+- [x] Add: Game editor (Rot Engine) new Entities edit
+- [x] Fix: Player balance at: `progression.xml`
+- [x] Add: Vehicle game sounds
+- [x] Fix: Vehicle consuption of Battery, Fuel, Motor (engine)
+- [x] Fix: NPC Malee swing arch spining
+- [x] Fix: NPC ranged weapon pointing to right direction when NPC shoot
+- [x] Add: `windows_certificate.py` for Windows binary certificate
+- [x] Chg: Replace the Github actions
+- [x] Rem: Removed pyinstaller from `requirements.txt`

@@ -988,7 +988,7 @@ def draw_game(game):
         text_rect = text_surf.get_rect(center=bubble_rect.center)
         game.game_screen.blit(text_surf, text_rect)
 
-    if game.game_state == 'PLAYING':
+    if game.game_state in ['PLAYING', 'PAUSED']:
         view_left = game.viewport_left_offset
         view_right = game.viewport_left_offset + game.dynamic_w
         view_bottom = game.dynamic_h

@@ -3,6 +3,7 @@ import pygame
 import random
 import os
 import math
+from core.data.config import TILE_SIZE
 from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
 from core.entities.zombie.corpse import Corpse
@@ -39,6 +40,7 @@ class Animal(Zombie):
 
         super().__init__(x, y, zombie_template)
         self.attack_player = template.get('attack_player', False)
+        self.spawn_zombies_max = template.get('spawn_zombies', 0)
 
         sounds = template.get('sounds', {})
         self.sound_hit = sounds.get('hit')
@@ -251,6 +253,21 @@ class Animal(Zombie):
 
         # 4. Add corpse to map INSTANTLY
         game.items_on_ground.append(corpse)
+        
+        # Make dead animal spawn 0 to spawn_zombies_max zombies instantly
+        if getattr(self, 'spawn_zombies_max', 0) > 0:
+            num_zombies_to_spawn = random.randint(0, self.spawn_zombies_max)
+            for _ in range(num_zombies_to_spawn):
+                # Calculate a random position within a 3-tile radius
+                angle = random.uniform(0, math.pi * 2)
+                radius = random.uniform(TILE_SIZE * 2, TILE_SIZE * 5)
+                spawn_x = self.rect.centerx + math.cos(angle) * radius
+                spawn_y = self.rect.centery + math.sin(angle) * radius
+
+                zombie = Zombie.create_random(spawn_x, spawn_y)
+                zombie.aggro_timer = 10000
+                zombie.state = 'chasing'
+                game.zombies.append(zombie)
         
         # Add a death burst effect to make the death visually pop and feel responsive
         if hasattr(game, 'splashes'):

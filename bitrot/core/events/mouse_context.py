@@ -1815,6 +1815,17 @@ def handle_right_click(game, mouse_pos):
                 
         game.context_menu['options'] = new_options
 
+        if game.game_state == 'PAUSED':
+            forbidden_opts = ['Read', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 'Toggle Light', 'Crafts', 'Open door/window', 'Close door/window', 'Barricate', 'Unbarricade']
+            filtered_options = []
+            for o in new_options:
+                label = o if isinstance(o, str) else o.get('label')
+                if label not in forbidden_opts:
+                    filtered_options.append(o)
+            game.context_menu['options'] = filtered_options
+        else:
+            game.context_menu['options'] = new_options
+
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []
         return

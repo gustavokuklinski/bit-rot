@@ -1,4 +1,4 @@
-<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false">
+<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false" spawn_zombies="3">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
@@ -24,9 +24,9 @@
     </clothes>
 
     <visuals>
-        <sprite id="center" file="player.png" />
-        <sprite id="left" file="player_left.png" />
-        <sprite id="right" file="player_right.png" />
+        <sprite id="center" file="npc_zombie.png" />
+        <sprite id="left" file="npc_zombie_left.png" />
+        <sprite id="right" file="npc_zombie_right.png" />
     </visuals>
     
     <loot>

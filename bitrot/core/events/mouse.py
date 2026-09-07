@@ -396,9 +396,11 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.messages_button_rect and game.messages_button_rect.collidepoint(mouse_pos):
             toggle_messages_modal(game); return
         if game.crafting_button_rect and game.crafting_button_rect.collidepoint(mouse_pos):
-            toggle_crafting_modal(game); return
+            if game.game_state != 'PAUSED': toggle_crafting_modal(game)
+            return
         if game.help_button_rect and game.help_button_rect.collidepoint(mouse_pos):
-            toggle_help_modal(game); return
+            if game.game_state != 'PAUSED': toggle_help_modal(game)
+            return
             
         if getattr(game.player, 'is_aiming', False):
             handle_attack(game, mouse_pos)

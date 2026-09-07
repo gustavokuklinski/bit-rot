@@ -1,4 +1,4 @@
-<animal name="Rat" attack_player="true" type="animal" spawn_weight="50" spawn_layer="[1, 2]">
+<animal name="Rat" attack_player="true" type="animal" spawn_weight="50" spawn_layer="[1, 2]" spawn_zombies="2">
     <name value="Rat" />
     <stats>
         <health min="10" max="20" />

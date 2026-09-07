@@ -42,6 +42,31 @@ jobs:
       - name: Package Game
         shell: bash
         run: |
+          mkdir release
+          cp -r build/bitrot.dist/* release/
+          cp -r bitrot/data.rot release/data.rot
+          
+          # 1. Create a launch script to handle relative paths
+          cat <<EOF > release/launch.sh
+          #!/bin/bash
+          cd "\$(dirname "\$0")"
+          ./bitrot
+          EOF
+          chmod +x release/launch.sh
+          
+          # 2. Create the .desktop shortcut
+          cat <<EOF > release/BitRot.desktop
+          [Desktop Entry]
+          Name=Bit Rot
+          Comment=Zombie survivor game sandbox
+          Exec=sh -c "cd \"\$(dirname \"%k\")\" && ./launch.sh"
+          Icon=data.rot/icons/favicon.png
+          Terminal=false
+          Type=Application
+          Categories=Game;
+          EOF
+          chmod +x release/BitRot.desktop
+          
           # 1. Create the release directory
           mkdir release
           

@@ -28,6 +28,7 @@ class NPCData:
                         
                         template['is_friendly'] = root.get('is_friendly', 'false').lower() == 'true'
                         template['is_static'] = root.get('is_static', 'false').lower() == 'true'
+                        template['spawn_zombies'] = int(root.get('spawn_zombies', 0))
 
                         name_node = root.find('name')
                         template['name'] = name_node.get('value') if name_node is not None else 'Survivor'

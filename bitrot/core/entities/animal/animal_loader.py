@@ -45,6 +45,7 @@ class AnimalLoader:
                 spawn_weight = int(animal_node.get('spawn_weight', '10'))
                 spawn_layer_raw = animal_node.get('spawn_layer', '[1]')
                 attack_player = animal_node.get('attack_player', 'false').lower() == 'true'
+                spawn_zombies = int(animal_node.get('spawn_zombies', '0'))
                 spawn_layers = []
                 try:
                     # Elegantly strip brackets and split into a list of ints
@@ -110,11 +111,12 @@ class AnimalLoader:
                     'attack_player': attack_player,
                     'spawn_weight': spawn_weight,
                     'spawn_layers': spawn_layers,
+                    'spawn_zombies': spawn_zombies,
                     'stats': stats,
                     'sprite': sprite_file,
                     'loot': loot,
                     'capacity': capacity,
-                    'sounds': sounds  # --- NEW: Save sounds to definition ---
+                    'sounds': sounds
                 }
 
             except Exception as e:
