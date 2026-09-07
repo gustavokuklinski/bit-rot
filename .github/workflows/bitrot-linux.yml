@@ -40,7 +40,7 @@ jobs:
           mkdir release
           # Copy executable and data
           cp -r bitrot/data.rot release/data.rot
-          mv build/bitrot release/bitrot  # Use .app for macOS
+          mv build/bitrot.bin release/bitrot.bin
           
           # Generate readme.txt
           cat <<EOF > release/readme.txt
