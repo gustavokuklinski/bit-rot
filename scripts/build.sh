@@ -28,7 +28,6 @@ check_appimagetool() {
     if ! command -v appimagetool &> /dev/null; then
         echo "appimagetool not found."
         echo "Download it from: https://github.com/AppImage/AppImageKit/releases"
-        echo "Example: wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool && chmod +x appimagetool && sudo mv appimagetool /usr/local/bin/"
         exit 1
     fi
 }
@@ -39,105 +38,130 @@ check_appimagetool() {
 build_linux() {
     check_nuitka
     echo "Building Linux standalone executable..."
-    # We build to a specific folder to make AppImage packaging easier
     nuitka --standalone --assume-yes-for-downloads \
             --output-dir=./build \
             --static-libpython=yes \
             --include-data-dir=bitrot/data.rot=data.rot \
             bitrot/bitrot.py
     
-    # If you need the editor as well, build it, but AppImage usually has one entry point
-    nuitka --standalone --assume-yes-for-downloads \
-            --output-dir=./build \
-            --static-libpython=yes \
-            --include-data-dir=bitrot/data.rot=data.rot \
-            bitrot/editor.py
-    
     echo "Linux builds ready in ./build/"
 }
 
 build_appimage() {
-    # 1. First, generate the Nuitka standalone binaries
-    build_linux
+    # --- CACHE LOGIC ---
+    if [[ "$USE_CACHE" == true ]]; then
+        echo "Using cached Nuitka build..."
+        if [[ ! -d "build/bitrot.dist" ]]; then
+            echo "Error: No cached build found in build/bitrot.dist. Run without --cache first."
+            exit 1
+        fi
+    else
+        build_linux
+    fi
+    # -------------------
     
     check_appimagetool
     echo "Packaging into AppImage..."
 
-    # Define AppDir structure
     APPDIR="bitrot.AppDir"
     rm -rf "$APPDIR"
     mkdir -p "$APPDIR/usr/bin"
     
-    # 2. Copy the Nuitka build output into AppDir
-    # Nuitka creates a folder like 'bitrot.dist'
-    cp -r build/bitrot.dist/* "$APPDIR/usr/bin/"
+    if [ -d "build/bitrot.dist" ]; then
+        cp -a build/bitrot.dist/* "$APPDIR/usr/bin/"
+    else
+        echo "Error: build/bitrot.dist not found."
+        exit 1
+    fi
+
+    # ----------------------------------------------------------------------
+    # SMART BINARY DETECTION
+    # ----------------------------------------------------------------------
+    # We look for a file in usr/bin that is NOT a directory and NOT a .so file
+    # and is likely our executable.
+    BINARY_NAME=$(find "$APPDIR/usr/bin" -maxdepth 1 -type f ! -name "*.so*" ! -name "*.pyc*" | head -n 1 | xargs basename)
+
+    if [[ -z "$BINARY_NAME" ]]; then
+        echo "Error: Could not find the compiled binary inside build/bitrot.dist"
+        exit 1
+    fi
+
+    echo "Detected binary name: $BINARY_NAME"
     
-    # 3. Create the AppRun script (The entry point for AppImage)
+    # Ensure the detected binary is executable
+    chmod +x "$APPDIR/usr/bin/$BINARY_NAME"
+    # ----------------------------------------------------------------------
+
+    # Create the AppRun script using the DETECTED binary name
     cat << EOF > "$APPDIR/AppRun"
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
 export LD_LIBRARY_PATH="\$HERE/usr/bin:\$LD_LIBRARY_PATH"
-exec "\$HERE/usr/bin/bitrot" "\$@"
+if [ -f "\$HERE/usr/bin/$BINARY_NAME" ]; then
+    exec "\$HERE/usr/bin/$BINARY_NAME" "\$@"
+else
+    echo "Error: Binary $BINARY_NAME not found inside AppImage"
+    exit 1
+fi
 EOF
     chmod +x "$APPDIR/AppRun"
 
-    # 4. Create the .desktop file
     cat << EOF > "$APPDIR/bitrot.desktop"
 [Desktop Entry]
 Name=Bitrot
-Exec=bitrot
+Exec=$BINARY_NAME
 Icon=bitrot
 Type=Application
 Categories=Utility;
 EOF
 
-    # 5. Copy an icon (Ensure you have a .png version for Linux)
-    # Using the favicon path from your macos build as a reference, but Linux needs PNG
     if [ -f "bitrot/data.rot/icons/favicon.png" ]; then
         cp "bitrot/data.rot/icons/favicon.png" "$APPDIR/bitrot.png"
     else
-        echo "Warning: favicon.png not found, AppImage will have no icon."
-        touch "$APPDIR/bitrot.png" # Create dummy file to prevent appimagetool error
+        touch "$APPDIR/bitrot.png" 
     fi
 
-    # 6. Run appimagetool
     appimagetool "$APPDIR"
-    
-    echo "AppImage generated successfully!"
+    echo "AppImage generated successfully using binary: $BINARY_NAME"
 }
-
 build_macos() {
     check_nuitka
     echo "Building macOS executable..."
     nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build --static-libpython=yes bitrot/bitrot.py
-    nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build --static-libpython=yes bitrot/editor.py
     echo "macOS builds ready in ./build/"
-    echo "After build, run: xattr -cr bitrot.app"
 }
 
 # ----------------------------------------------------------------------
-# Parse target
+# Parse target and options
 # ----------------------------------------------------------------------
 TARGET=""
+USE_CACHE=false
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --linux) TARGET="linux"; shift ;;
         --appimage) TARGET="appimage"; shift ;;
         --macos) TARGET="macos"; shift ;;
+        --cache) USE_CACHE=true; shift ;;
         --help)
             cat << EOF
-Usage: $(basename "$0") [TARGET]
+Usage: $(basename "$0") [TARGET] [OPTIONS]
 
 Targets:
   --linux      Build for Linux (standalone folder)
   --appimage   Build for Linux (packaged .AppImage)
   --macos      Build for macOS (app bundle)
 
+Options:
+  --cache      Skip Nuitka compilation and use existing build/bitrot.dist (AppImage only)
+
+Example:
+  ./build.sh --appimage --cache
 EOF
             exit 0
             ;;
         *)
-            echo "Unknown target: $1"
+            echo "Unknown argument: $1"
             echo "Use --help for usage."
             exit 1
             ;;

@@ -19,7 +19,7 @@
   - [Command Line Mode (CLI)](#command-line-mode-cli)
 - [🛠️ Manual Installation](#-manual-installation-virtual-environment)
 - [📦 Building Executables](#-building-executables)
-- [🔑 Windows Signing & Certificates](#-windows-signing--certificates)
+- [🔑 Windows Signing and Certificates](#-windows-signing-and-certificates)
 - [☁️ Cloud Builds (GitHub Actions)](#-cloud-builds-github-actions)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
@@ -145,9 +145,9 @@ For a truly portable "single-file" experience on Linux, you can build an **AppIm
 
 **1. Install `appimagetool`:**
 ```bash
-wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-chmod +x appimagetool
-sudo mv appimagetool /usr/local/bin/
+$ wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+$ chmod +x appimagetool
+$ sudo mv appimagetool /usr/local/bin/
 ```
 
 **2. Build the AppImage:**
@@ -192,7 +192,7 @@ $ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.r
 
 ---
 
-## 🔑 Windows Signing & Certificates
+## 🔑 Windows Signing and Certificates
 
 Windows Defender often flags unsigned Python executables as "Trojan" or "Unknown Malware." To prevent this, Bit Rot binaries are digitally signed.
 

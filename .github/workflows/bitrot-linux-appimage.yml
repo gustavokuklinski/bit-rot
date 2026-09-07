@@ -1,0 +1,135 @@
+name: Bit Rot - Linux - AppImage
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf ccache zip wget
+          # Install appimagetool globally so build.sh can find it
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/local/bin/
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build AppImage and Standalone
+        run: |
+          # Make sure the build script is executable
+          chmod +x scripts/build.sh
+          # This will generate both the build/bitrot.dist folder and the .AppImage file
+          ./scripts/build.sh --appimage
+
+      - name: Package Legacy Zip
+        shell: bash
+        run: |
+          # We keep your existing zip logic for those who prefer a folder over an AppImage
+          mkdir release
+          cp -r build/bitrot.dist/* release/
+          cp -r bitrot/data.rot release/data.rot
+          
+          # Generate readme.txt (Keeping your detailed content)
+          cat <<EOF > release/readme.txt
+          Bit Rot - Zombie survivor game sandbox
+          Itch: https://gustavokuklinski.itch.io/bit-rot
+          Github: https://github.com/gustavokuklinski/bit-rot
+          Created by: Gustavo Kuklinski
+           
+          Controls:
+          # Controls
+
+          ### System controls
+          - F2 / ESC: Pause and save
+          - F4: Default modal positions
+          - F11: Toggle full screen (works in game)
+
+          ### In game controls
+
+          Basic controls:
+          - W/A/S/D: Walk
+          - SHIFT + W/A/S/D: Run
+          - LCTRL or RMB + LMB: Shoot + Aim / Attack
+          - 1/2/3/4/5: Equip and use item from Belt
+          - MOUSE SCROLL / - or =: Zoom in/Zoom out
+
+          Game world interaction
+          - SHIFT + LMB + Drag: Get/drop only one item from stack
+          - LMB + Drag: Place or Drop
+          - RMC: Opens context menu 
+          - E: Interact, open/close door, enter/exit vehicle
+          - R: Reload weapon
+          - Q: Start vehicle engine
+          - SPACE: Stop/Break vehicle
+
+          Modals
+          - I: Opens Inventory
+          - H: Open Status
+          - N: Open Nearby
+          - G: Open Clothes
+          - C: Open Craft
+          - M: Open Messages
+          - T: Type message on message modal
+          - TAB: Close/Open latest open modals
+
+          ## Chat debug commands (Cheat codes):
+          * %rot item "[Item name]" [number]: Spawn an item to player inventory;
+          * %rot cloth "[Item name]" [number]: Spawn a cloth to player;
+          * %rot vehicle "[Vehicle name]": Spawn a vehicle 1 tile distance from the player;
+          * %rot god: Reset all status to 100% + 1 level up;
+          * %rot godzen: Invisible and reset all status to 100% + 1 level up;
+
+          License
+          Copyright 2025 Gustavo Kuklinski <https://github.com/gustavokuklinski/bit-rot>
+
+          Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+          1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+          2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+          3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+          THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+          EOF
+          
+          cd release && zip -r ../bitrot_linux.zip . && cd ..
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitrot-linux
+          # This uploads the zip AND any .AppImage file found in the root
+          path: |
+            bitrot_linux.zip
+            *.AppImage
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          # This will automatically attach both the zip and the AppImage to the GitHub Release
+          files: |
+            bitrot_linux.zip
+            *.AppImage
+          generate_release_notes: true

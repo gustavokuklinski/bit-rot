@@ -66,6 +66,7 @@ Examples:
   $ ./bitrot.sh shell
   $ ./bitrot.sh clean --full
   $ ./bitrot.sh build --linux
+  $ ./bitrot.sh build --appimage
 EOF
 }
 
@@ -192,22 +193,18 @@ show_build_menu() {
         echo -e "${C_BLUE}┌──────────────────────────────────────────────────────────┐${C_RESET}"
         echo -e "${C_BLUE}│ ${C_BOLD}BUILD EXECUTABLE${C_RESET}                                    ${C_BLUE}│${C_RESET}"
         echo -e "${C_BLUE}├──────────────────────────────────────────────────────────┤${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}1)${C_RESET} Linux                                             ${C_BLUE}│${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}2)${C_RESET} Windows                                           ${C_BLUE}│${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}3)${C_RESET} macOS                                             ${C_BLUE}│${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}4)${C_RESET} Android                                           ${C_BLUE}│${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}5)${C_RESET} All Platforms                                     ${C_BLUE}│${C_RESET}"
-        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}6)${C_RESET} Back to Main Menu                                  ${C_BLUE}│${C_RESET}"
+        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}1)${C_RESET} Linux (.bin)                                      ${C_BLUE}│${C_RESET}"
+        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}2)${C_RESET} Linux (.AppImage)                                 ${C_BLUE}│${C_RESET}"
+        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}3)${C_RESET} macOS (.app)                                      ${C_BLUE}│${C_RESET}"
+        echo -e "${C_BLUE}│${C_RESET}  ${C_BOLD}4)${C_RESET} Back to Main Menu                                  ${C_BLUE}│${C_RESET}"
         echo -e "${C_BLUE}└──────────────────────────────────────────────────────────┘${C_RESET}"
-        echo -n -e "\n${C_BOLD}Selection [1-6]: ${C_RESET}"
+        echo -n -e "\n${C_BOLD}Selection [1-4]: ${C_RESET}"
         read -r choice
         case $choice in
             1) run_script_with_output "$SCRIPTS_DIR/build.sh" "--linux" ;;
-            2) run_script_with_output "$SCRIPTS_DIR/build.sh" "--windows" ;;
+            2) run_script_with_output "$SCRIPTS_DIR/build.sh" "--appimage" ;;
             3) run_script_with_output "$SCRIPTS_DIR/build.sh" "--macos" ;;
-            4) run_script_with_output "$SCRIPTS_DIR/build.sh" "--android" ;;
-            5) run_script_with_output "$SCRIPTS_DIR/build.sh" "--all" ;;
-            6) return ;;
+            4) return ;;
             *) echo -e "${C_RED}Invalid option!${C_RESET}"; sleep 1 ;;
         esac
     done

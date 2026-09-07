@@ -44,8 +44,6 @@ if %ERRORLEVEL% NEQ 0 (
 :: 2. Build with Nuitka
 echo Building Windows executables...
 nuitka --standalone --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --windows-company-name="Gustavo Kuklinski" --windows-product-name="Bit Rot" --windows-product-version="1.0.0" --windows-file-description="Bit Rot Game Engine" bitrot/bitrot.py
-nuitka --standalone --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --windows-company-name="Gustavo Kuklinski" --windows-product-name="Bit Rot" --windows-product-version="1.0.0" --windows-file-description="Bit Rot Game Engine" bitrot/editor.py
-
 :: 3. Find Signtool.exe (specifically the x64 version)
 echo Searching for x64 signtool.exe...
 set "SIGNTOOL_PATH="
@@ -65,8 +63,6 @@ echo Found x64 signtool at: %SIGNTOOL_PATH%
 :: 4. Sign the binaries
 echo Signing binaries...
 "%SIGNTOOL_PATH%" sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\bitrot.dist\bitrot.exe"
-"%SIGNTOOL_PATH%" sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\editor.dist\editor.exe"
-
 echo Windows builds ready and signed in .\build\
 exit /b 0
 

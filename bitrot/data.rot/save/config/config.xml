@@ -6,7 +6,7 @@
         <language value="en_US" name="Language" default="en_US"/>
         <window_mode value="windowed" name="Window" default="windowed"/>
     </ui>
-        <audio>
+    <audio>
         <volume_music value="0.5" name="Music Volume" default="0.5"/>
         <volume_background value="1.0" name="Background Volume: Items, Steps, Zombies" default="0.5"/>
         <volume_atmospheric value="1.0" name="Atmospheric Volume: Day, Rain, Cave" default="0.5"/>
@@ -59,8 +59,8 @@
         <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="5" name="Max Zombie spawn on chunk" default="5"/>
-        <spawn value="10" name="Zombies per spawn" default="10"/>
+        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk" default="10"/>
+        <spawn value="2" name="Zombies per spawn" default="2"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day" default="1"/>
         <wander value="true" name="Zombie wandering" default="true"/>
         <sight_check value="true" name="Sight player" default="true"/>
