@@ -44,7 +44,7 @@ jobs:
           mkdir release
           # Copy executable and data
           cp -r bitrot/data.rot release/data.rot
-          mv build/bitrot.bin release/bitrot.bin
+          mv build/bitrot.dist/bitrot.bin release/bitrot.bin
           
           # Generate readme.txt
           cat <<EOF > release/readme.txt
