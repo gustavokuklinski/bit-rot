@@ -14,7 +14,7 @@
 ## 📖 Table of Contents
 - [📋 Minimum Requirements](#-minimum-requirements)
 - [🎮 Controls and Keybinds](#-controls-and-keybinds)
-- [🚀 Using the Rot Engine (Tutorial)](#-using-the-rot-engine-tutorial)
+- [🚀 Using the Rot Engine](#-using-the-rot-engine)
   - [Interactive Mode (TUI)](#interactive-mode-tui)
   - [Command Line Mode (CLI)](#command-line-mode-cli)
 - [🛠️ Manual Installation](#-manual-installation-virtual-environment)
@@ -39,7 +39,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Processor** | Intel Core i3 or Apple Silicon M-series |
 | **Video** | Intel HD Graphics 3000 |
 | **OS** | Ubuntu/Debian, Windows 7, or macOS |
-| **Software** | Python 3.14 |
+| **Software** | git, python3.11 |
 | **Resolution** | 1280x720 |
 | **Disk Space** | 500 MB |
 
@@ -63,6 +63,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Reset Modals**     | `F4`                  | `Back`                | ✅                   |
 | **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✅                   |
 | **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✅                   |
+| **Fullscreen**       | `F11`                 | —                     | ❌                   |
 | **Chat**             | `T`                   | —                     | ❌                   |
 | **Toggle Inventory** | `I`                   | —                     | ❌                   |
 | **Toggle Crafting**  | `C`                   | —                     | ❌                   |
@@ -77,7 +78,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 ---
 
-## 🚀 Using the Rot Engine (Tutorial)
+## 🚀 Using the Rot Engine
 
 The **Rot Engine** scripts (`BITROT.sh` and `BITROT.bat`) are the primary control centers for the project. They act as wrappers for the specialized scripts located in the `./scripts/` directory.
 
@@ -133,11 +134,27 @@ $ pip install -r requirements.txt
 We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
 ### ⚡ Automatic Build (Recommended)
-The easiest way to build is using the Rot Engine wrappers. These scripts handle dependencies, icons, and (on Windows) the digital signing process automatically.
+The easiest way to build is using the Rot Engine wrappers. These scripts handle dependencies, icons, and signing automatically.
 
 - **Windows**: `BITROT.bat build --windows` (triggers `./scripts/build.bat`)
-- **Linux**: `./BITROT.sh build --linux` (triggers `./scripts/build.sh`)
 - **macOS**: `./BITROT.sh build --macos` (triggers `./scripts/build.sh`)
+- **Linux (Standalone)**: `./BITROT.sh build --linux` (triggers `./scripts/build.sh`)
+
+#### 🐧 Generating a Linux AppImage
+For a truly portable "single-file" experience on Linux, you can build an **AppImage**. This packages the standalone build into a read-only filesystem that runs on most distributions.
+
+**1. Install `appimagetool`:**
+```bash
+wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+chmod +x appimagetool
+sudo mv appimagetool /usr/local/bin/
+```
+
+**2. Build the AppImage:**
+```bash
+./BITROT.sh build --appimage
+```
+*This will create a `.AppImage` file in the project root that can be shared and executed immediately.*
 
 ---
 
