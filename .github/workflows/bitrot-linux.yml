@@ -32,7 +32,11 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          nuitka --onefile --assume-yes-for-downloads --output-dir=./build bitrot/bitrot.py
+          nuitka --standalone \
+          --assume-yes-for-downloads \
+          --output-dir=./build \
+          --include-data-dir=bitrot/data.rot=data.rot \
+          bitrot/bitrot.py
 
       - name: Package Game
         shell: bash
