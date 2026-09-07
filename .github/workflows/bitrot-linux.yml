@@ -42,11 +42,18 @@ jobs:
       - name: Package Game
         shell: bash
         run: |
+          # 1. Create the release directory
           mkdir release
-          # Copy executable and data
-          cp -r bitrot/data.rot release/data.rot
-          mv build/bitrot.dist/bitrot.bin release/bitrot.bin
           
+          # 2. Copy EVERY file from the distribution folder
+          # This includes the binary AND all the .so library files
+          cp -r build/bitrot.dist/* release/
+          
+          # 3. Copy the data assets folder
+          cp -r bitrot/data.rot release/data.rot
+          
+          mv release/bitrot release/bitrot.bin
+
           # Generate readme.txt
           cat <<EOF > release/readme.txt
           Bit Rot - Zombie survivor game sandbox
