@@ -58,9 +58,9 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Reload**           | `R`                   | `X Button`            | ✅                   |
 | **Vehicle Engine**   | `Q`                   | `Y Button`            | ✅                   |
 | **Shove**            | `Space`               | `LB (Left Bumper)`    | ✅                   |
+| **Pause**            | `F2/Esc`              | `Start`               | ✅                   |
 | **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✅                   |
-| **Pause**            | `Esc`                 | `Start`               | ✅                   |
-| **Reset Modals**     | `Caps Lock/Special`   | `Back`                | ✅                   |
+| **Reset Modals**     | `F4`                  | `Back`                | ✅                   |
 | **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✅                   |
 | **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✅                   |
 | **Chat**             | `T`                   | —                     | ❌                   |
