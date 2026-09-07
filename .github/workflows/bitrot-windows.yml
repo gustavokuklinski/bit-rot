@@ -35,7 +35,6 @@ jobs:
           nuitka --standalone `
           --assume-yes-for-downloads `
           --output-dir=./build `
-          --static-libpython=yes `
           --windows-console-mode=disable `
           --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico `
           --windows-company-name="Gustavo Kuklinski" `
