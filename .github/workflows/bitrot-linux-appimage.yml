@@ -25,7 +25,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y patchelf ccache zip wget
+          sudo apt-get install -y patchelf ccache zip wget libfuse2
           # Install appimagetool globally so build.sh can find it
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
