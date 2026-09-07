@@ -35,6 +35,7 @@ jobs:
           nuitka --standalone \
           --assume-yes-for-downloads \
           --output-dir=./build \
+          --static-libpython=yes \
           --include-data-dir=bitrot/data.rot=data.rot \
           bitrot/bitrot.py
 

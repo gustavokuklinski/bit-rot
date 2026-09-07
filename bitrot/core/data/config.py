@@ -19,15 +19,26 @@ GAME_OFFSET_X = 0
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
+if getattr(sys, 'frozen', False) or '__compiled__' in globals():
+    # PRODUCTION: The game is compiled. 
+    # sys.executable is the path to the .exe or .bin file.
+    # We take the directory containing that executable as the root.
+    BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    # DEVELOPMENT: The game is running as a .py script.
+    # File is at: /bit-rot/bitrot/core/data/config.py
+    # We go up two levels to get to /bit-rot/bitrot/
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
 
+# 2. Define the paths relative to the discovered BASE_DIR
+# We use os.path.join for everything to ensure it works on Windows and Linux
 VERSION_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "VERSION")
-MAP_DIR = os.path.join(BASE_DIR, "data.rot", "lib", "map") + os.sep
-DATA_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
-SPRITE_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
-SOUND_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
-FONT_FACE = os.path.join(BASE_DIR, "data.rot", "lib", "font", "PixelOperator8.ttf") # Oxanium-Regular.ttf
+MAP_DIR      = os.path.join(BASE_DIR, "data.rot", "lib", "map") + os.sep
+DATA_PATH    = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
+SPRITE_PATH  = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
+SOUND_PATH   = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
+FONT_FACE    = os.path.join(BASE_DIR, "data.rot", "lib", "font", "PixelOperator8.ttf")
 
 # Colors
 TRANSPARENT = (0, 0, 0, 0)
