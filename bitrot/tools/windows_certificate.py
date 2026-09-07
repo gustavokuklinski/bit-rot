@@ -1,4 +1,6 @@
+# bitrot/tools/windows_certificate.py
 import datetime
+import sys
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import pkcs12, BestAvailableEncryption
@@ -24,7 +26,6 @@ def generate_windows_code_sign_cert(filename="win_bitrot_cert.pfx", password="bi
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1))
         .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=365))
-        # MANDATORY FOR EXECUTABLES:
         .add_extension(x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False), critical=True)
         .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CODE_SIGNING]), critical=True)
         .sign(private_key, hashes.SHA256())
@@ -44,4 +45,6 @@ def generate_windows_code_sign_cert(filename="win_bitrot_cert.pfx", password="bi
     print(f"Success! Certificate saved to {filename}")
 
 if __name__ == "__main__":
-    generate_windows_code_sign_cert()
+    # Allow filename to be passed as first argument
+    fname = sys.argv[1] if len(sys.argv) > 1 else "win_bitrot_cert.pfx"
+    generate_windows_code_sign_cert(fname)

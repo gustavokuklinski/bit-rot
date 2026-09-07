@@ -1,0 +1,118 @@
+name: Bit Rot - macOS
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with Nuitka
+        run: |
+          nuitka --onefile --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --assume-yes-for-downloads --output-dir=./build bitrot/bitrot.py
+
+      - name: Package Game
+        shell: bash
+        run: |
+          mkdir release
+          # Copy executable and data
+          cp -r bitrot/data.rot release/data.rot
+          mv build/bitrot release/bitrot  # Use .app for macOS
+          
+          # Generate readme.txt
+          cat <<EOF > release/readme.txt
+          Bit Rot - Zombie survivor game sandbox
+
+          Itch: https://gustavokuklinski.itch.io/bit-rot
+          Github: https://github.com/gustavokuklinski/bit-rot
+          Created by: Gustavo Kuklinski
+           
+          Controls:
+          # Controls
+
+          ### System controls
+          - F2 / ESC: Pause and save
+          - F4: Default modal positions
+          - F11: Toggle full screen (works in game)
+
+          ### In game controls
+
+          Basic controls:
+          - W/A/S/D: Walk
+          - SHIFT + W/A/S/D: Run
+          - LCTRL or RMB + LMB: Shoot + Aim / Attack
+          - 1/2/3/4/5: Equip and use item from Belt
+          - MOUSE SCROLL / - or =: Zoom in/Zoom out
+
+          Game world interaction
+          - SHIFT + LMB + Drag: Get/drop only one item from stack
+          - LMB + Drag: Place or Drop
+          - RMC: Opens context menu 
+          - E: Interact, open/close door, enter/exit vehicle
+          - R: Reload weapon
+          - Q: Start vehicle engine
+          - SPACE: Stop/Break vehicle
+
+          Modals
+          - I: Opens Inventory
+          - H: Open Status
+          - N: Open Nearby
+          - G: Open Clothes
+          - C: Open Craft
+          - M: Open Messages
+          - T: Type message on message modal
+          - TAB: Close/Open latest open modals
+
+          ## Chat debug commands (Cheat codes):
+          * %rot item "[Item name]" [number]: Spawn an item to player inventory;
+          * %rot cloth "[Item name]" [number]: Spawn a cloth to player;
+          * %rot vehicle "[Vehicle name]": Spawn a vehicle 1 tile distance from the player;
+          * %rot god: Reset all status to 100% + 1 level up;
+          * %rot godzen: Invisible and reset all status to 100% + 1 level up;
+
+          License
+          Copyright 2025 Gustavo Kuklinski <https://github.com/gustavokuklinski/bit-rot>
+
+          Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+          1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+          2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+          3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+          THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+          EOF
+          
+          cd release && zip -r ../bitrot_linux.zip . && cd ..
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitrot-macos
+          path: bitrot_macos.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: bitrot_macos.zip
+          generate_release_notes: true
