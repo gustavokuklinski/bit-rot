@@ -38,19 +38,25 @@ jobs:
 
       - name: Package Game
         run: |
-          mkdir release
+          # 1. Create the directory
+          mkdir -p bitrot_linux
+          # 2. Copy the compiled files and data into that directory
           cp -r build/bitrot.dist/* bitrot_linux/
           cp -r bitrot/data.rot bitrot_linux/
+          # 3. Create a zip file of the folder for the GitHub Release
+          cd bitrot_linux && zip -r ../bitrot_linux.zip . && cd ..
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-linux
+          # We upload the FOLDER. GitHub zips it once. No double-zip.
           path: bitrot_linux/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          # We upload the ZIP we created in the "Package Game" step.
           files: bitrot_linux.zip
           generate_release_notes: true

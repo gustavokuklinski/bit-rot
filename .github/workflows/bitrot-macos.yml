@@ -36,19 +36,27 @@ jobs:
 
       - name: Package Game
         run: |
-          mkdir release
+          # 1. Create the distribution folder
+          mkdir -p bitrot_macos
+          # 2. Copy the .app bundle and data folder into it
           cp -r build/bitrot.app bitrot_macos/
           cp -r bitrot/data.rot bitrot_macos/
+          # 3. Create the ZIP file for the GitHub Release
+          # We move into the folder so the zip contains the files, not the folder itself
+          cd bitrot_macos && zip -r ../bitrot_macos.zip . && cd ..
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-macos
+          # Upload the FOLDER. GitHub zips it once.
+          # This prevents the "zip-inside-a-zip" issue in the Actions tab.
           path: bitrot_macos/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          # This now works because the 'Package Game' step created the zip
           files: bitrot_macos.zip
           generate_release_notes: true

@@ -49,19 +49,29 @@ jobs:
       - name: Package Game
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path release
+          # 1. Create the distribution folder
+          New-Item -ItemType Directory -Force -Path bitrot_windows
+          
+          # 2. Copy files into that folder
           Copy-Item -Path "build\bitrot.dist\*" -Destination "bitrot_windows" -Recurse -Force
           Copy-Item -Path "bitrot\data.rot" -Destination "bitrot_windows" -Recurse -Force
+          
+          # 3. Create the ZIP file for the GitHub Release
+          # We zip the CONTENTS of the folder so the user doesn't get another folder inside the zip
+          Compress-Archive -Path "bitrot_windows\*" -DestinationPath "bitrot_windows.zip" -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-windows
+          # Upload the FOLDER. GitHub zips it once automatically.
+          # This prevents the "zip-inside-a-zip" issue in the Actions tab.
           path: bitrot_windows/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          # This now works because Compress-Archive created this file.
           files: bitrot_windows.zip
           generate_release_notes: true
