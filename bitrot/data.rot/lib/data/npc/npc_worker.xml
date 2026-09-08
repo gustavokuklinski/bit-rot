@@ -1,4 +1,4 @@
-<npc type="worker" spawn_weight="20" is_friendly="false" is_static="false" spawn_zombies="6">
+<npc type="worker" spawn_weight="20" is_friendly="false" is_static="false" spawn_zombies="1">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

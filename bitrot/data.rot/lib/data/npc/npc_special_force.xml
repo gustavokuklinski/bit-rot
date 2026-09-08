@@ -1,4 +1,4 @@
-<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false" spawn_zombies="3">
+<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false" spawn_zombies="1">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 

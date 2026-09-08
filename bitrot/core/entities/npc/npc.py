@@ -862,20 +862,31 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         super().die(game)
         self.kill()
 
-        # Make dead NPC become a Zombie and spawn an additional 1 to 10 Zombies instantly
-        import core.data.config as game_config
-        num_zombies_to_spawn = int((random.randint(1, game_config.ZOMBIE_MAX_CHUNK) * self.spawn_zombies_max))
-        for _ in range(num_zombies_to_spawn):
-            # Calculate a random position within a 3-tile radius
-            angle = random.uniform(0, math.pi * 2)
-            radius = random.uniform(TILE_SIZE * 2, TILE_SIZE * 5)
-            spawn_x = self.rect.centerx + math.cos(angle) * radius
-            spawn_y = self.rect.centery + math.sin(angle) * radius
+        if getattr(self, 'spawn_zombies_max', 0) > 0:
+            # 1. Spawn the single reanimated NPC zombie directly on their exact location
+            reanimated_zombie = Zombie.create_random(self.rect.centerx, self.rect.centery)
+            reanimated_zombie.aggro_timer = 10000
+            reanimated_zombie.state = 'chasing'
+            game.zombies.append(reanimated_zombie)
+            
+            # 2. Spawn the surrounding zombie horde relative to the player
+            if hasattr(game, 'player') and game.player:
+                dx = self.rect.centerx - game.player.rect.centerx
+                dy = self.rect.centery - game.player.rect.centery
+                # Check if within roughly 1.5x of the player's view radius
+                if (dx*dx + dy*dy) <= (getattr(game, 'player_view_radius', TILE_SIZE * 20) * 1.5) ** 2:
+                    import core.data.config as game_config
+                    # Scale by config multiplier
+                    num_zombies_to_spawn = int((random.randint(0, game_config.ZOMBIES_PER_SPAWN)) * self.spawn_zombies_max)
+                    
+                    for _ in range(num_zombies_to_spawn):
+                        # Calculate a random position relative to the player
+                        angle = random.uniform(0, math.pi * 2)
+                        radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
+                        spawn_x = game.player.rect.centerx + math.cos(angle) * radius
+                        spawn_y = game.player.rect.centery + math.sin(angle) * radius
 
-            zombie = Zombie.create_random(spawn_x, spawn_y)
-            
-            # Ensure the newly spawned zombies are immediately hostile and alert
-            zombie.aggro_timer = 10000
-            zombie.state = 'chasing'
-            
-            game.zombies.append(zombie)
+                        zombie = Zombie.create_random(spawn_x, spawn_y)
+                        zombie.aggro_timer = 10000
+                        zombie.state = 'chasing'
+                        game.zombies.append(zombie)

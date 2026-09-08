@@ -331,10 +331,6 @@ def load_settings(preset="config"):
         RESOLUTION = "1280x720"
         WINDOW_MODE = ui_config.find('window_mode').get('value')
 
-        
-
-        
-
         # --- 3. Lock-in the True Font Render right here ---
         font_16  = ImageFontWrapper(FONT_FACE, 16)
         font_14  = ImageFontWrapper(FONT_FACE, 8)
@@ -431,6 +427,6 @@ try:
     with open(version_file_path, "r") as f:
         GAME_VERSION = f.read().strip()
 except:
-    GAME_VERSION = "0.0.1"
+    GAME_VERSION = "0.0.6"
 
 load_settings()
