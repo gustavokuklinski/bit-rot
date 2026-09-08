@@ -37,14 +37,14 @@ jobs:
       - name: Package Game
         run: |
           mkdir release
-          cp -r build/bitrot.app release/
-          cp -r bitrot/data.rot release/
+          cp -r build/bitrot.app bitrot_macos/
+          cp -r bitrot/data.rot bitrot_macos/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-macos
-          path: bitrot_macos.zip
+          path: bitrot_macos/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

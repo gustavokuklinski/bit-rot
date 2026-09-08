@@ -39,14 +39,14 @@ jobs:
       - name: Package Game
         run: |
           mkdir release
-          cp -r build/bitrot.dist/* release/
-          cp -r bitrot/data.rot release/
+          cp -r build/bitrot.dist/* bitrot_linux/
+          cp -r bitrot/data.rot bitrot_linux/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-linux
-          path: bitrot_linux.zip
+          path: bitrot_linux/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

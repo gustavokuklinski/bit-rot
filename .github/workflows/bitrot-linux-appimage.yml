@@ -40,7 +40,7 @@ jobs:
           chmod +x scripts/build.sh
           # Generate the .AppImage using your build script
           ./scripts/build.sh --appimage
-
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

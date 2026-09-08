@@ -50,14 +50,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release
-          Copy-Item -Path "build\bitrot.dist\*" -Destination "release" -Recurse -Force
-          Copy-Item -Path "bitrot\data.rot" -Destination "release" -Recurse -Force
+          Copy-Item -Path "build\bitrot.dist\*" -Destination "bitrot_windows" -Recurse -Force
+          Copy-Item -Path "bitrot\data.rot" -Destination "bitrot_windows" -Recurse -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bitrot-windows
-          path: bitrot_windows.zip
+          path: bitrot_windows/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
