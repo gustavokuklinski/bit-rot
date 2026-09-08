@@ -1,0 +1,26 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Enable version updates for Python (pip)
+  - package-ecosystem: "pip"
+    # Look for a requirements.txt or pyproject.toml in the root directory
+    directory: "/"
+    # Check for updates once a week (on Monday)
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+
+    target-branch: "main"
+
+    groups:
+      minor-patch-updates:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"

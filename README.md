@@ -1,8 +1,14 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/bitrot/data.rot/icons/logo.png" alt="Bit Rot Logo" width="400"><br /><br />
 
-  <img src="https://img.shields.io/badge/license-BSD%203%20Clause-blue.svg" alt="License">
+  <img src="https://img.shields.io/badge/license-EULA-yellow.svg" alt="License">
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey" alt="Platform">
+</p>
+
+<p align="center">
+  <img alt="GitHub forks" src="https://img.shields.io/github/forks/gustavokuklinski/bit-rot">
+  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/gustavokuklinski/bit-rot">
+  <img alt="GitHub watchers" src="https://img.shields.io/github/watchers/gustavokuklinski/bit-rot">
 </p>
 
 # 🧟 Bit Rot
@@ -103,12 +109,12 @@ If you run the scripts without any arguments, you will enter the **Interactive A
 4. **Build Executable**: Automates the Nuitka compilation and signing process.
 
 ### ⌨️ Command Line Mode (CLI)
-| Command | Description | Linux/Mac | Windows |
-| :--- | :--- | :--- | :--- |
-| `shell` | Launches the game | `./BITROT.sh shell` | `BITROT.bat shell` |
-| `shell --editor` | Launches the editor | `./BITROT.sh shell --editor` | `BITROT.bat shell --editor` |
-| `clean` | Cleans project files | `./BITROT.sh clean --full` | `BITROT.bat clean --full` |
-| `build` | Compiles the game | `./BITROT.sh build --linux` / `--macos` | `BITROT.bat build --windows` |
+| Command | Description | Linux | Mac | Windows |
+| :--- | :--- | :--- | :--- | :--- |
+| `shell` | Launches the game | `./BITROT.sh shell`| `./BITROT.sh shell` | `BITROT.bat shell` |
+| `shell --editor` | Launches the editor | `./BITROT.sh shell --editor` | `./BITROT.sh shell --editor` |`BITROT.bat shell --editor` |
+| `clean` | Cleans project files | `./BITROT.sh clean --full` | `./BITROT.sh clean --full` |`BITROT.bat clean --full` |
+| `build` | Compiles the game | `./BITROT.sh build --linux` or `--appimage` |  `./BITROT.sh build --macos` |  `BITROT.bat build --windows` |
 
 ---
 
@@ -262,4 +268,7 @@ The best way to reach us is through [GitHub Issues](https://github.com/gustavoku
 
 ---
 
+[![Star History Chart](https://api.star-history.com/chart?repos=gustavokuklinski/bit-rot&type=date&legend=top-left)](https://www.star-history.com/?repos=gustavokuklinski%2Fbit-rot&type=date&legend=bottom-right)
+
+---
 **Survive. Adapt. Fight the Rot. 🧟**

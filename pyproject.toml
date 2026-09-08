@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bit-rot"
+version = "0.0.0"
+authors = [{name = "Gustavo Kuklinski", email = "ghc.kuklinski@gmail.com"}]
+description = "Every path leads to Rot."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pygame-ce",
+    "numpy",
+    "pillow",
+    "cryptography"
+]
+
+[project.optional-dependencies]
+dev = [
+    "Nuitka",
+    "faker"
+]
+
+[tool.black]
+line-length = 88
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
