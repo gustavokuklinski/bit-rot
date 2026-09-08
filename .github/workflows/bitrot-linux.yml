@@ -41,7 +41,6 @@ jobs:
           mkdir release
           cp -r build/bitrot.dist/* release/
           cp -r bitrot/data.rot release/
-          cd release && zip -r ../bitrot_linux.zip . && cd ..
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

@@ -91,14 +91,14 @@ The **Rot Engine** scripts (`BITROT.sh` and `BITROT.bat`) are the primary contro
 ### 🏁 Getting Started
 **Linux / macOS:**
 ```bash
-$ chmod +x BITROT.sh scripts/*.sh
-$ ./BITROT.sh
+chmod +x BITROT.sh scripts/*.sh
+./BITROT.sh
 ```
 
 **Windows:**
 Simply double-click `BITROT.bat` or run it via CMD:
 ```cmd
-C:\bit-rot\> BITROT.bat
+BITROT.bat
 ```
 
 ### 🕹️ Interactive Mode (TUI)
@@ -124,13 +124,13 @@ If you prefer to set things up manually for development:
 
 ### 1. Create and activate a virtual environment
 ```bash
-$ python3 -m venv .venv
-$ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 ### 2. Install dependencies
 ```bash
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
@@ -151,9 +151,9 @@ For a truly portable "single-file" experience on Linux, you can build an **AppIm
 
 **1. Install `appimagetool`:**
 ```bash
-$ wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-$ chmod +x appimagetool
-$ sudo mv appimagetool /usr/local/bin/
+wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+chmod +x appimagetool
+sudo mv appimagetool /usr/local/bin/
 ```
 
 **2. Build the AppImage:**
@@ -161,6 +161,15 @@ $ sudo mv appimagetool /usr/local/bin/
 ./BITROT.sh build --appimage
 ```
 *This will create a `.AppImage` file in the project root that can be shared and executed immediately.*
+
+**3. AppImage troubleshooting**
+
+AppImage requires fuse2 to run the final file.
+
+```bash 
+sudo apt install libfuse2 # Ubuntu/Debian based
+sudo pacman -S fuse2 # Arch based
+```
 
 ---
 
@@ -179,19 +188,19 @@ $ nuitka --standalone --include-data-dir=./bitrot/data.rot=data.rot --output-dir
 #### 🪟 Windows
 ```bash
 # Build the game with a custom icon and no console window
-$ nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
+nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
 
 # Build the editor with a custom icon and no console window
-$ nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
+nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
 ```
 
 #### 🍎 macOS
 ```bash
 # Build the game as an application bundle
-$ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
+nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
 
 # Build the editor as an application bundle
-$ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
+nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
 ```
 
 *This process will create a `build/` directory containing the standalone executable and all required dependencies.*
