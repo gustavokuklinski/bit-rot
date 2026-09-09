@@ -276,8 +276,4 @@ Please note that this project has a [Code of Conduct](CODE_OF_CONDUCT.md). By in
 The best way to reach us is through [GitHub Issues](https://github.com/gustavokuklinski/bit-rot/issues) or [Discord](https://discord.gg/SK4s7V6mEZ).
 
 ---
-
-[![Star History Chart](https://api.star-history.com/chart?repos=gustavokuklinski/bit-rot&type=date&legend=top-left)](https://www.star-history.com/?repos=gustavokuklinski%2Fbit-rot&type=date&legend=bottom-right)
-
----
 **Survive. Adapt. Fight the Rot. 🧟**

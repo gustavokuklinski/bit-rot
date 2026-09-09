@@ -7,7 +7,9 @@ if [[ $# -gt 0 ]]; then
             find . -type d -name "__pycache__" -exec rm -rf {} +
             rm -Rf build/
             rm -Rf data.rot/
-            echo "Full clean done (removed __pycache__, build/ and data.rot/)."
+            rm -Rf bitrot.AppDir/
+            rm -Rf Bitrot-x86_64.AppImage
+            echo "Full clean done (removed: __pycache__, builds and data.rot)."
             exit 0
             ;;
         --cache)
@@ -17,6 +19,8 @@ if [[ $# -gt 0 ]]; then
             ;;
         --build)
             rm -Rf build/
+            rm -Rf bitrot.AppDir/
+            rm -Rf Bitrot-x86_64.AppImage
             echo "build/ directory removed."
             exit 0
             ;;

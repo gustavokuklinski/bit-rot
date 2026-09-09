@@ -258,15 +258,29 @@ class Animal(Zombie):
         if getattr(self, 'spawn_zombies_max', 0) > 0 and hasattr(game, 'player') and game.player:
             dx = self.rect.centerx - game.player.rect.centerx
             dy = self.rect.centery - game.player.rect.centery
-            # Check if within roughly 1.5x of the player's view radius
+            
             if (dx*dx + dy*dy) <= (getattr(game, 'player_view_radius', TILE_SIZE * 20) * 1.5) ** 2:
                 num_zombies_to_spawn = random.randint(0, self.spawn_zombies_max)
+                
                 for _ in range(num_zombies_to_spawn):
-                    # Calculate a random position within a 3-tile radius
-                    angle = random.uniform(0, math.pi * 2)
-                    radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
-                    spawn_x = game.player.rect.centerx + math.cos(angle) * radius
-                    spawn_y = game.player.rect.centery + math.sin(angle) * radius
+                    spawn_x, spawn_y = None, None
+                    # --- VALIDATION LOOP: Try to find a spot that isn't a wall ---
+                    for attempt in range(10):
+                        angle = random.uniform(0, math.pi * 2)
+                        radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
+                        tx = game.player.rect.centerx + math.cos(angle) * radius
+                        ty = game.player.rect.centery + math.sin(angle) * radius
+                        
+                        gx, gy = int(tx // TILE_SIZE), int(ty // TILE_SIZE)
+                        if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]):
+                            tile_def = game.map_manager.get_tile_at(gx, gy)
+                            if not tile_def or not tile_def.get('is_obstacle', False):
+                                spawn_x, spawn_y = tx, ty
+                                break
+                    
+                    # FALLBACK: If all 10 attempts fail, spawn where the animal died
+                    if spawn_x is None:
+                        spawn_x, spawn_y = self.rect.centerx, self.rect.centery
 
                     zombie = Zombie.create_random(spawn_x, spawn_y)
                     zombie.aggro_timer = 10000
