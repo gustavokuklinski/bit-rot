@@ -42,6 +42,62 @@ def get_key_name(action):
         if name == "RETURN": return "ENTER"
         return name
 
+def _draw_tt(game, tip, x, y, center_align=False, dynamic_h=GAME_HEIGHT):
+    """Helper to render interaction tooltips"""
+    if isinstance(tip, str):
+        lines = tip.split('\n')
+        max_w = max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0)
+        tt_w, tt_h = max_w + 10, len(lines) * 20 + 10
+        if center_align: 
+            x -= tt_w // 2
+        else: 
+            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5) # Use dynamic_h
+        
+        tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+        tip_bg.fill((0, 0, 0, 220))
+        game.game_screen.blit(tip_bg, (x, y))
+        pygame.draw.rect(game.game_screen, WHITE, pygame.Rect(x, y, tt_w, tt_h), 1)
+        for i, line in enumerate(lines):
+            ls = font_12.render(line, False, WHITE)
+            lx = x + (tt_w//2 - ls.get_width()//2 if center_align else 5)
+            game.game_screen.blit(ls, (lx, y + 5 + i*20))
+            
+    elif isinstance(tip, dict) and tip.get('type') == 'vehicle':
+        if not hasattr(game, 'vehicle_icons'):
+            game.vehicle_icons = {}
+            icon_paths = {'fuel': SPRITE_PATH + '/items/car_fuel_unit.png', 'motor': SPRITE_PATH + '/items/car_motor.png', 'power': SPRITE_PATH + '/items/car_battery.png', 'tires': SPRITE_PATH + '/items/car_tire.png', 'key': SPRITE_PATH + '/items/car_key_pickup.png'}
+            for k, path in icon_paths.items():
+                try: game.vehicle_icons[k] = pygame.transform.scale(pygame.image.load(path).convert_alpha(), (16, 16))
+                except: game.vehicle_icons[k] = None
+        
+        lines = tip['text_lines']
+        stats_w = sum((20 if game.vehicle_icons.get(s['icon']) else font_12.render(s['text'] + ": ", False, WHITE).get_width()) + font_12.render(s['val'], False, WHITE).get_width() + 10 for s in tip['stats']) - 10
+        tt_w = max(max((font_12.render(line, False, WHITE).get_width() for line in lines), default=0), stats_w) + 10
+        tt_h = len(lines) * 20 + 30
+        if center_align: 
+            x -= tt_w // 2
+        else: 
+            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5) # Use dynamic_h
+        
+        tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+        tip_bg.fill((0, 0, 0, 220))
+        game.game_screen.blit(tip_bg, (x, y))
+        pygame.draw.rect(game.game_screen, WHITE, pygame.Rect(x, y, tt_w, tt_h), 1)
+        for i, line in enumerate(lines):
+            ls = font_12.render(line, False, WHITE)
+            lx = x + (tt_w//2 - ls.get_width()//2 if center_align else 5)
+            game.game_screen.blit(ls, (lx, y + 5 + i*20))
+        
+        curr_x, curr_y = x + (tt_w//2 - stats_w//2 if center_align else 5), y + 5 + len(lines)*20
+        for stat in tip['stats']:
+            if game.vehicle_icons.get(stat['icon']):
+                game.game_screen.blit(game.vehicle_icons[stat['icon']], (curr_x, curr_y)); curr_x += 20
+            else:
+                ts = font_12.render(stat['text'] + ": ", False, WHITE)
+                game.game_screen.blit(ts, (curr_x, curr_y + 2)); curr_x += ts.get_width()
+            vs = font_12.render(stat['val'], False, WHITE)
+            game.game_screen.blit(vs, (curr_x, curr_y + 2)); curr_x += vs.get_width() + 10
+            
 def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
     world_mouse_pos = game.screen_to_world((game._get_scaled_mouse_pos()[0] - game.viewport_left_offset, game._get_scaled_mouse_pos()[1]))
@@ -108,7 +164,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
-            interactables.append({'rect': obj.rect, 'tip': tr('tooltip', f"Press {get_key_name('interact')} to inspect")})
+            interactables.append({'rect': obj.rect, 'tip': tr('tooltip', f"Press {get_key_name('interact')} to inspect\nor use the Nearby modal")})
 
     tooltip_to_draw = None
     focused_tip = None 
@@ -122,12 +178,38 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         game.game_screen.blit(font_12.render("!", False, (255, 255, 255)), font_12.render("!", False, (255, 255, 255)).get_rect(center=box_rect.center))
         if box_rect.collidepoint(mouse_pos): tooltip_to_draw = item['tip']
 
-    # --- LAYER 2: Basic HUD ---
+    # --- RENDER INTERACTION TOOLTIPS (drawn on top of world, under modals) ---
+    if tooltip_to_draw:
+        _draw_tt(game, tooltip_to_draw, mouse_pos[0] + 15, mouse_pos[1] + 15, dynamic_h=dynamic_h)
+    #if focused_tip and focused_tip != tooltip_to_draw:
+    #    _draw_tt(game, focused_tip, game.viewport_left_offset + (game.dynamic_w // 2), dynamic_h - 130, center_align=True, dynamic_h=dynamic_h)
+
+    # --- LAYER 2: UI Buttons & Basic HUD ---
+    if game.game_state in ['PLAYING', 'PAUSED']:
+        view_left, view_right = game.viewport_left_offset, game.viewport_left_offset + game.dynamic_w
+        game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, dynamic_h)
+        game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h)
+
+        for rect, label in [(game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), (game.status_button_rect, tr('ui', f"Player Status ({get_key_name('toggle_status')})")), (game.inventory_button_rect, tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")), (game.gear_button_rect, tr('ui', f"Gear ({get_key_name('toggle_gear')})")), (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")), (game.nearby_button_rect, tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")), (game.messages_button_rect, tr('ui', f"Messages ({get_key_name('toggle_messages')})")), (game.crafting_button_rect, tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")), (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))]:
+            if rect and rect.collidepoint(mouse_pos):
+                text_surf = font_12.render(label, True, WHITE)
+                tip_x, tip_y = min(mouse_pos[0] + 10, GAME_WIDTH - text_surf.get_width() - 21), min(mouse_pos[1] + 10, GAME_HEIGHT - text_surf.get_height() - 21)
+                pygame.draw.rect(game.game_screen, (0, 0, 0, 220), pygame.Rect(tip_x, tip_y, text_surf.get_width() + 16, text_surf.get_height() + 16))
+                pygame.draw.rect(game.game_screen, WHITE, pygame.Rect(tip_x, tip_y, text_surf.get_width() + 16, text_surf.get_height() + 16), 1)
+                game.game_screen.blit(text_surf, (tip_x + 8, tip_y + 8))
+
     draw_belt_hud(game.game_screen, game, game.player, mouse_pos, dynamic_h)
     alert_tooltip = draw_player_alerts(game.game_screen, game.player)
     if alert_tooltip: game.hovered_item = alert_tooltip
 
-    # --- LAYER 3: Modals (Topmost Layer) ---
+    # --- LAYER 3: Modals (Sits on top of Buttons and HUD) ---
     top_tooltip = None
     game.modal_buttons = []
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
@@ -167,7 +249,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             _, *buttons = modal['instance'].draw()
             game.modal_buttons.extend(buttons)
 
-    # --- LAYER 4: Overlays & Tooltips (Drawn ON TOP of Modals) ---
+    # --- LAYER 4: Overlays & Tooltips (Absolute Top) ---
     highlighted_rect, highlighted_allowed = None, False
     if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
         preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
@@ -230,43 +312,23 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             img = pygame.transform.scale(preview_item.image, (int(highlighted_rect.height * 0.9) if highlighted_rect else 40, int(highlighted_rect.height * 0.9) if highlighted_rect else 40))
             game.game_screen.blit(img, img.get_rect(topleft=(mouse_pos[0] - game.drag_offset[0], mouse_pos[1] - game.drag_offset[1])))
         elif preview_item:
-            rect_w, rect_h = (int(highlighted_rect.width * 0.8), int(highlighted_rect.height * 0.8) if highlighted_rect else (40, 40))
+            rect_w, rect_h = (int(highlighted_rect.width * 0.8), int(highlighted_rect.height * 0.8)) if highlighted_rect else (40, 40)
             s = pygame.Surface((rect_w, rect_h), pygame.SRCALPHA)
             s.fill((*preview_item.color, 180))
             game.game_screen.blit(s, (mouse_pos[0] - rect_w//2, mouse_pos[1] - rect_h//2))
 
-        if top_tooltip:
-            tip_rect, item, frac, bar_color = top_tooltip['rect'], top_tooltip['item'], top_tooltip['frac'], top_tooltip['bar']
-            tip_s = pygame.Surface((tip_rect.width, tip_rect.height), pygame.SRCALPHA)
-            tip_s.fill((10, 10, 10, 220))
-            game.game_screen.blit(tip_s, tip_rect.topleft)
-            pygame.draw.rect(game.game_screen, WHITE, tip_rect, 1)
-            game.game_screen.blit(font_12.render(f"{tr('item', item.name)}", True, WHITE), (tip_rect.x + 8, tip_rect.y + 6))
-            game.game_screen.blit(font_12.render(f"Type: {item.item_type}", True, GRAY), (tip_rect.x + 8, tip_rect.y + 26))
-            bar_x, bar_y, bar_w, bar_h = tip_rect.x + 8, tip_rect.y + 42, tip_rect.width - 16, 10
-            pygame.draw.rect(game.game_screen, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
-            pygame.draw.rect(game.game_screen, bar_color, (bar_x, bar_y, int(max(0.0, min(1.0, frac)) * bar_w), bar_h))
-            pygame.draw.rect(game.game_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
-
-    elif not game.context_menu['active'] and game.game_state in ['PLAYING', 'PAUSED']:
-        view_left, view_right = game.viewport_left_offset, game.viewport_left_offset + game.dynamic_w
-        game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.crafting_button_rect = draw_crafting_button(game.game_screen, draw_ui_buttons_placeholder=None, view_left=view_left, view_right=view_right, dynamic_h=dynamic_h)
-        game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h)
-
-        for rect, label in [(game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), (game.status_button_rect, tr('ui', f"Player Status ({get_key_name('toggle_status')})")), (game.inventory_button_rect, tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")), (game.gear_button_rect, tr('ui', f"Gear ({get_key_name('toggle_gear')})")), (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")), (game.nearby_button_rect, tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")), (game.messages_button_rect, tr('ui', f"Messages ({get_key_name('toggle_messages')})")), (game.crafting_button_rect, tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")), (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))]:
-            if rect and rect.collidepoint(mouse_pos):
-                text_surf = font_12.render(label, True, WHITE)
-                tip_x, tip_y = min(mouse_pos[0] + 10, GAME_WIDTH - text_surf.get_width() - 21), min(mouse_pos[1] + 10, GAME_HEIGHT - text_surf.get_height() - 21)
-                pygame.draw.rect(game.game_screen, (0, 0, 0, 220), pygame.Rect(tip_x, tip_y, text_surf.get_width() + 16, text_surf.get_height() + 16))
-                pygame.draw.rect(game.game_screen, WHITE, pygame.Rect(tip_x, tip_y, text_surf.get_width() + 16, text_surf.get_height() + 16), 1)
-                game.game_screen.blit(text_surf, (tip_x + 8, tip_y + 8))
+    if top_tooltip:
+        tip_rect, item, frac, bar_color = top_tooltip['rect'], top_tooltip['item'], top_tooltip['frac'], top_tooltip['bar']
+        tip_s = pygame.Surface((tip_rect.width, tip_rect.height), pygame.SRCALPHA)
+        tip_s.fill((10, 10, 10, 220))
+        game.game_screen.blit(tip_s, tip_rect.topleft)
+        pygame.draw.rect(game.game_screen, WHITE, tip_rect, 1)
+        game.game_screen.blit(font_12.render(f"{tr('item', item.name)}", True, WHITE), (tip_rect.x + 8, tip_rect.y + 6))
+        game.game_screen.blit(font_12.render(f"Type: {item.item_type}", True, GRAY), (tip_rect.x + 8, tip_rect.y + 26))
+        bar_x, bar_y, bar_w, bar_h = tip_rect.x + 8, tip_rect.y + 42, tip_rect.width - 16, 10
+        pygame.draw.rect(game.game_screen, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
+        pygame.draw.rect(game.game_screen, bar_color, (bar_x, bar_y, int(max(0.0, min(1.0, frac)) * bar_w), bar_h))
+        pygame.draw.rect(game.game_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
 
     # --- LAYER 5: Combat HUD (Reticle & Ammo) ---
     if getattr(game.player, 'is_aiming', False):
@@ -310,17 +372,17 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             item = getattr(game, 'item_to_place')['item']
             in_range = ((game.screen_to_world(mouse_pos)[0] - game.player.rect.centerx)**2 + (game.screen_to_world(mouse_pos)[1] - game.player.rect.centery)**2) <= (TILE_SIZE * 1.5) ** 2
             if getattr(item, 'image', None):
-                game.game_screen.blit(item.image, get_rect_from_surface(item.image, center=mouse_pos),)
+                game.game_screen.blit(item.image, item.image.get_rect(center=mouse_pos))
                 tint = pygame.Surface(item.image.get_rect(center=mouse_pos).size, pygame.SRCALPHA)
                 tint.fill((0, 255, 0, 80) if in_range else (255, 0, 0, 80))
                 game.game_screen.blit(tint, item.image.get_rect(center=mouse_pos).topleft)
             else:
                 pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), pygame.Rect(mouse_pos[0]-8, mouse_pos[1]-8, 16, 16))
-                pygame.draw.rect(game.game_screen, (0, 255, 0) if in_range else (255, 0, 0), pygame.Rect(mouse_pos[0]-8, mouse_pos[1]-8, 16, 16))
+                pygame.draw.rect(game.game_screen, (0, 255, 0) if in_range else (255, 0, 0), pygame.Rect(mouse_pos[0]-8, mouse_pos[1]-8, 16, 16), 2)
         else:
             pygame.mouse.set_visible(True)
             pygame.mouse.set_cursor(game.assets.get('aim_cursor') if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]) else (game.assets.get('custom_cursor') or pygame.cursors.arrow))
 
     if hasattr(game, 'clock'):
-        fps_surf = font_12.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'HUnknown')},", False, (255, 255, 255))
-        game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_s_height() - 5)))
+        fps_surf = font_12.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
+        game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5)))
