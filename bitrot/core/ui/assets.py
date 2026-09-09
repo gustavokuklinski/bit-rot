@@ -31,6 +31,11 @@ def load_assets():
         assets['day_icon'] = None
         assets['night_icon'] = None
 
+    try:
+        assets['menu_hud_icon'] = pygame.image.load(SPRITE_PATH + 'ui/menu_hud.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading menu hud icon: {e}")
+        assets['menu_hud_icon'] = None
 
     try:
         assets['close_button'] = pygame.image.load(SPRITE_PATH + 'ui/close.png').convert_alpha()

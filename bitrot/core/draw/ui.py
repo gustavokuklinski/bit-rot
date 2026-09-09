@@ -191,16 +191,56 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     if game.game_state in ['PLAYING', 'PAUSED']:
         view_left, view_right = game.viewport_left_offset, game.viewport_left_offset + game.dynamic_w
         game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, dynamic_h)
-        game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h)
+        
+        # --- NEW: Menu HUD Toggle Button (Placed to the left of the Pause button) ---
+        game.menu_hud_button_rect = pygame.Rect(
+            game.pause_button_rect.x + 25,
+            game.pause_button_rect.y,
+            game.pause_button_rect.width,
+            game.pause_button_rect.height
+        )
+        
+        
+        
+        if getattr(game, 'assets', None) and game.assets.get('menu_hud_icon'):
+            icon_rect = game.assets['menu_hud_icon'].get_rect(center=game.menu_hud_button_rect.center)
+            game.game_screen.blit(game.assets['menu_hud_icon'], icon_rect)
+            
+        # Conditionally render the other left-side HUD buttons
+        show_hud_menus = getattr(game, 'show_hud_menus', False)
+        
+        if show_hud_menus:
+            game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, dynamic_h)
+            game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h)
+        else:
+            game.status_button_rect = None
+            game.inventory_button_rect = None
+            game.nearby_button_rect = None
+            game.gear_button_rect = None
+            game.slots_button_rect = None
+            game.messages_button_rect = None
+            game.crafting_button_rect = None
+            game.help_button_rect = None
 
-        for rect, label in [(game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), (game.status_button_rect, tr('ui', f"Player Status ({get_key_name('toggle_status')})")), (game.inventory_button_rect, tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")), (game.gear_button_rect, tr('ui', f"Gear ({get_key_name('toggle_gear')})")), (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")), (game.nearby_button_rect, tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")), (game.messages_button_rect, tr('ui', f"Messages ({get_key_name('toggle_messages')})")), (game.crafting_button_rect, tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")), (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))]:
+        # Build the tooltips 
+        for rect, label in [
+            (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), 
+            (game.menu_hud_button_rect, tr('ui', "Toggle UI Menus (SHIFT+M)")),
+            (getattr(game, 'status_button_rect', None), tr('ui', f"Player Status ({get_key_name('toggle_status')})")), 
+            (getattr(game, 'inventory_button_rect', None), tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")), 
+            (getattr(game, 'gear_button_rect', None), tr('ui', f"Gear ({get_key_name('toggle_gear')})")), 
+            (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")), 
+            (getattr(game, 'nearby_button_rect', None), tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")), 
+            (getattr(game, 'messages_button_rect', None), tr('ui', f"Messages ({get_key_name('toggle_messages')})")), 
+            (getattr(game, 'crafting_button_rect', None), tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")), 
+            (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
+        ]:
             if rect and rect.collidepoint(mouse_pos):
                 text_surf = font_12.render(label, True, WHITE)
                 tip_x, tip_y = min(mouse_pos[0] + 10, GAME_WIDTH - text_surf.get_width() - 21), min(mouse_pos[1] + 10, GAME_HEIGHT - text_surf.get_height() - 21)

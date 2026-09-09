@@ -453,6 +453,10 @@ def handle_keyboard_events(game, event, action_triggered=None):
             reset_modal_positions(game)
             return
 
+        if event.key == pygame.K_m and (pygame.key.get_mods() & pygame.KMOD_SHIFT):
+            game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
+            return
+
         if game.modals and not getattr(game, 'hide_modals', False):
             top_modal = game.modals[-1]
             if 'instance' in top_modal and hasattr(top_modal['instance'], 'handle_event'):

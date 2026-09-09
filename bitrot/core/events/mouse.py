@@ -383,6 +383,10 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.pause_button_rect and game.pause_button_rect.collidepoint(mouse_pos):
             toggle_pause(game); return
         
+        if getattr(game, 'menu_hud_button_rect', None) and game.menu_hud_button_rect.collidepoint(mouse_pos):
+            game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
+            return
+            
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game); return
         if game.inventory_button_rect and game.inventory_button_rect.collidepoint(mouse_pos):
