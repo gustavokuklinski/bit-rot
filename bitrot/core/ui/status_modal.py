@@ -23,7 +23,7 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     modal['tabs_data'] = tabs_data
     tabs = Tabs(surface, modal, tabs_data, assets)
     # modal['tabs_instance'] = tabs # Store the instance
-    tabs.draw()
+    tabs.draw(game, mouse_pos)
 
     if modal['active_tab'] == 'Status':
         draw_status_tab(surface, player, modal, assets, zombies_killed)

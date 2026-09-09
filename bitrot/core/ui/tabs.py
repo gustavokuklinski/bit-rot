@@ -1,6 +1,7 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal
+from core.data.localization import tr
 
 class Tabs:
     def __init__(self, surface, modal, tabs_data, assets):
@@ -89,6 +90,13 @@ class Tabs:
 
         # Store calculated rects for click detection
         self.modal['tab_rects'] = self.tab_rects
+        
+        # 4. Check for Tab Hovers and construct the tooltip
+        if game and mouse_pos and self.modal.get('is_active', True):
+            for i, tab in enumerate(self.tabs_data):
+                if self.tab_rects[i].collidepoint(mouse_pos):
+                    game.hovered_tab_tooltip = self._get_tab_tooltip(tab)
+                    break
 
     def _draw_single_tab(self, tab, rect, is_active, is_drag_target=False):
         if is_active: 
@@ -111,6 +119,31 @@ class Tabs:
             text = font_12.render(tab['label'], False, WHITE)
             text_rect = text.get_rect(center=rect.center)
             self.surface.blit(text, text_rect)
+
+    def _get_tab_tooltip(self, tab):
+        """Constructs the tooltip string to show based on the Tab's parent modal."""
+        # Check if tab has an explicit tooltip overriding everything
+        if 'tooltip' in tab:
+            return tr('tooltip', tab['tooltip'])
+            
+        # Inventory / Gear item names from a linked entity
+        if 'item' in tab and tab['item']:
+            return tr('item', getattr(tab['item'], 'name', tab.get('label', '')))
+            
+        label = tab.get('label', '')
+        modal_type = self.modal.get('type', '')
+        
+        # Determine tooltip text mapping based on Modal Type
+        if modal_type == 'status':
+            if label == 'Health': return tr('tooltip', 'Overview')
+            if label == 'Status': return tr('tooltip', 'Player Status')
+            if label == 'Record': return tr('tooltip', 'Skills')
+            if label == 'Quests': return tr('tooltip', 'Quests')
+            
+        if modal_type in ['inventory', 'gear', 'slots']:
+            return tr('item', label)
+            
+        return tr('tooltip', label)
 
     def handle_input(self):
         # This method is no longer needed as input will be handled in mouse.py

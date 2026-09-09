@@ -181,8 +181,11 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     # --- RENDER INTERACTION TOOLTIPS (drawn on top of world, under modals) ---
     if tooltip_to_draw:
         _draw_tt(game, tooltip_to_draw, mouse_pos[0] + 15, mouse_pos[1] + 15, dynamic_h=dynamic_h)
+    
+    # This display the tooltip on top of the player belt 
     #if focused_tip and focused_tip != tooltip_to_draw:
-    #    _draw_tt(game, focused_tip, game.viewport_left_offset + (game.dynamic_w // 2), dynamic_h - 130, center_align=True, dynamic_h=dynamic_h)
+    #    _draw_tt(game, focused_tip, game.viewport_left_offset + (game.dynamic_w // 2), dynamic_h - 130, center_align=True)
+    #
 
     # --- LAYER 2: UI Buttons & Basic HUD ---
     if game.game_state in ['PLAYING', 'PAUSED']:
@@ -211,6 +214,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
     # --- LAYER 3: Modals (Sits on top of Buttons and HUD) ---
     top_tooltip = None
+    game.hovered_tab_tooltip = None
     game.modal_buttons = []
     topmost_modal_id = game.modals[-1]['id'] if game.modals else None
 
@@ -329,6 +333,9 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         pygame.draw.rect(game.game_screen, DARK_GRAY, (bar_x, bar_y, bar_w, bar_h))
         pygame.draw.rect(game.game_screen, bar_color, (bar_x, bar_y, int(max(0.0, min(1.0, frac)) * bar_w), bar_h))
         pygame.draw.rect(game.game_screen, WHITE, (bar_x, bar_y, bar_w, bar_h), 1)
+
+    if getattr(game, 'hovered_tab_tooltip', None):
+        _draw_tt(game, game.hovered_tab_tooltip, mouse_pos[0] + 15, mouse_pos[1] + 15)
 
     # --- LAYER 5: Combat HUD (Reticle & Ammo) ---
     if getattr(game.player, 'is_aiming', False):
