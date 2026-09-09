@@ -4,6 +4,7 @@ import random
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.data.config import TILE_SIZE
+from core.ui.notifications import check_milestone_progress
 
 class NPCCombat:
     def check_line_of_sight(self, target, game):
@@ -61,6 +62,10 @@ class NPCCombat:
         return False
 
     def take_damage(self, damage, game, attacker=None):
+        
+        if attacker == getattr(game, 'player', None) and getattr(self, 'is_static', False):
+            check_milestone_progress(game, 'hit', 'static_npc')
+
         if self.is_dead: return True
         
         # --- Quest NPC Invulnerability & Hostility ---

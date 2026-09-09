@@ -5,6 +5,7 @@ from core.data.config import *
 from core.entities.item.item import Item
 from core.messages import display_message
 from core.data.localization import tr
+from core.ui.notifications import check_milestone_progress
 
 class CraftingRepairTab:
     def __init__(self, modal):
@@ -272,6 +273,8 @@ class CraftingRepairTab:
 
         def craft_complete():
             nearby = self.modal.game.find_nearby_containers()
+            check_milestone_progress(self.modal.game, 'craft_repair', 'item')
+            
             if recipe.gain_xp:
                 for attr, amount in recipe.gain_xp.items():
                     if hasattr(self.modal.player.progression, 'add_xp'):

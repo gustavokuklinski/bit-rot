@@ -106,10 +106,18 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
     quests = load_quests()
     
+    if NPCDialog.MILESTONES is None:
+        NPCDialog.load_dialogs(getattr(player, 'game', None))
+    milestones = NPCDialog.MILESTONES or []
+    
     completed_list = getattr(player, 'completed_quests', [])
     active_list = getattr(player, 'quests', [])
     
+    # --- FIX: Ensure we have the list safely ---
+    completed_milestones = getattr(player, 'completed_milestones', [])
+    
     in_progress, next_petrol_locked, island_locked, completed_quests = [], [], [], []
+    ms_completed, ms_locked = [], [] 
     np_total = np_comp = isl_total = isl_comp = 0
 
     for q in quests:
@@ -128,13 +136,21 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
         elif q['is_procedural']: island_locked.append(q)
         else: next_petrol_locked.append(q)
 
+    # PROCESS MILESTONES (Fix string matching)
+    for ms in milestones:
+        ms_name = ms.get('name', '').strip()
+        if ms_name in completed_milestones:
+            ms_completed.append(ms)
+        else:
+            ms_locked.append(ms)
+
     total_global, comp_global, in_prog_count = len(quests), len(completed_quests), len(in_progress)
 
     start_x = modal_rect.left + 15
     base_y = modal_rect.top + 70 
     slot_size = 40
     gap = 10
-    cols = 4 # Changed from 7 to 4 to fit 244px width
+    cols = 4 
     
     def get_section_height(items):
         if not items: return 0
@@ -143,7 +159,8 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
 
     total_content_height = (
         get_section_height(in_progress) + get_section_height(next_petrol_locked) +
-        get_section_height(island_locked) + get_section_height(completed_quests)
+        get_section_height(island_locked) + get_section_height(completed_quests) +
+        get_section_height(ms_completed) + get_section_height(ms_locked)
     )
     
     visible_height = modal_rect.height - 80 
@@ -220,28 +237,48 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
             y = y_offset + row * (slot_size + gap)
             slot_rect = pygame.Rect(x, y, slot_size, slot_size)
             if y > base_y + visible_height or y + slot_size < base_y: continue
+            
             pygame.draw.rect(surface, GRAY_40, slot_rect)
-            item = q['item_obj']
-            if item and getattr(item, 'image', None):
-                img = item.image.copy()
-                if outline_color == GRAY_60: img.set_alpha(100)
-                scaled_img = pygame.transform.scale(img, (32, 32))
-                surface.blit(scaled_img, scaled_img.get_rect(center=slot_rect.center))
-            else:
-                fallback_text = font_12.render("?", False, WHITE)
+            
+            # Handle Milestone vs Normal Quest graphic
+            if q.get('is_milestone'):
+                fallback_text = font_12.render("M", False, WHITE)
                 if outline_color == GRAY_60: fallback_text.set_alpha(100)
                 surface.blit(fallback_text, fallback_text.get_rect(center=slot_rect.center))
+            else:
+                item = q.get('item_obj')
+                if item and getattr(item, 'image', None):
+                    img = item.image.copy()
+                    if outline_color == GRAY_60: img.set_alpha(100)
+                    scaled_img = pygame.transform.scale(img, (32, 32))
+                    surface.blit(scaled_img, scaled_img.get_rect(center=slot_rect.center))
+                else:
+                    fallback_text = font_12.render("?", False, WHITE)
+                    if outline_color == GRAY_60: fallback_text.set_alpha(100)
+                    surface.blit(fallback_text, fallback_text.get_rect(center=slot_rect.center))
+            
             pygame.draw.rect(surface, outline_color, slot_rect, 2 if outline_color != GRAY_60 else 1)
+            
             if slot_rect.collidepoint(mouse_pos) and clip_rect.collidepoint(mouse_pos):
                 if not modal.get('quest_is_scrolling_content') and not modal.get('quest_is_dragging'):
                     class QuestTooltipDummy:
                         def __init__(self, q_data):
                             self.name = tr('ui', q_data['name'])
-                            status = 'Completed' if outline_color == GREEN else ('In Progress' if outline_color == YELLOW else 'Locked')
-                            self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
+                            
+                            # Proper tooltips for Milestones vs Quests
+                            if q_data.get('is_milestone'):
+                                if outline_color == YELLOW:
+                                    self.tooltip_text = f"{tr('ui', q_data.get('message', ''))}\n{tr('ui', 'Check your quest tab')}"
+                                else:
+                                    self.tooltip_text = ""
+                            else:
+                                status = 'Completed' if outline_color == GREEN else ('In Progress' if outline_color == YELLOW else 'Locked')
+                                self.tooltip_text = f"{tr('ui', 'Status:')} {tr('ui', status)}\n{tr('ui', q_data['tip'])}"
+                            
                             self.item_type = self.durability = self.max_durability = None
                             self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
                     pending_tooltip = QuestTooltipDummy(q)
+                    
         rows = (len(items) + cols - 1) // cols
         return y_offset + (rows * (slot_size + gap)) + 15
         
@@ -249,6 +286,10 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     current_y = draw_quest_section(f"Next Petrol ({np_comp}/{np_total})", next_petrol_locked, current_y, GRAY_60)
     current_y = draw_quest_section(f"Island Quest ({isl_comp}/{isl_total})", island_locked, current_y, GRAY_60)
     current_y = draw_quest_section(f"Completed ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
+    
+    # --- FIX: Explicitly name the completed section to avoid confusion ---
+    current_y = draw_quest_section(f"Completed Milestones ({len(ms_completed)}/{len(milestones)})", ms_completed, current_y, YELLOW)
+    current_y = draw_quest_section(f"Locked Milestones", ms_locked, current_y, GRAY_60)
 
     surface.set_clip(None)
     bar_rect = pygame.Rect(modal_rect.right - 10, base_y, 8, visible_height)

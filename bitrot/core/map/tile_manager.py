@@ -93,13 +93,13 @@ class TileManager:
                                         definition['health_min'] = 60
                                         definition['health_max'] = 100
                                     
-                                    if 'drops' not in definition:
-                                        definition['drops'] = [{
-                                            'item': 'Tree Trunk',
-                                            'chance': 1.0, 
-                                            'min_qty': 1, 
-                                            'max_qty': 2
-                                        }]
+                                    #if 'drops' not in definition:
+                                    #    definition['drops'] = [{
+                                    #        'item': 'Log',
+                                    #        'chance': 1.0, 
+                                    #        'min_qty': 1, 
+                                    #        'max_qty': 2
+                                    #    }]
                                     
                                     definition['destructible'] = True
 

@@ -5,13 +5,26 @@ from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Item
 from core.data.config import ZOMBIE_INFECTION_CHANCE
 import core.data.config
+from core.ui.notifications import check_milestone_progress
 
 class ZombieCombat:
     def take_damage(self, amount, game, attacker=None): 
         self.health -= amount
+
+        if attacker == getattr(game, 'player', None) and type(self).__name__ == 'NPC' and getattr(self, 'is_static', False):
+            check_milestone_progress(game, 'hit', 'static_npc')
+
         # [FIX] Ensure health does not stay stuck at 1 or above if damage is sufficient
         if self.health <= 0:
             self.health = 0
+
+            if attacker == getattr(game, 'player', None):
+                # Check if it's an NPC or a Zombie
+                if type(self).__name__ == 'NPC':
+                    if not getattr(self, 'is_friendly', True):
+                        check_milestone_progress(game, 'kill', 'hostile_npc')
+                else:
+                    check_milestone_progress(game, 'kill', 'zombie')
             
         self.show_health_bar_timer = 120 
 

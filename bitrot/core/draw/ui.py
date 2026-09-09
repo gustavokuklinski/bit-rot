@@ -24,6 +24,7 @@ from core.ui.slots_modal import draw_slots_modal
 from core.systems.utils import get_player_facing_tile, get_targeted_interactable, find_nearby_containers
 from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
+from core.ui.notifications import draw_notifications
 
 def get_key_name(action):
     val = keybind_manager.kb_binds.get(action)
@@ -433,3 +434,5 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     if hasattr(game, 'clock'):
         fps_surf = font_12.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
         game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5)))
+
+    draw_notifications(game.game_screen, game)

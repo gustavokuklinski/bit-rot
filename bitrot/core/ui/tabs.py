@@ -139,7 +139,12 @@ class Tabs:
             if label == 'Status': return tr('tooltip', 'Player Status')
             if label == 'Record': return tr('tooltip', 'Skills')
             if label == 'Quests': return tr('tooltip', 'Quests')
-            
+        
+        if modal_type == 'mobile':
+            if label == 'Clock': return tr('tooltip', 'Clock')
+            if label == 'Map': return tr('tooltip', 'Chunk map')
+            if label == 'MP3': return tr('tooltip', 'MP3 Player - Use SD Cards')
+
         if modal_type in ['inventory', 'gear', 'slots']:
             return tr('item', label)
             

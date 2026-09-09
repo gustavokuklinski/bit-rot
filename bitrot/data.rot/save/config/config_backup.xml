@@ -59,7 +59,7 @@
         <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
     </npc>
     <zombie>
-        <zombie_spawn_per_chunk value="10" name="Max Zombie spawn on chunk" default="10"/>
+        <zombie_spawn_per_chunk value="5" name="Max Zombie spawn on chunk" default="5"/>
         <spawn value="5" name="Zombies per spawn" default="5"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day" default="1"/>
         <wander value="true" name="Zombie wandering" default="true"/>

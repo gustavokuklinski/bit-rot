@@ -8,17 +8,23 @@ from core.data.config import DATA_PATH, CHUNK_SIZE, MAP_CHUNKS
 class NPCDialog:
     NPC_DIALOGS = None
     QUESTS_FILE_PATH = None  
+    MILESTONES = None # Class variable for Milestones
 
     PROCEDURAL_ITEM_POOL = []
     MAX_PROCEDURAL_QUESTS = CHUNK_SIZE * 5
 
     @staticmethod
     def load_dialogs(game=None):
-        if NPCDialog.NPC_DIALOGS is not None: return
+        # FIX 1: Only return early if BOTH dialogs and milestones are loaded!
+        if NPCDialog.NPC_DIALOGS is not None and NPCDialog.MILESTONES is not None: 
+            return
         
-        NPCDialog.NPC_DIALOGS = {} 
+        if NPCDialog.NPC_DIALOGS is None:
+            NPCDialog.NPC_DIALOGS = {} 
+            
+        # Initialize Milestones array
+        NPCDialog.MILESTONES = []
         
-        # [UPDATED] - Point to the new modular directory
         dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
         
         if not os.path.exists(dialogs_dir):
@@ -27,7 +33,6 @@ class NPCDialog:
 
         fragments = {}
 
-        # [NEW] - Loop through all XML files in the directory
         for filename in os.listdir(dialogs_dir):
             if filename.endswith('.xml'):
                 filepath = os.path.join(dialogs_dir, filename)
@@ -35,9 +40,25 @@ class NPCDialog:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
                     
-                    for node in root.findall('node'):
+                    # FIX 2: Use .iter() to recursively find the nodes, avoiding nesting issues
+                    for node in root.iter('node'):
                         node_id = node.get('id')
                         if not node_id: continue
+                        
+                        # ==========================================================
+                        # Intercept the milestones node
+                        # ==========================================================
+                        if node_id == "milestones":
+                            for ms in node.iter('milestone'):
+                                NPCDialog.MILESTONES.append({
+                                    'is_milestone': True,
+                                    'type': ms.get('type'),
+                                    'entity': ms.get('entity'),
+                                    'name': ms.get('name'),
+                                    'number': int(ms.get('number', 1)),
+                                    'message': ms.get('message')
+                                })
+                            continue
                         
                         # ==========================================================
                         # Intercept the procedural items pool node

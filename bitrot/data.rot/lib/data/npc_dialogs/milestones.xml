@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<npc_dialog>
+    <node id="milestones">
+        <milestone type="kill" entity="zombie" name="First Rotter" number="1" message="First Blood!" />
+        <milestone type="kill" entity="zombie" name="10th Rotter" number="10" message="10 rotters died!" />
+        <milestone type="kill" entity="zombie" name="20th Rotter" number="20" message="20 rotters died!" />
+
+        <milestone type="kill" entity="hostile_npc" name="Hostile" number="1" message="Killed first hostile!" />
+        <milestone type="kill" entity="animal" name="Animal" number="1" message="Some animals can provide food or death!" />
+
+        <milestone type="hit" entity="static_npc" name="Was it friendly?" number="1" message="You hit a friend! It will become Hostile!" />
+        
+        <milestone type="craft_craft" entity="item" name="The Builder" number="1" message="You made your first craft!" />
+        <milestone type="craft_repair" entity="item" name="The Fixer" number="1" message="You made your first repair!" />
+        <milestone type="craft_dismantle" entity="item" name="The Tweaker" number="1" message="You made your first dismantle!" />
+
+        <milestone type="days" entity="world_day" number="1" name="First day alive" message="You survived your first day." />
+    </node>
+</npc_dialog>

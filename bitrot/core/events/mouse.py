@@ -15,6 +15,7 @@ from core.events.mouse_context import handle_context_menu_click, handle_right_cl
 from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion, handle_left_click_drag_candidate
 from core.events.mouse_combat import handle_attack
 from core.data.localization import tr
+from core.ui.notifications import add_notification
 
 def handle_mouse_down(game, event, mouse_pos):
 
@@ -67,6 +68,31 @@ def handle_mouse_down(game, event, mouse_pos):
                     handle_context_menu_click(game, mouse_pos)
                     return 
             game.context_menu['active'] = False
+
+        if getattr(game, 'notifications', None):
+            clicked_notif = False
+            for notif in game.notifications:
+                if notif.get('rect') and notif['rect'].collidepoint(mouse_pos):
+                    # Ensure status modal is open
+                    status_modal = next((m for m in game.modals if m['type'] == 'status'), None)
+                    if status_modal:
+                        status_modal['active_tab'] = 'Quests'
+                        # Bring modal to front
+                        game.modals.remove(status_modal)
+                        game.modals.append(status_modal)
+                    else:
+                        toggle_status_modal(game)
+                        # The newly created modal is always placed at the end of the list
+                        game.modals[-1]['active_tab'] = 'Quests'
+                        
+                    # Remove the clicked notification
+                    game.notifications.remove(notif)
+                    clicked_notif = True
+                    break
+                    
+            # If a notification was clicked, stop processing other UI underneath it
+            if clicked_notif:
+                return
 
         topmost_modal = None
         for modal in reversed(game.modals):
@@ -215,6 +241,8 @@ def handle_mouse_down(game, event, mouse_pos):
                                                         game.player.completed_quests = []
                                                     game.player.completed_quests.append(comp_flag)
                                                     display_message(game, f"{tr('msg', 'Quest Completed')}: {comp_flag}")
+
+                                                    add_notification(game, "Quest completed!", "Check your quest tab")
 
                                             # --- 5. Gain XP ---
                                             if selected_opt.get('gain_xp'):
@@ -386,7 +414,7 @@ def handle_mouse_down(game, event, mouse_pos):
         if getattr(game, 'menu_hud_button_rect', None) and game.menu_hud_button_rect.collidepoint(mouse_pos):
             game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
             return
-            
+
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):
             toggle_status_modal(game); return
         if game.inventory_button_rect and game.inventory_button_rect.collidepoint(mouse_pos):

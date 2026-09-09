@@ -8,6 +8,7 @@ from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
 from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Item
+from core.ui.notifications import check_milestone_progress
 
 class Animal(Zombie):
 
@@ -202,6 +203,10 @@ class Animal(Zombie):
         if self.health <= 0:
             self.health = 0
             self.state = 'dead' # Extra safety flag
+
+            if attacker == game.player:
+                check_milestone_progress(game, 'kill', 'animal')
+                
             self.die(game)
             return True
             
