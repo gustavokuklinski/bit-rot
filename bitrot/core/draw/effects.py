@@ -84,6 +84,14 @@ def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
             surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
 def draw_screen_effects(game, offset_x, offset_y, zoom):
+    # Get current dynamic dimensions from camera.py
+    dyn_w = getattr(game, 'dynamic_w', GAME_WIDTH)
+    dyn_h = getattr(game, 'dynamic_h', GAME_HEIGHT)
+    v_left = getattr(game, 'viewport_left_offset', 0)
+
+    # Define the actual game viewport area to prevent effects from leaking into UI/Modals
+    game_viewport_rect = pygame.Rect(v_left, 0, dyn_w, dyn_h)
+
     if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
         is_under_roof = False
         if getattr(game, 'roof_data', None) and game.player:
@@ -93,24 +101,40 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
                 if r_key and r_key != ' ': is_under_roof = True
         
         if not is_under_roof and getattr(game, 'current_layer_index', 1) != 2:
-            if not hasattr(game, 'rain_texture'):
-                try: game.rain_texture = pygame.transform.scale(game.assets.get('rain_texture'), (GAME_WIDTH, GAME_HEIGHT)).convert_alpha()
-                except Exception: game.rain_texture = None
+            try:
+                if not hasattr(game, 'rain_texture') or game.rain_texture.get_width() != dyn_w:
+                    game.rain_texture = pygame.transform.scale(game.assets.get('rain_texture'), (dyn_w, dyn_h)).convert_alpha()
+            except Exception: 
+                game.rain_texture = None
 
             if game.rain_texture:
+                # --- FIX: CLIP THE RAIN ---
+                # Only allow drawing within the game viewport rectangle
+                game.game_screen.set_clip(game_viewport_rect)
+                
                 if not hasattr(game, 'rain_offset'): game.rain_offset = 0
-                game.rain_offset = (game.rain_offset + 15 * getattr(game, 'dt_mult', 1.0)) % GAME_HEIGHT
-                game.game_screen.blit(game.rain_texture, (0, game.rain_offset))
-                game.game_screen.blit(game.rain_texture, (0, game.rain_offset - GAME_HEIGHT))
+                game.rain_offset = (game.rain_offset + 15 * getattr(game, 'dt_mult', 1.0)) % dyn_h
+                
+                game.game_screen.blit(game.rain_texture, (v_left, game.rain_offset))
+                game.game_screen.blit(game.rain_texture, (v_left, game.rain_offset - dyn_h))
+                
+                # IMPORTANT: Reset clip to None so other UI elements can draw normally
+                game.game_screen.set_clip(None)
 
     anxiety_level = getattr(game.player, 'anxiety', 0)
     if anxiety_level > 10:
-        if not hasattr(game, 'crt_texture'):
-            try: game.crt_texture = pygame.transform.scale(game.assets.get('crt_texture'), (GAME_WIDTH + 20, GAME_HEIGHT + 20)).convert_alpha()
-            except Exception: game.crt_texture = None
+        try:
+            if not hasattr(game, 'crt_texture') or game.crt_texture.get_width() != dyn_w + 20:
+                game.crt_texture = pygame.transform.scale(game.assets.get('crt_texture'), (dyn_w + 20, dyn_h + 20)).convert_alpha()
+        except Exception: 
+            game.crt_texture = None
+            
         if game.crt_texture:
+            # I recommend clipping the CRT too, so shaking doesn't leak into modals
+            game.game_screen.set_clip(game_viewport_rect)
             shake = int((anxiety_level / 100) * 5)
-            game.game_screen.blit(game.crt_texture, (random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
+            game.game_screen.blit(game.crt_texture, (v_left + random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
+            game.game_screen.set_clip(None)
 
      # --- FIXED GUN FLASH BLOCK ---
     if game.player.gun_flash_timer > 0:

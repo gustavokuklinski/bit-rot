@@ -166,7 +166,7 @@ class WorldTime:
             else:
                 core.data.config.ZOMBIE_DETECTION_RADIUS *= z_mult
             
-            check_milestone_progress(game, 'days', 'world_day')
+            check_milestone_progress(self.game, 'days', 'world_day')
             
             print(f"Day {self.day_count} Complete. Difficulty Increased (x{z_mult})!")
             display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})")
