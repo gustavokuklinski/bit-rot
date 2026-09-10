@@ -2,7 +2,7 @@ import pygame
 from core.data.config import GAME_WIDTH, WHITE, font_12
 from core.entities.npc.npc_dialog import NPCDialog
 
-def add_notification(game, title, message, duration=5000):
+def add_notification(game, title, message, duration=5000, target_tab='Quests'):
     if not hasattr(game, 'notifications'): 
         game.notifications = []
         
@@ -10,7 +10,8 @@ def add_notification(game, title, message, duration=5000):
         'title': title,
         'message': message,
         'remaining_time': duration,
-        'rect': None
+        'rect': None,
+        'target_tab': target_tab
     })
 
 def draw_notifications(surface, game):
@@ -100,4 +101,4 @@ def check_milestone_progress(game, m_type, entity):
             if ms_name not in player.completed_milestones and current_val >= ms['number']:
                 # Milestone Completed!
                 player.completed_milestones.append(ms_name)
-                add_notification(game, ms_name, f"{ms['message']}\nCheck your quest tab")
+                add_notification(game, ms_name, f"{ms['message']}\nCheck your quest tab", target_tab='Quests')

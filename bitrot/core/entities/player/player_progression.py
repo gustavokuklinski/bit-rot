@@ -4,6 +4,8 @@ import core.data.config
 from core.data.config import *
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.messages import display_message
+import core.messages
+from core.ui.notifications import add_notification
 # Import the new loader
 from core.data.progression_loader import PROGRESSION_CONFIG
 from core.data.localization import tr
@@ -204,6 +206,14 @@ class PlayerProgression:
         # Get nice name for display
         display_name = self.config.attributes.get(attr['name'], {}).get('name', attr['name'])
         display_message(f"{tr('msg', 'Leveled up')} {display_name} {tr('msg', 'to level')} {attr['level']}!")
+
+        if core.messages._game_instance:
+            add_notification(
+                core.messages._game_instance, 
+                tr('ui', 'Skill up!'), 
+                f"{tr('ui', display_name)}: {attr['level']}", 
+                target_tab='Record'
+            )
 
     def add_agility_xp(self, player, amount):
         self.add_xp(player, 'agility', amount)
