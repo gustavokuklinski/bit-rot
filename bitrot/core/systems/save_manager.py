@@ -75,7 +75,9 @@ def save_game(game):
             "quests": getattr(game.player, 'quests', []),
             "completed_quests": getattr(game.player, 'completed_quests', []),
             "dialog_history": list(getattr(game.player, 'dialog_history', [])),
-            "special_dialogs": getattr(game.player, 'special_dialogs', [])
+            "special_dialogs": getattr(game.player, 'special_dialogs', []),
+            "completed_milestones": getattr(game.player, 'completed_milestones', []),
+            "milestone_progress": getattr(game.player, 'milestone_progress', {})
         }
 
         with open(os.path.join(save_path, "host.rot"), "w") as f:

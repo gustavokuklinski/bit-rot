@@ -66,6 +66,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.completed_quests = data.get('completed_quests', [])
         self.known_recipes = data.get('known_recipes', [])
         self.dialog_history = data.get('dialog_history', [])
+        self.completed_milestones = data.get('completed_milestones', [])
+        self.milestone_progress = data.get('milestone_progress', {})
 
         if self.traits:
             for trait_id in self.traits:
