@@ -137,6 +137,9 @@ class Item:
         if getattr(self, 'in_belt', False):
             data['in_belt'] = self.in_belt
 
+        if getattr(self, 'is_placed', False):
+            data['is_placed'] = self.is_placed
+
         if self.text is not None:
             data['text'] = getattr(self, 'original_text', self.text)
 
@@ -159,6 +162,7 @@ class Item:
         if 'load' in data: item.load = data['load']
         if 'state' in data: item.state = data['state']
         if 'in_belt' in data: item.in_belt = data['in_belt']
+        if 'is_placed' in data: item.is_placed = data['is_placed']
 
         if 'text' in data: 
             item.text = data['text']

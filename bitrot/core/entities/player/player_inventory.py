@@ -183,6 +183,7 @@ class PlayerInventory:
                 item_to_drop.rect.topleft = found_pos
                 item_to_drop.x, item_to_drop.y = found_pos
 
+            item_to_drop.is_placed = False
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
             return item_to_drop
@@ -368,10 +369,11 @@ class PlayerInventory:
             if found_pos:
                 item_to_drop.rect.topleft = found_pos
                 item_to_drop.x, item_to_drop.y = found_pos
+                item_to_drop.is_placed = False
                 game.items_on_ground.append(item_to_drop)
             else:
                 # Fallback: If completely blocked, put it back in inventory or just spawn it anyway
-                # (Usually, you'd put it back, but for now we just append it to prevent item loss)
+                item_to_drop.is_placed = False
                 game.items_on_ground.append(item_to_drop)
 
             self.drop_cooldown = 10 

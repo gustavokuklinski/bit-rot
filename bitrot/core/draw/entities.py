@@ -26,7 +26,8 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
         if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
-        if getattr(item, 'item_type', '') == 'camp':
+        # [FIX] Render Placed items full-size, otherwise downscale 8x8 Drops
+        if getattr(item, 'is_placed', False):
             if getattr(item, 'image', None): surface.blit(item.image, draw_pos)
             else: pygame.draw.rect(surface, getattr(item, 'color', WHITE), draw_pos)
         else:

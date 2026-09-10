@@ -1,4 +1,4 @@
-<item name="Sleeping Bag" type="camp" allow_belt="false" tip="Drop and RMB to sleep anywhere">
+<item name="Sleeping Bag" type="camp" allow_belt="false" tip="Place item to create a safezone radius">
     <properties>
         <capacity value="1" />
         <allow_sleep value="true" />

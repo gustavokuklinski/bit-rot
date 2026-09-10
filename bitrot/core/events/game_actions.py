@@ -17,11 +17,11 @@ def try_grab_item(game):
             closest_item = item
 
     if closest_item and closest_dist_sq < (TILE_SIZE * 2) ** 2:
-        # Convert "Campfire on" to "Campfire off" when picking up
+        # Convert active utility to off when picking up
         item_to_grab = closest_item
-        if closest_item.name == "Campfire on":
+        if closest_item.name in ["Campfire on", "Lantern on"]:
             from core.entities.item.item import Item
-            new_item = Item.create_from_name("Campfire off")
+            new_item = Item.create_from_name(closest_item.name.replace(" on", " off"))
             if new_item:
                 new_item.durability = closest_item.durability
                 new_item.load = closest_item.load
@@ -29,19 +29,21 @@ def try_grab_item(game):
                 new_item.x = closest_item.x
                 new_item.y = closest_item.y
                 item_to_grab = new_item
-                display_message(tr('msg', "Campfire extinguished when picked up."))
+                display_message(tr('msg', f"{closest_item.name.split(' ')[0]} extinguished when picked up."))
 
         target_inventory = game.player.inventory
         target_capacity = game.player.base_inventory_slots
 
         success = False
         if len(target_inventory) < target_capacity:
+            item_to_grab.is_placed = False # <--- [FIX] Reset status
             target_inventory.append(item_to_grab)
             game.items_on_ground.remove(closest_item)
             success = True
             print(f"Grabbed {item_to_grab.name}.")
             display_message(f"{tr('msg', 'Grabbed')} {item_to_grab.name}.")
         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+            item_to_grab.is_placed = False # <--- [FIX] Reset status
             game.player.inventory.append(item_to_grab)
             game.items_on_ground.remove(closest_item)
             success = True

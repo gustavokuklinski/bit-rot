@@ -122,6 +122,12 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
             pygame.draw.rect(surface, (128, 0, 128), animal.rect.move(offset_x, offset_y), 2)
             break
 
+    for item in game.visible_items:
+        if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
+            if screen_rect.colliderect(item.rect) and item.rect.collidepoint(world_mouse_pos):
+                center_pos = item.rect.move(offset_x, offset_y).center
+                pygame.draw.circle(surface, (50, 255, 50), center_pos, int(TILE_SIZE * 5), 1)
+
     if game.hovered_interactable_tile_rect:
         pygame.draw.rect(surface, BLUE, game.hovered_interactable_tile_rect.move(offset_x, offset_y), 2)
     
@@ -418,19 +424,59 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         if getattr(game, 'item_to_place', None):
             pygame.mouse.set_visible(False)
             item = getattr(game, 'item_to_place')['item']
-            in_range = ((game.screen_to_world(mouse_pos)[0] - game.player.rect.centerx)**2 + (game.screen_to_world(mouse_pos)[1] - game.player.rect.centery)**2) <= (TILE_SIZE * 1.5) ** 2
+            
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+            
+            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_mouse_pos = game.screen_to_world(adj_mouse)
+            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
+            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
+
+            # [FIX] Draw Highlight bounding box
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    tx = p_tx + dx
+                    ty = p_ty + dy
+                    
+                    test_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
+                    
+                    screen_x = ((tx * TILE_SIZE + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+                    screen_y = ((ty * TILE_SIZE + offset_y) * zoom)
+                    grid_rect = pygame.Rect(screen_x, screen_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+                    
+                    color = (50, 255, 50, 60) if is_free else (255, 50, 50, 60)
+                    grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
+                    grid_surf.fill(color)
+                    game.game_screen.blit(grid_surf, grid_rect.topleft)
+                    pygame.draw.rect(game.game_screen, (color[0], color[1], color[2]), grid_rect, 1)
+            
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+            
+            test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+            is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
+            can_place = in_range and is_free
+            
+            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_snap_y = ((snap_y + offset_y) * zoom)
+            
             if getattr(item, 'image', None):
-                game.game_screen.blit(item.image, item.image.get_rect(center=mouse_pos))
-                tint = pygame.Surface(item.image.get_rect(center=mouse_pos).size, pygame.SRCALPHA)
-                tint.fill((0, 255, 0, 80) if in_range else (255, 0, 0, 80))
-                game.game_screen.blit(tint, item.image.get_rect(center=mouse_pos).topleft)
+                preview_img = pygame.transform.scale(item.image, (max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom))))
+                game.game_screen.blit(preview_img, (screen_snap_x, screen_snap_y))
+                tint = pygame.Surface((preview_img.get_width(), preview_img.get_height()), pygame.SRCALPHA)
+                tint.fill((0, 255, 0, 80) if can_place else (255, 0, 0, 80))
+                game.game_screen.blit(tint, (screen_snap_x, screen_snap_y))
             else:
-                pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), pygame.Rect(mouse_pos[0]-8, mouse_pos[1]-8, 16, 16))
-                pygame.draw.rect(game.game_screen, (0, 255, 0) if in_range else (255, 0, 0), pygame.Rect(mouse_pos[0]-8, mouse_pos[1]-8, 16, 16), 2)
+                preview_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+                pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), preview_rect)
+                pygame.draw.rect(game.game_screen, (0, 255, 0) if can_place else (255, 0, 0), preview_rect, 2)
         else:
             pygame.mouse.set_visible(True)
             pygame.mouse.set_cursor(game.assets.get('aim_cursor') if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]) else (game.assets.get('custom_cursor') or pygame.cursors.arrow))
-
+    
     if hasattr(game, 'clock'):
         fps_surf = font_12.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
         game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5)))

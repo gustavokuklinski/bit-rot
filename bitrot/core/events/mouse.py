@@ -24,55 +24,52 @@ def handle_mouse_down(game, event, mouse_pos):
             adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
             world_pos = game.screen_to_world(adjusted_mouse_pos)
             
+            mouse_tx = int(world_pos[0]) // TILE_SIZE
+            mouse_ty = int(world_pos[1]) // TILE_SIZE
+            
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+            
             # [FIX] STRICT SNAP: Force the click position to the top-left of the tile
-            snap_x = (int(world_pos[0]) // TILE_SIZE) * TILE_SIZE
-            snap_y = (int(world_pos[1]) // TILE_SIZE) * TILE_SIZE
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
             
-            dx = world_pos[0] - game.player.rect.centerx
-            dy = world_pos[1] - game.player.rect.centery
-            dist_sq = dx*dx + dy*dy
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
             
-            if dist_sq <= (TILE_SIZE * 1.5) ** 2:
-                item_data = game.item_to_place
-                item = item_data['item']
-                source = item_data['source']
-                index = item_data['index']
-                container_item = item_data['container']
+            if in_range:
+                test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
                 
-                if getattr(item, 'liquid', False):
-                    display_message(tr('msg', "Cannot place liquid directly."))
+                if not is_free:
+                    display_message(tr('msg', "Cannot place item here, blocked by obstacle!"))
                 else:
-                    dropped_item = None
-                    if source == 'gear':
-                        item_to_drop = game.player.clothes.get(index)
-                        if item_to_drop and item_to_drop == item:
-                            dropped_item = game.player.drop_item(game, source, index, container_item)
+                    item_data = game.item_to_place
+                    item = item_data['item']
+                    source = item_data['source']
+                    index = item_data['index']
+                    container_item = item_data['container']
+                    
+                    if getattr(item, 'liquid', False):
+                        display_message(tr('msg', "Cannot place liquid directly."))
                     else:
-                        dropped_item = game.player.drop_item(game, source, index, container_item)
-                        
-                    if not dropped_item and game.items_on_ground:
-                        if game.items_on_ground[-1].name == item.name:
-                            dropped_item = game.items_on_ground[-1]
-                            
-                    if dropped_item:
-                        # [FIX] Set topleft to the snapped grid position
-                        dropped_item.rect.topleft = (snap_x, snap_y)
-                        dropped_item.x, dropped_item.y = snap_x, snap_y
-                        
-                        found_pos = find_free_tile(
-                            dropped_item.rect, 
-                            game.obstacles, 
-                            items_on_ground=None, 
-                            initial_pos=(snap_x, snap_y), 
-                            max_radius=2
-                        )
-                        if found_pos:
-                            dropped_item.rect.topleft = found_pos
-                            dropped_item.x, dropped_item.y = found_pos
+                        dropped_item = None
+                        if source == 'gear':
+                            item_to_drop = game.player.clothes.get(index)
+                            if item_to_drop and item_to_drop == item:
+                                dropped_item = game.player.drop_item(game, source, index, container_item)
                         else:
-                            # If the snapped tile is a wall, we still place it but 
-                            # the player will see it's "blocked" or we could cancel the action
-                            pass
+                            dropped_item = game.player.drop_item(game, source, index, container_item)
+                            
+                        if not dropped_item and game.items_on_ground:
+                            if game.items_on_ground[-1].name == item.name:
+                                dropped_item = game.items_on_ground[-1]
+                                
+                        if dropped_item:
+                            # [FIX] Set topleft exactly to the snapped grid position and register as Placed
+                            dropped_item.rect.topleft = (snap_x, snap_y)
+                            dropped_item.x, dropped_item.y = snap_x, snap_y
+                            dropped_item.is_placed = True
+                            
             else:
                 display_message(tr('msg', "Too far to place item!"))
                 

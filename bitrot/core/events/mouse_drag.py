@@ -234,14 +234,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                 break
                             if item_in_slot is None or item_in_slot.can_stack_with(game.dragged_item):
                                 item_ref = game.dragged_item
-                                # Convert "Campfire on" to "Campfire off" when looting
-                                if item_ref.name == "Campfire on":
-                                    new_item = Item.create_from_name("Campfire off")
+                                # Convert active utility to off when looting
+                                if item_ref.name in ["Campfire on", "Lantern on"]:
+                                    new_item = Item.create_from_name(item_ref.name.replace(" on", " off"))
                                     if new_item:
                                         new_item.durability = item_ref.durability
                                         new_item.load = item_ref.load
                                         item_ref = new_item
-                                        display_message(tr('msg', "Campfire extinguished when picked up."))
+                                        display_message(tr('msg', f"{item_ref.name.split(' ')[0]} extinguished when picked up."))
                                         
                                 item_ref.rect.center = game.player.rect.center
                                 if item_ref not in game.items_on_ground:
@@ -372,14 +372,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                             dropped_successfully = False
                                         elif is_external_source:
                                             item_ref = game.dragged_item
-                                            # Convert "Campfire on" to "Campfire off" when looting
-                                            if item_ref.name == "Campfire on":
-                                                new_item = Item.create_from_name("Campfire off")
+                                            # Convert active utility to off when looting
+                                            if item_ref.name in ["Campfire on", "Lantern on"]:
+                                                new_item = Item.create_from_name(item_ref.name.replace(" on", " off"))
                                                 if new_item:
                                                     new_item.durability = item_ref.durability
                                                     new_item.load = item_ref.load
                                                     item_ref = new_item
-                                                    display_message(tr('msg', "Campfire extinguished when picked up."))
+                                                    display_message(tr('msg', f"{item_ref.name.split(' ')[0]} extinguished when picked up."))
                                                      
                                             item_ref.rect.center = game.player.rect.center
                                             if item_ref not in game.items_on_ground:
@@ -413,13 +413,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                     elif len(target_list) < game.player.get_total_inventory_slots():
                                         if is_external_source:
                                             item_ref = game.dragged_item
-                                            if item_ref.name == "Campfire on":
-                                                new_item = Item.create_from_name("Campfire off")
+                                            if item_ref.name in ["Campfire on", "Lantern on"]:
+                                                new_item = Item.create_from_name(item_ref.name.replace(" on", " off"))
                                                 if new_item:
                                                     new_item.durability = item_ref.durability
                                                     new_item.load = item_ref.load
                                                     item_ref = new_item
-                                                    display_message(tr('msg', "Campfire extinguished when picked up."))
+                                                    display_message(tr('msg', f"{item_ref.name.split(' ')[0]} extinguished when picked up."))
                                             item_ref.rect.center = game.player.rect.center
                                             if item_ref not in game.items_on_ground:
                                                 game.items_on_ground.append(item_ref)
@@ -616,13 +616,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                     
                                     if can_loot:
                                         item_ref = game.dragged_item
-                                        if item_ref.name == "Campfire on":
-                                            new_item = Item.create_from_name("Campfire off")
+                                        if item_ref.name in ["Campfire on", "Lantern on"]:
+                                            new_item = Item.create_from_name(item_ref.name.replace(" on", " off"))
                                             if new_item:
                                                 new_item.durability = item_ref.durability
                                                 new_item.load = item_ref.load
                                                 item_ref = new_item
-                                                display_message(tr('msg', "Campfire extinguished when picked up."))
+                                                display_message(tr('msg', f"{item_ref.name.split(' ')[0]} extinguished when picked up."))
                                         item_ref.rect.center = game.player.rect.center
                                         if item_ref not in game.items_on_ground:
                                             game.items_on_ground.append(item_ref)
@@ -1128,6 +1128,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     game.dragged_item.rect.center = item_in_slot.rect.center
                                     game.dragged_item.x = game.dragged_item.rect.x
                                     game.dragged_item.y = game.dragged_item.rect.y
+                                    game.dragged_item.is_placed = False # <--- [FIX] Ensure it drops small
                                     game.items_on_ground.append(game.dragged_item)
                                     
                                     if type_orig == 'nearby' or type_orig == 'ground':
@@ -1138,6 +1139,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         dropped_successfully = False 
                             
                             else:
+                                game.dragged_item.is_placed = False # <--- [FIX] Ensure it drops small
                                 game.items_on_ground.append(game.dragged_item)
 
                                 dx = game.dragged_item.rect.centerx - game.player.rect.centerx
@@ -1297,6 +1299,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             )
                             game.dragged_item.x = game.dragged_item.rect.x
                             game.dragged_item.y = game.dragged_item.rect.y
+                            game.dragged_item.is_placed = False # <--- [FIX] Ensure it drops small
                             
                             game.items_on_ground.append(game.dragged_item)
                             dropped_successfully = True
@@ -1632,9 +1635,9 @@ def handle_mouse_motion(game, event, mouse_pos):
                     if getattr(container_obj, 'item_type', '') == 'ground':
                         if item_to_drag in game.items_on_ground:
                             game.items_on_ground.remove(item_to_drag)
-                        # Convert "Campfire on" to "Campfire off" when dragging from ground
-                        if item_to_drag.name == "Campfire on":
-                            new_item = Item.create_from_name("Campfire off")
+                        # Convert active utility to off when dragging from ground
+                        if item_to_drag.name in ["Campfire on", "Lantern on"]:
+                            new_item = Item.create_from_name(item_to_drag.name.replace(" on", " off"))
                             if new_item:
                                 new_item.durability = item_to_drag.durability
                                 new_item.load = item_to_drag.load
@@ -1642,7 +1645,7 @@ def handle_mouse_motion(game, event, mouse_pos):
                                 new_item.x = item_to_drag.x
                                 new_item.y = item_to_drag.y
                                 game.dragged_item = new_item
-                                display_message(tr('msg', "Campfire extinguished when picked up."))
+                                display_message(tr('msg', f"{item_to_drag.name.split(' ')[0]} extinguished when picked up."))
                 elif type_orig == 'mp3':
                     game.mp3_state['slots'][i_orig] = None
                     if game.mp3_state['playing_idx'] == i_orig:

@@ -206,10 +206,12 @@ class PlayerActions:
 
         is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
 
-        # Prevent turning on campfires in inventory or any map containers (they can only be on when placed on ground)
-        if item.state == "off" and "Campfire" in item.name and not is_on_ground:
-            display_message(tr('msg', "Campfires can only be lit when placed on the ground."))
-            return
+        # Prevent turning on/off campfires and lanterns if they are not explicitly placed on the ground
+        restricted_toggle_items = ["Campfire", "Lantern"]
+        if any(name in item.name for name in restricted_toggle_items):
+            if not is_on_ground or not getattr(item, 'is_placed', False):
+                display_message(tr('msg', "This item can only be turned on/off when Placed on the ground."))
+                return
 
         new_name = ""
         if item.state == "on":
@@ -308,6 +310,8 @@ class PlayerActions:
         new_item.rect.center = item.rect.center
         new_item.x = item.x
         new_item.y = item.y
+
+        new_item.is_placed = getattr(item, 'is_placed', False)
 
         # Handle ground and nearby sources (items on ground or in VirtualGroundContainer)
         if source == 'ground':
@@ -437,15 +441,19 @@ class PlayerActions:
                 
         elif item_type in ['utility', 'mobile']:
             item_state = getattr(item, 'state', '')
-            if item_state == 'on': options.append('Turn off')
-            elif item_state == 'off':
-                # Campfires can only be turned on when strictly on the ground
-                if "Campfire" in getattr(item, 'name', ''):
-                    is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
-                    if is_on_ground:
-                        options.append('Turn on')
-                else:
-                    options.append('Turn on')
+            
+            is_restricted_toggle = any(name in getattr(item, 'name', '') for name in ["Campfire", "Lantern"])
+            is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
+            can_toggle = True
+            
+            if is_restricted_toggle:
+                if not is_on_ground or not getattr(item, 'is_placed', False):
+                    can_toggle = False
+                    
+            if can_toggle:
+                if item_state == 'on': options.append('Turn off')
+                elif item_state == 'off': options.append('Turn on')
+                
             if getattr(item, 'fuel_type', None): options.append('Reload')
             if item_type == 'mobile': options.append('Open')
             
@@ -453,7 +461,6 @@ class PlayerActions:
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
-        
         elif item_type == 'cloth':
             options.append('Open'); options.append('Equip')
         elif item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:
@@ -501,5 +508,6 @@ class PlayerActions:
             if source != 'inventory':
                 if not is_liquid:
                     options.append('Send all to Inventory')
-        else: options.append('Drop')
+        else: 
+            options.append('Drop')
         return options

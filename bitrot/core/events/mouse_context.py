@@ -473,10 +473,12 @@ def handle_context_menu_click(game, mouse_pos):
                             if clone:
                                 clone.load = getattr(item, 'capacity', 100)
                                 clone.durability = item.durability
+                                clone.is_placed = False # <--- [FIX] Reset status
                                 game.player.inventory.append(clone)
                                 game.player.stack_item_in_inventory(clone)
                         else:
                             if remove_item_from_src(item):
+                                item.is_placed = False # <--- [FIX] Reset status
                                 game.player.inventory.append(item)
                                 game.player.stack_item_in_inventory(item)
                         
@@ -1078,18 +1080,18 @@ def handle_context_menu_click(game, mouse_pos):
                         grabbed = False
                         item_to_grab = item
                         
-                        if item.name == "Campfire on":
+                        if item_to_grab.name in ["Campfire on", "Lantern on"]:
                             from core.entities.item.item import Item
-                            new_item = Item.create_from_name("Campfire off")
+                            new_item = Item.create_from_name(item_to_grab.name.replace(" on", " off"))
                             if new_item:
-                                new_item.durability = item.durability
-                                new_item.load = item.load
-                                new_item.rect.center = item.rect.center
-                                new_item.x = item.x
-                                new_item.y = item.y
+                                new_item.durability = item_to_grab.durability
+                                new_item.load = item_to_grab.load
+                                new_item.rect.center = item_to_grab.rect.center
+                                new_item.x = item_to_grab.x
+                                new_item.y = item_to_grab.y
                                 item_to_grab = new_item
-                                print("Campfire extinguished when picked up.")
-                                display_message(tr('msg', "Campfire extinguished when picked up."))
+                                print(f"{item_to_grab.name.split(' ')[0]} extinguished when picked up.")
+                                display_message(tr('msg', f"{item_to_grab.name.split(' ')[0]} extinguished when picked up."))
 
                         is_partial = False
                         amount = item_to_grab.load if hasattr(item_to_grab, 'load') and item_to_grab.load else 1
@@ -1129,6 +1131,7 @@ def handle_context_menu_click(game, mouse_pos):
                             grabbed = True
 
                         if grabbed:
+                            item_to_grab.is_placed = False # <--- [FIX] Reset status
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
 
