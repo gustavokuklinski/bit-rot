@@ -117,7 +117,7 @@ def spawn_initial_items(obstacles, item_spawns):
                     
     return items_on_ground
 
-def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_height_px, max_radius=5):
+def _find_spawn_spot_near(initial_pos_px, occupied_tiles, obstacles, map_width_px, map_height_px, max_radius=5):
     start_x_tile = initial_pos_px[0] // TILE_SIZE
     start_y_tile = initial_pos_px[1] // TILE_SIZE
 
@@ -127,11 +127,21 @@ def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_heig
     max_x_tile = map_width_px // TILE_SIZE
     max_y_tile = map_height_px // TILE_SIZE
 
+    # NEW: Helper to verify if the snapped grid position actually overlaps any physical obstacle
+    def is_physically_free(tx, ty):
+        test_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        for ob in obstacles:
+            if test_rect.colliderect(ob):
+                return False
+        return True
+
     tile_coord = (start_x_tile, start_y_tile)
     if tile_coord not in occupied_tiles:
         if 0 <= tile_coord[0] < max_x_tile and 0 <= tile_coord[1] < max_y_tile:
-            occupied_tiles.add(tile_coord)
-            return (start_x_tile * TILE_SIZE, start_y_tile * TILE_SIZE)
+            # CHANGE: Added physical check
+            if is_physically_free(start_x_tile, start_y_tile):
+                occupied_tiles.add(tile_coord)
+                return (start_x_tile * TILE_SIZE, start_y_tile * TILE_SIZE)
 
     for radius in range(1, max_radius + 1):
         for i in range(-radius, radius + 1):
@@ -144,8 +154,10 @@ def _find_spawn_spot_near(initial_pos_px, occupied_tiles, map_width_px, map_heig
                     continue
                 tile_coord = (check_x_tile, check_y_tile)
                 if tile_coord not in occupied_tiles:
-                    occupied_tiles.add(tile_coord)
-                    return (check_x_tile * TILE_SIZE, check_y_tile * TILE_SIZE)
+                    # CHANGE: Added physical check
+                    if is_physically_free(check_x_tile, check_y_tile):
+                        occupied_tiles.add(tile_coord)
+                        return (check_x_tile * TILE_SIZE, check_y_tile * TILE_SIZE)
     return None
 
 def manage_dynamic_npcs(game):
@@ -213,10 +225,14 @@ def manage_dynamic_npcs(game):
     
     # [FIX] Robust Fallback: Ambient random spawning if map lacks generated NPC markers
     if not valid_candidates: 
-        # Check against XML chance to organically spawn wandering NPCs nearby
         if random.random() < core.data.config.NPC_SPAWN_CHANCE * 0.02: 
-            rx = player_x + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
-            ry = player_y + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
+            # 1. Calculate raw random position
+            raw_x = player_x + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
+            raw_y = player_y + random.choice([-1, 1]) * random.randint(int(NPC_MIN_SPAWN_DIST), int(NPC_SPAWN_RADIUS))
+            
+            # 2. [FIX] SNAP TO GRID: Ensure they spawn perfectly on a tile
+            rx = (int(raw_x) // TILE_SIZE) * TILE_SIZE
+            ry = (int(raw_y) // TILE_SIZE) * TILE_SIZE
             
             rect = pygame.Rect(rx, ry, TILE_SIZE, TILE_SIZE)
             # Ensure they don't spawn inside a wall/obstacle
@@ -278,7 +294,10 @@ def spawn_static_npcs(game, building_tiles):
     for (tx, ty) in building_tiles:
         if random.random() < core.data.config.NPC_STATIC_PERCENT:
             px, py = tx * TILE_SIZE, ty * TILE_SIZE
-            if not any(ob.collidepoint(px, py) for ob in game.obstacles):
+            
+            # [FIX] Change collidepoint to colliderect with a full TILE_SIZE Rect
+            npc_rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+            if not any(ob.colliderect(npc_rect) for ob in game.obstacles):
                 npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
                 
                 # [FIX] Enforce XML rules for generated interior statics
@@ -350,6 +369,10 @@ def spawn_l2_population(game, count=10, target_layer=None):
             
         px, py = rx * TILE_SIZE, ry * TILE_SIZE
         
+        spawn_rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+        if any(ob.colliderect(spawn_rect) for ob in getattr(game, 'obstacles', [])):
+            continue
+
         # Simple obstacle check (Only valid if we are on active layer, otherwise skip strict collision)
         # For offline generation, we trust the tile type mostly.
         
@@ -454,8 +477,12 @@ def spawn_animals(game, count=5, target_layer=None):
         
         # Check if occupied by another animal
         rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+        
+        if any(ob.colliderect(rect) for ob in getattr(game, 'obstacles', [])):
+            continue
+
         if any(isinstance(a, Animal) and a.rect.colliderect(rect) for a in existing_animals):
-             continue
+            continue
 
         a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
         # [FIX] Pass game instance and target_layer to Animal
@@ -700,7 +727,13 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
         for _ in range(spawns_per_marker): 
             if len(zombies) >= limit: break
             
-            spawn_spot_px = _find_spawn_spot_near(pos, occupied_tiles, map_width_px, map_height_px)
+            spawn_spot_px = _find_spawn_spot_near(
+                pos, 
+                occupied_tiles, 
+                relevant_obstacles, 
+                map_width_px, 
+                map_height_px
+            )
             
             if spawn_spot_px:
                 if game and game.current_layer_index == 2:

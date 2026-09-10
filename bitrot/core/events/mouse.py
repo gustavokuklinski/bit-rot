@@ -16,18 +16,22 @@ from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion, handle_
 from core.events.mouse_combat import handle_attack
 from core.data.localization import tr
 from core.ui.notifications import add_notification
+from core.placement import find_free_tile
 
 def handle_mouse_down(game, event, mouse_pos):
-
     if event.button == 1:
         if getattr(game, 'item_to_place', None):
             adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
             world_pos = game.screen_to_world(adjusted_mouse_pos)
+            
+            # [FIX] STRICT SNAP: Force the click position to the top-left of the tile
+            snap_x = (int(world_pos[0]) // TILE_SIZE) * TILE_SIZE
+            snap_y = (int(world_pos[1]) // TILE_SIZE) * TILE_SIZE
+            
             dx = world_pos[0] - game.player.rect.centerx
             dy = world_pos[1] - game.player.rect.centery
             dist_sq = dx*dx + dy*dy
             
-            # Allow placement up to ~1 tile away (including diagonals)
             if dist_sq <= (TILE_SIZE * 1.5) ** 2:
                 item_data = game.item_to_place
                 item = item_data['item']
@@ -46,15 +50,29 @@ def handle_mouse_down(game, event, mouse_pos):
                     else:
                         dropped_item = game.player.drop_item(game, source, index, container_item)
                         
-                    # Catch the dropped item if `drop_item` didn't explicitly return it
                     if not dropped_item and game.items_on_ground:
                         if game.items_on_ground[-1].name == item.name:
                             dropped_item = game.items_on_ground[-1]
                             
-                    # Update its position to the exact clicked world coordinate
                     if dropped_item:
-                        dropped_item.rect.center = world_pos
-                        dropped_item.x, dropped_item.y = world_pos
+                        # [FIX] Set topleft to the snapped grid position
+                        dropped_item.rect.topleft = (snap_x, snap_y)
+                        dropped_item.x, dropped_item.y = snap_x, snap_y
+                        
+                        found_pos = find_free_tile(
+                            dropped_item.rect, 
+                            game.obstacles, 
+                            items_on_ground=None, 
+                            initial_pos=(snap_x, snap_y), 
+                            max_radius=2
+                        )
+                        if found_pos:
+                            dropped_item.rect.topleft = found_pos
+                            dropped_item.x, dropped_item.y = found_pos
+                        else:
+                            # If the snapped tile is a wall, we still place it but 
+                            # the player will see it's "blocked" or we could cancel the action
+                            pass
             else:
                 display_message(tr('msg', "Too far to place item!"))
                 

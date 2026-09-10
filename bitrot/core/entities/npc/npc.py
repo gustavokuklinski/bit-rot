@@ -124,9 +124,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         self.start_x = x
         self.start_y = y
-        self.patrol_target = None
-        self.patrol_wait = 0
-        self.shelter_target = None
 
         self.idle_timer = 0
         self.stuck_timer = 0
@@ -176,8 +173,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
              if random_item and not random_item.liquid:
                  self.inventory.append(random_item)
 
-        possible_weapons = [name for name, data in ITEM_TEMPLATES.items() 
-                            if data.get('type') in ['weapon_melee', 'weapon_ranged']]
+        # 1. Categorize all available weapons from templates
+        melee_pool = [name for name, data in ITEM_TEMPLATES.items() if data.get('type') == 'weapon_melee']
+        ranged_pool = [name for name, data in ITEM_TEMPLATES.items() if data.get('type') == 'weapon_ranged']
         
         template_weapons = []
         if hasattr(self, 'loot_table'):
@@ -186,11 +184,26 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if item_name in ITEM_TEMPLATES and ITEM_TEMPLATES[item_name].get('type') in ['weapon_melee', 'weapon_ranged']:
                     template_weapons.append(item_name)
         
+        weapon_name = None
+
+        # 2. Handle Weapon Assignment
         if template_weapons:
             weapon_name = random.choice(template_weapons)
-            self.equipped_weapon = Item.create_from_name(weapon_name, randomize_durability=True)
-        elif possible_weapons:
-            weapon_name = random.choice(possible_weapons)
+        elif not self.is_friendly:
+            if random.random() < 0.05 and ranged_pool:
+                weapon_name = random.choice(ranged_pool)
+            elif melee_pool:
+                weapon_name = random.choice(melee_pool)
+            else:
+                weapon_name = "Knife"
+        else:
+            all_weapons = melee_pool + ranged_pool
+            if all_weapons:
+                weapon_name = random.choice(all_weapons)
+            else:
+                weapon_name = "Knife"
+
+        if weapon_name:
             self.equipped_weapon = Item.create_from_name(weapon_name, randomize_durability=True)
         else:
             self.equipped_weapon = Item.create_from_name("Knife", randomize_durability=True)
@@ -313,24 +326,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         current_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
         
         if hasattr(self, 'last_grid_pos') and current_grid_pos != self.last_grid_pos:
-            lgx, lgy = self.last_grid_pos
-            if 0 <= lgy < len(game.map_data) and 0 <= lgx < len(game.map_data[0]):
-                tile_def = game.map_manager.get_tile_at(lgx, lgy)
-                
-                # If the NPC just stepped off an OPEN statable tile (like a Window or Door)
-                if tile_def and tile_def.get('is_statable') and tile_def.get('state') == 'open':
-                    # Only close it if they aren't in a frantic combat panic
-                    if self.state in ['wandering', 'idle', 'seeking_shelter'] or self.is_friendly:
-                        game.map_manager.toggle_door_state(lgx, lgy)
-            
             self.last_grid_pos = current_grid_pos
-
-
-        is_raining = getattr(game, 'is_raining', False)
-        if hasattr(game, 'weather'):
-            is_raining = is_raining or getattr(game.weather, 'is_raining', False)
-        if hasattr(game, 'world_time') and hasattr(game.world_time, 'state'):
-            is_raining = is_raining or ('RAIN' in getattr(game.world_time, 'state', ''))
 
         if self.knockback_timer > 0:
             VELOCITY_MULTIPLIER = 0.25
@@ -440,41 +436,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if target_entity:
             target_pos = target_entity.rect.center
-            # Calculate aim_angle: atan2(-dy, dx) gives the correct Pygame rotation angle
             dx_target = target_pos[0] - self.rect.centerx
             dy_target = target_pos[1] - self.rect.centery
             self.aim_angle = math.degrees(math.atan2(-dy_target, dx_target))
-            
             self.idle_timer = 0
         else:
-            # Reset to movement angle if not targeting anyone
             self.aim_angle = self.angle
-            
-            if self.is_static:
-                target_pos = None
-                self.state = 'idle'
-            else:
-                if is_raining:
-                    if not self.shelter_target:
-                         self._find_shelter(game)
-                    if self.shelter_target:
-                        target_pos = self.shelter_target
-                        self.state = 'seeking_shelter'
-                    else:
-                        target_pos = (self.start_x, self.start_y) 
-                else:
-                    self.shelter_target = None
-                    if self.patrol_wait > 0:
-                        self.patrol_wait -= game.dt_ms * multiplier
-                        target_pos = None
-                        self.state = 'idle'
-                    else:
-                        if not self.patrol_target:
-                            self._pick_patrol_point(game)
-                        target_pos = self.patrol_target
-                        self.state = 'wandering'
-
-            
+            target_pos = None
+            self.state = 'idle'
 
         self.dx, self.dy = 0, 0
         
@@ -488,7 +457,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                  move_threshold = TILE_SIZE * 2.5
             
             if dist_to_dest > move_threshold:
-                # [FIX] Simplified Line of sight to avoid forcing heavy A* calculations
                 has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
 
                 if not has_los or self.stuck_timer > 0:
@@ -527,13 +495,18 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     self.dy = (target_pos[1] - self.rect.centery) * scale
                     
                 self.angle = math.degrees(math.atan2(-self.dy, self.dx))
+            
+            elif self.state == 'chasing':
+                shuffle_speed = effective_speed * 0.3
+                offset_x = math.sin(current_time * 0.002) * shuffle_speed
+                offset_y = math.cos(current_time * 0.002) * shuffle_speed
+                self.dx = offset_x
+                self.dy = offset_y
+                self.angle = math.degrees(math.atan2(-self.dy, self.dx))
+                
             else:
-                 if self.state == 'wandering' and self.patrol_target:
-                      self.patrol_target = None
-                      # [FIX] Organic wait timer so they don't look locked/twitching
-                      self.patrol_wait = random.randint(1500, 4000)
-                 elif self.state == 'seeking_shelter':
-                      pass 
+                # State is not chasing, just stay idle
+                pass
 
         if self.state == 'chasing' and target_entity:
              self._handle_combat(target_entity, game, multiplier, current_time)
@@ -557,10 +530,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         game=game, 
                         source_pos=self.rect.center, 
                         base_volume=0.3, 
-                        pitch_variance=0.25 # Slightly more variance to prevent phase alignment
+                        pitch_variance=0.25 
                     )
                     self.last_step_sound_time = current_time
-                    self.current_step_delay = random.randint(350, 500) # Re-randomize cadence
+                    self.current_step_delay = random.randint(350, 500) 
         else:
             self.walk_anim_angle = 0
             self.vx = 0
@@ -611,41 +584,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             collision, collider = check_mask_collision(self.rect)
             
             if collision:
-                if collider in obstacles:
-                    self._handle_door_interaction(collider, game)
-                    
-                    # [ELEGANT FIX] Hostile NPCs attack structural barricades/windows (avoiding trees/rocks)
-                    if self.state == 'chasing':
-                        gx = collider.x // TILE_SIZE
-                        gy = collider.y // TILE_SIZE
-                        tile_def = game.map_manager.get_tile_at(gx, gy)
-                        
-                        if tile_def and tile_def.get('destructible'):
-                            char = game.map_data[gy][gx]
-                            name = str(tile_def.get('name', '')).lower()
-                            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                           'door' in name or 'window' in name or 'barricate' in name or 'barricate' in char)
-                            
-                            if is_structural:
-                                # [ELEGANT FIX] Desynchronize the attack cooldown
-                                attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
-                                
-                                if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
-                                    damage = random.randint(self.min_attack, self.max_attack)
-                                    game.map_manager.hit_tile(gx, gy, damage, attacker=self)
-                                    self.last_attack_time = current_time
-                                    # Randomize the next hit between 0.7s and 1.35s
-                                    self.current_attack_delay = random.randint(700, 1350) 
-                                    self.melee_swing_timer = 250
-                                    
-                                    if getattr(self, 'sound_attack', None):
-                                        game.sound_manager.play_sound(
-                                            self.sound_attack, subdir='npc', game=game,
-                                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
-                                        )
-
-                                step_dx = 0 # Kill sliding momentum to commit to the attack
-                
                 self.x -= step_dx
                 self.rect.x = int(self.x)
                 self.dx = 0
@@ -653,7 +591,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
-                     if self.state == 'wandering': self.patrol_target = None
             
             self.y += step_dy
             self.rect.y = int(self.y)
@@ -661,40 +598,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             collision, collider = check_mask_collision(self.rect)
             
             if collision:
-                if collider in obstacles:
-                    self._handle_door_interaction(collider, game)
-                    
-                    # [ELEGANT FIX] Hostile NPCs attack structural barricades/windows on Y-AXIS
-                    if self.state == 'chasing':
-                        gx = collider.x // TILE_SIZE
-                        gy = collider.y // TILE_SIZE
-                        tile_def = game.map_manager.get_tile_at(gx, gy)
-                        
-                        if tile_def and tile_def.get('destructible'):
-                            char = game.map_data[gy][gx]
-                            name = str(tile_def.get('name', '')).lower()
-                            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                           'door' in name or 'window' in name or 'barricate' in name or 'barricate' in char)
-                            
-                            if is_structural:
-                                # [ELEGANT FIX] Desynchronize the attack cooldown
-                                attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
-                                
-                                if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
-                                    damage = random.randint(self.min_attack, self.max_attack)
-                                    game.map_manager.hit_tile(gx, gy, damage, attacker=self)
-                                    self.last_attack_time = current_time
-                                    # Randomize the next hit between 0.7s and 1.35s
-                                    self.current_attack_delay = random.randint(700, 1350) 
-                                    self.melee_swing_timer = 250
-                                    
-                                    if getattr(self, 'sound_attack', None):
-                                        game.sound_manager.play_sound(
-                                            self.sound_attack, subdir='npc', game=game,
-                                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
-                                        )
-                                step_dy = 0 # Kill sliding momentum to commit to the attack
-                
                 self.y -= step_dy
                 self.rect.y = int(self.y)
                 self.dy = 0
@@ -702,59 +605,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if self.stuck_timer <= 0:
                      self.stuck_timer = 200
                      self.stuck_angle = random.randint(0, 360)
-                     # [FIX] If the NPC hits a wall while randomly walking, drop the target immediately 
-                     if self.state == 'wandering': self.patrol_target = None
 
         self.rect.topleft = (int(self.x), int(self.y))
-
-    def _find_shelter(self, game):
-        current_grid_x = int(self.rect.centerx // TILE_SIZE)
-        current_grid_y = int(self.rect.centery // TILE_SIZE)
-        
-        found = False
-        for r in range(1, 20):
-            for d_x in range(-r, r+1):
-                for d_y in range(-r, r+1):
-                    tx, ty = current_grid_x + d_x, current_grid_y + d_y
-                    if 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]):
-                        t_def = game.map_manager.get_tile_at(tx, ty)
-                        if t_def and (t_def.get('is_indoor', False) or t_def.get('has_roof', False)):
-                            self.shelter_target = (tx * TILE_SIZE + TILE_SIZE//2, ty * TILE_SIZE + TILE_SIZE//2)
-                            found = True
-                            break
-                if found: break
-            if found: break
-    
-    def _pick_patrol_point(self, game):
-        # [FIX] Anchor the patrol point calculation off the NPC's current position, not their original spawn
-        for _ in range(10): 
-            angle_p = math.radians(random.uniform(0, 360))
-            dist_p = random.uniform(TILE_SIZE * 2, TILE_SIZE * 8)
-            px = self.rect.centerx + math.cos(angle_p) * dist_p
-            py = self.rect.centery + math.sin(angle_p) * dist_p
-            
-            grid_x = int(px // TILE_SIZE)
-            grid_y = int(py // TILE_SIZE)
-            
-            if 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
-                t_def = game.map_manager.get_tile_at(grid_x, grid_y)
-                if t_def and not t_def.get('is_obstacle', False):
-                    self.patrol_target = (px, py)
-                    return
-
-    def _handle_door_interaction(self, obstacle, game):
-        obs_grid_x = obstacle.x // TILE_SIZE
-        obs_grid_y = obstacle.y // TILE_SIZE
-        tile_def = game.map_manager.get_tile_at(obs_grid_x, obs_grid_y)
-        if tile_def and tile_def.get('is_statable'):
-
-            name = str(tile_def.get('name', '')).lower()
-            char = game.map_data[obs_grid_y][obs_grid_x]
-            if 'barricate' in name or 'barricad' in name or 'barricate' in char or 'barricad' in char:
-                return
-
-            if 'close' in char or tile_def.get('state') == 'close':
-                game.map_manager.toggle_door_state(obs_grid_x, obs_grid_y)
 
     def _handle_combat(self, target_entity, game, multiplier, current_time):
         weapon = getattr(self, 'equipped_weapon', None)
@@ -764,9 +616,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         dy = target_entity.rect.centery - self.rect.centery
         dist = math.hypot(dx, dy)
         
-        # [NEW] Calculate Angle to Target for the facing check
         angle_to_target = math.degrees(math.atan2(-dy, dx))
-        # Calculate difference between where NPC is facing (self.angle) and where target is
         angle_diff = (angle_to_target - self.angle + 180) % 360 - 180
         
         effective_attack_range = self.attack_range
@@ -775,7 +625,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             effective_attack_range = TILE_SIZE * 8
             attack_cooldown = 500 / multiplier
         
-        # [MODIFIED] Add a facing check for melee: abs(angle_diff) < 45 means target is in a 90-degree cone
         is_in_front = abs(angle_diff) < 45 
 
         if dist <= effective_attack_range and (current_time - self.last_attack_time > attack_cooldown):
@@ -785,9 +634,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if is_ranged_weapon:
                 has_los = self.check_line_of_sight(target_entity, game)
 
-            # [MODIFIED] Only allow melee hits if the target is actually in front of the NPC
             if not is_ranged_weapon and not is_in_front:
-                return # NPC is facing the wrong way, cannot hit
+                return 
 
             if weapon_is_ready and has_los:
                 self.last_attack_time = current_time
@@ -863,13 +711,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.kill()
 
         if getattr(self, 'spawn_zombies_max', 0) > 0:
-            # 1. Spawn the single reanimated NPC zombie directly on their exact location
             reanimated_zombie = Zombie.create_random(self.rect.centerx, self.rect.centery)
             reanimated_zombie.aggro_timer = 10000
             reanimated_zombie.state = 'chasing'
             game.zombies.append(reanimated_zombie)
             
-            # 2. Spawn the surrounding zombie horde relative to the player
             if hasattr(game, 'player') and game.player:
                 dx = self.rect.centerx - game.player.rect.centerx
                 dy = self.rect.centery - game.player.rect.centery
@@ -880,7 +726,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     
                     for _ in range(num_zombies_to_spawn):
                         spawn_x, spawn_y = None, None
-                        # --- VALIDATION LOOP: Try to find a spot that isn't a wall ---
                         for attempt in range(10):
                             angle = random.uniform(0, math.pi * 2)
                             radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
@@ -894,7 +739,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                                     spawn_x, spawn_y = tx, ty
                                     break
                         
-                        # FALLBACK: If all 10 attempts fail, spawn where the NPC died
                         if spawn_x is None:
                             spawn_x, spawn_y = self.rect.centerx, self.rect.centery
 

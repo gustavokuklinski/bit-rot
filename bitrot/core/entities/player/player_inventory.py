@@ -1,9 +1,11 @@
 # core/entities/player/player_inventory.py
 import random
+from core.data.config import *
 from core.entities.item.item import Item
 from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal
 from core.messages import display_message
 from core.data.localization import tr
+from core.placement import find_free_tile
 
 class PlayerInventory:
     def get_total_inventory_slots(self):
@@ -140,7 +142,7 @@ class PlayerInventory:
 
         item_to_drop = None
         if is_infinite:
-            item.load = getattr(item, 'capacity', 100) # Keep map container full
+            item.load = getattr(item, 'capacity', 100)
             item_to_drop = Item.create_from_name(tr('item', item.name))
             if item_to_drop:
                 transfer_amount = min(item_to_drop.capacity or 100, quantity) if quantity != 'all' else (item_to_drop.capacity or 100)
@@ -162,15 +164,29 @@ class PlayerInventory:
                     self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
-            offset_x = random.randint(-8, 8)
-            offset_y = random.randint(-8, 8)
-            item_to_drop.rect.center = (self.rect.centerx + offset_x, self.rect.centery + offset_y)
-            item_to_drop.x = item_to_drop.rect.x
-            item_to_drop.y = item_to_drop.rect.y
+            # [FIX] STRICT SNAP: Same as drop_item
+            snap_x = (self.rect.x // TILE_SIZE) * TILE_SIZE
+            snap_y = (self.rect.y // TILE_SIZE) * TILE_SIZE
             
+            item_to_drop.rect.topleft = (snap_x, snap_y)
+            item_to_drop.x = snap_x
+            item_to_drop.y = snap_y
+
+            found_pos = find_free_tile(
+                item_to_drop.rect, 
+                game.obstacles, 
+                items_on_ground=None, 
+                initial_pos=(snap_x, snap_y), 
+                max_radius=2
+            )
+            if found_pos:
+                item_to_drop.rect.topleft = found_pos
+                item_to_drop.x, item_to_drop.y = found_pos
+
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
             return item_to_drop
+
         return None
 
     def transfer_item_stack(self, source, index, container_item, target_container, game=None):
@@ -330,12 +346,34 @@ class PlayerInventory:
             item_to_drop = container_item.inventory.pop(index)
 
         if item_to_drop:
-            offset_x = random.randint(-8, 8)
-            offset_y = random.randint(-8, 8)
-            item_to_drop.rect.center = (self.rect.centerx + offset_x, self.rect.centery + offset_y)
-            item_to_drop.x = item_to_drop.rect.x
-            item_to_drop.y = item_to_drop.rect.y
-            game.items_on_ground.append(item_to_drop)
+            # [FIX] SNAP TO GRID: Determine the exact top-left corner of the player's tile
+            snap_x = (self.rect.x // TILE_SIZE) * TILE_SIZE
+            snap_y = (self.rect.y // TILE_SIZE) * TILE_SIZE
+            
+            # Set the item to that exact grid position
+            item_to_drop.rect.topleft = (snap_x, snap_y)
+            item_to_drop.x = snap_x
+            item_to_drop.y = snap_y
+            
+            # [FIX] COLLISION CHECK: Ensure it doesn't spawn inside a wall
+            # We pass items_on_ground=None to allow multiple items to stack on one tile
+            found_pos = find_free_tile(
+                item_to_drop.rect, 
+                game.obstacles, 
+                items_on_ground=None, 
+                initial_pos=(snap_x, snap_y), 
+                max_radius=2
+            )
+            
+            if found_pos:
+                item_to_drop.rect.topleft = found_pos
+                item_to_drop.x, item_to_drop.y = found_pos
+                game.items_on_ground.append(item_to_drop)
+            else:
+                # Fallback: If completely blocked, put it back in inventory or just spawn it anyway
+                # (Usually, you'd put it back, but for now we just append it to prevent item loss)
+                game.items_on_ground.append(item_to_drop)
+
             self.drop_cooldown = 10 
             return item_to_drop
         return None

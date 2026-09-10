@@ -336,6 +336,46 @@ def process_chat_command(game, text):
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
         return True
 
+    if command == "zombie":
+        if game.player:
+            from core.entities.zombie.zombie import Zombie
+            import core.data.config as cfg
+            
+            count = getattr(cfg, 'ZOMBIES_PER_SPAWN', 1)
+            if count <= 0: count = 1
+            
+            spawned = 0
+            for _ in range(count):
+                angle = random.uniform(0, math.pi * 2)
+                dist = TILE_SIZE * 2
+                
+                # 1. Calculate raw position based on player TOP-LEFT to stay in grid sync
+                raw_x = game.player.rect.x + math.cos(angle) * dist
+                raw_y = game.player.rect.y + math.sin(angle) * dist
+                
+                # 2. STRICT SNAP: Force coordinates to be multiples of TILE_SIZE
+                snap_x = (int(raw_x) // TILE_SIZE) * TILE_SIZE
+                snap_y = (int(raw_y) // TILE_SIZE) * TILE_SIZE
+                
+                # 3. PHYSICAL CHECK: Use a Rect to see if this tile is actually empty
+                test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                
+                # We check obstacles AND existing zombies to prevent stacking
+                is_blocked = any(test_rect.colliderect(ob) for ob in game.obstacles)
+                if not is_blocked:
+                    # Also check if another zombie is already exactly there
+                    if any(z.rect.topleft == (snap_x, snap_y) for z in game.zombies):
+                        is_blocked = True
+                
+                if not is_blocked:
+                    new_zombie = Zombie.create_random(snap_x, snap_y)
+                    if new_zombie:
+                        game.zombies.append(new_zombie)
+                        spawned += 1
+            
+            display_message(game, f"{tr('msg', 'Debug:')} Spawned {spawned} zombies around player.")
+        return True
+
     return False
 
 def reset_modal_positions(game):

@@ -586,7 +586,7 @@ class ZombieAI:
                     self.stuck_angle = random.randint(0, 360)
                 
                 # [NEW] Attack destructibles when path is blocked
-                if hit_obstacle and self.state == 'chasing':
+                if hit_obstacle and type(self).__name__ == 'Zombie' and self.state == 'chasing': 
                     gx = hit_obstacle.x // TILE_SIZE
                     gy = hit_obstacle.y // TILE_SIZE
                     tile_def = game.map_manager.get_tile_at(gx, gy)
@@ -642,7 +642,7 @@ class ZombieAI:
                     self.stuck_angle = random.randint(0, 360)
 
                 # [NEW] Attack destructibles when path is blocked
-                if hit_obstacle and self.state == 'chasing':
+                if hit_obstacle and type(self).__name__ == 'Zombie' and self.state == 'chasing':
                     gx = hit_obstacle.x // TILE_SIZE
                     gy = hit_obstacle.y // TILE_SIZE
                     tile_def = game.map_manager.get_tile_at(gx, gy)
@@ -667,8 +667,12 @@ class ZombieAI:
                                 if getattr(self, 'sound_attack', None):
                                     snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
                                     game.sound_manager.play_sound(
-                                        self.sound_attack, subdir=snd_dir, game=game, 
-                                        source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
+                                        self.sound_attack, 
+                                        subdir=snd_dir, 
+                                        game=game, 
+                                        source_pos=self.rect.center, 
+                                        base_volume=0.6, 
+                                        pitch_variance=0.35 # Slightly wider pitch
                                     )
 
                         step_x = 0

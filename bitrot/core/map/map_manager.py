@@ -611,21 +611,22 @@ class MapManager:
 
             if 'drops' in definition:
                 for drop in definition['drops']:
-                     if random.random() <= drop['chance']:
-                         qty = random.randint(drop.get('min_qty', 1), drop.get('max_qty', 1))
-                         for _ in range(qty):
-                             item = Item.create_from_name(drop['item'])
-                             if item:
-                                 center_x = grid_x * TILE_SIZE + TILE_SIZE // 2
-                                 center_y = grid_y * TILE_SIZE + TILE_SIZE // 2
-                                 item.rect.center = (center_x, center_y)
-                                 
-                                 if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
-                                     self.game.items_on_ground.append(item)
-                                 else:
-                                     print(f"Warning: Could not place dropped item {tr('item', item.name)}")
-                             else:
-                                 print(f"Warning: Drop item '{drop['item']}' not found in templates.")
+                    if random.random() <= drop['chance']:
+                        qty = random.randint(drop.get('min_qty', 1), drop.get('max_qty', 1))
+                        for _ in range(qty):
+                            item = Item.create_from_name(drop['item'])
+                            if item:
+                                # [FIX] Use topleft for perfect grid alignment
+                                item.rect.topleft = (grid_x * TILE_SIZE, grid_y * TILE_SIZE)
+                                item.x = item.rect.x
+                                item.y = item.rect.y
+
+                                if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
+                                    self.game.items_on_ground.append(item)
+                                else:
+                                    print(f"Warning: Could not place dropped item {tr('item', item.name)}")
+                            else:
+                                print(f"Warning: Drop item '{drop['item']}' not found in templates.")
 
         return True
 

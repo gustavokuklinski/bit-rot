@@ -2,11 +2,6 @@ import random
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
 def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10):
-    """
-    Finds a free tile for the given rect, avoiding obstacles.
-    If items_on_ground is provided, avoids them too. If None or [], allows stacking.
-    Returns the (x, y) coordinates of the free tile, or None if no free tile is found.
-    """
     if items_on_ground is None:
         items_on_ground = []
 
@@ -26,15 +21,11 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
         if rect.colliderect(ob):
             collision = True
             break
-    if not collision:
-        for item in items_on_ground:
-            if rect.colliderect(item.rect):
-                collision = True
-                break
+    
+    # [FIX] REMOVED: The loop checking items_on_ground to allow stacking
     if not collision:
         return (rect.x, rect.y)
 
-    # If not, and we have an initial position, search outwards radially
     if initial_pos:
         for radius in range(1, max_radius + 1): 
             for i in range(-radius, radius + 1):
@@ -45,18 +36,13 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                     rect.x = start_x + i * TILE_SIZE
                     rect.y = start_y + j * TILE_SIZE
 
-                    # Removed the screen-bound check here so it works on massive world maps
                     collision = False
                     for ob in obstacles:
                         if rect.colliderect(ob):
                             collision = True
                             break
-                    if not collision:
-                        for item in items_on_ground:
-                            if rect.colliderect(item.rect):
-                                collision = True
-                                break
                     
+                    # [FIX] REMOVED: The loop checking items_on_ground to allow stacking
                     if not collision:
                         return (rect.x, rect.y) 
 
