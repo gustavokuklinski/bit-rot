@@ -179,7 +179,7 @@ class Animal(Zombie):
 
     # [FIX] Override take_damage for instant hit feedback
     def take_damage(self, amount, game, attacker=None):
-        if self.is_dead:
+        if getattr(self, 'is_dead', False):
             return False
             
         self.health -= amount
@@ -196,17 +196,20 @@ class Animal(Zombie):
                     source_pos=self.rect.center, 
                     base_volume=0.3, 
                     pitch_variance=0.15
-                ) # Natural sound variation!
+                ) 
                 self.last_hit_sound_time = current_time
         
         # Instantly register as ready to die so the game calls die() without delay
         if self.health <= 0:
             self.health = 0
-            self.state = 'dead' # Extra safety flag
-
-            if attacker == game.player:
+            self.state = 'dead' 
+            
+            # --- NEW: TRIGGER ANIMAL KILL MILESTONE ---
+            player = getattr(game, 'player', None)
+            if attacker == player or attacker is None:
                 check_milestone_progress(game, 'kill', 'animal')
-                
+            # ------------------------------------------
+            
             self.die(game)
             return True
             

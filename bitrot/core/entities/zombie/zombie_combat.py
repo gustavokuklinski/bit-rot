@@ -8,24 +8,34 @@ import core.data.config
 from core.ui.notifications import check_milestone_progress
 
 class ZombieCombat:
-    def take_damage(self, amount, game, attacker=None): 
+    def take_damage(self, amount, game, attacker=None):
+        # Prevent multiple kill triggers on an already dead zombie
+        was_dead = getattr(self, 'is_dead', False) or self.health <= 0
+        
+        player = getattr(game, 'player', None)
+        
+        # --- TRIGGER HIT STATIC NPC MILESTONE ---
+        if (attacker == player or attacker is None) and type(self).__name__ == 'NPC' and getattr(self, 'is_static', False):
+            check_milestone_progress(game, 'hit', 'static_npc')
+        # ---------------------------------------------
+
         self.health -= amount
 
-        if attacker == getattr(game, 'player', None) and type(self).__name__ == 'NPC' and getattr(self, 'is_static', False):
-            check_milestone_progress(game, 'hit', 'static_npc')
-
-        # [FIX] Ensure health does not stay stuck at 1 or above if damage is sufficient
+        # [FIX] Ensure health does not stay stuck at 1 or above
         if self.health <= 0:
             self.health = 0
 
-            if attacker == getattr(game, 'player', None):
-                # Check if it's an NPC or a Zombie
-                if type(self).__name__ == 'NPC':
-                    if not getattr(self, 'is_friendly', True):
-                        check_milestone_progress(game, 'kill', 'hostile_npc')
-                else:
-                    check_milestone_progress(game, 'kill', 'zombie')
-            
+            # --- TRIGGER KILL MILESTONES (Only if it just died from this hit) ---
+            if not was_dead:
+                # Treat 'None' as the player to catch default weapon/projectile hits
+                if attacker == player or attacker is None:
+                    if type(self).__name__ == 'NPC':
+                        if not getattr(self, 'is_friendly', True):
+                            check_milestone_progress(game, 'kill', 'hostile_npc')
+                    else:
+                        check_milestone_progress(game, 'kill', 'zombie')
+            # --------------------------------------------------------------------
+
         self.show_health_bar_timer = 120 
 
         current_time = pygame.time.get_ticks()
@@ -42,7 +52,6 @@ class ZombieCombat:
                 )
             self.last_hit_sound_time = current_time
 
-        # [FIX] Return True if the entity should be dead
         if self.health <= 0:
             return True
         return False

@@ -63,8 +63,12 @@ class NPCCombat:
 
     def take_damage(self, damage, game, attacker=None):
         
-        if attacker == getattr(game, 'player', None) and getattr(self, 'is_static', False):
+        player = getattr(game, 'player', None)
+        
+        # --- TRIGGER HIT STATIC NPC ---
+        if (attacker == player or attacker is None) and getattr(self, 'is_static', False):
             check_milestone_progress(game, 'hit', 'static_npc')
+        # ------------------------------
 
         if self.is_dead: return True
         

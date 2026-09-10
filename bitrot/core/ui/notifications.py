@@ -87,6 +87,18 @@ def check_milestone_progress(game, m_type, entity):
         
     key = f"{m_type}_{entity}"
     player.milestone_progress[key] = player.milestone_progress.get(key, 0) + 1
+
+    if key == 'kill_zombie':
+        # take_damage triggers this before die() increments game.zombies_killed, so we add 1
+        global_zombie_kills = getattr(game, 'zombies_killed', 0) + 1
+        if global_zombie_kills > player.milestone_progress[key]:
+            player.milestone_progress[key] = global_zombie_kills
+            
+    elif key == 'days_world_day':
+        global_days = getattr(game.world_time, 'day_count', 0)
+        if global_days > player.milestone_progress[key]:
+            player.milestone_progress[key] = global_days
+
     current_val = player.milestone_progress[key]
     
     if NPCDialog.MILESTONES is None:
