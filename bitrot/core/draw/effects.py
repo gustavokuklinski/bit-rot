@@ -112,14 +112,54 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
             shake = int((anxiety_level / 100) * 5)
             game.game_screen.blit(game.crt_texture, (random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
 
+     # --- FIXED GUN FLASH BLOCK ---
     if game.player.gun_flash_timer > 0:
-        screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
-        screen_y = ((game.player.rect.centery + offset_y) * zoom)
-        flash_dist = (TILE_SIZE * 1.4) * zoom 
-        flash_x = screen_x + math.cos(game.player.aim_angle) * flash_dist
-        flash_y = screen_y - math.sin(game.player.aim_angle) * flash_dist
-        pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), int((TILE_SIZE // 5) * zoom))
+        # 1. Check if the current weapon is one that SHOULD NOT have a flash
+        show_flash = True
+        if hasattr(game.player, 'weapon') and game.player.weapon:
+            weapon_name = getattr(game.player.weapon, 'name', '')
+            if weapon_name in ["Slingshot", "Bow"]:
+                show_flash = False
+
+        # 2. Only draw if the weapon is not a Slingshot or Bow
+        if show_flash:
+            screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_y = ((game.player.rect.centery + offset_y) * zoom)
+            flash_dist = (TILE_SIZE * 1.4) * zoom 
+            flash_x = screen_x + math.cos(game.player.aim_angle) * flash_dist
+            flash_y = screen_y - math.sin(game.player.aim_angle) * flash_dist
+            
+            light_tex = game.assets.get('light_texture')
+            if light_tex:
+                # STRETCH
+                base_size = max(8, int(8 * zoom))
+                width = int(base_size * 1.6)
+                height = int(base_size * 0.7)
+                
+                small_flash = pygame.transform.smoothscale(light_tex, (width, height))
+                
+                # COLOR (Yellowish-Orange)
+                color_surf = pygame.Surface((width, height))
+                color_surf.fill((255, 180, 50)) 
+                color_surf.blit(small_flash, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+                small_flash = color_surf
+                
+                # OPACITY (~60% and fade)
+                opacity = min(153, int(game.player.gun_flash_timer * 50))
+                small_flash.set_alpha(opacity)
+                
+                # ROTATE to match aim angle
+                rotated_flash = pygame.transform.rotate(small_flash, -math.degrees(game.player.aim_angle))
+                flash_rect = rotated_flash.get_rect(center=(int(flash_x), int(flash_y)))
+                
+                # BLEND additive to remove black borders
+                game.game_screen.blit(rotated_flash, flash_rect, special_flags=pygame.BLEND_RGB_ADD)
+            else:
+                pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), 1)
+            
+        # Always decrement the timer so it doesn't get stuck at > 0 for these weapons
         game.player.gun_flash_timer -= getattr(game, 'dt_mult', 1.0)
+    # -----------------------------
 
     if game.player and game.player.chat_text and game.player.chat_timer > 0:
         screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X
