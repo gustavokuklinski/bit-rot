@@ -10,10 +10,11 @@ _SKILL_ICON_CACHE = {}
 def draw_record_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
 
-    attributes_to_draw = [
-        ("Strength", "strength"), ("Fitness", "fitness"), ("Agility", "agility"),
-        ("Luck", "lucky"), ("Melee", "melee"), ("Ranged", "ranged"),
-        ("Maintenance", "maintenance"), ("Intelligence", "intelligence")
+    # [FIX] List only the IDs. We'll fetch the display names from progression.xml dynamically.
+    attribute_ids = [
+        "strength", "fitness", "agility",
+        "lucky", "melee", "ranged",
+        "maintenance", "intelligence"
     ]
 
     start_x = modal_rect.left + 15
@@ -22,7 +23,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     
     pending_tooltip = None
 
-    for i, (label, attr_id) in enumerate(attributes_to_draw):
+    for i, attr_id in enumerate(attribute_ids):
         current_y = start_y + (i * line_height)
         
         if hasattr(player.progression, "get_level"):
@@ -32,6 +33,9 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
 
         attr_config = player.progression.config.attributes.get(attr_id, {})
         image_rel_path = attr_config.get('image')
+        
+        # [FIX] Dynamically get the name defined in the XML (e.g. "Aiming" for "ranged")
+        label = attr_config.get('name', attr_id.capitalize())
         
         icon_size = 24
         if image_rel_path:
@@ -54,7 +58,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         surface.blit(label_surf, (text_x - 3, current_y + 2))
 
         # Adjusted for narrow width: values aligned to the right of the label
-        value_x = text_x + 80 
+        value_x = text_x + 145 
         value_surf = font_12.render(f"{str(level)}/10", False, WHITE)
         value_pos = (value_x, current_y + 2)
         surface.blit(value_surf, value_pos)

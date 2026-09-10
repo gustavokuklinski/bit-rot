@@ -16,6 +16,7 @@ from core.ui.helpers.trait_config_loader import _load_config_presets, save_confi
 from core.ui.helpers.settings import _draw_settings_screen, handle_settings_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
+from core.data.progression_loader import PROGRESSION_CONFIG
 
 fake = Faker()
 _stat_icons_cache = {}
@@ -577,16 +578,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
             else: text_x = 0
 
             if stat == 'defence':
-                text_surf = font_12.render(f"{tr('ui', 'Defence')}", False, WHITE)
+                text_surf = font_12.render(f"{tr('ui', 'Defence')}:", False, WHITE)
                 val_surf = font_12.render(f"{int(value)}%", False, WHITE)
                 
                 content_surface.blit(text_surf, (text_x, y_offset + S(3)))
-                content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
+                content_surface.blit(val_surf, (text_x + text_surf.get_width() + S(5), y_offset + S(3)))
                 y_offset += line_height
                 continue
                 
             elif stat == 'weight':
-                text_surf = font_12.render(f"{tr('ui', 'Weight')}", False, WHITE)
+                text_surf = font_12.render(f"{tr('ui', 'Weight')}:", False, WHITE)
                 str_val = current_attrs.get('strength', 5)
                 str_level = str_val.get('level', 5) if isinstance(str_val, dict) else int(str_val)
                 final_str = str_level + level_modifiers.get('strength', 0)
@@ -595,27 +596,25 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 val_surf = font_12.render(f"{value:.2f} / {max_wgt:.2f}", False, WHITE)
                 
                 content_surface.blit(text_surf, (text_x, y_offset + S(3)))
-                content_surface.blit(val_surf, (text_x + S(100), y_offset + S(3)))
+                content_surface.blit(val_surf, (text_x + text_surf.get_width() + S(5), y_offset + S(3)))
                 y_offset += line_height
                 continue
 
             base_value = state['base_data']['stats'].get(stat, 100.0)
             trait_mod = display_modifiers.get(stat, 0)
-            stat_name_str = f"{tr('ui', stat.capitalize())}"
+            stat_name_str = f"{tr('ui', stat.capitalize())}:"
             trait_str = f"{int(trait_mod):+}% {tr('ui', 'Rate')}"
             
             mod_color = WHITE
             if trait_mod > 0: mod_color = (100, 255, 100) 
             elif trait_mod < 0: mod_color = (255, 100, 100) 
 
-            text_surf = font_12.render(f"{stat_name_str}", False, WHITE)
+            text_surf = font_12.render(stat_name_str, False, WHITE)
+            content_surface.blit(text_surf, (text_x, y_offset + S(3)))
             
             if trait_mod != 0:
-                mod_surf = font_12.render(f"{trait_str}", False, mod_color)
-                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
-                content_surface.blit(mod_surf, (text_x + S(100), y_offset + S(3)))
-            else:
-                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
+                mod_surf = font_12.render(trait_str, False, mod_color)
+                content_surface.blit(mod_surf, (text_x + text_surf.get_width() + S(5), y_offset + S(3)))
                 
             y_offset += line_height
 
@@ -634,17 +633,23 @@ def _draw_player_build_screen(game, state, mouse_pos):
             xp_mod = display_modifiers.get(attr, 0)   
             lvl_mod = level_modifiers.get(attr, 0)    
             
-            stat_name_str = f"{tr('ui', attr.capitalize())}"
+            # [FIX] Read the display name dynamically from progression.xml
+            attr_config = PROGRESSION_CONFIG.attributes.get(attr, {})
+            xml_name = attr_config.get('name', attr.capitalize())
             
-            text_surf = font_12.render(f"{stat_name_str}", False, WHITE)
+            # Add colon after the name
+            stat_name_str = f"{tr('ui', xml_name)}:"
+            
+            text_surf = font_12.render(stat_name_str, False, WHITE)
             content_surface.blit(text_surf, (text_x, y_offset + S(3)))
             
-            current_draw_x = text_x + S(100)
+            # [FIX] Position the modifiers directly after the text instead of a hardcoded gap
+            current_draw_x = text_x + text_surf.get_width() + S(5)
             
             if lvl_mod > 0:
                 lvl_surf = font_12.render(f"+{lvl_mod}Lv", False, (100, 255, 100)) 
                 content_surface.blit(lvl_surf, (current_draw_x, y_offset + S(3)))
-                current_draw_x += lvl_surf.get_width() + S(8)
+                current_draw_x += lvl_surf.get_width() + S(5)
             
             if xp_mod != 0:
                 mod_color = (100, 255, 100) if xp_mod > 0 else (255, 100, 100)
