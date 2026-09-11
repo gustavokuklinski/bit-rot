@@ -255,7 +255,7 @@ def handle_context_menu_click(game, mouse_pos):
                             
                         game.player.start_action("Barricading", 5.0, do_barricate, xp_reward=0)
                     else:
-                        display_message(tr('msg', "Need: Hammer, 4 Plank and 8 Nails."))
+                        display_message(tr('msg', "Need: Hammer, 2 Plank and 4 Nails."))
                 clicked_on_menu = True
 
             elif option == 'Unbarricade':
