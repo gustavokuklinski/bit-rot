@@ -1,0 +1,5 @@
+<recipe type="weapon_throw" craft="create" output="Molotov" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="1" time="1.5">
+    <ingredient name="[Red Wine Bottle, Whiskey Bottle, White Wine Bottle]" destroy="true" amount="1" />
+    <ingredient name="[Fuel Unit, Whiskey Unit]" destroy="true" amount="3" />
+    <ingredient name="[Ragged Cloth, Denim Stripes]" destroy="true" amount="1" />
+</recipe>

@@ -1,4 +1,4 @@
-<recipe type="ammo" craft="create" output="9mm Ammo" gain_xp="[maintenance:1]" amount="1" time="0.5">
+<recipe type="ammo" craft="create" magazine="Guns and Ammo Almanach" output="9mm Ammo" gain_xp="[maintenance:1]" amount="1" time="0.5">
     <ingredient name="[Almanach, Magazine]" destroy="true" amount="1" />
     <ingredient name="Powder" destroy="true" amount="2" />
     <ingredient name="9mm Capsule" destroy="true" amount="1" />
