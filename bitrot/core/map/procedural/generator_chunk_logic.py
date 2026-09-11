@@ -36,6 +36,21 @@ class ProceduralGeneratorChunk:
             
         cx, cy = w // 2, h // 2
         
+        # [FIX] Connector padding buffer parameters
+        connector_depth = 5
+        connector_radius = 3
+
+        def is_in_connector_zone(tx, ty):
+            if conns['top'] and ty < connector_depth and abs(tx - cx) <= connector_radius:
+                return True
+            if conns['bottom'] and ty >= h - connector_depth and abs(tx - cx) <= connector_radius:
+                return True
+            if conns['left'] and tx < connector_depth and abs(ty - cy) <= connector_radius:
+                return True
+            if conns['right'] and tx >= w - connector_depth and abs(ty - cy) <= connector_radius:
+                return True
+            return False
+
         layers = {
             'base': [[' ' for _ in range(w)] for _ in range(h)],
             'ground': [['bg_grass' for _ in range(w)] for _ in range(h)],
@@ -61,8 +76,39 @@ class ProceduralGeneratorChunk:
         dirt_tile = 'dirty_01'
         sand_tile = 'sand_01'
 
-        # [FIX] Default path width set to 4
-        def draw_secondary_maze_road(start_x, start_y, target_x, target_y, tile_type=dirt_tile, path_width=4):
+        # [FIX] Helper to carve a strictly straight corridor without any wobbles
+        def carve_straight_segment(x1, y1, x2, y2, tile_type, path_width=4):
+            if path_width >= 4:
+                r_min, r_max = -2, 2
+            elif path_width == 3:
+                r_min, r_max = -1, 2
+            elif path_width == 2:
+                r_min, r_max = -1, 1
+            else:
+                r_min, r_max = 0, 1
+
+            cur_x, cur_y = x1, y1
+            pts = [(cur_x, cur_y)]
+            while cur_x != x2 or cur_y != y2:
+                if cur_x < x2: cur_x += 1
+                elif cur_x > x2: cur_x -= 1
+                if cur_y < y2: cur_y += 1
+                elif cur_y > y2: cur_y -= 1
+                pts.append((cur_x, cur_y))
+
+            for px, py in pts:
+                for oy in range(r_min, r_max):
+                    for ox in range(r_min, r_max):
+                        gx_pos, gy_pos = px + ox, py + oy
+                        if 0 <= gx_pos < w and 0 <= gy_pos < h:
+                            layers['ground'][gy_pos][gx_pos] = tile_type
+                            layers['base'][gy_pos][gx_pos] = ' '
+                            occupied_mask[gy_pos][gx_pos] = 1
+
+        def draw_secondary_maze_road(start_x, start_y, target_x, target_y, tile_type=dirt_tile, path_width=None):
+            if path_width is None:
+                path_width = 4 if tile_type == road_tile else 2
+                
             current_x, current_y = start_x, start_y
             path = [(current_x, current_y)]
             
@@ -118,13 +164,14 @@ class ProceduralGeneratorChunk:
                     path.append((current_x, current_y))
 
             for px, py in path:
-                # [FIX] Apply exact width sizes based on passed parameter
-                if path_width == 4:
+                if path_width >= 4:
                     r_min, r_max = -2, 2
                 elif path_width == 3:
                     r_min, r_max = -1, 2
-                else:
+                elif path_width == 2:
                     r_min, r_max = -1, 1
+                else:
+                    r_min, r_max = 0, 1
 
                 for oy in range(r_min, r_max):
                     for ox in range(r_min, r_max):
@@ -138,37 +185,39 @@ class ProceduralGeneratorChunk:
                                     layers['ground'][gy_pos][gx_pos] = tile_type
                                     occupied_mask[gy_pos][gx_pos] = 1
 
-        # 1. Central Hub (Mark the center)
+        # 1. Central Hub
         for y in range(cy-2, cy+3):
             for x in range(cx-2, cx+3):
                 layers['ground'][y][x] = road_tile
                 occupied_mask[y][x] = 1
 
-        # 2. Connections (All Drunkard)
+        # 2. Connections with Guaranteed Straight Padding
+        lead_in = 4
         if conns['top']:
-            if conns['top_type'] == 'asphalt': draw_secondary_maze_road(cx, 0, cx, cy, road_tile)
-            elif conns['top_type'] == 'sand': draw_secondary_maze_road(cx, 0, cx, cy, sand_tile)
-            else: draw_secondary_maze_road(cx, 0, cx, cy, dirt_tile)
+            conn_type = road_tile if conns['top_type'] == 'asphalt' else (sand_tile if conns['top_type'] == 'sand' else dirt_tile)
+            carve_straight_segment(cx, 0, cx, lead_in, conn_type)
+            draw_secondary_maze_road(cx, lead_in, cx, cy, conn_type)
             
         if conns['bottom']:
-            if conns['bottom_type'] == 'asphalt': draw_secondary_maze_road(cx, h-1, cx, cy, road_tile)
-            elif conns['bottom_type'] == 'sand': draw_secondary_maze_road(cx, h-1, cx, cy, sand_tile)
-            else: draw_secondary_maze_road(cx, h-1, cx, cy, dirt_tile)
+            conn_type = road_tile if conns['bottom_type'] == 'asphalt' else (sand_tile if conns['bottom_type'] == 'sand' else dirt_tile)
+            carve_straight_segment(cx, h - 1, cx, h - 1 - lead_in, conn_type)
+            draw_secondary_maze_road(cx, h - 1 - lead_in, cx, cy, conn_type)
             
         if conns['left']:
-            if conns['left_type'] == 'asphalt': draw_secondary_maze_road(0, cy, cx, cy, road_tile)
-            elif conns['left_type'] == 'sand': draw_secondary_maze_road(0, cy, cx, cy, sand_tile)
-            else: draw_secondary_maze_road(0, cy, cx, cy, dirt_tile)
+            conn_type = road_tile if conns['left_type'] == 'asphalt' else (sand_tile if conns['left_type'] == 'sand' else dirt_tile)
+            carve_straight_segment(0, cy, lead_in, cy, conn_type)
+            draw_secondary_maze_road(lead_in, cy, cx, cy, conn_type)
             
         if conns['right']:
-            if conns['right_type'] == 'asphalt': draw_secondary_maze_road(w-1, cy, cx, cy, road_tile)
-            elif conns['right_type'] == 'sand': draw_secondary_maze_road(w-1, cy, cx, cy, sand_tile)
-            else: draw_secondary_maze_road(w-1, cy, cx, cy, dirt_tile)
+            conn_type = road_tile if conns['right_type'] == 'asphalt' else (sand_tile if conns['right_type'] == 'sand' else dirt_tile)
+            carve_straight_segment(w - 1, cy, w - 1 - lead_in, cy, conn_type)
+            draw_secondary_maze_road(w - 1 - lead_in, cy, cx, cy, conn_type)
 
         # 3. Border (Forest)
         border_w = getattr(self, 'forest_border_width', 2)
         for y in range(h):
             for x in range(w):
+                if is_in_connector_zone(x, y): continue
                 if x < border_w or x >= w - border_w or y < border_w or y >= h - border_w:
                     if occupied_mask[y][x] == 0:
                         tile = random.choice(getattr(self, 'forest_tiles', ['wall_stone']))
@@ -191,12 +240,13 @@ class ProceduralGeneratorChunk:
 
             if coast_left:
                 for y in range(h):
+                    if is_in_connector_zone(0, y): continue
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
                     water_lim = (cw - 8) + offset 
                     sand_lim = cw + offset
                     for x in range(cw + 8):
-                        if x >= w: break
+                        if x >= w or is_in_connector_zone(x, y): break
                         if layers['ground'][y][x] == road_tile: continue
                         if x < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
@@ -210,13 +260,14 @@ class ProceduralGeneratorChunk:
 
             if coast_right:
                 for y in range(h):
+                    if is_in_connector_zone(w - 1, y): continue
                     global_y = gy * h + y
                     offset = get_coast_noise(global_y)
                     water_lim = (cw - 8) + offset
                     sand_lim = cw + offset
                     min_x = w - (cw + 8)
                     for x in range(min_x, w):
-                        if x < 0: continue
+                        if x < 0 or is_in_connector_zone(x, y): continue
                         if layers['ground'][y][x] == road_tile: continue
                         dist = w - 1 - x
                         if dist < water_lim:
@@ -231,12 +282,13 @@ class ProceduralGeneratorChunk:
 
             if coast_top:
                 for x in range(w):
+                    if is_in_connector_zone(x, 0): continue
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
                     water_lim = (cw - 8) + offset
                     sand_lim = cw + offset
                     for y in range(cw + 8):
-                        if y >= h: break
+                        if y >= h or is_in_connector_zone(x, y): break
                         if layers['ground'][y][x] == road_tile: continue
                         if y < water_lim:
                             layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
@@ -250,13 +302,14 @@ class ProceduralGeneratorChunk:
 
             if coast_bottom:
                 for x in range(w):
+                    if is_in_connector_zone(x, h - 1): continue
                     global_x = gx * w + x
                     offset = get_coast_noise(global_x)
                     water_lim = (cw - 8) + offset
                     sand_lim = cw + offset
                     min_y = h - (cw + 8)
                     for y in range(min_y, h):
-                        if y < 0: continue
+                        if y < 0 or is_in_connector_zone(x, y): continue
                         if layers['ground'][y][x] == road_tile: continue
                         dist = h - 1 - y
                         if dist < water_lim:
@@ -280,7 +333,6 @@ class ProceduralGeneratorChunk:
                 ry2 = random.randint(safe_margin, h - safe_margin)
                 draw_secondary_maze_road(rx1, ry1, rx2, ry2, tile_type=dirt_tile)
 
-        # Helper to intelligently map generic building types to requested L2 basements
         def get_l2_counterpart(tmpl_name, is_forest=False):
             potential_l2_names = []
             if 'l1' in tmpl_name.lower():
@@ -309,12 +361,9 @@ class ProceduralGeneratorChunk:
             return None
 
         # 6. Place Buildings (TETRIS METHOD)
-        
         def get_tetris_candidates(tw, th, gap=1):
-            """Calculates perfectly flush corner and center coordinates to block buildings together."""
             candidates = []
             if not placed_rects:
-                # Start the first buildings tightly around the central crossroad hub
                 candidates.extend([
                     (cx + 3, cy + 3),
                     (cx - tw - 3, cy - th - 3),
@@ -324,36 +373,23 @@ class ProceduralGeneratorChunk:
                 return candidates
             
             for pr in placed_rects:
-                # Calculate exactly flush aligned locations to mimic blocks
-                # Right side
                 candidates.extend([
-                    (pr.x + pr.width + gap, pr.y), # Top flush
-                    (pr.x + pr.width + gap, pr.y + pr.height - th), # Bottom flush
-                    (pr.x + pr.width + gap, pr.y + (pr.height - th) // 2) # Center flush
-                ])
-                # Left side
-                candidates.extend([
+                    (pr.x + pr.width + gap, pr.y),
+                    (pr.x + pr.width + gap, pr.y + pr.height - th),
+                    (pr.x + pr.width + gap, pr.y + (pr.height - th) // 2),
                     (pr.x - tw - gap, pr.y), 
                     (pr.x - tw - gap, pr.y + pr.height - th), 
-                    (pr.x - tw - gap, pr.y + (pr.height - th) // 2)
-                ])
-                # Bottom
-                candidates.extend([
+                    (pr.x - tw - gap, pr.y + (pr.height - th) // 2),
                     (pr.x, pr.y + pr.height + gap), 
                     (pr.x + pr.width - tw, pr.y + pr.height + gap),
-                    (pr.x + (pr.width - tw) // 2, pr.y + pr.height + gap)
-                ])
-                # Top
-                candidates.extend([
+                    (pr.x + (pr.width - tw) // 2, pr.y + pr.height + gap),
                     (pr.x, pr.y - th - gap), 
                     (pr.x + pr.width - tw, pr.y - th - gap),
                     (pr.x + (pr.width - tw) // 2, pr.y - th - gap)
                 ])
                     
-            # Sort strictly by distance to the central hub to grow outward seamlessly
             candidates.sort(key=lambda c: (c[0] + tw/2.0 - cx)**2 + (c[1] + th/2.0 - cy)**2)
             
-            # Remove duplicates for efficiency
             seen = set()
             unique_candidates = []
             for c in candidates:
@@ -366,6 +402,12 @@ class ProceduralGeneratorChunk:
             if tx < 2 or tx + tw > w - 2 or ty < 2 or ty + th > h - 2: return False
             
             t_rect = pygame.Rect(tx, ty, tw, th)
+            
+            # [FIX] Protect chunk connector padding from any building overlaps
+            for ry in range(ty, ty + th):
+                for rx in range(tx, tx + tw):
+                    if is_in_connector_zone(rx, ry):
+                        return False
             
             if not is_center_override:
                 hub_rect = pygame.Rect(cx-2, cy-2, 5, 5)
@@ -471,7 +513,7 @@ class ProceduralGeneratorChunk:
                         for rx in range(tx, tx + tw): 
                             occupied_mask[ry][rx] = 1
 
-        # 8. Tile Clusters / Ground Formatting
+        # 8. Ground Formatting
         if force_forest:
             for y in range(h):
                 for x in range(w):
@@ -484,6 +526,10 @@ class ProceduralGeneratorChunk:
         clear_radius = 2 
         
         def apply_border_wall(bx, by, is_horizontal):
+            if is_in_connector_zone(bx, by):
+                layers['base'][by][bx] = ' '
+                return
+
             ground = layers['ground'][by][bx]
             if ground == getattr(self, 'water_tile', 'water_01'):
                 return
@@ -563,8 +609,6 @@ class ProceduralGeneratorChunk:
         # -------------------------------------------------------------
         # 11. [FIX] Scatter Decorations & Dense Forest Walls
         # -------------------------------------------------------------
-        
-        # Build a safe mask so we don't accidentally spawn a rock inside a building's empty floor space
         building_mask = [[False for _ in range(w)] for _ in range(h)]
         for pr in placed_rects:
             for ry in range(max(0, pr.y - 1), min(h, pr.y + pr.height + 1)):
@@ -576,7 +620,6 @@ class ProceduralGeneratorChunk:
         sand_decos = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
         asphalt_decos = ['garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4']
 
-        # Find paths
         path_tiles = set()
         for y in range(h):
             for x in range(w):
@@ -586,21 +629,23 @@ class ProceduralGeneratorChunk:
 
         for y in range(h):
             for x in range(w):
+                # [FIX] Keep connector padding zone 100% clean and free of decorations and obstacles
+                if is_in_connector_zone(x, y):
+                    layers['base'][y][x] = ' '
+                    continue
+
                 if not building_mask[y][x] and layers['base'][y][x] == ' ':
                     ground_tile = layers['ground'][y][x]
                     
-                    # Leave water and beach sand completely alone
                     if 'water' in ground_tile or 'beach_sand' in ground_tile:
                         continue
                         
-                    # Decorate sand with grasses only
                     if 'sand_' in ground_tile:
                         if random.random() < 0.05:
                             layers['base'][y][x] = random.choice(sand_decos)
                         continue
 
                     if (x, y) in path_tiles:
-                        # ON the path
                         if 'dirty' in ground_tile and random.random() < 0.05:
                             layers['base'][y][x] = random.choice(dirty_decos)
                         elif 'asphalt' in ground_tile and random.random() < 0.05:
@@ -614,11 +659,9 @@ class ProceduralGeneratorChunk:
                                     if d < dist_to_path:
                                         dist_to_path = d
                         
-                        # Immediately bordering paths
                         if dist_to_path == 1:
                             if random.random() < 0.6:
                                 layers['base'][y][x] = random.choice(dirty_decos)
-                        # Farther away = Dense Dungeon-like Walls
                         elif dist_to_path >= 2:
                             if random.random() < 0.90:
                                 layers['base'][y][x] = random.choice(wall_decos)
@@ -631,24 +674,19 @@ class ProceduralGeneratorChunk:
         
         if not is_cave:
             lot_m = 2
-            # 1. Draw the asphalt padding (lot) around the building
             for ry in range(ty-lot_m, ty+th+lot_m):
                 for rx in range(tx-lot_m, tx+tw+lot_m):
                     if 1 <= rx < w-1 and 1 <= ry < h-1:
-                        # Only apply asphalt if we're not running into water 
                         if layers['ground'][ry][rx] != getattr(self, 'water_tile', 'water_01'):
                             layers['ground'][ry][rx] = road_tile
                             occupied_mask[ry][rx] = 1
             
             bx, by = tx + tw // 2, ty + th // 2
-            # 2. Draw the organic connector to the center crossroad using the passed method (default width 4)
             draw_secondary_maze_road(bx, by, cx, cy, road_tile)
         else:
             bx, by = tx + tw // 2, ty + th // 2
-            # [FIX] Cave paths are strictly 3 tiles wide
             draw_secondary_maze_road(bx, by, cx, cy, 'dirty_01', path_width=3)
             
-        # 3. Blit the actual building on top
         self._blit_template(layers, tmpl, tx, ty, w, h)
         placed_rects.append(pygame.Rect(tx, ty, tw, th))
         for ry in range(ty, ty + th):

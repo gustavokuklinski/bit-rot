@@ -556,14 +556,15 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 offset_x, offset_y = chunk_offsets[(gx, gy)]
                 chunk_layers = self._extract_dynamic_chunk(global_layers, offset_x, offset_y, c_w, c_h)
                 self._save_chunk(f"map_L1_{gx}_{gy}", chunk_layers)
-        
-        # --- CHUNK-BASED L2 PROCESSING ---
+
+        # --- CHUNK-BASED L2 PROCESSING (CONTAINED PER CHUNK) ---
         print("Processing L2 Chunks independently...")
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
                 c_w = col_widths[gx]
                 c_h = row_heights[gy]
                 offset_x, offset_y = chunk_offsets[(gx, gy)]
+                conns = connections_grid[gy][gx]
                 
                 # Extract chunk L2 layers natively
                 chunk_layers_l2 = self._extract_dynamic_chunk(global_layers_l2, offset_x, offset_y, c_w, c_h)
@@ -575,8 +576,12 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                         if chunk_layers_l2['roof'][y][x] != ' ' or chunk_layers_l2['base'][y][x] != ' ':
                             chunk_mask_l2[y][x] = 1
                             
-                # Process L2 logic independently within the isolated chunk bounds
+                # Connect L2 structures contained strictly within this chunk
                 self._connect_l2_drunkards(chunk_layers_l2)
+                
+                # [FIX] Keep Layer 2 contained: create wall with '@' at chunk connections and borders
+                self._enforce_l2_contained_borders(chunk_layers_l2, c_w, c_h, conns)
+                
                 self._decorate_l2_pathways(chunk_layers_l2, chunk_mask_l2)
                 self._populate_l2_spawns(chunk_layers_l2)
                 
@@ -586,7 +591,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 if hasattr(self, '_scatter_quest_items'):
                     self._scatter_quest_items(chunk_layers_l2, chunk_mask_l2, c_w, c_h, 2)
 
-                # Paste fully processed chunk back into the global_layers_l2 matrix for map preview/rendering
+                # Paste fully processed chunk back into global_layers_l2
                 for layer_key, layer_grid in chunk_layers_l2.items():
                     for r in range(c_h):
                         for c in range(c_w):

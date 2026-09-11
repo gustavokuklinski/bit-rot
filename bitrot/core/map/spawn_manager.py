@@ -357,11 +357,20 @@ def spawn_l2_population(game, count=10, target_layer=None):
         rx = random.randint(0, map_w - 1)
         ry = random.randint(0, map_h - 1)
         
-        # Check tile using the specific layer data
         t_char = map_data[ry][rx]
+        if t_char in ['@', '#', ' ', '']: continue
         t_def = defs.get(t_char)
-        if not t_def: continue
-        
+        if not t_def or t_def.get('is_obstacle', False): continue
+
+        # Check the base layer of Layer 2 as well!
+        base_layer = game.all_map_layers.get(target_layer, [])
+        if ry < len(base_layer) and rx < len(base_layer[ry]):
+            b_char = base_layer[ry][rx]
+            if b_char != ' ': continue
+            if b_char in ['@', '#']: continue
+            b_def = defs.get(b_char)
+            if b_def and b_def.get('is_obstacle', False): continue
+
         t_name = t_def.get('name', '').lower()
         is_path = 'path' in t_name or 'cave_l2' in t_name or 'dirty' in t_name or 'asphalt' in t_name
         is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
@@ -530,16 +539,19 @@ def spawn_animals(game, count=5, target_layer=None):
                 rx = random.randint(0, map_w - 1)
                 ry = random.randint(0, map_h - 1)
                 
-                # Check for obstacle logic if on active layer
-                if target_layer == game.current_layer_index:
-                    px, py = rx * TILE_SIZE, ry * TILE_SIZE
-                    rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
-                    if any(ob.colliderect(rect) for ob in game.obstacles): continue
-                
-                # Check tile validity
                 t_char = map_data[ry][rx]
+                if t_char in ['@', '#', ' ', '']: continue
                 t_def = defs.get(t_char)
                 if not t_def or t_def.get('is_obstacle', False): continue
+
+                # Check the base layer of target_layer
+                base_layer = game.all_map_layers.get(target_layer, [])
+                if ry < len(base_layer) and rx < len(base_layer[ry]):
+                    b_char = base_layer[ry][rx]
+                    if b_char != ' ': continue
+                    if b_char in ['@', '#']: continue
+                    b_def = defs.get(b_char)
+                    if b_def and b_def.get('is_obstacle', False): continue
 
                 t_name = t_def.get('name', '').lower()
                 
