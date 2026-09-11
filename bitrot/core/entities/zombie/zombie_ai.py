@@ -176,12 +176,14 @@ class ZombieAI:
         in_camp_safe_zone = False
         if hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                if getattr(item, 'item_type', '') == 'camp':
+                if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
                     dx = player.rect.centerx - item.rect.centerx
                     dy = player.rect.centery - item.rect.centery
                     if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:  # 5 tiles radius
-                        in_camp_safe_zone = True
-                        break
+                        # [FIX] Add Line of Sight validation for the safe zone
+                        if player.has_line_of_sight(item.rect, game.obstacles, game):
+                            in_camp_safe_zone = True
+                            break
 
         # Apply stealth modifiers
         if in_camp_safe_zone:
@@ -321,12 +323,14 @@ class ZombieAI:
         in_camp_safe_zone = False
         if target_entity == game.player and hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                if getattr(item, 'item_type', '') == 'camp':
+                if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
                     dx = game.player.rect.centerx - item.rect.centerx
                     dy = game.player.rect.centery - item.rect.centery
                     if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:
-                        in_camp_safe_zone = True
-                        break
+                        # [FIX] Add Line of Sight validation for the safe zone
+                        if game.player.has_line_of_sight(item.rect, game.obstacles, game):
+                            in_camp_safe_zone = True
+                            break
         
         if in_camp_safe_zone and target_entity == game.player:
             reduced_detection_sq = (core.data.config.ZOMBIE_DETECTION_RADIUS * 0.3) ** 2

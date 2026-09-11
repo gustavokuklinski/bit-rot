@@ -231,8 +231,8 @@ def handle_context_menu_click(game, mouse_pos):
                                             if amt_left <= 0:
                                                 return
                                                 
-                            consume('plank', 4)
-                            consume('nails', 8)
+                            consume('plank', 2)
+                            consume('nails', 4)
                             
                             base_name = char.replace('_open', '').replace('_close', '').replace('_broke', '')
                             if '_broke' in char:
