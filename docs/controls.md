@@ -37,6 +37,7 @@
 * `%rot item "[Item name]" [number]`: Spawn an item to player inventory;
 * `%rot cloth "[Item name]" [number]`: Spawn a cloth to player;
 * `%rot vehicle "[Vehicle name]"`: Spawn a vehicle 1 tile distance from the player;
+* `%rot zombie`: Spawn zombies;
 * `%rot god`: Reset all status to 100% + 1 level up;
 * `%rot godzen`: Invisible and reset all status to 100% + 1 level up;
 

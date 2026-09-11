@@ -3,34 +3,42 @@ import random
 import os
 
 # --- CONFIGURATION ---
-OUTPUT_PATH = './crt_overlay.png' 
+OUTPUT_PATH = './vhs_glitch_overlay.png' 
 IMAGE_SIZE = (800, 800) 
-SCANLINE_COLOR = (0, 0, 0, 60)    # Dark, semi-transparent lines
-NOISE_COLOR = (255, 255, 255, 20) # Very faint white noise
 
-def generate_crt_texture():
+def generate_vhs_texture():
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     pygame.init()
     
-    surface = pygame.Surface(IMAGE_SIZE, pygame.SRCALPHA)
-    surface.fill((0, 0, 0, 0)) 
-
     width, height = IMAGE_SIZE
+    surface = pygame.Surface(IMAGE_SIZE, pygame.SRCALPHA)
+    surface.fill((0, 0, 0, 0)) # Start with a fully transparent screen
 
-    # 1. Create Scanlines
-    # We draw a line every 3 pixels to create the CRT look
-    for y in range(0, height, 3):
-        pygame.draw.line(surface, SCANLINE_COLOR, (0, y), (width, y), 1)
+    # List of RGB colors for the glitch (Red, Green, Blue)
+    # The '50' at the end is the transparency (Alpha)
+    glitch_colors = [
+        (255, 0, 0, 50),   # Red
+        (0, 255, 0, 50),   # Green
+        (0, 0, 255, 50),   # Blue
+        (0, 0, 0, 100)     # Dark scanline
+    ]
 
-    # 2. Add subtle static noise
-    for _ in range(2000):
-        rx = random.randint(0, width - 1)
-        ry = random.randint(0, height - 1)
-        surface.set_at((rx, ry), NOISE_COLOR)
+    for y in range(0, height):
+        # 1. Draw the standard dark CRT scanlines every 3rd pixel
+        if y % 3 == 0:
+            pygame.draw.line(surface, (0, 0, 0, 80), (0, y), (width, y), 1)
+
+        # 2. Randomly draw a colored glitch line
+        # 0.02 means there is a 2% chance for any given line to be a glitch
+        if random.random() < 0.02: 
+            color = random.choice(glitch_colors)
+            # We draw the line. Sometimes we make it slightly offset for a "jagged" look
+            offset = random.randint(-10, 10)
+            pygame.draw.line(surface, color, (offset, y), (width + offset, y), 1)
 
     pygame.image.save(surface, OUTPUT_PATH)
-    print(f"Successfully generated CRT overlay at: {OUTPUT_PATH}")
+    print(f"Successfully generated Simple RGB Glitch at: {OUTPUT_PATH}")
     pygame.quit()
 
 if __name__ == "__main__":
-    generate_crt_texture()
+    generate_vhs_texture()
