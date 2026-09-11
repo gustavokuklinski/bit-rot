@@ -39,8 +39,8 @@ class ProceduralGeneratorSpawning:
                 t_name = t_def.get('name', '').lower() if t_def else ground.lower()
                 
                 # ZOMBIES: Spawn ONLY on pathways and deep background grass
-                if 'asphalt' in t_name or 'dirty' in t_name or 'bg' in t_name or 'path' in t_name or \
-                   'asphalt' in ground or 'dirty' in ground or 'bg' in ground or 'path' in ground:
+                if 'asphalt' in t_name or 'dirty' in t_name or 'path' in t_name or \
+                   'asphalt' in ground or 'dirty' in ground or 'path' in ground:
                     valid_tiles.append((x, y))
 
         total_zombies = ZOMBIE_MAX_CHUNK
@@ -79,8 +79,8 @@ class ProceduralGeneratorSpawning:
                 
                 if g_char == 'house_floor_01' or 'house_floor_01' in t_name:
                     building_tiles.append((x, y))
-                elif 'asphalt' in t_name or 'dirty' in t_name or 'bg' in t_name or 'path' in t_name or \
-                     'asphalt' in g_char or 'dirty' in g_char or 'bg' in g_char or 'path' in g_char:
+                elif 'asphalt' in t_name or 'dirty' in t_name or 'path' in t_name or \
+                     'asphalt' in g_char or 'dirty' in g_char or 'path' in g_char:
                     outside_tiles.append((x, y))
         
         total_candidates = len(building_tiles) + len(outside_tiles)
