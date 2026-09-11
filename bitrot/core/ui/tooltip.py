@@ -15,6 +15,9 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if item.item_type:
         lines.append(f"{tr('tooltip', 'Type:')} {tr('tooltip', item.item_type)}")
 
+    if hasattr(item, 'consume_time') and (getattr(item, 'item_type', '').startswith('consumable') or getattr(item, 'item_type', '') == 'liquid'):
+        lines.append(f"{tr('tooltip', 'Time use:')} {item.consume_time}s")
+
     if hasattr(item, 'require') and item.require:
         reqs = item.require if isinstance(item.require, list) else [item.require]
         

@@ -1,4 +1,4 @@
-<item name="Zombie Meat" type="consumable_food" allow_belt="false">
+<item name="Zombie Meat" type="consumable_food" allow_belt="false" consume_time="3.0">
     <properties>
         <restore status="[food]" value="3" />
         <reduce status="[stamina]" value="50" />

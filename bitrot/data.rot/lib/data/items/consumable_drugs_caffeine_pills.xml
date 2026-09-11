@@ -1,4 +1,4 @@
-<item name="Caffeine Pills" type="consumable_drugs" allow_belt="true">
+<item name="Caffeine Pills" type="consumable_drugs" allow_belt="true" consume_time="0.1">
     <properties>
         <restore status="[stamina]" value="15" />
         <reduce status="[anxiety]" value="15" />

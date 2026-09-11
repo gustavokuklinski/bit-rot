@@ -1,4 +1,4 @@
-<item name="Vaccine" type="consumable_drugs" allow_belt="true">
+<item name="Vaccine" type="consumable_drugs" allow_belt="true" consume_time="1.2">
     <properties>
         <reduce status="[infection]" value="15" />
         <load value="1" />

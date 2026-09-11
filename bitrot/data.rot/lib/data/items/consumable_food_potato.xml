@@ -1,4 +1,4 @@
-<item name="Potato" type="consumable_food" allow_belt="false">
+<item name="Potato" type="consumable_food" allow_belt="false" consume_time="2.0">
     <properties>
         <restore status="[food]" value="4" />
         <restore status="[health]" value="2" />

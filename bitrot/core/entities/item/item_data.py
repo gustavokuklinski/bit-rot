@@ -41,6 +41,9 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
 
         state = root.attrib.get('state')
         tip = root.attrib.get('tip')
+        consume_time_str = root.attrib.get('consume_time', '1.0')
+        consume_time = float(consume_time_str)
+
         template = {
             'type': ttype, 
             'properties': {}, 
@@ -48,7 +51,8 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             'disposable': disposable, 
             'liquid': liquid, 
             'allow_liquid': allow_liquid, 
-            'allow_belt': allow_belt, 
+            'allow_belt': allow_belt,
+            'consume_time': consume_time,
             'tip': tip,
             'spawn_amount_global': spawn_amount_global,
             'spawn_maptile': spawn_maptile,            
@@ -193,7 +197,8 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 
                 template = {
                     'type': root.attrib.get('type'),
-                    'properties': {}
+                    'properties': {},
+                    'consume_time': float(root.attrib.get('consume_time', '1.0'))
                 }
                 
                 builder_str = root.attrib.get('builder', 'false')

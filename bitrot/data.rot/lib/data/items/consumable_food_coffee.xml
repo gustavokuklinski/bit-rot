@@ -1,4 +1,4 @@
-<item name="Coffee" type="consumable_food" allow_belt="false" tip="Craft your Coffee">
+<item name="Coffee" type="consumable_food" allow_belt="false" tip="Craft your Coffee" consume_time="3.0">
     <properties>
         <restore status="[anxiety]" value="2" />
         <reduce status="[water]" value="10" />

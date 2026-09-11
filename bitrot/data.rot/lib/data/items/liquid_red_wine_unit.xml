@@ -1,4 +1,4 @@
-<item name="Red Wine Unit" type="liquid" liquid="true">
+<item name="Red Wine Unit" type="liquid" liquid="true" consume_time="0.2">
     <properties>
         <restore status="[water]" value="2" />
         <reduce status="[anxiety]" value="8" />

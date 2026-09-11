@@ -99,13 +99,7 @@ class PlayerActions:
             display_message(f"{tr('msg', 'Cannot use')} {tr('item', item.name)}{tr('msg', ', it is empty.')}")
             return False
             
-        duration_mult = 1.0
-        if item.item_type == 'consumable_medication' or 'Medkit' in item.name:
-            duration_mult = 2.0
-        elif item.item_type == 'consumable_drink' or item.item_type == 'liquid':
-            duration_mult = 1.0
-        elif item.item_type == 'consumable_food':
-            duration_mult = 1.0
+        duration_mult = getattr(item, 'consume_time', 1.0)
             
         def execute_consume():
             status_effect_legacy = getattr(item, 'status_effect', None)

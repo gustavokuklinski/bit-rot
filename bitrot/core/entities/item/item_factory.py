@@ -204,9 +204,10 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     weight = float(get_prop_val(props, 'weight', 'weight', '0.0'))
     reduction_str = get_prop_val(props, 'weight', 'reduction', '0%').replace('%', '')
     weight_reduction = float(reduction_str) / 100.0
+    
+    consume_time = template.get('consume_time', 1.0)
 
-    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction, allow_belt=allow_belt, tip=tip)
-
+    new_item = cls(item_name, template['type'], durability=durability, load=load, capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, slot=slot, defence=defence, speed=speed, state=state, min_light=min_light, max_light=max_light, fuel_type=fuel_type, text=text, min_reduce=min_reduce, max_reduce=max_reduce, sounds=sounds, attribute_modifiers=attribute_modifiers, status_effect=status_effect, effects=effects, repair_list=repair_list, knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, require=require, weight=weight, weight_reduction=weight_reduction, allow_belt=allow_belt, tip=tip, consume_time=consume_time)
     if item_name in COLORABLE_ITEMS:
         if force_color is not None:
             new_item.color = force_color

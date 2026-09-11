@@ -1,4 +1,4 @@
-<item name="Whiskey Unit" type="liquid" liquid="true">
+<item name="Whiskey Unit" type="liquid" liquid="true" consume_time="0.5">
     <properties>
         <restore status="[water]" value="2" />
         <reduce status="[anxiety]" value="8" />

@@ -1,4 +1,4 @@
-<item name="Energy Drink" type="consumable_drink" allow_belt="false">
+<item name="Energy Drink" type="consumable_drink" allow_belt="false" consume_time="0.3">
     <properties>
         <restore status="[water]" value="5" />
         <restore status="[stamina]" value="8" />
