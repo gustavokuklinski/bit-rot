@@ -157,8 +157,8 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
             if light_tex:
                 # STRETCH
                 base_size = max(8, int(8 * zoom))
-                width = int(base_size * 1.6)
-                height = int(base_size * 0.7)
+                width = int(base_size * 0.8)
+                height = int(base_size * 0.8)
                 
                 small_flash = pygame.transform.smoothscale(light_tex, (width, height))
                 

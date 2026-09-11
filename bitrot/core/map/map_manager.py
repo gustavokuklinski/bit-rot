@@ -20,6 +20,7 @@ class MapManager:
         self.current_map_filename = 'map_L1_world_map.csv' 
         self.map_files = self._discover_maps()
         self.shaking_tiles = {}
+        self.tile_hit_timers = {}
         
         # [NEW] Chunk Caching System
         self.chunk_surfaces = {} 
@@ -518,6 +519,57 @@ class MapManager:
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
     
+
+    def draw_tile_health_bars(self, surface, offset_x, offset_y):
+        """Draws floating health bars over recently damaged destructible tiles."""
+        if not self.tile_hit_timers:
+            return
+
+        # We use a list of keys because we will remove items from the dict during iteration
+        coords = list(self.tile_hit_timers.keys())
+        
+        map_name = self.current_map_filename
+        if map_name not in self.game.map_states or 'tile_health' not in self.game.map_states[map_name]:
+            return
+        
+        tile_health_map = self.game.map_states[map_name]['tile_health']
+
+        for pos in coords:
+            grid_x, grid_y = pos
+            timer = self.tile_hit_timers[grid_x, grid_y]
+            
+            # Only draw if the tile still exists and has health
+            if pos in tile_health_map:
+                current_hp = tile_health_map[pos]
+                
+                # Get the tile definition to find max health
+                char = self.game.map_data[grid_y][grid_x]
+                defn = self.game.tile_manager.definitions.get(char)
+                
+                if defn:
+                    # Calculate max health (use the higher of the min/max range)
+                    max_hp = defn.get('health_max', 100)
+                    
+                    # Position the bar slightly above the tile
+                    draw_x = grid_x * TILE_SIZE + offset_x
+                    draw_y = grid_y * TILE_SIZE + offset_y - 7
+                    
+                    # 1. Draw Background (Dark Gray)
+                    bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
+                    pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+
+                    # 2. Draw Health (Green)
+                    health_perc = max(0, min(1.0, current_hp / max_hp))
+                    health_width = int(health_perc * TILE_SIZE)
+                    health_bar_rect = pygame.Rect(draw_x, draw_y, health_width, 5)
+                    pygame.draw.rect(surface, GREEN, health_bar_rect)
+
+            # Decrement timer
+            self.tile_hit_timers[pos] -= 1
+            if self.tile_hit_timers[pos] <= 0:
+                del self.tile_hit_timers[pos]
+
+                
     # [FIX] Added the 'attacker' argument and conditional checks for stamina drain
     def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
@@ -528,7 +580,9 @@ class MapManager:
         
         if not definition or not definition.get('destructible'):
             return False
-            
+        
+        self.tile_hit_timers[(grid_x, grid_y)] = 60
+
         # Determine if the entity hitting the tile is the player
         # If attacker is not provided, assume it's the player for backward compatibility
         is_player = (attacker is None) or (attacker == getattr(self.game, 'player', None))

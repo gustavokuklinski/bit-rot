@@ -25,7 +25,7 @@ def draw_game(game):
     
     # 2. Render Environment
     draw_world(game, world_view_surface, offset_x, offset_y, view_w, view_h)
-
+    
     # 3. Render Characters, Items, and Vehicles
     draw_entities(game, world_view_surface, offset_x, offset_y, view_w, view_h, screen_rect, zoom)
 
@@ -37,6 +37,8 @@ def draw_game(game):
 
     # 6. Apply Lighting & FOW
     draw_lighting(game, world_view_surface, offset_x, offset_y, view_w, view_h)
+
+    game.map_manager.draw_tile_health_bars(world_view_surface, offset_x, offset_y)
 
     # 7. Blit the World onto the Screen (handling zoom)
     game_rect = pygame.Rect(game.viewport_left_offset, 0, final_w, final_h)
