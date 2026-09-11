@@ -30,26 +30,28 @@ def get_house_spawn_position(game):
     
     # Access the global, unchunked ground map array directly
     ground_layer = game.all_ground_layers.get(layer)
+    base_layer = game.all_map_layers.get(layer)
     
-    if not ground_layer:
+    if not ground_layer or not base_layer:
         return None
 
     map_height = len(ground_layer)
-    
     defs = game.tile_manager.definitions
     
     for y in range(map_height):
         # Determine the width of the current row to prevent out-of-bounds
         row_width = len(ground_layer[y])
         for x in range(row_width):
-            g_key = ground_layer[y][x]
-            if g_key and g_key != ' ':
-                tile_def = defs.get(g_key)
+            g_char = ground_layer[y][x]
+            if g_char and g_char != ' ':
+                tile_def = defs.get(g_char)
                 
-                # Check the ground tile name (using lower() for safety)
-                ground_name = tile_def.get('name', '').lower() if tile_def else ''
-                if ground_name == 'house_floor_01':
-                    valid_spawns.append((x, y))
+                # Check the ground tile name 
+                ground_name = tile_def.get('name', '').lower() if tile_def else g_char.lower()
+                if g_char == 'house_floor_01' or 'house_floor_01' in ground_name:
+                    # Make sure the base layer is empty (no walls)
+                    if y < len(base_layer) and x < len(base_layer[y]) and base_layer[y][x] == ' ':
+                        valid_spawns.append((x, y))
                     
     if valid_spawns:
         # Pick a random valid spawn tile and convert grid coordinates to pixel coordinates
@@ -462,7 +464,27 @@ def spawn_animals(game, count=5, target_layer=None):
          for y in range(h):
              for x in range(w):
                  if spawn_layer[y][x] == 'ANM':
-                     spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
+                     # NEW BORDER LOGIC validation: Confirm it's still a border!
+                     ground = game.all_ground_layers[target_layer][y][x]
+                     
+                     # [FIX] Removed invalid 'self' reference. Exclude water and interior floors safely.
+                     if 'water' in ground or 'floor' in ground: continue
+                     
+                     is_path = 'asphalt' in ground or 'dirty' in ground or 'path' in ground
+                     is_border = False
+                     
+                     if not is_path:
+                         for dy in [-1, 0, 1]:
+                             for dx in [-1, 0, 1]:
+                                 if 0 <= y+dy < h and 0 <= x+dx < w:
+                                     adj_g = game.all_ground_layers[target_layer][y+dy][x+dx]
+                                     if 'asphalt' in adj_g or 'dirty' in adj_g or 'path' in adj_g:
+                                         is_border = True
+                                         break
+                             if is_border: break
+                     
+                     if is_border:
+                         spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
     
     if spawn_markers:
         print(f"  > Found {len(spawn_markers)} 'ANM' markers on layer {target_layer}")
@@ -520,9 +542,26 @@ def spawn_animals(game, count=5, target_layer=None):
                 if not t_def or t_def.get('is_obstacle', False): continue
 
                 t_name = t_def.get('name', '').lower()
-                if t_name not in ['bg_grass', 'dirty_01']:
+                
+                is_path = 'asphalt' in t_name or 'dirty' in t_name or 'path' in t_name
+                is_border = False
+                
+                # Verify that it is NOT a path, but touches a path!
+                if not is_path:
+                    for dy in [-1, 0, 1]:
+                        for dx in [-1, 0, 1]:
+                            if 0 <= ry+dy < map_h and 0 <= rx+dx < map_w:
+                                adj_char = map_data[ry+dy][rx+dx]
+                                adj_def = defs.get(adj_char, {})
+                                adj_name = adj_def.get('name', '').lower() if adj_def else ''
+                                if 'asphalt' in adj_name or 'dirty' in adj_name or 'path' in adj_name:
+                                    is_border = True
+                                    break
+                        if is_border: break
+                
+                if not is_border:
                     continue
-                # Only Rats spawn randomly ambiently in most layers
+                
                 chosen_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                 px, py = rx * TILE_SIZE, ry * TILE_SIZE
                 # [FIX] Pass game instance and target_layer to Animal

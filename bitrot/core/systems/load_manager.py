@@ -298,20 +298,22 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         center_y = getattr(game, 'map_height_pixels', 1000) // 2
         game.map_manager.update_chunks((center_x, center_y))
 
-    house_spawn = get_house_spawn_position(game)
-
-    if house_spawn:
-        game.logger.info(f"House spawn point found at {house_spawn}. Setting player position.")
-        game.player.x, game.player.y = house_spawn
-        game.player.rect.topleft = house_spawn
-    elif game.player_spawn:
+    # [FIX] Prioritize the perfectly calculated 'P' marker from the generator safely!
+    if game.player_spawn:
         game.logger.info(f"Player spawn point found at {game.player_spawn}. Setting player position.")
         game.player.x, game.player.y = game.player_spawn
         game.player.rect.topleft = game.player_spawn
     else:
-        game.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
-        game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
-        game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+        # Fallback if no P marker exists
+        house_spawn = get_house_spawn_position(game)
+        if house_spawn:
+            game.logger.info(f"House spawn point found at {house_spawn}. Setting player position.")
+            game.player.x, game.player.y = house_spawn
+            game.player.rect.topleft = house_spawn
+        else:
+            game.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
+            game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
+            game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
 
     if spawn_entities:

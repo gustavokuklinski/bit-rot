@@ -49,7 +49,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'Stores': MAP_CHUNKS * 2,
             'Shed': MAP_CHUNKS * 5,
             'Building': MAP_CHUNKS * 10,
-            'Petrol': MAP_CHUNKS * 5,
+            'Petrol': MAP_CHUNKS * 3,
             'Heli': 1,
             'Military': 1
         }
@@ -329,7 +329,6 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                         n_g = get_group(nx, ny)
                         if my_g != n_g and n_g != 'out':
                             connections_grid[gy][gx][f'{direction}_type'] = 'asphalt'
-                            #connections_grid[gy][gx][direction] = False
 
 
         # --- PASS 1: Generate all chunks dynamically to determine sizes ---
@@ -455,7 +454,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
             'protected_mask': [[0 for _ in range(global_tiles_w)] for _ in range(global_tiles_h)]
         }
 
-        # --- PASS 2: MERGE CHUNKS INTO GLOBAL LAYERS ---
+        # --- PASS 3: MERGE CHUNKS INTO GLOBAL LAYERS ---
         chunk_offsets = {}
         for gy in range(grid_h):
             for gx in range(grid_w):
@@ -485,7 +484,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         self._apply_terrain_smoothing(global_layers, global_tiles_w, global_tiles_h)
         self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'sand_01')
         self._apply_sand_smoothing(global_layers, global_tiles_w, global_tiles_h, 'beach_sand_01')
-        self._apply_asphalt_smoothing(global_layers, global_tiles_w, global_tiles_h) # [ADDED]
+        self._apply_asphalt_smoothing(global_layers, global_tiles_w, global_tiles_h) 
 
         # --- SCATTER VEHICLES (L1 Global) ---
         print("Scattering Vehicles (L1)...")
@@ -499,14 +498,59 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         if hasattr(self, '_scatter_quest_items'):
             self._scatter_quest_items(global_layers, None, global_tiles_w, global_tiles_h, 1)
 
-        # Re-render L1 heat map to show vehicles AND animals
+        # --- [FIX] Find optimal Player Spawn (house_floor_01) ensuring safe chunk ---
+        print("Locating optimal player spawn (house_floor_01)...")
+        indoor_floors = []
+        defs = self.game.tile_manager.definitions
+        
+        # Only iterate over SAFE chunks to find indoor floors
+        for gy in range(grid_h):
+            for gx in range(grid_w):
+                if (gx, gy) in military_chunk_coords or (gx, gy) in island_coords:
+                    continue # Skip military and island chunks
+                
+                c_w, c_h = chunk_dims[(gx, gy)]
+                off_x, off_y = chunk_offsets[(gx, gy)]
+                
+                for y in range(off_y, off_y + c_h):
+                    for x in range(off_x, off_x + c_w):
+                        g_char = global_layers['ground'][y][x]
+                        t_def = defs.get(g_char)
+                        t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
+                        
+                        # Check directly against the character or the name
+                        if g_char == 'house_floor_01' or 'house_floor_01' in t_name:
+                            if global_layers['base'][y][x] == ' ' and global_layers['spawn'][y][x] == ' ':
+                                indoor_floors.append((x, y, gx, gy))
+
+        if indoor_floors:
+            px, py, start_gx, start_gy = random.choice(indoor_floors)
+            global_layers['spawn'][py][px] = 'P'
+            print(f"Player spawn locked at global ({px}, {py}) in chunk ({start_gx}, {start_gy}).")
+        else:
+            print("WARNING: No interior floors found in safe chunks! Spawning near center of a safe chunk.")
+            
+            # Find a safe chunk
+            safe_chunks = [(gx, gy) for gx in range(grid_w) for gy in range(grid_h) if (gx, gy) not in military_chunk_coords and (gx, gy) not in island_coords]
+            if not safe_chunks: 
+                safe_chunks = [(grid_w // 2, grid_h // 2)] # Absolute fallback
+                
+            start_gx, start_gy = random.choice(safe_chunks)
+            c_w, c_h = chunk_dims[(start_gx, start_gy)]
+            off_x, off_y = chunk_offsets[(start_gx, start_gy)]
+            
+            cx = off_x + (c_w // 2)
+            cy = off_y + (c_h // 2)
+            global_layers['spawn'][cy][cx] = 'P'
+            print(f"Player spawn locked at global ({cx}, {cy}) in chunk ({start_gx}, {start_gy}).")
+
+        # Re-render L1 heat map to show vehicles, animals AND the new Player marker
         self._render_full_map_to_surface(full_map_surface, heat_map_surface, global_layers)
         
         # --- SAVE L1 CHUNKS (Separated) ---
         print("Saving L1 separate chunk maps...")
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
-                # We extract the MAXIMUM allocated dimensions for this chunk cell to ensure padding/global traits are kept
                 c_w = col_widths[gx]
                 c_h = row_heights[gy]
                 offset_x, offset_y = chunk_offsets[(gx, gy)]

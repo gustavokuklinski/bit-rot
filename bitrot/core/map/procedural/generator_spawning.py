@@ -5,36 +5,31 @@ from core.data.config import *
 
 class ProceduralGeneratorSpawning:
     def _scatter_zombies(self, layers, mask, w, h):
-        building_tiles = []
-        street_tiles = []
-        woods_tiles = []
+        valid_tiles = []
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
+        
         for y in range(h):
             for x in range(w):
                 if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
                 if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
-                ground = layers['ground'][y][x]
-                if ground == self.water_tile: continue 
-                if ground == 'sand_01' or ground == 'dirty_01':
-                    building_tiles.append((x, y))
-                elif ground == 'asphalt_01':
-                    street_tiles.append((x, y))
-                elif ground == 'bg_grass':
-                    woods_tiles.append((x, y))
+                
+                g_char = layers['ground'][y][x]
+                t_def = defs.get(g_char)
+                t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
+                
+                if 'water' in t_name or 'water' in g_char.lower(): continue 
+                
+                # ZOMBIES: Spawn ONLY on pathways and deep background grass
+                if 'asphalt' in t_name or 'dirty' in t_name or 'bg' in t_name or 'path' in t_name or \
+                   'asphalt' in g_char or 'dirty' in g_char or 'bg' in g_char or 'path' in g_char:
+                    valid_tiles.append((x, y))
 
         total_zombies = ZOMBIE_MAX_CHUNK
-        count_building = int(total_zombies * 0.45)
-        count_street = int(total_zombies * 0.25)
-        count_woods = total_zombies - count_building - count_street
+        if not valid_tiles: return
         
-        def place_zombies(target_count, available_tiles):
-            if not available_tiles: return
-            chosen = random.sample(available_tiles, min(target_count, len(available_tiles)))
-            for (zx, zy) in chosen:
-                layers['spawn'][zy][zx] = 'Z'
-
-        place_zombies(count_building, building_tiles)
-        place_zombies(count_street, street_tiles)
-        place_zombies(count_woods, woods_tiles)
+        chosen = random.sample(valid_tiles, min(total_zombies, len(valid_tiles)))
+        for (zx, zy) in chosen:
+            layers['spawn'][zy][zx] = 'Z'
 
     def _scatter_npcs(self, layers, mask, w, h):
         # 1. Configuration
@@ -52,18 +47,25 @@ class ProceduralGeneratorSpawning:
         # 2. Gather Candidates
         building_tiles = []
         outside_tiles = []
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
+        
         for y in range(h):
             for x in range(w):
                 if x < 2 or x >= w-2 or y < 2 or y >= h-2: continue
                 # Valid spots: Empty base (no walls), Empty spawn, Valid ground
                 if layers['base'][y][x] != ' ' or layers['spawn'][y][x] != ' ': continue
-                ground = layers['ground'][y][x]
-                if ground == self.water_tile: continue 
+                
+                g_char = layers['ground'][y][x]
+                t_def = defs.get(g_char)
+                t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
+                
+                if 'water' in t_name or 'water' in g_char.lower(): continue 
                 
                 # Strict tile rules for NPC spawn placement
-                if ground == 'house_floor_01':
+                if g_char == 'house_floor_01' or 'house_floor_01' in t_name:
                     building_tiles.append((x, y))
-                elif ground in ['asphalt_01', 'sand_01', 'dirty_01', 'bg_grass']:
+                elif 'asphalt' in t_name or 'dirty' in t_name or 'bg' in t_name or 'path' in t_name or \
+                     'asphalt' in g_char or 'dirty' in g_char or 'bg' in g_char or 'path' in g_char:
                     outside_tiles.append((x, y))
         
         total_candidates = len(building_tiles) + len(outside_tiles)
@@ -188,7 +190,7 @@ class ProceduralGeneratorSpawning:
 
     def _scatter_vehicles(self, layers, mask, w, h):
         """
-        [NEW] Scatter vehicles on road/asphalt AND drunkard (dirty_01) tiles.
+        Scatter vehicles on road/asphalt AND drunkard (dirty_01) tiles.
         """
         street_tiles = []
         for y in range(h):
@@ -207,14 +209,9 @@ class ProceduralGeneratorSpawning:
 
         # Determine limit (Global Limit calculated from Chunk config)
         if CHUNK_SIZE > 0:
-            # W and H are in tiles.
             num_chunks_w = w // CHUNK_SIZE
             num_chunks_h = h // CHUNK_SIZE
-            total_chunks = num_chunks_w * num_chunks_h
-            
-            # If map size is weird, at least assume 1 chunk
-            total_chunks = max(1, total_chunks)
-            
+            total_chunks = max(1, num_chunks_w * num_chunks_h)
             max_vehicles_global = MAX_VEH_CHUNK * total_chunks
         else:
             max_vehicles_global = 40 # Fallback default
@@ -241,7 +238,7 @@ class ProceduralGeneratorSpawning:
         if not ITEM_TEMPLATES:
             load_item_templates_data()
             
-        # [NEW] Track spawned items globally across layers (L1 and L2)
+        # Track spawned items globally across layers (L1 and L2)
         if not hasattr(self, 'quest_items_spawned'):
             self.quest_items_spawned = {}
             
@@ -281,7 +278,6 @@ class ProceduralGeneratorSpawning:
                             valid_spots.append((x, y))
                     else:
                         # Fallback if XML doesn't specify a spawn_maptile
-                        # You could add logic here to allow them to spawn on generic interior floors
                         pass
                         
             # 3. Scatter up to the global limit
@@ -294,15 +290,11 @@ class ProceduralGeneratorSpawning:
                 self.quest_items_spawned[item_name] = spawned_so_far + len(chosen_spots)
                 print(f"  > Quest Scatter [Layer {current_layer}]: Placed {len(chosen_spots)} '{item_name}' (Total: {self.quest_items_spawned[item_name]}/{max_spawn}).")
             else:
-                # [FIX] Always print an output so you know it attempted to spawn the item
                 print(f"  > Quest Scatter [Layer {current_layer}]: Placed 0 '{item_name}'. (No valid '{allowed_tiles}' spots generated on this map layer)")
 
     def _scatter_animals(self, layers, mask, w, h):
         """
-        [NEW] Scatter Animals ('ANM') based on ANIMAL_SPAWN_COUNT.
-        Prefers natural tiles (Grass, Woods) but can spawn on Floor/Dirt.
-        
-        Calculates total limit based on map size to ensure 'Per Chunk' setting works globally.
+        Scatter Animals ('ANM') strictly on the borders of pathways.
         """
         if ANIMAL_SPAWN_COUNT <= 0: return
 
@@ -315,13 +307,23 @@ class ProceduralGeneratorSpawning:
                 
                 ground = layers['ground'][y][x]
                 if ground == self.water_tile: continue
-
-                if ground == 'house_floor_01': 
-                    continue
+                if ground == 'house_floor_01': continue
                 
-                # Check for natural or valid walking tiles
-                # Grass, Dirty, Floor, Asphalt are all valid for animals generally (Rat can go anywhere)
-                if 'grass' in ground or 'dirty' in ground:
+                # Animals spawn strictly OUTSIDE the paths, but immediately ADJACENT to them
+                is_path = 'asphalt' in ground or 'dirty' in ground or 'path' in ground
+                is_border = False
+                
+                if not is_path:
+                    for dy in [-1, 0, 1]:
+                        for dx in [-1, 0, 1]:
+                            if 0 <= y+dy < h and 0 <= x+dx < w:
+                                adj_g = layers['ground'][y+dy][x+dx]
+                                if 'asphalt' in adj_g or 'dirty' in adj_g or 'path' in adj_g:
+                                    is_border = True
+                                    break
+                        if is_border: break
+                
+                if is_border:
                     valid_tiles.append((x, y))
                 
 
