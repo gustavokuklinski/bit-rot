@@ -722,7 +722,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 
                 if (dx*dx + dy*dy) <= (getattr(game, 'player_view_radius', TILE_SIZE * 20) * 1.5) ** 2:
                     import core.data.config as game_config
-                    num_zombies_to_spawn = int((random.randint(0, game_config.ZOMBIES_PER_SPAWN)) * self.spawn_zombies_max)
+                    num_zombies_to_spawn = int((random.randint(0, game_config.ZOMBIES_PER_SPAWN))) + 1
                     
                     for _ in range(num_zombies_to_spawn):
                         spawn_x, spawn_y = None, None
@@ -738,9 +738,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                                 if not tile_def or not tile_def.get('is_obstacle', False):
                                     spawn_x, spawn_y = tx, ty
                                     break
-                        
-                        if spawn_x is None:
-                            spawn_x, spawn_y = self.rect.centerx, self.rect.centery
 
                         zombie = Zombie.create_random(spawn_x, spawn_y)
                         zombie.aggro_timer = 10000
