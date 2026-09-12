@@ -405,7 +405,7 @@ class Vehicle:
     def toggle_engine(self, game=None):
         driver_seat = self.seats[0]
         if not driver_seat or type(driver_seat).__name__ != 'Player':
-            display_message("Cannot start engine: No driver in the driver's seat.")
+            display_message(tr('msg', "Cannot start engine: No driver in the driver's seat."))
             return
 
         if game is None and hasattr(driver_seat, 'game'):

@@ -282,14 +282,12 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
         rows = (len(items) + cols - 1) // cols
         return y_offset + (rows * (slot_size + gap)) + 15
         
-    current_y = draw_quest_section(f"In Progress ({in_prog_count})", in_progress, current_y, YELLOW)
-    current_y = draw_quest_section(f"Next Petrol ({np_comp}/{np_total})", next_petrol_locked, current_y, GRAY_60)
-    current_y = draw_quest_section(f"Island Quest ({isl_comp}/{isl_total})", island_locked, current_y, GRAY_60)
-    current_y = draw_quest_section(f"Completed ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
-    
-    # --- FIX: Explicitly name the completed section to avoid confusion ---
-    current_y = draw_quest_section(f"Completed Milestones ({len(ms_completed)}/{len(milestones)})", ms_completed, current_y, YELLOW)
-    current_y = draw_quest_section(f"Locked Milestones", ms_locked, current_y, GRAY_60)
+    current_y = draw_quest_section(f"{tr('ui', 'In Progress')} ({in_prog_count})", in_progress, current_y, YELLOW)
+    current_y = draw_quest_section(f"{tr('ui', 'Next Petrol')} ({np_comp}/{np_total})", next_petrol_locked, current_y, GRAY_60)
+    current_y = draw_quest_section(f"{tr('ui', 'Island Quest')} ({isl_comp}/{isl_total})", island_locked, current_y, GRAY_60)
+    current_y = draw_quest_section(f"{tr('ui', 'Completed')} ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
+    current_y = draw_quest_section(f"{tr('ui', 'Completed Milestones')} ({len(ms_completed)}/{len(milestones)})", ms_completed, current_y, YELLOW)
+    current_y = draw_quest_section(f"{tr('ui', "Locked Milestones")}", ms_locked, current_y, GRAY_60)
 
     surface.set_clip(None)
     bar_rect = pygame.Rect(modal_rect.right - 10, base_y, 8, visible_height)

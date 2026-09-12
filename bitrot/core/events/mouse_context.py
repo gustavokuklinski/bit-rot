@@ -251,7 +251,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.player.progression.add_xp(game.player, 'maintenance', 5)
                                 
                             target_name = "Window" if "window" in char.lower() else "Door"
-                            display_message(tr('msg', f"{target_name} barricaded successfully."))
+                            display_message(f"{target_name} {tr('msg', 'barricaded successfully.')}")
                             
                         game.player.start_action("Barricading", 5.0, do_barricate, xp_reward=0)
                     else:
@@ -1660,14 +1660,14 @@ def handle_right_click(game, mouse_pos):
                                     liquid_name = inside_item.name
                         
                         if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} units)"
+                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} {tr('ui', 'units')})"
                         else:
-                            display_str = f"{c.name} (Empty)"
+                            display_str = f"{c.name} ({tr('ui', 'Empty')})"
                             
                         if c_id not in sub_opts:
                             sub_opts.append(c_id)
                             display_map[c_id] = display_str
-                            tooltip_map[c_id] = f"Location: {loc_str}"
+                            tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
                             
                 new_options.append({'label': 'Remove fuel to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
                 continue
@@ -1799,9 +1799,9 @@ def handle_right_click(game, mouse_pos):
                         
                         # Generate the dynamic label string 
                         if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} units)"
+                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} {tr('ui', 'units')})"
                         elif getattr(c, 'allow_liquid', False):
-                            display_str = f"{c.name} (Empty)"
+                            display_str = f"{c.name} ({tr('ui', 'Empty')})"
                         else:
                             display_str = c.name
                             
@@ -1809,7 +1809,7 @@ def handle_right_click(game, mouse_pos):
                         if c_id not in sub_opts:
                             sub_opts.append(c_id)
                             display_map[c_id] = display_str
-                            tooltip_map[c_id] = f"Location: {loc_str}"
+                            tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
                             
                 new_options.append({'label': 'Send to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
                 

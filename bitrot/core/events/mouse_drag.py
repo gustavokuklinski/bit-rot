@@ -191,7 +191,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                     else:
-                                        display_message(tr('msg', f"Cannot place {game.dragged_item.name} in {slot_name} slot."))
+                                        display_message(f"{tr('msg', 'Cannot place')} {game.dragged_item.name} {tr('msg', 'in')} {slot_name} {tr('msg', 'slot.')}")
                                     break
                         if dropped_successfully or (not dropped_successfully and game.dragged_item):
                             break
@@ -212,7 +212,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                     if is_modal_slot or is_hud_slot:
                         if not getattr(game.dragged_item, 'allow_belt', False):
-                            display_message(tr('msg', f"Cannot place {game.dragged_item.name} on the belt."))
+                            display_message(f"{tr('msg', 'Cannot place')} {game.dragged_item.name} {tr('msg', 'to belt.')}")
                             dropped_successfully = False
                             break
                         
@@ -838,7 +838,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                      target_container.inventory.append(game.dragged_item)
                                                      dropped_successfully = True
                                             else:
-                                                display_message(f"{target_container.name} is full.")
+                                                display_message(f"{target_container.name} {tr('msg', 'is full.')}")
                                                 dropped_successfully = False
                                         
                                         break 
@@ -961,7 +961,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_in_slot.can_stack_with(game.dragged_item):
                                             can_loot = True; is_stack = True
                                         else:
-                                            display_message("Cannot swap while looting.")
+                                            display_message(tr('msg', "Cannot swap while looting."))
                                             dropped_successfully = False
                                             break
                                     elif len(container.inventory) < (container.capacity or 0):

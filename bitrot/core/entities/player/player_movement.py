@@ -507,22 +507,38 @@ class PlayerMovement:
                                         npc.x, npc.y = free_pos
                                         game.npcs.add(npc)
                                     
-                            if hasattr(game, 'active_animals'):
+                            if hasattr(game, 'active_animals') and getattr(core.data.config, 'ANIMAL_SPAWN_COUNT', 1) > 0:
                                 from core.entities.animal.animal import Animal
-                                num_to_spawn = random.randint(2, 6)
-                                for _ in range(num_to_spawn):
-                                    ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
-                                    ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
-                                    animal_type = random.choice(['Rat', 'Pig', 'Dog', 'Chicken'])
-                                    animal_obj = Animal(ax, ay, animal_type)
-                                    
-                                    # [FIX] Robust Spatial Spawn
-                                    free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
-                                    if free_pos:
-                                        animal_obj.rect.topleft = free_pos
-                                        animal_obj.x, animal_obj.y = free_pos
-                                        game.active_animals.append(animal_obj)
-                                        game.items_on_ground.append(animal_obj)
+                                from core.entities.animal.animal_loader import AnimalLoader
+                                AnimalLoader.load_animals()
+
+                                curr_layer = getattr(game, 'current_layer_index', 1)
+                                valid_animal_types = []
+                                valid_weights = []
+
+                                # [FIX] Dynamically load all valid animals from XML definitions
+                                for a_name, a_def in AnimalLoader.definitions.items():
+                                    if curr_layer in a_def.get('spawn_layers', [1]):
+                                        valid_animal_types.append(a_name)
+                                        valid_weights.append(a_def.get('spawn_weight', 10))
+
+                                if valid_animal_types:
+                                    num_to_spawn = random.randint(2, 6)
+                                    for _ in range(num_to_spawn):
+                                        ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
+                                        ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
+                                        
+                                        # Choose weighted by XML spawn_weight
+                                        animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
+                                        animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
+                                        
+                                        # [FIX] Robust Spatial Spawn
+                                        free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
+                                        if free_pos:
+                                            animal_obj.rect.topleft = free_pos
+                                            animal_obj.x, animal_obj.y = free_pos
+                                            game.active_animals.append(animal_obj)
+                                            game.items_on_ground.append(animal_obj)
                                     
                         # Make sure followers aren't lost
                         if hasattr(game, 'npcs'):

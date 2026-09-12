@@ -160,12 +160,12 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             game_ms_per_minute = game.world_time.day_length_ms / (24 * 60)
             total_game_mins_left = int(timer_ms / game_ms_per_minute) if game_ms_per_minute > 0 else 0
             w_hours = total_game_mins_left // 60
-            rain_val = f"{w_hours}h" if weather_state == 'CLEAR' else "Now"
+            rain_val = f"{w_hours}h" if weather_state == 'CLEAR' else tr('ui', "Now")
             rain_color = (100, 200, 255) if weather_state != 'CLEAR' else ((255, 170, 100) if w_hours <= 2 else WHITE)
         else:
-            time_str = "No Signal"
+            time_str = tr('ui', "No Signal")
             time_color = (200, 80, 80)
-            rain_val = "Offline"
+            rain_val = tr('ui', "Offline")
             rain_color = (120, 120, 120)
 
         world_state = getattr(game.world_time, 'state', 'DAY')
@@ -181,7 +181,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             (weather_icon, "", f"{day_night_str} - Rain in: {rain_val}", rain_color, None),
         ]
         
-        status_title = font_12.render("World Info", False, WHITE)
+        status_title = font_12.render(tr('ui', "World Info"), False, WHITE)
         surface.blit(status_title, (start_x, current_y))
         
         text_y = current_y + 35

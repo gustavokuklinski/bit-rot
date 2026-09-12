@@ -188,7 +188,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     interactables = []
     for npc in game.npcs:
         if npc.is_friendly and npc.aggro_timer <= 0 and screen_rect.colliderect(npc.rect) and math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery) < TILE_SIZE * 1.5:
-            interactables.append({'rect': npc.rect, 'tip': tr('tooltip', 'Press E to Talk\nRMB For Talk option')})
+            interactables.append({'rect': npc.rect, 'tip': tr('tooltip', 'interact_npc')})
                 
     for obj in game.containers:
         if getattr(obj, 'item_type', '') == 'vehicle' and getattr(game.player, 'vehicle', None) != obj and screen_rect.colliderect(obj.rect):
@@ -199,7 +199,12 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 key_status = tr('tooltip', "Not Req") if not getattr(obj, 'required_key_id', None) else (tr('tooltip', "Yes") if equip.get('key') else tr('tooltip', "Missing"))
                 interactables.append({'rect': obj.rect, 'tip': {
                     'type': 'vehicle',
-                    'text_lines': [tr('tooltip', f"Press {get_key_name('interact')} to enter/exit vehicle"), tr('tooltip', f"Press {get_key_name('vehicle_engine')} to turn on/off engine"), tr('tooltip', "RMB for Vehicle Options and Trunk"), ""],
+                    'text_lines': [
+                        tr('tooltip', 'interact_vehicle').replace('{key}', get_key_name('interact')), 
+                        tr('tooltip', 'engine_vehicle').replace('{key}', get_key_name('vehicle_engine')), 
+                        tr('tooltip', 'vehicle_options_rmb'), 
+                        ""
+                    ],
                     'stats': [{'icon': 'motor', 'text': tr('tooltip', "Motor"), 'val': f"{int(getattr(obj, 'motor', 0.0) * 100)}%"}, {'icon': 'fuel', 'text': tr('tooltip', "Fuel"), 'val': f"{int(getattr(obj, 'fuel', 0))}"}, {'icon': 'power', 'text': tr('tooltip', "Power"), 'val': f"{int(getattr(obj, 'battery', 0))}"}, {'icon': 'tires', 'text': tr('tooltip', "Tires"), 'val': f"{tires_count}/{len(req_tires) if req_tires else 4}"}, {'icon': 'key', 'text': tr('tooltip', "Key"), 'val': key_status}]
                 }})
 
@@ -207,11 +212,13 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     if fx is not None:
         t = game.map_manager.get_tile_at(fx, fy)
         if t and (t.get('is_stair') or t.get('is_statable')) and math.hypot(game.player.rect.centerx - (fx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (fy*TILE_SIZE + TILE_SIZE/2)) < TILE_SIZE * 1.5:
-            interactables.append({'rect': pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE), 'tip': tr('tooltip', f"Press {get_key_name('interact')}\nto go Down/Up" if t.get('is_stair') else f"Press {get_key_name('interact')} or RMB\nto Open/Close")})
+            tip_key = 'stair_interact' if t.get('is_stair') else 'generic_interact'
+            tip_text = tr('tooltip', tip_key).replace('{key}', get_key_name('interact'))
+            interactables.append({'rect': pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE), 'tip': tip_text})
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
-            interactables.append({'rect': obj.rect, 'tip': tr('tooltip', f"Press {get_key_name('interact')} to inspect\nor use the Nearby modal")})
+            interactables.append({'rect': obj.rect, 'tip': tr('tooltip', 'inspect_container').replace('{key}', get_key_name('interact'))})
 
     tooltip_to_draw = None
     focused_tip = None 
@@ -279,13 +286,13 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         for rect, label in [
             (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), 
             (game.menu_hud_button_rect, tr('ui', "Toggle UI Menus (SHIFT+M)")),
-            (getattr(game, 'status_button_rect', None), tr('ui', f"Player Status ({get_key_name('toggle_status')})")), 
-            (getattr(game, 'inventory_button_rect', None), tr('ui', f"Inventory ({get_key_name('toggle_inventory')})")), 
-            (getattr(game, 'gear_button_rect', None), tr('ui', f"Gear ({get_key_name('toggle_gear')})")), 
-            (getattr(game, 'slots_button_rect', None), tr('ui', f"Slots Overview ({get_key_name('toggle_slots')})")), 
-            (getattr(game, 'nearby_button_rect', None), tr('ui', f"Nearby ({get_key_name('toggle_nearby')})")), 
-            (getattr(game, 'messages_button_rect', None), tr('ui', f"Messages ({get_key_name('toggle_messages')})")), 
-            (getattr(game, 'crafting_button_rect', None), tr('ui', f"Crafting ({get_key_name('toggle_crafting')})")), 
+            (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status')})"),
+            (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory')})"),
+            (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear')})"),
+            (getattr(game, 'slots_button_rect', None), f"{tr('ui', 'Slots Overview')} ({get_key_name('toggle_slots')})"),
+            (getattr(game, 'nearby_button_rect', None), f"{tr('ui', 'Nearby')} ({get_key_name('toggle_nearby')})"),
+            (getattr(game, 'messages_button_rect', None), f"{tr('ui', 'Messages')} ({get_key_name('toggle_messages')})"),
+            (getattr(game, 'crafting_button_rect', None), f"{tr('ui', 'Crafting')} ({get_key_name('toggle_crafting')})"),
             (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
         ]:
             if rect and rect.collidepoint(mouse_pos):
