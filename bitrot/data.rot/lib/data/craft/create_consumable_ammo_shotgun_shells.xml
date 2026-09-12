@@ -1,0 +1,8 @@
+<recipe type="consumable_ammo" craft="create" magazine="Guns and Ammo Almanach" output="Shotgun Shells" gain_xp="[maintenance:1]" amount="1" time="0.5">
+    <ingredient name="Powder" destroy="true" amount="4" />
+    <ingredient name="Shells Capsule" destroy="true" amount="1" />
+    <ingredient name="Slingshot Rock" destroy="true" amount="6" />
+    <ingredient name="Line Twine" destroy="true" amount="1" />
+
+    <ingredient name="Needle" destroy="false" amount="1" />
+</recipe>
