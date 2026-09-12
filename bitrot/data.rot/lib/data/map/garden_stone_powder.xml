@@ -3,7 +3,7 @@
         <sprite file="garden_stone_powder.png" />
     </visuals>
     <properties>
-        <health min="200" max="400" />
+        <health min="40" max="80" />
     </properties>
     <drop>
         <item item="Powder" chance="0.7" />

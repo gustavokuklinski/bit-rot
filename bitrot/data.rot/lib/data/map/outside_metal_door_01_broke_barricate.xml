@@ -1,6 +1,6 @@
-<map name="outside_metal_door_01_broke_barricate" type="maptile" char="outside_metal_door_01_broke_barricate" is_obstacle="true" destructible="true">
+<map name="outside_metal_door_01_broke_barricate" type="maptile" char="outside_metal_door_01_broke_barricate" is_obstacle="true" destructible="true" is_visible="true">
     <properties>
-        <health min="90" max="160" />
+        <health min="40" max="40" />
     </properties>
     <visuals>
         <sprite id="close" file="outside_metal_door_01_broke_barricate.png" />

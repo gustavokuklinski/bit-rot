@@ -1,6 +1,6 @@
 <map name="window_01_broke_barricate" type="maptile" char="window_01_broke_barricate" is_obstacle="true" destructible="true">
     <properties>
-        <health min="90" max="160" />
+        <health min="40" max="40" />
     </properties>
     <visuals>
         <sprite file="window_01_broke_barricate.png" />

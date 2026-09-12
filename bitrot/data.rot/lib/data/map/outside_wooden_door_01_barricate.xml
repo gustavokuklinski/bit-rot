@@ -1,6 +1,6 @@
 <map name="outside_wooden_door_01_barricate" type="maptile" char="outside_wooden_door_01_barricate" is_obstacle="true" destructible="true">
     <properties>
-        <health min="90" max="160" />
+        <health min="120" max="120" />
     </properties>
     <visuals>
         <sprite file="outside_wooden_door_01_barricate.png" />

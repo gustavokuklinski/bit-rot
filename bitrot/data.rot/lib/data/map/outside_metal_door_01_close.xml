@@ -1,6 +1,6 @@
-<map name="outside_metal_door_01_close" type="maptile" char="outside_metal_door_01_close" state="close" is_obstacle="true" destructible="true">
+<map name="outside_metal_door_01_close" type="maptile" char="outside_metal_door_01_close" state="close" is_obstacle="true" destructible="true" is_visible="true">
     <properties>
-        <health min="90" max="160" />
+        <health min="100" max="100" />
     </properties>
     <visuals>
         <sprite id="close" file="outside_metal_door_01_close.png" />

@@ -4,7 +4,7 @@
     </visuals>
     
     <properties>
-        <health min="10" max="20" />
+        <health min="5" max="15" />
     </properties>
 
     <drop>
