@@ -116,7 +116,13 @@ class Tabs:
             self.surface.blit(tab['icon'], icon_rect)
         else:
             # Fallback to text if icon fails to load or not provided
-            text = font_12.render(tab['label'], False, WHITE)
+            raw_label = tab.get('label', '')
+            display_text = tr('tab', raw_label)
+            if display_text == raw_label:
+                display_text = tr('ui', raw_label)
+            if display_text == raw_label:
+                display_text = tr('item', raw_label)
+            text = font_12.render(display_text, False, WHITE)
             text_rect = text.get_rect(center=rect.center)
             self.surface.blit(text, text_rect)
 
@@ -126,13 +132,13 @@ class Tabs:
         if 'tooltip' in tab:
             return tr('tooltip', tab['tooltip'])
             
-        # Inventory / Gear item names from a linked entity
-        if 'item' in tab and tab['item']:
-            return tr('item', getattr(tab['item'], 'name', tab.get('label', '')))
-            
         label = tab.get('label', '')
         modal_type = self.modal.get('type', '')
         
+        # Inventory / Gear item names from a linked entity
+        if 'item' in tab and tab['item']:
+            return tr('item', getattr(tab['item'], 'name', label))
+            
         # Determine tooltip text mapping based on Modal Type
         if modal_type == 'status':
             if label == 'Health': return tr('tooltip', 'Overview')
@@ -146,13 +152,21 @@ class Tabs:
             if label == 'MP3': return tr('tooltip', 'MP3 Player - Use SD Cards')
 
         if modal_type in ['inventory', 'gear', 'slots']:
+            if label == 'Inventory':
+                return tr('tab', 'Inventory') if tr('tab', 'Inventory') != 'Inventory' else tr('ui', 'Inventory')
+            if label == 'Gear':
+                return tr('tab', 'Gear') if tr('tab', 'Gear') != 'Gear' else tr('ui', 'Gear')
             return tr('item', label)
-            
-        return tr('tooltip', label)
 
-    def handle_input(self):
-        # This method is no longer needed as input will be handled in mouse.py
-        pass
+        if modal_type == 'vehicle':
+            return tr('tab', label)
+            
+        # Generic fallback
+        translated = tr('tab', label)
+        if translated != label: return translated
+        translated = tr('ui', label)
+        if translated != label: return translated
+        return tr('tooltip', label)
 
     # check_click is kept but might not be used directly by handle_mouse_down anymore
     def check_click(self, scaled_mouse_pos):

@@ -7,7 +7,7 @@
         <modal name="Gear" translation_modal="Equipamento" />
         <modal name="Messages" translation_modal="Mensagens" />
         <modal name="Nearby" translation_modal="Proximidades" />
-        <modal name="Slots Overview" translation_modal="Visão Geral de Bolsos" />
+        <modal name="Slots Overview" translation_modal="Visão Geral" />
         <modal name="Map" translation_modal="Mapa" />
         <modal name="Load Game" translation_modal="Carregar Jogo" />
         <modal name="Settings" translation_modal="Configurações" />
@@ -153,7 +153,7 @@
         <ui name="Player Status" translation_ui="Status do Jogador" />
         <ui name="Inventory" translation_ui="Inventário" />
         <ui name="Gear" translation_ui="Equipamento" />
-        <ui name="Slots Overview" translation_ui="Visão Geral de Bolsos" />
+        <ui name="Slots Overview" translation_ui="Visão Geral" />
         <ui name="Nearby" translation_ui="Proximidades" />
         <ui name="Ground" translation_ui="Chão" />
         <ui name="Messages" translation_ui="Mensagens" />
@@ -253,6 +253,13 @@
         <ui name="Locked" translation_ui="Bloqueada" />
         <ui name="Check your quest tab" translation_ui="Veja sua aba de missões" />
         <ui name="Quest completed!" translation_ui="Missão concluída!" />
+
+        <!-- Breadcrumb & UI elements -->
+        <ui name="Belt" translation_ui="Cinto" />
+        <ui name="Slot" translation_ui="Espaço" />
+        <ui name="Slots" translation_ui="Espaços" />
+        <ui name="Gear" translation_ui="Equipamento" />
+        <ui name="Inventory" translation_ui="Inventário" />
 
         <!-- Crafting UI -->
         <ui name="Search..." translation_ui="Pesquisar..." />

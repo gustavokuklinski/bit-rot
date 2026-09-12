@@ -261,9 +261,10 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 pygame.draw.rect(gear_content_surface, WHITE, cycle_rect_rel, 1, border_radius=3)
                 
                 display_item_name = selected_item
-                if selected_item != "None":
-                    template = ITEM_TEMPLATES.get(selected_item, {})
-                    display_item_name = template.get('name', selected_item.replace("_", " ").title())
+                if selected_item == "None":
+                    display_item_name = tr('ui', "None")
+                else:
+                    display_item_name = tr('cloth', selected_item)
 
                 text = font_12.render(display_item_name, False, WHITE)
                 text_x = cycle_rect_rel.x + (cycle_rect_rel.width - text.get_width()) // 2

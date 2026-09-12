@@ -19,25 +19,28 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
         cap = getattr(obj, 'capacity', 0)
         return cap if cap is not None else 0
 
-    # ONLY allow explicitly defined containers and clothes
     valid_types = ['container', 'cloth']
 
     if hasattr(player, 'clothes') and player.clothes:
         for slot_name, item in player.clothes.items():
             if item and getattr(item, 'item_type', '') in valid_types and get_safe_capacity(item) > 0:
-                bc = f"Gear > {str(slot_name).capitalize()} > {tr('item', getattr(item, 'name', 'Unknown'))}"
+                slot_tr = tr('ui', str(slot_name).capitalize())
+                item_tr = tr('item', getattr(item, 'name', 'Unknown'))
+                bc = f"{tr('ui', 'Gear')} > {slot_tr} > {item_tr}"
                 containers.append((item, bc))
                 
     if hasattr(player, 'belt') and player.belt:
         for i, item in enumerate(player.belt):
             if item and getattr(item, 'item_type', '') in valid_types and get_safe_capacity(item) > 0:
-                bc = f"Belt > Slot {i+1} > {tr('item', getattr(item, 'name', 'Unknown'))}"
+                item_tr = tr('item', getattr(item, 'name', 'Unknown'))
+                bc = f"{tr('ui', 'Belt')} > {tr('ui', 'Slot')} {i+1} > {item_tr}"
                 containers.append((item, bc))
                 
     if hasattr(player, 'inventory') and player.inventory:
         for item in player.inventory:
             if item and getattr(item, 'item_type', '') in valid_types and get_safe_capacity(item) > 0:
-                bc = f"Inventory > {tr('item', getattr(item, 'name', 'Unknown'))}"
+                item_tr = tr('item', getattr(item, 'name', 'Unknown'))
+                bc = f"{tr('ui', 'Inventory')} > {item_tr}"
                 containers.append((item, bc))
 
     # --- 2. Set Dimensions & Spacing ---
