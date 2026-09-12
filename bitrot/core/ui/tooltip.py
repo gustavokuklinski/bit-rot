@@ -175,13 +175,21 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     # -----------------------------------------------
 
     if hasattr(item, 'tip') and item.tip:
-        # Replace literal "\n" from XML with actual newlines, then split into a list
-        tip_lines = str(item.tip).replace('\\n', '\n').split('\n')
+        # FIX: Use item.name as the key, because that's what is in the XML 'name' attribute
+        translated_tip = tr('tips', item.name)
+        
+        # FALLBACK: If tr() didn't find a translation, it returns the key (item.name).
+        # In that case, we should use the original English tip text (item.tip).
+        if translated_tip == item.name:
+            translated_tip = item.tip
+        
+        # Now split the resulting text into lines
+        tip_lines = str(translated_tip).replace('\\n', '\n').split('\n')
         
         # Add the first line with the yellow "Tip: " prefix
         lines.append([(tr('tooltip', "Tip:"), (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
         
-        # Add any remaining lines with invisible spaces to align them perfectly under the first line
+        # Add any remaining lines
         for extra_line in tip_lines[1:]:
             lines.append([("", (255, 255, 0)), (extra_line.strip(), WHITE)])
 

@@ -37,7 +37,7 @@ Você tem três objetivos. Escolha com sabedoria, pois a ilha está ouvindo.
 * **Trajes e Armadura**: Solte os itens no menu de Equipamentos (Gear) para vestir roupas. As roupas não mudam apenas a sua aparência; elas funcionam como um escudo de armadura. O dano recebido reduz a durabilidade da sua roupa primeiro, antes de ferir você.
 * **Peso de Carga**: Fique de olho no seu peso total! Carregar mais do que a sua capacidade máxima o deixará sobrecarregado (over-encumbered). Isso aumentará drasticamente o consumo do seu fôlego (stamina) ao correr e drenará lentamente a sua saúde com o tempo.
 
-### [ STATUS DO JOGADOR ]
+### [ STATUS ]
 
 * **Saúde**: Sua força vital. Ela cai devido a ataques físicos, fome, desidratação, infecção grave ou ao carregar muito peso. Use suprimentos médicos ou durma em uma cama adequada para se recuperar.
 * **Fôlego (Stamina)**: Esgota-se ao correr ou ao golpear com armas brancas. Ele se recupera naturalmente ao descansar ou caminhar. *Aviso:* Níveis altos de Infecção limitarão permanentemente seu fôlego máximo até que você seja curado!

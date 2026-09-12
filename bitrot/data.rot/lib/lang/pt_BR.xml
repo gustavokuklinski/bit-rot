@@ -149,11 +149,11 @@
         <ui name="Maintenance" translation_ui="Manutenção" />
         <ui name="Intelligence" translation_ui="Inteligência" />
         <ui name="Health" translation_ui="Saúde" />
-        <ui name="Stamina" translation_ui="Vigor" />
+        <ui name="Stamina" translation_ui="Energia" />
         <ui name="Water" translation_ui="Água" />
         <ui name="Food" translation_ui="Comida" />
         <ui name="Anxiety" translation_ui="Ansiedade" />
-        <ui name="Tireness" translation_ui="Cansaço" />
+        <ui name="Weight" translation_ui="Peso" />
         <ui name="Infection" translation_ui="Infecção" />
 
         <ui name="Hair" translation_ui="Cabelo" />
