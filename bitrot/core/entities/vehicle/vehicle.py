@@ -546,10 +546,10 @@ class Vehicle:
                     )
 
                 missing = []
-                if not has_key: missing.append("Key")
-                if not has_power: missing.append("Battery Power")
-                if not has_fuel: missing.append("Fuel")
-                if not has_all_tires: missing.append("Tires")
+                if not has_key: missing.append(tr('tooltip', "Key"))
+                if not has_power: missing.append(tr('tooltip', "Power"))
+                if not has_fuel: missing.append(tr('tooltip', "Fuel"))
+                if not has_all_tires: missing.append(tr('tooltip', "Tires"))
                 display_message(f"{tr('msg', 'Cannot start. Missing/Empty:')} {', '.join(missing)}")
 
     def can_equip(self, item, slot):

@@ -190,7 +190,7 @@ class PlayerCombat:
         for i, item in enumerate(self.belt):
             if item == broken_weapon:
                 self.belt[i] = None
-                display_message(f"{broken_weapon.name} {tr('msg', 'broke and was removed from your inventory.')}")
+                display_message(f"{tr('item', broken_weapon.name)} {tr('msg', 'broke and was removed from your belt.')}")
                 return
         try:
             self.inventory.remove(broken_weapon)

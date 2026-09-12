@@ -31,7 +31,7 @@ class PlayerStats:
         if dur_damage > 0:
             item_hit.durability = max(0, item_hit.durability - dur_damage)
             if item_hit.durability <= 0:
-                display_message(f"{tr('msg', 'Your')} {item_hit.name} {tr('msg', 'broke!')}")
+                display_message(f"{tr('msg', 'Your')} {tr('item', item_hit.name)} {tr('msg', 'broke!')}")
 
     def take_damage(self, game, base_damage, base_infection):
         
@@ -57,7 +57,7 @@ class PlayerStats:
                 if item_hit.durability <= 0:
                     item_hit.durability = 0
                     worn_clothes.remove(item_hit)
-                    display_message(f"{tr('msg', 'Your')} {item_hit.name} {tr('msg', 'broke!')}")
+                    display_message(f"{tr('msg', 'Your')} {tr('item', item_hit.name)} {tr('msg', 'broke!')}")
 
         # 2. When the defence reach Zero, start depleting the player Health
         health_bonus_perc = self.progression.get_health_bonus(self)

@@ -186,7 +186,7 @@ class PlayerActions:
                                     required_container.inventory.pop(idx)
                                 except ValueError: pass
                             
-                            display_message(f"{required_item_found.name} {tr('msg', 'used up.')}")
+                            display_message(f"{tr('item', required_item_found.name)} {tr('msg', 'used up.')}")
 
         if is_auto_drink:
             execute_consume()
@@ -272,7 +272,7 @@ class PlayerActions:
                         elif required_source == 'container' and required_container:
                             try: required_container.inventory.remove(required_item_found)
                             except ValueError: pass
-                        display_message(f"{required_item_found.name} {tr('msg', 'used up.')}")
+                        display_message(f"{tr('item', required_item_found.name)} {tr('msg', 'used up.')}")
                 req_consumed = True
 
             # Fallback for old code behavior
@@ -378,17 +378,17 @@ class PlayerActions:
             return
         kit, source, index, container = self.find_repair_kit(target_item)
         if not kit:
-            display_message(f"{tr('msg', 'No repair kit found for')} {target_item.name}.")
+            display_message(f"{tr('msg', 'No repair kit found for')} {tr('item', target_item.name)}.")
             return
         if target_item.durability >= target_item.max_durability:
-            display_message(f"{target_item.name} {tr('msg', 'is already in perfect condition.')}")
+            display_message(f"{tr('item', target_item.name)} {tr('msg', 'is already in perfect condition.')}")
             return
         def execute_repair():
             restore_amount = random.randint(kit.min_restore, kit.max_restore)
             old_dur = target_item.durability
             target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
             restored = target_item.durability - old_dur
-            display_message(f"{tr('msg', 'Repaired')} {target_item.name} {tr('msg', 'by')} {restored:.0f} {tr('msg', 'points using')} {kit.name}.")
+            display_message(f"{tr('msg', 'Repaired')} {tr('item', target_item.name)} {tr('msg', 'by')} {restored:.0f} {tr('msg', 'points using')} {tr('item', kit.name)}.")
             self.progression.add_xp(self, 'maintenance', 20)
             kit.load -= 1
             if kit.load <= 0:
@@ -396,7 +396,7 @@ class PlayerActions:
                 if inv:
                     if source == 'belt': self.belt[index] = None
                     else: inv.pop(index)
-                display_message(f"{kit.name} {tr('msg', 'used up.')}")
+                display_message(f"{tr('item', kit.name)} {tr('msg', 'used up.')}")
         self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
 
     def get_item_context_options(self, item, source, container_item=None):

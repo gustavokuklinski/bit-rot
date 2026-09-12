@@ -51,7 +51,7 @@ def update_vehicles(game, zombies_to_remove):
                                  entity.die(game)
                                  if entity in game.items_on_ground: game.items_on_ground.remove(entity)
                                  if entity in getattr(game, 'active_animals', []): game.active_animals.remove(entity)
-                                 display_message(f"You ran over an animal!")
+                                 display_message(tr('msg', "You ran over an animal!"))
                              else:
                                  if speed > 0:
                                      entity.knockback_velocity = [(vehicle.velocity[0] / speed) * 15, (vehicle.velocity[1] / speed) * 15]
@@ -60,7 +60,7 @@ def update_vehicles(game, zombies_to_remove):
                         elif hasattr(game, 'npcs') and entity in game.npcs:
                              if entity.take_damage(impact_damage, game, attacker=game.player):
                                  handle_zombie_death(game, entity, game.items_on_ground, game.obstacles, None)
-                                 display_message(f"You ran over {entity.name}!")
+                                 display_message(f"{tr('msg', 'You ran over')} {entity.name}!")
                              else:
                                  if speed > 0:
                                      entity.knockback_velocity = [(vehicle.velocity[0] / speed) * 15, (vehicle.velocity[1] / speed) * 15]

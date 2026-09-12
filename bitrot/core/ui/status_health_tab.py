@@ -152,6 +152,8 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         mins = (mins // 10) * 10 
         time_ratio = (current_hour * 60 + mins) / 1440.0
         
+        day_suffix = tr('ui', 'day') if day_count == 1 else tr('ui', 'days')
+        
         if player_has_mobile:
             time_str = f"{current_hour:02d}:{mins:02d}"
             time_color = WHITE
@@ -170,15 +172,12 @@ def draw_health_tab(surface, player, modal, assets, game=None):
 
         world_state = getattr(game.world_time, 'state', 'DAY')
         weather_icon = SPRITE_PATH + "ui/night.png" if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else SPRITE_PATH + "ui/day.png"
-        day_night_str = "Darkness" if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else "Daylight"
+        day_night_str = tr('ui', "Darkness") if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else tr('ui', "Daylight")
         dn_color = (150, 150, 255) if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else (255, 220, 100)
         
-        # Combined rows: (Icon, Label, Value, Value Color, Progress Bar Ratio)
-        # Row 1: Time + Days
-        # Row 2: Day/Night + Rain
         combined_lines = [
-            (SPRITE_PATH + "ui/clock.png", "Time", f"{time_str} - {day_count} day", time_color, time_ratio),
-            (weather_icon, "", f"{day_night_str} - Rain in: {rain_val}", rain_color, None),
+            (SPRITE_PATH + "ui/clock.png", tr('ui', "Time"), f"{time_str} - {day_count} {day_suffix}", time_color, time_ratio),
+            (weather_icon, "", f"{day_night_str} - {tr('ui', 'Rain in:')} {rain_val}", rain_color, None),
         ]
         
         status_title = font_12.render(tr('ui', "World Info"), False, WHITE)

@@ -17,7 +17,11 @@ class CraftingRepairTab:
             craft_type = getattr(r, 'craft_type', 'create')
             if craft_type != 'repair': continue
             
-            if search_text and search_text.lower() not in r.output_name.lower(): continue
+            if search_text:
+                st = search_text.lower()
+                # FIX: Search English ID OR Translated Name
+                if (st not in r.output_name.lower()) and (st not in tr('item', r.output_name).lower()):
+                    continue
             filtered.append(r)
         return filtered
 
@@ -28,9 +32,9 @@ class CraftingRepairTab:
         # Target selection for repair
         target_opts = []
         target_ids = []
-        locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
+        locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=True)
         for container, key, item, ctype, path in locs:
-            if tr('item', item.name) == r.output_name and item.durability is not None and item.durability < item.max_durability:
+            if item.name == r.output_name and item.durability is not None and item.durability < item.max_durability:
                 target_opts.append(f"{tr('item', item.name)} (Dur: {int(item.durability)}) - {' > '.join(path)}")
                 target_ids.append(item.id)
         
@@ -82,12 +86,12 @@ class CraftingRepairTab:
             
             have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in player_items 
-                       if tr('item', item.name) in valid_names)
+                       if item.name in valid_names)
             
             if nearby_items:
                 have += sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in nearby_items 
-                       if tr('item', item.name) in valid_names)
+                       if item.name in valid_names)
             
             color = GREEN if have >= needed else RED
             if have < needed: can_craft = False
@@ -99,7 +103,7 @@ class CraftingRepairTab:
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:
-                locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
+                locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=True)
                 for container, key, item, ctype, path in locs:
                     if item.id == sel_id:
                         name_display = f"[*] {tr('item', item.name)}"
@@ -130,7 +134,7 @@ class CraftingRepairTab:
                     itms = []
                     locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
                     for container, key, item, ctype, path in locs:
-                        if tr('item', item.name) in valid_names:
+                        if item.name in valid_names:
                             qty = item.load if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
                             opts.append(f"{tr('item', item.name)} ({qty}) - {' > '.join(path)}")
                             itms.append(item.id)
@@ -290,7 +294,7 @@ class CraftingRepairTab:
             locations = self.modal.prioritize_locations(locations, self.modal.selected_target)
 
             for container, key, item, ctype, path in locations:
-                if tr('item', item.name) == recipe.output_name and item.durability is not None and item.durability < item.max_durability:
+                if item.name == recipe.output_name and item.durability is not None and item.durability < item.max_durability:
                     target_item = item
                     target_container = container
                     target_key = key
@@ -321,7 +325,7 @@ class CraftingRepairTab:
                 for container, key, item, ctype, path in locations:
                     if removed >= to_remove: break
 
-                    if tr('item', item.name) in valid_names and item != target_item:
+                    if item.name in valid_names and item != target_item:
                         item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                         take = min(to_remove - removed, item_qty)
                         

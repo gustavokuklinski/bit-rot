@@ -16,7 +16,7 @@ from core.data.localization import tr
 
 class CraftingModal(BaseModal):
     def __init__(self, surface, modal_data, assets, game):
-        super().__init__(surface, modal_data, assets, "Craft (C)")
+        super().__init__(surface, modal_data, assets, "Craft")
         self.game = game
         self.player = game.player
         
@@ -148,7 +148,7 @@ class CraftingModal(BaseModal):
             
         return False
 
-    def _get_all_item_locations(self, include_nearby=False, nearby_containers=None):
+    def _get_all_item_locations(self, include_nearby=False, nearby_containers=None, exclude_equipped=False):
         locations = []
         
         def extract_list(container_list, path):
@@ -157,26 +157,29 @@ class CraftingModal(BaseModal):
                 if item:
                     locations.append((container_list, i, item, 'list', path))
                     if hasattr(item, 'inventory') and item.inventory:
+                        # Use translated name for the breadcrumb path
                         extract_list(item.inventory, path + [tr('item', item.name)])
 
+        # Always include main inventory
         extract_list(self.player.inventory, ["Inventory"])
         
-        for i in range(len(self.player.belt) - 1, -1, -1):
-            item = self.player.belt[i]
-            if item:
-                locations.append((self.player.belt, i, item, 'fixed_list', ["Belt"]))
-                if hasattr(item, 'inventory') and item.inventory:
-                    extract_list(item.inventory, ["Belt", tr('item', item.name)])
-                    
-        protected_slots = ['arms', 'legs', 'body', 'feet', 'hands']
-        for k in list(self.player.clothes.keys()):
-            item = self.player.clothes[k]
-            if item:
-                if str(k).lower() not in protected_slots:
-                    locations.append((self.player.clothes, k, item, 'dict', ["Gear", str(k).capitalize()]))
-                if hasattr(item, 'inventory') and item.inventory:
-                    extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
-                    
+        # ONLY include Belt and Gear if exclude_equipped is False
+        if not exclude_equipped:
+            for i in range(len(self.player.belt) - 1, -1, -1):
+                item = self.player.belt[i]
+                if item:
+                    locations.append((self.player.belt, i, item, 'fixed_list', ["Belt"]))
+                    if hasattr(item, 'inventory') and item.inventory:
+                        extract_list(item.inventory, ["Belt", tr('item', item.name)])
+                        
+            protected_slots = ['arms', 'legs', 'body', 'feet', 'hands']
+            for k in list(self.player.clothes.keys()):
+                item = self.player.clothes[k]
+                if item:
+                    if str(k).lower() not in protected_slots:
+                        locations.append((self.player.clothes, k, item, 'dict', ["Gear", str(k).capitalize()]))
+                    if hasattr(item, 'inventory') and item.inventory:
+                        extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
         
         if include_nearby:
             if nearby_containers is None:
@@ -200,7 +203,7 @@ class CraftingModal(BaseModal):
             
             have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in search_items 
-                       if tr('item', item.name) in valid_names)
+                       if item.name in valid_names)
             
             if have < needed: return False
         return True
@@ -440,11 +443,11 @@ class CraftingModal(BaseModal):
         return None, self.get_buttons()
 
     def _draw_ingredient_tooltip(self, names, pos, nearby_containers):
-        locs = self._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
+        locs = self._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=True)
         
         available_items = []
         for container, key, item, ctype, path in locs:
-            if tr('item', item.name) in names:
+            if item.name in names:
                 available_items.append((item, path))
         
         line_height = 24
@@ -459,7 +462,7 @@ class CraftingModal(BaseModal):
             for name in names:
                 img = self.get_preview_image(name)
                 if img: img = pygame.transform.scale(img, (20, 20))
-                s = font_12.render(f"{name} {tr('ui', '(None available)')}", False, GRAY)
+                s = font_12.render(f"{tr('item', name)} {tr('ui', '(None available)')}", False, GRAY)
                 
                 row_w = dash_w + (25 if img else 0) + s.get_width()
                 if row_w > max_w: max_w = row_w
@@ -518,7 +521,7 @@ class CraftingModal(BaseModal):
             for container, key, item, ctype, path in locations:
                 if removed_check >= to_remove: break
 
-                if tr('item', item.name) in valid_names:
+                if item.name in valid_names:
                     if hasattr(item, 'inventory') and item.inventory: return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
 
                     item_qty = item.load if (item.load is not None and item.is_stackable()) else 1

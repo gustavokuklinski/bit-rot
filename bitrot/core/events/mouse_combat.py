@@ -107,7 +107,7 @@ def handle_attack(game, mouse_pos):
                     print(f"{weapon.name} broke!")
                     game.player.progression.add_xp(game.player, 'maintenance', 50)
                     game.player.active_weapon = None 
-                    display_message(game, f"{weapon.name} {tr('msg', 'is broken and unequipped.')}")
+                    display_message(game, f"{tr('item', weapon.name)} {tr('msg', 'is broken and unequipped.')}")
                 
                 # --- AUTO RELOAD: Trigger right after ammo hits 0 ---
                 elif weapon.load <= 0 and not game.player.is_reloading:
@@ -132,10 +132,10 @@ def handle_attack(game, mouse_pos):
                             is_critical=True
                         )
                     print(f"**CLICK!** {weapon.name} is out of ammo.")
-                    display_message(f"{weapon.name} {tr('msg', 'is out of ammo.')}")
+                    display_message(f"{tr('item', weapon.name)} {tr('msg', 'is out of ammo.')}")
             else:
                 print(f"**CLUNK!** {weapon.name} is broken.")
-                display_message(f"{weapon.name} {tr('msg', 'is broken.')}")
+                display_message(f"{tr('item', weapon.name)} {tr('msg', 'is broken.')}")
 
         # ... (Rest of the melee and throw logic below remains perfectly unchanged) ...
         elif weapon and weapon.item_type == 'weapon_throw':

@@ -368,7 +368,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                     elif len(target_container.inventory) < (target_container.capacity or 0):
                                         if not check_container_weight_limit(target_container, game.dragged_item):
-                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         elif is_external_source:
                                             item_ref = game.dragged_item
@@ -609,7 +609,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             break
                                     elif len(container.inventory) < (container.capacity or 0):
                                         if not check_container_weight_limit(container, game.dragged_item):
-                                            display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -660,7 +660,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             if game.dragged_item.load <= 0: dropped_successfully = True
                                         else:
                                             if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
-                                                display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                                display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                                 dropped_successfully = False
                                             else:
                                                 item_to_swap = container.inventory.pop(target_index)
@@ -669,7 +669,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 dropped_successfully = False
                                     else:
                                         if not check_container_weight_limit(container, game.dragged_item):
-                                            display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             container.inventory.insert(target_index, game.dragged_item)
@@ -677,7 +677,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 
                                 elif len(container.inventory) < (container.capacity or 0):
                                     if not check_container_weight_limit(container, game.dragged_item):
-                                        display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                        display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                         dropped_successfully = False
                                     else:
                                         container.inventory.append(game.dragged_item)
@@ -723,7 +723,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             break
                                     elif len(target_container.inventory) < (target_container.capacity or 0):
                                         if not check_container_weight_limit(target_container, game.dragged_item):
-                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -765,7 +765,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if game.dragged_item.load <= 0: dropped_successfully = True
                                     else:
                                         if not check_container_weight_limit(target_container, game.dragged_item, item_in_slot):
-                                            display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             item_to_swap = target_container.inventory.pop(target_index)
@@ -774,7 +774,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             dropped_successfully = False
                                 else:
                                     if not check_container_weight_limit(target_container, game.dragged_item):
-                                        display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                        display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                         dropped_successfully = False
                                     else:
                                         target_container.inventory.insert(target_index, game.dragged_item)
@@ -812,7 +812,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                             if len(target_container.inventory) < (target_container.capacity or 0):
                                                  if not check_container_weight_limit(target_container, game.dragged_item):
-                                                     display_message(f"{target_container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                                     display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                                      dropped_successfully = False
                                                      break
 
@@ -838,7 +838,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                      target_container.inventory.append(game.dragged_item)
                                                      dropped_successfully = True
                                             else:
-                                                display_message(f"{target_container.name} {tr('msg', 'is full.')}")
+                                                display_message(f"{tr('item', target_container.name)} is full.")
                                                 dropped_successfully = False
                                         
                                         break 
@@ -966,7 +966,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             break
                                     elif len(container.inventory) < (container.capacity or 0):
                                         if not check_container_weight_limit(container, game.dragged_item):
-                                            display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             can_loot = True
@@ -1011,7 +1011,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             if game.dragged_item.load <= 0: dropped_successfully = True
                                         else:
                                             if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
-                                                display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                                display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                                 dropped_successfully = False
                                             else:
                                                 item_to_swap = container.inventory.pop(target_index)
@@ -1020,14 +1020,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 dropped_successfully = False
                                     else:
                                         if not check_container_weight_limit(container, game.dragged_item):
-                                            display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                            display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                             dropped_successfully = False
                                         else:
                                             container.inventory.insert(target_index, game.dragged_item)
                                             dropped_successfully = True
                                 elif len(container.inventory) < (container.capacity or 0):
                                     if not check_container_weight_limit(container, game.dragged_item):
-                                        display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                        display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                         dropped_successfully = False
                                     else:
                                         container.inventory.append(game.dragged_item)
@@ -1187,7 +1187,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     break
                             elif len(container.inventory) < (container.capacity or 0):
                                 if not check_container_weight_limit(container, game.dragged_item):
-                                    display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                    display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                     dropped_successfully = False
                                     break
                                 else:
@@ -1239,7 +1239,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     dropped_successfully = True
                             else:
                                 if not check_container_weight_limit(container, game.dragged_item, item_in_slot):
-                                    display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                    display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                     dropped_successfully = False
                                 else:
                                     item_to_swap = container.inventory.pop(target_index)
@@ -1248,13 +1248,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                     dropped_successfully = False 
                         elif len(container.inventory) < (container.capacity or 0):
                             if not check_container_weight_limit(container, game.dragged_item):
-                                display_message(f"{container.name} {tr('msg', 'cannot carry that much weight.')}")
+                                display_message(f"{tr('item', container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                 dropped_successfully = False
                             else:
                                 container.inventory.append(game.dragged_item)
                                 dropped_successfully = True
                         else:
-                            display_message(f"{container.name} {tr('msg', 'is full.')}")
+                            display_message(f"{tr('item', container.name)} {tr('msg', 'is full.')}")
                         
                         if dropped_successfully: break
                 if dropped_successfully:
@@ -1282,11 +1282,11 @@ def handle_mouse_up(game, event, mouse_pos):
                             tile_allow_liquid = tile_def.get('allow_liquid', False) if tile_def else False
                             if str(tile_allow_liquid).lower() in ['true', '1'] or tile_allow_liquid is True:
                                 poured_in_map = True
-                                display_message(f"{tr('msg', 'Poured')} {game.dragged_item.name} {tr('msg', 'into')} {tr('msg', tile_def.get('name', ''))}.")
+                                display_message(f"{tr('msg', 'Poured')} {tr('item', game.dragged_item.name)} {tr('msg', 'into')} {tr('msg', tile_def.get('name', ''))}.")
                                 game.dragged_item.load = 0
                                 dropped_successfully = True 
                             else:
-                                display_message(f"{tr('msg', 'The')} {game.dragged_item.name} {tr('msg', 'spills on the ground.')}")
+                                display_message(f"{tr('msg', 'The')} {tr('item', game.dragged_item.name)} {tr('msg', 'spills on the ground.')}")
                                 dropped_successfully = True 
                         
                         if not poured_in_map and not getattr(game.dragged_item, 'liquid', False):

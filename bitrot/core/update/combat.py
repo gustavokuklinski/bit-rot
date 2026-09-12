@@ -188,7 +188,7 @@ def player_hit_zombie(player, zombie, game):
                 active_weapon.durability -= durability_loss
                 if active_weapon.durability <= 0:
                     player.active_weapon = None
-                    display_message(f"{active_weapon.name} is broken and unequipped.")
+                    display_message(f"{tr('item', active_weapon.name)} {tr('msg', 'is broken and unequipped.')}")
     else: 
         base_damage = progression.get_unarmed_damage(player)
 

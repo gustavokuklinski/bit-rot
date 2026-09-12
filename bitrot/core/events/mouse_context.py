@@ -250,7 +250,7 @@ def handle_context_menu_click(game, mouse_pos):
                             if hasattr(game.player, 'progression'):
                                 game.player.progression.add_xp(game.player, 'maintenance', 5)
                                 
-                            target_name = "Window" if "window" in char.lower() else "Door"
+                            target_name = tr('ui', "Window") if "window" in char.lower() else tr('ui', "Door")
                             display_message(f"{target_name} {tr('msg', 'barricaded successfully.')}")
                             
                         game.player.start_action("Barricading", 5.0, do_barricate, xp_reward=0)
@@ -310,7 +310,7 @@ def handle_context_menu_click(game, mouse_pos):
                             if hasattr(game.player, 'progression'):
                                 game.player.progression.add_xp(game.player, 'maintenance', 5)
                                 
-                            target_name = "Window" if "window" in char.lower() else "Door"
+                            target_name = tr('ui', "Window") if "window" in char.lower() else tr('ui', "Door")
                             display_message(tr('msg', f"{target_name} unbarricaded successfully."))
                             
                         game.player.start_action("Unbarricading", 4.0, do_unbarricade, xp_reward=0)
@@ -417,7 +417,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     veh.add_equipment(removed_item, slot_name)
                                     
                                 if amount_transferred > 0:
-                                    display_message(f"{tr('msg', 'Removed fuel to')} {target_container.name}.")
+                                    display_message(f"{tr('msg', 'Removed fuel to')} {tr('item', target_container.name)}.")
                                 else:
                                     display_message(tr('msg', "Container is full."))
                                     
@@ -948,28 +948,30 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
             
             elif option == 'Crafts':
-                crafting_modal = next((m for m in game.modals if m['type'] == 'crafting'), None)
+                # 1. Translate the item name for the search box
+                translated_name = tr('item', item.name)
                 tab_name = tr('tab', "Known Recipes")
                 
-                if not crafting_modal:
-                    default_pos = game.last_modal_positions.get('crafting', (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2))
-                    new_modal = {
-                        'id': uuid.uuid4(),
-                        'type': 'crafting',
-                        'position': default_pos,
-                        'rect': pygame.Rect(default_pos[0], default_pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
-                        'is_dragging': False,
-                        'drag_offset': (0, 0),
-                        'active_tab': tab_name,
-                        'search_text': item.name,
-                        'search_active': False
-                    }
-                    game.modals.append(new_modal)
-                else:
-                    crafting_modal['active_tab'] = tab_name
-                    crafting_modal['search_text'] = item.name
-                    crafting_modal['search_active'] = False
+                # 2. FORCE REOPEN: Remove existing crafting modal if it exists to reset state
+                game.modals = [m for m in game.modals if m['type'] != 'crafting']
                 
+                # 3. Determine position (use last known position or center of screen)
+                default_pos = (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2)
+                pos = game.last_modal_positions.get('crafting', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
+
+                # 4. Create and add the new modal with the translated search text
+                new_modal = {
+                    'id': uuid.uuid4(),
+                    'type': 'crafting',
+                    'position': pos,
+                    'rect': pygame.Rect(pos[0], pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
+                    'is_dragging': False,
+                    'drag_offset': (0, 0),
+                    'active_tab': tab_name,
+                    'search_text': translated_name, # <--- FIXED: Now in Portuguese
+                    'search_active': False
+                }
+                game.modals.append(new_modal)
                 clicked_on_menu = True
 
             elif option == 'Open' or option == 'Inspect':

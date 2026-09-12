@@ -602,7 +602,7 @@ class MapManager:
                 weapon.durability = max(0, weapon.durability - DURABILITY_COST)
                 if weapon.durability <= 0:
                     self.game.player.active_weapon = None
-                    display_message(f"{weapon.name} {tr('msg', 'is broken and unequipped.')}")
+                    display_message(f"{tr('item', weapon.name)} {tr('msg', 'is broken and unequipped.')}")
                     return True
         
         if definition.get('sound_src'):

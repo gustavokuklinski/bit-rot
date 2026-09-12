@@ -17,7 +17,11 @@ class CraftingDismantleTab:
             craft_type = getattr(r, 'craft_type', 'create')
             if craft_type != 'dismantle': continue
             
-            if search_text and search_text.lower() not in r.output_name.lower(): continue
+            if search_text:
+                st = search_text.lower()
+                # FIX: Search English ID OR Translated Name
+                if (st not in r.output_name.lower()) and (st not in tr('item', r.output_name).lower()):
+                    continue
             filtered.append(r)
         return filtered
 
@@ -61,12 +65,12 @@ class CraftingDismantleTab:
             
             have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in player_items 
-                       if tr('item', item.name) in valid_names)
+                       if item.name in valid_names)
             
             if nearby_items:
                 have += sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
                        for item in nearby_items 
-                       if tr('item', item.name) in valid_names)
+                       if item.name in valid_names)
             
             color = GREEN if have >= needed else RED
             if have < needed: can_craft = False
@@ -107,9 +111,9 @@ class CraftingDismantleTab:
                 if click and not self.modal.dropdown_state['active']:
                     opts = []
                     itms = []
-                    locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers)
+                    locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=True)
                     for container, key, item, ctype, path in locs:
-                        if tr('item', item.name) in valid_names:
+                        if item.name in valid_names:
                             qty = item.load if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
                             opts.append(f"{tr('item', item.name)} ({qty}) - {' > '.join(path)}")
                             itms.append(item.id)
@@ -282,7 +286,7 @@ class CraftingDismantleTab:
                 for container, key, item, ctype, path in locations:
                     if removed >= to_remove: break
 
-                    if tr('item', item.name) in valid_names:
+                    if item.name in valid_names:
                         item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                         take = min(to_remove - removed, item_qty)
                         
