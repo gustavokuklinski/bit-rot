@@ -11,6 +11,10 @@
   <img alt="GitHub watchers" src="https://img.shields.io/github/watchers/gustavokuklinski/bit-rot">
 </p>
 
+<p align="center">
+  <a href='https://ko-fi.com/I2I61MH19A' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi1.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+</p>
+
 # 🧟 Bit Rot
 
 **Bit Rot** is a zombie survivor game where you fight, survive, and navigate through a post-apocalyptic island overrun by the undead.
