@@ -37,8 +37,13 @@ def _parse_xml_to_dict(filepath):
             
         for element in category:
             key = element.get('name')
-            # O valor a ser pego dinamicamente (ex: translation_ui, translation_item)
-            val_attr = f"translation_{cat_name}" 
+            
+            # Logic to handle the specific 'translation_type' attribute for the item_type category
+            if cat_name == 'item_type':
+                val_attr = 'translation_type'
+            else:
+                val_attr = f"translation_{cat_name}"
+                
             val = element.get(val_attr)
             
             if key and val:

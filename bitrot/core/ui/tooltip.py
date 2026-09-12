@@ -13,7 +13,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         lines.append(item.tooltip_text)
         
     if item.item_type:
-        lines.append(f"{tr('tooltip', 'Type:')} {tr('tooltip', item.item_type)}")
+        lines.append(f"{tr('tooltip', 'Type:')} {tr('item_type', item.item_type)}")
 
     if hasattr(item, 'consume_time') and (getattr(item, 'item_type', '').startswith('consumable') or getattr(item, 'item_type', '') == 'liquid'):
         lines.append(f"{tr('tooltip', 'Time use:')} {item.consume_time}s")
@@ -47,11 +47,12 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         if not RecipeManager.RECIPES:
              RecipeManager.load_recipes()
              
-        recipes = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
+        # recipes = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
+        recipes = RecipeManager.get_recipes_by_magazine(item.name)
         if recipes:
             lines.append(tr('tooltip', "Teaches:"))
             for r in recipes:
-                lines.append(f" - {r.output_name}")
+                lines.append(f" - {tr('item', r.output_name)}")
 
     if hasattr(item, 'inventory') and item.inventory is not None:
         if item.item_type in ['container', 'cloth']:
@@ -178,7 +179,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         tip_lines = str(item.tip).replace('\\n', '\n').split('\n')
         
         # Add the first line with the yellow "Tip: " prefix
-        lines.append([(tr('tooltip', "Tip: "), (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
+        lines.append([(tr('tooltip', "Tip:"), (255, 255, 0)), (tip_lines[0].strip(), WHITE)])
         
         # Add any remaining lines with invisible spaces to align them perfectly under the first line
         for extra_line in tip_lines[1:]:

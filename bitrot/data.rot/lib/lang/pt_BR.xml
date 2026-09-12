@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language name="pt_BR">
     <modal>
-        <modal name="Inventory (I)" translation_modal="Inventário (I)" />
         <modal name="Inventory" translation_modal="Inventário" />
-        <modal name="Player Status (H)" translation_modal="Status do Jogador (H)" />
-        <modal name="Craft (C)" translation_modal="Criação (C)" />
-        <modal name="Gear (G)" translation_modal="Equipamento (G)" />
-        <modal name="Messages (M)" translation_modal="Mensagens (M)" />
-        <modal name="Map (M)" translation_modal="Mapa (M)" />
+        <modal name="Player Status" translation_modal="Status do Jogador" />
+        <modal name="Craft" translation_modal="Criação" />
+        <modal name="Gear" translation_modal="Equipamento" />
+        <modal name="Messages" translation_modal="Mensagens" />
+        <modal name="Nearby" translation_modal="Proximidades" />
+        <modal name="Slots Overview" translation_modal="Bolsos" />
+        <modal name="Map" translation_modal="Mapa" />
         <modal name="Load Game" translation_modal="Carregar Jogo" />
         <modal name="Settings" translation_modal="Configurações" />
         <modal name="Mobile" translation_modal="Celular" />
@@ -273,7 +274,9 @@
         <tooltip name="Ammo:" translation_tooltip="Munição:" />
         <tooltip name="Repairs:" translation_tooltip="Repara:" />
         <tooltip name="Passive (in Inventory):" translation_tooltip="Passiva (no Inventário):" />
-        <tooltip name="Tip: " translation_tooltip="Dica: " />
+        <tooltip name="Passive skill boost:" translation_tooltip="Habilidade passiva extra:" />
+        <tooltip name="Tip:" translation_tooltip="Dica:" />
+        <tooltip name="Time use:" translation_tooltip="Tempo de uso:" />
 
         <tooltip name="Press E to Talk&#10;RMB For Talk option" translation_tooltip="Pressione E para Falar&#10;Botão Direito p/ Opções" />
         <tooltip name="Press E&#10;to go Down/Up" translation_tooltip="Pressione E&#10;para Descer/Subir" />
@@ -469,6 +472,8 @@
         <msg name="Missing" translation_msg="Faltando" />
         <msg name="of" translation_msg="de" />
         <msg name="Looting" translation_msg="Saqueando" />
+
+        <msg name="Reading" translation_msg="Lendo" />
     </msg>
 
 </language>

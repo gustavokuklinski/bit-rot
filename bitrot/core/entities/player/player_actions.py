@@ -334,7 +334,7 @@ class PlayerActions:
              self.inventory[self.inventory.index(item)] = new_item
 
     def read_recipe_book(self, item):
-        recipes_taught = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
+        recipes_taught = RecipeManager.get_recipes_by_magazine(item.name)
         
         if not recipes_taught:
             display_message(f"{tr('msg', 'You read')} {tr('item', item.name)}{tr('msg', ', but learn nothing new.')}")
@@ -357,7 +357,7 @@ class PlayerActions:
             self.progression.add_xp(self, 'intelligence', 10)
 
         # Call start_action without the xp_attr or xp_reward parameters
-        self.start_action(f"Reading {tr('item', item.name)}", 3.0, finish_reading)
+        self.start_action(f"{tr('msg', 'Reading')} {tr('item', item.name)}", 3.0, finish_reading)
 
     def find_repair_kit(self, target_item):
         if not target_item: return None, None, None, None

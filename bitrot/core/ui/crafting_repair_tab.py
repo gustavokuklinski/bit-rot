@@ -34,7 +34,7 @@ class CraftingRepairTab:
                 target_opts.append(f"{tr('item', item.name)} (Dur: {int(item.durability)}) - {' > '.join(path)}")
                 target_ids.append(item.id)
         
-        target_text = r.output_name
+        target_text = tr('item', r.output_name)
         if self.modal.selected_target in target_ids:
             idx = target_ids.index(self.modal.selected_target)
             target_text = f"{tr('tab', 'Repair')}: {target_opts[idx]}"
@@ -94,7 +94,8 @@ class CraftingRepairTab:
             
             primary_name = valid_names[0]
             img = self.modal.ingredient_images.get(primary_name)
-            name_display = primary_name if len(valid_names) == 1 else f"{primary_name} ({tr('ui', 'Any')})"
+            translated_name = tr('item', primary_name)
+            name_display = translated_name if len(valid_names) == 1 else f"{translated_name} ({tr('ui', 'Any')})"
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:
@@ -221,7 +222,7 @@ class CraftingRepairTab:
 
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED
-            mag_text = f"{tr('ui', 'Requires Magazine:')} {r.magazine}"
+            mag_text = f"{tr('ui', 'Requires Magazine:')} {tr('item', r.magazine)}" 
             mag_surf = font_12.render(mag_text, False, mag_color)
             element_cursor_y -= 20
             surface.blit(mag_surf, (details_x, element_cursor_y))

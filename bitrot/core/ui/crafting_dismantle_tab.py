@@ -25,7 +25,7 @@ class CraftingDismantleTab:
         r = self.modal.selected_recipe
         surface = self.modal.surface
 
-        title_surf = font_12.render(r.output_name, False, WHITE)
+        title_surf = font_12.render(tr('item', r.output_name), False, WHITE)
         surface.blit(title_surf, (details_x, details_y))
         
         sel_id = self.modal.selected_ingredients.get(0)
@@ -73,7 +73,8 @@ class CraftingDismantleTab:
             
             primary_name = valid_names[0]
             img = self.modal.ingredient_images.get(primary_name)
-            name_display = primary_name if len(valid_names) == 1 else f"{primary_name}"
+            translated_name = tr('item', primary_name)
+            name_display = translated_name if len(valid_names) == 1 else f"{translated_name}"
 
             sel_id = self.modal.selected_ingredients.get(r_idx)
             if sel_id:
@@ -207,7 +208,7 @@ class CraftingDismantleTab:
 
         if r.magazine:
             mag_color = GREEN if knows_magazine else RED
-            mag_text = f"{tr('ui', 'Requires Magazine:')} {r.magazine}"
+            mag_text = f"{tr('ui', 'Requires Magazine:')} {tr('item', r.magazine)}" 
             mag_surf = font_12.render(mag_text, False, mag_color)
             element_cursor_y -= 20
             surface.blit(mag_surf, (details_x, element_cursor_y))

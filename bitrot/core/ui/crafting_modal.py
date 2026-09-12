@@ -369,7 +369,7 @@ class CraftingModal(BaseModal):
             
             old_clip = self.surface.get_clip()
             self.surface.set_clip(row_rect)
-            name_surf = font_12.render(recipe.output_name, False, text_color)
+            name_surf = font_12.render(tr('item', recipe.output_name), False, text_color)
             self.surface.blit(name_surf, (row_rect.x + 8, row_rect.y + 6))
             self.surface.set_clip(old_clip)
             
