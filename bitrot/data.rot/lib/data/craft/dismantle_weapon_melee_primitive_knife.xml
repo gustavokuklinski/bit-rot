@@ -3,5 +3,4 @@
     <result name="Stone Blade" amount="1" />
     <result name="Half Stick" amount="1" />
     <result name="[Ragged Cloth, Denim Stripes, Leather Piece]" amount="1" chance="0.5" /> 
-    <ingredient name="Blueprint" destroy="true" amount="1" />
 </recipe>

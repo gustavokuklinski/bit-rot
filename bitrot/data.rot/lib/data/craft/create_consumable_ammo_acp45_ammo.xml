@@ -1,5 +1,4 @@
-<recipe type="ammo" craft="create" magazine="Guns and Ammo Almanach" output="ACP45 Ammo" gain_xp="[maintenance:1]" amount="1" time="0.5">
-    <ingredient name="[Almanach, Magazine]" destroy="true" amount="1" />
+<recipe type="consumable_ammo" craft="create" magazine="Guns and Ammo Almanach" output="ACP45 Ammo" gain_xp="[maintenance:1]" amount="1" time="0.5">
     <ingredient name="Powder" destroy="true" amount="4" />
     <ingredient name="ACP45 Capsule" destroy="true" amount="1" />
     <ingredient name="ACP45 Bullet" destroy="true" amount="1" />
