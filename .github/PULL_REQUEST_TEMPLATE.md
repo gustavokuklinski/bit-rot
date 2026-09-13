@@ -28,7 +28,7 @@ If no AI was used, simply check the "[ ] Human" box and delete the other fields.
 | `[e.g., Gemini 2.5 Pro]` | `[e.g., Fix]` | `[e.g., Provided fix for edge case in sorting]` |
 
 **Allowed Categories**:
-`[Code]`, `[Fix]`, `[Add]`, `[Test]`, `[Content]`
+`[Code]`, `[Fix]`, `[Add]`, `[Content]`
 
 ---
 

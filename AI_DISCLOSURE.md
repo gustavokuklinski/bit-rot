@@ -10,9 +10,12 @@ In the spirit of transparency and open-source collaboration, this document outli
 ## AI Models Used
 The following Large Language Models (LLMs) were utilized during the development lifecycle:
 
-- **gemma3:31B**
+- **Gemma4 31B IT**
+- **Gemini Pro Latest**
+- **Gemini 3.8 Flash**
+- **Gemini 3.1 Pro Preview**
 - **Gemini 2.5 Pro**
-- **Gemini 3.1 Pro**
+---
 - **Qwen3.5**
 - **ChatGPT-5o**
 - **DeepSeek-R1**
@@ -27,7 +30,6 @@ The extent of AI involvement varied by domain:
 | Domain | Method | Details |
 | :--- | :--- | :--- |
 | **Code** | **LLM (AI-Assisted)** | AI was used to generate boilerplate, suggest refactors, write utility functions, debug errors, and produce documentation strings (docblocks). All generated code was reviewed, tested, and adapted by human developers before inclusion. |
-| **Audio Content** | **LLM (AI-Assisted)** | AI was used to generate audio speak and music files |
 | **Content** | **Human** | All written content—including this disclosure, the README, guides, and in-app user-facing text—was authored by humans without AI generation. |
 | **Design** | **Human** | The architecture, system design, user experience flows, and visual styling decisions were conceived and executed entirely by human contributors. |
 

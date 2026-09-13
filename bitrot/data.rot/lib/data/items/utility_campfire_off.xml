@@ -1,4 +1,4 @@
-<item name="Campfire off" type="utility" state="off" allow_belt="false" tip="Place to Turn on">
+<item name="Campfire off" type="utility" state="off" allow_belt="false" tip="Place and Turn on to create safe radius">
     <properties>
         <durability min="1" max="100" />
         <weight weight="1.0"/>
