@@ -176,11 +176,12 @@ class ZombieAI:
         in_camp_safe_zone = False
         if hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
+                # Check any item placed with safe_radius > 0
+                if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
+                    safe_r = item.safe_radius
                     dx = player.rect.centerx - item.rect.centerx
                     dy = player.rect.centery - item.rect.centery
-                    if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:  # 5 tiles radius
-                        # [FIX] Add Line of Sight validation for the safe zone
+                    if (dx * dx + dy * dy) < (TILE_SIZE * safe_r) ** 2:
                         if player.has_line_of_sight(item.rect, game.obstacles, game):
                             in_camp_safe_zone = True
                             break
@@ -323,11 +324,12 @@ class ZombieAI:
         in_camp_safe_zone = False
         if target_entity == game.player and hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
+                # Check any item placed with safe_radius > 0
+                if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
+                    safe_r = item.safe_radius
                     dx = game.player.rect.centerx - item.rect.centerx
                     dy = game.player.rect.centery - item.rect.centery
-                    if (dx * dx + dy * dy) < (TILE_SIZE * 5) ** 2:
-                        # [FIX] Add Line of Sight validation for the safe zone
+                    if (dx * dx + dy * dy) < (TILE_SIZE * safe_r) ** 2:
                         if game.player.has_line_of_sight(item.rect, game.obstacles, game):
                             in_camp_safe_zone = True
                             break

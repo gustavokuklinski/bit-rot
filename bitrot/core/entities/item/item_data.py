@@ -44,6 +44,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
         consume_time_str = root.attrib.get('consume_time', '1.0')
         consume_time = float(consume_time_str)
 
+        safe_radius_str = root.attrib.get('safe_radius', '0')
+        try:
+            safe_radius = int(safe_radius_str)
+        except (ValueError, TypeError):
+            safe_radius = 0
+
         template = {
             'type': ttype, 
             'properties': {}, 
@@ -54,6 +60,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             'allow_belt': allow_belt,
             'consume_time': consume_time,
             'tip': tip,
+            'safe_radius': safe_radius,    # <--- ADD THIS
             'spawn_amount_global': spawn_amount_global,
             'spawn_maptile': spawn_maptile,            
             'spawn_layer': spawn_layer                 

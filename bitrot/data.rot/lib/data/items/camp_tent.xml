@@ -1,4 +1,4 @@
-<item name="Camp Tent" type="camp" allow_belt="false" tip="Place item to create a safezone radius">
+<item name="Camp Tent" type="camp" allow_belt="false" safe_radius="3" tip="Place item to create a safezone radius">
     <properties>
         <capacity value="1" />
         <allow_sleep value="true" />

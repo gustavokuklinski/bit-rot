@@ -123,20 +123,25 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
             break
 
     for item in game.visible_items:
-        if getattr(item, 'item_type', '') == 'camp' and getattr(item, 'is_placed', False):
+        if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
             if screen_rect.colliderect(item.rect) and item.rect.collidepoint(world_mouse_pos):
+                
+                # --- [NEW] Draw hover highlight box around the item ---
+                pygame.draw.rect(surface, (50, 255, 50), item.rect.move(offset_x, offset_y), 2)
+
                 cx = item.rect.centerx
                 cy = item.rect.centery
-                radius_tiles = 5
+                radius_tiles = getattr(item, 'safe_radius', 0)
                 
-                # Create a translucent green tile surface with a baked-in 1px transparent border
+                # Create a translucent green tile surface with a 1px border
                 t_size = TILE_SIZE
                 highlight_surf = pygame.Surface((t_size, t_size), pygame.SRCALPHA)
-                highlight_surf.fill((50, 255, 50, 15)) # Extremely faint fill
-                pygame.draw.rect(highlight_surf, (50, 255, 50, 40), (0, 0, t_size, t_size), 1) # True 1px transparent border
+                highlight_surf.fill((50, 255, 50, 15)) # Faint fill
+                pygame.draw.rect(highlight_surf, (50, 255, 50, 40), (0, 0, t_size, t_size), 1)
                 
-                # Pre-filter obstacles to only those near the camp for performance
-                local_obstacles = [ob for ob in game.obstacles if ob.colliderect(item.rect.inflate(TILE_SIZE * 12, TILE_SIZE * 12))]
+                # Pre-filter obstacles to only those within the safe radius
+                search_box = item.rect.inflate(TILE_SIZE * (radius_tiles * 2 + 2), TILE_SIZE * (radius_tiles * 2 + 2))
+                local_obstacles = [ob for ob in game.obstacles if ob.colliderect(search_box)]
                 
                 for dx in range(-radius_tiles, radius_tiles + 1):
                     for dy in range(-radius_tiles, radius_tiles + 1):
@@ -146,24 +151,20 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
                         target_cx = tx * TILE_SIZE + TILE_SIZE / 2
                         target_cy = ty * TILE_SIZE + TILE_SIZE / 2
                         
-                        # Use a circular radius calculation
                         dist = math.hypot(target_cx - cx, target_cy - cy)
                         if dist <= radius_tiles * TILE_SIZE:
                             los = True
-                            
-                            # Check if the line intersects any physical wall/obstacle
                             for ob in local_obstacles:
                                 if ob.clipline((cx, cy), (target_cx, target_cy)):
                                     gx = ob.centerx // TILE_SIZE
                                     gy = ob.centery // TILE_SIZE
                                     tile_def = game.map_manager.get_tile_at(gx, gy)
                                     if tile_def and tile_def.get('is_visible'):
-                                        continue  # Transparent obstacles (like fences) don't block the effect
+                                        continue  # Transparent obstacles don't block
                                     los = False
                                     break
                             
                             if los:
-                                # Apply ONLY the camera's X/Y offset, because the world surface handles the zoom later!
                                 draw_x = tx * TILE_SIZE + offset_x
                                 draw_y = ty * TILE_SIZE + offset_y
                                 surface.blit(highlight_surf, (draw_x, draw_y))

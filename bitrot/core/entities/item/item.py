@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0):        
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -77,6 +77,8 @@ class Item:
         self.tip = tip
 
         self.consume_time = consume_time
+
+        self.safe_radius = safe_radius
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
@@ -151,6 +153,9 @@ class Item:
         if hasattr(self, 'color') and self.color != (255, 255, 255):
             data['color'] = self.color
 
+        if getattr(self, 'safe_radius', 0) > 0:
+            data['safe_radius'] = self.safe_radius
+
         return data
 
     @staticmethod
@@ -179,7 +184,10 @@ class Item:
 
         if 'inventory' in data and data['inventory']:
             item.inventory = [Item.from_dict(i_data) for i_data in data['inventory'] if i_data]
-            
+        
+        if 'safe_radius' in data: 
+            item.safe_radius = data['safe_radius']
+
         return item
 
     @property

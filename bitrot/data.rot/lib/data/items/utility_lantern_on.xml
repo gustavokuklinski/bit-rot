@@ -3,7 +3,8 @@
         <durability min="1" max="100" />
         <weight weight="1.0"/>
         <light min="1" max="5" />
-        <fuel type="[Matches, Lighter on]" />
+        <fuel type="[Alcohol, Ligther Fluid, Ragged Cloth, Plank, Log]" />
+        <require type="[Matches, Lighter on]" />
         <sprite file="utility_lantern_on.png" />
     </properties>
     <spawn chance="0" />

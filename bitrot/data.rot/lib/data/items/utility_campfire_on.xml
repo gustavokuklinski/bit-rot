@@ -1,9 +1,9 @@
-<item name="Campfire on" type="utility" state="on" allow_belt="false" tip="Grab to Turn off">
+<item name="Campfire on" type="utility" state="on" safe_radius="5" allow_belt="false" tip="Grab to Turn off">
     <properties>
         <durability min="1" max="100" />
         <weight weight="1.0"/>
         <light min="2" max="6" />
-        <fuel type="[Ragged Cloth, Plank, Log]" />
+        <fuel type="[Alcohol, Ligther Fluid, Ragged Cloth, Plank, Log]" />
         <require type="[Matches, Lighter on]" />
         <sprite file="utility_campfire_on.png" />
     </properties>

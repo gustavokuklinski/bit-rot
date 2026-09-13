@@ -3,7 +3,7 @@
         <durability min="1" max="100" />
         <weight weight="1.0"/>
         <light min="0" max="0" />
-        <fuel type="[Alcohol, Ligther fluid, Ragged Cloth, Plank, Log]" />
+        <fuel type="[Alcohol, Ligther Fluid, Ragged Cloth, Plank, Log]" />
         <require type="[Matches, Lighter on]" />
         <sprite file="utility_campfire_off.png" />
     </properties>

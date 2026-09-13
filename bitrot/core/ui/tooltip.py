@@ -18,6 +18,9 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if hasattr(item, 'consume_time') and (getattr(item, 'item_type', '').startswith('consumable') or getattr(item, 'item_type', '') == 'liquid'):
         lines.append(f"{tr('tooltip', 'Time use:')} {item.consume_time}s")
 
+    if getattr(item, 'safe_radius', 0) > 0:
+        lines.append(f"{tr('tooltip', 'Safe radius:')} {item.safe_radius} {tr('tooltip', 'tiles')}")
+
     if hasattr(item, 'require') and item.require:
         reqs = item.require if isinstance(item.require, list) else [item.require]
     
@@ -28,22 +31,26 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         or_separator = f" {tr('tooltip', 'or')} "
         lines.append(f"{tr('tooltip', 'Requires:')} {or_separator.join(translated_reqs)}")
 
-    if getattr(item, 'fuel_type', None):
-        raw_fuel = item.fuel_type
-        if isinstance(raw_fuel, dict) and 'type' in raw_fuel:
-            raw_fuel = raw_fuel['type']
-            
+    fuel_val = getattr(item, 'fuel_type', None) or getattr(item, 'fuel', None)
+    if not fuel_val and hasattr(item, 'properties') and isinstance(item.properties, dict):
+        fuel_val = item.properties.get('fuel_type') or item.properties.get('fuel')
+
+    if fuel_val:
+        if isinstance(fuel_val, dict):
+            fuel_val = fuel_val.get('type') or fuel_val.get('value')
+
         candidates = []
-        if isinstance(raw_fuel, list):
-            candidates = raw_fuel
-        elif isinstance(raw_fuel, str):
-            if raw_fuel.startswith('[') and raw_fuel.endswith(']'):
-                candidates = [s.strip() for s in raw_fuel[1:-1].split(',')]
+        if isinstance(fuel_val, list):
+            candidates = fuel_val
+        elif isinstance(fuel_val, str):
+            if fuel_val.startswith('[') and fuel_val.endswith(']'):
+                candidates = [s.strip() for s in fuel_val[1:-1].split(',')]
             else:
-                candidates = [raw_fuel]
-        
-        translated_fuels = [tr('item', c) for c in candidates]
-        lines.append(f"{tr('tooltip', 'Fuel:')} {', '.join(translated_fuels)}")
+                candidates = [fuel_val]
+
+        translated_fuels = [tr('item', c) for c in candidates if c]
+        if translated_fuels:
+            lines.append(f"{tr('tooltip', 'Fuel:')} {', '.join(translated_fuels)}")
 
     if item.item_type == 'recipe':
         # Ensure recipes are loaded if checking from main menu or early state

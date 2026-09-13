@@ -422,6 +422,8 @@
         <tooltip name="Tip:" translation_tooltip="Dica:" />
         <tooltip name="Time use:" translation_tooltip="Tempo de uso:" />
         <tooltip name="Fuel:" translation_tooltip="Combustível:" />
+        <tooltip name="Safe radius:" translation_tooltip="Raio seguro:" />
+        <tooltip name="tiles" translation_tooltip="quadrados" />
 
         <!-- Tab Tooltips -->
         <tooltip name="Overview" translation_tooltip="Visão Geral do Personagem" />
