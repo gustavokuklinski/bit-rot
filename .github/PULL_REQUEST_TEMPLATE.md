@@ -27,11 +27,8 @@ If no AI was used, simply check the "[ ] Human" box and delete the other fields.
 | `[e.g., DeepSeek-R1]` | `[e.g., Code]` | `[e.g., Generated the data validation helper]` |
 | `[e.g., Gemini 2.5 Pro]` | `[e.g., Fix]` | `[e.g., Provided fix for edge case in sorting]` |
 
-**Allowed Models** (from our [AI_DISCLOSURE.md](AI_DISCLOSURE.md)):
-`gemma3:31B`, `Gemini 2.5 Pro`, `Gemini 3.1 Pro`, `Qwen3.5`, `ChatGPT-5o`, `DeepSeek-R1`
-
 **Allowed Categories**:
-`[Code]`, `[Fix]`, `[Refactor]`, `[Test]`, `[Doc]`
+`[Code]`, `[Fix]`, `[Add]`, `[Test]`, `[Content]`
 
 ---
 

@@ -38,7 +38,6 @@ assignees: ''
 
 <!-- Please complete the following information: -->
 - OS: [e.g., Windows 11, macOS 14]
-- Browser/Version: [e.g., Chrome 120, Node.js v20]
 - Project Version/Branch: [e.g., main, v1.2.3]
 
 ---

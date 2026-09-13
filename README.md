@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/bitrot/data.rot/icons/logo.png" alt="Bit Rot Logo" width="400"><br /><br />
-
-  <img src="https://img.shields.io/badge/license-EULA-yellow.svg" alt="License">
-  <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey" alt="Platform">
+  <img src="https://raw.githubusercontent.com/gustavokuklinski/bit-rot/refs/heads/main/bitrot/data.rot/icons/logo.png" alt="Bit Rot Logo" width="400">
 </p>
 
 <p align="center">
-  <img alt="GitHub forks" src="https://img.shields.io/github/forks/gustavokuklinski/bit-rot">
-  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/gustavokuklinski/bit-rot">
-  <img alt="GitHub watchers" src="https://img.shields.io/github/watchers/gustavokuklinski/bit-rot">
+    <a href="https://github.com/gustavokuklinski/bit-rot/stargazers"><img src="https://img.shields.io/github/stars/gustavokuklinski/bit-rot?style=flat-square&color=f59e0b&label=Stars" alt="GitHub stars" /></a>
+    <a href="https://github.com/gustavokuklinski/bit-rot/releases/"><img src="https://img.shields.io/github/downloads/gustavokuklinski/bit-rot/total?style=flat-square&color=8b5cf6&label=Downloads" alt="Total downloads" /></a>
+    <a href="https://github.com/gustavokuklinski/bit-rot/releases/latest"><img src="https://img.shields.io/github/v/tag/gustavokuklinski/bit-rot?&style=flat-square&color=10b981&label=Build" alt="Tag release" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache 2.0-blue?style=flat-square" alt="ISC license" /></a><br />
+    <a href="https://discord.gg/JC9hMgh3nF"><img src="https://img.shields.io/badge/Discord-%235865F2.svg?&logo=discord&style=flat-square&logoColor=white&label=Community" alt="Discord community" /></a>
+    <a href="https://gustavokuklinski.itch.io/bit-rot/purchase"><img src="https://img.shields.io/badge/itch.io-%23FF0B34.svg?logo=Itch.io&style=flat-square&label=Download&logoColor=white" alt="Download Bit Rot" /></a>
 </p>
 
 <p align="center">
@@ -25,16 +25,12 @@
 - [📋 Minimum Requirements](#-minimum-requirements)
 - [🎮 Controls and Keybinds](#-controls-and-keybinds)
 - [🚀 Using the Rot Engine](#-using-the-rot-engine)
-  - [Interactive Mode (TUI)](#interactive-mode-tui)
-  - [Command Line Mode (CLI)](#command-line-mode-cli)
+  - [Interactive Mode](#interactive-mode)
+  - [Command Line Mode](#command-line-mode)
 - [🛠️ Manual Installation](#-manual-installation-virtual-environment)
 - [📦 Building Executables](#-building-executables)
 - [🔑 Windows Signing and Certificates](#-windows-signing-and-certificates)
-- [☁️ Cloud Builds (GitHub Actions)](#-cloud-builds-github-actions)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [🔐 Security](#-security)
-- [👤 Code of Conduct](#-code-of-conduct)
+- [☁️ Cloud Builds](#-cloud-builds)
 - [📬 Contact](#-contact)
 
 ---
@@ -105,14 +101,14 @@ Simply double-click `BITROT.bat` or run it via CMD:
 BITROT.bat
 ```
 
-### 🕹️ Interactive Mode (TUI)
+### 🕹️ Interactive Mode
 If you run the scripts without any arguments, you will enter the **Interactive ASCII Menu**:
 1. **Play BitRot**: Launches the game.
 2. **Editor**: Launches the level editor.
 3. **Clean Project**: Deletes cache, build folders, or resets `data.rot`.
 4. **Build Executable**: Automates the Nuitka compilation and signing process.
 
-### ⌨️ Command Line Mode (CLI)
+### ⌨️ Command Line Mode
 | Command | Description | Linux | Mac | Windows |
 | :--- | :--- | :--- | :--- | :--- |
 | `shell` | Launches the game | `./BITROT.sh shell`| `./BITROT.sh shell` | `BITROT.bat shell` |
@@ -231,7 +227,7 @@ signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://times
 
 ---
 
-## ☁️ Cloud Builds (GitHub Actions)
+## ☁️ Cloud Builds
 
 If you don't have the Windows SDK or Nuitka installed locally, you can use our **GitHub Actions Pipeline** to build the project in the cloud.
 
@@ -242,36 +238,14 @@ If you don't have the Windows SDK or Nuitka installed locally, you can use our *
 4. Select your target platform (Windows, Linux, or macOS).
 5. Click **Run workflow**.
 
+| Linux | AppImage | MacOS | Windows |
+| :--- | :--- | :--- | :--- |
+| <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux-appimage.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux-appimage.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-macos.yml?branch=main&style=flat-square&label=MacOS" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-windows.yml?branch=main&style=flat-square&label=Windows" alt="GH Action" /></a> |
+
 ### 📦 Downloading the Build:
 Once the process is complete, GitHub will upload the compiled binaries as **Artifacts**. You can find them at the bottom of the specific Action run summary.
 
 **Note for Maintainers:** The GitHub Action uses **Repository Secrets** to store the certificate password and signing keys, ensuring that the public releases are signed without exposing sensitive passwords in the code.
-
----
-
-## 🤝 Contributing
-
-We welcome community contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a Pull Request.
-
-If you use Generative AI to assist with your code, remember to include the mandatory **AI tags** (e.g., `[DeepSeek-R1] [Code]`) in your PR description.
-
----
-
-## 📄 License
-
-This project is released under a **source-available license** with **All Rights Reserved**. You may fork it and submit Pull Requests, but you **may not** re-upload, redistribute, or claim the code as your own. See the [LICENSE](LICENSE) file for full details.
-
----
-
-## 🔐 Security
-
-For security concerns or vulnerability reports, please review our [Security Policy](SECURITY.md). **We are not responsible for broken code or damage on any machine**—use this software at your own risk.
-
----
-
-## 👤 Code of Conduct
-
-Please note that this project has a [Code of Conduct](CODE_OF_CONDUCT.md). By interacting with the community, you agree to abide by its terms.
 
 ---
 
