@@ -22,6 +22,12 @@
         <item_type name="consumable_drugs" translation_type="drogas" />
         <item_type name="consumable_food" translation_type="comida" />
         <item_type name="consumable_medication" translation_type="medicamento" />
+        <item_type name="camp" translation_type="acampamento" />
+        <item_type name="car_battery" translation_type="bateria_veiculo" />
+        <item_type name="car_tire" translation_type="pneu_veiculo" />
+        <item_type name="car_fuel" translation_type="gasolina_veiculo_liquido" />
+        <item_type name="car_key" translation_type="chave_veiculo" />
+        <item_type name="car_motor" translation_type="motor_veiculo" />
     </item_type>
 
     <item>

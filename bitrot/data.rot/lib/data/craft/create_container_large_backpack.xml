@@ -1,0 +1,8 @@
+<recipe type="container" craft="create" output="Large Backpack" magazine="Sewing Vol.2" req_level="[intelligence:1, maintenance:2]" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="4.5">
+    <ingredient name="Small Backpack" destroy="true" amount="1" />
+    <ingredient name="Ragged Cloth" destroy="true" amount="3" />
+    <ingredient name="Leather Piece" destroy="true" amount="2" />
+    <ingredient name="Denim Stripes" destroy="true" amount="1" />
+    <ingredient name="Line Twine" destroy="true" amount="4" />
+    <ingredient name="Needle" destroy="false" amount="2" />
+</recipe>
