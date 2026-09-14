@@ -278,6 +278,10 @@
         <ui name="REPAIR ITEM" translation_ui="CONSERTAR ITEM" />
         <ui name="DISMANTLE" translation_ui="DESMONTAR" />
         <ui name="MISSING RESOURCES" translation_ui="RECURSOS INSUFICIENTES" />
+
+        <ui name="Ingredients" translation_ui="Ingredientes" />
+       
+        <ui name="Open Craft" translation_tooltip="Abrir criação" />
     </ui>
 
     <alert>
@@ -464,6 +468,8 @@
         <tooltip name="Weight" translation_tooltip="Peso Carregado" />
         <tooltip name="Current time cycle" translation_tooltip="Ciclo horário global" />
         <tooltip name="Time of day and rain" translation_tooltip="Fase solar e previsão de chuva" />
+
+        <tooltip name="Type" translation_tooltip="Tipo" />
     </tooltip>
 
     <msg>
@@ -652,7 +658,7 @@
         <msg name="Could not find vehicle" translation_msg="Veículo não encontrado" />
         <msg name="Debug:" translation_msg="Depuração:" />
         <msg name="You" translation_msg="Você" />
-
+        <msg name="The item must be in inventory or nearby to craft" translation_msg="O item precisa estar no inventário ou nas proximidades para criar" />
         <msg name="You feel dizzy and your vision blurs..." translation_msg="Você está tonto e sua visão embaça..." />
         <msg name="The strong whiskey makes your head spin and your vision blurs..." translation_msg="Este whiskey é forte, sua cabeça está rodando..." />
     </msg>

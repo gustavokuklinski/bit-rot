@@ -13,6 +13,7 @@ from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, to
 from core.data.localization import tr
 from core.placement import find_free_tile
 from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive
+from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
 
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
@@ -142,12 +143,9 @@ def handle_context_menu_click(game, mouse_pos):
                     game.modals.append(new_container_modal)
                  clicked_on_menu = True
 
-            
             if option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
             elif option == 'Gear': toggle_gear_modal(game)
-
-            
                     
             if option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
@@ -175,8 +173,6 @@ def handle_context_menu_click(game, mouse_pos):
                         def do_barricate():
                             def consume(name_substr, amount):
                                 amt_left = amount
-                                
-                                # 1. Check Belt (Fixed size list, replacing with None is correct)
                                 for i in range(len(game.player.belt)):
                                     it = game.player.belt[i]
                                     if it and name_substr in it.name.lower():
@@ -190,7 +186,6 @@ def handle_context_menu_click(game, mouse_pos):
                                             if amt_left <= 0:
                                                 return
                                                 
-                                # 2. Check Inventory (Dynamic list, must pop. Iterating backwards is safe)
                                 for i in range(len(game.player.inventory) - 1, -1, -1):
                                     it = game.player.inventory[i]
                                     if it and name_substr in it.name.lower():
@@ -261,7 +256,6 @@ def handle_context_menu_click(game, mouse_pos):
                             if hasattr(game.map_manager, '_replace_tile'):
                                 game.map_manager._replace_tile(grid_x, grid_y, char, target_char)
                                 
-                            # Handle random drops
                             from core.placement import find_free_tile
                             plank_qty = random.randint(0, 2)
                             nails_qty = random.randint(0, 2)
@@ -357,10 +351,8 @@ def handle_context_menu_click(game, mouse_pos):
                                 if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
                                     for inv_item in target_container.inventory:
                                         if inv_item.can_stack_with(removed_item):
-                                            i_cap = getattr(inv_item, 'capacity', 1)
-                                            if i_cap is None: i_cap = 1
-                                            i_load = getattr(inv_item, 'load', 1)
-                                            if i_load is None: i_load = 1
+                                            i_cap = getattr(target_container, 'max_liquid', None) or getattr(inv_item, 'capacity', 1) or 1
+                                            i_load = getattr(inv_item, 'load', 1) or 1
                                             
                                             avail = i_cap - i_load
                                             trans = min(avail, actual_transfer)
@@ -446,12 +438,12 @@ def handle_context_menu_click(game, mouse_pos):
                             if clone:
                                 clone.load = getattr(item, 'capacity', 100)
                                 clone.durability = item.durability
-                                clone.is_placed = False # <--- [FIX] Reset status
+                                clone.is_placed = False
                                 game.player.inventory.append(clone)
                                 game.player.stack_item_in_inventory(clone)
                         else:
                             if remove_item_from_src(item):
-                                item.is_placed = False # <--- [FIX] Reset status
+                                item.is_placed = False
                                 game.player.inventory.append(item)
                                 game.player.stack_item_in_inventory(item)
                         
@@ -572,6 +564,38 @@ def handle_context_menu_click(game, mouse_pos):
                             
                 clicked_on_menu = True
 
+            # --- CLICK HANDLER FOR CRAFTS & FAST CRAFTING ---
+            elif option == 'Crafts':
+                if target_sub_slot and target_sub_slot.startswith('header_'):
+                    # Category headers are visual dividers and not clickable
+                    return
+
+                if target_sub_slot == 'open_craft' or not target_sub_slot:
+                    translated_name = tr('item', item.name)
+                    tab_name = tr('tab', "Known Recipes")
+                    
+                    game.modals = [m for m in game.modals if m['type'] != 'crafting']
+                    default_pos = (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2)
+                    pos = game.last_modal_positions.get('crafting', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
+
+                    new_modal = {
+                        'id': uuid.uuid4(),
+                        'type': 'crafting',
+                        'position': pos,
+                        'rect': pygame.Rect(pos[0], pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
+                        'is_dragging': False,
+                        'drag_offset': (0, 0),
+                        'active_tab': tab_name,
+                        'search_text': translated_name,
+                        'search_active': False
+                    }
+                    game.modals.append(new_modal)
+                else:
+                    recipe = game.context_menu.get('craft_recipes', {}).get(target_sub_slot)
+                    if recipe:
+                        execute_recipe_craft(game, recipe)
+                clicked_on_menu = True
+
             elif option == 'Remove' and source == 'vehicle_equipment':
                 veh = container_item
                 slot_name = index
@@ -599,16 +623,14 @@ def handle_context_menu_click(game, mouse_pos):
                 if isinstance(item, dict) and item.get('type') == 'virtual_slot':
                     veh = item['vehicle']
                     slot_name = item['slot']
-                    
-                    
 
-                    found_item = None
-                    src_list = None
-                    idx = -1
-                    
-                    found_item, src_list, idx = recursive_search_and_extract(game.player.belt)
+                    found_item, src_list, idx, _ = find_item_recursive(
+                        game.player.belt, lambda it: veh.can_equip(it, slot_name)
+                    )
                     if not found_item:
-                        found_item, src_list, idx = recursive_search_and_extract(game.player.inventory)
+                        found_item, src_list, idx, _ = find_item_recursive(
+                            game.player.inventory, lambda it: veh.can_equip(it, slot_name)
+                        )
                     if not found_item:
                         for k, v in game.player.clothes.items():
                             if not v: continue
@@ -616,7 +638,9 @@ def handle_context_menu_click(game, mouse_pos):
                                 found_item, src_list, idx = v, game.player.clothes, k
                                 break
                             if hasattr(v, 'inventory') and v.inventory:
-                                found_item, src_list, idx = recursive_search_and_extract(v.inventory)
+                                found_item, src_list, idx, _ = find_item_recursive(
+                                    v.inventory, lambda it: veh.can_equip(it, slot_name)
+                                )
                                 if found_item: break
                                 
                     if found_item:
@@ -916,33 +940,6 @@ def handle_context_menu_click(game, mouse_pos):
                 else:
                     game.player.read_recipe_book(item)
                 clicked_on_menu = True
-            
-            elif option == 'Crafts':
-                # 1. Translate the item name for the search box
-                translated_name = tr('item', item.name)
-                tab_name = tr('tab', "Known Recipes")
-                
-                # 2. FORCE REOPEN: Remove existing crafting modal if it exists to reset state
-                game.modals = [m for m in game.modals if m['type'] != 'crafting']
-                
-                # 3. Determine position (use last known position or center of screen)
-                default_pos = (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2)
-                pos = game.last_modal_positions.get('crafting', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
-
-                # 4. Create and add the new modal with the translated search text
-                new_modal = {
-                    'id': uuid.uuid4(),
-                    'type': 'crafting',
-                    'position': pos,
-                    'rect': pygame.Rect(pos[0], pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
-                    'is_dragging': False,
-                    'drag_offset': (0, 0),
-                    'active_tab': tab_name,
-                    'search_text': translated_name, # <--- FIXED: Now in Portuguese
-                    'search_active': False
-                }
-                game.modals.append(new_modal)
-                clicked_on_menu = True
 
             elif option == 'Open' or option == 'Inspect':
                 if getattr(item, 'item_type', None) == 'map':
@@ -1103,7 +1100,7 @@ def handle_context_menu_click(game, mouse_pos):
                             grabbed = True
 
                         if grabbed:
-                            item_to_grab.is_placed = False # <--- [FIX] Reset status
+                            item_to_grab.is_placed = False
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
 
@@ -1536,20 +1533,13 @@ def handle_right_click(game, mouse_pos):
         if item_type not in ['map_tile', 'maptile', 'maptile_container', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
             item_name_to_check = getattr(clicked_item, 'name', '')
             if item_name_to_check:
-                has_crafts = False
-                for r in RecipeManager.RECIPES:
-                    if item_name_to_check.lower() in r.output_name.lower():
-                        has_crafts = True
-                        break
-                    for ing in r.ingredients:
-                        if any(item_name_to_check.lower() in n.lower() for n in ing['names']):
-                            has_crafts = True
-                            break
-                    if has_crafts:
-                        break
-                
+                if not RecipeManager.RECIPES:
+                    RecipeManager.load_recipes()
+
+                has_crafts = any(is_recipe_relevant_to_item(r, item_name_to_check) for r in RecipeManager.RECIPES)
                 if has_crafts and 'Crafts' not in options:
                     options.append('Crafts')
+
 
         # --- SUBMENU GENERATION LOGIC ---
         new_options = []
@@ -1631,10 +1621,13 @@ def handle_right_click(game, mouse_pos):
                                     liquid_qty += getattr(inside_item, 'load', 1) or 1
                                     liquid_name = inside_item.name
                         
+                        max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
                         if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} {tr('ui', 'units')})"
+                            display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
+                        elif getattr(c, 'allow_liquid', False):
+                            display_str = f"{c.name} (0{max_liq_str} {tr('ui', 'Empty')})"
                         else:
-                            display_str = f"{c.name} ({tr('ui', 'Empty')})"
+                            display_str = c.name
                             
                         if c_id not in sub_opts:
                             sub_opts.append(c_id)
@@ -1785,7 +1778,124 @@ def handle_right_click(game, mouse_pos):
                             tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
                             
                 new_options.append({'label': 'Send to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
-                
+                continue
+
+            elif opt == 'Crafts':
+                if not RecipeManager.RECIPES:
+                    RecipeManager.load_recipes()
+
+                sub_opts = ['open_craft']
+                display_map = {'open_craft': tr('ui', 'Open Craft')}
+                tooltip_map = {'open_craft': f"{tr('tooltip', 'Open crafting menu')}\n\n{tr('msg', 'The item must be in inventory or nearby to craft')}"}
+                color_map = {'open_craft': WHITE}
+
+                item_name = getattr(clicked_item, 'name', '')
+                game.context_menu['craft_recipes'] = {}
+
+                # 1. Bucket recipes by craft type using the strict relevance filter
+                craft_buckets = {
+                    'Craft': [],
+                    'Repair': [],
+                    'Dismantle': []
+                }
+
+                for r in RecipeManager.RECIPES:
+                    # Filter out recipes that do not use this item as an ingredient (or repair/dismantle target)
+                    if not is_recipe_relevant_to_item(r, item_name):
+                        continue
+
+                    raw_type = getattr(r, 'craft_type', 'create').lower()
+                    if raw_type == 'repair':
+                        cat_key = 'Repair'
+                    elif raw_type == 'dismantle':
+                        cat_key = 'Dismantle'
+                    else:
+                        cat_key = 'Craft'
+
+                    can_craft, is_unlocked, missing_ings, missing_mag, missing_skills = get_recipe_status_details(game.player, game, r)
+                    craft_buckets[cat_key].append({
+                        'recipe': r,
+                        'can_craft': can_craft,
+                        'is_unlocked': is_unlocked,
+                        'missing_ings': missing_ings,
+                        'missing_mag': missing_mag,
+                        'missing_skills': missing_skills
+                    })
+
+                # 2. Append each category in order: Craft -> Repair -> Dismantle
+                global_idx = 0
+                max_total_recipes = 12
+
+                for cat_name in ['Craft', 'Repair', 'Dismantle']:
+                    bucket = craft_buckets[cat_name]
+                    if not bucket:
+                        continue
+
+                    # Sort: Available crafts (can_craft=True) first
+                    bucket.sort(key=lambda d: (not d['can_craft'], d['recipe'].output_name))
+
+                    # Add category header
+                    hdr_id = f"header_{cat_name.lower()}"
+                    sub_opts.append(hdr_id)
+                    display_map[hdr_id] = tr('tab', cat_name)
+                    color_map[hdr_id] = (255, 215, 0)
+
+                    for data in bucket:
+                        if global_idx >= max_total_recipes:
+                            break
+
+                        r = data['recipe']
+                        sub_key = f"recipe_{global_idx}"
+                        global_idx += 1
+
+                        sub_opts.append(sub_key)
+                        game.context_menu['craft_recipes'][sub_key] = r
+
+                        out_name = tr('item', r.output_name)
+                        if r.output_amount > 1:
+                            out_name = f"{out_name} x{r.output_amount}"
+
+                        display_map[sub_key] = f"- {out_name}"
+                        color_map[sub_key] = WHITE if data['can_craft'] else GRAY
+
+                        # Build tooltip
+                        tt_lines = [
+                            out_name,
+                            f"{tr('ui', 'Type')}: {tr('tab', cat_name)}",
+                            ""
+                        ]
+
+                        if data['can_craft']:
+                            tt_lines.append(f"{tr('ui', 'Ready to craft')} ({r.time_required}s)")
+                        else:
+                            if data['missing_ings']:
+                                tt_lines.append(f"{tr('ui', 'Ingredients')}:")
+                                for m in data['missing_ings']:
+                                    tt_lines.append(f"- {tr('item', m['name'])} ({m['have']}/{m['needed']})")
+
+                            if data['missing_skills'] or data['missing_mag']:
+                                if data['missing_ings']:
+                                    tt_lines.append("")
+                                tt_lines.append(f"{tr('ui', 'Missing skill')}:")
+                                for s in data['missing_skills']:
+                                    skill_name = tr('ui', s[0].capitalize())
+                                    tt_lines.append(f"- {skill_name} (Lv {s[2]})")
+                                if data['missing_mag']:
+                                    tt_lines.append(f"- {tr('item', data['missing_mag'])}")
+
+                        tt_lines.append("")
+                        tt_lines.append(tr('msg', "The item must be in inventory or nearby to craft"))
+                        tooltip_map[sub_key] = "\n".join(tt_lines)
+
+                new_options.append({
+                    'label': 'Crafts', 
+                    'sub': sub_opts, 
+                    'display_names': display_map, 
+                    'tooltips': tooltip_map,
+                    'colors': color_map
+                })
+                continue
+
             else:
                 new_options.append(opt)
                 

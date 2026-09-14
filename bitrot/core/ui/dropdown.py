@@ -142,53 +142,98 @@ def draw_context_menu(surface, menu_state, mouse_pos):
 
             for i, sub_label in enumerate(sub_labels):
                 sub_opt_rect = pygame.Rect(sub_x, sub_y + i * item_height, sub_max_width, item_height)
-                
-                # Check for replacements
                 raw_sub_id = sub_options[i]
+                is_header = raw_sub_id.startswith('header_')
+
+                if is_header:
+                    hdr_color = options[active_sub_idx].get('colors', {}).get(raw_sub_id, (255, 215, 0))
+                    text_surf = font_12.render(sub_label, False, hdr_color)
+                    surface.blit(text_surf, (sub_opt_rect.x + padding + 4, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
+                    continue
+
+                # Regular clickable item (Open Craft and Recipes)
                 replace_name = options[active_sub_idx].get('replacing', {}).get(raw_sub_id)
                 sub_tooltip = options[active_sub_idx].get('tooltips', {}).get(raw_sub_id) 
 
                 menu_state['rects'].append(sub_opt_rect)
-                action_string = f"{options[active_sub_idx]['label']}::{sub_options[i]}"
+                action_string = f"{options[active_sub_idx]['label']}::{raw_sub_id}"
                 menu_state['action_map'].append(action_string)
                 
-                text_color = WHITE
+                base_color = options[active_sub_idx].get('colors', {}).get(raw_sub_id, WHITE)
+                text_color = base_color
+
                 if sub_opt_rect.collidepoint(mouse_pos):
                     pygame.draw.rect(surface, GRAY_80, sub_opt_rect)
-                    text_color = YELLOW
-                    # If hovering over an occupied slot, prep the tooltip
+                    text_color = YELLOW if base_color == WHITE else (220, 220, 160)
+
                     if replace_name:
-                        active_tooltip = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", mouse_pos)
-                    # Render location tooltip
+                        active_tooltip = (f"{tr('msg', 'This item will replace')} {tr('item', replace_name)}", sub_opt_rect, sub_rect)
                     elif sub_tooltip:
-                        active_tooltip = (tr('msg', sub_tooltip), mouse_pos)
+                        active_tooltip = (sub_tooltip, sub_opt_rect, sub_rect)
                     
                 text_surf = font_12.render(sub_label, False, text_color)
-                surface.blit(text_surf, (sub_opt_rect.x + padding, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
+                surface.blit(text_surf, (sub_opt_rect.x + padding + 6, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
                 
-                # Draw the little red *
                 if replace_name:
-                    ast_surf = font_12.render("*", False, (255, 100, 100)) # Light Red asterisk
+                    ast_surf = font_12.render("*", False, (255, 100, 100))
                     surface.blit(ast_surf, (sub_opt_rect.right - padding - ast_surf.get_width(), sub_opt_rect.y + (item_height - ast_surf.get_height()) // 2))
 
-    # [NEW] Draw the tooltip globally on top of everything
+    # --- Tooltip Rendering Anchored to the Side of the Submenu ---
     if active_tooltip:
-        t_text, t_pos = active_tooltip
-        t_surf = font_12.render(t_text, False, WHITE)
-        t_rect = t_surf.get_rect()
-        t_rect.topleft = (t_pos[0] + 15, t_pos[1] + 15) # Offset below mouse
-        
-        # Clamp tooltip to screen
-        if t_rect.right > GAME_WIDTH:
-            t_rect.right = t_pos[0] - 5
-        if t_rect.bottom > GAME_HEIGHT:
-            t_rect.bottom = t_pos[1] - 5
-            
-        bg_rect = t_rect.inflate(10, 10)
-        
-        # Draw background
-        s_tooltip = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-        s_tooltip.fill((20, 20, 20, 240))
-        surface.blit(s_tooltip, bg_rect.topleft)
-        pygame.draw.rect(surface, WHITE, bg_rect, 1)
-        surface.blit(t_surf, t_rect)
+        if len(active_tooltip) == 3:
+            t_text, opt_rect, parent_rect = active_tooltip
+            t_pos = None
+        else:
+            t_text, t_pos = active_tooltip
+            opt_rect, parent_rect = None, None
+
+        lines = t_text.split('\n')
+        line_height = font_12.get_height() + 4
+        tt_padding = 8
+
+        max_w = max((font_12.size(line)[0] for line in lines), default=0)
+        tt_w = max_w + (tt_padding * 2)
+        tt_h = (len(lines) * line_height) + (tt_padding * 2)
+
+        if parent_rect and opt_rect:
+            # Place to the right of the submenu
+            tt_x = parent_rect.right + 5
+            if tt_x + tt_w > GAME_WIDTH:
+                # Flip to the left of the submenu if offscreen
+                tt_x = parent_rect.left - tt_w - 5
+            tt_x = max(5, min(tt_x, GAME_WIDTH - tt_w - 5))
+
+            # Align vertically with the hovered option
+            tt_y = opt_rect.top
+            if tt_y + tt_h > GAME_HEIGHT:
+                tt_y = max(5, GAME_HEIGHT - tt_h - 5)
+            tt_y = max(5, tt_y)
+        else:
+            tt_x = max(5, min(t_pos[0] + 15, GAME_WIDTH - tt_w - 5))
+            tt_y = max(5, min(t_pos[1] + 15, GAME_HEIGHT - tt_h - 5))
+
+        tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
+        s_tooltip = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
+        s_tooltip.fill((20, 20, 20, 245))
+        surface.blit(s_tooltip, tt_rect.topleft)
+        pygame.draw.rect(surface, WHITE, tt_rect, 1)
+
+        for line_idx, line in enumerate(lines):
+            if not line:
+                continue
+
+            line_color = WHITE
+            if "Type:" in line:
+                line_color = (180, 180, 180)       # Sub-header style (soft gray)
+            elif "Missing" in line or "Ingredients:" in line or "Requires" in line:
+                line_color = (255, 130, 130)       # Section headers (soft red)
+            elif line.startswith("- "):
+                line_color = (220, 220, 220)       # List items (light gray)
+            elif "Ready" in line:
+                line_color = (130, 255, 130)       # Success status (soft green)
+            elif "inventory or nearby" in line:
+                line_color = (255, 215, 0)         # Crafting reminder note (gold)
+
+            line_surf = font_12.render(line, False, line_color)
+            surface.blit(line_surf, (tt_x + tt_padding, tt_y + tt_padding + (line_idx * line_height)))
+    
