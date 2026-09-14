@@ -2,7 +2,8 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_white_wine_bottle.png" />
-        <weight weight="0.5" reduction="5%" />
+        <weight weight="0.04" reduction="1%" />
+        <max_liquid value="10" />
     </properties>
     <loot>
         <item name="White Wine Unit" chance="1.0" />

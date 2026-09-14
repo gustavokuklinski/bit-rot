@@ -208,6 +208,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     consume_time = template.get('consume_time', 1.0)
     safe_radius = int(template.get('safe_radius', 0))
 
+    max_liquid_str = get_prop_val(props, 'max_liquid', 'value', None)
+    max_liquid = int(float(max_liquid_str)) if max_liquid_str else template.get('max_liquid', None)
+
     new_item = cls(
         item_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
@@ -222,7 +225,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, 
         require=require, weight=weight, weight_reduction=weight_reduction, 
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
-        safe_radius=safe_radius
+        safe_radius=safe_radius, max_liquid=max_liquid
     )
 
     if item_name in COLORABLE_ITEMS:
@@ -257,6 +260,10 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                 loot_item = cls.create_from_name(loot_info['name'])
                 if loot_item:
                     # --- CORRECTED BYPASS LOGIC ---
+                    if getattr(loot_item, 'liquid', False) and getattr(new_item, 'max_liquid', None) is not None:
+                        loot_item.capacity = new_item.max_liquid
+                        loot_item.load = new_item.max_liquid
+                        
                     if disposable or allow_liquid:
                         new_item.inventory.append(loot_item)
                     else:

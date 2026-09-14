@@ -12,34 +12,7 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 from core.placement import find_free_tile
-
-
-def does_allow_liquid(obj):
-    """Safely checks if an object allows liquid, accounting for string-parsed XML booleans."""
-    if not obj: return False
-    val = getattr(obj, 'allow_liquid', None)
-    if val is not None: return str(val).lower() in ['true', '1'] or val is True
-    if hasattr(obj, 'properties') and isinstance(obj.properties, dict):
-        if 'allow_liquid' in obj.properties:
-            val = obj.properties['allow_liquid']
-            return str(val).lower() in ['true', '1'] or val is True
-    if isinstance(obj, dict):
-        if 'allow_liquid' in obj:
-            val = obj['allow_liquid']
-            return str(val).lower() in ['true', '1'] or val is True
-    return False
-
-def is_infinite_liquid_source(obj):
-    """Checks if the object is an infinite map tile source/sink."""
-    if not does_allow_liquid(obj):
-        return False
-    item_type = getattr(obj, 'item_type', '')
-    obj_type = getattr(obj, 'type', '')
-    if isinstance(obj, dict):
-        item_type = obj.get('item_type', item_type)
-        obj_type = obj.get('type', obj_type)
-    return item_type == 'maptile_container' or obj_type == 'maptile_container' or getattr(obj, 'is_maptile', False)
-
+from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive
 
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
@@ -546,17 +519,15 @@ def handle_context_menu_click(game, mouse_pos):
                             if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
                                 for inv_item in target_container.inventory:
                                     if inv_item.can_stack_with(removed_item):
-                                        i_cap = getattr(inv_item, 'capacity', 1)
-                                        if i_cap is None: i_cap = 1
-                                        i_load = getattr(inv_item, 'load', 1)
-                                        if i_load is None: i_load = 1
-                                        r_load = getattr(removed_item, 'load', 1)
-                                        if r_load is None: r_load = 1
+                                        i_cap = getattr(target_container, 'max_liquid', None) or getattr(inv_item, 'capacity', 1) or 1
+                                        i_load = getattr(inv_item, 'load', 1) or 1
+                                        r_load = getattr(removed_item, 'load', 1) or 1
                                         
                                         avail = i_cap - i_load
                                         trans = min(avail, qty_to_send, r_load)
                                         if trans > 0:
                                             inv_item.load = i_load + trans
+                                            inv_item.capacity = i_cap
                                             removed_item.load = r_load - trans
                                             qty_to_send -= trans
                                             stacked = True
@@ -567,19 +538,26 @@ def handle_context_menu_click(game, mouse_pos):
                             if c_cap is None: c_cap = 0
                             
                             if qty_to_send > 0 and len(target_container.inventory) < c_cap:
-                                r_load = getattr(removed_item, 'load', 1)
-                                if r_load is None: r_load = 1
-                                
-                                if qty_to_send < r_load:
-                                    new_item = Item.create_from_name(removed_item.name)
-                                    if new_item:
-                                        new_item.load = qty_to_send
-                                        if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
-                                        removed_item.load = r_load - qty_to_send
-                                        target_container.inventory.append(new_item)
-                                else:
-                                    if remove_item_from_src(item, is_clone=is_clone):
-                                        target_container.inventory.append(removed_item)
+                                r_load = getattr(removed_item, 'load', 1) or 1
+                                target_max_liq = getattr(target_container, 'max_liquid', None)
+                                trans_qty = min(qty_to_send, target_max_liq) if target_max_liq is not None else qty_to_send
+
+                                if trans_qty > 0:
+                                    if trans_qty < r_load:
+                                        new_item = Item.create_from_name(removed_item.name)
+                                        if new_item:
+                                            new_item.load = trans_qty
+                                            if target_max_liq is not None:
+                                                new_item.capacity = target_max_liq
+                                            if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
+                                            removed_item.load = r_load - trans_qty
+                                            target_container.inventory.append(new_item)
+                                    else:
+                                        if remove_item_from_src(item, is_clone=is_clone):
+                                            if target_max_liq is not None:
+                                                removed_item.capacity = target_max_liq
+                                            target_container.inventory.append(removed_item)
+
                             elif qty_to_send > 0 and not stacked:
                                 display_message(tr('msg', "Container is full."))
                                 
@@ -622,15 +600,7 @@ def handle_context_menu_click(game, mouse_pos):
                     veh = item['vehicle']
                     slot_name = item['slot']
                     
-                    def recursive_search_and_extract(item_list):
-                        for idx_num, it in enumerate(item_list):
-                            if not it: continue
-                            if veh.can_equip(it, slot_name):
-                                return it, item_list, idx_num
-                            if hasattr(it, 'inventory') and it.inventory:
-                                found, src_list, nested_idx = recursive_search_and_extract(it.inventory)
-                                if found: return found, src_list, nested_idx
-                        return None, None, -1
+                    
 
                     found_item = None
                     src_list = None
@@ -1800,10 +1770,11 @@ def handle_right_click(game, mouse_pos):
                                     liquid_name = inside_item.name
                         
                         # Generate the dynamic label string 
+                        max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
                         if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)} {liquid_name} {tr('ui', 'units')})"
+                            display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
                         elif getattr(c, 'allow_liquid', False):
-                            display_str = f"{c.name} ({tr('ui', 'Empty')})"
+                            display_str = f"{c.name} (0{max_liq_str} {tr('ui', 'Empty')})"
                         else:
                             display_str = c.name
                             

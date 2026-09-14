@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -79,6 +79,7 @@ class Item:
         self.consume_time = consume_time
 
         self.safe_radius = safe_radius
+        self.max_liquid = max_liquid
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
@@ -141,6 +142,9 @@ class Item:
         if getattr(self, 'in_belt', False):
             data['in_belt'] = self.in_belt
 
+        if getattr(self, 'max_liquid', None) is not None:
+            data['max_liquid'] = self.max_liquid
+
         if getattr(self, 'is_placed', False):
             data['is_placed'] = self.is_placed
 
@@ -175,6 +179,9 @@ class Item:
             item.text = data['text']
             item.original_text = data['text']
         
+        if 'max_liquid' in data:
+            item.max_liquid = data['max_liquid']
+
         if 'color' in data: 
             item.color = tuple(data['color'])
             if item.image and item.color != (255, 255, 255):

@@ -3,6 +3,7 @@
         <capacity value="1" />
         <sprite file="container_liquid_fuel_canister.png" />
         <weight weight="1.0" reduction="5%" />
+        <max_liquid value="20" />
     </properties>
     <loot>
         <item name="Fuel Unit" chance="1.0" />

@@ -99,7 +99,7 @@ class ZombieCombat:
             )
 
     def die(self, game):
-        """Handles zombie death: plays sound, creates corpse, generates loot."""
+        """Handles zombie death: plays sound, creates corpse, generates loot, and respawns reinforcements."""
         if self.is_dead: return
 
         if not hasattr(self, 'inventory') or self.inventory is None:
@@ -109,14 +109,14 @@ class ZombieCombat:
             for slot, cloth_item in self.clothes.items():
                 if cloth_item:
                     self.inventory.append(cloth_item)
-            self.clothes = {} # Clear it out
+            self.clothes = {}
 
         self.is_dead = True
         
         # 1. Play sound
         if self.sound_dead:
-             snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-             game.sound_manager.play_sound(
+            snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+            game.sound_manager.play_sound(
                 self.sound_dead, 
                 subdir=snd_dir, 
                 game=game, 
@@ -129,51 +129,49 @@ class ZombieCombat:
         corpse = Corpse(
             name=f"Corpse of {self.name}",
             capacity=20, 
-            image_path="zombie/dead.png", # Corpse class handles default if None
+            image_path="zombie/dead.png",
             pos=self.rect.center,
-            decay_ms=300000 # 5 minutes decay
+            decay_ms=300000
         )
 
-        # 3. Add Fixed Inventory (like ID card)
         for item in self.inventory:
             corpse.inventory.append(item)
 
-        # 4. Add Random Loot Table Items
         if self.loot_table:
             for loot_entry in self.loot_table:
                 chance_val = float(loot_entry.get('chance', 0))
-                
-                # Normalize chance: if the code occasionally passes whole numbers (like 50.0 for 50%),
-                # convert it to the 0.0 - 1.0 scale. Since you use 1.0 as 100%, this covers both bases.
                 if chance_val > 1.0:
                     chance_val /= 100.0
-                    
                 if random.random() <= chance_val:
                     item_name = loot_entry.get('item')
                     new_item = Item.create_from_name(item_name)
                     if new_item:
-                         corpse.inventory.append(new_item)
-
-        # 5. Add Clothes
-        #for slot, clothe in self.clothes.items():
-        #    if clothe:
-        #         item_name = clothe.get('name')
-        #         if item_name and not item_name.startswith("Empty"):
-        #             # Simple check to try and create the item version of the cloth
-        #             cloth_item = Item.create_from_name(item_name)
-        #             if cloth_item:
-        #                 corpse.inventory.append(cloth_item)
+                        corpse.inventory.append(new_item)
 
         game.items_on_ground.append(corpse)
 
-        # [FIX] Force immediate item grid rebuild so corpse displays instantly
+        # 3. Dynamic Out-of-Sight Zombie Respawn
+        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True) and getattr(self, 'type', 'zombie') != 'animal':
+            from core.map.spawn_manager import get_out_of_sight_spawn_pos
+            from core.entities.zombie.zombie import Zombie
+            
+            max_spawn = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
+            num_to_spawn = random.randint(1, max(1, int(max_spawn)))
+            
+            for _ in range(num_to_spawn):
+                if len(game.zombies) >= core.data.config.MAX_ZOMBIES_GLOBAL:
+                    break
+                spawn_pos = get_out_of_sight_spawn_pos(game)
+                if spawn_pos:
+                    new_zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
+                    game.zombies.append(new_zombie)
+
         if hasattr(game, 'rebuild_item_grid'):
             game.rebuild_item_grid(force=True)
 
-        # Remove self from game
         if self in game.zombies:
             game.zombies.remove(self)
         if self in game.active_zombies:
             game.active_zombies.remove(self)
-        if self in game.active_animals:
+        if hasattr(game, 'active_animals') and self in game.active_animals:
             game.active_animals.remove(self)

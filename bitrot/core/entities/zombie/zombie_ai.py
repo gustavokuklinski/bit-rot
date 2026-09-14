@@ -12,7 +12,6 @@ class ZombieAI:
 
         self.path = []
         self.path_step = 0
-        # [OPTIMIZATION] Randomize initial time to stagger pathfinding updates across frames
         self.last_path_calc_time = pygame.time.get_ticks() + random.randint(-2000, 0)
         self.path_recalc_cooldown = 0
         self.stuck_timer = 0
@@ -23,7 +22,6 @@ class ZombieAI:
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
             return True
         
-        # Use cached result if recently checked
         if not hasattr(self, 'last_los_check_time'):
             self.last_los_check_time = 0
             self.los_check_interval = 500
@@ -38,44 +36,35 @@ class ZombieAI:
         los_result = True
         for obs in game.obstacles:
             if obs.clipline(start_pos, end_pos):
-                # Check if this obstacle tile allows visibility
                 gx = obs.centerx // TILE_SIZE
                 gy = obs.centery // TILE_SIZE
                 tile_def = game.map_manager.get_tile_at(gx, gy)
                 if tile_def and tile_def.get('is_visible'):
-                    continue # It's a transparent obstacle, ignore for line-of-sight!
+                    continue
                 
                 los_result = False
                 break
         
-        # Cache the result
         self.last_los_check_time = current_time
         self.cached_los_result = los_result
-        
         return los_result
 
     def _get_path_astar(self, start_pos, target_pos, game):
-        """
-        Calculates a path from start_pos to target_pos using A* algorithm.
-        """
+        """Calculates a path from start_pos to target_pos using A* algorithm."""
         start_grid = (int(start_pos[0] // TILE_SIZE), int(start_pos[1] // TILE_SIZE))
         target_grid = (int(target_pos[0] // TILE_SIZE), int(target_pos[1] // TILE_SIZE))
         
         if start_grid == target_grid:
             return [target_pos]
             
-        # [OPTIMIZATION] Reduced max iterations to prevent lag spikes on complex maps
         MAX_ITERATIONS = 200 
-        
         open_set = []
         heapq.heappush(open_set, (0, 0, start_grid, []))
         
         g_score = {start_grid: 0}
         visited = set()
-        
         closest_dist = float('inf')
         closest_node = start_grid
-
         iterations = 0
         
         map_h = len(game.map_data)
@@ -111,7 +100,6 @@ class ZombieAI:
             for next_node in neighbors:
                 if next_node in visited:
                     continue
-                
                 if not (0 <= next_node[1] < map_h and 0 <= next_node[0] < map_w):
                     continue
                 
@@ -124,50 +112,40 @@ class ZombieAI:
                     if tile_def:
                         is_npc = hasattr(self, 'is_friendly') 
                         name = str(tile_def.get('name', '')).lower()
-                        
-                        # [ELEGANT FIX] Filter to only allow pathing through structural barriers
                         char = game.map_data[next_node[1]][next_node[0]]
                         is_barricaded = 'barricate' in char or 'barricad' in char or 'barricate' in name or 'barricad' in name
                         is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
                                        'door' in name or 'window' in name or is_barricaded)
 
                         if is_npc and tile_def.get('is_statable') and not is_barricaded:
-                            move_cost = 2.0  # Slight delay cost for opening
+                            move_cost = 2.0
                         elif tile_def.get('destructible') and is_structural:
-                            move_cost = 15.0 # Cost of breaking barricades/doors
+                            move_cost = 15.0
                         else:
                             continue
                     else:
                         continue
                 
                 new_g = g_score[current] + move_cost
-                
                 if next_node not in g_score or new_g < g_score[next_node]:
                     g_score[next_node] = new_g
                     h = abs(next_node[0] - target_grid[0]) + abs(next_node[1] - target_grid[1])
                     heapq.heappush(open_set, (new_g + h, h, next_node, path + [current]))
 
         if closest_node != start_grid:
-             return [(closest_node[0] * TILE_SIZE + TILE_SIZE//2, closest_node[1] * TILE_SIZE + TILE_SIZE//2)]
+             return [(closest_node[0] * TILE_SIZE + TILE_SIZE // 2, closest_node[1] * TILE_SIZE + TILE_SIZE // 2)]
         
         return None
 
     def _check_chase_triggers(self, player, game, dist_to_player, current_time):
-        """
-        Check if the zombie should enter chasing state based on player actions.
-        Returns True if the zombie should chase, False otherwise.
-        """
-        # [NEW] Ignore triggers if player is in Godzen mode
         if getattr(player, 'godzen_mode', False):
             return False
 
-        # Initialize cache attributes if not present
         if not hasattr(self, 'last_trigger_check_time'):
             self.last_trigger_check_time = 0
             self.trigger_check_interval = 300
             self.cached_trigger_result = False
 
-        # Use cached result if recently checked (but always check if already chasing)
         if self.state != 'chasing' and current_time - self.last_trigger_check_time < self.trigger_check_interval:
             return self.cached_trigger_result
 
@@ -176,7 +154,6 @@ class ZombieAI:
         in_camp_safe_zone = False
         if hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                # Check any item placed with safe_radius > 0
                 if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
                     safe_r = item.safe_radius
                     dx = player.rect.centerx - item.rect.centerx
@@ -186,15 +163,13 @@ class ZombieAI:
                             in_camp_safe_zone = True
                             break
 
-        # Apply stealth modifiers
         if in_camp_safe_zone:
             base_detection_radius *= 0.3
         elif getattr(player, 'is_aiming', False):
-            base_detection_radius *= 0.5  # Stealthy aiming
+            base_detection_radius *= 0.5
         elif getattr(player, 'is_running', False):
-            base_detection_radius *= 1.5  # Running is loud/visible
+            base_detection_radius *= 1.5
             
-        # [NEW] Increase detection radius by 3x when player shoots ranged weapon (gunshot noise)
         if getattr(player, 'gun_flash_timer', 0) > 0:
             detection_radius = base_detection_radius * 3
         else:
@@ -203,18 +178,14 @@ class ZombieAI:
         detection_radius_sq = detection_radius ** 2
         trigger_result = False
 
-        # [FIX] Early exit: zombie too far from player to detect anything
-        # But allow chase if zombie was recently damaged/aggroed
         dist_sq = dist_to_player * dist_to_player
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
         if dist_sq > detection_radius_sq and self.state != 'chasing' and not is_aggroed:
             return False
 
-        # [FIX] Aggroed zombies always chase
         if is_aggroed:
             trigger_result = True
 
-        # If zombie can see player within detection radius, always chase
         if dist_sq <= detection_radius_sq:
             if core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
                 if self.has_line_of_sight(player.rect, game, current_time):
@@ -223,43 +194,32 @@ class ZombieAI:
                 trigger_result = True
 
         if not trigger_result:
-            # Check if player is running (makes noise, attracts zombies)
-            if getattr(player, 'is_running', False):
-                if dist_sq <= detection_radius_sq:
-                    trigger_result = True
+            if getattr(player, 'is_running', False) and dist_sq <= detection_radius_sq:
+                trigger_result = True
 
-            # Check if player is shooting ranged weapon (loud noise)
-            if not trigger_result and getattr(player, 'gun_flash_timer', 0) > 0:
-                if dist_sq <= detection_radius_sq:
-                    trigger_result = True
+            if not trigger_result and getattr(player, 'gun_flash_timer', 0) > 0 and dist_sq <= detection_radius_sq:
+                trigger_result = True
 
-            # Check if player is using melee weapon (quieter, only very close zombies hear)
             if not trigger_result and getattr(player, 'melee_swing_timer', 0) > 0:
                 melee_noise_radius_sq = (TILE_SIZE * 3) ** 2
                 if dist_sq < melee_noise_radius_sq:
                     trigger_result = True
 
-            # Check for moving vehicles (loud noise, attracts zombies)
-            # Only check if zombie is close to player area (optimization)
             if not trigger_result and dist_sq <= detection_radius_sq:
                 if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'vehicles'):
                     for vehicle in game.map_manager.vehicles:
                         if getattr(vehicle, 'active', False) or vehicle.current_speed_val > 0.5:
                             dx = vehicle.rect.centerx - self.rect.centerx
                             dy = vehicle.rect.centery - self.rect.centery
-                            veh_dist_sq = dx*dx + dy*dy
-                            if veh_dist_sq < detection_radius_sq:
+                            if dx*dx + dy*dy < detection_radius_sq:
                                 trigger_result = True
                                 break
 
-        # Cache the result
         self.last_trigger_check_time = current_time
         self.cached_trigger_result = trigger_result
-
         return trigger_result
 
     def update_ai(self, player_rect, obstacles, nearby_entities, game):
-        """Main AI logic: decide state (wander/chase) and target."""
         current_time = pygame.time.get_ticks()
         multiplier = 1.0
 
@@ -276,7 +236,6 @@ class ZombieAI:
         nearest_target = None
         min_target_dist_sq = dist_to_player_sq
 
-        # --- QUADTREE TARGETING: Check nearby NPCs and Animals natively ---
         for entity in nearby_entities:
             if getattr(entity, 'is_dead', False): continue
             
@@ -289,10 +248,9 @@ class ZombieAI:
                 entity_dist_sq = edx*edx + edy*edy
                 
                 if entity_dist_sq < min_target_dist_sq:
-                    # [NEW FIX]: Ensure zombies only target static NPCs if they have line of sight to them
                     if getattr(entity, 'is_static', False):
                         if not self.has_line_of_sight(entity.rect, game, current_time):
-                            continue  # Skip targeting this static NPC if we can't see them
+                            continue
                             
                     min_target_dist_sq = entity_dist_sq
                     nearest_target = entity
@@ -324,7 +282,6 @@ class ZombieAI:
         in_camp_safe_zone = False
         if target_entity == game.player and hasattr(game, 'items_on_ground'):
             for item in game.items_on_ground:
-                # Check any item placed with safe_radius > 0
                 if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
                     safe_r = item.safe_radius
                     dx = game.player.rect.centerx - item.rect.centerx
@@ -336,7 +293,6 @@ class ZombieAI:
         
         if in_camp_safe_zone and target_entity == game.player:
             reduced_detection_sq = (core.data.config.ZOMBIE_DETECTION_RADIUS * 0.3) ** 2
-            # Drop aggro and go back to wandering if the enemy is outside the reduced radius
             if dist_to_target_sq > reduced_detection_sq:
                 should_chase = False
                 is_aggroed = False
@@ -344,8 +300,6 @@ class ZombieAI:
                 if self.state == 'chasing':
                     self.state = 'wandering'
 
-        # [FIX] Ensure detection_radius_sq is scaled down so the immediate line-of-sight check 
-        # doesn't instantly re-aggro the zombie after breaking the chase state
         detection_radius_sq = core.data.config.ZOMBIE_DETECTION_RADIUS ** 2
         if target_entity == game.player:
             if in_camp_safe_zone:
@@ -399,12 +353,9 @@ class ZombieAI:
 
             if core.data.config.ZOMBIE_WANDER_ENABLED:
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
-                
                 wander_interval = core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL / multiplier
                 
-                if (current_time - self.last_wander_change > wander_interval) or \
-                   (self.wander_target is None) or target_reached:
-
+                if (current_time - self.last_wander_change > wander_interval) or (self.wander_target is None) or target_reached:
                     for _ in range(5):
                         wander_radius = 5 * TILE_SIZE
                         new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
@@ -429,9 +380,7 @@ class ZombieAI:
             self.move_towards(target_pos, obstacles, nearby_entities, game, can_see_target=(can_see_target and self.state == 'chasing'))
 
     def move_towards(self, target_pos, obstacles, nearby_entities, game, can_see_target=True):
-
         multiplier = 1.0
-        
         speed_mult = 1.0
         gx = self.rect.centerx // TILE_SIZE
         gy = self.rect.centery // TILE_SIZE
@@ -452,7 +401,7 @@ class ZombieAI:
              use_pathfinding = True
 
         if use_pathfinding:
-            if current_time - self.last_path_calc_time > 1500 or not self.path:
+            if current_time - self.last_path_calc_time > 1000 or not self.path:
                 new_path = self._get_path_astar(self.rect.center, target_pos, game)
                 if new_path:
                     self.path = new_path
@@ -464,7 +413,7 @@ class ZombieAI:
                 dy = next_node[1] - self.rect.centery
                 dist = math.hypot(dx, dy)
                 
-                if dist < TILE_SIZE / 2:
+                if dist < TILE_SIZE * 0.5:
                     self.path.pop(0) 
                     if self.path:
                         next_node = self.path[0]
@@ -496,7 +445,7 @@ class ZombieAI:
                 move_x = (dx / dist) * effective_speed
                 move_y = (dy / dist) * effective_speed
 
-        # --- SEPARATION LOGIC ---
+        # Separation from other zombies
         sep_x, sep_y = 0, 0
         separation_radius = TILE_SIZE * 0.9
         separation_radius_sq = separation_radius ** 2
@@ -507,7 +456,6 @@ class ZombieAI:
             
             dx = self.rect.centerx - z.rect.centerx
             dy = self.rect.centery - z.rect.centery
-            
             if abs(dx) > separation_radius or abs(dy) > separation_radius:
                 continue
 
@@ -529,11 +477,9 @@ class ZombieAI:
             move_x += sep_x * separation_strength
             move_y += sep_y * separation_strength
 
+        # Decrement stuck timer without erratic angle force fighting A*
         if self.stuck_timer > 0:
             self.stuck_timer -= game.dt_ms
-            rad = math.radians(self.stuck_angle)
-            move_x += math.cos(rad) * effective_speed * 0.5
-            move_y += -math.sin(rad) * effective_speed * 0.5
 
         self.vx = move_x 
         self.vy = move_y 
@@ -560,128 +506,131 @@ class ZombieAI:
                 )
                 self.last_step_sound_time = current_time + (random.randint(300, 500) / max(1, multiplier * 0.1))
 
-        # --- PHYSICS SUB-STEPPING ---
+        # -------------------------------------------------------------------------
+        # PARITY WITH PLAYER: collidelistall + Pixel-Mask + 4px Corner Slide Solver
+        # -------------------------------------------------------------------------
+        def check_collision(rect_check):
+            indices = rect_check.collidelistall(obstacles)
+            for idx in indices:
+                obstacle = obstacles[idx]
+                gx = obstacle.x // TILE_SIZE
+                gy = obstacle.y // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy)
+                if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
+                    offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                    if self.mask.overlap(tile_def['mask'], offset):
+                        return obstacle
+                else:
+                    return obstacle
+
+            if getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
+                if rect_check.colliderect(game.player.rect.inflate(-10, -10)):
+                    return game.player
+            return None
+
         safe_step_size = TILE_SIZE * 0.45
         total_dist_x, total_dist_y = abs(move_x), abs(move_y)
         steps = int(math.ceil(max(total_dist_x, total_dist_y) / safe_step_size))
         steps = max(1, steps)
         step_x, step_y = move_x / steps, move_y / steps
-        
+        max_slide = 4
+
         for _ in range(steps):
-            # --- X AXIS ---
+            # --- X AXIS WITH VERTICAL CORNER SLIDING ---
             self.x += step_x
-            self.rect.x = int(self.x)
-            collided = False
-            hit_obstacle = None
+            self.rect.x = round(self.x)
+            collider = check_collision(self.rect)
             
-            for obs in obstacles:
-                if self.rect.colliderect(obs): 
-                    collided = True
-                    hit_obstacle = obs
-                    break
-                
-            if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
-                if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
-                    collided = True
-            
-            if collided:
-                self.x -= step_x
-                self.rect.x = int(self.x)
-                if abs(step_x) > 0.1:
-                    self.stuck_timer = 200
-                    self.stuck_angle = random.randint(0, 360)
-                
-                # [NEW] Attack destructibles when path is blocked
-                if hit_obstacle and type(self).__name__ == 'Zombie' and self.state == 'chasing': 
-                    gx = hit_obstacle.x // TILE_SIZE
-                    gy = hit_obstacle.y // TILE_SIZE
-                    tile_def = game.map_manager.get_tile_at(gx, gy)
+            if collider:
+                resolved = False
+                for offset in range(1, max_slide + 1):
+                    # Try sliding vertically UP
+                    self.rect.y -= offset
+                    if not check_collision(self.rect):
+                        self.y -= offset
+                        resolved = True
+                        break
+                    self.rect.y += offset
+
+                    # Try sliding vertically DOWN
+                    self.rect.y += offset
+                    if not check_collision(self.rect):
+                        self.y += offset
+                        resolved = True
+                        break
+                    self.rect.y += offset
+
+                if not resolved:
+                    self.x -= step_x
+                    self.rect.x = round(self.x)
+                    if abs(step_x) > 0.1:
+                        self.stuck_timer = 200
+                        self.path = []
                     
-                    if tile_def and tile_def.get('destructible'):
-                        name = str(tile_def.get('name', '')).lower()
-                        is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                       'door' in name or 'window' in name or 'barricate' in name)
-                        
-                        if is_structural:
-                            # [ELEGANT FIX] Desynchronize the mob! Give each attack a randomized cooldown
-                            attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
-                            
-                            if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
-                                damage = random.randint(self.min_attack, self.max_attack)
-                                game.map_manager.hit_tile(gx, gy, damage, attacker=self)
-                                self.last_attack_time = current_time
-                                # Randomize the next hit between 0.7s and 1.35s to break the "marching" rhythm
-                                self.current_attack_delay = random.randint(700, 1350) 
-                                self.melee_swing_timer = 10
-                                
-                                if getattr(self, 'sound_attack', None):
-                                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                                    game.sound_manager.play_sound(
-                                        self.sound_attack, subdir=snd_dir, game=game, 
-                                        source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35 # Slightly wider pitch
-                                    )
-                        
-                        step_x = 0
-                        step_y = 0
-            
-            # --- Y AXIS ---
+                    # Attack structural obstacles if path is completely blocked
+                    if collider and collider != getattr(game, 'player', None) and type(self).__name__ == 'Zombie' and self.state == 'chasing':
+                        self._try_attack_obstacle(collider, game, current_time, multiplier)
+
+            # --- Y AXIS WITH HORIZONTAL CORNER SLIDING ---
             self.y += step_y
-            self.rect.y = int(self.y)
-            collided = False
-            hit_obstacle = None
+            self.rect.y = round(self.y)
+            collider = check_collision(self.rect)
             
-            for obs in obstacles:
-                if self.rect.colliderect(obs): 
-                    collided = True
-                    hit_obstacle = obs
-                    break
+            if collider:
+                resolved = False
+                for offset in range(1, max_slide + 1):
+                    # Try sliding horizontally LEFT
+                    self.rect.x -= offset
+                    if not check_collision(self.rect):
+                        self.x -= offset
+                        resolved = True
+                        break
+                    self.rect.x += offset
 
-            if not collided and getattr(game, 'player', None) and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
-                if self.rect.colliderect(game.player.rect.inflate(-12, -12)):
-                    collided = True
+                    # Try sliding horizontally RIGHT
+                    self.rect.x += offset
+                    if not check_collision(self.rect):
+                        self.x += offset
+                        resolved = True
+                        break
+                    self.rect.x += offset
 
-            if collided:
-                self.y -= step_y
-                self.rect.y = int(self.y)
-                if abs(step_y) > 0.1:
-                    self.stuck_timer = 200
-                    self.stuck_angle = random.randint(0, 360)
+                if not resolved:
+                    self.y -= step_y
+                    self.rect.y = round(self.y)
+                    if abs(step_y) > 0.1:
+                        self.stuck_timer = 200
+                        self.path = []
 
-                # [NEW] Attack destructibles when path is blocked
-                if hit_obstacle and type(self).__name__ == 'Zombie' and self.state == 'chasing':
-                    gx = hit_obstacle.x // TILE_SIZE
-                    gy = hit_obstacle.y // TILE_SIZE
-                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    # Attack structural obstacles if path is completely blocked
+                    if collider and collider != getattr(game, 'player', None) and type(self).__name__ == 'Zombie' and self.state == 'chasing':
+                        self._try_attack_obstacle(collider, game, current_time, multiplier)
+
+        self.rect.topleft = (round(self.x), round(self.y))
+
+    def _try_attack_obstacle(self, hit_obstacle, game, current_time, multiplier):
+        gx = hit_obstacle.x // TILE_SIZE
+        gy = hit_obstacle.y // TILE_SIZE
+        tile_def = game.map_manager.get_tile_at(gx, gy)
+        
+        if tile_def and tile_def.get('destructible'):
+            name = str(tile_def.get('name', '')).lower()
+            char = game.map_data[gy][gx] if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]) else ''
+            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
+                           'door' in name or 'window' in name or 'barricate' in char or 'barricad' in char)
+            
+            if is_structural:
+                attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
+                if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
+                    damage = random.randint(self.min_attack, self.max_attack)
+                    game.map_manager.hit_tile(gx, gy, damage, attacker=self)
+                    self.last_attack_time = current_time
+                    self.current_attack_delay = random.randint(700, 1350)
+                    self.melee_swing_timer = 10
                     
-                    if tile_def and tile_def.get('destructible'):
-                        name = str(tile_def.get('name', '')).lower()
-                        is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                                       'door' in name or 'window' in name or 'barricate' in name)
-                        
-                        if is_structural:
-                            # [ELEGANT FIX] Desynchronize the mob! Give each attack a randomized cooldown
-                            attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier
-                            
-                            if current_time - getattr(self, 'last_attack_time', 0) > attack_delay:
-                                damage = random.randint(self.min_attack, self.max_attack)
-                                game.map_manager.hit_tile(gx, gy, damage, attacker=self)
-                                self.last_attack_time = current_time
-                                # Randomize the next hit between 0.7s and 1.35s to break the "marching" rhythm
-                                self.current_attack_delay = random.randint(700, 1350) 
-                                self.melee_swing_timer = 10
-                                
-                                if getattr(self, 'sound_attack', None):
-                                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
-                                    game.sound_manager.play_sound(
-                                        self.sound_attack, 
-                                        subdir=snd_dir, 
-                                        game=game, 
-                                        source_pos=self.rect.center, 
-                                        base_volume=0.6, 
-                                        pitch_variance=0.35 # Slightly wider pitch
-                                    )
-
-                        step_x = 0
-                        step_y = 0
-
-        self.rect.topleft = (int(self.x), int(self.y))
+                    if getattr(self, 'sound_attack', None):
+                        snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                        game.sound_manager.play_sound(
+                            self.sound_attack, subdir=snd_dir, game=game, 
+                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35
+                        )

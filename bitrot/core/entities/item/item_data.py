@@ -49,6 +49,16 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             safe_radius = int(safe_radius_str)
         except (ValueError, TypeError):
             safe_radius = 0
+        
+        max_liquid = None
+        props_node = root.find('properties')
+        if props_node is not None:
+            max_liq_node = props_node.find('max_liquid')
+            if max_liq_node is not None:
+                try:
+                    max_liquid = int(float(max_liq_node.get('value', '0')))
+                except (ValueError, TypeError):
+                    max_liquid = None
 
         template = {
             'type': ttype, 
@@ -60,7 +70,8 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             'allow_belt': allow_belt,
             'consume_time': consume_time,
             'tip': tip,
-            'safe_radius': safe_radius,    # <--- ADD THIS
+            'safe_radius': safe_radius,
+            'max_liquid': max_liquid,
             'spawn_amount_global': spawn_amount_global,
             'spawn_maptile': spawn_maptile,            
             'spawn_layer': spawn_layer                 
@@ -92,6 +103,10 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             require_node = props_node.find('require')
             if require_node is not None:
                 template['properties']['require'] = {k: v for k, v in require_node.attrib.items()}
+
+            max_liq_node = props_node.find('max_liquid')
+            if max_liq_node is not None:
+                template['properties']['max_liquid'] = {'value': max_liq_node.get('value', '0')}
 
             fuel_node = props_node.find('fuel')
             if fuel_node is not None:

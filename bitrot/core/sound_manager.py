@@ -1,3 +1,4 @@
+# sound_manager.py
 import pygame
 import os
 import random
@@ -5,56 +6,93 @@ import math
 from core.data.config import *
 import core.data.config
 
+CATEGORY_TO_CONFIG_ATTR = {
+    'ambient': 'VOLUME_ATMOSPHERIC', 
+    'weather': 'VOLUME_ATMOSPHERIC', 
+    'cave': 'VOLUME_ATMOSPHERIC', 
+    'atmosphere': 'VOLUME_ATMOSPHERIC', 
+    'environment': 'VOLUME_ATMOSPHERIC', 
+    'music': 'VOLUME_MUSIC', 
+    'map': 'VOLUME_MAP', 
+    'items': 'VOLUME_ITEMS', 
+    'item': 'VOLUME_ITEMS', 
+    'vehicles': 'VOLUME_VEHICLE', 
+    'vehicle': 'VOLUME_VEHICLE', 
+    'player': 'VOLUME_PLAYER', 
+    'zombie': 'VOLUME_ZOMBIE', 
+    'zombies': 'VOLUME_ZOMBIE', 
+    'npc': 'VOLUME_NPC', 
+    'npcs': 'VOLUME_NPC', 
+    'animal': 'VOLUME_ANIMAL', 
+    'animals': 'VOLUME_ANIMAL'
+}
+
 class SoundManager:
     def __init__(self):
-        """
-        Initializes the SoundManager.
-        Sounds will be loaded on-demand.
-        """
         self.sounds = {}
-        # We still pre-init the mixer for better performance
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.mixer.init()
-
-        # Increase the maximum number of simultaneous channels
         pygame.mixer.set_num_channels(128)
-        
-        # Reserve the first 16 channels (IDs 0 to 15) for critical sounds 
-        # find_channel() will now only look at channels 16 through 255.
         pygame.mixer.set_reserved(16)
         
-        # Keep track of which reserved channel to use next (Round-robin)
         self.current_reserved_channel = 0
         self.max_reserved_channels = 16
 
+    @staticmethod
+    def get_volume_modifier(subdir):
+        if not subdir:
+            return 1.0
+        attr_name = CATEGORY_TO_CONFIG_ATTR.get(subdir.lower())
+        return getattr(core.data.config, attr_name, 1.0) if attr_name else 1.0
+
+    @staticmethod
+    def calculate_zoom_multiplier(game):
+        if not game:
+            return 1.0
+        near = core.data.config.NEAR_ZOOM
+        far = core.data.config.FAR_ZOOM
+        zoom_range = near - far
+        current_zoom = max(far, min(game.zoom_level, near))
+        progress = (current_zoom - far) / zoom_range if zoom_range != 0 else 1.0
+        return 0.75 + (progress * 0.25)
+
+    @staticmethod
+    def calculate_spatial_audio(source_pos, player_pos, max_dist, base_volume, zoom_mult, vol_mod, is_steep_falloff=False):
+        dx = source_pos[0] - player_pos[0]
+        dy = source_pos[1] - player_pos[1]
+        distance = math.hypot(dx, dy)
+
+        if distance > max_dist:
+            return 0.0, 0.0
+
+        exponent = 3.0 if is_steep_falloff else 2.0
+        volume_falloff = math.pow(max(0.0, 1.0 - (distance / max_dist)), exponent)
+        if not is_steep_falloff:
+            volume_falloff = max(0.01, volume_falloff)
+
+        final_volume = min(1.0, base_volume * volume_falloff * zoom_mult * vol_mod)
+
+        pan_range = TILE_SIZE * 15
+        pan_factor = max(-1.0, min(1.0, dx / pan_range))
+        angle = (pan_factor + 1.0) * math.pi / 4.0
+        
+        return final_volume * math.cos(angle), final_volume * math.sin(angle)
+
     def load_sound(self, name, sound_path):
-        """
-        Loads a single sound from a path and stores it.
-        Returns True on success, False on failure.
-        """
         if name in self.sounds:
-            return True # Already loaded
-        
-        # Use SOUND_PATH from config
+            return True
         full_path = os.path.join(SOUND_PATH, sound_path)
-        
         try:
-            sound = pygame.mixer.Sound(full_path)
-            self.sounds[name] = sound
+            self.sounds[name] = pygame.mixer.Sound(full_path)
             return True
         except pygame.error as e:
             print(f"Warning: Could not load sound '{name}' from '{full_path}': {e}")
             return False
 
     def get_pitched_sound(self, sound_key, base_sound, pitch_factor):
-        """
-        Dynamically resamples the sound array to shift the pitch and caches it.
-        """
         if pitch_factor == 1.0:
             return base_sound
-            
         pitched_key = f"{sound_key}_pitch_{pitch_factor:.2f}"
-        
         if pitched_key in self.sounds:
             return self.sounds[pitched_key]
             
@@ -62,125 +100,66 @@ class SoundManager:
             import numpy as np
             import pygame.sndarray
             
-            # Extract the raw sound data array
             snd_array = pygame.sndarray.array(base_sound)
-            
-            # Resample the array to change speed/pitch
             indices = np.round(np.arange(0, len(snd_array), pitch_factor)).astype(int)
             indices = indices[indices < len(snd_array)]
-            
-            pitched_array = snd_array[indices]
-            
-            # Ensure the array is memory-contiguous (required by pygame.sndarray)
-            pitched_array = np.ascontiguousarray(pitched_array)
+            pitched_array = np.ascontiguousarray(snd_array[indices])
             
             pitched_sound = pygame.sndarray.make_sound(pitched_array)
             self.sounds[pitched_key] = pitched_sound
             return pitched_sound
-            
         except ImportError:
-            print("Notice: 'numpy' is required for pitch shifting. Playing default sound.")
             return base_sound
         except Exception as e:
             print(f"Warning: Failed to shift pitch for {sound_key}: {e}")
             return base_sound
 
     def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0, pitch_variance=0.0, force=False, is_critical=False, fade_ms=0):
-        """
-        Plays a sound by its name.
-        'is_critical' routes the sound to a protected reserved channel so it never drops.
-        'fade_ms' smoothly fades the sound in over the specified milliseconds.
-        """
         if not name: 
-            return
+            return None
             
-        sound_key = name
-        if subdir:
-            sound_key = f"{subdir}/{name}"
-
+        sound_key = f"{subdir}/{name}" if subdir else name
         name_lower = name.lower()
         subdir_lower = subdir.lower() if subdir else ""
 
-        # ---> NEW: EARLY VOLUME CHECK <---
-        # Pull master volume from XML config immediately based on the specific subdir
-        volume_modifier = 1.0
-        
-        if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_ATMOSPHERIC', 1.0)
-        elif subdir_lower in ['music']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_MUSIC', 1.0)
-        elif subdir_lower in ['map']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_MAP', 1.0)
-        elif subdir_lower in ['items', 'item']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_ITEMS', 1.0)
-        elif subdir_lower in ['vehicles', 'vehicle']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_VEHICLE', 1.0)
-        elif subdir_lower in ['player']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_PLAYER', 1.0)
-        elif subdir_lower in ['zombie', 'zombies']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_ZOMBIE', 1.0)
-        elif subdir_lower in ['npc', 'npcs']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_NPC', 1.0)
-        elif subdir_lower in ['animal', 'animals']:
-            volume_modifier = getattr(core.data.config, 'VOLUME_ANIMAL', 1.0)
-
-        # If the volume is completely muted, exit instantly to guarantee absolute silence and save CPU!
+        volume_modifier = self.get_volume_modifier(subdir)
         if volume_modifier <= 0.0 or base_volume <= 0.0:
             return None
 
-        # --- VIP Routing for Explosives / Guns ---
-        if not is_critical and any(k in name_lower for k in ['explode', 'explosion', 'bomb', 'grenade', 'blast', 'shot', 'gun', 'fire']):
+        # VIP routing for explosives/guns
+        if not is_critical and any(k in name_lower for k in ('explode', 'explosion', 'bomb', 'grenade', 'blast', 'shot', 'gun', 'fire')):
             is_critical = True
             force = True
 
-        # --- The Phasing & Summing Fix for Zombie Audio ---
+        # Zombie acoustic variance
         is_zombie = 'zombie' in subdir_lower or 'zombie' in name_lower
-        
         if is_zombie:
-            if any(k in name_lower for k in ['groan', 'moan', 'idle', 'wander', 'alert']):
+            if any(k in name_lower for k in ('groan', 'moan', 'idle', 'wander', 'alert')):
                 if random.random() > 0.5:
-                    return None 
-                
+                    return None
                 if pitch_variance == 0.0:
                     pitch_variance = 0.25
-                
-                base_volume *= random.uniform(0.3, 0.6)  
-                
+                base_volume *= random.uniform(0.3, 0.6)
+
         if 'step' in name_lower or 'walk' in name_lower:
             if pitch_variance == 0.0:
-                pitch_variance = 0.35  
-            
+                pitch_variance = 0.35
             if is_zombie:
-                base_volume *= 0.3  
+                base_volume *= 0.3
 
         if sound_key not in self.sounds:
-            sound_path = name
-            if subdir:
-                sound_path = os.path.join(subdir, name)
-            
+            sound_path = os.path.join(subdir, name) if subdir else name
             if not self.load_sound(sound_key, sound_path):
-                if 'step' not in name_lower:
-                    print(f"Warning: Sound '{name}' could not be found or loaded from {sound_path}.")
-                return
+                return None
                 
         sound = self.sounds[sound_key]
-
         if pitch_variance > 0:
-            raw_pitch = random.uniform(1.0 - pitch_variance, 1.0 + pitch_variance)
-            pitch_factor = round(raw_pitch * 20) / 20.0 
+            pitch_factor = round(random.uniform(1.0 - pitch_variance, 1.0 + pitch_variance) * 20) / 20.0
             sound = self.get_pitched_sound(sound_key, sound, pitch_factor)
 
-        zoom_multiplier = 1.0 
-        if game:
-            MAX_ZOOM_VOLUME = 1.0 
-            MIN_ZOOM_VOLUME = 0.75 
-            current_zoom = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
-            if (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM) != 0:
-                zoom_progress = (current_zoom - core.data.config.FAR_ZOOM) / (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM)
-            else:
-                zoom_progress = 1.0 
-            zoom_multiplier = MIN_ZOOM_VOLUME + (zoom_progress * (MAX_ZOOM_VOLUME - MIN_ZOOM_VOLUME))
+        zoom_multiplier = self.calculate_zoom_multiplier(game)
 
+        # Select playback channel
         channel = None
         if is_critical:
             for i in range(self.max_reserved_channels):
@@ -198,150 +177,59 @@ class SoundManager:
             channel = pygame.mixer.find_channel(force)
 
         if not channel:
-            return
+            return None
 
+        # Position panning / attenuation
         if game and source_pos and game.player:
-            player_pos = game.player.rect.center
-            dx = source_pos[0] - player_pos[0]
-            dy = source_pos[1] - player_pos[1]
-            distance = math.hypot(dx, dy)
-
-            # --- NEW: Spatial Audio Culling for Footsteps ---
             is_step = 'step' in name_lower or 'walk' in name_lower
             is_player = subdir_lower == 'player'
-            
-            max_dist = GAME_WIDTH * 0.6 
-            if is_step and not is_player:
-                # Clamp non-player footsteps strictly to the view radius
-                max_dist = GAME_WIDTH * 0.45
-                
-            if distance > max_dist:
-                return 
+            max_dist = GAME_WIDTH * (0.45 if is_step and not is_player else 0.6)
 
-            # Inverse-Square / Inverse-Cube Law Falloff
-            if is_step and not is_player:
-                # Steeper absolute drop-off for ambient steps prevents distant crowds from summing up
-                volume_falloff = math.pow(max(0.0, 1.0 - (distance / max_dist)), 3.0)
-            else:
-                volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
-            
-            final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
-            final_volume = min(1.0, final_volume) 
-
-            pan_range = TILE_SIZE * 15
-            pan_factor = max(-1.0, min(1.0, dx / pan_range))
-            
-            angle = (pan_factor + 1.0) * math.pi / 4.0
-            left_vol = final_volume * math.cos(angle)
-            right_vol = final_volume * math.sin(angle)
-            
+            left_vol, right_vol = self.calculate_spatial_audio(
+                source_pos, game.player.rect.center, max_dist, base_volume, 
+                zoom_multiplier, volume_modifier, is_steep_falloff=(is_step and not is_player)
+            )
+            if left_vol == 0.0 and right_vol == 0.0:
+                return None
             channel.set_volume(left_vol, right_vol)
-            
         else:
-            final_ui_volume = base_volume * zoom_multiplier * volume_modifier
-            final_ui_volume = min(1.0, final_ui_volume) 
-            channel.set_volume(final_ui_volume, final_ui_volume)
-    
-        # Passing the fade_ms directly into the channel start call
+            final_ui_vol = min(1.0, base_volume * zoom_multiplier * volume_modifier)
+            channel.set_volume(final_ui_vol, final_ui_vol)
+
         channel.play(sound, loops=loops, fade_ms=fade_ms)
         return channel
-    
+
     def play_music(self, path, volume=1.0, loops=-1):
-        """
-        Plays background music using pygame.mixer.music (streaming).
-        """
-        # ---> NEW: Early exit to prevent music from starting if volume is 0 <---
         if core.data.config.VOLUME_MUSIC <= 0.0 or volume <= 0.0:
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.stop()
             return
             
         try:
-            # Force absolute path for Android
-            # Strip './' if the caller included it to prevent path joining issues
             if path.startswith('./'):
                 path = path[2:]
-                
-            # If the path isn't already absolute, make it absolute using BASE_DIR
             if not os.path.isabs(path):
                 path = os.path.join(core.data.config.BASE_DIR, path)
 
             if os.path.exists(path):
                 pygame.mixer.music.load(path)
-                
-                # APPLY the Music Volume Setting
-                final_music_volume = volume * core.data.config.VOLUME_MUSIC
-                pygame.mixer.music.set_volume(final_music_volume)
-                
+                pygame.mixer.music.set_volume(volume * core.data.config.VOLUME_MUSIC)
                 pygame.mixer.music.play(loops)
             else:
                 print(f"Warning: Music file not found at '{path}'")
         except pygame.error as e:
             print(f"Warning: Could not load music '{path}': {e}")
-    
+
     def update_spatial_volume(self, channel, source_pos, game, base_volume=1.0, subdir=None):
-        """
-        Updates the volume and panning of an existing channel based on source position.
-        """
         if not channel or not game or not game.player:
             return
 
-        # 1. Volume Modifiers (Matches play_sound logic)
-        volume_modifier = 1.0
-        if subdir:
-            subdir_lower = subdir.lower()
-            if subdir_lower in ['ambient', 'weather', 'cave', 'atmosphere', 'environment']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_ATMOSPHERIC', 1.0)
-            elif subdir_lower in ['music']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_MUSIC', 1.0)
-            elif subdir_lower in ['map']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_MAP', 1.0)
-            elif subdir_lower in ['items', 'item']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_ITEMS', 1.0)
-            elif subdir_lower in ['vehicles', 'vehicle']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_VEHICLE', 1.0)
-            elif subdir_lower in ['player']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_PLAYER', 1.0)
-            elif subdir_lower in ['zombie', 'zombies']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_ZOMBIE', 1.0)
-            elif subdir_lower in ['npc', 'npcs']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_NPC', 1.0)
-            elif subdir_lower in ['animal', 'animals']:
-                volume_modifier = getattr(core.data.config, 'VOLUME_ANIMAL', 1.0)
+        volume_modifier = self.get_volume_modifier(subdir)
+        zoom_multiplier = self.calculate_zoom_multiplier(game)
+        max_dist = GAME_WIDTH * 0.6
 
-        # 2. Distance Calculation
-        player_pos = game.player.rect.center
-        dx = source_pos[0] - player_pos[0]
-        dy = source_pos[1] - player_pos[1]
-        distance = math.hypot(dx, dy)
-
-        # 3. Falloff Logic (Matches play_sound logic)
-        max_dist = GAME_WIDTH * 0.6 
-        if distance > max_dist:
-            channel.set_volume(0, 0)
-            return
-
-        volume_falloff = max(0.01, math.pow(max(0.0, 1.0 - (distance / max_dist)), 2.0))
-        
-        # Zoom Multiplier
-        zoom_multiplier = 1.0 
-        MAX_ZOOM_VOLUME = 1.0 
-        MIN_ZOOM_VOLUME = 0.75 
-        current_zoom = max(core.data.config.FAR_ZOOM, min(game.zoom_level, core.data.config.NEAR_ZOOM))
-        if (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM) != 0:
-            zoom_progress = (current_zoom - core.data.config.FAR_ZOOM) / (core.data.config.NEAR_ZOOM - core.data.config.FAR_ZOOM)
-        else:
-            zoom_progress = 1.0 
-        zoom_multiplier = MIN_ZOOM_VOLUME + (zoom_progress * (MAX_ZOOM_VOLUME - MIN_ZOOM_VOLUME))
-
-        final_volume = base_volume * volume_falloff * zoom_multiplier * volume_modifier
-        final_volume = min(1.0, final_volume) 
-
-        # 4. Panning Logic (Matches play_sound logic)
-        pan_range = TILE_SIZE * 15
-        pan_factor = max(-1.0, min(1.0, dx / pan_range))
-        angle = (pan_factor + 1.0) * math.pi / 4.0
-        left_vol = final_volume * math.cos(angle)
-        right_vol = final_volume * math.sin(angle)
-        
+        left_vol, right_vol = self.calculate_spatial_audio(
+            source_pos, game.player.rect.center, max_dist, 
+            base_volume, zoom_multiplier, volume_modifier
+        )
         channel.set_volume(left_vol, right_vol)

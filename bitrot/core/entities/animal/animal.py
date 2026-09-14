@@ -3,7 +3,7 @@ import pygame
 import random
 import os
 import math
-from core.data.config import TILE_SIZE
+import core.data.config
 from core.entities.zombie.zombie import Zombie
 from core.entities.animal.animal_loader import AnimalLoader
 from core.entities.zombie.corpse import Corpse
@@ -223,7 +223,6 @@ class Animal(Zombie):
                 
         return False
 
-    # [FIX] Custom animal die method without the lag-inducing grid rebuilds
     def die(self, game):
         if self.is_dead: return
         self.is_dead = True
@@ -238,9 +237,9 @@ class Animal(Zombie):
                 source_pos=self.rect.center, 
                 base_volume=0.3, 
                 pitch_variance=0.15
-            ) # Natural sound variation!
+            )
 
-        # 2. Create Animal Corpse using the updated relative path
+        # 2. Create Animal Corpse
         corpse = Corpse(
             name=f"Dead {self.name}",
             capacity=10, 
@@ -249,7 +248,6 @@ class Animal(Zombie):
             decay_ms=120000 
         )
 
-        # 3. Add animal-specific loot
         if hasattr(self, 'loot_table') and self.loot_table:
             for loot_entry in self.loot_table:
                 chance_val = float(loot_entry.get('chance', 0))
@@ -259,43 +257,34 @@ class Animal(Zombie):
                     new_item = Item.create_from_name(item_name)
                     if new_item: corpse.inventory.append(new_item)
 
-        # 4. Add corpse to map INSTANTLY
         game.items_on_ground.append(corpse)
         
-        # Make dead animal spawn 0 to spawn_zombies_max zombies instantly
-        if getattr(self, 'spawn_zombies_max', 0) > 0 and hasattr(game, 'player') and game.player:
-            dx = self.rect.centerx - game.player.rect.centerx
-            dy = self.rect.centery - game.player.rect.centery
+        # 3. Dynamic Respawn: Same Animal + Extra Zombies (Out of Sight)
+        from core.map.spawn_manager import get_out_of_sight_spawn_pos
+        
+        if getattr(core.data.config, 'ANIMAL_RESPAWN', True):
+            animals_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1)
+            num_animals = random.randint(1, max(1, int(animals_per_spawn)))
             
-            if (dx*dx + dy*dy) <= (getattr(game, 'player_view_radius', TILE_SIZE * 20) * 1.5) ** 2:
-                num_zombies_to_spawn = random.randint(0, self.spawn_zombies_max)
-                
-                for _ in range(num_zombies_to_spawn):
-                    spawn_x, spawn_y = None, None
-                    # --- VALIDATION LOOP: Try to find a spot that isn't a wall ---
-                    for attempt in range(10):
-                        angle = random.uniform(0, math.pi * 2)
-                        radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
-                        tx = game.player.rect.centerx + math.cos(angle) * radius
-                        ty = game.player.rect.centery + math.sin(angle) * radius
-                        
-                        gx, gy = int(tx // TILE_SIZE), int(ty // TILE_SIZE)
-                        if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]):
-                            tile_def = game.map_manager.get_tile_at(gx, gy)
-                            if not tile_def or not tile_def.get('is_obstacle', False):
-                                spawn_x, spawn_y = tx, ty
-                                break
-                    
-                    # FALLBACK: If all 10 attempts fail, spawn where the animal died
-                    if spawn_x is None:
-                        spawn_x, spawn_y = self.rect.centerx, self.rect.centery
+            for _ in range(num_animals):
+                spawn_pos = get_out_of_sight_spawn_pos(game)
+                if spawn_pos:
+                    new_animal = Animal(spawn_pos[0], spawn_pos[1], self.name, game=game, layer=self.layer)
+                    game.items_on_ground.append(new_animal)
 
-                    zombie = Zombie.create_random(spawn_x, spawn_y)
-                    zombie.aggro_timer = 10000
-                    zombie.state = 'chasing'
+        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
+            from core.entities.zombie.zombie import Zombie
+            max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
+            num_zombies = random.randint(1, max(1, int(max_zombie_spawns)))
+            
+            for _ in range(num_zombies):
+                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 10000):
+                    break
+                spawn_pos = get_out_of_sight_spawn_pos(game)
+                if spawn_pos:
+                    zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
                     game.zombies.append(zombie)
         
-        # Add a death burst effect to make the death visually pop and feel responsive
         if hasattr(game, 'splashes'):
             game.splashes.append({
                 'pos': (self.rect.centerx, self.rect.bottom), 
@@ -305,8 +294,7 @@ class Animal(Zombie):
                 'type': 'death_burst'
             })
 
-        # 5. Safely clean up from active memory to prevent ghost artifacts
-        try: self.kill() # Instantly removes it from Pygame rendering groups if it exists in one
+        try: self.kill()
         except: pass
         
         if self in game.items_on_ground:
@@ -325,6 +313,5 @@ class Animal(Zombie):
             try: game.active_zombies.remove(self)
             except ValueError: pass
             
-        # Force position offscreen to prevent 1-frame ghost rendering 
         self.rect.x = -9999
         self.rect.y = -9999

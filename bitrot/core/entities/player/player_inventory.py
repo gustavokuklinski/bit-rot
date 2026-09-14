@@ -226,14 +226,18 @@ class PlayerInventory:
                 target_inv = target['inv']
                 for target_item in target_inv:
                     if target_item.can_stack_with(item):
-                        available_space = target_item.capacity - target_item.load
+                        item_max_cap = getattr(target_obj, 'max_liquid', None) if is_item_liquid else target_item.capacity
+                        if item_max_cap is None:
+                            item_max_cap = target_item.capacity or 100
+                            
+                        available_space = item_max_cap - target_item.load
                         transfer = min(available_space, remaining_load)
                         target_item.load += transfer
+                        target_item.capacity = item_max_cap
                         remaining_load -= transfer
                         if not is_infinite:
-                            item.load = remaining_load 
+                            item.load = remaining_load
                         if remaining_load <= 0: break
-                if remaining_load <= 0: break
             
             if not is_infinite and item.load <= 0:
                 if source_inventory and 0 <= index < len(source_inventory) and source_inventory[index] == item:
@@ -262,9 +266,14 @@ class PlayerInventory:
 
                     if len(target_inv) < target_cap:
                         new_stack = Item.create_from_name(tr('item', item.name))
-                        transfer_amt = min(new_stack.capacity or 100, remaining_load)
+                        max_cap_allowed = new_stack.capacity or 100
+                        if is_item_liquid and getattr(target_obj, 'max_liquid', None) is not None:
+                            max_cap_allowed = target_obj.max_liquid
+                            new_stack.capacity = max_cap_allowed
+
+                        transfer_amt = min(max_cap_allowed, remaining_load)
                         new_stack.load = transfer_amt
-                        new_stack.durability = item.durability 
+                        new_stack.durability = item.durability
                         target_inv.append(new_stack)
                         remaining_load -= transfer_amt
                         

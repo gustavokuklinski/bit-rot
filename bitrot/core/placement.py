@@ -1,10 +1,12 @@
+# placement.py
 import random
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
-def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10):
-    if items_on_ground is None:
-        items_on_ground = []
+def _is_colliding(rect, obstacles):
+    """Checks if rect collides with any obstacle in the list."""
+    return any(rect.colliderect(ob) for ob in obstacles)
 
+def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10):
     if initial_pos:
         start_x = (initial_pos[0] // TILE_SIZE) * TILE_SIZE
         start_y = (initial_pos[1] // TILE_SIZE) * TILE_SIZE
@@ -15,15 +17,7 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
     rect.x = start_x
     rect.y = start_y
 
-    # Check if the initial position is free
-    collision = False
-    for ob in obstacles:
-        if rect.colliderect(ob):
-            collision = True
-            break
-    
-    # [FIX] REMOVED: The loop checking items_on_ground to allow stacking
-    if not collision:
+    if not _is_colliding(rect, obstacles):
         return (rect.x, rect.y)
 
     if initial_pos:
@@ -36,15 +30,8 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                     rect.x = start_x + i * TILE_SIZE
                     rect.y = start_y + j * TILE_SIZE
 
-                    collision = False
-                    for ob in obstacles:
-                        if rect.colliderect(ob):
-                            collision = True
-                            break
-                    
-                    # [FIX] REMOVED: The loop checking items_on_ground to allow stacking
-                    if not collision:
-                        return (rect.x, rect.y) 
+                    if not _is_colliding(rect, obstacles):
+                        return (rect.x, rect.y)
 
     return None
 
@@ -52,21 +39,10 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
     rect.x = random.randint(0, (GAME_WIDTH // TILE_SIZE) - 1) * TILE_SIZE
     rect.y = random.randint(0, (GAME_HEIGHT // TILE_SIZE) - 1) * TILE_SIZE
 
-    attempts = 0
     max_attempts = (GAME_WIDTH // TILE_SIZE) * (GAME_HEIGHT // TILE_SIZE)
 
-    while attempts < max_attempts:
-        collision = False
-        for ob in obstacles:
-            if rect.colliderect(ob):
-                collision = True
-                break
-        if not collision:
-            for item in items_on_ground:
-                if rect.colliderect(item.rect):
-                    collision = True
-                    break
-        
+    for _ in range(max_attempts):
+        collision = _is_colliding(rect, obstacles) or any(rect.colliderect(item.rect) for item in items_on_ground)
         if not collision:
             return (rect.x, rect.y)
 
@@ -76,7 +52,5 @@ def find_random_free_tile(rect, obstacles, items_on_ground):
             rect.y += TILE_SIZE
             if rect.y >= GAME_HEIGHT:
                 rect.y = 0
-        
-        attempts += 1
 
     return None

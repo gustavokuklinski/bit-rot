@@ -2,7 +2,8 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_flask.png" />
-        <weight weight="0.5" reduction="10%" />
+        <weight weight="0.02" reduction="1%" />
+        <max_liquid value="10" />
     </properties>
     <loot>
     </loot>

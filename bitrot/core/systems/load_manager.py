@@ -21,6 +21,7 @@ from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
 from core.systems.quadtree import Quadtree
+from core.entities.item.item_helpers import deserialize_item
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -395,13 +396,7 @@ def load_game(game, save_folder_name):
         game.player.y = player_data['y']
         game.player.rect.topleft = (game.player.x, game.player.y)
         
-        game.player.inventory = []
-        for item_data in player_data['inventory']:
-            if isinstance(item_data, dict):
-                item = Item.from_dict(item_data)
-            else:
-                item = Item.create_from_name(item_data)
-            if item: game.player.inventory.append(item)
+        game.player.inventory = [deserialize_item(d) for d in player_data['inventory'] if deserialize_item(d)]
 
         game.player.belt = []
         for item_data in player_data.get('belt', [None]*5):

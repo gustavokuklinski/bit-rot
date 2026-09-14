@@ -4,11 +4,12 @@ import pygame
 import random
 import math
 import time
+import core.data.config
+from core.data.config import *
 from core.entities.item.item import Item, Projectile, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 from core.entities.zombie.zombie_data import ZombieData  
 from core.messages import display_message
-from core.data.config import *
 from faker import Faker
 from core.entities.npc.npc_dialog import NPCDialog
 
@@ -549,6 +550,26 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.dx += math.cos(rad) * effective_speed * 0.5
             self.dy += -math.sin(rad) * effective_speed * 0.5
 
+        def check_collision(rect_check):
+            indices = rect_check.collidelistall(obstacles)
+            for idx in indices:
+                obstacle = obstacles[idx]
+                gx = obstacle.x // TILE_SIZE
+                gy = obstacle.y // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy)
+                if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
+                    offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
+                    if self.mask.overlap(tile_def['mask'], offset):
+                        return obstacle
+                else:
+                    return obstacle
+            
+            for entity in entities_to_check:
+                hitbox = entity.rect.inflate(-12, -12)
+                if rect_check.colliderect(hitbox):
+                    return entity
+            return None
+
         total_dist_x = abs(self.dx)
         total_dist_y = abs(self.dy)
         step_size_limit = TILE_SIZE * 0.45
@@ -557,56 +578,70 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         
         step_dx = self.dx / steps
         step_dy = self.dy / steps
-        
-        def check_mask_collision(rect_check):
-            for obstacle in obstacles:
-                if rect_check.colliderect(obstacle):
-                    gx = obstacle.x // TILE_SIZE
-                    gy = obstacle.y // TILE_SIZE
-                    tile_def = game.map_manager.get_tile_at(gx, gy)
-                    if tile_def and 'mask' in tile_def:
-                        offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
-                        if self.mask.overlap(tile_def['mask'], offset):
-                            return True, obstacle
-                    else:
-                         return True, obstacle
-            
-            for entity in entities_to_check:
-                hitbox = entity.rect.inflate(-12, -12)
-                if rect_check.colliderect(hitbox):
-                    return True, entity
-            return False, None
+        max_slide = 4
 
         for _ in range(steps):
+            # --- X AXIS WITH VERTICAL CORNER SLIDING ---
             self.x += step_dx
-            self.rect.x = int(self.x)
+            self.rect.x = round(self.x)
+            collider = check_collision(self.rect)
             
-            collision, collider = check_mask_collision(self.rect)
-            
-            if collision:
-                self.x -= step_dx
-                self.rect.x = int(self.x)
-                self.dx = 0
-                
-                if self.stuck_timer <= 0:
-                     self.stuck_timer = 200
-                     self.stuck_angle = random.randint(0, 360)
-            
+            if collider:
+                resolved = False
+                for offset in range(1, max_slide + 1):
+                    self.rect.y -= offset
+                    if not check_collision(self.rect):
+                        self.y -= offset
+                        resolved = True
+                        break
+                    self.rect.y += offset
+
+                    self.rect.y += offset
+                    if not check_collision(self.rect):
+                        self.y += offset
+                        resolved = True
+                        break
+                    self.rect.y += offset
+
+                if not resolved:
+                    self.x -= step_dx
+                    self.rect.x = round(self.x)
+                    self.dx = 0
+                    if self.stuck_timer <= 0:
+                        self.stuck_timer = 200
+                        self.path = []
+
+            # --- Y AXIS WITH HORIZONTAL CORNER SLIDING ---
             self.y += step_dy
-            self.rect.y = int(self.y)
+            self.rect.y = round(self.y)
+            collider = check_collision(self.rect)
             
-            collision, collider = check_mask_collision(self.rect)
-            
-            if collision:
-                self.y -= step_dy
-                self.rect.y = int(self.y)
-                self.dy = 0
+            if collider:
+                resolved = False
+                for offset in range(1, max_slide + 1):
+                    self.rect.x -= offset
+                    if not check_collision(self.rect):
+                        self.x -= offset
+                        resolved = True
+                        break
+                    self.rect.x += offset
 
-                if self.stuck_timer <= 0:
-                     self.stuck_timer = 200
-                     self.stuck_angle = random.randint(0, 360)
+                    self.rect.x += offset
+                    if not check_collision(self.rect):
+                        self.x += offset
+                        resolved = True
+                        break
+                    self.rect.x += offset
 
-        self.rect.topleft = (int(self.x), int(self.y))
+                if not resolved:
+                    self.y -= step_dy
+                    self.rect.y = round(self.y)
+                    self.dy = 0
+                    if self.stuck_timer <= 0:
+                        self.stuck_timer = 200
+                        self.path = []
+
+        self.rect.topleft = (round(self.x), round(self.y))
 
     def _handle_combat(self, target_entity, game, multiplier, current_time):
         weapon = getattr(self, 'equipped_weapon', None)
@@ -694,6 +729,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.idle_timer = 500
     
     def die(self, game):
+        if self.is_dead:
+            return
+
         if not hasattr(self, 'inventory') or self.inventory is None:
             self.inventory = []
 
@@ -708,38 +746,60 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.clothes = {}
 
         super().die(game)
-        self.kill()
+        try:
+            self.kill()
+        except:
+            pass
 
-        if getattr(self, 'spawn_zombies_max', 0) > 0:
-            reanimated_zombie = Zombie.create_random(self.rect.centerx, self.rect.centery)
-            reanimated_zombie.aggro_timer = 10000
-            reanimated_zombie.state = 'chasing'
-            game.zombies.append(reanimated_zombie)
+        # ---------------------------------------------------------
+        # Dynamic Respawn: 1 NPC + Extra Zombies (Out of Sight)
+        # ---------------------------------------------------------
+        from core.map.spawn_manager import get_out_of_sight_spawn_pos
+
+        # 1. Instantly spawn ONE replacement NPC out of sight
+        if getattr(core.data.config, 'NPC_RESPAWN', True):
+            npcs_per_spawn = getattr(core.data.config, 'NPCS_PER_SPAWN', 1)
+            num_npcs = random.randint(1, max(1, int(npcs_per_spawn)))
+
+            for _ in range(num_npcs):
+                if len(game.npcs) >= getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500):
+                    break
+                spawn_pos = get_out_of_sight_spawn_pos(game)
+                if spawn_pos:
+                    new_npc = NPC(
+                        spawn_pos[0], 
+                        spawn_pos[1], 
+                        game, 
+                        is_static=False, 
+                        layer=getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+                    )
+                    new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
+                    game.npcs.add(new_npc)
+
+        # 2. Spawn reinforcement zombies based on ZOMBIES_PER_SPAWN
+        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
+            from core.entities.zombie.zombie import Zombie
+            max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
+            num_zombies = random.randint(1, max(1, int(max_zombie_spawns)))
             
-            if hasattr(game, 'player') and game.player:
-                dx = self.rect.centerx - game.player.rect.centerx
-                dy = self.rect.centery - game.player.rect.centery
-                
-                if (dx*dx + dy*dy) <= (getattr(game, 'player_view_radius', TILE_SIZE * 20) * 1.5) ** 2:
-                    import core.data.config as game_config
-                    num_zombies_to_spawn = int((random.randint(0, game_config.ZOMBIES_PER_SPAWN))) + 1
-                    
-                    for _ in range(num_zombies_to_spawn):
-                        spawn_x, spawn_y = None, None
-                        for attempt in range(10):
-                            angle = random.uniform(0, math.pi * 2)
-                            radius = random.uniform(TILE_SIZE * 10, TILE_SIZE * 15)
-                            tx = game.player.rect.centerx + math.cos(angle) * radius
-                            ty = game.player.rect.centery + math.sin(angle) * radius
-                            
-                            gx, gy = int(tx // TILE_SIZE), int(ty // TILE_SIZE)
-                            if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]):
-                                tile_def = game.map_manager.get_tile_at(gx, gy)
-                                if not tile_def or not tile_def.get('is_obstacle', False):
-                                    spawn_x, spawn_y = tx, ty
-                                    break
+            for _ in range(num_zombies):
+                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 10000):
+                    break
+                spawn_pos = get_out_of_sight_spawn_pos(game)
+                if spawn_pos:
+                    zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
+                    game.zombies.append(zombie)
 
-                        zombie = Zombie.create_random(spawn_x, spawn_y)
-                        zombie.aggro_timer = 10000
-                        zombie.state = 'chasing'
-                        game.zombies.append(zombie)
+        # Add death burst visual effect
+        if hasattr(game, 'splashes'):
+            game.splashes.append({
+                'pos': (self.rect.centerx, self.rect.bottom), 
+                'time': pygame.time.get_ticks(),
+                'duration': 250, 
+                'radius': 5,    
+                'type': 'death_burst'
+            })
+
+        # Move offscreen to avoid 1-frame ghost collision
+        self.rect.x = -9999
+        self.rect.y = -9999

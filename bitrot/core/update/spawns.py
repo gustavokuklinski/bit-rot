@@ -53,31 +53,3 @@ def check_dynamic_zombie_spawns(game, grid_size=128):
             entities_to_avoid.extend(new_zombies) 
             game.layer_zombies[game.current_layer_index] = game.zombies[:]
             spawns_this_frame += 1
-
-def check_zombie_respawn(game):
-    current_time = pygame.time.get_ticks()
-    current_map = game.map_manager.current_map_filename
-    
-    if not game.current_zombie_spawns or current_map not in game.map_states:
-        if current_map not in game.map_states:
-            game.map_states[current_map] = {'items': game.items_on_ground, 'zombies': game.zombies, 'killed_zombies': [], 'picked_up_items': [], 'last_respawn_time': current_time}
-        return
-
-    if core.data.config.ZOMBIE_RESPAWN_TIMER_MS <= 0: return
-
-    if 'last_respawn_time' not in game.map_states[current_map]: game.map_states[current_map]['last_respawn_time'] = current_time
-    if current_time - game.map_states[current_map]['last_respawn_time'] > core.data.config.ZOMBIE_RESPAWN_TIMER_MS:
-        print(f"Respawn timer expired for {current_map}. Respawning zombies.")
-        game.map_states[current_map]['last_respawn_time'] = current_time
-
-def check_animal_respawn(game):
-    current_time = pygame.time.get_ticks()
-    current_map = game.map_manager.current_map_filename
-    
-    if current_map not in game.map_states or core.data.config.ANIMAL_RESPAWN_TIMER_MS <= 0: return
-    if 'last_animal_respawn_time' not in game.map_states[current_map]: game.map_states[current_map]['last_animal_respawn_time'] = current_time
-
-    if current_time - game.map_states[current_map]['last_animal_respawn_time'] > core.data.config.ANIMAL_RESPAWN_TIMER_MS:
-        print(f"Respawn timer expired for animals on {current_map}.")
-        game.map_states[current_map]['last_animal_respawn_time'] = current_time
-        spawn_animals(game, count=core.data.config.ANIMAL_SPAWN_COUNT)

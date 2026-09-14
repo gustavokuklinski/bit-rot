@@ -9,37 +9,8 @@ from core.ui.inventory_modal import get_belt_slot_rect_in_modal, get_inventory_s
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.data.localization import tr
+from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source
 
-def does_allow_liquid(obj):
-    """Safely checks if an object allows liquid, accounting for string-parsed XML booleans."""
-    if not obj: return False
-    
-    # 1. Check direct attribute
-    val = getattr(obj, 'allow_liquid', None)
-    if val is not None:
-        return str(val).lower() in ['true', '1'] or val is True
-        
-    # 2. Check inside properties dict (common for Items)
-    if hasattr(obj, 'properties') and isinstance(obj.properties, dict):
-        if 'allow_liquid' in obj.properties:
-            val = obj.properties['allow_liquid']
-            return str(val).lower() in ['true', '1'] or val is True
-            
-    # 3. Check if obj is a dict (common for Map Tiles)
-    if isinstance(obj, dict):
-        if 'allow_liquid' in obj:
-            val = obj['allow_liquid']
-            return str(val).lower() in ['true', '1'] or val is True
-            
-    return False
-
-def is_infinite_liquid_source(obj):
-    """Checks if the object is an infinite map tile source/sink."""
-    if not does_allow_liquid(obj):
-        return False
-    item_type = getattr(obj, 'item_type', '')
-    obj_type = getattr(obj, 'type', '')
-    return item_type == 'maptile_container' or obj_type == 'maptile_container' or getattr(obj, 'is_maptile', False)
 
 def check_recursive_containment(dragged_item, target_container):
     if dragged_item is target_container:

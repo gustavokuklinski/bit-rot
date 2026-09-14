@@ -1,6 +1,7 @@
 import pygame
 import math
 from core.update.combat import create_blood_splatter, handle_zombie_death
+from core.data.localization import tr
 from core.messages import display_message
 
 def update_vehicles(game, zombies_to_remove):
@@ -30,7 +31,7 @@ def update_vehicles(game, zombies_to_remove):
                         if current_time - getattr(entity, 'last_vehicle_hit_time', 0) < 500: continue
                         entity.last_vehicle_hit_time = current_time
 
-                        impact_damage = 10000 
+                        impact_damage = 100
                         vehicle.damage_motor(2.0)
                         
                         velocity_dir = [vehicle.velocity[0]/speed, vehicle.velocity[1]/speed] if speed > 0 else None

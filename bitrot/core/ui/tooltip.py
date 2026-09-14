@@ -68,7 +68,15 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         if item.item_type in ['container', 'cloth']:
             cap = item.capacity if item.capacity is not None else 0
             lines.append(f"{tr('tooltip', 'Contents:')} {len(item.inventory)} / {cap}")
-        
+
+    if getattr(item, 'max_liquid', None) is not None:
+        current_liquid = 0
+        if hasattr(item, 'inventory') and item.inventory:
+            for inside_item in item.inventory:
+                if getattr(inside_item, 'liquid', False):
+                    current_liquid += (getattr(inside_item, 'load', 1) or 1)
+        lines.append(f"{tr('tooltip', 'Liquid:')} {int(current_liquid)}/{item.max_liquid}")
+
     # --- Durability Bar Logic ---
     if item.durability is not None:
         max_dur = item.max_durability # Get max from item property

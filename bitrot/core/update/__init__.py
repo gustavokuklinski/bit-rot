@@ -3,7 +3,7 @@ from core.data.config import TILE_SIZE
 
 # Internal Pipeline Steps
 from core.update.utils import build_obstacle_grid, get_nearby_obstacles
-from core.update.spawns import check_zombie_respawn, check_animal_respawn, check_dynamic_zombie_spawns
+from core.update.spawns import check_dynamic_zombie_spawns
 from core.update.projectiles import update_projectiles
 from core.update.entities import update_entities
 from core.update.vehicles import update_vehicles
@@ -34,8 +34,6 @@ def update_game_state(game):
         tx, ty = target_tile
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-    check_zombie_respawn(game)
-    check_animal_respawn(game) 
     check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):

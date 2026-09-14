@@ -6,7 +6,7 @@ from core.entities.vehicle.vehicle import Vehicle
 from core.entities.animal.animal import Animal
 from core.data.config import MAP_DIR, get_writable_dir
 from core.entities.npc.npc_dialog import NPCDialog
-
+from core.entities.item.item_helpers import deserialize_item, serialize_item
 def save_game(game):
     if game.current_save_folder_name:
         save_name = game.current_save_folder_name
@@ -68,10 +68,9 @@ def save_game(game):
             "known_recipes": game.player.known_recipes,
             "visuals": game.player.visuals,
             "sounds": game.player.sounds_data,
-            "inventory": [item.to_dict() if hasattr(item, 'to_dict') else item for item in game.player.inventory if item],
-            "belt": [(item.to_dict() if hasattr(item, 'to_dict') else item) if item else None for item in game.player.belt],
-            "clothes": {slot: ((item.to_dict() if hasattr(item, 'to_dict') else item)) if item else None for slot, item in game.player.clothes.items()},
-
+            "inventory": [serialize_item(i) for i in game.player.inventory if i],
+            "belt": [serialize_item(i) for i in game.player.belt],
+            "clothes": {slot: serialize_item(item) for slot, item in game.player.clothes.items()},
             "quests": getattr(game.player, 'quests', []),
             "completed_quests": getattr(game.player, 'completed_quests', []),
             "dialog_history": list(getattr(game.player, 'dialog_history', [])),

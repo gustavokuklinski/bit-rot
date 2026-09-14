@@ -247,50 +247,42 @@ def manage_dynamic_npcs(game):
 
     random.shuffle(valid_candidates)
 
+    npcs_per_spawn = getattr(core.data.config, 'NPCS_PER_SPAWN', 1)
+
     for pos in valid_candidates:
-        # [FIX] Obey the XML Configuration
-        if current_count >= core.data.config.NPC_MAX_CHUNK: break
-        if spawned_this_frame >= limit_per_frame: break
+        if current_count >= core.data.config.NPC_MAX_CHUNK:
+            break
 
         px, py = pos[0], pos[1]
-        
         npc_type = pos[2] if len(pos) > 2 else 'NPC'
         is_static = (npc_type == 'SNPC')
 
         dist_sq = (px - player_x)**2 + (py - player_y)**2
+        if not (min_spawn_rad_sq < dist_sq < spawn_rad_sq):
+            continue
 
-        if min_spawn_rad_sq < dist_sq < spawn_rad_sq:
-            too_crowded = False
-            for npc in game.npcs:
-                if (npc.rect.x - px)**2 + (npc.rect.y - py)**2 < (TILE_SIZE * 2)**2:
-                    too_crowded = True
-                    break
-            
-            if not too_crowded:
-                if game.current_layer_index == 2:
-                    tx, ty = int(px // TILE_SIZE), int(py // TILE_SIZE)
-                    tile = game.map_manager.get_tile_at(tx, ty)
-                    if not tile: continue
-                    t_name = tile.get('name', '').lower()
-                    is_building = 'floor' in t_name or 'wood' in t_name or 'tile' in t_name or 'carpet' in t_name
-                    if not is_building:
-                        continue
+        batch_count = 1 if is_static else random.randint(1, max(1, int(npcs_per_spawn)))
 
-                npc = NPC(px, py, game, layer=game.current_layer_index, is_static=is_static)
-                
-                if npc_type == 'NPC':
-                    npc.is_friendly = False   
-                    npc.is_static = False     
-                elif npc_type == 'SNPC':
-                    npc.is_friendly = True    
-                    npc.is_static = True      
-                
-                if game.current_layer_index == 2:
-                    npc.is_friendly = True
+        for _ in range(batch_count):
+            if current_count >= core.data.config.NPC_MAX_CHUNK:
+                break
 
-                game.npcs.add(npc)
-                current_count += 1
-                spawned_this_frame += 1
+            npc_rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+            free_pos = find_free_tile(npc_rect, game.obstacles, max_radius=3, initial_pos=(px, py))
+            if not free_pos:
+                continue
+
+            # Prevent stacking on existing NPCs
+            if any(math.hypot(n.rect.x - free_pos[0], n.rect.y - free_pos[1]) < TILE_SIZE for n in game.npcs):
+                continue
+
+            npc = NPC(free_pos[0], free_pos[1], game, layer=game.current_layer_index, is_static=is_static)
+            npc.is_friendly = True if is_static else (random.random() > core.data.config.NPC_HOSTILE_PERCENT)
+            if game.current_layer_index == 2:
+                npc.is_friendly = True
+
+            game.npcs.add(npc)
+            current_count += 1
 
 def spawn_static_npcs(game, building_tiles):
     for (tx, ty) in building_tiles:
@@ -416,23 +408,14 @@ def spawn_l2_population(game, count=10, target_layer=None):
                 target_zombies.append(zombie)
             zombie_count += 1
 
-def spawn_animals(game, count=5, target_layer=None):
-    """
-    Spawns animals based on 'ANM' markers or random distribution.
-    Rules:
-      - Rat: Spawns in Layer 1 and 2.
-      - Bat: Spawns only in Layer 2.
-      - Cow: Spawns only in Layer 1.
-    """
-    # [FIX] Respect Global Animal Configuration
-    if core.data.config.ANIMAL_SPAWN_COUNT <= 0:
-        print(f"[ANIMAL] Spawn skipped: ANIMAL_SPAWN_COUNT={core.data.config.ANIMAL_SPAWN_COUNT}")
+def spawn_animals(game, count=None, target_layer=None):
+    if count is None:
+        count = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', getattr(core.data.config, 'ANIMAL_SPAWN_COUNT', 10))
+    if count <= 0:
         return
 
     if target_layer is None:
         target_layer = game.current_layer_index
-    
-    print(f"[ANIMAL] Spawning {count} animals on layer {target_layer}")
 
     if not hasattr(game, 'layer_zombies'):
         game.layer_zombies = {}
@@ -444,145 +427,62 @@ def spawn_animals(game, count=5, target_layer=None):
         target_list = game.items_on_ground
     else:
         target_list = game.layer_zombies[target_layer]
-    
+
     AnimalLoader.load_animals()
-    
     valid_animal_types = []
     valid_weights = []
-    
+
     for name, definition in AnimalLoader.definitions.items():
         if target_layer in definition.get('spawn_layers', []):
             valid_animal_types.append(name)
             valid_weights.append(definition.get('spawn_weight', 10))
-            
+
     if not valid_animal_types:
         return
 
     spawned_count = 0
-    
-    # 1. Scan for 'ANM' markers in the specific layer
-    spawn_markers = []
-    spawn_layer = None
-    
-    if hasattr(game, 'all_spawn_layers') and target_layer in game.all_spawn_layers:
-         spawn_layer = game.all_spawn_layers[target_layer]
-    
-    if spawn_layer:
-         h = len(spawn_layer)
-         w = len(spawn_layer[0]) if h > 0 else 0
-         for y in range(h):
-             for x in range(w):
-                 if spawn_layer[y][x] == 'ANM':
-                     # NEW BORDER LOGIC validation: Confirm it's still a border!
-                     ground = game.all_ground_layers[target_layer][y][x]
-                     
-                     # [FIX] Removed invalid 'self' reference. Exclude water and interior floors safely.
-                     if 'water' in ground or 'floor' in ground: continue
-                     
-                     is_path = 'asphalt' in ground or 'dirty' in ground or 'path' in ground
-                     is_border = False
-                     
-                     if not is_path:
-                         for dy in [-1, 0, 1]:
-                             for dx in [-1, 0, 1]:
-                                 if 0 <= y+dy < h and 0 <= x+dx < w:
-                                     adj_g = game.all_ground_layers[target_layer][y+dy][x+dx]
-                                     if 'asphalt' in adj_g or 'dirty' in adj_g or 'path' in adj_g:
-                                         is_border = True
-                                         break
-                             if is_border: break
-                     
-                     if is_border:
-                         spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
-    
-    if spawn_markers:
-        print(f"  > Found {len(spawn_markers)} 'ANM' markers on layer {target_layer}")
-
-    # [CHANGED] Filter existing animals to check overlaps
     existing_animals = [x for x in target_list if isinstance(x, Animal)]
-    
-    # 2. Spawn at Markers (only if needed and empty)
+    animals_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1)
+
+    # 1. Scan for 'ANM' markers
+    spawn_markers = []
+    spawn_layer = getattr(game, 'all_spawn_layers', {}).get(target_layer)
+
+    if spawn_layer:
+        h = len(spawn_layer)
+        w = len(spawn_layer[0]) if h > 0 else 0
+        for y in range(h):
+            for x in range(w):
+                if spawn_layer[y][x] == 'ANM':
+                    ground = game.all_ground_layers[target_layer][y][x]
+                    if 'water' in ground or 'floor' in ground:
+                        continue
+                    spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
+
+    # 2. Spawn batch at each marker (up to ANIMALS_PER_SPAWN)
     random.shuffle(spawn_markers)
     for px, py in spawn_markers:
-        if len(existing_animals) + spawned_count >= count: break 
-        
-        # Check if occupied by another animal
-        rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
-        
-        if any(ob.colliderect(rect) for ob in getattr(game, 'obstacles', [])):
-            continue
+        if len(existing_animals) + spawned_count >= count:
+            break
 
-        if any(isinstance(a, Animal) and a.rect.colliderect(rect) for a in existing_animals):
-            continue
+        batch_count = random.randint(1, max(1, int(animals_per_spawn)))
+        for _ in range(batch_count):
+            if len(existing_animals) + spawned_count >= count:
+                break
 
-        a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
-        # [FIX] Pass game instance and target_layer to Animal
-        animal = Animal(px, py, a_type, game=game, layer=target_layer)
-        target_list.append(animal)
-        spawned_count += 1
-        
-    # 3. Random Spawn (Ambient) - only if few markers or to reach count
-    if spawned_count + len(existing_animals) < count:
-        # Only try random spawning if we have map data for this layer
-        if hasattr(game, 'all_ground_layers') and target_layer in game.all_ground_layers:
-            map_data = game.all_ground_layers[target_layer]
-            map_h = len(map_data)
-            map_w = len(map_data[0]) if map_h > 0 else 0
-            
-            attempts = 0
-            max_attempts = 100
-            
-            defs = game.tile_manager.definitions
+            rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+            free_pos = find_free_tile(rect, getattr(game, 'obstacles', []), max_radius=3, initial_pos=(px, py))
+            if not free_pos:
+                continue
 
-            while spawned_count + len(existing_animals) < count and attempts < max_attempts:
-                attempts += 1
-                rx = random.randint(0, map_w - 1)
-                ry = random.randint(0, map_h - 1)
-                
-                t_char = map_data[ry][rx]
-                if t_char in ['@', '#', ' ', '']: continue
-                t_def = defs.get(t_char)
-                if not t_def or t_def.get('is_obstacle', False): continue
+            test_rect = pygame.Rect(free_pos[0], free_pos[1], TILE_SIZE, TILE_SIZE)
+            if any(isinstance(a, Animal) and a.rect.colliderect(test_rect) for a in existing_animals + target_list):
+                continue
 
-                # Check the base layer of target_layer
-                base_layer = game.all_map_layers.get(target_layer, [])
-                if ry < len(base_layer) and rx < len(base_layer[ry]):
-                    b_char = base_layer[ry][rx]
-                    if b_char != ' ': continue
-                    if b_char in ['@', '#']: continue
-                    b_def = defs.get(b_char)
-                    if b_def and b_def.get('is_obstacle', False): continue
-
-                t_name = t_def.get('name', '').lower()
-                
-                is_path = 'asphalt' in t_name or 'dirty' in t_name or 'path' in t_name
-                is_border = False
-                
-                # Verify that it is NOT a path, but touches a path!
-                if not is_path:
-                    for dy in [-1, 0, 1]:
-                        for dx in [-1, 0, 1]:
-                            if 0 <= ry+dy < map_h and 0 <= rx+dx < map_w:
-                                adj_char = map_data[ry+dy][rx+dx]
-                                adj_def = defs.get(adj_char, {})
-                                adj_name = adj_def.get('name', '').lower() if adj_def else ''
-                                if 'asphalt' in adj_name or 'dirty' in adj_name or 'path' in adj_name:
-                                    is_border = True
-                                    break
-                        if is_border: break
-                
-                if not is_border:
-                    continue
-                
-                chosen_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
-                px, py = rx * TILE_SIZE, ry * TILE_SIZE
-                # [FIX] Pass game instance and target_layer to Animal
-                animal = Animal(px, py, chosen_type, game=game, layer=target_layer)
-                target_list.append(animal)
-                spawned_count += 1
-    
-    if spawned_count > 0:
-        print(f"  > Spawned {spawned_count} animals on Layer {target_layer} (Markers: {len(spawn_markers)}).")
+            a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
+            animal = Animal(free_pos[0], free_pos[1], a_type, game=game, layer=target_layer)
+            target_list.append(animal)
+            spawned_count += 1
 
 def spawn_random_vehicles(game, count=10):
     if not VehicleData.VEHICLE_TEMPLATES:
@@ -807,3 +707,52 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
                 break 
                 
     return zombies
+
+def get_out_of_sight_spawn_pos(game):
+    """
+    Finds a valid, obstacle-free tile coordinate positioned outside
+    the current screen frame (GAME_WIDTH x GAME_HEIGHT) relative to the player.
+    """
+    if not game.player:
+        return None
+
+    px, py = game.player.rect.centerx, game.player.rect.centery
+    
+    # Radius guaranteed to be off-screen
+    min_dist = max(GAME_WIDTH, GAME_HEIGHT) * 0.65
+    max_dist = max(GAME_WIDTH, GAME_HEIGHT) * 1.10
+
+    map_w = getattr(game, 'map_width_pixels', 3000)
+    map_h = getattr(game, 'map_height_pixels', 3000)
+
+    for _ in range(15):
+        angle = random.uniform(0, math.pi * 2)
+        dist = random.uniform(min_dist, max_dist)
+        
+        target_x = px + math.cos(angle) * dist
+        target_y = py + math.sin(angle) * dist
+
+        tx = (int(target_x) // TILE_SIZE) * TILE_SIZE
+        ty = (int(target_y) // TILE_SIZE) * TILE_SIZE
+
+        # Bounds check
+        if not (0 <= tx < map_w - TILE_SIZE and 0 <= ty < map_h - TILE_SIZE):
+            continue
+
+        test_rect = pygame.Rect(tx, ty, TILE_SIZE, TILE_SIZE)
+
+        # Collision with obstacles check
+        if any(test_rect.colliderect(ob) for ob in getattr(game, 'obstacles', [])):
+            continue
+
+        # Prevent spawning on water
+        gx, gy = tx // TILE_SIZE, ty // TILE_SIZE
+        tile = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
+        if tile:
+            t_name = tile.get('name', '').lower()
+            if 'water' in t_name or tile.get('is_obstacle', False):
+                continue
+
+        return (tx, ty)
+
+    return None

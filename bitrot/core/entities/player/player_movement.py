@@ -4,7 +4,8 @@ import math
 import re
 import random
 import pygame
-from core.data.config import TILE_SIZE
+import core.data.config
+from core.data.config import *
 from core.messages import display_message
 from core.placement import find_free_tile
 from core.entities.npc.npc import NPC

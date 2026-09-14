@@ -115,7 +115,7 @@ ZOMBIE_WANDER_ENABLED = True
 ZOMBIE_WANDER_CHANGE_INTERVAL = 0
 ZOMBIE_LINE_OF_SIGHT_CHECK = True
 ZOMBIES_PER_SPAWN = 0
-ZOMBIE_RESPAWN_TIMER_MS = 0
+ZOMBIE_RESPAWN = True
 ZOMBIE_INFECTION_CHANCE = 0.0
 ZOMBIE_MULTIPLIER = 2
 DURABILITY_MULTIPLIER = 1.0
@@ -123,6 +123,7 @@ WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
 WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
 CLOTH_DURABILITY_MULTIPLIER = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER = 1.0
+
 NPC_MAX_CHUNK = 0
 NPC_HOSTILE_PERCENT = 0
 MAX_NPCS_GLOBAL = 0
@@ -132,6 +133,8 @@ NPC_DAMAGE_MULTIPLIER = 1.0
 NPC_SPEED_MULTIPLIER = 1.0
 NPC_DETECTION_RADIUS = 0
 NPC_STATIC_PERCENT = 0.0
+NPC_RESPAWN = True
+
 MAX_VEH_CHUNK = 0
 VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
@@ -144,8 +147,13 @@ UI_SHOW_TUTORIAL_DEFAULT = True
 RESOLUTION = "1280x720"
 WINDOW_MODE = "fullscreen"
 UI_SCALE = 1
-ANIMAL_SPAWN_COUNT = 0
-ANIMAL_RESPAWN_TIMER_MS = 0
+
+ANIMAL_MAX_CHUNK = 10
+ANIMAL_SPAWN_COUNT = 10
+ANIMALS_PER_SPAWN = 5
+ANIMAL_RESPAWN = True
+ANIMAL_RESPAWN = True
+
 
 VOLUME_MUSIC = 0.50
 VOLUME_BACKGROUND = 0.50
@@ -231,17 +239,17 @@ def load_settings(preset="config"):
     global AUTO_DRINK, AUTO_DRINK_THRESHOLD, BASE_PLAYER_VIEW_RADIUS
     global ZOMBIE_SPEED, MAX_ZOMBIES_GLOBAL, ZOMBIE_DROP, ZOMBIE_DETECTION_RADIUS
     global ZOMBIE_WANDER_ENABLED, ZOMBIE_WANDER_CHANGE_INTERVAL, ZOMBIE_LINE_OF_SIGHT_CHECK
-    global ZOMBIES_PER_SPAWN, ZOMBIE_RESPAWN_TIMER_MS, ZOMBIE_INFECTION_CHANCE, ZOMBIE_MULTIPLIER
+    global ZOMBIES_PER_SPAWN, ZOMBIE_RESPAWN, ZOMBIE_INFECTION_CHANCE, ZOMBIE_MULTIPLIER
     global DURABILITY_MULTIPLIER, WEAPON_MELEE_DURABILITY_MULTIPLIER
     global WEAPON_RANGED_DURABILITY_MULTIPLIER, CLOTH_DURABILITY_MULTIPLIER
     global ITEM_SPAWN_CHANCE_MULTIPLIER
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
-    global NPC_MAX_CHUNK, ZOMBIE_MAX_CHUNK
+    global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
-    global ANIMAL_SPAWN_COUNT, ANIMAL_RESPAWN_TIMER_MS
+    global ANIMAL_MAX_CHUNK, ANIMALS_PER_SPAWN, ANIMAL_RESPAWN, ANIMAL_SPAWN_COUNT
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
 
@@ -280,7 +288,14 @@ def load_settings(preset="config"):
         val_wander = zombie_config.find('wander').get('value')
         ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
         ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
-        ZOMBIE_RESPAWN_TIMER_MS = int(zombie_config.find('respawn_timer').get('value'))
+        val_respawn = zombie_config.find('respawn')
+        if val_respawn is not None:
+            ZOMBIE_RESPAWN = str(val_respawn.get('value', 'true')).lower() == 'true'
+        else:
+            # Fallback for old configs having respawn_timer
+            old_timer = zombie_config.find('respawn_timer')
+            ZOMBIE_RESPAWN = (old_timer is not None and int(old_timer.get('value', '0')) > 0)
+
         ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value'))
         ZOMBIE_MULTIPLIER = int(zombie_config.find('zombie_multiplier').get('value'))
         ZOMBIE_INFECTION_CHANCE = 0.4
@@ -303,16 +318,25 @@ def load_settings(preset="config"):
                 ITEM_SPAWN_CHANCE_MULTIPLIER = float(multiplier_node.get('value'))
 
         npc_config = root.find('npc')
-        MAX_NPCS_GLOBAL = 1500
-        NPC_SPAWN_CHANCE = 1.0
-        NPC_HEALTH_MULTIPLIER = 1.0
-        NPC_DAMAGE_MULTIPLIER = 1.0
-        NPC_SPEED_MULTIPLIER = 1.0
-        NPC_DETECTION_RADIUS = 10 * TILE_SIZE
+        if npc_config is not None:
+            MAX_NPCS_GLOBAL = 1500
+            NPC_SPAWN_CHANCE = 1.0
+            NPC_HEALTH_MULTIPLIER = 1.0
+            NPC_DAMAGE_MULTIPLIER = 1.0
+            NPC_SPEED_MULTIPLIER = 1.0
+            NPC_DETECTION_RADIUS = 10 * TILE_SIZE
 
-        NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value'))
-        NPC_STATIC_PERCENT = float(npc_config.find('static_percent').get('value'))    
-        NPC_HOSTILE_PERCENT = float(npc_config.find('hostile_percent').get('value'))
+            NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value', '10'))
+            
+            spawn_node = npc_config.find('spawn')
+            NPCS_PER_SPAWN = int(spawn_node.get('value', '5')) if spawn_node is not None else 5
+            
+            NPC_STATIC_PERCENT = float(npc_config.find('static_percent').get('value', '0.40'))    
+            NPC_HOSTILE_PERCENT = float(npc_config.find('hostile_percent').get('value', '0.60'))
+
+            respawn_node = npc_config.find('respawn')
+            NPC_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
+
 
         vehicle_config = root.find('vehicle')
         MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value'))
@@ -374,8 +398,16 @@ def load_settings(preset="config"):
         VOLUME_ANIMAL = float(vol_animal.get('value'))
 
         animal_config = root.find('animal')
-        ANIMAL_SPAWN_COUNT = int(animal_config.find('animal_spawn_per_chunk').get('value'))
-        ANIMAL_RESPAWN_TIMER_MS = int(animal_config.find('animal_respawn_ms_timer').get('value'))
+        if animal_config is not None:
+            chunk_node = animal_config.find('animal_spawn_per_chunk')
+            ANIMAL_MAX_CHUNK = int(chunk_node.get('value', '10')) if chunk_node is not None else 10
+            ANIMAL_SPAWN_COUNT = ANIMAL_MAX_CHUNK
+
+            spawn_node = animal_config.find('spawn')
+            ANIMALS_PER_SPAWN = int(spawn_node.get('value', '5')) if spawn_node is not None else 5
+
+            respawn_node = animal_config.find('respawn')
+            ANIMAL_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
 
     except Exception as e:
         print(f"Error loading config from {filepath}: {e}")
