@@ -59,7 +59,8 @@ def save_game(game):
                 "food": game.player.food,
                 "stamina": game.player.stamina,
                 "infection": game.player.infection,
-                "anxiety": game.player.anxiety
+                "anxiety": game.player.anxiety,
+                "alcohol_level": getattr(game.player, 'alcohol_level', 0.0)
             },
 
             "attributes": attributes_base,

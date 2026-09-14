@@ -106,6 +106,18 @@ class PlayerActions:
             ammo_type = getattr(item, 'ammo_type', None) 
             consumed = False
 
+            # --- DETECT ALCOHOLIC LIQUIDS ---
+            item_name_lower = getattr(item, 'name', '').lower()
+            is_wine = ('white wine' in item_name_lower or 'red wine' in item_name_lower)
+            is_whiskey = ('whiskey' in item_name_lower)
+
+            if is_wine or is_whiskey:
+                consumed = True
+                if hasattr(self, 'anxiety'):
+                    self.anxiety = max(0.0, self.anxiety - (5.0 if is_wine else 12.0))
+                if hasattr(self, 'water') and is_wine:
+                    self.water = min(100.0, self.water + 3.0)
+
             if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
                 self.reload_active_weapon(game=game)
                 return 
@@ -156,6 +168,17 @@ class PlayerActions:
 
             if consumed:
                 item.load -= 1
+
+                old_level = getattr(self, 'alcohol_level', 0.0)
+                if is_wine:
+                    self.alcohol_level = old_level + 1.0
+                    if old_level < 5.0 <= self.alcohol_level:
+                        display_message(tr('msg', "You feel dizzy and your vision blurs..."))
+                elif is_whiskey:
+                    self.alcohol_level = old_level + 2.5
+                    if old_level < 5.0 <= self.alcohol_level:
+                        display_message(tr('msg', "The strong whiskey makes your head spin and your vision blurs..."))
+
                 if item.load <= 0:
                     if source_type == 'belt':
                         self.belt[item_index] = None

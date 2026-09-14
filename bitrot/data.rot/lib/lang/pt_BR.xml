@@ -290,6 +290,7 @@
         <alert name="Are you feeling sick or infected?" translation_alert="Você está doente ou infectado?" />
         <alert name="You are carrying too much weight." translation_alert="Carga excessiva! Você está sobrecarregado." />
         <alert name="You are carrying a heavy load." translation_alert="Você está carregando uma carga pesada." />
+        <alert name="You are drunk and your vision is blurred." translation_alert="Você está bêbado, sua visão está turva" />
     </alert>
 
     <context>
@@ -651,5 +652,8 @@
         <msg name="Could not find vehicle" translation_msg="Veículo não encontrado" />
         <msg name="Debug:" translation_msg="Depuração:" />
         <msg name="You" translation_msg="Você" />
+
+        <msg name="You feel dizzy and your vision blurs..." translation_msg="Você está tonto e sua visão embaça..." />
+        <msg name="The strong whiskey makes your head spin and your vision blurs..." translation_msg="Este whiskey é forte, sua cabeça está rodando..." />
     </msg>
 </language>

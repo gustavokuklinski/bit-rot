@@ -92,6 +92,41 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
     # Define the actual game viewport area to prevent effects from leaking into UI/Modals
     game_viewport_rect = pygame.Rect(v_left, 0, dyn_w, dyn_h)
 
+    # =========================================================================
+    # --- ALCOHOL BLUR EFFECT (5 Wine or 2 Whiskey) ---
+    # =========================================================================
+    alcohol = getattr(game.player, 'alcohol_level', 0.0) if game.player else 0.0
+    if alcohol >= 5.0 and dyn_w > 0 and dyn_h > 0:
+        if not hasattr(game, 'blur_cache_surf') or game.blur_cache_surf.get_size() != (dyn_w, dyn_h):
+            game.blur_cache_surf = pygame.Surface((dyn_w, dyn_h))
+
+        # Copy the current game viewport
+        game.blur_cache_surf.blit(game.game_screen, (0, 0), game_viewport_rect)
+
+        # Bilinear blur via downsample / upsample
+        factor = max(5, min(10, int(5 + (alcohol - 5.0) * 0.8)))
+        small_w = max(1, dyn_w // factor)
+        small_h = max(1, dyn_h // factor)
+
+        downsampled = pygame.transform.smoothscale(game.blur_cache_surf, (small_w, small_h))
+        blurred = pygame.transform.smoothscale(downsampled, (dyn_w, dyn_h))
+
+        # Drunken double-vision sway
+        sway_time = pygame.time.get_ticks() * 0.0025
+        sway_x = int(math.sin(sway_time) * 4)
+        sway_y = int(math.cos(sway_time * 0.7) * 3)
+
+        # Alpha transparency for the blur overlay
+        blur_alpha = min(230, int(180 + (alcohol - 5.0) * 10))
+        blurred.set_alpha(blur_alpha)
+
+        # Clip so the blur never leaks into modal headers, sidebars, or tooltips
+        game.game_screen.set_clip(game_viewport_rect)
+        game.game_screen.blit(blurred, (v_left + sway_x, sway_y))
+        game.game_screen.set_clip(None)
+    # =========================================================================
+
+
     if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
         is_under_roof = False
         if getattr(game, 'roof_data', None) and game.player:

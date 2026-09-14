@@ -59,6 +59,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.infection = stats.get('infection', 0.0)
         self.anxiety = stats.get('anxiety', 0.0)
         self.intelligence = stats.get('intelligence', 0.0)
+        self.alcohol_level = float(stats.get('alcohol_level', 0.0))
 
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
@@ -328,6 +329,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if damage_this_frame > 0:
             self.health = max(0.0, self.health - damage_this_frame)
 
+        if getattr(self, 'alcohol_level', 0.0) > 0:
+            self.alcohol_level = max(0.0, self.alcohol_level - (0.0007 * game.dt_mult))
 
         decay_rate = PROGRESSION_CONFIG.get_stat('metabolism', 'decay_rate_seconds', 5.0)
         

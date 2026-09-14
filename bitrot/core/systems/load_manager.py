@@ -398,6 +398,8 @@ def load_game(game, save_folder_name):
         
         game.player.inventory = [deserialize_item(d) for d in player_data['inventory'] if deserialize_item(d)]
 
+        game.player.alcohol_level = float(player_data.get('stats', {}).get('alcohol_level', 0.0))
+
         game.player.belt = []
         for item_data in player_data.get('belt', [None]*5):
             if item_data:
