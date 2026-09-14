@@ -149,7 +149,7 @@ class Tabs:
         if modal_type == 'mobile':
             if label == 'Clock': return tr('tooltip', 'Clock')
             if label == 'Map': return tr('tooltip', 'Chunk map')
-            if label == 'MP3': return tr('tooltip', 'MP3 Player - Use SD Cards')
+            if label == 'Apps': return tr('tooltip', 'Mobile Apps - Insert SD Cards')
 
         if modal_type in ['inventory', 'gear', 'slots']:
             if label == 'Inventory':

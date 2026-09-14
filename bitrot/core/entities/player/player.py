@@ -473,15 +473,11 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if self.health <= 1:
             print("GAME OVER: Health depleted!")
             pygame.mixer.music.stop() # Silence music
-            if hasattr(game, 'mp3_state'):
-                 game.mp3_state['status'] = 'stopped'
             return True
             
         if self.infection >= 100:
             print("GAME OVER: Zombified!")
             pygame.mixer.music.stop() # Silence music
-            if hasattr(game, 'mp3_state'):
-                 game.mp3_state['status'] = 'stopped'
             return True
 
         if self.drop_cooldown > 0:

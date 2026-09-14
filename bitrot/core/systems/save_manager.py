@@ -312,6 +312,7 @@ def save_game(game):
             "items": safe_ground_items,
             "containers": container_data,
             "modal_positions": game.last_modal_positions,
+            "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)

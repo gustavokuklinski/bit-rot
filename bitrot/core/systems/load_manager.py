@@ -107,7 +107,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.splashes = []
     game.blood_stains = []
     game.npcs.empty()
-    
+    game.app_state = {'slots': [None] * 5}
+
     # 3. Clear Visual Caches
     if hasattr(game, '_tile_cache_surface'):
         game._tile_cache_surface = None
@@ -430,6 +431,11 @@ def load_game(game, save_folder_name):
         with open(os.path.join(save_path, "world.rot"), "r") as f:
             world_data = json.load(f)
         
+        game.app_state = {'slots': [None] * 5}
+        for idx, s_data in enumerate(world_data.get('app_slots', [])):
+            if s_data and idx < 5:
+                game.app_state['slots'][idx] = deserialize_item(s_data)
+                
         time_data = world_data.get('time', {})
         game.world_time.game_time_ms = time_data.get('game_time_ms', 0)
         game.world_time.day_count = time_data.get('day_count', 0)

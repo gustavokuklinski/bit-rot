@@ -1,8 +1,0 @@
-<item name="Mixtape #0731" type="sd_card" tip="The Cringe\nPulse of the Roda\nBlack Water Pavements\n Use with Mobile > MP3">
-    <properties>
-        <sprite file="sd_card.png" />
-        <weight weight="0.0001" />
-        <audio value="radio/mixtape_01.ogg" />
-    </properties>
-    <spawn chance="0" />
-</item>

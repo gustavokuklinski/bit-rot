@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -80,6 +80,7 @@ class Item:
 
         self.safe_radius = safe_radius
         self.max_liquid = max_liquid
+        self.map_value = map_value
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
@@ -160,6 +161,9 @@ class Item:
         if getattr(self, 'safe_radius', 0) > 0:
             data['safe_radius'] = self.safe_radius
 
+        if getattr(self, 'map_value', None) is not None:
+            data['map_value'] = self.map_value
+        
         return data
 
     @staticmethod
@@ -195,8 +199,11 @@ class Item:
         if 'safe_radius' in data: 
             item.safe_radius = data['safe_radius']
 
-        return item
+        if 'map_value' in data:
+            item.map_value = data['map_value']
 
+        return item
+        
     @property
     def damage(self):
         if self.min_damage is not None and self.max_damage is not None:

@@ -210,6 +210,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
 
     max_liquid_str = get_prop_val(props, 'max_liquid', 'value', None)
     max_liquid = int(float(max_liquid_str)) if max_liquid_str else template.get('max_liquid', None)
+    map_value = get_prop_val(props, 'map', 'value', None) or template.get('map_value', None)
 
     new_item = cls(
         item_name, template['type'], durability=durability, load=load, 
@@ -225,7 +226,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, 
         require=require, weight=weight, weight_reduction=weight_reduction, 
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
-        safe_radius=safe_radius, max_liquid=max_liquid
+        safe_radius=safe_radius, max_liquid=max_liquid, map_value=map_value
     )
 
     if item_name in COLORABLE_ITEMS:

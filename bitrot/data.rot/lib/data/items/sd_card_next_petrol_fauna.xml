@@ -1,0 +1,8 @@
+<item name="Next Petrol Fauna" type="sd_card" tip="Use with Mobile > Apps">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <map value="show_animals" />
+    </properties>
+    <spawn chance="0" />
+</item>

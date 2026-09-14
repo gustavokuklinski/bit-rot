@@ -233,6 +233,9 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     if not game.player:
         return
 
+
+    
+
     # --- 4. Render Map (Cached) ---
     current_layer = getattr(game, 'current_layer_index', 1)
     current_map_file = getattr(game.map_manager, 'current_map_filename', '')
@@ -345,10 +348,82 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
             pygame.draw.rect(surface, MINIMAP_PLAYER_COLOR, player_rect, 0)
             pygame.draw.rect(surface, (0, 0, 0), player_rect, 1)
 
+        active_caps = set()
+        app_slots = getattr(game, 'app_state', {}).get('slots', [])
+        for card in app_slots:
+            if not card: continue
+            map_val = getattr(card, 'map_value', None)
+            if not map_val and hasattr(card, 'properties') and isinstance(card.properties, dict):
+                map_val = card.properties.get('map', {}).get('value')
+            if not map_val and hasattr(card, 'name') and card.name in ITEM_TEMPLATES:
+                map_val = ITEM_TEMPLATES[card.name].get('properties', {}).get('map', {}).get('value')
+            if map_val:
+                active_caps.add(map_val.strip().lower())
+
+        # 1. Live Zombies (RED DOTS)
+        if 'show_zombies' in active_caps:
+            for z in getattr(game, 'zombies', []):
+                if getattr(z, 'is_dead', False): continue
+                zx = (z.rect.centerx // TILE_SIZE) + gx_offset
+                zy = (z.rect.centery // TILE_SIZE) + gy_offset
+                screen_x = map_area_rect.x + (zx - src_x) * map_zoom + (map_zoom / 2)
+                screen_y = map_area_rect.y + (zy - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(screen_x, screen_y):
+                    pygame.draw.circle(surface, (220, 40, 40), (int(screen_x), int(screen_y)), 3)
+
+        # 2. Live Hostile NPCs (ORANGE DOTS)
+        if 'show_hostile_npc' in active_caps:
+            for npc in getattr(game, 'npcs', []):
+                if getattr(npc, 'is_dead', False) or getattr(npc, 'is_friendly', False): continue
+                nx = (npc.rect.centerx // TILE_SIZE) + gx_offset
+                ny = (npc.rect.centery // TILE_SIZE) + gy_offset
+                screen_x = map_area_rect.x + (nx - src_x) * map_zoom + (map_zoom / 2)
+                screen_y = map_area_rect.y + (ny - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(screen_x, screen_y):
+                    pygame.draw.circle(surface, (255, 165, 0), (int(screen_x), int(screen_y)), 3)
+
+        # 3. Live Static NPCs (GREEN DOTS)
+        if 'show_static_hostile' in active_caps or 'show_static_npc' in active_caps:
+            for npc in getattr(game, 'npcs', []):
+                if getattr(npc, 'is_dead', False) or not getattr(npc, 'is_static', False): continue
+                nx = (npc.rect.centerx // TILE_SIZE) + gx_offset
+                ny = (npc.rect.centery // TILE_SIZE) + gy_offset
+                screen_x = map_area_rect.x + (nx - src_x) * map_zoom + (map_zoom / 2)
+                screen_y = map_area_rect.y + (ny - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(screen_x, screen_y):
+                    pygame.draw.circle(surface, (40, 220, 40), (int(screen_x), int(screen_y)), 3)
+
+        # 4. Live Animals (YELLOW DOTS)
+        if 'show_animals' in active_caps:
+            animal_list = getattr(game, 'active_animals', [])
+            if not animal_list:
+                animal_list = [i for i in getattr(game, 'items_on_ground', []) if getattr(i, 'type', '') == 'animal']
+            for a in animal_list:
+                if getattr(a, 'is_dead', False): continue
+                ax = (a.rect.centerx // TILE_SIZE) + gx_offset
+                ay = (a.rect.centery // TILE_SIZE) + gy_offset
+                screen_x = map_area_rect.x + (ax - src_x) * map_zoom + (map_zoom / 2)
+                screen_y = map_area_rect.y + (ay - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(screen_x, screen_y):
+                    pygame.draw.circle(surface, (240, 220, 50), (int(screen_x), int(screen_y)), 3)
+
+        # 5. Live Vehicles (BLUE DOTS)
+        if 'show_vehicles' in active_caps:
+            veh_list = getattr(game, 'vehicles', [])
+            if not veh_list and hasattr(game, 'map_manager'):
+                veh_list = getattr(game.map_manager, 'vehicles', [])
+            for v in veh_list:
+                vx = (v.rect.centerx // TILE_SIZE) + gx_offset
+                vy = (v.rect.centery // TILE_SIZE) + gy_offset
+                screen_x = map_area_rect.x + (vx - src_x) * map_zoom + (map_zoom / 2)
+                screen_y = map_area_rect.y + (vy - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(screen_x, screen_y):
+                    pygame.draw.circle(surface, (40, 140, 255), (int(screen_x), int(screen_y)), 3)
+
+
         # --- [NEW] Draw Dynamic Quest Markers ---
         if hasattr(game.player, 'quests'):
             
-            # --- [OPTIMIZATION] Throttle Heavy Item Scanning to 1.5 seconds ---
             current_t = time.time()
             if 'quest_markers_cache_time' not in modal or current_t - modal['quest_markers_cache_time'] > 1.5:
                 modal['quest_markers_cache_time'] = current_t
@@ -358,7 +433,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                     
                 active_req_items = set()
                 
-                # 1. Identify which items the player is tasked to find
                 for node_id in game.player.quests:
                     options = NPCDialog.NPC_DIALOGS.get(node_id, [])
                     for opt in options:
@@ -371,7 +445,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                 
                 quest_locations = []
                 if active_req_items:
-                    # 2. Scan world items and containers
                     for item in getattr(game, 'items_on_ground', []) + getattr(game, 'visible_items', []):
                         if item.name in active_req_items:
                             quest_locations.append((item.rect.centerx, item.rect.centery))
@@ -385,11 +458,9 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                                     
                 modal['cached_quest_locations'] = quest_locations
 
-            # Retrieve from cache
             quest_locations = modal.get('cached_quest_locations', [])
             
             if quest_locations:
-                # 3. Draw the markers dynamically over the map
                 pulse = (math.sin(time.time() * 5) + 1) / 2 # Smooth 60fps pulse
 
                 for qx, qy in quest_locations:
@@ -408,7 +479,6 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
                         pygame.draw.circle(surface, (255, 215, 0), (int(q_center_x), int(q_center_y)), int(marker_radius))
                         pygame.draw.circle(surface, (0, 0, 0), (int(q_center_x), int(q_center_y)), int(marker_radius), 1)
                         
-                        # Add the '!' in the center
                         if 'font_12' in globals():
                             excl_surf = font_12.render("!", False, (0, 0, 0))
                             excl_rect = excl_surf.get_rect(center=(int(q_center_x), int(q_center_y)))

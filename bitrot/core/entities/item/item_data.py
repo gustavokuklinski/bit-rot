@@ -59,6 +59,13 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     max_liquid = int(float(max_liq_node.get('value', '0')))
                 except (ValueError, TypeError):
                     max_liquid = None
+        
+        map_value = None
+        props_node = root.find('properties')
+        if props_node is not None:
+            map_node = props_node.find('map')
+            if map_node is not None:
+                map_value = map_node.get('value', '').strip()
 
         template = {
             'type': ttype, 
@@ -72,6 +79,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             'tip': tip,
             'safe_radius': safe_radius,
             'max_liquid': max_liquid,
+            'map_value': map_value,
             'spawn_amount_global': spawn_amount_global,
             'spawn_maptile': spawn_maptile,            
             'spawn_layer': spawn_layer                 
