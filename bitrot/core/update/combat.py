@@ -4,6 +4,7 @@ import random
 from core.data.config import TILE_SIZE
 from core.update.utils import get_nearby_obstacles
 from core.messages import display_message
+from core.data.localization import tr
 
 def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     if not hasattr(game, 'blood_stains'):
