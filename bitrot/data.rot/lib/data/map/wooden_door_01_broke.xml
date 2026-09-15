@@ -1,4 +1,7 @@
 <map name="wooden_door_01_broke" type="maptile" char="wooden_door_01_broke" is_obstacle="false">
+    <properties>
+        <repair items="[Metal Scrap:8, Weld:2]" gain_xp="[maintenance:1]" magazine="Survivor Guide Basic" time="2.0" />
+    </properties>
     <visuals>
         <sprite file="wooden_door_01_broke.png" />
     </visuals>

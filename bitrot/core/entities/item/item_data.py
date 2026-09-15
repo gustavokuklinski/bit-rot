@@ -119,6 +119,19 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             fuel_node = props_node.find('fuel')
             if fuel_node is not None:
                 template['properties']['fuel_type'] = fuel_node.attrib.get('type')
+            
+            health_node = props_node.find('health')
+            if health_node is not None:
+                template['health_min'] = int(health_node.get('min', '30'))
+                template['health_max'] = int(health_node.get('max', '30'))
+
+            remove_node = props_node.find('remove')
+            if remove_node is not None:
+                raw_items = remove_node.get('item', '')
+                items_list = [t.strip() for t in raw_items.replace('[', '').replace(']', '').split(',') if t.strip()]
+                template['remove_items'] = items_list
+                template['remove_time'] = float(remove_node.get('time', '1.5'))
+                
 
             for node in props_node.findall('restore'):
                 status_str = node.get('status')

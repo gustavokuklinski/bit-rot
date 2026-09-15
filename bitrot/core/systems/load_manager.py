@@ -435,7 +435,24 @@ def load_game(game, save_folder_name):
         for idx, s_data in enumerate(world_data.get('app_slots', [])):
             if s_data and idx < 5:
                 game.app_state['slots'][idx] = deserialize_item(s_data)
-                
+        
+        for b_entry in world_data.get('barricades', []):
+            m_name = b_entry['map']
+            if m_name not in game.map_states:
+                game.map_states[m_name] = {}
+            if 'barricades' not in game.map_states[m_name]:
+                game.map_states[m_name]['barricades'] = {}
+
+            item_obj = Item.create_from_name(b_entry['item_name'])
+            game.map_states[m_name]['barricades'][(b_entry['gx'], b_entry['gy'])] = {
+                'item_name': b_entry['item_name'],
+                'health': b_entry['health'],
+                'max_health': b_entry['max_health'],
+                'remove_items': b_entry.get('remove_items', ['Crowbar', 'Hammer']),
+                'remove_time': b_entry.get('remove_time', 1.5),
+                'sprite': item_obj.image if item_obj else None
+            }
+
         time_data = world_data.get('time', {})
         game.world_time.game_time_ms = time_data.get('game_time_ms', 0)
         game.world_time.day_count = time_data.get('day_count', 0)

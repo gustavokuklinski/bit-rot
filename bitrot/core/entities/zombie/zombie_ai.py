@@ -613,11 +613,13 @@ class ZombieAI:
         gy = hit_obstacle.y // TILE_SIZE
         tile_def = game.map_manager.get_tile_at(gx, gy)
         
-        if tile_def and tile_def.get('destructible'):
-            name = str(tile_def.get('name', '')).lower()
+        if game.map_manager.is_tile_destructible(gx, gy):
+            name = str(tile_def.get('name', '')).lower() if tile_def else ''
             char = game.map_data[gy][gx] if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]) else ''
-            is_structural = (tile_def.get('is_statable') or tile_def.get('is_window') or 
-                           'door' in name or 'window' in name or 'barricate' in char or 'barricad' in char)
+            has_barricade = bool(game.map_manager.get_barricade(gx, gy))
+            is_structural = (has_barricade or (tile_def and (tile_def.get('is_statable') or tile_def.get('is_window'))) or 
+                           'door' in name or 'window' in name or 'barricate' in char or 'barricad' in char or
+                           '_open' in char or '_close' in char)
             
             if is_structural:
                 attack_delay = getattr(self, 'current_attack_delay', 1000.0) / multiplier

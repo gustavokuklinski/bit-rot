@@ -303,6 +303,21 @@ def save_game(game):
                 "y": i.rect.y if hasattr(i, 'rect') else i.y
             })
 
+        saved_barricades = []
+        for map_name, m_state in game.map_states.items():
+            if 'barricades' in m_state:
+                for (gx, gy), b in m_state['barricades'].items():
+                    saved_barricades.append({
+                        'map': map_name,
+                        'gx': gx,
+                        'gy': gy,
+                        'item_name': b['item_name'],
+                        'health': b['health'],
+                        'max_health': b['max_health'],
+                        'remove_items': b['remove_items'],
+                        'remove_time': b['remove_time']
+                    })
+
         world_data = {
             "time": {
                 "game_time_ms": game.world_time.game_time_ms,
@@ -313,6 +328,7 @@ def save_game(game):
             "containers": container_data,
             "modal_positions": game.last_modal_positions,
             "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
+            "barricades": saved_barricades
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)

@@ -1,0 +1,5 @@
+<recipe type="resource" craft="create" output="Wood Barricade" magazine="Carpentary Vol.1" gain_xp="[intelligence:0.1, maintenance:0.1]" amount="5" time="3.0">
+    <ingredient name="[Plank]" destroy="true" amount="2" />
+    <ingredient name="[Nails]" destroy="true" amount="4" />
+    <ingredient name="[Hammer, Primitive Hammer]" destroy="false" amount="1" />
+</recipe>

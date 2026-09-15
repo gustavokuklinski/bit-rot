@@ -1,6 +1,7 @@
 <map name="wooden_door_01_close" type="maptile" char="wooden_door_01_close" state="close" is_obstacle="true" destructible="true">
     <properties>
         <health min="110" max="110" />
+        <repair items="[Metal Scrap:4, Weld:1]" gain_xp="[maintenance:0.5]" magazine="Survivor Guide Basic" time="1.5" />
     </properties>
     <visuals>
         <sprite id="close" file="wooden_door_01_close.png" />

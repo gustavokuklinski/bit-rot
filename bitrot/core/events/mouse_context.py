@@ -15,6 +15,15 @@ from core.placement import find_free_tile
 from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
 
+def _is_barricade_item(it):
+    """Safely checks if an item is a valid barricade, guarding against NoneType values."""
+    if not it:
+        return False
+    b_health = getattr(it, 'barricade_health', None)
+    if b_health is not None and b_health > 0:
+        return True
+    return 'barricade' in getattr(it, 'name', '').lower()
+
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
 
@@ -100,7 +109,160 @@ def handle_context_menu_click(game, mouse_pos):
 
             if clicked_on_menu: 
                 print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
-                
+            
+            if option == 'Place barricade':
+                if source == 'map_tile' and isinstance(item, dict):
+                    gx = item['grid_x']
+                    gy = item['grid_y']
+
+                    # Search player inventory or belt safely
+                    found_barricade = None
+                    barricade_source = None
+                    barricade_idx = -1
+
+                    for idx_it, it in enumerate(game.player.inventory):
+                        if _is_barricade_item(it):
+                            found_barricade = it
+                            barricade_source = 'inventory'
+                            barricade_idx = idx_it
+                            break
+
+                    if not found_barricade:
+                        for idx_it, it in enumerate(game.player.belt):
+                            if _is_barricade_item(it):
+                                found_barricade = it
+                                barricade_source = 'belt'
+                                barricade_idx = idx_it
+                                break
+
+                    if found_barricade:
+                        def do_place_barricade():
+                            if barricade_source == 'inventory':
+                                if barricade_idx < len(game.player.inventory) and game.player.inventory[barricade_idx] == found_barricade:
+                                    game.player.inventory.pop(barricade_idx)
+                                elif found_barricade in game.player.inventory:
+                                    game.player.inventory.remove(found_barricade)
+                            elif barricade_source == 'belt':
+                                game.player.belt[barricade_idx] = None
+
+                            game.map_manager.add_barricade(gx, gy, found_barricade)
+                            display_message(tr('msg', "Barricade placed successfully."))
+
+                        game.player.start_action("Placing Barricade", 1.5, do_place_barricade, xp_reward=5)
+                    else:
+                        display_message(tr('msg', "Barricade must be in inventory."))
+                clicked_on_menu = True
+
+            elif option == 'Remove barricade':
+                if source == 'map_tile' and isinstance(item, dict):
+                    gx = item['grid_x']
+                    gy = item['grid_y']
+                    barricade = game.map_manager.get_barricade(gx, gy)
+
+                    if barricade:
+                        req_tools = barricade.get('remove_items', ['Crowbar', 'Hammer'])
+                        remove_time = barricade.get('remove_time', 1.5)
+
+                        has_tool = False
+                        for it in game.player.inventory + game.player.belt:
+                            if it and any(tool.lower() in it.name.lower() for tool in req_tools):
+                                has_tool = True
+                                break
+
+                        if has_tool:
+                            def do_remove_barricade():
+                                removed = game.map_manager.remove_barricade(gx, gy)
+                                if removed:
+                                    b_item = Item.create_from_name(removed['item_name'])
+                                    if b_item:
+                                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                            game.player.inventory.append(b_item)
+                                        else:
+                                            b_item.rect.center = game.player.rect.center
+                                            b_item.x, b_item.y = b_item.rect.topleft
+                                            game.items_on_ground.append(b_item)
+                                    display_message(tr('msg', "Barricade removed."))
+
+                            game.player.start_action("Removing Barricade", remove_time, do_remove_barricade, xp_reward=5)
+                        else:
+                            display_message(f"{tr('msg', 'Need:')} {', '.join(req_tools)}")
+                clicked_on_menu = True
+
+            elif option == 'Repair Door/Window':
+                if source == 'map_tile' and isinstance(item, dict):
+                    gx = item['grid_x']
+                    gy = item['grid_y']
+                    char = item.get('char', '')
+                    t_def = game.map_manager.get_tile_at(gx, gy)
+
+                    if t_def and t_def.get('repair_info'):
+                        r_info = t_def['repair_info']
+                        req_mag = r_info.get('magazine')
+
+                        if req_mag and req_mag not in getattr(game.player, 'known_recipes', []):
+                            display_message(f"{tr('msg', 'Requires magazine:')} {req_mag}")
+                            game.context_menu['active'] = False
+                            return
+
+                        all_player_items = [it for it in (game.player.inventory + game.player.belt) if it]
+                        has_all = True
+                        missing = []
+
+                        for req_name, req_qty in r_info['items'].items():
+                            avail = sum(it.load if (hasattr(it, 'is_stackable') and it.is_stackable() and it.load) else 1
+                                        for it in all_player_items if req_name.lower() in it.name.lower())
+                            if avail < req_qty:
+                                has_all = False
+                                missing.append(f"{req_name} ({avail}/{req_qty})")
+
+                        if not has_all:
+                            display_message(f"{tr('msg', 'Missing:')} {', '.join(missing)}")
+                            game.context_menu['active'] = False
+                            return
+
+                        def do_repair_door():
+                            for req_name, req_qty in r_info['items'].items():
+                                left = req_qty
+                                for it_list in [game.player.belt, game.player.inventory]:
+                                    for i in range(len(it_list)):
+                                        it = it_list[i]
+                                        if it and req_name.lower() in it.name.lower():
+                                            if hasattr(it, 'is_stackable') and it.is_stackable() and it.load:
+                                                take = min(left, it.load)
+                                                it.load -= take
+                                                left -= take
+                                                if it.load <= 0:
+                                                    it_list[i] = None
+                                            else:
+                                                it_list[i] = None
+                                                left -= 1
+                                            if left <= 0:
+                                                break
+                                    if left <= 0:
+                                        break
+
+                            game.player.inventory = [it for it in game.player.inventory if it is not None]
+
+                            for skill, amt in r_info.get('gain_xp', {}).items():
+                                game.player.progression.add_xp(game.player, skill, amt)
+
+                            base_name = char.replace('_open', '').replace('_close', '').replace('_broke', '')
+                            close_char = f"{base_name}_close"
+                            if close_char not in game.tile_manager.definitions:
+                                close_char = f"{base_name}_open"
+
+                            if close_char in game.tile_manager.definitions:
+                                game.map_manager._replace_tile(gx, gy, char, close_char)
+
+                            map_name = game.map_manager.current_map_filename
+                            if map_name in game.map_states and 'tile_health' in game.map_states[map_name]:
+                                game.map_states[map_name]['tile_health'][(gx, gy)] = t_def.get('health_max', 100)
+
+                            display_message(tr('msg', "Door/Window repaired successfully."))
+
+                        game.player.start_action("Repairing", r_info.get('time', 1.5), do_repair_door, xp_reward=0)
+                clicked_on_menu = True
+
             if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 grid_x = int(item.x // TILE_SIZE)
                 grid_y = int(item.y // TILE_SIZE)
@@ -150,139 +312,6 @@ def handle_context_menu_click(game, mouse_pos):
             if option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
                     game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
-                clicked_on_menu = True
-                
-            elif option == 'Barricate':
-                if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
-                    has_hammer = False
-                    planks = 0
-                    nails = 0
-                    
-                    for it in game.player.inventory + game.player.belt:
-                        if it:
-                            name_low = it.name.lower()
-                            if 'hammer' in name_low: has_hammer = True
-                            if 'plank' in name_low: planks += getattr(it, 'load', 1)
-                            if 'nails' in name_low: nails += getattr(it, 'load', 1)
-                            
-                    if has_hammer and planks >= 4 and nails >= 8:
-                        grid_x = item['grid_x']
-                        grid_y = item['grid_y']
-                        char = item.get('char', '')
-                        
-                        def do_barricate():
-                            def consume(name_substr, amount):
-                                amt_left = amount
-                                for i in range(len(game.player.belt)):
-                                    it = game.player.belt[i]
-                                    if it and name_substr in it.name.lower():
-                                        load = getattr(it, 'load', 1)
-                                        if load > amt_left:
-                                            it.load -= amt_left
-                                            return
-                                        else:
-                                            amt_left -= load
-                                            game.player.belt[i] = None
-                                            if amt_left <= 0:
-                                                return
-                                                
-                                for i in range(len(game.player.inventory) - 1, -1, -1):
-                                    it = game.player.inventory[i]
-                                    if it and name_substr in it.name.lower():
-                                        load = getattr(it, 'load', 1)
-                                        if load > amt_left:
-                                            it.load -= amt_left
-                                            return
-                                        else:
-                                            amt_left -= load
-                                            game.player.inventory.pop(i) 
-                                            if amt_left <= 0:
-                                                return
-                                                
-                            consume('plank', 2)
-                            consume('nails', 4)
-                            
-                            base_name = char.replace('_open', '').replace('_close', '').replace('_broke', '')
-                            if '_broke' in char:
-                                new_char = f"{base_name}_broke_barricate"
-                            else:
-                                new_char = f"{base_name}_barricate"
-                                
-                            if new_char not in game.tile_manager.definitions:
-                                display_message(tr('msg', f"Error: Tile '{new_char}' not found in XML!"))
-                                return
-                                
-                            if hasattr(game.map_manager, '_replace_tile'):
-                                game.map_manager._replace_tile(grid_x, grid_y, char, new_char)
-                                
-                            if hasattr(game.player, 'progression'):
-                                game.player.progression.add_xp(game.player, 'maintenance', 5)
-                                
-                            target_name = tr('ui', "Window") if "window" in char.lower() else tr('ui', "Door")
-                            display_message(f"{target_name} {tr('msg', 'barricaded successfully.')}")
-                            
-                        game.player.start_action("Barricading", 5.0, do_barricate, xp_reward=0)
-                    else:
-                        display_message(tr('msg', "Need: Hammer, 2 Plank and 4 Nails."))
-                clicked_on_menu = True
-
-            elif option == 'Unbarricade':
-                if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
-                    has_tool = False
-                    for it in game.player.inventory + game.player.belt:
-                        if it:
-                            name_low = it.name.lower()
-                            if 'axe' in name_low or 'pickaxe' in name_low or 'picaxe' in name_low or 'crowbar' in name_low:
-                                has_tool = True
-                                break
-                    
-                    if has_tool:
-                        grid_x = item['grid_x']
-                        grid_y = item['grid_y']
-                        char = item.get('char', '')
-                        
-                        def do_unbarricade():
-                            if '_broke_barricate' in char:
-                                target_char = char.replace('_broke_barricate', '_broke')
-                            else:
-                                target_char = char.replace('_barricate', '_close')
-                                if target_char not in game.tile_manager.definitions:
-                                    target_char = char.replace('_barricate', '')
-                                    
-                            if target_char not in game.tile_manager.definitions:
-                                display_message(tr('msg', f"Error: Tile '{target_char}' not found in XML!"))
-                                return
-                                
-                            if hasattr(game.map_manager, '_replace_tile'):
-                                game.map_manager._replace_tile(grid_x, grid_y, char, target_char)
-                                
-                            from core.placement import find_free_tile
-                            plank_qty = random.randint(0, 2)
-                            nails_qty = random.randint(0, 2)
-                            
-                            def spawn_drop(name, qty):
-                                if qty > 0:
-                                    drop_item = Item.create_from_name(name)
-                                    if drop_item:
-                                        drop_item.load = qty
-                                        center_x = grid_x * TILE_SIZE + TILE_SIZE // 2
-                                        center_y = grid_y * TILE_SIZE + TILE_SIZE // 2
-                                        drop_item.rect.center = (center_x, center_y)
-                                        if find_free_tile(drop_item.rect, game.obstacles, game.items_on_ground, initial_pos=(drop_item.rect.x, drop_item.rect.y), max_radius=2):
-                                            game.items_on_ground.append(drop_item)
-                            
-                            spawn_drop('Plank', plank_qty)
-                            spawn_drop('Nails', nails_qty)
-                                
-                            if hasattr(game.player, 'progression'):
-                                game.player.progression.add_xp(game.player, 'maintenance', 5)
-                                
-                            target_name = tr('ui', "Window") if "window" in char.lower() else tr('ui', "Door")
-                            display_message(tr('msg', f"{target_name} unbarricaded successfully."))
-                            
-                        game.player.start_action("Unbarricading", 4.0, do_unbarricade, xp_reward=0)
-                    else:
-                        display_message(tr('msg', "Need: Axe (Any), Pickaxe or Crowbar."))
                 clicked_on_menu = True
 
             if option == 'Toggle Light':
@@ -567,7 +596,6 @@ def handle_context_menu_click(game, mouse_pos):
             # --- CLICK HANDLER FOR CRAFTS & FAST CRAFTING ---
             elif option == 'Crafts':
                 if target_sub_slot and target_sub_slot.startswith('header_'):
-                    # Category headers are visual dividers and not clickable
                     return
 
                 if target_sub_slot == 'open_craft' or not target_sub_slot:
@@ -1374,9 +1402,6 @@ def handle_right_click(game, mouse_pos):
         if 'tooltips' not in game.context_menu:
             game.context_menu['tooltips'] = {}
 
-        game.context_menu['tooltips']['Barricate'] = "Need: Hammer (Any), 4 Plank and 8 Nails."
-        game.context_menu['tooltips']['Unbarricade'] = "Need: Axe (Any), Pickaxe or Crowbar."
-
         options = ['']
 
         if click_source == 'npc':
@@ -1398,20 +1423,50 @@ def handle_right_click(game, mouse_pos):
 
         elif click_source == 'map_tile':
             options = []
-            
-            if 'state' in clicked_item:
+            gx = clicked_item['grid_x']
+            gy = clicked_item['grid_y']
+            char = clicked_item.get('char', '')
+            t_def = game.map_manager.get_tile_at(gx, gy)
+
+            barricade = game.map_manager.get_barricade(gx, gy)
+
+            # 1. Door Open / Close
+            if not barricade and 'state' in clicked_item:
                 if clicked_item['state'] == 'close':
                     options.append('Open door/window')
                 elif clicked_item['state'] == 'open':
                     options.append('Close door/window')
-                    
-            if 'char' in clicked_item:
-                char = clicked_item['char']
-                if 'door' in char.lower() or 'window' in char.lower():
-                    if '_barricate' not in char:
-                        options.append('Barricate')
-                    else:
-                        options.append('Unbarricade')
+
+            # 2. Place Barricade / Remove Barricade
+            is_door_or_window = ('door' in char.lower() or 'window' in char.lower() or
+                                 (t_def and (t_def.get('is_statable') or 'door' in t_def.get('name', '').lower() or 'window' in t_def.get('name', '').lower())))
+
+            if is_door_or_window:
+                if barricade:
+                    options.append('Remove barricade')
+                    req_tools = barricade.get('remove_items', ['Crowbar', 'Hammer'])
+                    game.context_menu['tooltips']['Remove barricade'] = f"{tr('ui', 'Remove with:')} {', '.join(req_tools)}"
+                else:
+                    options.append('Place barricade')
+                    game.context_menu['tooltips']['Place barricade'] = tr('ui', "Barricade must be in inventory")
+
+            # 3. Repair Door / Window
+            if t_def and t_def.get('repair_info'):
+                r_info = t_def['repair_info']
+                is_broken = '_broke' in char
+                map_name = game.map_manager.current_map_filename
+                tile_health_map = game.map_states.get(map_name, {}).get('tile_health', {})
+                max_h = t_def.get('health_max', 100)
+                is_damaged = (gx, gy) in tile_health_map and tile_health_map[(gx, gy)] < max_h
+
+                if is_broken or is_damaged:
+                    options.append('Repair Door/Window')
+                    tt_lines = [tr('ui', "Required Materials:")]
+                    for req_item, req_qty in r_info['items'].items():
+                        tt_lines.append(f"- {tr('item', req_item)}: x{req_qty}")
+                    if r_info.get('magazine'):
+                        tt_lines.append(f"{tr('ui', 'Requires:')} {r_info['magazine']}")
+                    game.context_menu['tooltips']['Repair Door/Window'] = "\n".join(tt_lines)
                         
         elif click_source == 'light_source':
             options = ['Toggle Light']

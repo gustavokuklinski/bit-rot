@@ -1,3 +1,5 @@
+# core/draw/ui.py
+
 import pygame
 import math
 from core.data.config import *
@@ -26,6 +28,24 @@ from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
 
+# Hardcoded default English fallbacks for interaction tooltips
+DEFAULT_TOOLTIPS = {
+    'inspect_container': "Inspect [{key}]",
+    'generic_interact': "Interact [{key}]",
+    'stair_interact': "Climb [{key}]",
+    'interact_npc': "Talk [{key}]",
+    'interact_vehicle': "Enter/Exit [{key}]",
+    'engine_vehicle': "Toggle Engine [{key}]",
+    'vehicle_options_rmb': "Vehicle Options [RMB]",
+}
+
+def get_tooltip_tr(key, default=None):
+    """Returns the translation from the XML if present, otherwise falls back to the hardcoded English text."""
+    translated = tr('tooltip', key)
+    if translated == key:
+        return default if default is not None else DEFAULT_TOOLTIPS.get(key, key)
+    return translated
+
 def get_key_name(action):
     val = keybind_manager.kb_binds.get(action)
     if val is None: return ""
@@ -52,7 +72,7 @@ def _draw_tt(game, tip, x, y, center_align=False, dynamic_h=GAME_HEIGHT):
         if center_align: 
             x -= tt_w // 2
         else: 
-            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5) # Use dynamic_h
+            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5)
         
         tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
         tip_bg.fill((0, 0, 0, 220))
@@ -66,7 +86,13 @@ def _draw_tt(game, tip, x, y, center_align=False, dynamic_h=GAME_HEIGHT):
     elif isinstance(tip, dict) and tip.get('type') == 'vehicle':
         if not hasattr(game, 'vehicle_icons'):
             game.vehicle_icons = {}
-            icon_paths = {'fuel': SPRITE_PATH + '/items/car_fuel_unit.png', 'motor': SPRITE_PATH + '/items/car_motor.png', 'power': SPRITE_PATH + '/items/car_battery.png', 'tires': SPRITE_PATH + '/items/car_tire.png', 'key': SPRITE_PATH + '/items/car_key_pickup.png'}
+            icon_paths = {
+                'fuel': SPRITE_PATH + '/items/car_fuel_unit.png',
+                'motor': SPRITE_PATH + '/items/car_motor.png',
+                'power': SPRITE_PATH + '/items/car_battery.png',
+                'tires': SPRITE_PATH + '/items/car_tire.png',
+                'key': SPRITE_PATH + '/items/car_key_pickup.png'
+            }
             for k, path in icon_paths.items():
                 try: game.vehicle_icons[k] = pygame.transform.scale(pygame.image.load(path).convert_alpha(), (16, 16))
                 except: game.vehicle_icons[k] = None
@@ -78,7 +104,7 @@ def _draw_tt(game, tip, x, y, center_align=False, dynamic_h=GAME_HEIGHT):
         if center_align: 
             x -= tt_w // 2
         else: 
-            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5) # Use dynamic_h
+            x, y = min(x, GAME_WIDTH - tt_w - 5), min(y, dynamic_h - tt_h - 5)
         
         tip_bg = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
         tip_bg.fill((0, 0, 0, 220))
@@ -125,21 +151,17 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
     for item in game.visible_items:
         if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
             if screen_rect.colliderect(item.rect) and item.rect.collidepoint(world_mouse_pos):
-                
-                # --- [NEW] Draw hover highlight box around the item ---
                 pygame.draw.rect(surface, (50, 255, 50), item.rect.move(offset_x, offset_y), 2)
 
                 cx = item.rect.centerx
                 cy = item.rect.centery
                 radius_tiles = getattr(item, 'safe_radius', 0)
                 
-                # Create a translucent green tile surface with a 1px border
                 t_size = TILE_SIZE
                 highlight_surf = pygame.Surface((t_size, t_size), pygame.SRCALPHA)
-                highlight_surf.fill((50, 255, 50, 15)) # Faint fill
+                highlight_surf.fill((50, 255, 50, 15))
                 pygame.draw.rect(highlight_surf, (50, 255, 50, 40), (0, 0, t_size, t_size), 1)
                 
-                # Pre-filter obstacles to only those within the safe radius
                 search_box = item.rect.inflate(TILE_SIZE * (radius_tiles * 2 + 2), TILE_SIZE * (radius_tiles * 2 + 2))
                 local_obstacles = [ob for ob in game.obstacles if ob.colliderect(search_box)]
                 
@@ -160,7 +182,7 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
                                     gy = ob.centery // TILE_SIZE
                                     tile_def = game.map_manager.get_tile_at(gx, gy)
                                     if tile_def and tile_def.get('is_visible'):
-                                        continue  # Transparent obstacles don't block
+                                        continue
                                     los = False
                                     break
                             
@@ -189,7 +211,8 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     interactables = []
     for npc in game.npcs:
         if npc.is_friendly and npc.aggro_timer <= 0 and screen_rect.colliderect(npc.rect) and math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery) < TILE_SIZE * 1.5:
-            interactables.append({'rect': npc.rect, 'tip': tr('tooltip', 'interact_npc')})
+            tip_text = get_tooltip_tr('interact_npc', "Talk [{key}]").replace('{key}', get_key_name('interact'))
+            interactables.append({'rect': npc.rect, 'tip': tip_text})
                 
     for obj in game.containers:
         if getattr(obj, 'item_type', '') == 'vehicle' and getattr(game.player, 'vehicle', None) != obj and screen_rect.colliderect(obj.rect):
@@ -201,12 +224,18 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 interactables.append({'rect': obj.rect, 'tip': {
                     'type': 'vehicle',
                     'text_lines': [
-                        tr('tooltip', 'interact_vehicle').replace('{key}', get_key_name('interact')), 
-                        tr('tooltip', 'engine_vehicle').replace('{key}', get_key_name('vehicle_engine')), 
-                        tr('tooltip', 'vehicle_options_rmb'), 
+                        get_tooltip_tr('interact_vehicle', "Enter/Exit [{key}]").replace('{key}', get_key_name('interact')), 
+                        get_tooltip_tr('engine_vehicle', "Toggle Engine [{key}]").replace('{key}', get_key_name('vehicle_engine')), 
+                        get_tooltip_tr('vehicle_options_rmb', "Vehicle Options [RMB]"), 
                         ""
                     ],
-                    'stats': [{'icon': 'motor', 'text': tr('tooltip', "Motor"), 'val': f"{int(getattr(obj, 'motor', 0.0) * 100)}%"}, {'icon': 'fuel', 'text': tr('tooltip', "Fuel"), 'val': f"{int(getattr(obj, 'fuel', 0))}"}, {'icon': 'power', 'text': tr('tooltip', "Power"), 'val': f"{int(getattr(obj, 'battery', 0))}"}, {'icon': 'tires', 'text': tr('tooltip', "Tires"), 'val': f"{tires_count}/{len(req_tires) if req_tires else 4}"}, {'icon': 'key', 'text': tr('tooltip', "Key"), 'val': key_status}]
+                    'stats': [
+                        {'icon': 'motor', 'text': tr('tooltip', "Motor"), 'val': f"{int(getattr(obj, 'motor', 0.0) * 100)}%"},
+                        {'icon': 'fuel', 'text': tr('tooltip', "Fuel"), 'val': f"{int(getattr(obj, 'fuel', 0))}"},
+                        {'icon': 'power', 'text': tr('tooltip', "Power"), 'val': f"{int(getattr(obj, 'battery', 0))}"},
+                        {'icon': 'tires', 'text': tr('tooltip', "Tires"), 'val': f"{tires_count}/{len(req_tires) if req_tires else 4}"},
+                        {'icon': 'key', 'text': tr('tooltip', "Key"), 'val': key_status}
+                    ]
                 }})
 
     fx, fy = get_player_facing_tile(game)
@@ -214,12 +243,14 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         t = game.map_manager.get_tile_at(fx, fy)
         if t and (t.get('is_stair') or t.get('is_statable')) and math.hypot(game.player.rect.centerx - (fx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (fy*TILE_SIZE + TILE_SIZE/2)) < TILE_SIZE * 1.5:
             tip_key = 'stair_interact' if t.get('is_stair') else 'generic_interact'
-            tip_text = tr('tooltip', tip_key).replace('{key}', get_key_name('interact'))
+            default_tip = "Climb [{key}]" if t.get('is_stair') else "Interact [{key}]"
+            tip_text = get_tooltip_tr(tip_key, default_tip).replace('{key}', get_key_name('interact'))
             interactables.append({'rect': pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE), 'tip': tip_text})
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
-            interactables.append({'rect': obj.rect, 'tip': tr('tooltip', 'inspect_container').replace('{key}', get_key_name('interact'))})
+            tip_text = get_tooltip_tr('inspect_container', "Open [{key}]").replace('{key}', get_key_name('interact'))
+            interactables.append({'rect': obj.rect, 'tip': tip_text})
 
     tooltip_to_draw = None
     focused_tip = None 
@@ -233,21 +264,15 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         game.game_screen.blit(font_12.render("!", False, (255, 255, 255)), font_12.render("!", False, (255, 255, 255)).get_rect(center=box_rect.center))
         if box_rect.collidepoint(mouse_pos): tooltip_to_draw = item['tip']
 
-    # --- RENDER INTERACTION TOOLTIPS (drawn on top of world, under modals) ---
+    # --- RENDER INTERACTION TOOLTIPS ---
     if tooltip_to_draw:
         _draw_tt(game, tooltip_to_draw, mouse_pos[0] + 15, mouse_pos[1] + 15, dynamic_h=dynamic_h)
-    
-    # This display the tooltip on top of the player belt 
-    #if focused_tip and focused_tip != tooltip_to_draw:
-    #    _draw_tt(game, focused_tip, game.viewport_left_offset + (game.dynamic_w // 2), dynamic_h - 130, center_align=True)
-    #
 
     # --- LAYER 2: UI Buttons & Basic HUD ---
     if game.game_state in ['PLAYING', 'PAUSED']:
         view_left, view_right = game.viewport_left_offset, game.viewport_left_offset + game.dynamic_w
         game.pause_button_rect = draw_pause_button(game.game_screen, view_left, view_right, dynamic_h)
         
-        # --- NEW: Menu HUD Toggle Button (Placed to the left of the Pause button) ---
         game.menu_hud_button_rect = pygame.Rect(
             game.pause_button_rect.x + 25,
             game.pause_button_rect.y,
@@ -255,13 +280,10 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.pause_button_rect.height
         )
         
-        
-        
         if getattr(game, 'assets', None) and game.assets.get('menu_hud_icon'):
             icon_rect = game.assets['menu_hud_icon'].get_rect(center=game.menu_hud_button_rect.center)
             game.game_screen.blit(game.assets['menu_hud_icon'], icon_rect)
             
-        # Conditionally render the other left-side HUD buttons
         show_hud_menus = getattr(game, 'show_hud_menus', False)
         
         if show_hud_menus:
@@ -283,9 +305,8 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.crafting_button_rect = None
             game.help_button_rect = None
 
-        # Build the tooltips 
         for rect, label in [
-            (game.pause_button_rect, tr('ui', f"Pause and Save (F2)")), 
+            (game.pause_button_rect, tr('ui', "Pause and Save (F2)")), 
             (game.menu_hud_button_rect, tr('ui', "Toggle UI Menus (SHIFT+M)")),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status')})"),
             (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory')})"),
@@ -481,7 +502,6 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
             mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
 
-            # [FIX] Draw Highlight bounding box
             for dx in range(-1, 2):
                 for dy in range(-1, 2):
                     tx = p_tx + dx

@@ -75,6 +75,33 @@ class TileManager:
                                         definition['health_min'] = int(health_node.get('min', 1))
                                         definition['health_max'] = int(health_node.get('max', 1))
 
+                                    repair_node = props_node.find('repair')
+                                    if repair_node is not None:
+                                        raw_items = repair_node.get('items', '')
+                                        parsed_items = {}
+                                        if raw_items:
+                                            clean_items = raw_items.replace('[', '').replace(']', '').strip()
+                                            for pair in clean_items.split(','):
+                                                if ':' in pair:
+                                                    i_name, i_qty = pair.split(':', 1)
+                                                    parsed_items[i_name.strip()] = int(i_qty.strip())
+
+                                        raw_xp = repair_node.get('gain_xp', '')
+                                        parsed_xp = {}
+                                        if raw_xp:
+                                            clean_xp = raw_xp.replace('[', '').replace(']', '').strip()
+                                            for pair in clean_xp.split(','):
+                                                if ':' in pair:
+                                                    skill, amt = pair.split(':', 1)
+                                                    parsed_xp[skill.strip()] = float(amt.strip())
+
+                                        definition['repair_info'] = {
+                                            'items': parsed_items,
+                                            'gain_xp': parsed_xp,
+                                            'magazine': repair_node.get('magazine'),
+                                            'time': float(repair_node.get('time', 1.5))
+                                        }
+
                                 # Parse Explicit Drops
                                 drop_node = root.find('drop')
                                 if drop_node is not None:

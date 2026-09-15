@@ -396,6 +396,11 @@ class MapManager:
 
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
+        
+        if self.get_barricade(grid_x, grid_y):
+            display_message(tr('msg', "Door is barricaded!"))
+            return
+
         if not self.game.map_data: return
 
         current_char = self.game.map_data[grid_y][grid_x]
@@ -521,56 +526,116 @@ class MapManager:
     
 
     def draw_tile_health_bars(self, surface, offset_x, offset_y):
-        """Draws floating health bars over recently damaged destructible tiles."""
         if not self.tile_hit_timers:
             return
 
-        # We use a list of keys because we will remove items from the dict during iteration
         coords = list(self.tile_hit_timers.keys())
-        
         map_name = self.current_map_filename
-        if map_name not in self.game.map_states or 'tile_health' not in self.game.map_states[map_name]:
-            return
-        
-        tile_health_map = self.game.map_states[map_name]['tile_health']
 
         for pos in coords:
             grid_x, grid_y = pos
-            timer = self.tile_hit_timers[grid_x, grid_y]
+            barricade = self.get_barricade(grid_x, grid_y)
             
-            # Only draw if the tile still exists and has health
-            if pos in tile_health_map:
-                current_hp = tile_health_map[pos]
-                
-                # Get the tile definition to find max health
-                char = self.game.map_data[grid_y][grid_x]
-                defn = self.game.tile_manager.definitions.get(char)
-                
-                if defn:
-                    # Calculate max health (use the higher of the min/max range)
-                    max_hp = defn.get('health_max', 100)
-                    
-                    # Position the bar slightly above the tile
-                    draw_x = grid_x * TILE_SIZE + offset_x
-                    draw_y = grid_y * TILE_SIZE + offset_y - 7
-                    
-                    # 1. Draw Background (Dark Gray)
-                    bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
-                    pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+            draw_x = grid_x * TILE_SIZE + offset_x
+            draw_y = grid_y * TILE_SIZE + offset_y - 7
 
-                    # 2. Draw Health (Green)
-                    health_perc = max(0, min(1.0, current_hp / max_hp))
-                    health_width = int(health_perc * TILE_SIZE)
-                    health_bar_rect = pygame.Rect(draw_x, draw_y, health_width, 5)
-                    pygame.draw.rect(surface, GREEN, health_bar_rect)
+            if barricade:
+                bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
+                pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+                pct = max(0.0, min(1.0, barricade['health'] / barricade['max_health']))
+                bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 5)
+                pygame.draw.rect(surface, YELLOW, bar_rect)
+            elif map_name in self.game.map_states and 'tile_health' in self.game.map_states[map_name]:
+                if pos in self.game.map_states[map_name]['tile_health']:
+                    current_hp = self.game.map_states[map_name]['tile_health'][pos]
+                    char = self.game.map_data[grid_y][grid_x]
+                    defn = self.game.tile_manager.definitions.get(char)
+                    if defn:
+                        max_hp = defn.get('health_max', 100)
+                        bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
+                        pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+                        pct = max(0.0, min(1.0, current_hp / max_hp))
+                        bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 5)
+                        pygame.draw.rect(surface, GREEN, bar_rect)
 
-            # Decrement timer
             self.tile_hit_timers[pos] -= 1
             if self.tile_hit_timers[pos] <= 0:
                 del self.tile_hit_timers[pos]
 
-                
-    # [FIX] Added the 'attacker' argument and conditional checks for stamina drain
+    
+    def is_tile_destructible(self, grid_x, grid_y):
+        """Checks if a tile can receive damage (has a barricade, destructible tag, or door/window)."""
+        if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
+            return False
+        if self.get_barricade(grid_x, grid_y):
+            return True
+        char = self.game.map_data[grid_y][grid_x]
+        tile_def = self.game.tile_manager.definitions.get(char)
+        if not tile_def:
+            return False
+        if tile_def.get('destructible'):
+            return True
+        if '_open' in char or '_close' in char or 'door' in char.lower() or 'window' in char.lower():
+            base_name = char.replace("_open", "").replace("_close", "").replace("_broke", "")
+            if f"{base_name}_broke" in self.game.tile_manager.definitions:
+                return True
+        return False
+
+    def get_barricade(self, grid_x, grid_y):
+        map_name = self.current_map_filename
+        if map_name in self.game.map_states and 'barricades' in self.game.map_states[map_name]:
+            return self.game.map_states[map_name]['barricades'].get((grid_x, grid_y))
+        return None
+
+    def add_barricade(self, grid_x, grid_y, item):
+        map_name = self.current_map_filename
+        if map_name not in self.game.map_states:
+            self.game.map_states[map_name] = {}
+        if 'barricades' not in self.game.map_states[map_name]:
+            self.game.map_states[map_name]['barricades'] = {}
+
+        max_hp = getattr(item, 'barricade_health', 30) or 30
+        sprite_img = getattr(item, 'image', None)
+        if not sprite_img:
+            item_def = Item.create_from_name(item.name)
+            if item_def and item_def.image:
+                sprite_img = item_def.image
+
+        self.game.map_states[map_name]['barricades'][(grid_x, grid_y)] = {
+            'item': item,
+            'item_name': item.name,
+            'health': max_hp,
+            'max_health': max_hp,
+            'remove_items': getattr(item, 'remove_items', ['Crowbar', 'Hammer']),
+            'remove_time': getattr(item, 'remove_time', 1.5),
+            'sprite': sprite_img
+        }
+
+        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        if tile_rect not in self.game.obstacles:
+            self.game.obstacles.append(tile_rect)
+
+        self.invalidate_chunk(grid_x, grid_y)
+
+    def remove_barricade(self, grid_x, grid_y):
+        map_name = self.current_map_filename
+        if map_name in self.game.map_states and 'barricades' in self.game.map_states[map_name]:
+            b_data = self.game.map_states[map_name]['barricades'].pop((grid_x, grid_y), None)
+            
+            tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            char = self.game.map_data[grid_y][grid_x]
+            tile_def = self.game.tile_manager.definitions.get(char)
+            
+            is_obstacle = tile_def and tile_def.get('is_obstacle', False)
+            if not is_obstacle and tile_rect in self.game.obstacles:
+                self.game.obstacles.remove(tile_rect)
+            elif is_obstacle and tile_rect not in self.game.obstacles:
+                self.game.obstacles.append(tile_rect)
+
+            self.invalidate_chunk(grid_x, grid_y)
+            return b_data
+        return None
+
     def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
@@ -578,24 +643,19 @@ class MapManager:
         char = self.game.map_data[grid_y][grid_x]
         definition = self.game.tile_manager.definitions.get(char)
         
-        if not definition or not definition.get('destructible'):
+        barricade = self.get_barricade(grid_x, grid_y)
+        if not barricade and not self.is_tile_destructible(grid_x, grid_y):
             return False
-        
-        self.tile_hit_timers[(grid_x, grid_y)] = 60
 
-        # Determine if the entity hitting the tile is the player
-        # If attacker is not provided, assume it's the player for backward compatibility
+        self.tile_hit_timers[(grid_x, grid_y)] = 60
         is_player = (attacker is None) or (attacker == getattr(self.game, 'player', None))
-            
-        # Only drain stamina and durability if it's a manual melee hit (not a bullet) AND performed by the player
+
         if not is_projectile and is_player:
             STAMINA_COST = 0.05
             if self.game.player.stamina < STAMINA_COST:
                 display_message(tr('msg', "You are too exhausted to chop/mine!"))
                 return True
-
             self.game.player.stamina = max(0, self.game.player.stamina - STAMINA_COST)
-
 
             if weapon and weapon.durability is not None:
                 DURABILITY_COST = 0.05
@@ -604,84 +664,72 @@ class MapManager:
                     self.game.player.active_weapon = None
                     display_message(f"{tr('item', weapon.name)} {tr('msg', 'is broken and unequipped.')}")
                     return True
-        
-        if definition.get('sound_src'):
+
+        # Play sound
+        if definition and definition.get('sound_src'):
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             self.game.sound_manager.play_sound(
-                definition['sound_src'],
-                subdir='map',
-                game=self.game,
-                source_pos=tile_rect.center,
-                base_volume=0.4,
-                pitch_variance=0.15
+                definition['sound_src'], subdir='map', game=self.game,
+                source_pos=tile_rect.center, base_volume=0.4, pitch_variance=0.15
             )
 
+        # Trigger shake effect
         self.shaking_tiles[(grid_x, grid_y)] = time.time()
 
+        # 1. BARRICADE ABSORPTION
+        if barricade:
+            barricade['health'] -= damage
+            if barricade['health'] <= 0:
+                self.remove_barricade(grid_x, grid_y)
+                display_message(tr('msg', "Barricade destroyed!"))
+                return True
+            else:
+                return True
+
+        # 2. DOOR / WINDOW / DESTRUCTIBLE TILE DAMAGE
         map_name = self.current_map_filename
         if map_name not in self.game.map_states:
             self.game.map_states[map_name] = {}
         if 'tile_health' not in self.game.map_states[map_name]:
             self.game.map_states[map_name]['tile_health'] = {}
-        
+
         pos_key = (grid_x, grid_y)
         if pos_key not in self.game.map_states[map_name]['tile_health']:
-            self.game.map_states[map_name]['tile_health'][pos_key] = random.randint(
-                definition.get('health_min', 60), 
-                definition.get('health_max', 100)
-            )
-        
+            max_h = definition.get('health_max') if definition else None
+            min_h = definition.get('health_min') if definition else None
+            if not max_h:
+                base_name = char.replace("_open", "").replace("_close", "").replace("_broke", "")
+                close_def = self.game.tile_manager.definitions.get(f"{base_name}_close")
+                if close_def and close_def.get('health_max'):
+                    max_h = close_def.get('health_max')
+                    min_h = close_def.get('health_min', max_h)
+                else:
+                    max_h = 100
+                    min_h = 60
+            self.game.map_states[map_name]['tile_health'][pos_key] = random.randint(min_h, max_h)
+
         self.game.map_states[map_name]['tile_health'][pos_key] -= damage
         current_hp = self.game.map_states[map_name]['tile_health'][pos_key]
-        print(f"Maptile Destructible ({max(0, current_hp)} HP left)")
-        
+
         if current_hp <= 0:
             del self.game.map_states[map_name]['tile_health'][pos_key]
-            
             if (grid_x, grid_y) in self.shaking_tiles:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
-            # [NEW] Check for barricade reversion or a broken variant
-            if '_barricate' in char:
-                if '_broke_barricate' in char:
-                    target_char = char.replace('_broke_barricate', '_broke')
-                else:
-                    target_char = char.replace('_barricate', '_close')
+            base_name = char.replace("_open", "").replace("_close", "").replace("_broke", "")
+            broken_char = f"{base_name}_broke"
+            if broken_char in self.game.tile_manager.definitions:
+                target_char = broken_char
             else:
-                base_name = char.replace("_open", "").replace("_close", "")
-                broken_char = f"{base_name}_broke"
-                
-                if broken_char in self.game.tile_manager.definitions:
-                    target_char = broken_char
-                else:
-                    try:
-                        ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
-                    except (KeyError, IndexError, AttributeError):
-                        ground_char = "." 
-                    target_char = ground_char
+                ground_char = "."
+                try:
+                    ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
+                except Exception:
+                    pass
+                target_char = ground_char
 
-            # Replace with the new state
             self._replace_tile(grid_x, grid_y, char, target_char)
-
-            if 'drops' in definition:
-                for drop in definition['drops']:
-                    if random.random() <= drop['chance']:
-                        qty = random.randint(drop.get('min_qty', 1), drop.get('max_qty', 1))
-                        for _ in range(qty):
-                            item = Item.create_from_name(drop['item'])
-                            if item:
-                                # [FIX] Use topleft for perfect grid alignment
-                                item.rect.topleft = (grid_x * TILE_SIZE, grid_y * TILE_SIZE)
-                                item.x = item.rect.x
-                                item.y = item.rect.y
-
-                                if find_free_tile(item.rect, self.game.obstacles, self.game.items_on_ground, initial_pos=(item.rect.x, item.rect.y), max_radius=2):
-                                    self.game.items_on_ground.append(item)
-                                else:
-                                    print(f"Warning: Could not place dropped item {tr('item', item.name)}")
-                            else:
-                                print(f"Warning: Drop item '{drop['item']}' not found in templates.")
-
+            display_message(tr('msg', "Door/Window broken!"))
         return True
 
     def _replace_tile(self, grid_x, grid_y, old_char, new_char):

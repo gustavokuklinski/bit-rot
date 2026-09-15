@@ -441,13 +441,13 @@
         <tooltip name="MP3 Player - Use SD Cards" translation_tooltip="Reprodutor MP3 - Insira cartões SD" />
 
         <!-- World Interaction Overlays -->
-        <tooltip name="interact_npc" translation_tooltip="Pressione {key} para Falar&#10;Botão Direito para Opções" />
-        <tooltip name="interact_vehicle" translation_tooltip="Pressione {key} para Entrar/Sair do veículo" />
-        <tooltip name="engine_vehicle" translation_tooltip="Pressione {key} para Ligar/Desligar o motor" />
-        <tooltip name="vehicle_options_rmb" translation_tooltip="Botão Direito para Opções e Porta-malas" />
-        <tooltip name="stair_interact" translation_tooltip="Pressione {key} para Subir/Descer" />
-        <tooltip name="generic_interact" translation_tooltip="Pressione {key} ou Botão Direito para Abrir/Fechar" />
-        <tooltip name="inspect_container" translation_tooltip="Pressione {key} para Vasculhar recipiente" />
+        <tooltip name="interact_npc" translation_tooltip="Conversar [{key}]" />
+        <tooltip name="interact_vehicle" translation_tooltip="Entrar/Sair do veículo [{key}]" />
+        <tooltip name="engine_vehicle" translation_tooltip="Ligar/Desligar o motor [{key}]" />
+        <tooltip name="vehicle_options_rmb" translation_tooltip="Botão Direito para Opções" />
+        <tooltip name="stair_interact" translation_tooltip="Subir/Descer [{key}]" />
+        <tooltip name="generic_interact" translation_tooltip="Interagir [{key}]" />
+        <tooltip name="inspect_container" translation_tooltip="Inspecionar [{key}]" />
 
         <tooltip name="Motor" translation_tooltip="Motor" />
         <tooltip name="Fuel" translation_tooltip="Combustível" />

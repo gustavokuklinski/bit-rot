@@ -1,6 +1,7 @@
 <map name="outside_metal_door_01_close" type="maptile" char="outside_metal_door_01_close" state="close" is_obstacle="true" destructible="true" is_visible="true">
     <properties>
         <health min="100" max="100" />
+        <repair items="[Metal Scrap:4, Weld:1]" gain_xp="[maintenance:0.5]" magazine="Survivor Guide Basic" time="1.5" />
     </properties>
     <visuals>
         <sprite id="close" file="outside_metal_door_01_close.png" />

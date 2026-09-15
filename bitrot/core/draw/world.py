@@ -1,3 +1,5 @@
+# core/draw/world.py
+
 import pygame
 import time
 import random
@@ -49,6 +51,26 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                 area_rect = pygame.Rect(clip_rect.x - dest_x, clip_rect.y - dest_y, clip_rect.width, clip_rect.height)
                 surface.blit(chunk_surf, clip_rect.topleft, area=area_rect)
 
+    # --- Draw Placed Barricades over Doors and Windows ---
+    map_name = game.map_manager.current_map_filename
+    if map_name in game.map_states and 'barricades' in game.map_states[map_name]:
+        for (gx, gy), b_data in list(game.map_states[map_name]['barricades'].items()):
+            if (gx, gy) in shaking_tiles:
+                continue
+            screen_px = int(gx * tile_size + offset_x)
+            screen_py = int(gy * tile_size + offset_y)
+            if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
+                b_sprite = b_data.get('sprite')
+                if not b_sprite and b_data.get('item_name'):
+                    from core.entities.item.item import Item
+                    item_def = Item.create_from_name(b_data['item_name'])
+                    if item_def and item_def.image:
+                        b_data['sprite'] = item_def.image
+                        b_sprite = item_def.image
+                if b_sprite:
+                    surface.blit(b_sprite, (screen_px, screen_py))
+
+    # --- Draw Shaking Tiles (Doors, Windows, and Barricades) ---
     for pos, start_t in shaking_tiles.items():
         gx, gy = pos
         screen_px = int(gx * tile_size + offset_x)
@@ -60,11 +82,35 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                 b_def = tm.definitions.get(b_key)
                 if b_def:
                     draw_x, draw_y = screen_px, screen_py
-                    if current_time - start_t > 0.2: tiles_to_remove.append(pos)
+                    if current_time - start_t > 0.2:
+                        tiles_to_remove.append(pos)
                     else:
                         draw_x += random.randint(-2, 2)
                         draw_y += random.randint(-2, 2)
+
+                    # Blit ground underneath to avoid ghost visual artifacts
+                    try:
+                        g_char = game.all_ground_layers[game.current_layer_index][gy][gx]
+                        g_def = tm.definitions.get(g_char)
+                        if g_def:
+                            surface.blit(g_def['image'], (screen_px, screen_py))
+                    except Exception:
+                        pass
+
                     surface.blit(b_def['image'], (draw_x, draw_y))
+
+                    # If this tile is barricaded, draw the shaking barricade sprite on top
+                    barricade = game.map_manager.get_barricade(gx, gy)
+                    if barricade:
+                        b_sprite = barricade.get('sprite')
+                        if not b_sprite and barricade.get('item_name'):
+                            from core.entities.item.item import Item
+                            item_def = Item.create_from_name(barricade['item_name'])
+                            if item_def and item_def.image:
+                                barricade['sprite'] = item_def.image
+                                b_sprite = item_def.image
+                        if b_sprite:
+                            surface.blit(b_sprite, (draw_x, draw_y))
     
     for k in tiles_to_remove:
         if k in game.map_manager.shaking_tiles:

@@ -1,4 +1,7 @@
 <map name="door_02_open" type="maptile" char="door_02_open" state="open" is_obstacle="false">
+    <properties>
+        <repair items="[Metal Scrap:4, Weld:1]" gain_xp="[maintenance:0.5]" magazine="Survivor Guide Basic" time="1.5" />
+    </properties>
     <visuals>
         <sprite id="open" file="door_02_open.png" />
     </visuals>

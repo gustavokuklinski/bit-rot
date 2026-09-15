@@ -365,39 +365,36 @@ def handle_attack(game, mouse_pos):
                                     break
 
                 if not hit_something:
-                     clicked_grid_x = int(world_pos[0] // TILE_SIZE)
-                     clicked_grid_y = int(world_pos[1] // TILE_SIZE)
+                    clicked_grid_x = int(world_pos[0] // TILE_SIZE)
+                    clicked_grid_y = int(world_pos[1] // TILE_SIZE)
 
-                     target_found = False
+                    target_found = False
 
-                     for offset_y in range(4):
-                         target_y = clicked_grid_y + offset_y
+                    for offset_y in range(4):
+                        target_y = clicked_grid_y + offset_y
 
-                         tile_def = game.map_manager.get_tile_at(clicked_grid_x, target_y)
+                        if game.map_manager.is_tile_destructible(clicked_grid_x, target_y):
 
-                         if tile_def and tile_def.get('destructible'):
+                            tile_center_x = clicked_grid_x * TILE_SIZE + TILE_SIZE / 2
+                            tile_center_y = target_y * TILE_SIZE + TILE_SIZE / 2
+                            dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
 
-                             tile_center_x = clicked_grid_x * TILE_SIZE + TILE_SIZE / 2
-                             tile_center_y = target_y * TILE_SIZE + TILE_SIZE / 2
-                             dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+                            if dist <= TILE_SIZE * 2:
+                                if weapon is None:
+                                    if not can_deal_damage:
+                                        hit_something = True
+                                        break
+                                    self_damage = random.randint(1, 2)
+                                    game.player.stamina = max(0.0, game.player.stamina - self_damage)
 
-                             if dist <= TILE_SIZE * 2:
-                                 if weapon is None:
-                                     if not can_deal_damage:
-                                         hit_something = True
-                                         break
-                                     self_damage = random.randint(1, 2)
-                                     game.player.stamina = max(0.0, game.player.stamina - self_damage)
-
-                                 damage = game.player.get_attack_damage()
-                                 result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
+                                damage = game.player.get_attack_damage()
+                                result = game.map_manager.hit_tile(clicked_grid_x, target_y, damage, weapon=weapon)
                                  
-                                 if result:
-                                     hit_something = True
-                                     target_found = True
-                                     # ONLY drain extra stamina if hitting a tile unarmed
-                                     if weapon is None and game.player.stamina > 0:
-                                         game.player.stamina = max(0.0, game.player.stamina - 0.5)
-                                     break
+                                if result:
+                                    hit_something = True
+                                    target_found = True
+                                    if weapon is None and game.player.stamina > 0:
+                                        game.player.stamina = max(0.0, game.player.stamina - 0.5)
+                                    break
 
                 if not hit_something: print("Swung and missed!")
