@@ -1,7 +1,7 @@
 # core/ui/crafting_common.py
 import random
 import pygame
-from core.data.config import WHITE, GRAY, GREEN, RED, font_12
+from core.data.config import WHITE, GRAY, GREEN, RED, TILE_SIZE, font_12
 from core.data.localization import tr
 from core.entities.item.item import Item
 from core.messages import display_message
@@ -184,13 +184,17 @@ def draw_craft_action_footer(modal, recipe, details_x, details_y, details_w, lis
             on_execute(recipe)
 
 def get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=None, exclude_equipped=False):
-    """Gathers all item locations across player inventory, belt, clothes, and nearby containers."""
+    """Gathers all item locations across player inventory, belt, clothes, nearby containers,
+    and items dropped on the ground within 1 tile of the player.
+    """
     locations = []
+    seen_item_ids = set()
     
     def extract_list(container_list, path):
         for i in range(len(container_list) - 1, -1, -1):
             it = container_list[i]
-            if it:
+            if it and id(it) not in seen_item_ids:
+                seen_item_ids.add(id(it))
                 locations.append((container_list, i, it, 'list', path))
                 if hasattr(it, 'inventory') and it.inventory:
                     extract_list(it.inventory, path + [tr('item', it.name)])
@@ -200,7 +204,8 @@ def get_crafting_item_locations(player, game, include_nearby=True, nearby_contai
     if not exclude_equipped:
         for i in range(len(player.belt) - 1, -1, -1):
             it = player.belt[i]
-            if it:
+            if it and id(it) not in seen_item_ids:
+                seen_item_ids.add(id(it))
                 locations.append((player.belt, i, it, 'fixed_list', ["Belt"]))
                 if hasattr(it, 'inventory') and it.inventory:
                     extract_list(it.inventory, ["Belt", tr('item', it.name)])
@@ -208,20 +213,40 @@ def get_crafting_item_locations(player, game, include_nearby=True, nearby_contai
         protected_slots = ['arms', 'legs', 'body', 'feet', 'hands']
         for k in list(player.clothes.keys()):
             it = player.clothes[k]
-            if it:
+            if it and id(it) not in seen_item_ids:
                 if str(k).lower() not in protected_slots:
+                    seen_item_ids.add(id(it))
                     locations.append((player.clothes, k, it, 'dict', ["Gear", str(k).capitalize()]))
                 if hasattr(it, 'inventory') and it.inventory:
                     extract_list(it.inventory, ["Gear", str(k).capitalize(), tr('item', it.name)])
     
-    if include_nearby:
-        if nearby_containers is None and game:
+    if include_nearby and game:
+        # 1. Nearby container contents
+        if nearby_containers is None:
             nearby_containers = game.find_nearby_containers()
         if nearby_containers:
             for obj in nearby_containers:
                 if hasattr(obj, 'inventory') and obj.inventory:
                     obj_name = getattr(obj, 'name', 'Ground')
                     extract_list(obj.inventory, ["Nearby", obj_name])
+                    
+        # 2. Loose ground dropped items within 1 tile (TILE_SIZE * 1.5) of the player
+        if hasattr(game, 'items_on_ground') and player and hasattr(player, 'rect'):
+            p_rect = player.rect
+            for i in range(len(game.items_on_ground) - 1, -1, -1):
+                it = game.items_on_ground[i]
+                if not it or getattr(it, 'type', '') == 'animal' or getattr(it, 'item_type', '') == 'vehicle':
+                    continue
+                if id(it) in seen_item_ids:
+                    continue
+                if hasattr(it, 'rect'):
+                    dx = p_rect.centerx - it.rect.centerx
+                    dy = p_rect.centery - it.rect.centery
+                    if (dx * dx + dy * dy) <= (TILE_SIZE * 1.5) ** 2:
+                        seen_item_ids.add(id(it))
+                        locations.append((game.items_on_ground, i, it, 'list', [tr('ui', "Ground")]))
+                        if hasattr(it, 'inventory') and it.inventory:
+                            extract_list(it.inventory, [tr('ui', "Ground"), tr('item', it.name)])
                     
     return locations
 
@@ -339,8 +364,11 @@ def execute_recipe_craft(game, recipe, player=None):
                     removed += take
 
                     if (it.is_stackable() and it.load is not None and it.load <= 0) or (not it.is_stackable() and take > 0):
-                        if ctype == 'list' and it in container:
-                            container.remove(it)
+                        if ctype == 'list':
+                            if it in container:
+                                container.remove(it)
+                            elif key < len(container):
+                                container.pop(key)
                         elif ctype == 'fixed_list':
                             container[key] = None
                         elif ctype == 'dict':
@@ -418,7 +446,7 @@ def get_recipe_status_details(player, game, recipe):
 
     missing_magazine = recipe.magazine if (recipe.magazine and not knows_magazine) else None
 
-    # 2. Check Ingredients
+    # 2. Check Ingredients (including 1-tile loose ground items)
     locs = get_crafting_item_locations(player, game, include_nearby=True)
     search_items = [loc[2] for loc in locs]
     missing_ingredients = []
@@ -450,7 +478,6 @@ def is_recipe_relevant_to_item(recipe, item_name):
     item_low = item_name.lower().strip()
     c_type = getattr(recipe, 'craft_type', 'create').lower()
 
-    # Check if this item is used as an ingredient
     is_ingredient = False
     for ing in recipe.ingredients:
         if any(item_low == n.lower().strip() for n in ing.get('names', [])):
@@ -458,11 +485,8 @@ def is_recipe_relevant_to_item(recipe, item_name):
             break
 
     if c_type == 'repair':
-        # Relevant if this is the item to repair, or a repair tool/material
         return (recipe.output_name.lower().strip() == item_low) or is_ingredient
     elif c_type == 'dismantle':
-        # Relevant if this item is the one being dismantled
         return is_ingredient or (item_low in recipe.output_name.lower())
-    else:  # 'create' / 'craft'
-        # Standard crafting: you can only craft recipes that USE this item as an ingredient
+    else:
         return is_ingredient

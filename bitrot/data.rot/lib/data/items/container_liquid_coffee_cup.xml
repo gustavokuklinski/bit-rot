@@ -1,4 +1,4 @@
-<item name="Cup" type="container" allow_liquid="true" allow_belt="false" tip="Use to craft.\nOnly liquids allowed">
+<item name="Coffee Cup" type="container" allow_liquid="true" allow_belt="false" tip="Only liquids allowed">
     <properties>
         <load value="1" />
         <weight weight="0.01" reduction="10%" />
@@ -6,5 +6,8 @@
         <sprite file="container_liquid_cup.png" />
         <max_liquid value="2" />
     </properties>
+    <loot>
+        <item name="Coffee Unit" chance="1.0" />
+    </loot>
     <spawn chance="1" />
 </item>

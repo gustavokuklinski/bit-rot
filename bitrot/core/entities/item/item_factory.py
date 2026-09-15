@@ -1,28 +1,27 @@
+# core/entities/item/item_factory.py
+
 import random
 import secrets
 import pygame
 import core.data.config
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 
-# Valid global colors for randomizing clothes
 CLOTHING_COLORS = [
-    (255, 255, 255), # White
-    (50, 50, 50),    # Black
-    (220, 50, 50),   # Red
-    (50, 200, 50),   # Green
-    (50, 50, 220),   # Blue
-    (220, 220, 50),  # Yellow
-    (255, 105, 180), # Pink
-    (255, 165, 0),   # Orange
-    (139, 69, 19),   # Brown
-    (128, 128, 128)  # Gray
+    (255, 255, 255),
+    (50, 50, 50),
+    (220, 50, 50),
+    (50, 200, 50),
+    (50, 50, 220),
+    (220, 220, 50),
+    (255, 105, 180),
+    (255, 165, 0),
+    (139, 69, 19),
+    (128, 128, 128)
 ]
 
 COLORABLE_ITEMS = ["Jacket", "Tshirt", "TShirt", "Sneakers", "Pants"]
 
 def generate_random_item(cls):
-    """Picks a random item template and generates it based on its spawn_chance."""
-    # [FIX] Apply global item spawn chance first to control overall map density
     if random.random() > core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER:
         return None
 
@@ -52,7 +51,7 @@ def generate_random_item(cls):
     chosen_name = random.choices(names, weights=normalized_chances, k=1)[0]
     return create_item_from_name(cls, chosen_name, randomize_durability=True)
 
-def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None):
+def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
         
@@ -95,7 +94,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     if needs_durability:
         multiplier = core.data.config.DURABILITY_MULTIPLIER
         if template['type'] == 'weapon_melee':
-                multiplier *= core.data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
+            multiplier *= core.data.config.WEAPON_MELEE_DURABILITY_MULTIPLIER
         elif template['type'] == 'weapon_ranged':
             multiplier *= core.data.config.WEAPON_RANGED_DURABILITY_MULTIPLIER
         elif template['type'] == 'tool':
@@ -154,7 +153,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
 
     state = template.get('state')
     if not state:
-            state = get_prop_val(props, 'state', 'value', None)
+        state = get_prop_val(props, 'state', 'value', None)
             
     min_light = int(get_prop_val(props, 'light', 'min', 0)) if 'light' in props else None
     max_light = int(get_prop_val(props, 'light', 'max', 0)) if 'light' in props else None
@@ -171,9 +170,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     status_effect = get_prop_val(props, 'status', 'value', None)
     
     sounds = template.get('sounds', {})
-
     effects = list(template.get('effects', []))
-
     repair_list = list(template.get('repair_list', []))
 
     knockback_str = get_prop_val(props, 'knockback', 'value', None)
@@ -189,12 +186,10 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     firing_second = float(firing_second_str)
     
     key_id = get_prop_val(props, 'key', 'value', None)
-    
     disposable = template.get('disposable', False)
     
     liquid = template.get('liquid', False)
     allow_liquid = template.get('allow_liquid', False)
-    
     allow_belt = template.get('allow_belt', False)
 
     require = get_prop_val(props, 'require', 'type', None)
@@ -245,27 +240,24 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             tinted.fill((*new_item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
             new_item.image = tinted
 
-    if 'loot' in template and hasattr(new_item, 'inventory'):
+    # Only generate initial template loot when explicitly requested (True for new world/loot drops, False for save deserialization)
+    if spawn_loot and 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
-            
             if loot_info['name'].endswith(' on'):
                 continue
 
             target_template = ITEM_TEMPLATES.get(loot_info['name'], {})
             target_type = target_template.get('type', '')
 
-            # --- CORRECTED LOOT CHANCE LOGIC ---
-            # Now correctly checking the 'allow_liquid' boolean directly
             if disposable or allow_liquid:
-                spawn_loot = True
+                spawn_loot_check = True
             else:
                 m = core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER
-                spawn_loot = random.random() < (loot_info['chance'] * m)
+                spawn_loot_check = random.random() < (loot_info['chance'] * m)
 
-            if spawn_loot:
+            if spawn_loot_check:
                 loot_item = cls.create_from_name(loot_info['name'])
                 if loot_item:
-                    # --- CORRECTED BYPASS LOGIC ---
                     if getattr(loot_item, 'liquid', False) and getattr(new_item, 'max_liquid', None) is not None:
                         loot_item.capacity = new_item.max_liquid
                         loot_item.load = new_item.max_liquid
@@ -282,8 +274,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         if fits and new_item.item_type in ['container', 'cloth']:
                             current_weight = sum(i.get_total_weight() for i in new_item.inventory)
                             item_weight = loot_item.get_total_weight()
-                            # If a container lacks a weight tag in XML, max_weight defaults to 0.0
-                            # This bypass prevents 0.0 weight disposable containers from rejecting items.
                             max_weight = new_item.weight * 5.0
                              
                             if current_weight + item_weight > max_weight:

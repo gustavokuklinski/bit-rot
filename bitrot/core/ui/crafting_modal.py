@@ -74,7 +74,6 @@ class CraftingModal(BaseModal):
         self.selected_target = None 
         self.dropdown_just_closed = False
         
-        # ---> FIX: Memory flag to catch synthetic Joystick events <---
         self._force_click = False
 
         self.tab_handlers = {
@@ -88,7 +87,6 @@ class CraftingModal(BaseModal):
         mouse_pos = self.game._get_scaled_mouse_pos()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Ensure we only process Left Clicks (Hardware or Synthetic Joystick)
             is_left_click = getattr(event, 'button', 1) == 1
             
             if self.dropdown_state.get('active'):
@@ -121,27 +119,26 @@ class CraftingModal(BaseModal):
                     self.modal['search_active'] = False
                     pygame.key.set_repeat() 
                     
-            # ---> FIX: If the click wasn't consumed by UI elements above, flag it for the drawing loop <---
             if is_left_click:
                 self._force_click = True
         
         elif event.type == pygame.KEYDOWN and self.search_active:
             if event.key == pygame.K_BACKSPACE:
                 self.search_text = self.search_text[:-1]
-                self.modal['search_text'] = self.search_text  # <--- UPDATE
+                self.modal['search_text'] = self.search_text
             elif event.key == pygame.K_RETURN:
                 self.search_active = False
-                self.modal['search_active'] = False           # <--- UPDATE
+                self.modal['search_active'] = False
                 pygame.key.set_repeat()
             elif event.key == pygame.K_ESCAPE:
                 self.search_active = False
-                self.modal['search_active'] = False           # <--- UPDATE
+                self.modal['search_active'] = False
                 pygame.key.set_repeat()
                 return True 
             else:
                 if len(self.search_text) < 20 and len(event.unicode) > 0 and event.unicode.isprintable():
                     self.search_text += event.unicode
-                    self.modal['search_text'] = self.search_text  # <--- UPDATE
+                    self.modal['search_text'] = self.search_text
             
             self.modal['crafting_scroll_offset'] = 0 
             return True
@@ -150,24 +147,26 @@ class CraftingModal(BaseModal):
 
     def _get_all_item_locations(self, include_nearby=False, nearby_containers=None, exclude_equipped=False):
         locations = []
+        seen_item_ids = set()
         
         def extract_list(container_list, path):
             for i in range(len(container_list) - 1, -1, -1):
                 item = container_list[i]
-                if item:
+                if item and id(item) not in seen_item_ids:
+                    seen_item_ids.add(id(item))
                     locations.append((container_list, i, item, 'list', path))
                     if hasattr(item, 'inventory') and item.inventory:
-                        # Use translated name for the breadcrumb path
                         extract_list(item.inventory, path + [tr('item', item.name)])
 
         # Always include main inventory
         extract_list(self.player.inventory, ["Inventory"])
         
-        # ONLY include Belt and Gear if exclude_equipped is False
+        # Belt and Gear if exclude_equipped is False
         if not exclude_equipped:
             for i in range(len(self.player.belt) - 1, -1, -1):
                 item = self.player.belt[i]
-                if item:
+                if item and id(item) not in seen_item_ids:
+                    seen_item_ids.add(id(item))
                     locations.append((self.player.belt, i, item, 'fixed_list', ["Belt"]))
                     if hasattr(item, 'inventory') and item.inventory:
                         extract_list(item.inventory, ["Belt", tr('item', item.name)])
@@ -175,13 +174,15 @@ class CraftingModal(BaseModal):
             protected_slots = ['arms', 'legs', 'body', 'feet', 'hands']
             for k in list(self.player.clothes.keys()):
                 item = self.player.clothes[k]
-                if item:
+                if item and id(item) not in seen_item_ids:
                     if str(k).lower() not in protected_slots:
+                        seen_item_ids.add(id(item))
                         locations.append((self.player.clothes, k, item, 'dict', ["Gear", str(k).capitalize()]))
                     if hasattr(item, 'inventory') and item.inventory:
                         extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
         
-        if include_nearby:
+        if include_nearby and self.game:
+            # 1. Nearby container contents
             if nearby_containers is None:
                 nearby_containers = self.game.find_nearby_containers()
             if nearby_containers:
@@ -189,6 +190,24 @@ class CraftingModal(BaseModal):
                     if hasattr(obj, 'inventory') and obj.inventory:
                         obj_name = getattr(obj, 'name', 'Ground')
                         extract_list(obj.inventory, ["Nearby", obj_name])
+
+            # 2. Loose ground dropped items within 1 tile of the player
+            if hasattr(self.game, 'items_on_ground') and self.player and hasattr(self.player, 'rect'):
+                p_rect = self.player.rect
+                for i in range(len(self.game.items_on_ground) - 1, -1, -1):
+                    it = self.game.items_on_ground[i]
+                    if not it or getattr(it, 'type', '') == 'animal' or getattr(it, 'item_type', '') == 'vehicle':
+                        continue
+                    if id(it) in seen_item_ids:
+                        continue
+                    if hasattr(it, 'rect'):
+                        dx = p_rect.centerx - it.rect.centerx
+                        dy = p_rect.centery - it.rect.centery
+                        if (dx * dx + dy * dy) <= (TILE_SIZE * 1.5) ** 2:
+                            seen_item_ids.add(id(it))
+                            locations.append((self.game.items_on_ground, i, it, 'list', [tr('ui', "Ground")]))
+                            if hasattr(it, 'inventory') and it.inventory:
+                                extract_list(it.inventory, [tr('ui', "Ground"), tr('item', it.name)])
                         
         return locations
 
@@ -254,20 +273,13 @@ class CraftingModal(BaseModal):
         self.modal_x, self.modal_y = self.modal['position']
         self.modal_rect.topleft = (self.modal_x, self.modal_y)
 
-
         self.close_button_rect.topright = (self.modal_x + self.modal_w - 10, self.modal_y + 10)
 
         self.draw_base()
-        
-        
 
-        # ---> FIX: Read dynamically scaled screen coordinates for UI matching <---
         mouse_pos = self.game._get_scaled_mouse_pos() if hasattr(self.game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
-        
-        # ---> FIX: Exclusively use the event-dispatched click flag to respect Z-Index!
-        # Do NOT poll raw pygame.mouse.get_pressed() here, otherwise background modals will intercept it.
         click = getattr(self, '_force_click', False)
-        self._force_click = False # Consume flag
+        self._force_click = False
 
         if getattr(self, 'dropdown_just_closed', False):
             if not click: self.dropdown_just_closed = False
@@ -313,15 +325,33 @@ class CraftingModal(BaseModal):
 
         nearby_items = []
         nearby_containers = self.game.find_nearby_containers()
+        seen_nearby_ids = set()
+
         if nearby_containers:
             for cont in nearby_containers:
                 if hasattr(cont, 'inventory') and cont.inventory:
                     def extract_nearby(inv):
                         for it in inv:
-                            if it:
+                            if it and id(it) not in seen_nearby_ids:
+                                seen_nearby_ids.add(id(it))
                                 nearby_items.append(it)
                                 if hasattr(it, 'inventory') and it.inventory: extract_nearby(it.inventory)
                     extract_nearby(cont.inventory)
+
+        # Include loose items on ground within 1 tile of the player
+        if hasattr(self.game, 'items_on_ground') and self.player and hasattr(self.player, 'rect'):
+            p_rect = self.player.rect
+            for it in self.game.items_on_ground:
+                if not it or getattr(it, 'type', '') == 'animal' or getattr(it, 'item_type', '') == 'vehicle':
+                    continue
+                if id(it) in seen_nearby_ids:
+                    continue
+                if hasattr(it, 'rect'):
+                    dx = p_rect.centerx - it.rect.centerx
+                    dy = p_rect.centery - it.rect.centery
+                    if (dx * dx + dy * dy) <= (TILE_SIZE * 1.5) ** 2:
+                        seen_nearby_ids.add(id(it))
+                        nearby_items.append(it)
 
         player_items = [loc[2] for loc in self._get_all_item_locations()]
 
@@ -382,7 +412,6 @@ class CraftingModal(BaseModal):
         bar_rect = pygame.Rect(list_rect.right - 10, list_rect.top + 2, 8, list_rect.height - 4)
         draw_scrollbar(self.surface, self.modal, bar_rect, self.visible_items, len(filtered_recipes), scroll_offset)
         
-        # Ensure legacy drag inputs for crafting still hook into the new rect
         self.modal['crafting_handle_rect'] = self.modal.get('scrollbar_handle_rect')
 
         details_x = list_x + self.list_width + self.padding
@@ -522,11 +551,11 @@ class CraftingModal(BaseModal):
                 if removed_check >= to_remove: break
 
                 if item.name in valid_names:
-                    if hasattr(item, 'inventory') and item.inventory: return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
+                    if hasattr(item, 'inventory') and item.inventory: 
+                        return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
 
                     item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
                     take = min(to_remove - removed_check, item_qty)
                     removed_check += take
                     
-            #if removed_check < to_remove: return f"{tr('msg', 'Missing')} {to_remove - removed_check} {tr('msg', 'of')} {valid_names[0]}"
         return None

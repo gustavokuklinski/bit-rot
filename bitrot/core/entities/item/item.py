@@ -88,17 +88,13 @@ class Item:
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
-        # Start with the base weight of the item itself
         total = self.weight
         
-        # If item is stackable (like resources/ammo), weight is per unit * quantity (load)
         if self.is_stackable() and self.load is not None:
             total = self.weight * self.load
 
-        # Add weight of contents if it's a container (recursive)
         if self.inventory:
             contents_weight = sum(item.get_total_weight() for item in self.inventory)
-            # Apply reduction (e.g., containers can reduce content weight by %)
             total += contents_weight * (1.0 - self.weight_reduction)
             
         if getattr(self, 'in_belt', False):
@@ -141,7 +137,7 @@ class Item:
             'durability': self.durability,
             'load': self.load,
             'state': self.state,
-            'inventory': [i.to_dict() for i in self.inventory] if self.inventory else []
+            'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.inventory] if self.inventory else []
         }
 
         if getattr(self, 'in_belt', False):
@@ -174,7 +170,9 @@ class Item:
     def from_dict(data):
         if not data or 'name' not in data: return None
         saved_color = tuple(data['color']) if 'color' in data else None
-        item = Item.create_from_name(data['name'], force_color=saved_color)
+        
+        # Pass spawn_loot=False so newly reconstructed saved items do not re-spawn default XML loot
+        item = Item.create_from_name(data['name'], force_color=saved_color, spawn_loot=False)
         if not item: return None
         
         if 'durability' in data: item.durability = data['durability']
@@ -197,8 +195,18 @@ class Item:
                 tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
                 item.image = tinted
 
-        if 'inventory' in data and data['inventory']:
-            item.inventory = [Item.from_dict(i_data) for i_data in data['inventory'] if i_data]
+        # Correctly clear and restore inventory (even if data['inventory'] is empty [])
+        if 'inventory' in data:
+            item.inventory = []
+            for i_data in data['inventory']:
+                if isinstance(i_data, dict):
+                    nested = Item.from_dict(i_data)
+                elif isinstance(i_data, str):
+                    nested = Item.create_from_name(i_data)
+                else:
+                    nested = None
+                if nested:
+                    item.inventory.append(nested)
         
         if 'safe_radius' in data: 
             item.safe_radius = data['safe_radius']
@@ -328,29 +336,22 @@ class Item:
         return generate_random_item(Item)
 
     @classmethod
-    def create_from_name(cls, item_name, randomize_durability=False, force_color=None):
-        return create_item_from_name(cls, item_name, randomize_durability, force_color)
+    def create_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True):
+        return create_item_from_name(cls, item_name, randomize_durability, force_color, spawn_loot=spawn_loot)
 
     @staticmethod
     def cleanup_disposables(item_list, modals=None, message_func=None):
-        """
-        Recursively removes empty disposable containers from a list of items.
-        """
         if item_list is None: return
 
-        # Iterate over a copy to safely modify the original list
         for item in list(item_list):
             if not item: continue
 
-            # 1. Recursion: Clean inside this item first
             if hasattr(item, 'inventory') and item.inventory:
                 Item.cleanup_disposables(item.inventory, modals, message_func)
 
-            # 2. Check if this item itself should be destroyed
             if getattr(item, 'disposable', False) and not getattr(item, '_drag_locked', False):
                 is_empty = False
                 
-                # Check 'load' for liquids/stackables, fallback to 'inventory' for bags/boxes
                 if getattr(item, 'load', None) is not None:
                     is_empty = (item.load <= 0)
                 elif hasattr(item, 'inventory'):
@@ -359,17 +360,14 @@ class Item:
                     is_empty = True
 
                 if is_empty:
-                    # Close associated modal if it's open
                     if modals:
                         for m in list(modals):
                             if m.get('item') == item:
                                 modals.remove(m)
                     
-                    # Notify
                     if message_func:
                         message_func(f"Discarded empty {tr('item', item.name)}.")
                     
-                    # Remove the item from the list
                     if item in item_list:
                         item_list.remove(item)
 

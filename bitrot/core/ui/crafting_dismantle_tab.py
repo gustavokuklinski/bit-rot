@@ -97,7 +97,10 @@ class CraftingDismantleTab:
                         removed += take
                         if (item.is_stackable() and item.load is not None and item.load <= 0) or (not item.is_stackable() and take > 0):
                             if ctype == 'list':
-                                container.pop(key)
+                                if item in container:
+                                    container.remove(item)
+                                elif key < len(container):
+                                    container.pop(key)
                             elif ctype == 'fixed_list':
                                 container[key] = None
                             elif ctype == 'dict':

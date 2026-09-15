@@ -1,4 +1,4 @@
-<item name="White Wine Bottle" type="container" allow_liquid="true" allow_belt="true" tip="Only liquids allowed">
+<item name="White Wine Bottle" type="container" allow_liquid="true" allow_belt="false" tip="Only liquids allowed">
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_white_wine_bottle.png" />

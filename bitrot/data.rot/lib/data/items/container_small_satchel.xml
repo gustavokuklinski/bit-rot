@@ -1,4 +1,4 @@
-<item name="Small Satchel" type="container">
+<item name="Small Satchel" type="container" allow_belt="false">
     <properties>
         <capacity value="4" />
         <sprite file="container_small_satchel.png" />
