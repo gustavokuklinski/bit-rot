@@ -160,7 +160,7 @@ def handle_context_menu_click(game, mouse_pos):
                     barricade = game.map_manager.get_barricade(gx, gy)
 
                     if barricade:
-                        req_tools = barricade.get('remove_items', ['Crowbar', 'Hammer'])
+                        req_tools = barricade.get('remove_items', ['Crowbar'])
                         remove_time = barricade.get('remove_time', 1.5)
 
                         has_tool = False

@@ -280,8 +280,13 @@
         <ui name="MISSING RESOURCES" translation_ui="RECURSOS INSUFICIENTES" />
 
         <ui name="Ingredients" translation_ui="Ingredientes" />
-       
-        <ui name="Open Craft" translation_tooltip="Abrir criação" />
+        <ui name="Open Craft" translation_ui="Abrir criação" />
+        <ui name="Requires:" translation_ui="Requer:" />
+        <ui name="Ready to craft" translation_ui="Pronto para criar" />
+        <ui name="Missing skill" translation_ui="Faltando habilidades" />
+        <ui name="Remove with:" translation_ui="Remova com:" />
+        <ui name="Barricade must be in inventory" translation_ui="Barricada precisa estar no inventário" />
+        <ui name="Required Materials:" translation_ui="Requer os itens:" />
     </ui>
 
     <alert>
@@ -350,6 +355,9 @@
         <context name="Close door/window" translation_context="Fechar porta/janela" />
         <context name="Barricate" translation_context="Barricar" />
         <context name="Unbarricade" translation_context="Desbarricar" />
+        <context name="Place barricade" translation_context="Barricar" />
+        <context name="Remove barricade" translation_context="Desbarricar" />
+        <context name="Repair Door/Window" translation_context="Consertar porta/janela" />
         <context name="Toggle Light" translation_context="Alternar Luz" />
         <context name="Talk" translation_context="Conversar" />
     </context>
@@ -436,18 +444,23 @@
         <tooltip name="Player Status" translation_tooltip="Status Biológico" />
         <tooltip name="Skills" translation_tooltip="Registro de Habilidades" />
         <tooltip name="Quests" translation_tooltip="Missões Ativas" />
-        <tooltip name="Clock" translation_tooltip="Relógio e Sobrevivência" />
-        <tooltip name="Chunk map" translation_tooltip="Mapa do Setor" />
-        <tooltip name="MP3 Player - Use SD Cards" translation_tooltip="Reprodutor MP3 - Insira cartões SD" />
+        <tooltip name="Clock" translation_tooltip="Relógio" />
+        <tooltip name="Map" translation_tooltip="Mapa" />
+        <tooltip name="Apps" translation_tooltip="Aplicativos - Insira cartões SD" />
 
         <!-- World Interaction Overlays -->
-        <tooltip name="interact_npc" translation_tooltip="Conversar [{key}]" />
-        <tooltip name="interact_vehicle" translation_tooltip="Entrar/Sair do veículo [{key}]" />
-        <tooltip name="engine_vehicle" translation_tooltip="Ligar/Desligar o motor [{key}]" />
-        <tooltip name="vehicle_options_rmb" translation_tooltip="Botão Direito para Opções" />
-        <tooltip name="stair_interact" translation_tooltip="Subir/Descer [{key}]" />
-        <tooltip name="generic_interact" translation_tooltip="Interagir [{key}]" />
-        <tooltip name="inspect_container" translation_tooltip="Inspecionar [{key}]" />
+        <tooltip name="interact_npc" translation_tooltip="Conversar [{key} / RMB]" />
+        <tooltip name="interact_vehicle" translation_tooltip="Entrar/Sair do veículo [{key} / RMB]" />
+        <tooltip name="engine_vehicle" translation_tooltip="Ligar/Desligar o motor [{key} / RMB]" />
+        <tooltip name="vehicle_options_rmb" translation_tooltip="RMB para Opções" />
+        <tooltip name="stair_interact" translation_tooltip="Subir/Descer [{key} / RMB]" />
+        <tooltip name="generic_interact" translation_tooltip="Interagir [{key} / RMB]" />
+        <tooltip name="inspect_container" translation_tooltip="Inspecionar [{key} / RMB]" />
+
+        <!-- Context menu tooltips -->
+        <tooltip name="Remove with:" translation_tooltip="Remova com:" />
+        <tooltip name="Barricade must be in inventory" translation_tooltip="Barricada precisa estar no inventário" />
+        <tooltip name="Required Materials:" translation_tooltip="Requer os itens:" />
 
         <tooltip name="Motor" translation_tooltip="Motor" />
         <tooltip name="Fuel" translation_tooltip="Combustível" />
@@ -661,5 +674,14 @@
         <msg name="The item must be in inventory or nearby to craft" translation_msg="O item precisa estar no inventário ou nas proximidades para criar" />
         <msg name="You feel dizzy and your vision blurs..." translation_msg="Você está tonto e sua visão embaça..." />
         <msg name="The strong whiskey makes your head spin and your vision blurs..." translation_msg="Este whiskey é forte, sua cabeça está rodando..." />
+    
+        <msg name="Barricade placed successfully." translation_msg="Barricada instalada com sucesso." />
+        <msg name="Barricade must be in inventory." translation_msg="Barricada precisa estar no inventário." />
+        <msg name="Barricade removed." translation_msg="Barricada removida." />
+        <msg name="Need:" translation_msg="Precisa:" />
+        <msg name="Requires magazine:" translation_msg="Precisa da revista:" />
+        <msg name="Missing:" translation_msg="Faltando:" />
+        <msg name="Door/Window repaired successfully." translation_msg="Janela/Porta reparada com sucesso." />
+
     </msg>
 </language>

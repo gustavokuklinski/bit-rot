@@ -30,11 +30,11 @@ from core.ui.notifications import draw_notifications
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
-    'inspect_container': "Inspect [{key}]",
-    'generic_interact': "Interact [{key}]",
+    'inspect_container': "Inspect [{key} / RMB]",
+    'generic_interact': "Interact [{key} / RMB]",
     'stair_interact': "Climb [{key}]",
-    'interact_npc': "Talk [{key}]",
-    'interact_vehicle': "Enter/Exit [{key}]",
+    'interact_npc': "Talk [{key} / RMB]",
+    'interact_vehicle': "Enter/Exit [{key} / RMB]",
     'engine_vehicle': "Toggle Engine [{key}]",
     'vehicle_options_rmb': "Vehicle Options [RMB]",
 }

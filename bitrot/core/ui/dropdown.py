@@ -228,7 +228,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             elif "Missing" in line or "Ingredients:" in line or "Requires" in line:
                 line_color = (255, 130, 130)       # Section headers (soft red)
             elif line.startswith("- "):
-                line_color = (220, 220, 220)       # List items (light gray)
+                line_color = (220, 220, 220)       # List items (light gray)  
             elif "Ready" in line:
                 line_color = (130, 255, 130)       # Success status (soft green)
             elif "inventory or nearby" in line:
