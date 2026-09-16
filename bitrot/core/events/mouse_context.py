@@ -1015,15 +1015,34 @@ def handle_context_menu_click(game, mouse_pos):
                         game.modals.append(new_text_modal)
                     clicked_on_menu = True
                 elif getattr(item, 'inventory', None) is not None:
-                    modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                    if not modal_exists:
-                        new_container_modal = {
-                            'id': uuid.uuid4(), 'type': 'container', 'item': item,
-                            'position': game.last_modal_positions['container'],
-                            'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1],CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
-                        }
-                        game.modals.append(new_container_modal)
+                    is_closed_maptile = getattr(item, 'item_type', '') == 'maptile_container' and not getattr(item, 'is_opened', False)
+
+                    def open_and_show_modal():
+                        # Open and generate loot if unopened
+                        if hasattr(item, 'open'):
+                            item.open(game)
+                        else:
+                            item.is_opened = True
+
+                        modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                        if not modal_exists:
+                            new_container_modal = {
+                                'id': uuid.uuid4(), 'type': 'container', 'item': item,
+                                'position': game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)),
+                                'is_dragging': False, 'drag_offset': (0, 0),
+                                'rect': pygame.Rect(game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[0], 
+                                                    game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[1],
+                                                    CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
+                            }
+                            game.modals.append(new_container_modal)
+
+                    if is_closed_maptile:
+                        agility = game.player.progression.get_level('agility')
+                        open_time = max(0.2, 1.8 - (agility * 0.2))
+                        game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+                    else:
+                        open_and_show_modal()
+                        
                     clicked_on_menu = True
 
             elif option == 'Unequip':

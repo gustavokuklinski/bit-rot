@@ -458,19 +458,27 @@ def load_game(game, save_folder_name):
         game.world_time.day_count = time_data.get('day_count', 0)
         
         saved_containers = world_data.get('containers', [])
-        saved_container_map = {f"{c['x']}_{c['y']}": c['inventory'] for c in saved_containers}
+        saved_container_map = {f"{c['x']}_{c['y']}": c for c in saved_containers}
 
         for c in game.containers:
             if hasattr(c, 'rect'):
                 key = f"{c.rect.x}_{c.rect.y}"
                 if key in saved_container_map:
+                    # Container was opened before saving
+                    c.is_opened = saved_container_map[key].get('is_opened', True)
                     c.inventory = [] 
-                    for i_data in saved_container_map[key]:
+                    for i_data in saved_container_map[key].get('inventory', []):
                         if isinstance(i_data, dict):
                             item = Item.from_dict(i_data)
                         else:
                             item = Item.create_from_name(i_data)
                         if item: c.inventory.append(item)
+                else:
+                    # Container was NEVER opened: keep it unopened and empty, UNLESS it's allow_liquid
+                    if getattr(c, 'item_type', '') == 'maptile_container':
+                        if not getattr(c, 'allow_liquid', False):
+                            c.is_opened = False
+                            c.inventory = []
 
         raw_layer_triggers = world_data.get('layer_spawn_triggers', {})
         game.layer_spawn_triggers = {}

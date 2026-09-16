@@ -271,10 +271,21 @@ def save_game(game):
             json.dump(vehicle_data, f, indent=4)
 
         container_data = []
+        saved_container_keys = set()
+
         for c in game.containers:
             if isinstance(c, Vehicle):
                 continue
-            
+
+            # ONLY save opened containers!
+            if getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False):
+                continue
+
+            ckey = f"{c.rect.x if hasattr(c, 'rect') else c.x}_{c.rect.y if hasattr(c, 'rect') else c.y}"
+            if ckey in saved_container_keys:
+                continue
+            saved_container_keys.add(ckey)
+
             safe_inv = []
             if hasattr(c, 'inventory'):
                 for i in c.inventory:
@@ -282,11 +293,12 @@ def save_game(game):
                         safe_inv.append(i.to_dict())
                     else:
                         safe_inv.append(i)
-            
+
             c_entry = {
                 "x": c.rect.x if hasattr(c, 'rect') else c.x,
                 "y": c.rect.y if hasattr(c, 'rect') else c.y,
-                "inventory": safe_inv
+                "inventory": safe_inv,
+                "is_opened": True
             }
             container_data.append(c_entry)
 

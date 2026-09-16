@@ -287,6 +287,8 @@
         <ui name="Remove with:" translation_ui="Remova com:" />
         <ui name="Barricade must be in inventory" translation_ui="Barricada precisa estar no inventário" />
         <ui name="Required Materials:" translation_ui="Requer os itens:" />
+
+        <ui name="Closed container" translation_ui="Recipiente fechado" />
     </ui>
 
     <alert>

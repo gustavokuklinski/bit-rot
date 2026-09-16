@@ -1,5 +1,4 @@
 # core/map/map_loader.py
-
 import csv
 import pygame
 import random
@@ -25,24 +24,18 @@ def _generate_container_items(tile_def):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
         
-    # Randomize loot pool to handle items with 100% chance fairly
     loot_pool = list(tile_def['loot'])
     random.shuffle(loot_pool)
     
-    # Check if this is a liquid container
     is_liquid_source = tile_def.get('allow_liquid', False)
     
     for loot_entry in loot_pool:
         if capacity > 0 and len(items) >= capacity:
             break
             
-        # 1. Use ONLY the global multiplier as requested
         total_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER
-        
-        # 2. Check chance to spawn anything at all from this entry
         adjusted_chance = loot_entry['chance'] * total_multiplier
         
-        # Force guaranteed spawn rules if it's a liquid source
         if is_liquid_source:
             adjusted_chance = 1.0  
             total_multiplier = 1.0 
@@ -51,22 +44,18 @@ def _generate_container_items(tile_def):
             min_qty = int(loot_entry.get('min', 1))
             max_qty = int(loot_entry.get('max', 1))
             
-            # 3. Calculate quantity based on total multiplier
             scaled_qty = min_qty + int(round((max_qty - min_qty) * min(1.0, total_multiplier)))
             qty = max(min_qty, min(max_qty, scaled_qty))
             
-            # Force maximum quantity yield for liquids
             if is_liquid_source:
                 qty = max_qty
             
-            # 4. If total multiplier is extremely low, allow occasional empty yields
             if not is_liquid_source and total_multiplier <= 0.01 and random.random() > 0.5:
                 qty = 0
 
             if qty <= 0:
                 continue
 
-            # 5. Spawn the determined quantity and enforce max load
             if 'type' in loot_entry:
                 matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type'] and not n.endswith(' on')]
                 if matching_items:
@@ -76,7 +65,6 @@ def _generate_container_items(tile_def):
                         new_item = Item.create_from_name(chosen_item)
                         
                         if new_item:
-                            # [FIX] If it's a liquid source, force the item's stack size to its maximum
                             if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
                                 new_item.load = new_item.capacity
                             items.append(new_item)
@@ -87,7 +75,6 @@ def _generate_container_items(tile_def):
                     new_item = Item.create_from_name(loot_entry['item'])
                     
                     if new_item:
-                        # [FIX] If it's a liquid source, force the item's stack size to its maximum
                         if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
                             new_item.load = new_item.capacity
                         items.append(new_item)
@@ -97,18 +84,16 @@ def _generate_container_items(tile_def):
 
 def load_map_from_file(filepath):
     """Loads a map layout from a CSV file."""
-    print(f"Attempting to load map from: {filepath}")  # Debug print
     layout = []
     try:
         with open(filepath, 'r', newline='') as f:
             reader = csv.reader(f)
             layout = list(reader)
-            print(f"Successfully loaded {len(layout)} rows from {filepath}")  # Debug print
     except FileNotFoundError:
         print(f"Error: Map layer file not found: {filepath}")
     except Exception as e:
         print(f"Error reading map layer file {filepath}: {e}")
-    return layout # Return list (possibly empty if file not found/error)
+    return layout
 
 def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layout, light_layout, tile_manager):
     """
@@ -160,18 +145,24 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                         if tile_def['type'] == 'maptile_container':
                             capacity = tile_def.get('capacity', 0)
-                            items = _generate_container_items(tile_def)
-                            
-                            container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                            val = tile_def.get('allow_liquid', False)
+                            allow_liquid = str(val).lower() in ['true', '1'] or val is True
+
+                            if allow_liquid:
+                                items = _generate_container_items(tile_def)
+                                container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                                container.is_opened = True
+                            else:
+                                container = Container(name=tile_def.get('name', tile_def['type']), items=[], capacity=capacity)
+                                container.is_opened = False
+
                             container.rect = rect
                             container.image = tile_def['image']
-                            
-                            # --- FIX: Transfer Liquid & Infinite Source Flags ---
-                            val = tile_def.get('allow_liquid', False)
-                            container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            container.allow_liquid = allow_liquid
                             container.is_maptile = True
                             container.item_type = 'maptile_container'
-                            # --------------------------------------------------
+                            container.tile_def = tile_def
+                            container.pre_loot = []
                             
                             containers.append(container)
                 else:
@@ -203,20 +194,27 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         renderable_tiles.append((tile_def['image'], rect)) 
                         if tile_def['is_obstacle']:
                             obstacles.append(rect) 
+                        
                         if tile_def['type'] == 'maptile_container':
                             capacity = tile_def.get('capacity', 0)
-                            items = _generate_container_items(tile_def)
-                            
-                            container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                            val = tile_def.get('allow_liquid', False)
+                            allow_liquid = str(val).lower() in ['true', '1'] or val is True
+
+                            if allow_liquid:
+                                items = _generate_container_items(tile_def)
+                                container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                                container.is_opened = True
+                            else:
+                                container = Container(name=tile_def.get('name', tile_def['type']), items=[], capacity=capacity)
+                                container.is_opened = False
+
                             container.rect = rect
                             container.image = tile_def['image']
-                            
-                            # --- FIX: Transfer Liquid & Infinite Source Flags ---
-                            val = tile_def.get('allow_liquid', False)
-                            container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            container.allow_liquid = allow_liquid
                             container.is_maptile = True
                             container.item_type = 'maptile_container'
-                            # --------------------------------------------------
+                            container.tile_def = tile_def
+                            container.pre_loot = []
                             
                             containers.append(container)
                 else:
@@ -269,16 +267,12 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     else:
                         print(f"Warning: Quest item '{item_name}' not found in templates.")
                 else:
-                    # [UPDATED] Clean up state tags like ' on' and ' off' to verify base item names
                     base_name = char.replace(' on', '').replace(' off', '').strip()
                     if base_name in ITEM_TEMPLATES:
                         item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
                     else:
-                        # Treat anything truly unknown as a fallback player spawn coordinate instead of an item
                         possible_player_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
 
-                # Check if the character is a renderable tile (e.g. specialized spawn markers)
-                # Do not look up 'VEH' in definitions to avoid 'No template' errors
                 if char != 'VEH' and char in tile_manager.definitions:
                     pos_x, pos_y = x * TILE_SIZE, y * TILE_SIZE
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
@@ -289,18 +283,24 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                     if tile_def['type'] == 'maptile_container':
                         capacity = tile_def.get('capacity', 0)
-                        items = _generate_container_items(tile_def)
-                        
-                        container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                        val = tile_def.get('allow_liquid', False)
+                        allow_liquid = str(val).lower() in ['true', '1'] or val is True
+
+                        if allow_liquid:
+                            items = _generate_container_items(tile_def)
+                            container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
+                            container.is_opened = True
+                        else:
+                            container = Container(name=tile_def.get('name', tile_def['type']), items=[], capacity=capacity)
+                            container.is_opened = False
+
                         container.rect = rect
                         container.image = tile_def['image']
-                        
-                        # --- FIX: Transfer Liquid & Infinite Source Flags ---
-                        val = tile_def.get('allow_liquid', False)
-                        container.allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                        container.allow_liquid = allow_liquid
                         container.is_maptile = True
                         container.item_type = 'maptile_container'
-                        # --------------------------------------------------
+                        container.tile_def = tile_def
+                        container.pre_loot = []
                         
                         containers.append(container)
     
@@ -345,27 +345,20 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         placed = False
         
         for container in containers:
-            # If a container shares this exact tile location
             if container.rect.colliderect(q_rect):
                 q_item = Item.create_from_name(qname)
                 if q_item:
-                    # Push it into the container's inventory
+                    if hasattr(container, 'pre_loot'):
+                        container.pre_loot.append(q_item)
                     if hasattr(container, 'inventory'):
                         container.inventory.append(q_item)
-                    elif hasattr(container, 'items'): # Fallback structure
-                        container.items.append(q_item)
-                        
                 placed = True
-                print(f"  > Injected quest item '{qname}' into container '{container.name}' at ({qx}, {qy})")
                 break
         
-        # Fallback: if the container was destroyed or missing, safely drop it on the ground
         if not placed:
             item_spawns.append((qx, qy, qname))
-            print(f"  > Dropped quest item '{qname}' on ground at ({qx}, {qy}) (Container not found)")
 
     if not player_spawn:
-        print("Warning: No player spawn ('P') defined in spawn layer.")
         if possible_player_spawns:
             player_spawn = random.choice(possible_player_spawns)
 

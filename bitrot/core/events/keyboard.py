@@ -664,24 +664,36 @@ def handle_keyboard_events(game, event, action_triggered=None):
                     
                     elif target['type'] == 'container':
                         found_container = target['entity']
+                        is_closed_maptile = getattr(found_container, 'item_type', '') == 'maptile_container' and not getattr(found_container, 'is_opened', False)
                         
-                        # Only open the modal if it isn't already active for this specific container
-                        modal_exists = False
-                        for modal in game.modals:
-                            if modal['type'] == 'container' and modal.get('item') == found_container:
-                                modal_exists = True
-                                break
-                                
-                        if not modal_exists:
-                            default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
-                            
-                            new_modal = {
-                                'id': uuid.uuid4(),
-                                'type': 'container',
-                                'item': found_container,
-                                'position': default_pos,
-                                'rect': pygame.Rect(default_pos[0], default_pos[1], MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-                                'is_dragging': False,
-                                'drag_offset': (0, 0)
-                            }
-                            game.modals.append(new_modal)
+                        def open_and_show_modal():
+                            if hasattr(found_container, 'open'):
+                                found_container.open(game)
+                            else:
+                                found_container.is_opened = True
+
+                            modal_exists = False
+                            for modal in game.modals:
+                                if modal['type'] == 'container' and modal.get('item') == found_container:
+                                    modal_exists = True
+                                    break
+                                    
+                            if not modal_exists:
+                                default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
+                                new_modal = {
+                                    'id': uuid.uuid4(),
+                                    'type': 'container',
+                                    'item': found_container,
+                                    'position': default_pos,
+                                    'rect': pygame.Rect(default_pos[0], default_pos[1], MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+                                    'is_dragging': False,
+                                    'drag_offset': (0, 0)
+                                }
+                                game.modals.append(new_modal)
+
+                        if is_closed_maptile:
+                            agility = game.player.progression.get_level('agility')
+                            open_time = max(0.2, 1.8 - (agility * 0.2))
+                            game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+                        else:
+                            open_and_show_modal()
