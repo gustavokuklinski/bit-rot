@@ -303,7 +303,7 @@ def load_settings(preset="config"):
         ZOMBIE_SPEED = 0.3
         ZOMBIE_DETECTION_RADIUS = 5 * TILE_SIZE
         ZOMBIE_DROP = 1
-        MAX_ZOMBIES_GLOBAL = 10000
+        MAX_ZOMBIES_GLOBAL = 500
         ZOMBIE_WANDER_CHANGE_INTERVAL = 2000
 
         DURABILITY_MULTIPLIER = 1.0

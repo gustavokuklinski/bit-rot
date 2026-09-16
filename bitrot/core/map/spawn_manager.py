@@ -710,49 +710,72 @@ def spawn_initial_zombies(obstacles, zombie_spawns, items_on_ground, limit=1000,
 
 def get_out_of_sight_spawn_pos(game):
     """
-    Finds a valid, obstacle-free tile coordinate positioned outside
-    the current screen frame (GAME_WIDTH x GAME_HEIGHT) relative to the player.
+    Finds a valid, obstacle-free tile coordinate positioned exactly 10 tiles away
+    from the player's view radius in a circular pattern around the player.
     """
-    if not game.player:
+    if not game or not getattr(game, 'player', None):
         return None
 
     px, py = game.player.rect.centerx, game.player.rect.centery
     
-    # Radius guaranteed to be off-screen
-    min_dist = max(GAME_WIDTH, GAME_HEIGHT) * 0.65
-    max_dist = max(GAME_WIDTH, GAME_HEIGHT) * 1.10
+    # Dynamic player view radius + exactly 10 tiles (10 * 16px = 160px)
+    view_radius = getattr(game, 'player_view_radius', getattr(core.data.config, 'BASE_PLAYER_VIEW_RADIUS', 15 * TILE_SIZE))
+    spawn_radius = view_radius + (10 * TILE_SIZE)
 
     map_w = getattr(game, 'map_width_pixels', 3000)
     map_h = getattr(game, 'map_height_pixels', 3000)
 
-    for _ in range(15):
-        angle = random.uniform(0, math.pi * 2)
-        dist = random.uniform(min_dist, max_dist)
-        
-        target_x = px + math.cos(angle) * dist
-        target_y = py + math.sin(angle) * dist
+    obstacles = getattr(game, 'obstacles', [])
+    map_mgr = getattr(game, 'map_manager', None)
+    curr_layer = getattr(game, 'current_layer_index', 1)
+    ground_layers = getattr(game, 'all_ground_layers', {})
+    ground_grid = ground_layers.get(curr_layer, getattr(game, 'ground_data', []))
+    
+    # Pick a random starting angle, then step in a circle around the player
+    start_angle = random.uniform(0, math.pi * 2)
+    num_angle_steps = 36  # Check 36 circular angles (every 10 degrees)
+    
+    # Exact 10-tile radius first, with 1-tile tolerance if a wall/corner is hit
+    radial_offsets = [0, TILE_SIZE, -TILE_SIZE, 2 * TILE_SIZE, -2 * TILE_SIZE]
 
-        tx = (int(target_x) // TILE_SIZE) * TILE_SIZE
-        ty = (int(target_y) // TILE_SIZE) * TILE_SIZE
+    for r_offset in radial_offsets:
+        cur_r = max(TILE_SIZE * 5, spawn_radius + r_offset)
+        for i in range(num_angle_steps):
+            angle = start_angle + (i * (2 * math.pi / num_angle_steps))
+            target_x = px + math.cos(angle) * cur_r
+            target_y = py + math.sin(angle) * cur_r
 
-        # Bounds check
-        if not (0 <= tx < map_w - TILE_SIZE and 0 <= ty < map_h - TILE_SIZE):
-            continue
+            tx = (int(target_x) // TILE_SIZE) * TILE_SIZE
+            ty = (int(target_y) // TILE_SIZE) * TILE_SIZE
 
-        test_rect = pygame.Rect(tx, ty, TILE_SIZE, TILE_SIZE)
-
-        # Collision with obstacles check
-        if any(test_rect.colliderect(ob) for ob in getattr(game, 'obstacles', [])):
-            continue
-
-        # Prevent spawning on water
-        gx, gy = tx // TILE_SIZE, ty // TILE_SIZE
-        tile = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
-        if tile:
-            t_name = tile.get('name', '').lower()
-            if 'water' in t_name or tile.get('is_obstacle', False):
+            # Map boundary check
+            if not (0 <= tx < map_w - TILE_SIZE and 0 <= ty < map_h - TILE_SIZE):
                 continue
 
-        return (tx, ty)
+            test_rect = pygame.Rect(tx, ty, TILE_SIZE, TILE_SIZE)
 
-    return None
+            # Obstacle collision check (walls, doors, vehicles, etc.)
+            if any(test_rect.colliderect(ob) for ob in obstacles):
+                continue
+
+            # Ground and water check
+            gx, gy = tx // TILE_SIZE, ty // TILE_SIZE
+            if ground_grid and 0 <= gy < len(ground_grid) and 0 <= gx < len(ground_grid[0]):
+                g_char = ground_grid[gy][gx]
+                if g_char in [' ', '@', '#', '']:
+                    continue
+                if 'water' in g_char.lower():
+                    continue
+
+            if map_mgr:
+                tile = map_mgr.get_tile_at(gx, gy)
+                if tile:
+                    t_name = tile.get('name', '').lower()
+                    if 'water' in t_name or tile.get('is_obstacle', False):
+                        continue
+
+            return (tx, ty)
+
+    # Fallback to ensure instant respawn never fails
+    fallback_rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+    return find_free_tile(fallback_rect, obstacles, max_radius=15, initial_pos=(px, py))

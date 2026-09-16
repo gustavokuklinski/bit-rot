@@ -53,6 +53,9 @@ def handle_attack(game, mouse_pos):
                         pitch_variance=0.15,
                         is_critical=True
                     )
+                
+                if hasattr(game, 'emit_noise'):
+                    game.emit_noise(game.player.rect.center, radius=TILE_SIZE * 30, source_type="gunshot")
 
                 aim_pos = game._get_scaled_mouse_pos()
                 adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])

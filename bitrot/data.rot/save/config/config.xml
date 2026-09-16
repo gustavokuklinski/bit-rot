@@ -50,12 +50,12 @@
         <has_tires_chance value="1.0" name="Car Tires chance" default="1.0"/>
     </vehicle>
     <animal>
-        <animal_spawn_per_chunk value="10" name="Max Animal spawn on chunk" default="10"/>
+        <animal_spawn_per_chunk value="15" name="Max Animal spawn on chunk" default="10"/>
         <spawn value="5" name="Animals per spawn" default="5"/>
         <respawn value="true" name="Animal respawn on death" default="true"/>
     </animal>
     <npc>
-        <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk" default="10"/>
+        <npc_spawn_per_chunk value="10" name="Max NPC spawn on chunk" default="15"/>
         <spawn value="5" name="NPCs per spawn" default="5"/>
         <static_percent value="0.40" name="Static NPC percentage" default="0.40"/>
         <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>

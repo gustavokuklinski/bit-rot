@@ -509,7 +509,9 @@ class Vehicle:
             if has_key and has_power and has_fuel and has_all_tires:
                 self.active = True
                 self.car_state = "On"
-
+                if game and hasattr(game, 'emit_noise'):
+                    game.emit_noise(self.rect.center, radius=TILE_SIZE * 22, source_type="vehicle")
+                    
                 if game and 'on' in self.sounds:
                     game.sound_manager.play_sound(
                         self.sounds['on'], 
@@ -631,7 +633,14 @@ class Vehicle:
         battery_item = self.equipment.get('battery')
         fuel_item = self.equipment.get('fuel')
 
-        if self.active:
+
+        if self.active and speed > 0.1 and game:
+            # Alert zombies to moving vehicle engine
+            if not hasattr(self, '_last_noise_time') or pygame.time.get_ticks() - self._last_noise_time > 1000:
+                self._last_noise_time = pygame.time.get_ticks()
+                if hasattr(game, 'emit_noise'):
+                    game.emit_noise(self.rect.center, radius=TILE_SIZE * 18, source_type="vehicle")
+
             fuel_drain = 0.0001 * dt_mult
             if self.fuel > 0:
                 self.fuel -= fuel_drain
@@ -665,58 +674,54 @@ class Vehicle:
 
             if game:
                 current_speed = self.current_speed_val
-                VEHICLE_BASE_VOL = 0.4
+                VEHICLE_BASE_VOL = 0.5
                 
-                if current_speed < 0.5:
-                    if 'idle' in self.sounds:
-                        if not self.engine_channel or not self.engine_channel.get_busy():
-                            self.engine_channel = game.sound_manager.play_sound(
-                                self.sounds['idle'], 
-                                subdir='vehicles', 
-                                game=game, 
-                                source_pos=self.rect.center,
-                                base_volume=VEHICLE_BASE_VOL, 
-                                loops=-1
-                            )
-                else:
-                    if 'moving' in self.sounds:
-                        pitch_factor = 1.0 + (min(current_speed / self.max_speed, 1.0) * 0.5)
-                        pitch_factor = round(pitch_factor * 20) / 20.0
-                        
-                        base_sound_key = f"vehicles/{self.sounds['moving']}"
-                        if base_sound_key not in game.sound_manager.sounds:
-                            game.sound_manager.load_sound(base_sound_key, os.path.join('vehicles', self.sounds['moving']))
+                # Check distance to player view radius
+                dist_to_player = math.hypot(self.rect.centerx - game.player.rect.centerx, self.rect.centery - game.player.rect.centery)
+                max_audible = game.sound_manager.get_max_audible_distance(game, subdir='vehicles')
+                in_earshot = dist_to_player <= max_audible
 
-                        base_sound = game.sound_manager.sounds.get(base_sound_key)
-                        pitched_sound = game.sound_manager.get_pitched_sound(base_sound_key, base_sound, pitch_factor)
+                desired_sound = None
+                if in_earshot:
+                    desired_sound = 'idle' if current_speed < 0.5 else 'moving'
 
-                        if not self.engine_channel or self.engine_channel.get_sound() != pitched_sound:
-                            if self.engine_channel:
-                                self.engine_channel.stop()
-                            
-                            self.engine_channel = game.sound_manager.play_sound(
-                                self.sounds['moving'], 
-                                subdir='vehicles', 
-                                game=game, 
-                                source_pos=self.rect.center,
-                                base_volume=VEHICLE_BASE_VOL, 
-                                loops=-1
-                            )
-                            if self.engine_channel:
-                                self.engine_channel.play(pitched_sound, loops=-1)
+                current_sound_type = getattr(self, '_current_sound_type', None)
+
+                # Cleanly switch states between idle and moving
+                if desired_sound != current_sound_type:
+                    if self.engine_channel:
+                        self.engine_channel.stop()
+                        self.engine_channel = None
+                    self._current_sound_type = desired_sound
+
+                    if desired_sound and desired_sound in self.sounds:
+                        self.engine_channel = game.sound_manager.play_sound(
+                            self.sounds[desired_sound], 
+                            subdir='vehicles', 
+                            game=game, 
+                            source_pos=self.rect.center,
+                            base_volume=VEHICLE_BASE_VOL, 
+                            loops=-1
+                        )
 
                 if self.engine_channel:
-                    game.sound_manager.update_spatial_volume(
-                        self.engine_channel, 
-                        self.rect.center, 
-                        game, 
-                        base_volume=VEHICLE_BASE_VOL, 
-                        subdir='vehicles'
-                    )
+                    if not in_earshot:
+                        self.engine_channel.stop()
+                        self.engine_channel = None
+                        self._current_sound_type = None
+                    else:
+                        game.sound_manager.update_spatial_volume(
+                            self.engine_channel, 
+                            self.rect.center, 
+                            game, 
+                            base_volume=VEHICLE_BASE_VOL, 
+                            subdir='vehicles'
+                        )
 
         if not self.active and self.engine_channel:
             self.engine_channel.stop()
             self.engine_channel = None
+            self._current_sound_type = None
 
             fuel_drain = 0.0001 * dt_mult
             if self.fuel > 0:

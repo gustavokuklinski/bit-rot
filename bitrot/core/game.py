@@ -34,7 +34,7 @@ from core.states.game_over import run_game_over
 class Game:
     def __init__(self):
         os.environ['SDL_RENDER_SCALE_QUALITY'] = '0'
-        pygame.mixer.pre_init(22050, -16, 2, 512)
+        pygame.mixer.pre_init(22050, -16, 2, 1024)
         pygame.init()
 
         display_flags = pygame.SCALED | pygame.DOUBLEBUF
@@ -376,6 +376,30 @@ class Game:
 
     def run_player_setup(self):
         run_player_setup(self)
+    
+    def emit_noise(self, source_pos, radius, source_type="noise"):
+        """Alerts nearby zombies and NPCs to investigate a sound source."""
+        if not source_pos:
+            return
+        rad_sq = radius * radius
+        for z in getattr(self, 'active_zombies', []) + getattr(self, 'zombies', []):
+            if getattr(z, 'is_dead', False):
+                continue
+            dx = z.rect.centerx - source_pos[0]
+            dy = z.rect.centery - source_pos[1]
+            if (dx * dx + dy * dy) <= rad_sq:
+                if hasattr(z, 'alert_to_noise'):
+                    z.alert_to_noise(source_pos, source_type=source_type)
+
+        for npc in getattr(self, 'active_npcs', []):
+            if getattr(npc, 'is_dead', False):
+                continue
+            if not getattr(npc, 'is_friendly', True) and not getattr(npc, 'is_static', False):
+                dx = npc.rect.centerx - source_pos[0]
+                dy = npc.rect.centery - source_pos[1]
+                if (dx * dx + dy * dy) <= rad_sq:
+                    if hasattr(npc, 'alert_to_noise'):
+                        npc.alert_to_noise(source_pos, source_type=source_type)
 
     async def run(self):
         self.logger.info("Entering Main Game Loop")

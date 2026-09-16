@@ -752,14 +752,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             pass
 
         # ---------------------------------------------------------
-        # Dynamic Respawn: 1 NPC + Extra Zombies (Out of Sight)
+        # Dynamic Instant Circular NPC Respawn (10 tiles from view radius)
         # ---------------------------------------------------------
         from core.map.spawn_manager import get_out_of_sight_spawn_pos
 
-        # 1. Instantly spawn ONE replacement NPC out of sight
+        # 1. Instantly spawn replacement NPC in a circle 10 tiles away from view radius
         if getattr(core.data.config, 'NPC_RESPAWN', True):
             npcs_per_spawn = getattr(core.data.config, 'NPCS_PER_SPAWN', 1)
-            num_npcs = random.randint(1, max(1, int(npcs_per_spawn)))
+            num_npcs = max(1, int(npcs_per_spawn))
 
             for _ in range(num_npcs):
                 if len(game.npcs) >= getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500):
@@ -776,19 +776,22 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
                     game.npcs.add(new_npc)
 
-        # 2. Spawn reinforcement zombies based on ZOMBIES_PER_SPAWN
+        # 2. Spawn reinforcement zombies in circular pattern
         if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
             from core.entities.zombie.zombie import Zombie
             max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
-            num_zombies = random.randint(1, max(1, int(max_zombie_spawns)))
+            num_zombies = max(1, int(max_zombie_spawns))
             
             for _ in range(num_zombies):
-                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 10000):
+                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500):
                     break
                 spawn_pos = get_out_of_sight_spawn_pos(game)
                 if spawn_pos:
                     zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
                     game.zombies.append(zombie)
+
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
 
         # Add death burst visual effect
         if hasattr(game, 'splashes'):
@@ -800,6 +803,5 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 'type': 'death_burst'
             })
 
-        # Move offscreen to avoid 1-frame ghost collision
         self.rect.x = -9999
         self.rect.y = -9999

@@ -113,12 +113,13 @@ class WorldTime:
             self.cave_channel.fadeout(1000)
             self.cave_channel = None
 
-        if self.weather == 'RAIN' and not self.rain_channel and hasattr(self.game, 'sound_manager'):
+        if self.weather == 'RAIN' and (not self.rain_channel or not self.rain_channel.get_busy()) and hasattr(self.game, 'sound_manager'):
             self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
             
-        if self.state in ["DAY", "TRANSITION_TO_DAY"] and not self.day_channel and hasattr(self.game, 'sound_manager'):
+        if self.state in ["DAY", "TRANSITION_TO_DAY"] and (not self.day_channel or not self.day_channel.get_busy()) and hasattr(self.game, 'sound_manager'):
             self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
-        elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"] and not self.night_channel and hasattr(self.game, 'sound_manager'):
+        
+        elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"] and (not self.night_channel or not self.night_channel.get_busy()) and hasattr(self.game, 'sound_manager'):
             self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
 
         current_real_time = pygame.time.get_ticks()
@@ -336,6 +337,9 @@ class WorldTime:
     def _send_radio_msg(self, sender, message):
         display_message(self.game, f"{sender}: {message}")
         
+        if hasattr(self.game, 'emit_noise') and self.game.player:
+            self.game.emit_noise(self.game.player.rect.center, radius=TILE_SIZE * 15, source_type="radio")
+
         truncated = message
         if len(truncated) > 120:
             truncated = truncated[:117] + "..."

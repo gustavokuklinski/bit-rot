@@ -112,7 +112,11 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.vx = 0 
         self.vy = 0 
 
-        self.state = 'wandering' 
+        self.state = 'wandering'
+        self.noise_target = None
+        self.noise_timer = 0
+        self.aggro_timer = 0
+
         self.is_dead = False
         self.wander_target = None 
         self.last_wander_change = 0 
@@ -122,8 +126,6 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
 
         self.knockback_velocity = [0, 0]
         self.knockback_timer = 0
-
-        self.aggro_timer = 0
 
         self.last_los_check_time = 0
         self.los_check_interval = 2000  
@@ -181,7 +183,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         if not ZombieData.ZOMBIE_TEMPLATES:
             print("Error: No zombie templates loaded. Creating default zombie.")
             default_template = {
-                'name':'Jogn Doe',
+                'name':'John Doe',
                 'health':10,
                 'speed':core.data.config.ZOMBIE_SPEED, 
                 'loot':[], 
@@ -207,6 +209,11 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         template = random.choices(ZombieData.ZOMBIE_TEMPLATES, weights=template_weights, k=1)[0]
         
         zombie = Zombie(x, y, template)
+
+        zombie.state = 'wandering'
+        zombie.noise_target = None
+        zombie.noise_timer = 0
+        zombie.aggro_timer = 0
         
         # FIX: Filter standard loot table assignment to prevent white clothes duplicates
         base_loot = list(template.get('loot', []))

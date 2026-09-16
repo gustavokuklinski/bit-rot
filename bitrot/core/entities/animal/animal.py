@@ -259,12 +259,20 @@ class Animal(Zombie):
 
         game.items_on_ground.append(corpse)
         
-        # 3. Dynamic Respawn: Same Animal + Extra Zombies (Out of Sight)
+        # Remove dead animal from active registries
+        if self in game.items_on_ground:
+            try: game.items_on_ground.remove(self)
+            except ValueError: pass
+        if hasattr(game, 'active_animals') and self in game.active_animals:
+            try: game.active_animals.remove(self)
+            except ValueError: pass
+
+        # 3. Dynamic Instant Circular Animal Respawn (10 tiles from view radius)
         from core.map.spawn_manager import get_out_of_sight_spawn_pos
         
         if getattr(core.data.config, 'ANIMAL_RESPAWN', True):
             animals_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1)
-            num_animals = random.randint(1, max(1, int(animals_per_spawn)))
+            num_animals = max(1, int(animals_per_spawn))
             
             for _ in range(num_animals):
                 spawn_pos = get_out_of_sight_spawn_pos(game)
@@ -275,10 +283,10 @@ class Animal(Zombie):
         if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
             from core.entities.zombie.zombie import Zombie
             max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
-            num_zombies = random.randint(1, max(1, int(max_zombie_spawns)))
+            num_zombies = max(1, int(max_zombie_spawns))
             
             for _ in range(num_zombies):
-                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 10000):
+                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500):
                     break
                 spawn_pos = get_out_of_sight_spawn_pos(game)
                 if spawn_pos:
@@ -294,24 +302,12 @@ class Animal(Zombie):
                 'type': 'death_burst'
             })
 
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
+            game.spatial_manager.rebuild_item_grid(force=True)
+
         try: self.kill()
         except: pass
-        
-        if self in game.items_on_ground:
-            try: game.items_on_ground.remove(self)
-            except ValueError: pass
-            
-        if hasattr(game, 'active_animals') and self in game.active_animals:
-            try: game.active_animals.remove(self)
-            except ValueError: pass
-            
-        if self in game.zombies:
-            try: game.zombies.remove(self)
-            except ValueError: pass
-            
-        if hasattr(game, 'active_zombies') and self in game.active_zombies:
-            try: game.active_zombies.remove(self)
-            except ValueError: pass
             
         self.rect.x = -9999
         self.rect.y = -9999

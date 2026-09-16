@@ -150,13 +150,19 @@ class ZombieCombat:
 
         game.items_on_ground.append(corpse)
 
-        # 3. Dynamic Out-of-Sight Zombie Respawn
+        # Remove dead zombie before spawning replacement to avoid hitting capacity cap
+        if self in game.zombies:
+            game.zombies.remove(self)
+        if self in game.active_zombies:
+            game.active_zombies.remove(self)
+
+        # 3. Dynamic Instant Circular Zombie Respawn (10 tiles from view radius)
         if getattr(core.data.config, 'ZOMBIE_RESPAWN', True) and getattr(self, 'type', 'zombie') != 'animal':
             from core.map.spawn_manager import get_out_of_sight_spawn_pos
             from core.entities.zombie.zombie import Zombie
             
             max_spawn = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
-            num_to_spawn = random.randint(1, max(1, int(max_spawn)))
+            num_to_spawn = max(1, int(max_spawn))
             
             for _ in range(num_to_spawn):
                 if len(game.zombies) >= core.data.config.MAX_ZOMBIES_GLOBAL:
@@ -166,12 +172,5 @@ class ZombieCombat:
                     new_zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
                     game.zombies.append(new_zombie)
 
-        if hasattr(game, 'rebuild_item_grid'):
-            game.rebuild_item_grid(force=True)
-
-        if self in game.zombies:
-            game.zombies.remove(self)
-        if self in game.active_zombies:
-            game.active_zombies.remove(self)
-        if hasattr(game, 'active_animals') and self in game.active_animals:
-            game.active_animals.remove(self)
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
