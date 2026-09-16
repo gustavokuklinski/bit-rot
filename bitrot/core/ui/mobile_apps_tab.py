@@ -10,7 +10,9 @@ APP_MODULE_NAMES = {
     'show_static_npc': ('Civilians Registry', GREEN),
     'show_zombies': ('Vaccine Registry', RED),
     'show_animals': ('Next Petrol Fauna', YELLOW),
-    'show_vehicles': ('Vehicle Registry', BLUE)
+    'show_vehicles': ('Vehicle Registry', BLUE),
+    'personal_data': ('Bio-Status Tracker', WHITE),
+    'open_jobs': ('Open Jobs Tracker', (255, 215, 0))
 }
 
 def get_card_map_value(item):
@@ -74,17 +76,15 @@ def draw_apps_tab(surface, game, modal, assets):
             if slot_rect.collidepoint(mouse_pos) and is_top_modal:
                 hovered_item = item
 
-    # Reduced gap to save vertical space
     y_offset += slot_size + 10
 
-    # Active Modules Dashboard (Reduced height to 80 to fit inside modal)
+    # Active Modules Dashboard
     panel_rect = pygame.Rect(start_x, y_offset, total_width, 80)
     pygame.draw.rect(surface, (25, 25, 25), panel_rect, border_radius=4)
     pygame.draw.rect(surface, GRAY_60, panel_rect, 1, border_radius=4)
 
     list_y = y_offset + 6
-    # Changed to font_14 for tighter spacing
-    heading = font_14.render("Active Map Radars:", False, (200, 200, 200))
+    heading = font_14.render("Active Modules:", False, (200, 200, 200))
     surface.blit(heading, (start_x + 8, list_y))
     list_y += 14
 
@@ -97,11 +97,11 @@ def draw_apps_tab(surface, game, modal, assets):
             label, color = APP_MODULE_NAMES[map_val]
             bullet = font_14.render(f"• {label}", False, color)
             surface.blit(bullet, (start_x + 8, list_y))
-            list_y += 11 # Tighter line height for up to 5 items
+            list_y += 11 
             active_count += 1
 
     if active_count == 0:
-        for line in ["No SD Cards active.", "Drag SD Cards into slots", "above to activate map radars."]:
+        for line in ["No SD Cards active.", "Drag SD Cards into slots", "above to activate apps."]:
             surface.blit(font_14.render(line, False, GRAY), (start_x + 8, list_y))
             list_y += 12
 

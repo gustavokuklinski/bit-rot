@@ -71,7 +71,7 @@ def draw_clock_tab(surface, game, modal, assets):
     # --- 3. Stats (Kills) ---
     zombies_killed = game.zombies_killed
     kills_text = f"{tr('ui', 'Kills:')} {zombies_killed}"
-    kills_surf = font_12.render(kills_text, False, WHITE) 
+    kills_surf = font_14.render(kills_text, False, WHITE) 
     kills_rect = kills_surf.get_rect(center=(center_x, y_offset))
     surface.blit(kills_surf, kills_rect)
 
@@ -87,7 +87,7 @@ def draw_clock_tab(surface, game, modal, assets):
     except Exception:
         alive_text = f"{tr('ui', 'Survived:')} --"
         
-    alive_surf = font_12.render(alive_text, False, WHITE)
+    alive_surf = font_14.render(alive_text, False, WHITE)
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
     surface.blit(alive_surf, alive_rect)
 

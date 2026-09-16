@@ -4,7 +4,8 @@
     </visuals>
     <capacity value="5" />
     <loot>
-        <item type="sd_card" min="1" max="5" chance="1.0" />
-        <item type="text" min="1" max="2" chance="1.0" />
+        <!-- SD Cards are extremely rare, Texts are abundant -->
+        <item type="sd_card" min="1" max="2" chance="0.01" />
+        <item type="text" min="1" max="2" chance="0.75" />
     </loot>
 </map>

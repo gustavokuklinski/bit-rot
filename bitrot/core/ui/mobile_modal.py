@@ -5,7 +5,8 @@ from core.ui.modals import BaseModal
 from core.ui.tabs import Tabs
 from core.ui.mobile_clock_tab import draw_clock_tab
 from core.ui.mobile_map_tab import draw_map_tab
-from core.ui.mobile_apps_tab import draw_apps_tab  # <--- UPDATED
+from core.ui.mobile_apps_tab import draw_apps_tab
+from core.ui.mobile_radio_tab import draw_radio_tab
 
 def draw_mobile_modal(surface, game, modal, assets):
     try:
@@ -24,6 +25,7 @@ def draw_mobile_modal(surface, game, modal, assets):
         {'label': 'Clock', 'icon_path': SPRITE_PATH + 'ui/clock.png'},
         {'label': 'Map', 'icon_path':  SPRITE_PATH + 'ui/map.png'},
         {'label': 'Apps', 'icon_path':  SPRITE_PATH + 'ui/mp3.png'},
+        {'label': 'Radio', 'icon_path': SPRITE_PATH + 'ui/mp3.png'},
     ]
     modal['tabs_data'] = tabs_data
 
@@ -43,5 +45,7 @@ def draw_mobile_modal(surface, game, modal, assets):
         draw_map_tab(surface, game, modal, assets)
     elif modal['active_tab'] == 'Apps':
         draw_apps_tab(surface, game, modal, assets)
+    elif modal['active_tab'] == 'Radio':
+        draw_radio_tab(surface, game, modal, assets)
 
     return [close_button]

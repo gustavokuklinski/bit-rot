@@ -4,11 +4,14 @@
     </visuals>
     <capacity value="10" />
     <loot>
-        <item type="consumable_drink" min="1" max="5" chance="1.0" />
-        <item type="consumable_food" min="1" max="5" chance="1.0" />
-        <item item="Whiskey Bottle" chance="1.0" />
-        <item item="Plastic Bottle" chance="1.0" />
-        <item item="Red Wine Bottle" chance="1.0" />
-        <item item="White Wine Bottle" chance="1.0" />
+        <!-- Generic Food and Drink: Middle to Abundant -->
+        <item type="consumable_drink" min="1" max="4" chance="0.55" />
+        <item type="consumable_food" min="1" max="4" chance="0.50" />
+        
+        <!-- Specific items: slightly rarer to balance -->
+        <item item="Plastic Bottle" chance="0.40" />
+        <item item="Red Wine Bottle" chance="0.20" />
+        <item item="White Wine Bottle" chance="0.20" />
+        <item item="Whiskey Bottle" chance="0.15" />
     </loot>
 </map>

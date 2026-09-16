@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<radio name="[Exxoil] EXL-36" frequency="random" stream="[12:00, 00:00, random]">
+    <stream text="[STATIC]...How is GTH-42? They were blackout!...[STATIC]" />
+    <stream text="[STATIC]...GTH-42, The outbreak comes from a heli...[STATIC]\n[STATIC][NOISE][GUNSHOTS]... They are here! Ahhh...[STATIC]" />
+    <stream text="Keep strong survivors! We will rebuild." />
+    <stream text="EXL-36 still operating... We hear you." />
+    <stream text="Ration your food and stay indoors. The horde is moving." />
+    <stream text="Avoid the horde, stay quiet. May God be with us." />
+</radio>

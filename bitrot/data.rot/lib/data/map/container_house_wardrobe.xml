@@ -4,21 +4,25 @@
     </visuals>
     <capacity value="15" />
     <loot>
-        <item item="Balaclava" chance="1.0" />
-        <item item="Beret" chance="1.0" />
-        <item item="Black Hat" chance="1.0" />
-        <item item="Tshirt" chance="1.0" />
-        <item item="Sneakers" chance="1.0" />
-        <item item="Jacket" chance="1.0" />
-        <item item="Jeans Pants" chance="1.0" />
-        <item item="Jeans Short" chance="1.0" />
-        <item item="Leather Black Gloves" chance="1.0" />
-        <item item="Leather Black Jacket" chance="1.0" />
-        <item item="Leather Black Pants" chance="1.0" />
+        <!-- Normal clothes: Abundant -->
+        <item item="Tshirt" chance="0.75" />
+        <item item="Sneakers" chance="0.70" />
+        <item item="Jeans Pants" chance="0.65" />
+        <item item="Jeans Short" chance="0.60" />
+        <item item="Jacket" chance="0.50" />
         
-        <item item="Sewing Kit" chance="1.0" />
-        <item type="container" min="0" max="5" chance="1.0" />
-        <item type="utility" min="1" max="6" chance="1.0" />
-        <item type="consumable_book" min="1" max="2" chance="1.0" />
+        <!-- Accessories/Better clothes: Middle -->
+        <item item="Balaclava" chance="0.25" />
+        <item item="Beret" chance="0.20" />
+        <item item="Black Hat" chance="0.35" />
+        <item item="Leather Black Gloves" chance="0.20" />
+        <item item="Leather Black Jacket" chance="0.15" />
+        <item item="Leather Black Pants" chance="0.15" />
+        
+        <!-- Utility and Bags -->
+        <item item="Sewing Kit" chance="0.30" />
+        <!-- Containers (Bags/Backpacks) inside wardrobes: Middle to Rare -->
+        <item type="container" min="1" max="1" chance="0.12" />
+        <item type="utility" min="1" max="2" chance="0.25" />
     </loot>
 </map>

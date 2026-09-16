@@ -1,7 +1,9 @@
+# core/draw/effects.py
+
 import pygame
 import math
 import random
-from core.data.config import TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, GAME_OFFSET_X, WHITE, BLACK, SPRITE_PATH
+from core.data.config import TILE_SIZE, GAME_WIDTH, GAME_HEIGHT, GAME_OFFSET_X, WHITE, BLACK, SPRITE_PATH, font_12
 
 def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
     player_tile_x = int(game.player.rect.centerx // TILE_SIZE)
@@ -84,26 +86,20 @@ def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
             surface.blit(scratch, (int(draw_x - p_radius), int(draw_y - p_radius)), scratch_rect)
 
 def draw_screen_effects(game, offset_x, offset_y, zoom):
-    # Get current dynamic dimensions from camera.py
     dyn_w = getattr(game, 'dynamic_w', GAME_WIDTH)
     dyn_h = getattr(game, 'dynamic_h', GAME_HEIGHT)
     v_left = getattr(game, 'viewport_left_offset', 0)
 
-    # Define the actual game viewport area to prevent effects from leaking into UI/Modals
     game_viewport_rect = pygame.Rect(v_left, 0, dyn_w, dyn_h)
 
-    # =========================================================================
-    # --- ALCOHOL BLUR EFFECT (5 Wine or 2 Whiskey) ---
-    # =========================================================================
+    # --- ALCOHOL BLUR EFFECT ---
     alcohol = getattr(game.player, 'alcohol_level', 0.0) if game.player else 0.0
     if alcohol >= 5.0 and dyn_w > 0 and dyn_h > 0:
         if not hasattr(game, 'blur_cache_surf') or game.blur_cache_surf.get_size() != (dyn_w, dyn_h):
             game.blur_cache_surf = pygame.Surface((dyn_w, dyn_h))
 
-        # Copy the current game viewport
         game.blur_cache_surf.blit(game.game_screen, (0, 0), game_viewport_rect)
 
-        # Bilinear blur via downsample / upsample
         factor = max(5, min(10, int(5 + (alcohol - 5.0) * 0.8)))
         small_w = max(1, dyn_w // factor)
         small_h = max(1, dyn_h // factor)
@@ -111,22 +107,18 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
         downsampled = pygame.transform.smoothscale(game.blur_cache_surf, (small_w, small_h))
         blurred = pygame.transform.smoothscale(downsampled, (dyn_w, dyn_h))
 
-        # Drunken double-vision sway
         sway_time = pygame.time.get_ticks() * 0.0025
         sway_x = int(math.sin(sway_time) * 4)
         sway_y = int(math.cos(sway_time * 0.7) * 3)
 
-        # Alpha transparency for the blur overlay
         blur_alpha = min(230, int(180 + (alcohol - 5.0) * 10))
         blurred.set_alpha(blur_alpha)
 
-        # Clip so the blur never leaks into modal headers, sidebars, or tooltips
         game.game_screen.set_clip(game_viewport_rect)
         game.game_screen.blit(blurred, (v_left + sway_x, sway_y))
         game.game_screen.set_clip(None)
-    # =========================================================================
 
-
+    # --- WEATHER ---
     if getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN':
         is_under_roof = False
         if getattr(game, 'roof_data', None) and game.player:
@@ -143,8 +135,6 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
                 game.rain_texture = None
 
             if game.rain_texture:
-                # --- FIX: CLIP THE RAIN ---
-                # Only allow drawing within the game viewport rectangle
                 game.game_screen.set_clip(game_viewport_rect)
                 
                 if not hasattr(game, 'rain_offset'): game.rain_offset = 0
@@ -153,9 +143,9 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
                 game.game_screen.blit(game.rain_texture, (v_left, game.rain_offset))
                 game.game_screen.blit(game.rain_texture, (v_left, game.rain_offset - dyn_h))
                 
-                # IMPORTANT: Reset clip to None so other UI elements can draw normally
                 game.game_screen.set_clip(None)
 
+    # --- CRT ANXIETY EFFECT ---
     anxiety_level = getattr(game.player, 'anxiety', 0)
     if anxiety_level > 10:
         try:
@@ -165,22 +155,19 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
             game.crt_texture = None
             
         if game.crt_texture:
-            # I recommend clipping the CRT too, so shaking doesn't leak into modals
             game.game_screen.set_clip(game_viewport_rect)
             shake = int((anxiety_level / 100) * 5)
             game.game_screen.blit(game.crt_texture, (v_left + random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
             game.game_screen.set_clip(None)
 
-     # --- FIXED GUN FLASH BLOCK ---
+    # --- GUN FLASH ---
     if game.player.gun_flash_timer > 0:
-        # 1. Check if the current weapon is one that SHOULD NOT have a flash
         show_flash = True
         if hasattr(game.player, 'weapon') and game.player.weapon:
             weapon_name = getattr(game.player.weapon, 'name', '')
             if weapon_name in ["Slingshot", "Bow"]:
                 show_flash = False
 
-        # 2. Only draw if the weapon is not a Slingshot or Bow
         if show_flash:
             screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
             screen_y = ((game.player.rect.centery + offset_y) * zoom)
@@ -190,42 +177,25 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
             
             light_tex = game.assets.get('light_texture')
             if light_tex:
-                # STRETCH
                 base_size = max(8, int(8 * zoom))
                 width = int(base_size * 0.8)
                 height = int(base_size * 0.8)
                 
                 small_flash = pygame.transform.smoothscale(light_tex, (width, height))
                 
-                # COLOR (Yellowish-Orange)
                 color_surf = pygame.Surface((width, height))
                 color_surf.fill((255, 180, 50)) 
                 color_surf.blit(small_flash, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
                 small_flash = color_surf
                 
-                # OPACITY (~60% and fade)
                 opacity = min(153, int(game.player.gun_flash_timer * 50))
                 small_flash.set_alpha(opacity)
                 
-                # ROTATE to match aim angle
                 rotated_flash = pygame.transform.rotate(small_flash, -math.degrees(game.player.aim_angle))
                 flash_rect = rotated_flash.get_rect(center=(int(flash_x), int(flash_y)))
                 
-                # BLEND additive to remove black borders
                 game.game_screen.blit(rotated_flash, flash_rect, special_flags=pygame.BLEND_RGB_ADD)
             else:
                 pygame.draw.circle(game.game_screen, WHITE, (int(flash_x), int(flash_y)), 1)
             
-        # Always decrement the timer so it doesn't get stuck at > 0 for these weapons
         game.player.gun_flash_timer -= getattr(game, 'dt_mult', 1.0)
-    # -----------------------------
-
-    if game.player and game.player.chat_text and game.player.chat_timer > 0:
-        screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X
-        screen_y = ((game.player.rect.centery + offset_y) * zoom)
-        font_bubble = game.assets.get('font')
-        text_surf = font_bubble.render(game.player.chat_text, True, BLACK)
-        bubble_rect = pygame.Rect(screen_x - ((text_surf.get_width() + 20) / 2) + (TILE_SIZE * zoom / 2) + game.viewport_left_offset, screen_y - text_surf.get_height() - 25, text_surf.get_width() + 20, text_surf.get_height() + 10)
-        pygame.draw.rect(game.game_screen, WHITE, bubble_rect, border_radius=8)
-        pygame.draw.polygon(game.game_screen, WHITE, [(screen_x + (TILE_SIZE * zoom / 2) - 6, bubble_rect.bottom), (screen_x + (TILE_SIZE * zoom / 2) + 6, bubble_rect.bottom), (screen_x + (TILE_SIZE * zoom / 2), bubble_rect.bottom + 8)])
-        game.game_screen.blit(text_surf, text_surf.get_rect(center=bubble_rect.center))

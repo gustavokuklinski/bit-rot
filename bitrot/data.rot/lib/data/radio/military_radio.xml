@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<radio name="Military Satellite" frequency="120.0" stream="[weather]">
+    <stream text="[STATIC]..." />
+    <stream text="[STATIC]...[COF] This is the safety broadcast channel...[STATIC]\n[STATIC]...Tropical, raining forming, expected at: {rain_time}...[STATIC]" />
+    <stream text="[STATIC]..." />
+</radio>

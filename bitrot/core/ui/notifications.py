@@ -1,8 +1,9 @@
 import pygame
 from core.data.config import GAME_WIDTH, WHITE, font_12
 from core.entities.npc.npc_dialog import NPCDialog
+import core.messages
 
-def add_notification(game, title, message, duration=5000, target_tab='Quests'):
+def add_notification(game, title, message, duration=5000, target_tab='Quests', play_sound=True):
     if not hasattr(game, 'notifications'): 
         game.notifications = []
         
@@ -13,6 +14,21 @@ def add_notification(game, title, message, duration=5000, target_tab='Quests'):
         'rect': None,
         'target_tab': target_tab
     })
+
+    if play_sound:
+        sound_mgr = getattr(game, 'sound_manager', None)
+        if not sound_mgr and getattr(core.messages, '_game_instance', None):
+            sound_mgr = getattr(core.messages._game_instance, 'sound_manager', None)
+            
+        if sound_mgr:
+            sound_mgr.play_sound(
+                "notification.ogg",
+                subdir="ui",
+                game=game,
+                source_pos=None,
+                base_volume=0.8,
+                is_critical=True
+            )
 
 def draw_notifications(surface, game):
     if not hasattr(game, 'notifications') or not game.notifications: 

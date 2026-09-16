@@ -1,3 +1,5 @@
+# core/map/tile_manager.py
+
 import os
 import xml.etree.ElementTree as ET
 import pygame
@@ -24,14 +26,13 @@ class TileManager:
                         char = root.get('char')
                         is_obstacle = root.get('is_obstacle', 'false').lower() == 'true'
                         
-                        # [NEW] Parse destructible tag
                         is_destructible = root.get('destructible', 'false').lower() == 'true'
-                        
-                        # [NEW] Parse allow_liquid tag
                         allow_liquid = root.get('allow_liquid', 'false').lower() == 'true'
+                        
+                        # [NEW] Parse the is_opened tag
+                        is_opened = root.get('is_opened', 'false').lower() == 'true'
 
                         is_stair = root.get('is_stair', 'false').lower() == 'true'
-                        
                         is_visible = root.get('is_visible', 'false').lower() == 'true'
 
                         # Default to 0 if not specified
@@ -45,17 +46,17 @@ class TileManager:
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
-                                # [NEW] Create collision mask from the tile image
                                 mask = pygame.mask.from_surface(image)
 
                                 definition = {
                                     'name': root.get('name', 'Unknown'),
                                     'is_obstacle': is_obstacle,
                                     'destructible': is_destructible, 
-                                    'allow_liquid': allow_liquid, # [ADDED] Store the flag
+                                    'allow_liquid': allow_liquid, 
+                                    'is_opened': is_opened, # [ADDED] Store the flag
                                     'is_visible': is_visible,
                                     'image': image,
-                                    'mask': mask, # [ADDED] Store the mask in the definition
+                                    'mask': mask, 
                                     'type': root.get('type'),
                                     'state': root.get('state'),
                                     'is_statable': root.get('state') is not None,
@@ -114,20 +115,10 @@ class TileManager:
                                             'max_qty': int(item_node.get('max', 1))
                                         })
 
-                                # [SAFETY NET] Defaults for destructibles/trees
                                 if definition['destructible'] or 'tree' in filename.lower():
                                     if 'health_max' not in definition:
                                         definition['health_min'] = 60
                                         definition['health_max'] = 100
-                                    
-                                    #if 'drops' not in definition:
-                                    #    definition['drops'] = [{
-                                    #        'item': 'Log',
-                                    #        'chance': 1.0, 
-                                    #        'min_qty': 1, 
-                                    #        'max_qty': 2
-                                    #    }]
-                                    
                                     definition['destructible'] = True
 
                                 sound_node = root.find('sound')

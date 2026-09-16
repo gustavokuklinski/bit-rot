@@ -1,4 +1,5 @@
 # core/map/map_loader.py
+
 import csv
 import pygame
 import random
@@ -80,11 +81,23 @@ def _generate_container_items(tile_def, game=None):
                 continue
 
             if 'type' in loot_entry:
-                matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == loot_entry['type'] and not n.endswith(' on')]
+                matching_items = []
+                matching_weights = []
+                
+                # Fetch all items matching the category type and enforce spawn_chance > 0 OR liquid bypass
+                for n, d in ITEM_TEMPLATES.items():
+                    if d.get('type') == loot_entry['type'] and not n.endswith(' on'):
+                        spawn_chance = d.get('spawn_chance', 1.0)
+                        if spawn_chance > 0 or is_liquid_source:
+                            matching_items.append(n)
+                            # If it's a forced spawn (0%) via liquid source, assign it a generic weight of 1.0
+                            matching_weights.append(spawn_chance if spawn_chance > 0 else 1.0)
+
                 if matching_items:
                     for _ in range(qty):
                         if capacity > 0 and len(items) >= capacity: break
-                        chosen_item = random.choice(matching_items)
+                        # Use random.choices to respect the individual rarity of items within this category
+                        chosen_item = random.choices(matching_items, weights=matching_weights, k=1)[0]
                         new_item = Item.create_from_name(chosen_item)
                         
                         if new_item:
@@ -93,14 +106,19 @@ def _generate_container_items(tile_def, game=None):
                             items.append(new_item)
                         
             elif 'item' in loot_entry and not loot_entry['item'].endswith(' on'):
-                for _ in range(qty):
-                    if capacity > 0 and len(items) >= capacity: break
-                    new_item = Item.create_from_name(loot_entry['item'])
-                    
-                    if new_item:
-                        if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
-                            new_item.load = new_item.capacity
-                        items.append(new_item)
+                # Explicitly verify the item isn't disabled globally via spawn_chance="0" OR bypass if it's a liquid source
+                target_name = loot_entry['item']
+                template = ITEM_TEMPLATES.get(target_name)
+                
+                if template and (template.get('spawn_chance', 1.0) > 0 or is_liquid_source):
+                    for _ in range(qty):
+                        if capacity > 0 and len(items) >= capacity: break
+                        new_item = Item.create_from_name(target_name)
+                        
+                        if new_item:
+                            if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
+                                new_item.load = new_item.capacity
+                            items.append(new_item)
                     
     return items
 
@@ -168,10 +186,14 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                         if tile_def['type'] == 'maptile_container':
                             capacity = tile_def.get('capacity', 0)
-                            val = tile_def.get('allow_liquid', False)
-                            allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            
+                            val_liq = tile_def.get('allow_liquid', False)
+                            allow_liquid = str(val_liq).lower() in ['true', '1'] or val_liq is True
+                            
+                            val_open = tile_def.get('is_opened', False)
+                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
-                            if allow_liquid:
+                            if allow_liquid or is_opened:
                                 items = _generate_container_items(tile_def)
                                 container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                                 container.is_opened = True
@@ -220,10 +242,14 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                         if tile_def['type'] == 'maptile_container':
                             capacity = tile_def.get('capacity', 0)
-                            val = tile_def.get('allow_liquid', False)
-                            allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                            
+                            val_liq = tile_def.get('allow_liquid', False)
+                            allow_liquid = str(val_liq).lower() in ['true', '1'] or val_liq is True
+                            
+                            val_open = tile_def.get('is_opened', False)
+                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
-                            if allow_liquid:
+                            if allow_liquid or is_opened:
                                 items = _generate_container_items(tile_def)
                                 container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                                 container.is_opened = True
@@ -247,7 +273,6 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
     # 3. Process Spawn Layer (P, Z, NPC, and Specific Items)
     possible_player_spawns = []
     quest_item_spawns = []
-    # Ensure ITEM_TEMPLATES is loaded for item checking
     if not ITEM_TEMPLATES:
         load_item_templates_data()
         
@@ -306,10 +331,14 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                         
                     if tile_def['type'] == 'maptile_container':
                         capacity = tile_def.get('capacity', 0)
-                        val = tile_def.get('allow_liquid', False)
-                        allow_liquid = str(val).lower() in ['true', '1'] or val is True
+                        
+                        val_liq = tile_def.get('allow_liquid', False)
+                        allow_liquid = str(val_liq).lower() in ['true', '1'] or val_liq is True
+                        
+                        val_open = tile_def.get('is_opened', False)
+                        is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
-                        if allow_liquid:
+                        if allow_liquid or is_opened:
                             items = _generate_container_items(tile_def)
                             container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                             container.is_opened = True

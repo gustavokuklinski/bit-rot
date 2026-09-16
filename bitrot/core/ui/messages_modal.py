@@ -2,15 +2,14 @@
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal, draw_scrollbar
-# Removed unused Tabs import (optional, but cleaner)
+from core.data.radio_manager import RadioManager
 
 def draw_messages_modal(surface, game, modal, assets):
     base_modal = BaseModal(surface, modal, assets, "Messages")
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 
-
-    # Get active log (Hardcoded to 'All' since tabs are gone)
+    # Get active log (Hardcoded to 'All')
     active_log = game.message_logs.get('All', [])
 
     # --- Layout Constants ---
@@ -36,8 +35,6 @@ def draw_messages_modal(surface, game, modal, assets):
     )
 
     # Content Area Position
-    # CHANGED: Removed the +35 padding that was previously making room for the tabs. 
-    # Added +5 for a small natural margin under the header.
     content_y_start = base_modal.modal_y + base_modal.header_h + 5 
     content_height = input_area_y - content_y_start - padding
     content_width = modal['rect'].width - (padding * 2)
@@ -46,92 +43,102 @@ def draw_messages_modal(surface, game, modal, assets):
     modal['content_rect'] = content_rect 
 
     def wrap_text(text, font_12, max_width):
-        words = text.split(' ')
         lines = []
-        current_line = []
-        for word in words:
-            test_line = ' '.join(current_line + [word]) if current_line else word
-            if font_12.size(test_line)[0] <= max_width:
-                current_line.append(word)
-            else:
-                if current_line:
-                    lines.append(' '.join(current_line))
-                    current_line = [word]
+        for paragraph in str(text).split('\n'):
+            words = paragraph.split(' ')
+            current_line = []
+            for word in words:
+                test_line = ' '.join(current_line + [word]) if current_line else word
+                if font_12.size(test_line)[0] <= max_width:
+                    current_line.append(word)
                 else:
-                    lines.append(word)
-                    current_line = []
-        if current_line:
-            lines.append(' '.join(current_line))
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                        current_line = [word]
+                    else:
+                        lines.append(word)
+                        current_line = []
+            if current_line:
+                lines.append(' '.join(current_line))
         return lines
 
     max_text_width = max(50, content_width - 15)
     wrapped_log = []
+    
+    # --- COLOR PARSING LOGIC ---
+    radio_stations = list(RadioManager.STATIONS.keys()) if hasattr(RadioManager, 'STATIONS') else []
+    
     for msg in active_log:
-        wrapped_log.extend(wrap_text(msg, font_12, max_text_width))
+        color = WHITE
+        
+        # Check if the message is from the Player
+        if msg.startswith("[") and "]: " in msg:
+            color = YELLOW
+        else:
+            # Check if the message is from a Radio Station
+            for st_name in radio_stations:
+                if msg.startswith(st_name + ":"):
+                    if "Exxoil" in st_name:
+                        color = ORANGE
+                    elif "Military" in st_name:
+                        color = (100, 200, 255) # Light Blue
+                    else:
+                        color = (100, 255, 100) # Generic Green for custom radios
+                    break
+
+        # Wrap text and append with its assigned color
+        for line in wrap_text(msg, font_12, max_text_width):
+            wrapped_log.append((line, color))
 
     # --- Draw Messages (Bottom-Up Alignment) ---
     line_height = font_12.get_height() + 4
     total_text_height = len(wrapped_log) * line_height
     
-    # Calculate max scroll (how much we CAN scroll)
     max_scroll = max(0, total_text_height - content_height)
     
-    # [NEW] Auto-scroll Logic
-    # CHANGED: Hardcoded the key to "All" instead of using modal['active_tab']
+    # Auto-scroll Logic
     log_len_key = "last_len_All"
     current_len = len(active_log)
     last_len = modal.get(log_len_key, 0)
     
-    # If new messages arrived since last frame, snap to bottom
     if current_len > last_len:
         modal['scroll_offset_y'] = max_scroll
         modal[log_len_key] = current_len
     elif log_len_key not in modal:
-        # Initialize
         modal[log_len_key] = current_len
         if 'scroll_offset_y' not in modal:
             modal['scroll_offset_y'] = max_scroll
 
-    # Save current length for next frame
     modal[log_len_key] = current_len
 
-    # Initialize scroll if missing
     if 'scroll_offset_y' not in modal:
         modal['scroll_offset_y'] = max_scroll
     
-    # Clamp scroll to valid range
     modal['scroll_offset_y'] = max(0, min(modal['scroll_offset_y'], max_scroll))
     
     try:
         content_surface = surface.subsurface(content_rect)
         content_surface.fill((20, 20, 20)) 
 
-        # Calculate Y start position
         if total_text_height < content_height:
-            # If text fits, align to bottom
             y_pos = content_height - total_text_height
         else:
-            # If text is longer, use scroll offset
             y_pos = -modal['scroll_offset_y']
 
-        # [OPTIMIZED] Virtual Scrolling: Only render what is visible
         start_index = 0
-        
-        # 1. Skip messages above the view
         if y_pos < 0:
             skip_count = int(abs(y_pos) // line_height)
             start_index = skip_count
             y_pos += skip_count * line_height
 
-        # 2. Iterate only from start_index
+        # --- RENDER WITH EXTRACTED COLOR ---
         for i in range(start_index, len(wrapped_log)):
-            msg = wrapped_log[i]
+            msg_text, msg_color = wrapped_log[i]
             
-            # 3. Stop rendering if we go below the view
             if y_pos > content_height:
                 break
                 
-            txt_surf = font_12.render(msg, False, WHITE)
+            txt_surf = font_12.render(msg_text, False, msg_color)
             content_surface.blit(txt_surf, (5, y_pos))
             y_pos += line_height
 

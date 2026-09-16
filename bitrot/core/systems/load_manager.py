@@ -5,6 +5,7 @@ import json
 import re
 import uuid
 import pygame
+import random
 from datetime import datetime
 from core.data.config import *
 import core.data.config
@@ -22,6 +23,7 @@ from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
 from core.systems.quadtree import Quadtree
 from core.entities.item.item_helpers import deserialize_item
+from core.data.radio_manager import RadioManager
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -108,6 +110,30 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.blood_stains = []
     game.npcs.empty()
     game.app_state = {'slots': [None] * 5}
+
+    if not RadioManager.STATIONS:
+        RadioManager.load_radios()
+        
+    game.radio_frequencies = {}
+    used_freqs = set()
+    
+    for name, data in RadioManager.STATIONS.items():
+        freq_raw = data['frequency']
+        if freq_raw == 'random':
+            f = round(random.uniform(110.42, 123.58), 2)
+            while any(abs(f - uf) <= 0.10 for uf in used_freqs): 
+                f = round(random.uniform(110.42, 123.58), 2)
+            game.radio_frequencies[name] = f
+            used_freqs.add(f)
+        else:
+            try:
+                f = float(freq_raw)
+                game.radio_frequencies[name] = f
+                used_freqs.add(f)
+            except:
+                game.radio_frequencies[name] = 110.42
+                
+    game.current_radio_freq = 110.42
 
     # 3. Clear Visual Caches
     if hasattr(game, '_tile_cache_surface'):
@@ -436,6 +462,28 @@ def load_game(game, save_folder_name):
             if s_data and idx < 5:
                 game.app_state['slots'][idx] = deserialize_item(s_data)
         
+        if not RadioManager.STATIONS:
+            RadioManager.load_radios()
+            
+        game.radio_frequencies = world_data.get('radio_frequencies')
+        if not game.radio_frequencies:
+            # Fallback for old saves
+            game.radio_frequencies = {}
+            used_freqs = set()
+            for name, data in RadioManager.STATIONS.items():
+                freq_raw = data['frequency']
+                if freq_raw == 'random':
+                    f = round(random.uniform(110.42, 123.58), 2)
+                    while any(abs(f - uf) <= 0.10 for uf in used_freqs): f = round(random.uniform(110.42, 123.58), 2)
+                    game.radio_frequencies[name] = f
+                    used_freqs.add(f)
+                else:
+                    try: game.radio_frequencies[name] = float(freq_raw)
+                    except: game.radio_frequencies[name] = 110.42
+                    
+        game.current_radio_freq = world_data.get('current_radio_freq', 110.42)
+
+
         for b_entry in world_data.get('barricades', []):
             m_name = b_entry['map']
             if m_name not in game.map_states:

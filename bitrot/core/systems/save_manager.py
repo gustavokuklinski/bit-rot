@@ -7,6 +7,8 @@ from core.entities.animal.animal import Animal
 from core.data.config import MAP_DIR, get_writable_dir
 from core.entities.npc.npc_dialog import NPCDialog
 from core.entities.item.item_helpers import deserialize_item, serialize_item
+from core.data.radio_manager import RadioManager 
+
 def save_game(game):
     if game.current_save_folder_name:
         save_name = game.current_save_folder_name
@@ -340,7 +342,9 @@ def save_game(game):
             "containers": container_data,
             "modal_positions": game.last_modal_positions,
             "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
-            "barricades": saved_barricades
+            "barricades": saved_barricades,
+            "radio_frequencies": getattr(game, 'radio_frequencies', {}),
+            "current_radio_freq": getattr(game, 'current_radio_freq', 110.42)
         }
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)

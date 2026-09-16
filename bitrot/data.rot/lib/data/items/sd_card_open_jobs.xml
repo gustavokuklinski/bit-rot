@@ -1,0 +1,8 @@
+<item name="Open Jobs" type="sd_card" allow_belt="false" tip="Insert into Mobile to track your quests">
+    <properties>
+        <weight weight="0.0001"/>
+        <map value="open_jobs" />
+        <sprite file="sd_card.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

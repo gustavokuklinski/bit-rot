@@ -4,9 +4,9 @@
     </visuals>
     <capacity value="15" />
     <loot>
-        <item type="resource" min="1" max="5" chance="1.0" />
-        <item type="utility" min="1" max="5" chance="1.0" />
-        <item type="weapon_melee" min="1" max="5" chance="1.0" />
-        <item type="container" min="0" max="2" chance="1.0" />
+        <item type="resource" min="1" max="4" chance="0.45" />
+        <item type="utility" min="1" max="3" chance="0.35" />
+        <item type="weapon_melee" min="1" max="2" chance="0.25" />
+        <item type="container" min="1" max="1" chance="0.12" />
     </loot>
 </map>

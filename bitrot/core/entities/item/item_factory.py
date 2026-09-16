@@ -28,7 +28,8 @@ def generate_random_item(cls):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
         
-    spawnable = {n:d for n,d in ITEM_TEMPLATES.items() if 'spawn' in d and 'chance' in d['spawn']}
+    # ONLY map items that have a spawn_chance > 0
+    spawnable = {n: d for n, d in ITEM_TEMPLATES.items() if d.get('spawn_chance', 1.0) > 0}
     if not spawnable:
         return None
         
@@ -39,7 +40,7 @@ def generate_random_item(cls):
         if name.endswith(' on'):
             continue
 
-        base_chance = float(data['spawn']['chance'])
+        base_chance = float(data.get('spawn_chance', 1.0))
         names.append(name)
         chances.append(base_chance)
     
@@ -240,14 +241,16 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             tinted.fill((*new_item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
             new_item.image = tinted
 
-    # Only generate initial template loot when explicitly requested (True for new world/loot drops, False for save deserialization)
     if spawn_loot and 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
             if loot_info['name'].endswith(' on'):
                 continue
 
             target_template = ITEM_TEMPLATES.get(loot_info['name'], {})
-            target_type = target_template.get('type', '')
+            
+            # Enforce global spawn ban within nested container loops
+            if target_template.get('spawn_chance', 1.0) <= 0:
+                continue
 
             if disposable or allow_liquid:
                 spawn_loot_check = True
