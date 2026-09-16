@@ -11,10 +11,10 @@ from core.placement import find_free_tile
 from core.entities.vehicle.vehicle import Vehicle
 
 
-def _generate_container_items(tile_def):
+def _generate_container_items(tile_def, game=None):
     """
     Helper function to generate items for a container based on its loot table,
-    accounting for global spawn multipliers to scale quantities.
+    accounting for global spawn multipliers, Player Luck, and Kill Count.
     """
     items = []
     capacity = tile_def.get('capacity', 0)
@@ -29,12 +29,35 @@ def _generate_container_items(tile_def):
     
     is_liquid_source = tile_def.get('allow_liquid', False)
     
+    # 1. Base Global Multiplier
+    dynamic_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER
+    lucky_level = 0
+
+    # 2. Dynamic Player Multipliers (Only applies if game/player context is passed)
+    if game and hasattr(game, 'player') and game.player:
+        # Luck: +5% total loot multiplier per level (Up to +50% at level 10)
+        lucky_level = game.player.progression.get_lucky(game.player)
+        luck_bonus = lucky_level * 0.05
+        
+        # Kills: +2% total loot multiplier per 100 kills (Capped at +50% / 2500 kills)
+        zombies_killed = getattr(game, 'zombies_killed', 0)
+        kill_bonus = min(0.5, zombies_killed * 0.0002)
+
+        dynamic_multiplier *= (1.0 + luck_bonus + kill_bonus)
+    
     for loot_entry in loot_pool:
         if capacity > 0 and len(items) >= capacity:
             break
             
-        total_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER
-        adjusted_chance = loot_entry['chance'] * total_multiplier
+        total_multiplier = dynamic_multiplier
+        base_chance = loot_entry['chance']
+        
+        # 3. Rare Item Boost: High Luck increases the raw spawn chance of rare items (< 20% chance)
+        if lucky_level > 0 and base_chance < 0.2:
+            rare_bonus = (0.2 - base_chance) * lucky_level * 0.05
+            base_chance += rare_bonus
+
+        adjusted_chance = base_chance * total_multiplier
         
         if is_liquid_source:
             adjusted_chance = 1.0  

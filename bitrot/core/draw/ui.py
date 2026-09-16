@@ -30,11 +30,11 @@ from core.ui.notifications import draw_notifications
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
-    'inspect_container': "Inspect [{key} / RMB]",
-    'generic_interact': "Interact [{key} / RMB]",
+    'inspect_container': "Inspect [{key}]",
+    'generic_interact': "Interact [{key}]",
     'stair_interact': "Climb [{key}]",
-    'interact_npc': "Talk [{key} / RMB]",
-    'interact_vehicle': "Enter/Exit [{key} / RMB]",
+    'interact_npc': "Talk [{key}]",
+    'interact_vehicle': "Enter/Exit [{key}]",
     'engine_vehicle': "Toggle Engine [{key}]",
     'vehicle_options_rmb': "Vehicle Options [RMB]",
 }
@@ -249,7 +249,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
-            tip_text = get_tooltip_tr('inspect_container', "Open [{key}]").replace('{key}', get_key_name('interact'))
+            tip_text = get_tooltip_tr('inspect_container', "Inspect [{key}]").replace('{key}', get_key_name('interact'))
             interactables.append({'rect': obj.rect, 'tip': tip_text})
 
     tooltip_to_draw = None
@@ -453,6 +453,31 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     if getattr(game, 'hovered_tab_tooltip', None):
         _draw_tt(game, game.hovered_tab_tooltip, mouse_pos[0] + 15, mouse_pos[1] + 15)
 
+    # --- LAYER 4.5: Player Action Progress Bar (Above FoW) ---
+    if game.player.action_timer > 0 and game.player.action_total_time > 0:
+        progress = 1.0 - (game.player.action_timer / game.player.action_total_time)
+        bar_total_width = int(TILE_SIZE * zoom)
+        bar_h = max(1, int(5 * zoom))
+        
+        if getattr(game.player, 'vehicle', None):
+            veh = game.player.vehicle
+            screen_x = ((veh.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_y = ((veh.rect.top + offset_y) * zoom) - (10 * zoom)
+        else:
+            screen_x = ((game.player.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_y = ((game.player.rect.top + offset_y) * zoom) - (10 * zoom)
+
+        bar_x = screen_x - (bar_total_width / 2)
+        bar_y = screen_y
+
+        bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, bar_h)
+        pygame.draw.rect(game.game_screen, DARK_GRAY, bg_bar_rect)
+        
+        bar_progress_width = int(bar_total_width * progress)
+        if bar_progress_width > 0:
+            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, bar_h)
+            pygame.draw.rect(game.game_screen, (50, 200, 50), bar_rect)
+
     # --- LAYER 5: Combat HUD (Reticle & Ammo) ---
     if getattr(game.player, 'is_aiming', False):
         pygame.mouse.set_visible(False) 
@@ -502,6 +527,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
             mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
 
+            # [FIX] Draw Highlight bounding box
             for dx in range(-1, 2):
                 for dy in range(-1, 2):
                     tx = p_tx + dx
@@ -546,7 +572,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             pygame.mouse.set_cursor(game.assets.get('aim_cursor') if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]) else (game.assets.get('custom_cursor') or pygame.cursors.arrow))
     
     if hasattr(game, 'clock'):
-        fps_surf = font_12.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
+        fps_surf = font_14.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
         game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5)))
 
     draw_notifications(game.game_screen, game)

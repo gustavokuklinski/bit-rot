@@ -1,8 +1,9 @@
+# core/entities/player/player_graphics.py
 import pygame
 import math
 import random
 from core.data.config import TILE_SIZE, SPRITE_PATH, DARK_GRAY, YELLOW
-from core.entities.item.item_data import ITEM_TEMPLATES  # NEW: Import ITEM_TEMPLATES
+from core.entities.item.item_data import ITEM_TEMPLATES
 from core.data.localization import tr
 
 # Define ORANGE if not imported
@@ -61,26 +62,10 @@ class PlayerGraphics:
         if self.vehicle:
             veh_draw_pos = (self.vehicle.x + offset_x, self.vehicle.y + offset_y)
             surface.blit(self.vehicle.image, veh_draw_pos)
-            
-            if self.action_timer > 0 and self.action_total_time > 0:
-                progress = 1.0 - (self.action_timer / self.action_total_time)
-                
-                bar_total_width = TILE_SIZE * 2
-                veh_w = self.vehicle.image.get_width()
-                
-                bar_x = veh_draw_pos[0] + (veh_w / 2) - (bar_total_width / 2)
-                bar_y = veh_draw_pos[1] - 15 
-                
-                bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
-                pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
-                
-                bar_progress_width = int(bar_total_width * progress)
-                bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
-                pygame.draw.rect(surface, (50, 200, 50), bar_rect)
-
+            # --- REMOVED THE OLD PROGRESS BAR FROM HERE ---
             return
 
-        # --- NEW: Desynchronized Positional and Rotational Wiggle ---
+        # --- Desynchronized Positional and Rotational Wiggle ---
         wiggle_y = 0
         draw_angle = getattr(self, 'walk_anim_angle', 0)
 
@@ -100,12 +85,9 @@ class PlayerGraphics:
             phase_shift = id(self) % 1000
             current_time = pygame.time.get_ticks()
             
-            # INCREASE PROCEDURAL ANIMATION SPEED WHEN RUNNING
             anim_mult = 1.6 if getattr(self, 'is_running', False) else 1.0
             
-            # Vertical positional bounce
             wiggle_y = int(math.sin(current_time * (0.015 * anim_mult) + phase_shift) * 2)
-            # Add rotation desynchronization
             draw_angle += math.sin(current_time * (0.01 * anim_mult) + phase_shift) * 5
 
         # Base draw_rect includes the vertical wiggle
@@ -208,22 +190,7 @@ class PlayerGraphics:
 
             surface.blit(rotated_image, rotated_rect)
 
-        # UI Bars
-        
-
-        if self.action_timer > 0 and self.action_total_time > 0:
-            progress = 1.0 - (self.action_timer / self.action_total_time)
-            
-            bar_total_width = TILE_SIZE * 2
-            bar_x = draw_rect.centerx - (bar_total_width / 2)
-            bar_y = draw_rect.top - 15 
-            
-            bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, 5)
-            pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
-            
-            bar_progress_width = int(bar_total_width * progress)
-            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, 5)
-            pygame.draw.rect(surface, (50, 200, 50), bar_rect)
+        # --- REMOVED THE OLD PROGRESS BAR FROM HERE ---
 
         if self.melee_swing_timer > 0:
             if self.active_weapon and self.active_weapon.image and \

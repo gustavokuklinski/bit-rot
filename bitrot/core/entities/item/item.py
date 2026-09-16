@@ -399,10 +399,10 @@ class Container(Item):
         self.is_opened = True
         if getattr(self, 'tile_def', None):
             from core.map.map_loader import _generate_container_items
-            generated = _generate_container_items(self.tile_def)
+            # Pass the game object to apply player Luck and Kill modifiers!
+            generated = _generate_container_items(self.tile_def, game=game)
             self.inventory = list(getattr(self, 'pre_loot', [])) + generated
             if game and hasattr(game, 'sound_manager') and self.tile_def.get('sound_src'):
-                self.tile_def['sound_src']
                 game.sound_manager.play_sound(
                     self.tile_def['sound_src'],
                     subdir='map',
