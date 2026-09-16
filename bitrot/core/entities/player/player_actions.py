@@ -110,17 +110,15 @@ class PlayerActions:
             item_name_lower = getattr(item, 'name', '').lower()
             is_wine = ('white wine' in item_name_lower or 'red wine' in item_name_lower)
             is_whiskey = ('whiskey' in item_name_lower)
+            is_beer = ('beer' in item_name_lower)
 
-            if is_wine or is_whiskey:
+            if is_wine or is_whiskey or is_beer:
                 consumed = True
                 if hasattr(self, 'anxiety'):
-                    self.anxiety = max(0.0, self.anxiety - (5.0 if is_wine else 12.0))
-                if hasattr(self, 'water') and is_wine:
+                    reduction = 5.0 if is_wine else (12.0 if is_whiskey else 3.0)
+                    self.anxiety = max(0.0, self.anxiety - reduction)
+                if hasattr(self, 'water') and (is_wine or is_beer):
                     self.water = min(100.0, self.water + 3.0)
-
-            if item.item_type == 'consumable_ammo' or status_effect_legacy == 'ammo' or ammo_type is not None:
-                self.reload_active_weapon(game=game)
-                return 
 
             if hasattr(item, 'effects') and item.effects:
                 for effect in item.effects:
@@ -172,13 +170,14 @@ class PlayerActions:
                 old_level = getattr(self, 'alcohol_level', 0.0)
                 if is_wine:
                     self.alcohol_level = old_level + 1.0
-                    if old_level < 5.0 <= self.alcohol_level:
-                        display_message(tr('msg', "You feel dizzy and your vision blurs..."))
                 elif is_whiskey:
                     self.alcohol_level = old_level + 2.5
-                    if old_level < 5.0 <= self.alcohol_level:
-                        display_message(tr('msg', "The strong whiskey makes your head spin and your vision blurs..."))
+                elif is_beer:
+                    self.alcohol_level = old_level + 0.8
 
+                if old_level < 5.0 <= self.alcohol_level:
+                    display_message(tr('msg', "You feel dizzy and your vision narrows..."))
+                    
                 if item.load <= 0:
                     if source_type == 'belt':
                         self.belt[item_index] = None

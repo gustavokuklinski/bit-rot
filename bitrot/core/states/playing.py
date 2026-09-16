@@ -1,5 +1,5 @@
 import pygame
-from core.data.config import BASE_PLAYER_VIEW_RADIUS, NPC_DETECTION_RADIUS
+from core.data.config import BASE_PLAYER_VIEW_RADIUS, NPC_DETECTION_RADIUS, BASE_PLAYER_VIEW_RADIUS, TILE_SIZE
 from core.input import handle_input
 from core.update import update_game_state
 from core.draw import draw_game
@@ -132,7 +132,8 @@ def run_playing(game):
     update_game_state(game)
     
     if game.player:
-        base_radius = BASE_PLAYER_VIEW_RADIUS
+        # Take the baseline view radius (calculated by world_time for day/night/weather)
+        base_radius = getattr(game, 'player_view_radius', BASE_PLAYER_VIEW_RADIUS) or BASE_PLAYER_VIEW_RADIUS
         radius_mult = 1.0
 
         for trait_id in game.player.traits:
@@ -145,7 +146,16 @@ def run_playing(game):
         health_ratio = max(0.1, game.player.health / game.player.max_health)
         radius_mult *= health_ratio
 
-        game.player_view_radius = base_radius * radius_mult
+        # --- ALCOHOL VIEW RADIUS REDUCTION ---
+        # More alcohol = smaller view radius (tunnel vision).
+        # Gradually restores as alcohol_level decays over time.
+        alcohol = getattr(game.player, 'alcohol_level', 0.0)
+        if alcohol > 0:
+            # Each point of alcohol reduces the view radius by 7% (clamped at 20% minimum so the player can still see their immediate surroundings)
+            alcohol_factor = max(0.20, 1.0 - (alcohol * 0.07))
+            radius_mult *= alcohol_factor
+
+        game.player_view_radius = max(TILE_SIZE * 2, base_radius * radius_mult)
     
     game.npc_spawn_timer += 1
     if game.npc_spawn_timer >= 30:
