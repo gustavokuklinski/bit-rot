@@ -184,6 +184,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         building_counts=gen_building_counts,
         chunk_settings=gen_chunk_settings
     )
+    game.generator = generator  # <--- Store generator reference on game instance
     
     if save_dir_name:
             raw_seed = player_data.get('world_seed', "4-B1TR07")

@@ -361,6 +361,13 @@ class PlayerMovement:
                     
                 if transition:
                     new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
+
+                    if new_map not in game.map_manager.map_files:
+                        if hasattr(game, 'generator') and game.generator:
+                            if 0 <= new_gx < game.generator.grid_w and 0 <= new_gy < game.generator.grid_h:
+                                game.generator.generate_chunk_on_demand(new_gx, new_gy)
+                                game.map_manager.refresh_maps()
+
                     # Check if the map file exists in the manager
                     if new_map in game.map_manager.map_files:
                         print(f"Transitioning to chunk: {new_map}")
@@ -517,23 +524,21 @@ class PlayerMovement:
                                 valid_animal_types = []
                                 valid_weights = []
 
-                                # [FIX] Dynamically load all valid animals from XML definitions
                                 for a_name, a_def in AnimalLoader.definitions.items():
-                                    if curr_layer in a_def.get('spawn_layers', [1]):
+                                    allowed = a_def.get('spawn_layers', [1, 2])
+                                    if curr_layer in allowed:
                                         valid_animal_types.append(a_name)
-                                        valid_weights.append(a_def.get('spawn_weight', 10))
+                                        valid_weights.append(max(1, int(a_def.get('spawn_weight', 10))))
 
                                 if valid_animal_types:
-                                    num_to_spawn = random.randint(2, 6)
+                                    num_to_spawn = random.randint(3, 7)
                                     for _ in range(num_to_spawn):
                                         ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
                                         ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
                                         
-                                        # Choose weighted by XML spawn_weight
                                         animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                                         animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
                                         
-                                        # [FIX] Robust Spatial Spawn
                                         free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
                                         if free_pos:
                                             animal_obj.rect.topleft = free_pos

@@ -415,7 +415,7 @@ def spawn_animals(game, count=None, target_layer=None):
         return
 
     if target_layer is None:
-        target_layer = game.current_layer_index
+        target_layer = getattr(game, 'current_layer_index', 1)
 
     if not hasattr(game, 'layer_zombies'):
         game.layer_zombies = {}
@@ -423,7 +423,8 @@ def spawn_animals(game, count=None, target_layer=None):
         game.layer_zombies[target_layer] = []
 
     if target_layer == game.current_layer_index:
-        if not hasattr(game, 'items_on_ground'): game.items_on_ground = []
+        if not hasattr(game, 'items_on_ground'): 
+            game.items_on_ground = []
         target_list = game.items_on_ground
     else:
         target_list = game.layer_zombies[target_layer]
@@ -433,9 +434,10 @@ def spawn_animals(game, count=None, target_layer=None):
     valid_weights = []
 
     for name, definition in AnimalLoader.definitions.items():
-        if target_layer in definition.get('spawn_layers', []):
+        allowed_layers = definition.get('spawn_layers', [1, 2])
+        if target_layer in allowed_layers:
             valid_animal_types.append(name)
-            valid_weights.append(definition.get('spawn_weight', 10))
+            valid_weights.append(max(1, int(definition.get('spawn_weight', 10))))
 
     if not valid_animal_types:
         return
@@ -444,7 +446,7 @@ def spawn_animals(game, count=None, target_layer=None):
     existing_animals = [x for x in target_list if isinstance(x, Animal)]
     animals_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1)
 
-    # 1. Scan for 'ANM' markers
+    # 1. Scan for 'ANM' spawn markers
     spawn_markers = []
     spawn_layer = getattr(game, 'all_spawn_layers', {}).get(target_layer)
 
@@ -454,12 +456,12 @@ def spawn_animals(game, count=None, target_layer=None):
         for y in range(h):
             for x in range(w):
                 if spawn_layer[y][x] == 'ANM':
-                    ground = game.all_ground_layers[target_layer][y][x]
-                    if 'water' in ground or 'floor' in ground:
+                    ground = game.all_ground_layers.get(target_layer, [[]])[y][x] if target_layer in game.all_ground_layers else ''
+                    if 'water' in ground.lower() or 'floor' in ground.lower():
                         continue
                     spawn_markers.append((x * TILE_SIZE, y * TILE_SIZE))
 
-    # 2. Spawn batch at each marker (up to ANIMALS_PER_SPAWN)
+    # 2. Spawn batch at each marker
     random.shuffle(spawn_markers)
     for px, py in spawn_markers:
         if len(existing_animals) + spawned_count >= count:
@@ -479,10 +481,41 @@ def spawn_animals(game, count=None, target_layer=None):
             if any(isinstance(a, Animal) and a.rect.colliderect(test_rect) for a in existing_animals + target_list):
                 continue
 
+            # Pick a diverse species using weighted distribution
             a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
             animal = Animal(free_pos[0], free_pos[1], a_type, game=game, layer=target_layer)
             target_list.append(animal)
             spawned_count += 1
+
+    # 3. Ambient fallback if spawn markers are missing or sparse
+    if len(existing_animals) + spawned_count < count:
+        ground_grid = game.all_ground_layers.get(target_layer, getattr(game, 'ground_data', []))
+        if ground_grid:
+            gh = len(ground_grid)
+            gw = len(ground_grid[0]) if gh > 0 else 0
+
+            for _ in range(60):
+                if len(existing_animals) + spawned_count >= count:
+                    break
+                rx = random.randint(3, max(4, gw - 4))
+                ry = random.randint(3, max(4, gh - 4))
+
+                g_tile = ground_grid[ry][rx]
+                if g_tile in [' ', '@', '#', ''] or 'water' in g_tile.lower() or 'floor' in g_tile.lower():
+                    continue
+
+                px, py = rx * TILE_SIZE, ry * TILE_SIZE
+                rect = pygame.Rect(px, py, TILE_SIZE, TILE_SIZE)
+                if any(rect.colliderect(ob) for ob in getattr(game, 'obstacles', [])):
+                    continue
+
+                if any(isinstance(a, Animal) and a.rect.colliderect(rect) for a in target_list):
+                    continue
+
+                a_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
+                animal = Animal(px, py, a_type, game=game, layer=target_layer)
+                target_list.append(animal)
+                spawned_count += 1
 
 def spawn_random_vehicles(game, count=10):
     if not VehicleData.VEHICLE_TEMPLATES:
