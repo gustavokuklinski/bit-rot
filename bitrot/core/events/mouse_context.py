@@ -115,7 +115,7 @@ def handle_context_menu_click(game, mouse_pos):
                     gx = item['grid_x']
                     gy = item['grid_y']
 
-                    # Search player inventory or belt safely
+                    # Search player inventory or belt for the barricade
                     found_barricade = None
                     barricade_source = None
                     barricade_idx = -1
@@ -136,7 +136,52 @@ def handle_context_menu_click(game, mouse_pos):
                                 break
 
                     if found_barricade:
+                        # Check required tools & materials from <place>
+                        all_player_items = [it for it in (game.player.inventory + game.player.belt) if it and it != found_barricade]
+                        missing_reqs = []
+
+                        for req in getattr(found_barricade, 'place_items', []):
+                            needed = req.get('amount', 1)
+                            candidates = req.get('items', [])
+                            have = 0
+                            for it in all_player_items:
+                                if it and any(cand.lower() == it.name.lower() or cand.lower() in it.name.lower() for cand in candidates):
+                                    have += it.load if (hasattr(it, 'is_stackable') and it.is_stackable() and it.load is not None) else 1
+                            if have < needed:
+                                cands_str = ", ".join(candidates)
+                                missing_reqs.append(f"{cands_str} ({have}/{needed})")
+
+                        if missing_reqs:
+                            display_message(f"{tr('msg', 'Need:')} {', '.join(missing_reqs)}")
+                            clicked_on_menu = True
+                            return
+
                         def do_place_barricade():
+                            # Consume required materials that have destroy="true"
+                            for req in getattr(found_barricade, 'place_items', []):
+                                if not req.get('destroy', False):
+                                    continue
+                                to_remove = req.get('amount', 1)
+                                candidates = req.get('items', [])
+                                for it_list in [game.player.belt, game.player.inventory]:
+                                    for idx_c in range(len(it_list)):
+                                        it = it_list[idx_c]
+                                        if it and it != found_barricade and any(cand.lower() == it.name.lower() or cand.lower() in it.name.lower() for cand in candidates):
+                                            if hasattr(it, 'is_stackable') and it.is_stackable() and it.load is not None:
+                                                take = min(to_remove, it.load)
+                                                it.load -= take
+                                                to_remove -= take
+                                                if it.load <= 0:
+                                                    it_list[idx_c] = None
+                                            else:
+                                                it_list[idx_c] = None
+                                                to_remove -= 1
+                                            if to_remove <= 0:
+                                                break
+                                    if to_remove <= 0:
+                                        break
+
+                            # Consume the barricade item itself
                             if barricade_source == 'inventory':
                                 if barricade_idx < len(game.player.inventory) and game.player.inventory[barricade_idx] == found_barricade:
                                     game.player.inventory.pop(barricade_idx)
@@ -145,10 +190,13 @@ def handle_context_menu_click(game, mouse_pos):
                             elif barricade_source == 'belt':
                                 game.player.belt[barricade_idx] = None
 
+                            game.player.inventory = [it for it in game.player.inventory if it is not None]
+
                             game.map_manager.add_barricade(gx, gy, found_barricade)
                             display_message(tr('msg', "Barricade placed successfully."))
 
-                        game.player.start_action("Placing Barricade", 1.5, do_place_barricade, xp_reward=5)
+                        place_time = getattr(found_barricade, 'place_time', 1.5)
+                        game.player.start_action("Placing Barricade", place_time, do_place_barricade, xp_reward=5)
                     else:
                         display_message(tr('msg', "Barricade must be in inventory."))
                 clicked_on_menu = True
@@ -1466,11 +1514,38 @@ def handle_right_click(game, mouse_pos):
             if is_door_or_window:
                 if barricade:
                     options.append('Remove barricade')
-                    req_tools = barricade.get('remove_items', ['Crowbar', 'Hammer'])
-                    game.context_menu['tooltips']['Remove barricade'] = f"{tr('ui', 'Remove with:')} {', '.join(req_tools)}"
+                    req_tools = barricade.get('remove_items', ['Crowbar', 'Hammer', 'Metal Hammer', 'Primitive Hammer', 'Picaxe'])
+                    tt_lines = [tr('ui', "To remove barricade need:")]
+                    tt_lines.append(f"- {', '.join(req_tools)}")
+                    game.context_menu['tooltips']['Remove barricade'] = "\n".join(tt_lines)
                 else:
                     options.append('Place barricade')
-                    game.context_menu['tooltips']['Place barricade'] = tr('ui', "Barricade must be in inventory")
+
+                    # Find barricade in player inventory/belt or fallback to template
+                    barricade_ref = None
+                    for it in game.player.inventory + game.player.belt:
+                        if _is_barricade_item(it):
+                            barricade_ref = it
+                            break
+
+                    if not barricade_ref:
+                        from core.entities.item.item_data import ITEM_TEMPLATES
+                        tmpl = ITEM_TEMPLATES.get('Wood Barricade', {})
+                        if tmpl:
+                            barricade_ref = Item.create_from_name('Wood Barricade')
+
+                    if barricade_ref and getattr(barricade_ref, 'place_items', None):
+                        tt_lines = [tr('ui', "Place barricade need:")]
+                        for req in barricade_ref.place_items:
+                            cands_str = ", ".join(req.get('items', []))
+                            amt = req.get('amount', 1)
+                            if amt > 1:
+                                tt_lines.append(f"- {cands_str} ({amt}x)")
+                            else:
+                                tt_lines.append(f"- {cands_str}")
+                        game.context_menu['tooltips']['Place barricade'] = "\n".join(tt_lines)
+                    else:
+                        game.context_menu['tooltips']['Place barricade'] = tr('ui', "Barricade must be in inventory")
 
             # 3. Repair Door / Window
             if t_def and t_def.get('repair_info'):

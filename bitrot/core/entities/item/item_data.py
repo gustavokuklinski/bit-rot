@@ -131,7 +131,28 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 items_list = [t.strip() for t in raw_items.replace('[', '').replace(']', '').split(',') if t.strip()]
                 template['remove_items'] = items_list
                 template['remove_time'] = float(remove_node.get('time', '1.5'))
-                
+            
+            # Parse <place> node
+            place_node = props_node.find('place')
+            if place_node is not None:
+                template['place_items'] = []
+                template['place_time'] = float(place_node.get('time', '1.5'))
+                for p_item in place_node.findall('item'):
+                    raw_items = p_item.get('item') or p_item.get('name') or ''
+                    p_list = [t.strip() for t in raw_items.replace('[', '').replace(']', '').split(',') if t.strip()]
+                    destroy_val = p_item.get('destroy', 'false').lower() == 'true'
+                    try:
+                        amt = int(p_item.get('amount', '1'))
+                    except (ValueError, TypeError):
+                        amt = 1
+                    template['place_items'].append({
+                        'items': p_list,
+                        'destroy': destroy_val,
+                        'amount': amt
+                    })
+            else:
+                template['place_items'] = []
+                template['place_time'] = 1.5
 
             for node in props_node.findall('restore'):
                 status_str = node.get('status')

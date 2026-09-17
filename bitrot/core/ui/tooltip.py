@@ -201,6 +201,20 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
             lines.append({'type': 'item_preview', 'items': item.inventory[:5]})
     # -----------------------------------------------
 
+    if getattr(item, 'place_items', None):
+        lines.append(tr('ui', "Place barricade need:"))
+        for req in item.place_items:
+            items_str = ", ".join(req.get('items', []))
+            amt = req.get('amount', 1)
+            if amt > 1:
+                lines.append(f"- {items_str} ({amt}x)")
+            else:
+                lines.append(f"- {items_str}")
+
+    if getattr(item, 'remove_items', None):
+        lines.append(tr('ui', "To remove barricade need:"))
+        lines.append(f"- {', '.join(item.remove_items)}")
+
     if hasattr(item, 'tip') and item.tip:
         # FIX: Use item.name as the key, because that's what is in the XML 'name' attribute
         translated_tip = tr('tips', item.name)

@@ -2,6 +2,10 @@
     <properties>
         <health min="30" max="30" />
         <remove item="[Crowbar, Hammer, Metal Hammer, Primitive Hammer, Picaxe]" />
+        <place>
+            <item item="[Hammer, Metal Hammer, Primitive Hammer]" destroy="false" amount="1" />
+            <item item="[Nails]" destroy="true" amount="4" />
+        </place>
         <weight weight="2.0"/>
         <sprite file="resource_wood_barricade.png" />
     </properties>

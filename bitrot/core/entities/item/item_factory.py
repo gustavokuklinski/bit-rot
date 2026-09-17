@@ -212,6 +212,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     remove_items = template.get('remove_items', [])
     remove_time = template.get('remove_time', 1.5)
 
+    place_items = list(template.get('place_items', []))
+    place_time = template.get('place_time', 1.5)
+
     new_item = cls(
         item_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
@@ -227,7 +230,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         require=require, weight=weight, weight_reduction=weight_reduction, 
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
         safe_radius=safe_radius, max_liquid=max_liquid, map_value=map_value,
-        barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time
+        barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time,
+        place_items=place_items, place_time=place_time
     )
 
     if item_name in COLORABLE_ITEMS:
