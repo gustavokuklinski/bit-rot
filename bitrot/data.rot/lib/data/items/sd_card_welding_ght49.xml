@@ -1,0 +1,14 @@
+<item name="welding_ght-49" type="sd_card" tip="Mobile App: +2 INT, +3 MAINT, +70% INT XP, +90% MAINT XP">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <map value="welding_ght_49" />
+        <!-- Instant Level Buffs while attached -->
+        <level intelligence="2" maintenance="3" />
+        <!-- Gained XP bonus percentages (+70% and +90%) -->
+        <xp_boost intelligence="70" maintenance="90" />
+        <!-- Passively awards +2 Maintenance and +1 Intelligence XP every 5 seconds while attached -->
+        <passive_xp maintenance="2" intelligence="1" interval="5" />
+    </properties>
+    <spawn chance="0" />
+</item>

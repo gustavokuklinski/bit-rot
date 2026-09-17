@@ -207,6 +207,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
     game.player_name = player_data.get('name', "Player")
     game.player = Player(player_data=player_data)
+    game.player.game = game
+    
     game.zoom_level = core.data.config.START_ZOOM
     
     initial_loot = player_data.get('initial_loot', [])

@@ -9,6 +9,15 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
 
     lines = [tr('item', item.name)]
 
+    if hasattr(item, 'tooltip_lines') and item.tooltip_lines:
+        lines.extend(item.tooltip_lines)
+    elif hasattr(item, 'tooltip_text') and item.tooltip_text:
+        if isinstance(item.tooltip_text, list):
+            lines.extend(item.tooltip_text)
+        elif isinstance(item.tooltip_text, str):
+            for t_line in str(item.tooltip_text).replace('\\n', '\n').split('\n'):
+                lines.append(t_line)
+
     if hasattr(item, 'tooltip_text') and item.tooltip_text:
         lines.append(item.tooltip_text)
         

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<radio name="Omega Protocol" frequency="random" stream="[00:00, 23:59, random]">
+    <stream text="[STATIC]...Asset 4-9 is compromised. Initiate scorched earth protocol...[STATIC]" />
+    <stream text="[STATIC]...The Package has been secured. Returning to Site-B for extraction...[STATIC]" />
+    <stream text="[STATIC]...Confirming casualty count: 100%. No witnesses remaining...[STATIC]" />
+    <stream text="[STATIC]...Sector 7 is now a Red Zone. Do not enter without Level 4 clearance...[STATIC]" />
+    <stream text="[STATIC]...Eagle One to Nest. The target is neutralized. Over...[STATIC]" />
+</radio>

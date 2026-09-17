@@ -3,6 +3,8 @@
         <weight weight="0.0001"/>
         <map value="open_jobs" />
         <sprite file="sd_card.png" />
+
+        <passive_xp maintenance="1" interval="25" />
     </properties>
     <spawn chance="0" />
 </item>

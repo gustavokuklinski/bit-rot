@@ -12,7 +12,7 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 from core.placement import find_free_tile
-from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive
+from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
 
 def _is_barricade_item(it):
@@ -1037,9 +1037,12 @@ def handle_context_menu_click(game, mouse_pos):
                             game.modals.append(new_container_modal)
 
                     if is_closed_maptile:
-                        agility = game.player.progression.get_level('agility')
-                        open_time = max(0.2, 1.8 - (agility * 0.2))
-                        game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+                        if has_app(game, 'open_container_instant'):
+                            open_and_show_modal()
+                        else:
+                            agility = game.player.progression.get_level('agility')
+                            open_time = max(0.2, 1.8 - (agility * 0.2))
+                            game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
                     else:
                         open_and_show_modal()
                         

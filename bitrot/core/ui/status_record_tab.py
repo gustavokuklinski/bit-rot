@@ -4,13 +4,13 @@ import pygame
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
 from core.data.localization import tr
+from core.entities.item.item_helpers import get_sd_card_attr_info
 
 _SKILL_ICON_CACHE = {}
 
 def draw_record_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
 
-    # [FIX] List only the IDs. We'll fetch the display names from progression.xml dynamically.
     attribute_ids = [
         "strength", "fitness", "agility",
         "lucky", "melee", "ranged",
@@ -26,15 +26,18 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     for i, attr_id in enumerate(attribute_ids):
         current_y = start_y + (i * line_height)
         
-        if hasattr(player.progression, "get_level"):
-            level = player.progression.get_level(attr_id)
-        else:
-            level = player.progression.attributes.get(attr_id, {}).get("level", 0)
+        attr_data = player.progression.attributes.get(attr_id, {})
+        level = attr_data.get('level', 0)
+        curr_xp = float(attr_data.get('xp', 0))
+        req_xp = int(attr_data.get('xp_to_next_level', 100))
+
+        # Check live SD card boosts
+        boost_info = get_sd_card_attr_info(player, attr_id)
+        level_boost = boost_info.get('level_boost', 0)
+        is_boosted = level_boost > 0 or boost_info.get('xp_boost', 0) > 0 or boost_info.get('passive_amount', 0) > 0
 
         attr_config = player.progression.config.attributes.get(attr_id, {})
         image_rel_path = attr_config.get('image')
-        
-        # [FIX] Dynamically get the name defined in the XML (e.g. "Aiming" for "ranged")
         label = attr_config.get('name', attr_id.capitalize())
         
         icon_size = 24
@@ -45,49 +48,72 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                     img = pygame.image.load(full_path).convert_alpha()
                     img = pygame.transform.scale(img, (icon_size, icon_size))
                     _SKILL_ICON_CACHE[image_rel_path] = img
-                except: _SKILL_ICON_CACHE[image_rel_path] = None
+                except Exception:
+                    _SKILL_ICON_CACHE[image_rel_path] = None
 
             icon_surf = _SKILL_ICON_CACHE.get(image_rel_path)
             if icon_surf:
                 surface.blit(icon_surf, (start_x - 5, current_y - 3))
 
-        bonus_perc = player.progression.get_total_attribute_bonus(player, attr_id)
-        
         text_x = start_x + icon_size + 10
         label_surf = font_12.render(f"{tr('ui', label)}:", False, WHITE)
         surface.blit(label_surf, (text_x - 3, current_y + 2))
 
-        # Adjusted for narrow width: values aligned to the right of the label
-        value_x = text_x + 145 
-        value_surf = font_12.render(f"{str(level)}/10", False, WHITE)
-        value_pos = (value_x, current_y + 2)
-        surface.blit(value_surf, value_pos)
+        # --- LIVE LEVEL NUMBER: Highlight Green if Boosted ---
+        value_x = text_x + 145
+        if level_boost > 0:
+            value_str = f"{level}/10 (+{level_boost})"
+            value_col = (100, 255, 100)  # Vibrant Green
+        elif is_boosted:
+            value_str = f"{level}/10"
+            value_col = (100, 255, 100)  # Vibrant Green
+        else:
+            value_str = f"{level}/10"
+            value_col = WHITE
 
-        value_rect = pygame.Rect(value_pos[0], value_pos[1], value_surf.get_width(), value_surf.get_height())
+        value_surf = font_12.render(value_str, False, value_col)
+        surface.blit(value_surf, (value_x, current_y + 2))
 
-        if hasattr(player.progression, "attributes"):
-            attr_data = player.progression.attributes.get(attr_id)
-            if attr_data:
-                curr_xp = float(attr_data.get('xp', 0))
-                req_xp = int(attr_data.get('xp_to_next_level', 100))
-                
-                if value_rect.collidepoint(mouse_pos):
-                    pending_tooltip = {
-                        "label": label, 
-                        "curr_xp": int(curr_xp), 
-                        "req_xp": req_xp,
-                        "bonus_perc": bonus_perc
-                    }
+        # Entire row is hoverable
+        row_rect = pygame.Rect(start_x, current_y, modal_rect.width - 30, line_height)
+        if row_rect.collidepoint(mouse_pos):
+            pending_tooltip = {
+                "label": label, 
+                "curr_xp": int(curr_xp), 
+                "req_xp": req_xp,
+                "boost_info": boost_info
+            }
 
     if pending_tooltip:
-        class XPTooltip:
+        class RecordTooltip:
             def __init__(self, data):
                 self.name = f"{tr('ui', data['label'])} {tr('ui', 'Experience')}"
-                self.tooltip_text = f"{tr('ui', 'Progress:')} {data['curr_xp']} / {data['req_xp']} XP"
-                bonus = data.get('bonus_perc', 0)
-                if bonus != 0:
-                    self.tooltip_text += f"\n{tr('ui', 'Boost:')} {int(bonus):+}%"
+                
+                # Default white progress line
+                self.tooltip_lines = [
+                    f"{tr('ui', 'Progress:')} {data['curr_xp']} / {data['req_xp']} XP"
+                ]
+
+                b = data.get('boost_info', {})
+                # Level Boost in GREEN
+                if b.get('level_boost', 0) > 0:
+                    self.tooltip_lines.append([
+                        (f"{tr('ui', 'Card Boost:')} +{b['level_boost']} Level", (100, 255, 100))
+                    ])
+
+                # XP % Multiplier in GREEN
+                if b.get('xp_boost', 0) > 0:
+                    self.tooltip_lines.append([
+                        (f"{tr('ui', 'Card XP Boost:')} +{int(b['xp_boost'])}%", (100, 255, 100))
+                    ])
+
+                # Live learning interval counter in GREEN
+                if b.get('passive_amount', 0) > 0:
+                    self.tooltip_lines.append([
+                        (f"{tr('ui', 'Live Learning:')} +{b['passive_amount']} XP / {b['passive_interval']}s", (100, 255, 100))
+                    ])
+
                 self.item_type = self.durability = self.max_durability = None
                 self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = self.defence = None
-                
-        draw_tooltip(surface, XPTooltip(pending_tooltip), (mouse_pos[0], mouse_pos[1]))
+
+        draw_tooltip(surface, RecordTooltip(pending_tooltip), (mouse_pos[0], mouse_pos[1]))

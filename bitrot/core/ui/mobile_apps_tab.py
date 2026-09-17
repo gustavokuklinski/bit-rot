@@ -12,7 +12,9 @@ APP_MODULE_NAMES = {
     'show_animals': ('Next Petrol Fauna', YELLOW),
     'show_vehicles': ('Vehicle Registry', BLUE),
     'personal_data': ('Bio-Status Tracker', WHITE),
-    'open_jobs': ('Open Jobs Tracker', (255, 215, 0))
+    'open_jobs': ('Open Jobs Tracker', (255, 215, 0)),
+    'open_container_instant': ('Expanded Bright', (0, 255, 255)),
+    'welding_ght_49': ('Welding GHT-49', (255, 140, 0))
 }
 
 def get_card_map_value(item):

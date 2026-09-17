@@ -250,6 +250,7 @@ class Game:
         self.dynamic_w = GAME_WIDTH
         self.dynamic_h = GAME_HEIGHT
 
+
     def get_events(self):
         return pygame.event.get()
 

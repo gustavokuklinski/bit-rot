@@ -9,6 +9,7 @@ from core.entities.item.item import Container
 from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.messages import display_message
+from core.entities.item.item_helpers import has_app
 
 def get_key_name(action):
     val = keybind_manager.kb_binds.get(action)
@@ -60,15 +61,18 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
         if game.player.action_timer > 0:
             display_message(tr('msg', "Busy..."))
         else:
-            agility = game.player.progression.get_level('agility')
-            open_time = max(0.2, 1.8 - (agility * 0.2))
-            
             def do_open_container():
                 if hasattr(container, 'open'):
                     container.open(game)
                     modal['active_tab'] = container.name
 
-            game.player.start_action(tr('ui', "Opening"), open_time, do_open_container, xp_reward=1.5)
+            # Zero timer if SD card app is installed
+            if has_app(game, 'open_container_instant'):
+                do_open_container()
+            else:
+                agility = game.player.progression.get_level('agility')
+                open_time = max(0.2, 1.8 - (agility * 0.2))
+                game.player.start_action(tr('ui', "Opening"), open_time, do_open_container, xp_reward=1.5)
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Nearby"))

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<radio name="City General Backup" frequency="144.1" stream="[08:00, 20:00, random]">
+    <stream text="[STATIC]...This is triage center 4. We are out of morphine and clean bandages...[STATIC]" />
+    <stream text="[STATIC]...Patient zero is still unstable. Please, we need a containment team immediately! [COF][COF]...[STATIC]" />
+    <stream text="[STATIC]...To any surviving medical staff: report to the East Wing for reorganization...[STATIC]" />
+    <stream text="[STATIC]...The infection rate is climbing. We can't keep them out of the ward much longer... [NOISE][SCREAMING]...[STATIC]" />
+    <stream text="[STATIC]...Is anyone receiving this? We have three wounded civilians. Please respond...[STATIC]" />
+</radio>

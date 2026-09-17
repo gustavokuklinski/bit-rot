@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<radio name="Raider Band" frequency="random" stream="[00:00, 23:59, random]">
+    <stream text="[STATIC]...One more down! Let's kill these Rotters!...[STATIC]" />
+    <stream text="[STATIC]...I think I got bit!...[COF]...[COF]... Once and for all let's go! Human or Rotter, death awaits! [STATIC]" />
+    <stream text="[STATIC]...Stop wasting ammo! Just use the pipes! [NOISE][METAL CLANG]...[STATIC]" />
+    <stream text="[STATIC]...We found a supply cache near the highway. Move in, leave no one alive...[STATIC]" />
+    <stream text="[STATIC]...Who the hell is on this channel? Get off or we'll find you! [STATIC]" />
+    <stream text="[STATIC]...More loot, more power. That's the rule...[STATIC]" />
+</radio>

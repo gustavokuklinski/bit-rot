@@ -1,0 +1,10 @@
+<item name="Expanded Bright" type="sd_card" tip="Use with Mobile > Apps">
+    <properties>
+        <sprite file="sd_card.png" />
+        <weight weight="0.0001" />
+        <map value="open_container_instant" />
+        <!-- Passively grants +1 Agility and +1 Intelligence XP every 5 seconds while attached -->
+        <passive_xp intelligence="1" agility="1" interval="5" />
+    </properties>
+    <spawn chance="0" />
+</item>

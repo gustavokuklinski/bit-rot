@@ -293,4 +293,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         new_item.spawn_maptile = template.get('spawn_maptile', [])
         new_item.spawn_layer = template.get('spawn_layer', [])
     
+    new_item.properties = template.get('properties', {})
+    
     return new_item

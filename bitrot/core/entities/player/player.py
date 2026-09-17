@@ -40,7 +40,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         data = player_data or {}
         stats = data.get('stats', {})
         self.progression = PlayerProgression(data)
-
+        self.progression.player = self
+        
         # Stats
         self.name = data.get('name', "Player")
         

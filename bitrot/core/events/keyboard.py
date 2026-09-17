@@ -10,6 +10,7 @@ from core.ui.helpers.keybinds import keybind_manager
 from core.messages import display_message
 from core.systems.utils import get_targeted_interactable
 from core.map.world_layers import set_active_layer
+from core.entities.item.item_helpers import has_app
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -692,8 +693,12 @@ def handle_keyboard_events(game, event, action_triggered=None):
                                 game.modals.append(new_modal)
 
                         if is_closed_maptile:
-                            agility = game.player.progression.get_level('agility')
-                            open_time = max(0.2, 1.8 - (agility * 0.2))
-                            game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+                            # If the SD card is active, open immediately with ZERO timer
+                            if has_app(game, 'open_container_instant'):
+                                open_and_show_modal()
+                            else:
+                                agility = game.player.progression.get_level('agility')
+                                open_time = max(0.2, 1.8 - (agility * 0.2))
+                                game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
                         else:
                             open_and_show_modal()
