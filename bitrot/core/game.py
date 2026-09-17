@@ -30,6 +30,7 @@ from core.states.loading import run_loading
 from core.states.playing import run_playing
 from core.states.paused import run_paused
 from core.states.game_over import run_game_over
+from core.states.chunk_loading import run_chunk_loading
 
 class Game:
     def __init__(self):
@@ -420,6 +421,8 @@ class Game:
                     run_loading(self)
                 elif self.game_state == 'PLAYING':
                     run_playing(self)
+                elif self.game_state == 'CHUNK_LOADING':
+                    run_chunk_loading(self)
                 elif self.game_state == 'PAUSED':
                     run_paused(self)
                 elif self.game_state == 'GAME_OVER':

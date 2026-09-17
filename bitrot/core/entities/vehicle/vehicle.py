@@ -632,7 +632,7 @@ class Vehicle:
         self.update_stats_from_equipment()
         battery_item = self.equipment.get('battery')
         fuel_item = self.equipment.get('fuel')
-
+        speed = self.current_speed_val
 
         if self.active and speed > 0.1 and game:
             # Alert zombies to moving vehicle engine

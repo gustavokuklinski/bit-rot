@@ -47,8 +47,7 @@ class PlayerMovement:
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
             
-            # --- NEW: Dynamic Pixel-Perfect Exit Logic ---
-            # Define 4 tight exit points (Right, Left, Bottom, Top) directly hugging the vehicle's doors
+            # --- Dynamic Pixel-Perfect Exit Logic ---
             exit_points = [
                 (self.vehicle.rect.right + 2, self.vehicle.rect.centery - (self.rect.height / 2)),
                 (self.vehicle.rect.left - self.rect.width - 2, self.vehicle.rect.centery - (self.rect.height / 2)),
@@ -60,7 +59,6 @@ class PlayerMovement:
             for px, py in exit_points:
                 self.rect.topleft = (int(px), int(py))
                 collision = False
-                # Check collision with ALL walls and the vehicle itself
                 for ob in game.obstacles:
                     if self.rect.colliderect(ob):
                         collision = True
@@ -72,7 +70,6 @@ class PlayerMovement:
                     break
             
             if not placed:
-                # Fallback to radial grid search only if perfectly hugged sides are fully blocked by walls
                 self.x = self.vehicle.rect.centerx - (self.rect.width / 2)
                 self.y = self.vehicle.rect.centery - (self.rect.height / 2)
                 self.rect.topleft = (int(self.x), int(self.y))
@@ -81,11 +78,9 @@ class PlayerMovement:
                 if free_pos:
                     self.x, self.y = free_pos
                     self.rect.topleft = (int(self.x), int(self.y))
-            # -------------------------------
             
             self.vehicle = None
             self.vehicle_seat_index = None
-            
             display_message(tr('msg', "Exited vehicle"))
 
     def update_position(self, obstacles, zombies, game):
@@ -130,9 +125,8 @@ class PlayerMovement:
                 
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005 * game.dt_mult)
 
-            # Move the vehicle (handles wall collisions)
+            # Move vehicle
             self.vehicle.move(move_x, move_y, obstacles, game=game)
-            
             vehicle_rect = self.vehicle.rect
             
             # --- ZOMBIE ROADKILL LOGIC ---
@@ -192,9 +186,8 @@ class PlayerMovement:
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
-            # Standard Player Walking Movement (when not in vehicle)
+            # Standard Walking Movement
             def check_collision(rect_check):
-                # Optimize by using collidelistall to only evaluate AABBs we are already touching
                 indices = rect_check.collidelistall(obstacles)
                 for idx in indices:
                     obstacle = obstacles[idx]
@@ -209,34 +202,24 @@ class PlayerMovement:
                         return 'tile'
                 return None
 
-            # [FIX] Calculate terrain/entity speed multiplier
             speed_mult = 1.0
 
-            # 1. Check if over entities (Zombies, NPCs, Animals)
-            # 1. Check if over entities (Zombies, NPCs, Animals)
+            # 1. Check entities push/slowdown
             entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
             for entity in entities:
-                # Broad phase: Rect collision
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
-                    
-                    # Narrow phase: Pixel-perfect mask collision
                     if hasattr(self, 'mask') and hasattr(entity, 'mask') and self.mask and entity.mask:
                         offset = (entity.rect.x - self.rect.x, entity.rect.y - self.rect.y)
                         if not self.mask.overlap(entity.mask, offset):
-                            continue # Skip push if pixels don't actually touch
+                            continue
 
-                    # Make the player struggle significantly more to walk through them
                     speed_mult = min(speed_mult, 0.20) 
                     
-                    # --- PLAYER PUSHES ENTITY (Physics) ---
                     dx = entity.rect.centerx - self.rect.centerx
                     dy = entity.rect.centery - self.rect.centery
                     dist = math.hypot(dx, dy)
                     
-                    # Drastically reduce push power. 
-                    # They will only slowly inch out of the way, making them feel heavy/strong.
                     push_power = 0.5 
-                    
                     if not hasattr(entity, 'knockback_velocity') or isinstance(entity.knockback_velocity, tuple):
                         entity.knockback_velocity = [0.0, 0.0]
                         
@@ -249,7 +232,7 @@ class PlayerMovement:
                         
                     entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 100)
                     
-            # 2. Check if over open window
+            # 2. Window slow down
             gx = self.rect.centerx // TILE_SIZE
             gy = self.rect.centery // TILE_SIZE
             if hasattr(game, 'map_manager'):
@@ -257,18 +240,16 @@ class PlayerMovement:
                 if tile_def:
                     name = tile_def.get('name', '').lower()
                     if 'window' in name or tile_def.get('is_window'):
-                        speed_mult = min(speed_mult, 0.35) # Slow down through windows
+                        speed_mult = min(speed_mult, 0.35)
 
             move_x = self.vx * speed_mult * game.dt_mult
             move_y = self.vy * speed_mult * game.dt_mult
 
-            # --- SUB-STEPPING WITH SLIDE/SNAG RESOLUTION ---
+            # Sub-stepping with slide resolution
             total_dist = max(abs(move_x), abs(move_y))
             steps = max(1, int(math.ceil(total_dist)))
             step_x = move_x / steps
             step_y = move_y / steps
-
-            # Increased slide tolerance to easily slip past jagged/diagonal masks
             max_slide = 4 
 
             for _ in range(steps):
@@ -278,21 +259,19 @@ class PlayerMovement:
                 if check_collision(self.rect) == 'tile':
                     resolved = False
                     for offset in range(1, max_slide + 1):
-                        # Try sliding vertically UP
                         self.rect.y -= offset
                         if check_collision(self.rect) != 'tile':
                             self.y -= offset
                             resolved = True
                             break
-                        self.rect.y += offset  # Revert UP attempt
+                        self.rect.y += offset
 
-                        # Try sliding vertically DOWN
                         self.rect.y += offset
                         if check_collision(self.rect) != 'tile':
                             self.y += offset
                             resolved = True
                             break
-                        self.rect.y -= offset  # Revert DOWN attempt
+                        self.rect.y -= offset
 
                     if not resolved:
                         self.x -= step_x
@@ -304,21 +283,19 @@ class PlayerMovement:
                 if check_collision(self.rect) == 'tile':
                     resolved = False
                     for offset in range(1, max_slide + 1):
-                        # Try sliding horizontally LEFT
                         self.rect.x -= offset
                         if check_collision(self.rect) != 'tile':
                             self.x -= offset
                             resolved = True
                             break
-                        self.rect.x += offset  # Revert LEFT attempt
+                        self.rect.x += offset
 
-                        # Try sliding horizontally RIGHT
                         self.rect.x += offset
                         if check_collision(self.rect) != 'tile':
                             self.x += offset
                             resolved = True
                             break
-                        self.rect.x -= offset  # Revert RIGHT attempt
+                        self.rect.x -= offset
 
                     if not resolved:
                         self.y -= step_y
@@ -326,8 +303,6 @@ class PlayerMovement:
 
         # --- CHUNK TRANSITION LOGIC ---
         if not getattr(game, 'is_giant_map', False):
-            #chunk_width_px = game.CHUNK_SIZE * TILE_SIZE
-            #chunk_height_px = game.CHUNK_SIZE * TILE_SIZE
             chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
             chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
 
@@ -342,7 +317,6 @@ class PlayerMovement:
                 new_gx, new_gy = gx, gy
                 transition = False
                 
-                # We check the center of the player/vehicle to see if they crossed the boundary
                 target = self.vehicle if self.vehicle else self
                 
                 if target.rect.centerx < 0:
@@ -362,20 +336,20 @@ class PlayerMovement:
                 if transition:
                     new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
 
+                    # --- ON-DEMAND GENERATION: Generate chunk as player enters it ---
                     if new_map not in game.map_manager.map_files:
                         if hasattr(game, 'generator') and game.generator:
                             if 0 <= new_gx < game.generator.grid_w and 0 <= new_gy < game.generator.grid_h:
                                 game.generator.generate_chunk_on_demand(new_gx, new_gy)
                                 game.map_manager.refresh_maps()
 
-                    # Check if the map file exists in the manager
+                    # Check if the map file exists in the manager now
                     if new_map in game.map_manager.map_files:
                         print(f"Transitioning to chunk: {new_map}")
                         
                         # --- CACHE DEPARTING CHUNK STATE ---
                         game.map_states.setdefault(current_map, {})
                         
-                        # [FIX] Filter out chasing entities so they travel with the player
                         chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
                         game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]
                         
@@ -384,10 +358,8 @@ class PlayerMovement:
                             chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
                             game.map_states[current_map]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
                         
-                        # Animals are also kept in items_on_ground for rendering purposes, remove chasing ones from cache
                         game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
                             
-                        # Keep followers with the player so they don't get cached away
                         followers = []
                         chunk_npcs = []
                         if hasattr(game, 'npcs'):
@@ -398,7 +370,6 @@ class PlayerMovement:
                                     chunk_npcs.append(npc)
                             game.map_states[current_map]['npcs'] = chunk_npcs
                             
-                        # Cache vehicles & containers (excluding the one the player is currently driving to prevent clones)
                         clean_containers = [c for c in game.containers if c != self.vehicle]
                         game.map_states[current_map]['containers'] = clean_containers
                         
@@ -406,25 +377,22 @@ class PlayerMovement:
                             clean_vehicles = [v for v in game.map_manager.vehicles if v != self.vehicle]
                             game.map_states[current_map]['vehicles'] = clean_vehicles
                         
-                        # Adjust coordinates for wrap-around
                         entities_to_teleport = [target] + followers + chasing_zombies + chasing_animals
                         
                         old_width = chunk_width_px
                         old_height = chunk_height_px
                         
-                        # Load the new chunk FIRST so its true dynamic dimensions exist in memory!
                         game.load_map(new_map)
                         
                         new_width = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
                         new_height = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
                         
-                        # Adjust coordinates dynamically depending on which edge was crossed
                         for ent in entities_to_teleport:
-                            if new_gx < gx: ent.x += new_width     # Walked left -> appear at right edge of NEW map
-                            elif new_gx > gx: ent.x -= old_width   # Walked right -> appear at left edge (subtracted old map width)
+                            if new_gx < gx: ent.x += new_width
+                            elif new_gx > gx: ent.x -= old_width
                             
-                            if new_gy < gy: ent.y += new_height    # Walked up -> appear at bottom edge of NEW map
-                            elif new_gy > gy: ent.y -= old_height  # Walked down -> appear at top edge
+                            if new_gy < gy: ent.y += new_height
+                            elif new_gy > gy: ent.y -= old_height
                             
                             ent.rect.topleft = (int(ent.x), int(ent.y))
                             
@@ -435,7 +403,6 @@ class PlayerMovement:
                         
                         # --- RESTORE NEW CHUNK STATE ---
                         if new_map in game.map_states:
-                            # Re-populate from Memory
                             game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
                             game.zombies = game.map_states[new_map].get('zombies', [])
                             if hasattr(game, 'active_animals'):
@@ -448,27 +415,22 @@ class PlayerMovement:
                                     
                             if 'containers' in game.map_states[new_map]:
                                 default_container_rects = [c.rect for c in game.containers]
-                                # Identify which of the default containers were actually parsed as obstacles
                                 obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
-                                
                                 game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
-                                
                                 game.containers = game.map_states[new_map]['containers']
                                 for c in game.containers:
-                                    # Only add back to obstacles if it was originally an obstacle
                                     if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
                                         game.obstacles.append(c.rect)
                                         
                             if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
                                 default_veh_rects = [v.rect for v in game.map_manager.vehicles]
                                 game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
-                                
                                 game.map_manager.vehicles = game.map_states[new_map]['vehicles']
                                 for v in game.map_manager.vehicles:
                                     if v.rect not in game.obstacles:
                                         game.obstacles.append(v.rect)
                         else:
-                            # First time ever visiting this chunk! Convert the raw map points into dynamic entities.
+                            # First time visiting chunk
                             game.items_on_ground = []
                             game.zombies = []
                             if hasattr(game, 'active_animals'):
@@ -482,7 +444,6 @@ class PlayerMovement:
                                     for _ in range(random.randint(1, 2)):
                                         z = Zombie.create_random(szx, szy)
                                         if z:
-                                            # [FIX] Robust Spatial Spawn - Automatically shifts entity until it's not inside a wall
                                             free_pos = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
                                             if free_pos:
                                                 z.rect.topleft = free_pos
@@ -490,25 +451,12 @@ class PlayerMovement:
                                                 game.zombies.append(z)
                                         
                             if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
-                                
                                 for spawn_data in game.npc_spawn_points:
-                                    if len(spawn_data) == 3:
-                                        nx, ny, npc_type = spawn_data
-                                    else:
-                                        nx, ny = spawn_data
-                                        npc_type = 'NPC'
-                                        
+                                    nx, ny = spawn_data[0], spawn_data[1]
+                                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'NPC'
                                     is_static = (npc_type == 'SNPC')
-                                    
                                     npc = NPC(nx, ny, game, is_static=is_static)
-                                    
-                                    if npc_type == 'NPC':
-                                        npc.is_friendly = False   
-                                        npc.is_static = False     
-                                    elif npc_type == 'SNPC':
-                                        npc.is_friendly = True    
-                                        npc.is_static = True      
-                                        
+                                    npc.is_friendly = is_static
                                     free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
                                     if free_pos:
                                         npc.rect.topleft = free_pos
@@ -519,11 +467,9 @@ class PlayerMovement:
                                 from core.entities.animal.animal import Animal
                                 from core.entities.animal.animal_loader import AnimalLoader
                                 AnimalLoader.load_animals()
-
                                 curr_layer = getattr(game, 'current_layer_index', 1)
                                 valid_animal_types = []
                                 valid_weights = []
-
                                 for a_name, a_def in AnimalLoader.definitions.items():
                                     allowed = a_def.get('spawn_layers', [1, 2])
                                     if curr_layer in allowed:
@@ -535,10 +481,8 @@ class PlayerMovement:
                                     for _ in range(num_to_spawn):
                                         ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
                                         ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
-                                        
                                         animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                                         animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
-                                        
                                         free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
                                         if free_pos:
                                             animal_obj.rect.topleft = free_pos
@@ -546,39 +490,35 @@ class PlayerMovement:
                                             game.active_animals.append(animal_obj)
                                             game.items_on_ground.append(animal_obj)
                                     
-                        # Make sure followers aren't lost
                         if hasattr(game, 'npcs'):
                             for f_npc in followers:
                                 game.npcs.add(f_npc)
 
-                        # [FIX] Re-attach chasing entities to the new active chunk
                         game.zombies.extend(chasing_zombies)
                         if hasattr(game, 'active_animals'):
                             game.active_animals.extend(chasing_animals)
-                            # Re-add animals to ground rendering list
                             game.items_on_ground.extend(chasing_animals)
 
-                        # Re-attach driving vehicle to the new chunk
                         if self.vehicle:
                             if self.vehicle not in game.containers:
                                 game.containers.append(self.vehicle)
                             if hasattr(game.map_manager, 'vehicles') and self.vehicle not in game.map_manager.vehicles:
                                 game.map_manager.vehicles.append(self.vehicle)
-                                
-                            # Ensure the driven vehicle is NOT in obstacles so it doesn't collide with itself
                             if self.vehicle.rect in game.obstacles:
                                 game.obstacles.remove(self.vehicle.rect)
-                                
+
                         # Prevent physics explosions due to the chunk load time spike
                         if hasattr(game, 'last_time'):
                             game.last_time = pygame.time.get_ticks()
                         if hasattr(game, 'dt_ms'):
                             game.dt_ms = 16.0
                             game.dt_mult = 1.0
-                                
+
+                        # --- TRIGGER CHUNK LOADING SCREEN ---
+                        game.game_state = 'CHUNK_LOADING'
                         return
                     else:
-                        # Revert movement if walking into map bounds where no chunk exists
+                        # Revert movement if walking into map bounds where no chunk exists or blocked
                         if target.rect.centerx < 0: target.x = 0
                         elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
                         if target.rect.centery < 0: target.y = 0

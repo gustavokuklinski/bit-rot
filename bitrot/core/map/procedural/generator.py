@@ -73,67 +73,74 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
 
     def _generate_hamiltonian_progression(self, w, h):
         """
-        Generates a Hamiltonian path visiting all w * h chunks in sequence.
-        Only consecutive steps in the path have open road connections.
+        Generates a randomized winding block path visiting ALL w * h chunks.
+        Start = Player Chunk
+        End = Military Chunk
+        Only consecutive chunks along the path are connected; all other borders are walled off.
         """
         total_nodes = w * h
+        all_cells = [(x, y) for x in range(w) for y in range(h)]
 
-        # Exact 2x2 order requested:
-        # [MILITARY (0,0)][PLAYER (1,0)]
-        # [CHUNK N.2 (0,1)][CHUNK N.1 (1,1)]
-        # Path: (1,0) -> (1,1) -> (0,1) -> (0,0)
-        if w == 2 and h == 2:
-            path = [(1, 0), (1, 1), (0, 1), (0, 0)]
+        # On odd bipartite grids, Hamiltonian path must start on majority color
+        if total_nodes % 2 == 1:
+            possible_starts = [c for c in all_cells if (c[0] + c[1]) % 2 == 0]
         else:
-            def get_unvisited_neighbors(x, y, visited):
-                nbrs = []
-                for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
-                        nbrs.append((nx, ny))
-                return nbrs
+            possible_starts = list(all_cells)
 
-            found_path = None
-            for _ in range(300):
-                sx = random.randint(0, w - 1)
-                sy = random.randint(0, h - 1)
-                if total_nodes % 2 == 1 and (sx + sy) % 2 != 0:
-                    continue
+        def get_unvisited_neighbors(cx, cy, visited):
+            nbrs = []
+            for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
+                    nbrs.append((nx, ny))
+            return nbrs
 
-                curr_path = [(sx, sy)]
-                visited = {(sx, sy)}
+        # Randomized Warnsdorff DFS
+        found_path = None
+        for _ in range(500):
+            start = random.choice(possible_starts)
+            path = [start]
+            visited = {start}
 
-                while len(curr_path) < total_nodes:
-                    cx, cy = curr_path[-1]
-                    nbrs = get_unvisited_neighbors(cx, cy, visited)
-                    if not nbrs:
-                        break
-                    # Warnsdorff heuristic
-                    nbrs.sort(key=lambda n: (len(get_unvisited_neighbors(n[0], n[1], visited)), random.random()))
-                    next_node = nbrs[0]
-                    visited.add(next_node)
-                    curr_path.append(next_node)
-
-                if len(curr_path) == total_nodes:
-                    found_path = curr_path
+            while len(path) < total_nodes:
+                curr = path[-1]
+                nbrs = get_unvisited_neighbors(curr[0], curr[1], visited)
+                if not nbrs:
                     break
+                nbrs.sort(key=lambda n: (len(get_unvisited_neighbors(n[0], n[1], visited)), random.random()))
+                nxt = nbrs[0]
+                visited.add(nxt)
+                path.append(nxt)
 
-            if found_path:
-                path = found_path
-            else:
-                # Serpentine fallback
-                path = []
-                for y in range(h):
-                    xs = range(w) if y % 2 == 0 else range(w - 1, -1, -1)
-                    for x in xs:
-                        path.append((x, y))
+            if len(path) == total_nodes:
+                found_path = path
+                break
 
+        if not found_path:
+            # Fallback randomized serpentine path
+            base = []
+            for y in range(h):
+                xs = range(w) if y % 2 == 0 else range(w - 1, -1, -1)
+                for x in xs:
+                    base.append((x, y))
+            if random.random() < 0.5:
+                base.reverse()
+            flip_h = random.choice([True, False])
+            flip_v = random.choice([True, False])
+            found_path = [((w - 1 - x) if flip_h else x, (h - 1 - y) if flip_v else y) for (x, y) in base]
+
+        path = found_path
+        start_chunk = path[0]
+        military_chunk = path[-1]
+        print(f"[Progression] {w}x{h} random winding path ({len(path)} chunks):")
+        print(f"  [START] {start_chunk} -> ... -> [GOAL] {military_chunk}")
+
+        # Build connections: ONLY consecutive steps in the path are open!
         connections_grid = [[{
             'top': False, 'bottom': False, 'left': False, 'right': False,
             'top_type': 'asphalt', 'bottom_type': 'asphalt', 'left_type': 'asphalt', 'right_type': 'asphalt'
         } for _ in range(w)] for _ in range(h)]
 
-        # Open connections ONLY between consecutive chunks in the path
         for i in range(len(path) - 1):
             x1, y1 = path[i]
             x2, y2 = path[i + 1]
@@ -174,13 +181,13 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         self.grid_w = grid_w
         self.grid_h = grid_h
 
-        print(f"[ProceduralGenerator] Seed: {actual_seed} | Grid: {grid_w}x{grid_h}")
+        print(f"[ProceduralGenerator] Seed: {actual_seed} | Size: {grid_w}x{grid_h}")
         random.seed(actual_seed)
 
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
 
-        # 1. Generate Progression Path & Connections
+        # 1. Generate Randomized Winding Progression Path
         self.chunk_path, self.connections_grid = self._generate_hamiltonian_progression(grid_w, grid_h)
         start_gx, start_gy = self.chunk_path[0]
         military_gx, military_gy = self.chunk_path[-1]
@@ -230,49 +237,48 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 if pool: global_l2_deck.append(pool.pop())
         random.shuffle(global_l2_deck)
 
-        # 3. Assign Buildings to Path
+        # 3. Assign Building Decks along the Path
         all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
         self.chunk_priority_map = {coord: [] for coord in all_coords}
         self.chunk_l2_priority_map = {coord: [] for coord in all_coords}
 
-        # Add Cave to each chunk
         cave_temps = self.categorized_templates.get('Cave', [])
         if cave_temps:
             for coord in all_coords:
                 self.chunk_priority_map[coord].append(random.choice(cave_temps))
 
-        # Assign Military Chunk
+        # Assign Military Chunk at path[-1]
         mil_coord = (military_gx, military_gy)
         if self.military_template: self.chunk_priority_map[mil_coord].append(self.military_template)
         if self.heli_template: self.chunk_priority_map[mil_coord].append(self.heli_template)
         if self.mil_petrol_template: self.chunk_priority_map[mil_coord].append(self.mil_petrol_template)
 
-        # Distribute remaining buildings across intermediate chunks
-        intermediate_chunks = [c for c in self.chunk_path if c != mil_coord]
-        if intermediate_chunks and global_deck:
+        # Distribute remaining buildings across the intermediate chunks
+        intermediate = [c for c in self.chunk_path if c != mil_coord]
+        if intermediate and global_deck:
             idx = 0
             for tmpl in global_deck:
-                self.chunk_priority_map[intermediate_chunks[idx]].append(tmpl)
-                idx = (idx + 1) % len(intermediate_chunks)
+                self.chunk_priority_map[intermediate[idx]].append(tmpl)
+                idx = (idx + 1) % len(intermediate)
 
-        if intermediate_chunks and global_l2_deck:
+        if intermediate and global_l2_deck:
             idx = 0
             for tmpl in global_l2_deck:
-                self.chunk_l2_priority_map[intermediate_chunks[idx]].append(tmpl)
-                idx = (idx + 1) % len(intermediate_chunks)
+                self.chunk_l2_priority_map[intermediate[idx]].append(tmpl)
+                idx = (idx + 1) % len(intermediate)
 
         # 4. Attach Generator to Game
         self.game.generator = self
         self.generated_chunks = set()
 
-        # 5. Generate Start Chunk and Military Chunk
-        print(f"[ProceduralGenerator] Generating Player Start Chunk ({start_gx}, {start_gy})...")
+        # 5. Generate ONLY Player Start Chunk and Military Chunk initially
+        print(f"[ProceduralGenerator] Generating Player Chunk ({start_gx}, {start_gy})...")
         self.generate_chunk_on_demand(start_gx, start_gy)
 
         print(f"[ProceduralGenerator] Pre-generating Military Goal Chunk ({military_gx}, {military_gy})...")
         self.generate_chunk_on_demand(military_gx, military_gy)
 
-        # Save macro world metadata
+        # Save macro metadata
         macro_meta_path = os.path.join(self.output_folder, "macro_world.json")
         try:
             with open(macro_meta_path, "w") as f:
@@ -293,18 +299,16 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         return f"map_L1_{start_gx}_{start_gy}_map.csv"
 
     def generate_chunk_on_demand(self, gx, gy):
-        """Generates a chunk dynamically as the player enters it."""
+        """Generates a chunk's CSV files dynamically when the player enters it."""
         if (gx, gy) in self.generated_chunks:
             return
 
         conns = self.connections_grid[gy][gx]
         is_start = ((gx, gy) == self.chunk_path[0])
-        is_military = ((gx, gy) == self.chunk_path[-1])
         
         assigned_buildings = self.chunk_priority_map.get((gx, gy), [])
         assigned_l2 = self.chunk_l2_priority_map.get((gx, gy), [])
 
-        # Outer world borders
         coast_left = (gx == 0)
         coast_right = (gx == self.grid_w - 1)
         coast_top = (gy == 0)
@@ -342,7 +346,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         if hasattr(self, '_scatter_quest_items'):
             self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
 
-        # Starting Chunk Player Spawn
+        # Player spawn marker on starting chunk
         if is_start:
             has_p = any('P' in row for row in l1_layers['spawn'])
             if not has_p:
@@ -366,9 +370,9 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         if hasattr(self, '_scatter_quest_items'):
             self._scatter_quest_items(l2_layers, None, c_w, c_h, 2)
 
-        # Save Layer 1 and Layer 2 files
+        # Save CSV files directly
         self._save_chunk(f"map_L1_{gx}_{gy}", l1_layers)
         self._save_chunk(f"map_L2_{gx}_{gy}", l2_layers)
 
         self.generated_chunks.add((gx, gy))
-        print(f"[ProceduralGenerator] On-demand generated chunk ({gx}, {gy}) successfully.")
+        print(f"[ProceduralGenerator] Generated chunk ({gx}, {gy}) successfully.")
