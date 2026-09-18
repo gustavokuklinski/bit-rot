@@ -374,7 +374,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 player_is_far_and_following = True
 
         weapon = getattr(self, 'equipped_weapon', None)
-        search_range = self.base_search_range 
+        # 5-tile radius default for NPCs
+        search_range = getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE)
 
         if not self.is_friendly and game.player:
             if getattr(game.player, 'is_aiming', False):
@@ -383,7 +384,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 search_range *= 1.5
 
         is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
-        if is_ranged_weapon: search_range = self.base_search_range * 2 
+        if is_ranged_weapon:
+            search_range = search_range * 1.5
+
+        # Store for debug visualization
+        self.current_detection_range = search_range
 
         potential_targets = []
         
@@ -414,10 +419,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     continue
 
                 dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
-                if dist < search_range and dist < min_dist_to_target:
-                    min_dist_to_target = dist
-                    target_entity = entity
-                    self.state = 'chasing'
+                if dist <= search_range and dist < min_dist_to_target:
+                    # Line of sight check before engaging
+                    if self.has_line_of_sight(entity.rect, game, current_time):
+                        min_dist_to_target = dist
+                        target_entity = entity
+                        self.state = 'chasing'
+                        if entity == game.player and not self.is_friendly:
+                            self.alert_nearby_zombies(game, search_range)
 
         if is_aggroed:
             if attacker and not attacker.is_dead:

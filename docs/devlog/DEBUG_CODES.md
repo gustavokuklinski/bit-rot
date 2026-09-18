@@ -19,3 +19,7 @@
 `%rot spawn zombies`	Respawns zombies on the map's 'Z' markers
 `%rot spawn npc`	Respawns NPCs on the map's 'NPC' and 'SNPC' markers
 `%rot spawn animals`	Respawns diverse animals on the map's 'ANM' markers
+
+`%rot radius all` Display a radius debug on Zombies and Hostile NPCs
+`%rot radius hostilenpc` Display a radius debug on Hostile NPCs
+`%rot radius off` Turn off the radius

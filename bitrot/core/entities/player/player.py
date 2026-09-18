@@ -234,7 +234,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         # Stealth bonus if hiding on a bed/bench
         if is_recovery_tile and self.saved_detection_radius is None:
             self.saved_detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
-            core.data.config.ZOMBIE_DETECTION_RADIUS = core.data.config.ZOMBIE_DETECTION_RADIUS * core.data.config.ZOMBIE_MULTIPLIER
+            core.data.config.ZOMBIE_DETECTION_RADIUS = int(core.data.config.ZOMBIE_DETECTION_RADIUS * 0.5)
             print(f"Stealth Mode: Radius set to {core.data.config.ZOMBIE_DETECTION_RADIUS}")
 
         elif not is_recovery_tile and self.saved_detection_radius is not None:

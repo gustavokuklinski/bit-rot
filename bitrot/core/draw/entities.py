@@ -1,10 +1,48 @@
 import pygame
 import math
 import random
-from core.data.config import TILE_SIZE, WHITE
+import core.data.config
+from core.data.config import *
 from core.entities.zombie.zombie import Zombie
 from core.entities.npc.npc import NPC
 from core.entities.animal.animal import Animal
+
+def draw_debug_radius(game, surface, offset_x, offset_y):
+    mode = getattr(game, 'debug_radius_mode', None)
+    if not mode or not getattr(game, 'player', None):
+        return
+
+    current_time = pygame.time.get_ticks()
+    player_rect = game.player.rect
+
+    entities_to_draw = []
+
+    # 1. Hostile NPCs
+    if hasattr(game, 'npcs'):
+        for npc in game.npcs:
+            if not getattr(npc, 'is_dead', False) and not getattr(npc, 'is_friendly', True) and not getattr(npc, 'is_static', False):
+                radius = getattr(npc, 'current_detection_range', getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE))
+                entities_to_draw.append((npc, radius))
+
+    # 2. Zombies (when mode is 'all')
+    if mode == 'all':
+        for z in getattr(game, 'active_zombies', game.zombies):
+            if not getattr(z, 'is_dead', False) and getattr(z, 'type', 'zombie') != 'animal':
+                radius = getattr(z, 'current_detection_radius', getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE))
+                entities_to_draw.append((z, radius))
+
+    # 3. Draw radius rings
+    for entity, radius in entities_to_draw:
+        cx = int(entity.rect.centerx + offset_x)
+        cy = int(entity.rect.centery + offset_y)
+        r = int(radius)
+
+        # RED when in line-of-sight, BLUE when blocked by obstacles
+        has_los = entity.has_line_of_sight(player_rect, game, current_time) if hasattr(entity, 'has_line_of_sight') else False
+        color = (255, 50, 50) if has_los else (60, 120, 255)
+
+        pygame.draw.circle(surface, color, (cx, cy), r, 2)
+        pygame.draw.circle(surface, color, (cx, cy), 2)
 
 def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect, zoom):
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
@@ -89,3 +127,5 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
 
     game.player.draw_highlight_stairs(surface, game, offset_x, offset_y)
     game.player.draw(surface, offset_x, offset_y, getattr(game.player, 'is_aiming', False))
+    draw_debug_radius(game, surface, offset_x, offset_y)
+

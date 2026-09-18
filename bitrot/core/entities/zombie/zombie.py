@@ -128,10 +128,10 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         self.knockback_timer = 0
 
         self.last_los_check_time = 0
-        self.los_check_interval = 2000  
+        self.los_check_interval = 200  
         self.cached_los_result = True
         self.last_trigger_check_time = 0
-        self.trigger_check_interval = 1000  
+        self.trigger_check_interval = 100  
         self.cached_trigger_result = False
 
         self.inventory = []

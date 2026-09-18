@@ -165,16 +165,16 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             w_hours = total_game_mins_left // 60
 
             if weather_state == 'RAIN':
-                weather_label = "Raining"
+                weather_label = tr('ui', "Raining")
                 weather_color = (100, 200, 255)
             elif weather_state == 'FOG':
-                weather_label = "Fog"
+                weather_label = tr('ui', "Fog")
                 weather_color = (200, 215, 225)
             elif weather_state == 'RAIN_FOG':
-                weather_label = "Raining with Fog"
+                weather_label =  tr('ui', "Raining with Fog")
                 weather_color = (130, 210, 255)
             else:
-                weather_label = f"Clear ({w_hours}h)"
+                weather_label = tr('ui', "Clear")
                 weather_color = (255, 170, 100) if w_hours <= 2 else WHITE
         else:
             time_str = tr('ui', "No Signal")

@@ -32,6 +32,29 @@ class ZombieAI:
         self.state = 'chasing'
         self.path = []  # Force immediate path calculation toward noise
 
+    def alert_nearby_zombies(self, game, radius):
+        """Alerts nearby zombies within the radius to converge on the player."""
+        current_time = pygame.time.get_ticks()
+        if current_time - getattr(self, '_last_alert_call_time', 0) < 2000:
+            return
+        self._last_alert_call_time = current_time
+
+        rad_sq = radius * radius
+        zombies_to_check = getattr(game, 'active_zombies', [])
+        if not zombies_to_check:
+            zombies_to_check = getattr(game, 'zombies', [])
+
+        for z in zombies_to_check:
+            if z is self or getattr(z, 'is_dead', False):
+                continue
+            dx = z.rect.centerx - self.rect.centerx
+            dy = z.rect.centery - self.rect.centery
+            if (dx * dx + dy * dy) <= rad_sq:
+                z.aggro_timer = max(getattr(z, 'aggro_timer', 0), 8000)
+                z.state = 'chasing'
+                if hasattr(z, 'path'):
+                    z.path = []
+
     def has_line_of_sight(self, target_rect, game, current_time):
         """Checks if there is an uninterrupted line between entity and target."""
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
@@ -225,7 +248,7 @@ class ZombieAI:
 
         
 
-        detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
+        detection_radius = getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE)
         if target_entity == game.player and getattr(game.player, 'is_aiming', False):
             detection_radius *= 0.5
         elif target_entity == game.player and getattr(game.player, 'is_running', False):
@@ -235,35 +258,40 @@ class ZombieAI:
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
         can_see_target = self.has_line_of_sight(target_rect, game, current_time)
 
+        # Store for debug visualization
+        self.current_detection_radius = detection_radius
+        self.can_see_player = can_see_target
+
         target_pos = None
 
-        # -------------------------------------------------------------
-        # CONTAINED / CLOSED PLACE & OPEN ENTRANCE CHECK
-        # -------------------------------------------------------------
+        # Player MUST be within the 5-tile detection zone
+        in_detection_zone = dist_to_target_sq <= detection_radius_sq
         player_is_reachable = False
-        if not can_see_target and dist_to_target_sq <= detection_radius_sq and not has_active_noise:
-            # Check if there is an unobstructed route through open doors or windows
-            check_path = self._get_path_astar(self.rect.center, target_rect.center, game, allow_break_obstacles=False)
-            if check_path is not None:
+
+        if in_detection_zone:
+            if can_see_target:
                 player_is_reachable = True
-        elif can_see_target:
-            player_is_reachable = True
+            elif not has_active_noise:
+                # Behind an obstacle: check if an open door/window allows a clear path
+                check_path = self._get_path_astar(self.rect.center, target_rect.center, game, allow_break_obstacles=False)
+                if check_path is not None:
+                    player_is_reachable = True
 
         # State Decision
         if has_active_noise:
-            # Chasing noise source
             self.state = 'chasing'
             target_pos = self.noise_target
         elif is_aggroed:
-            # Taking damage forces retaliation
             self.state = 'chasing'
             target_pos = target_rect.center
-        elif can_see_target or (dist_to_target_sq <= detection_radius_sq and player_is_reachable):
-            # Direct line of sight OR open door/window allows chase
+        elif in_detection_zone and player_is_reachable:
+            # Sensed/seen within 5 tiles: initiate chase and alert nearby horde
             self.state = 'chasing'
             target_pos = target_rect.center
 
-            # Attack check
+            if target_entity == game.player:
+                self.alert_nearby_zombies(game, detection_radius)
+
             attack_range_sq = (self.attack_range) ** 2
             if dist_to_target_sq < attack_range_sq:
                 if current_time - getattr(self, 'last_attack_time', 0) > 1000:
@@ -272,7 +300,7 @@ class ZombieAI:
                     self.vx, self.vy = 0, 0
                     return
         else:
-            # Player is in a fully closed place with doors/windows shut -> WANDER!
+            # Outside 5 tiles OR behind a sealed wall -> Keep wandering!
             self.state = 'wandering'
 
             # Ambient moans/groans only when wandering

@@ -529,6 +529,29 @@ def process_chat_command(game, text):
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
         return True
 
+    if command.startswith("radius"):
+        sub = command.replace("radius", "").strip()
+        if sub in ("all", ""):
+            if getattr(game, 'debug_radius_mode', None) == 'all':
+                game.debug_radius_mode = None
+                display_message(game, "[Debug] Detection radius display: OFF")
+            else:
+                game.debug_radius_mode = 'all'
+                display_message(game, "[Debug] Detection radius display: ALL (Zombies & Hostile NPCs)")
+            return True
+        elif sub in ("hostilenpc", "npc", "hostile"):
+            if getattr(game, 'debug_radius_mode', None) == 'hostilenpc':
+                game.debug_radius_mode = None
+                display_message(game, "[Debug] Detection radius display: OFF")
+            else:
+                game.debug_radius_mode = 'hostilenpc'
+                display_message(game, "[Debug] Detection radius display: Hostile NPCs only")
+            return True
+        elif sub in ("off", "none", "disable"):
+            game.debug_radius_mode = None
+            display_message(game, "[Debug] Detection radius display: OFF")
+            return True
+            
     return False
 
 def reset_modal_positions(game):

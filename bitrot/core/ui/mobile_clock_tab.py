@@ -96,21 +96,19 @@ def draw_clock_tab(surface, game, modal, assets):
     # --- 5. Weather Info ---
     try:
         current_weather = getattr(game.world_time, 'weather', 'CLEAR')
-        weather_timer_ms = getattr(game.world_time, 'weather_timer', 0)
-        
-        timer_in_game_minutes = int((weather_timer_ms / game.world_time.day_length_ms) * 24 * 60)
-        timer_hours = timer_in_game_minutes // 60
+        current_state = getattr(game.world_time, 'state', 'DAY')
+        is_night = current_state in ["NIGHT", "TRANSITION_TO_NIGHT"]
 
         if current_weather == 'RAIN':
-            weather_text = "Raining"
+            weather_text = tr('ui', "Rain")
         elif current_weather == 'FOG':
-            weather_text = "Fog"
+            weather_text = tr('ui', "Fog")
         elif current_weather == 'RAIN_FOG':
-            weather_text = "Raining with Fog"
+            weather_text = tr('ui', "Rain with Fog")
         else:
-            weather_text = f"{tr('ui', 'Weather: Clear')} ({timer_hours}h)"
+            weather_text = tr('ui', "Night") if is_night else tr('ui', "Day")
     except Exception:
-        weather_text = tr('ui', "Weather: Unknown")
+        weather_text = tr('ui', "Day")
         
     weather_surf = font_12.render(weather_text, False, WHITE)
     weather_rect = weather_surf.get_rect(center=(center_x, y_offset))

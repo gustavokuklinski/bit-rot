@@ -46,7 +46,7 @@ class BaseModal:
         self.assets = assets
         self.title = tr('modal', title)
         
-        default_w, default_h = MODAL_DIMENSIONS.get(modal.get('type', ''), (244, 240))
+        default_w, default_h = MODAL_DIMENSIONS.get(modal.get('type', ''), (256, 240))
         self.modal_w = w or default_w
         self.modal_h = h or default_h
         

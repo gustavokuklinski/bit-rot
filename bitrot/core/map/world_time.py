@@ -167,15 +167,6 @@ class WorldTime:
             self.game_time_ms %= self.day_length_ms
             self.day_count += 1
 
-            z_mult = core.data.config.ZOMBIE_MULTIPLIER * self.day_count
-            core.data.config.ZOMBIES_PER_SPAWN *= z_mult
-            core.data.config.ZOMBIE_INFECTION_CHANCE *= z_mult
-            
-            if hasattr(self.game.player, 'saved_detection_radius') and self.game.player.saved_detection_radius is not None:
-                self.game.player.saved_detection_radius *= z_mult
-            else:
-                core.data.config.ZOMBIE_DETECTION_RADIUS *= z_mult
-            
             check_milestone_progress(self.game, 'days', 'world_day')
             display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})")
             

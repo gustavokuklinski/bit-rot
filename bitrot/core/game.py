@@ -127,8 +127,8 @@ class Game:
         self.modals = []
         self.saved_modals = [] 
 
-        right_panel_x = GAME_WIDTH - 244
-        messages_panel_y = GAME_HEIGHT - 244
+        right_panel_x = GAME_WIDTH - 256
+        messages_panel_y = GAME_HEIGHT - 256
         
         self.last_modal_positions = {
             'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
