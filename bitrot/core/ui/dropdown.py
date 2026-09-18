@@ -37,9 +37,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
     menu_rect = pygame.Rect(menu_x, menu_y, max_width, menu_height)
     
     # Draw main menu background
-    s = pygame.Surface((max_width, menu_height), pygame.SRCALPHA)
-    s.fill((20, 20, 20, 220))
-    surface.blit(s, menu_rect.topleft)
+    pygame.draw.rect(surface, BLACK, menu_rect)
     pygame.draw.rect(surface, WHITE, menu_rect, 1)
     
     menu_state['rects'] = []
@@ -135,9 +133,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                 surface.blit(arrow_surf, (parent_rect.right - padding - arrow_surf.get_width(), parent_rect.y + (item_height - arrow_surf.get_height()) // 2))
 
             # Draw submenu
-            sub_s = pygame.Surface((sub_max_width, sub_height), pygame.SRCALPHA)
-            sub_s.fill((20, 20, 20, 220))
-            surface.blit(sub_s, sub_rect.topleft)
+            pygame.draw.rect(surface, BLACK, sub_rect)
             pygame.draw.rect(surface, WHITE, sub_rect, 1)
 
             for i, sub_label in enumerate(sub_labels):
@@ -213,9 +209,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             tt_y = max(5, min(t_pos[1] + 15, GAME_HEIGHT - tt_h - 5))
 
         tt_rect = pygame.Rect(tt_x, tt_y, tt_w, tt_h)
-        s_tooltip = pygame.Surface((tt_w, tt_h), pygame.SRCALPHA)
-        s_tooltip.fill((20, 20, 20, 245))
-        surface.blit(s_tooltip, tt_rect.topleft)
+        pygame.draw.rect(surface, BLACK, tt_rect)
         pygame.draw.rect(surface, WHITE, tt_rect, 1)
 
         for line_idx, line in enumerate(lines):

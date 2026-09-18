@@ -36,7 +36,7 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
         if item and player.active_weapon and item.id == player.active_weapon.id:
             pygame.draw.rect(surface, YELLOW, slot_rect, 2, 3)
         else:
-            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+            pygame.draw.rect(surface, GRAY_60, slot_rect, 1, 3)
 
         num_text = font_12.render(str(i + 1), True, GRAY)
         surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
@@ -102,24 +102,11 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
 
     for i in range(INVENTORY_SLOTS):
         slot_rect = get_inventory_slot_rect(i, modal['position'])
-        pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-
-        bg_color = GRAY_40
-        border_color = GRAY
-        border_width = 1
         
-        hovered = slot_rect.collidepoint(mouse_pos)
-        if hovered:
-            bg_color = GRAY_60
-            if game and game.dragged_item:
-                border_color = GREEN 
-                border_width = 2
-            else:
-                border_color = WHITE
-                
-        pygame.draw.rect(surface, bg_color, slot_rect, 0, 3)
-        pygame.draw.rect(surface, border_color, slot_rect, border_width, 3)
+        # Constant background color
+        pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
+        # Default idle border
+        pygame.draw.rect(surface, GRAY_60, slot_rect, 1, 3)
 
         item = player.inventory[i] if i < len(player.inventory) else None
 

@@ -1051,6 +1051,10 @@ def handle_mouse_up(game, event, mouse_pos):
                         
                         if not container: break
                         
+                        # Cannot drop items into a closed container!
+                        if getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False):
+                            break
+                        
                         if check_recursive_containment(game.dragged_item, container):
                             display_message("Recursion detected: Cannot put container into itself.")
                             dropped_successfully = False
@@ -1406,18 +1410,18 @@ def find_item_at_pos(game, mouse_pos):
             
             content_rect = modal.get('content_rect')
             if active_container and hasattr(active_container, 'inventory') and content_rect:
-                # --- [NEW] Keep allow_liquid containers fully stocked ---
-                if is_infinite_liquid_source(active_container):
-                    for item in active_container.inventory:
-                        if getattr(item, 'liquid', False):
-                            item.load = getattr(item, 'capacity', 100)
-                # --------------------------------------------------------
-                pos = content_rect.topleft
-                for i, item in enumerate(active_container.inventory):
-                    if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
-                        return item
-        
-        return None
+                # Check if the container is closed
+                is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+                if not is_closed:
+                    if is_infinite_liquid_source(active_container):
+                        for item in active_container.inventory:
+                            if getattr(item, 'liquid', False):
+                                item.load = getattr(item, 'capacity', 100)
+                    pos = content_rect.topleft
+                    for i, item in enumerate(active_container.inventory):
+                        if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
+                            return item
+            return None
 
     return None
 
@@ -1687,17 +1691,20 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                 break
         
         if active_container and hasattr(active_container, 'inventory'):
-            content_rect = modal.get('content_rect')
-            if content_rect and content_rect.collidepoint(mouse_pos):
-                pos = content_rect.topleft
-                for i, item in enumerate(active_container.inventory):
-                    if item: 
-                        slot_rect = get_container_slot_rect(pos, i)
-                        if slot_rect.collidepoint(mouse_pos):
-                            game.drag_candidate = (item, (i, 'nearby', active_container, modal['id']))
-                            game.drag_start_pos = mouse_pos
-                            game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                            return
+            # Ignore closed containers
+            is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+            if not is_closed:
+                content_rect = modal.get('content_rect')
+                if content_rect and content_rect.collidepoint(mouse_pos):
+                    pos = content_rect.topleft
+                    for i, item in enumerate(active_container.inventory):
+                        if item: 
+                            slot_rect = get_container_slot_rect(pos, i)
+                            if slot_rect.collidepoint(mouse_pos):
+                                game.drag_candidate = (item, (i, 'nearby', active_container, modal['id']))
+                                game.drag_start_pos = mouse_pos
+                                game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
+                                return
 
     elif modal['type'] == 'container':
         container_item = modal['item']

@@ -53,7 +53,7 @@
     </npc>
     <animal>
         <animal_spawn_per_chunk value="6" name="Max Animal spawn on chunk" default="6"/>
-        <spawn value="2" name="Animals per spawn" default="2"/>
+        <spawn value="3" name="Animals per spawn" default="3"/>
         <respawn value="true" name="Animal respawn on death" default="true"/>
     </animal>
 

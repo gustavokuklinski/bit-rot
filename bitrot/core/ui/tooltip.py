@@ -367,7 +367,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if tooltip_rect.top < 0:
         tooltip_rect.top = 0
 
-    pygame.draw.rect(surface, (0, 0, 0, 220), tooltip_rect) # Slightly darker opacity
+    pygame.draw.rect(surface, BLACK, tooltip_rect)
     pygame.draw.rect(surface, WHITE, tooltip_rect, 1)
 
     y_offset = tooltip_rect.y + 10

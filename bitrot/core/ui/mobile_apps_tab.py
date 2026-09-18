@@ -63,9 +63,10 @@ def draw_apps_tab(surface, game, modal, assets):
         slot_rect = pygame.Rect(start_x + i * (slot_size + gap), y_offset, slot_size, slot_size)
         modal['app_slot_rects'].append({'rect': slot_rect, 'index': i})
 
+        # Constant background color
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        border_color = WHITE if getattr(game, 'is_dragging', False) and slot_rect.collidepoint(mouse_pos) and is_top_modal else GRAY
-        pygame.draw.rect(surface, border_color, slot_rect, 1, 3)
+        # Default idle border
+        pygame.draw.rect(surface, GRAY_60, slot_rect, 1, 3)
 
         item = state['slots'][i]
         if item:

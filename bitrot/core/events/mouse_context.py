@@ -336,22 +336,40 @@ def handle_context_menu_click(game, mouse_pos):
                 return 
 
             elif option == 'Trunk':
-                 if getattr(item, 'item_type', '') == 'vehicle':
-                     grid_x = int(item.x // TILE_SIZE)
-                     grid_y = int(item.y // TILE_SIZE)
-                     if hasattr(game.map_manager, 'remove_vehicle_tile'):
+                if getattr(item, 'item_type', '') == 'vehicle':
+                    # Check key requirement
+                    if hasattr(item, 'has_key_access') and not item.has_key_access(game.player):
+                        display_message(tr('msg', "Vehicle trunk is locked! Requires vehicle key."))
+                        if 'fail' in getattr(item, 'sounds', {}):
+                            game.sound_manager.play_sound(
+                                item.sounds['fail'],
+                                subdir='vehicles',
+                                game=game,
+                                source_pos=item.rect.center,
+                                base_volume=0.5,
+                                is_critical=True
+                            )
+                        game.context_menu['active'] = False
+                        return
+
+                    grid_x = int(item.x // TILE_SIZE)
+                    grid_y = int(item.y // TILE_SIZE)
+                    if hasattr(game.map_manager, 'remove_vehicle_tile'):
                         game.map_manager.remove_vehicle_tile(grid_x, grid_y)
 
-                 modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                 if not modal_exists:
+                modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                if not modal_exists:
                     new_container_modal = {
-                        'id': uuid.uuid4(), 'type': 'container', 'item': item,
+                        'id': uuid.uuid4(),
+                        'type': 'container',
+                        'item': item,
                         'position': game.last_modal_positions['container'],
-                        'is_dragging': False, 'drag_offset': (0, 0),
+                        'is_dragging': False,
+                        'drag_offset': (0, 0),
                         'rect': pygame.Rect(game.last_modal_positions['container'][0], game.last_modal_positions['container'][1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
                     }
                     game.modals.append(new_container_modal)
-                 clicked_on_menu = True
+                clicked_on_menu = True
 
             if option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
@@ -1343,10 +1361,12 @@ def handle_right_click(game, mouse_pos):
             
             content_rect = modal.get('content_rect')
             if active_container and hasattr(active_container, 'inventory') and content_rect:
-                pos = content_rect.topleft
-                for i, item in enumerate(active_container.inventory):
-                    if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
-                        clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container; break
+                is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+                if not is_closed:
+                    pos = content_rect.topleft
+                    for i, item in enumerate(active_container.inventory):
+                        if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
+                            clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container; break
         
         if clicked_item: break
 

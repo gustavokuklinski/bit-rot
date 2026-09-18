@@ -5,7 +5,6 @@ from core.data.localization import tr
 from core.entities.item.item import Item
 from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.modals import draw_scrollbar
-from core.ui.tooltip import draw_tooltip # Import the tooltip renderer
 
 # Visual Design Constants
 DARK_GREEN = (0, 120, 0)
@@ -13,9 +12,6 @@ GREEN_HOVER = (50, 205, 50)
 GOLD = (255, 215, 0)
 BLUE_BTN = (0, 70, 140)
 BLUE_HOVER = (30, 120, 200)
-SLOT_BG = (60, 60, 60)    
-SLOT_BORDER = (120, 120, 120) 
-SLOT_HOVER = (80, 80, 80) 
 
 NO_DURABILITY_TYPES = [
     'container', 'consumable_drugs', 'consumable_food', 'consumable_ammo', 
@@ -36,7 +32,7 @@ def generate_npc_trade_stock(npc):
         slot = tmpl.get('slot', '')
         if itype in NO_DURABILITY_TYPES or itype in HAS_DURABILITY_TYPES or itype in UTIL_TYPES:
             valid_templates.append(name)
-        elif slot in ['head', 'body', 'legs', 'feet', 'arms', 'hands']: # Removed facial/hair as requested previously
+        elif slot in ['head', 'body', 'legs', 'feet', 'arms', 'hands']:
             valid_templates.append(name)
             
     if valid_templates:
@@ -52,8 +48,6 @@ def generate_npc_trade_stock(npc):
                     if hasattr(new_item, 'durability'): 
                         new_item.durability = None
                     
-                    # FIX: Only assign 'load' if the item is a stackable type.
-                    # Items like sd_card, map, recipe, car_key will skip this block.
                     stackable_types = ['consumable_ammo', 'consumable_food', 'consumable_medication', 
                                        'consumable_drink', 'consumable_drugs', 'resource', 'currency']
                     if itype in stackable_types:
@@ -109,10 +103,7 @@ def get_tradable_items(npc):
     tradable = []
     def is_tradable(item):
         if not item or getattr(item, 'name', '').startswith("Empty "): return False
-        
-        # ADD THIS CHECK: Strictly hide Facial and Hair slots
         if getattr(item, 'slot', None) in ['facial', 'hair']: return False
-        
         if getattr(item, 'item_type', '') == 'mobile': return False
         cat = get_trade_category(item)
         if cat == 'clothing' or getattr(item, 'item_type', '') == 'container':
@@ -214,7 +205,7 @@ def get_dragged_item(game):
 
 def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
     generate_npc_trade_stock(modal['npc'])
-    mouse_pos = pygame.mouse.get_pos()
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
     mouse_pressed = pygame.mouse.get_pressed()[0]
     prev_pressed = modal.get('trade_last_mouse_pressed', False)
     mouse_just_pressed = mouse_pressed and not prev_pressed
@@ -246,57 +237,63 @@ def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
     modal['scroll_offset_y'] = scroll_y
     modal['content_rect'] = item_area_rect
 
-    clip_surf = pygame.Surface((item_area_rect.width, item_area_rect.height), pygame.SRCALPHA)
+    clip_surf = pygame.Surface((item_area_rect.width, item_area_rect.height))
+    clip_surf.fill((20, 20, 20))
     selected_index = modal.get('trade_selected_index', -1)
-    
-    # Track the item currently hovered for the final tooltip render
-    current_hover_item = None
-    current_hover_rect = None
     
     if not tradable_items:
         empty_surf = font_12.render(tr('dialog', 'This NPC has nothing to trade.'), True, GRAY)
         clip_surf.blit(empty_surf, ((item_area_rect.width - empty_surf.get_width()) // 2, 20))
     else:
+        modal['trade_slot_rects'] = []
+
         for i, item_data in enumerate(tradable_items):
             item = item_data[1]
             row, col = i // cols, i % cols
-            
+
             lx = grid_start_x_relative + col * (slot_size + padding)
             ly = row * (slot_size + padding) - scroll_y
-            
-            slot_rect_abs = pygame.Rect(grid_start_x_absolute + col * (slot_size + padding), 
-                                        start_y + header_h + row * (slot_size + padding) - scroll_y, 
+
+            slot_rect_abs = pygame.Rect(grid_start_x_absolute + col * (slot_size + padding),
+                                        start_y + header_h + row * (slot_size + padding) - scroll_y,
                                         slot_size, slot_size)
-            
+
             is_hovered = slot_rect_abs.collidepoint(mouse_pos)
-            
+
             if is_hovered:
-                current_hover_item = item
-                current_hover_rect = slot_rect_abs
                 if mouse_just_pressed:
                     modal['trade_selected_index'] = i
-                    modal['trade_message'] = "" 
+                    modal['trade_message'] = ""
 
             if -slot_size < ly < content_h:
                 slot_rect_rel = pygame.Rect(lx, ly, slot_size, slot_size)
-                if i == selected_index:
-                    bg_color, border_color, border_w = SLOT_BG, GREEN, 3
-                elif is_hovered:
-                    bg_color, border_color, border_w = SLOT_HOVER, WHITE, 1
-                else:
-                    bg_color, border_color, border_w = SLOT_BG, SLOT_BORDER, 1
-                
-                pygame.draw.rect(clip_surf, bg_color, slot_rect_rel, 0, 3)
-                pygame.draw.rect(clip_surf, border_color, slot_rect_rel, border_w, 3)
 
+                # Store absolute rect for top-level hover and drag detection
+                if item_area_rect.collidepoint(slot_rect_abs.center):
+                    modal['trade_slot_rects'].append({'rect': slot_rect_abs, 'index': i, 'item': item})
+
+                # Constant background (GRAY_40)
+                pygame.draw.rect(clip_surf, GRAY_40, slot_rect_rel, 0, 3)
+
+                # Border: Green if selected by player, otherwise default idle GRAY_60
+                if i == selected_index:
+                    pygame.draw.rect(clip_surf, GREEN, slot_rect_rel, 2, 3)
+                else:
+                    pygame.draw.rect(clip_surf, GRAY_60, slot_rect_rel, 1, 3)
+
+                # 1. Item Sprite
                 if item and getattr(item, 'image', None):
-                    scaled_img = pygame.transform.scale(item.image, (slot_size - 4, slot_size - 4))
-                    clip_surf.blit(scaled_img, (lx + 2, ly + 2))
-                
-                if hasattr(item, 'is_stackable') and item.is_stackable() and getattr(item, 'load', 0) > 0:
+                    scaled_img = pygame.transform.scale(item.image, (slot_size - 8, slot_size - 8))
+                    clip_surf.blit(scaled_img, (lx + 4, ly + 4))
+                elif item and hasattr(item, 'color'):
+                    pygame.draw.rect(clip_surf, item.color, slot_rect_rel.inflate(-8, -8))
+
+                # 2. Stack Count / Ammo Load
+                if hasattr(item, 'is_stackable') and item.is_stackable() and getattr(item, 'load', 0) > 1:
                     qty_text = font_12.render(str(int(item.load)), True, WHITE)
-                    clip_surf.blit(qty_text, (slot_rect_rel.right - qty_text.get_width() - 2, slot_rect_rel.bottom - qty_text.get_height() - 2))
-                
+                    clip_surf.blit(qty_text, (slot_rect_rel.right - qty_text.get_width() - 3, slot_rect_rel.bottom - qty_text.get_height() - 2))
+
+                # 3. Item Price (Top-Left corner with shadow)
                 if not is_currency(item):
                     price = get_total_price(item)
                     p_shadow = font_12.render(f"${price}", True, BLACK)
@@ -304,13 +301,21 @@ def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
                     clip_surf.blit(p_shadow, (lx + 3, ly + 3))
                     clip_surf.blit(p_text, (lx + 2, ly + 2))
 
+                # 4. Durability Bar
                 itype = getattr(item, 'item_type', '')
                 if itype in HAS_DURABILITY_TYPES or itype in UTIL_TYPES:
-                    item_dur, item_max_dur = getattr(item, 'durability', None), getattr(item, 'max_durability', None)
+                    item_dur = getattr(item, 'durability', None)
+                    item_max_dur = getattr(item, 'max_durability', None)
                     if item_dur is not None and item_max_dur and item_max_dur > 0:
-                        dur_pct = max(0, min(1, item_dur / float(item_max_dur)))
+                        dur_pct = max(0.0, min(1.0, float(item_dur) / float(item_max_dur)))
+                        bar_w = slot_size - 10
+                        bar_h = 3
+                        bar_x = lx + 5
+                        bar_y = ly + slot_size - 6
                         bar_color = GREEN if dur_pct > 0.5 else (YELLOW if dur_pct > 0.25 else RED)
-                        pygame.draw.rect(clip_surf, bar_color, (lx + 2, ly + slot_size - 6, (slot_size - 4) * dur_pct, 4))
+                        pygame.draw.rect(clip_surf, BLACK, (bar_x, bar_y, bar_w, bar_h))
+                        if dur_pct > 0:
+                            pygame.draw.rect(clip_surf, bar_color, (bar_x, bar_y, int(bar_w * dur_pct), bar_h))
 
     surface.blit(clip_surf, item_area_rect.topleft)
     
@@ -322,11 +327,20 @@ def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
     
     drop_zone_rect = pygame.Rect(bar_center_x - 130, bottom_y_absolute + 10, slot_size, slot_size)
     modal['trade_drop_zone_rect'] = drop_zone_rect
-    pygame.draw.rect(surface, SLOT_BG, drop_zone_rect, 0, 3)
-    pygame.draw.rect(surface, YELLOW if drop_zone_rect.collidepoint(mouse_pos) else WHITE, drop_zone_rect, 2, 3)
     
-    drop_label = font_12.render(tr('dialog', 'Offer:'), True, WHITE)
-    surface.blit(drop_label, (drop_zone_rect.x - 45, drop_zone_rect.centery - 6))
+    # Constant background and idle border
+    pygame.draw.rect(surface, GRAY_40, drop_zone_rect, 0, 3)
+    pygame.draw.rect(surface, GRAY_60, drop_zone_rect, 1, 3)
+    
+    line1_surf = font_12.render(tr('dialog', 'Offer:'), True, WHITE)
+    line2_surf = font_12.render(tr('dialog', 'Drag-drop item'), True, (170, 170, 170))
+    
+    # Position both lines right-aligned, stopping 8px before the slot's left edge
+    line1_rect = line1_surf.get_rect(right=drop_zone_rect.left - 8, bottom=drop_zone_rect.centery - 2)
+    line2_rect = line2_surf.get_rect(right=drop_zone_rect.left - 8, top=drop_zone_rect.centery + 2)
+    
+    surface.blit(line1_surf, line1_rect)
+    surface.blit(line2_surf, line2_rect)
 
     sell_btn_rect = pygame.Rect(bar_center_x - 40, bottom_y_absolute + 10, 70, 35)
     pygame.draw.rect(surface, BLUE_HOVER if sell_btn_rect.collidepoint(mouse_pos) else BLUE_BTN, sell_btn_rect, 0, 5)
@@ -343,35 +357,33 @@ def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
     dragged_item, _, _ = get_dragged_item(game)
     if dragged_item and drop_zone_rect.collidepoint(mouse_pos):
         if getattr(dragged_item, 'image', None):
-            ghost_img = pygame.transform.scale(dragged_item.image, (slot_size - 4, slot_size - 4))
+            ghost_img = pygame.transform.scale(dragged_item.image, (slot_size - 8, slot_size - 8))
             ghost_img.set_alpha(150)
-            surface.blit(ghost_img, (drop_zone_rect.x + 2, drop_zone_rect.y + 2))
+            surface.blit(ghost_img, (drop_zone_rect.x + 4, drop_zone_rect.y + 4))
 
     offered_item = modal.get('trade_offered_item')
     if offered_item:
-        if offered_item and drop_zone_rect.collidepoint(mouse_pos):
-            current_hover_item = offered_item
-            current_hover_rect = drop_zone_rect
-            
         if getattr(offered_item, 'image', None):
-            scaled_img = pygame.transform.scale(offered_item.image, (slot_size - 4, slot_size - 4))
-            surface.blit(scaled_img, (drop_zone_rect.x + 2, drop_zone_rect.y + 2))
+            scaled_img = pygame.transform.scale(offered_item.image, (slot_size - 8, slot_size - 8))
+            surface.blit(scaled_img, (drop_zone_rect.x + 4, drop_zone_rect.y + 4))
+        elif hasattr(offered_item, 'color'):
+            pygame.draw.rect(surface, offered_item.color, drop_zone_rect.inflate(-8, -8))
+
         if hasattr(offered_item, 'is_stackable') and offered_item.is_stackable() and getattr(offered_item, 'load', 0) > 0:
             qty_text = font_12.render(str(int(offered_item.load)), True, WHITE)
-            surface.blit(qty_text, (drop_zone_rect.right - qty_text.get_width() - 2, drop_zone_rect.bottom - qty_text.get_height() - 2))
+            surface.blit(qty_text, (drop_zone_rect.right - qty_text.get_width() - 3, drop_zone_rect.bottom - qty_text.get_height() - 2))
+
         if not is_currency(offered_item):
             p_shadow = font_12.render(f"${get_total_price(offered_item)}", True, BLACK)
             p_text = font_12.render(f"${get_total_price(offered_item)}", True, GOLD)
             surface.blit(p_shadow, (drop_zone_rect.x + 3, drop_zone_rect.y + 3))
             surface.blit(p_text, (drop_zone_rect.x + 2, drop_zone_rect.y + 2))
+
         if drop_zone_rect.collidepoint(mouse_pos) and mouse_just_pressed:
             modal['trade_offered_item'] = None
             modal['trade_message'] = tr('dialog', 'Offer removed.')
 
-    # FINAL STEP: Render Tooltip on top of everything else
-    if current_hover_item:
-        draw_tooltip(surface, current_hover_item, mouse_pos, current_hover_rect)
-
+    # Logic: SELL Click
     if mouse_just_pressed and sell_btn_rect.collidepoint(mouse_pos):
         error = None
         if not offered_item: error = tr('dialog', 'Drop an item to sell!')
@@ -385,6 +397,7 @@ def draw_trade_tab(surface, modal, game, start_x, start_y, width, height):
             modal['trade_offered_item'], modal['trade_selected_index'] = None, -1
             modal['trade_message'] = f"{tr('dialog', 'Sold for')} ${price}!"
 
+    # Logic: TRADE Click
     elif mouse_just_pressed and trade_btn_rect.collidepoint(mouse_pos):
         error = None
         if selected_index == -1: error = tr('dialog', 'Select an NPC item first!')

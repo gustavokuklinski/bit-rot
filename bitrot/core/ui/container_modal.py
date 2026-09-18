@@ -36,15 +36,10 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
         col = i % cols
         slot_rect = pygame.Rect(start_x + col * (slot_size + gap), start_y + row * (slot_size + gap), slot_size, slot_size)
         
-        # Fill background with GRAY_40 to match inventory slots
+        # Constant background color
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        
-        # Default border is GRAY, changes to WHITE when highlighted ONLY if it is the Top Modal
-        border_color = GRAY
-        if getattr(game, 'is_dragging', False) and slot_rect.collidepoint(mouse_pos) and is_top_hovered:
-            border_color = WHITE # Highlight color
-
-        pygame.draw.rect(surface, border_color, slot_rect, 1, 3)
+        # Default idle border
+        pygame.draw.rect(surface, GRAY_60, slot_rect, 1, 3)
 
         if i < len(container_item.inventory):
             item = container_item.inventory[i]

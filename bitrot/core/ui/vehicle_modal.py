@@ -28,8 +28,8 @@ STYLE = {
     "INACTIVE": RED,         
     "WARN": ORANGE,          
     "BAR_BG": (40, 40, 40),  
-    "SLOT_BG": (30, 30, 30), 
-    "BORDER": GRAY,          
+    "SLOT_BG": GRAY_40,       # Unified constant background
+    "BORDER": GRAY_60,        # Unified default idle border
     "DRIVER_LBL": YELLOW,    
     "TRUNK_BAR": BLUE        
 }
@@ -207,8 +207,9 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
         
         slot_rect = pygame.Rect(slot_x, slot_y, seat_size, seat_size)
         
-        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
-        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        # Unified constant slot background & idle border
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect, 0, 3)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1, 3)
         
         if i == 0:
             lbl = font_12.render(tr('vehicle', "D"), False, STYLE["DRIVER_LBL"])
@@ -231,6 +232,7 @@ def draw_vehicle_seats_tab(surface, vehicle, start_x, start_y, modal_w, mouse_po
 
         modal['seat_rects'][i] = slot_rect
 
+
 def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos, modal, assets):
     """
     Draws the content of the vehicle mechanics tab (Equipment Slots).
@@ -238,20 +240,20 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
     x = start_x + 45
     y = start_y + 7
 
-    slots_row_1 = ['motor','key', 'fuel', 'battery']
-    # [NEW] Dynamically use the required tires for this specific vehicle model
+    slots_row_1 = ['motor', 'key', 'fuel', 'battery']
     slots_row_2 = getattr(vehicle, 'required_tires', [])
     
     slot_size = STYLE["SLOT_SIZE"]
     slot_gap = STYLE["SLOT_GAP"]
     
-    # Draw Row 1
+    # --- Draw Row 1: Engine Components ---
     current_x = x
     for slot_name in slots_row_1:
         slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
         
-        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
-        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        # Unified constant slot background & idle border
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect, 0, 3)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1, 3)
         
         lbl_text = tr('vehicle', slot_name.capitalize())
         lbl = font_12.render(lbl_text, False, STYLE["TEXT_DIM"])
@@ -286,16 +288,16 @@ def draw_vehicle_mechanics_tab(surface, vehicle, start_x, start_y, modal_w, mous
         modal['equipment_rects'][slot_name] = slot_rect
         current_x += slot_size + slot_gap
 
-    # Draw Row 2 (Dynamic Tires)
+    # --- Draw Row 2: Tires ---
     current_x = x
     y += slot_size + 35 
     for slot_name in slots_row_2:
         slot_rect = pygame.Rect(current_x, y, slot_size, slot_size)
         
-        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect)
-        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1)
+        # Unified constant slot background & idle border
+        pygame.draw.rect(surface, STYLE["SLOT_BG"], slot_rect, 0, 3)
+        pygame.draw.rect(surface, STYLE["BORDER"], slot_rect, 1, 3)
         
-        # [NEW] Format "tire_front_left" -> "FL TIRE", "tire_back" -> "B TIRE" dynamically
         name_parts = slot_name.split('_')[1:] 
         short_name = "".join([p[0].upper() for p in name_parts]) 
         lbl_text = short_name + " " + tr('vehicle', 'TIRE')

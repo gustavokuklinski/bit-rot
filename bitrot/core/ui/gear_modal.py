@@ -133,9 +133,10 @@ def _draw_gear_tab(surface, player, modal, assets, mouse_pos):
          player.clothes = {} # Safeguard
 
     for slot_name, slot_rect in modal['gear_slot_rects'].items():
-        # Draw empty slot
+        # Constant background color
         pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
+        # Default idle border
+        pygame.draw.rect(surface, GRAY_60, slot_rect, 1, 3)
 
         # Draw label, shifting slightly up into the smaller square 
         label_text = font_14.render(tr('ui', slot_name.capitalize()), False, GRAY)

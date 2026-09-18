@@ -57,6 +57,9 @@ class ZombieCombat:
         return False
 
     def attack(self, target_entity, game):
+        if getattr(target_entity, 'type', '') == 'animal' or target_entity.__class__.__name__ == 'Animal':
+            return
+
         self.melee_swing_timer = 10
         dx = target_entity.rect.centerx - self.rect.centerx
         dy = target_entity.rect.centery - self.rect.centery
@@ -80,6 +83,8 @@ class ZombieCombat:
 
         # 2. Target is an NPC, Animal, or other Zombie
         else:
+            if getattr(target_entity, 'type', '') == 'animal' or target_entity.__class__.__name__ == 'Animal':
+                return
             is_dead = target_entity.take_damage(damage, game, attacker=self)
             if is_dead and hasattr(game, 'npcs') and target_entity in game.npcs:
                 # Target entity die() is usually called inside its own take_damage, 

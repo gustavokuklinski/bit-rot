@@ -226,9 +226,8 @@ class ZombieAI:
             if getattr(entity, 'is_dead', False): 
                 continue
             is_npc = hasattr(game, 'npcs') and entity in game.npcs
-            is_animal = getattr(entity, 'type', '') == 'animal'
 
-            if is_npc or is_animal:
+            if is_npc:
                 edx = entity.rect.centerx - self.rect.centerx
                 edy = entity.rect.centery - self.rect.centery
                 entity_dist_sq = edx*edx + edy*edy

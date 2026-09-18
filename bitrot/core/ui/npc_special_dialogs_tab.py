@@ -52,7 +52,8 @@ def draw_special_dialogs_tab(surface, modal, game, start_x, start_y, width, heig
     modal['content_rect'] = pygame.Rect(start_x, start_y, width, height)
     
     # Draw to a dynamic sub-surface
-    content_surf = pygame.Surface((width, max(total_height, height)), pygame.SRCALPHA)
+    content_surf = pygame.Surface((width, max(total_height, height)))
+    content_surf.fill((20, 20, 20))
     
     for item in drawn_items:
         item_y = item['y']

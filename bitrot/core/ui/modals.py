@@ -75,12 +75,11 @@ class BaseModal:
         self.surface.blit(self.assets['close_button'], self.close_button_rect)
 
     def draw_base(self):
-        s = pygame.Surface((self.modal_w, self.modal_h), pygame.SRCALPHA)
-        s.fill((20, 20, 20, 250))
-        self.surface.blit(s, (self.modal_x, self.modal_y))
+        # Draw solid black directly onto the target surface (zero allocation, zero alpha blending)
+        pygame.draw.rect(self.surface, (20, 20, 20), self.modal_rect, 0, border_radius=4)
 
         border_color = WHITE if self.is_active else GRAY
-        pygame.draw.rect(self.surface, border_color, self.modal_rect, 1, 4)
+        pygame.draw.rect(self.surface, border_color, self.modal_rect, 1, border_radius=4)
         self.draw_header()
 
     def get_buttons(self):

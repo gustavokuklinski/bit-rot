@@ -27,6 +27,9 @@ from core.systems.utils import get_player_facing_tile, get_targeted_interactable
 from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
+from core.events.mouse_drag import check_recursive_containment
+from core.entities.item.item_helpers import does_allow_liquid
+
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
@@ -38,6 +41,194 @@ DEFAULT_TOOLTIPS = {
     'engine_vehicle': "Toggle Engine [{key}]",
     'vehicle_options_rmb': "Vehicle Options [RMB]",
 }
+
+def get_topmost_modal_at(game, mouse_pos):
+    """Returns the single top-most modal under mouse_pos based on z-order."""
+    for modal in reversed(getattr(game, 'modals', [])):
+        if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+            return modal
+    return None
+
+def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
+    """Accurately checks whether an item can be legally dropped into a given slot."""
+    if not item:
+        return False
+
+    is_liquid = bool(getattr(item, 'liquid', False))
+
+    if slot_type == 'belt':
+        return bool(getattr(item, 'allow_belt', False)) and not is_liquid
+
+    elif slot_type == 'inventory':
+        # Liquids spill without an appropriate container
+        return not is_liquid
+
+    elif slot_type == 'gear':
+        slot_name = index_or_name
+        if is_liquid:
+            return False
+        item_slot = getattr(item, 'slot', None)
+        if item_slot == 'hand':
+            item_slot = 'hands'
+        is_util_slot = slot_name in ['util', 'util2', 'util3']
+        is_container = getattr(item, 'item_type', '') == 'container'
+        is_util_item = (item_slot == 'util')
+        return (item_slot == slot_name) or (is_util_slot and (is_container or is_util_item))
+
+    elif slot_type == 'container':
+        if not target_obj:
+            return True
+        if check_recursive_containment(item, target_obj):
+            return False
+        if does_allow_liquid(target_obj) and not is_liquid:
+            return False
+        if is_liquid and not does_allow_liquid(target_obj):
+            return False
+        return True
+
+    elif slot_type == 'vehicle_equipment':
+        if target_obj and hasattr(target_obj, 'can_equip'):
+            return target_obj.can_equip(item, index_or_name)
+        return False
+
+    elif slot_type == 'vehicle_seat':
+        # Items cannot be equipped or stored in passenger seats
+        return False
+
+    elif slot_type == 'npc_trade_offer':
+        # Cannot trade spilled liquid or containers that have items inside them
+        if getattr(item, 'liquid', False):
+            return False
+        if getattr(item, 'item_type', '') == 'container' or getattr(item, 'slot', '') in ['head', 'body', 'legs', 'feet', 'arms', 'hands']:
+            if hasattr(item, 'inventory') and len(item.inventory) > 0:
+                return False
+        return True
+
+    elif slot_type == 'npc_trade_item':
+        # Player cannot drop items directly into the NPC's stock list
+        return False
+
+    elif slot_type == 'app':
+        item_type = getattr(item, 'type', None) or getattr(item, 'item_type', None)
+        if not item_type:
+            from core.entities.item.item_data import ITEM_TEMPLATES
+            tmpl = ITEM_TEMPLATES.get(getattr(item, 'name', ''))
+            if tmpl:
+                item_type = tmpl.get('type')
+        return item_type == 'sd_card'
+
+    return False
+
+def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
+    """
+    Finds the active slot under the mouse, strictly respecting modal z-order.
+    Returns: (slot_rect, slot_type, index_or_name, target_obj) or (None, None, None, None)
+    """
+    top_modal = get_topmost_modal_at(game, mouse_pos)
+
+    # 1. If mouse is over a modal, ONLY check slots inside that specific top modal
+    if top_modal:
+        m_type = top_modal.get('type')
+
+        if m_type == 'inventory':
+            active_tab = top_modal.get('active_tab', 'Inventory')
+            if active_tab == 'Inventory':
+                for i in range(len(game.player.belt)):
+                    slot = get_belt_slot_rect_in_modal(i, top_modal['position'])
+                    if slot.collidepoint(mouse_pos):
+                        return slot, 'belt', i, None
+                for i in range(10):
+                    slot = get_inventory_slot_rect(i, top_modal['position'])
+                    if slot.collidepoint(mouse_pos):
+                        return slot, 'inventory', i, None
+            elif active_tab in top_modal.get('container_mapping', {}):
+                c = top_modal['container_mapping'][active_tab]
+                if c:
+                    pos = (top_modal['rect'].x, top_modal['rect'].y + 40)
+                    for i in range(c.capacity or 0):
+                        slot = get_container_slot_rect(pos, i)
+                        if slot.collidepoint(mouse_pos):
+                            return slot, 'container', i, c
+
+        elif m_type == 'gear':
+            active_tab = top_modal.get('active_tab', 'Gear')
+            if active_tab == 'Gear':
+                for slot_name, slot in top_modal.get('gear_slot_rects', {}).items():
+                    if slot.collidepoint(mouse_pos):
+                        return slot, 'gear', slot_name, None
+            elif active_tab in top_modal.get('container_mapping', {}):
+                c = top_modal['container_mapping'][active_tab]
+                if c:
+                    pos = (top_modal['rect'].x, top_modal['rect'].y + 40)
+                    for i in range(c.capacity or 0):
+                        slot = get_container_slot_rect(pos, i)
+                        if slot.collidepoint(mouse_pos):
+                            return slot, 'container', i, c
+
+        elif m_type == 'container':
+            c = top_modal.get('item')
+            if c:
+                # If closed, do not target any slots
+                is_closed = (getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False))
+                if not is_closed:
+                    for i in range(c.capacity or 0):
+                        slot = get_container_slot_rect(top_modal['position'], i)
+                        if slot.collidepoint(mouse_pos):
+                            return slot, 'container', i, c
+            # Never let hits fall through to windows beneath
+            return None, None, None, None
+
+        elif m_type == 'nearby':
+            active_tab = top_modal.get('active_tab')
+            c = None
+            for tab_data in top_modal.get('tabs_data', []):
+                if tab_data.get('label') == active_tab:
+                    c = tab_data.get('container')
+                    break
+            content_rect = top_modal.get('content_rect')
+            if c and content_rect:
+                # If closed, do not target any slots
+                is_closed = (getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False))
+                if not is_closed:
+                    for i in range(c.capacity or 0):
+                        slot = get_container_slot_rect(content_rect.topleft, i)
+                        if slot.collidepoint(mouse_pos):
+                            return slot, 'container', i, c
+            # Never let hits fall through to windows beneath
+            return None, None, None, None
+
+        elif m_type == 'vehicle':
+            active_tab = top_modal.get('active_tab')
+            if active_tab == 'Mechanics':
+                for slot_name, slot in top_modal.get('equipment_rects', {}).items():
+                    if slot.collidepoint(mouse_pos):
+                        return slot, 'vehicle_equipment', slot_name, top_modal.get('vehicle')
+            elif active_tab == 'Seats':
+                for seat_idx, slot in top_modal.get('seat_rects', {}).items():
+                    if slot.collidepoint(mouse_pos):
+                        return slot, 'vehicle_seat', seat_idx, top_modal.get('vehicle')
+
+        elif m_type == 'npc_dialog':
+            if top_modal.get('active_tab_index') == 2:  # Trade Tab
+                # 1. Offer / Drop Zone slot
+                drop_zone = top_modal.get('trade_drop_zone_rect')
+                if drop_zone and drop_zone.collidepoint(mouse_pos):
+                    return drop_zone, 'npc_trade_offer', 0, None
+
+                # 2. NPC stock item slots
+                content_rect = top_modal.get('content_rect')
+                if content_rect and content_rect.collidepoint(mouse_pos):
+                    for slot_info in top_modal.get('trade_slot_rects', []):
+                        if slot_info['rect'].collidepoint(mouse_pos):
+                            return slot_info['rect'], 'npc_trade_item', slot_info['index'], slot_info['item']
+
+    # 2. If NO modal is under the cursor, check the Belt HUD at the bottom of the screen
+    for i in range(5):
+        slot = get_belt_hud_slot_rect(i, game=game, dynamic_h=dynamic_h)
+        if slot.collidepoint(mouse_pos):
+            return slot, 'belt', i, None
+
+    return None, None, None, None
 
 def get_tooltip_tr(key, default=None):
     """Returns the translation from the XML if present, otherwise falls back to the hardcoded English text."""
@@ -370,72 +561,32 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.modal_buttons.extend(buttons)
 
     # --- LAYER 4: Overlays & Tooltips (Absolute Top) ---
-    highlighted_rect, highlighted_allowed = None, False
-    if (game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]):
-        preview_item = game.dragged_item if game.is_dragging else game.drag_candidate[0]
-        for modal in reversed(game.modals):
-            if modal['type'] == 'inventory':
-                if modal.get('active_tab', 'Inventory') == 'Inventory':
-                    for i in range(len(game.player.belt)):
-                        slot = get_belt_slot_rect_in_modal(i, modal['position'])
-                        if slot.collidepoint(mouse_pos):
-                            highlighted_rect, highlighted_allowed = slot, preview_item.item_type
-                            break
-                    if highlighted_rect: break
-                    for i in range(5):
-                        slot = get_inventory_slot_rect(i, modal['position'])
-                        if slot.collidepoint(mouse_pos):
-                            highlighted_rect, highlighted_allowed = slot, True
-                            break
-                    if highlighted_rect: break
-            elif modal['type'] == 'gear':
-                if 'gear_slot_rects' in modal:
-                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
-                        if slot_rect.collidepoint(mouse_pos):
-                            highlighted_rect = slot_rect
-                            item_slot = 'hands' if getattr(preview_item, 'slot', None) == 'hand' else getattr(preview_item, 'slot', None)
-                            is_util_slot = slot_name in ['util', 'util2', 'util3']
-                            is_container = getattr(preview_item, 'item_type', '') == 'container'
-                            highlighted_allowed = (item_slot == slot_name) or (is_util_slot and (is_container or item_slot == 'util'))
-                            break
-                if highlighted_rect: break
-            elif modal['type'] == 'container':
-                cont = modal['item']
-                for i in range(min(cont.capacity, len(cont.inventory) + 16)):
-                    slot = get_container_slot_rect(modal['position'], i)
-                    if slot.collidepoint(mouse_pos):
-                        highlighted_rect, highlighted_allowed = slot, (len(cont.inventory) < cont.capacity) or (i < len(cont.inventory))
-                        break
-                if highlighted_rect: break
-            elif modal['type'] == 'slots':
-                for slot_data in modal.get('slot_rects', []):
-                    if slot_data['rect'].collidepoint(mouse_pos):
-                        highlighted_rect = slot_data['rect']
-                        highlighted_allowed = (len(slot_data['container'].inventory) < slot_data['container'].capacity) or (slot_data['index'] < len(slot_data['container'].inventory))
-                        break
-                if highlighted_rect: break
+    slot_rect, slot_type, slot_idx, target_obj = get_targeted_slot_info(game, mouse_pos, dynamic_h)
 
-        if not highlighted_rect:
-            for i in range(5):
-                slot = get_belt_hud_slot_rect(i, game=game, dynamic_h=dynamic_h)
-                if slot.collidepoint(mouse_pos):
-                    highlighted_rect, highlighted_allowed = slot, preview_item.item_type
-                    break
+    is_dragging = bool((game.is_dragging and game.dragged_item) or (game.drag_candidate and game.drag_candidate[0]))
+    preview_item = game.dragged_item if game.is_dragging else (game.drag_candidate[0] if game.drag_candidate else None)
 
-        if highlighted_rect:
-            overlay = pygame.Surface((highlighted_rect.width, highlighted_rect.height), pygame.SRCALPHA)
-            overlay.fill((50, 220, 50, 80) if highlighted_allowed else (220, 50, 50, 80))
-            game.game_screen.blit(overlay, highlighted_rect.topleft)
-            pygame.draw.rect(game.game_screen, YELLOW if highlighted_allowed else RED, highlighted_rect, 2)
+    if slot_rect:
+        if is_dragging and preview_item:
+            allowed = is_item_allowed_in_slot(preview_item, slot_type, slot_idx, target_obj)
+            # Allowed = Green Border (2px) | Not Allowed = Red Border (2px)
+            border_col = GREEN if allowed else RED
+            pygame.draw.rect(game.game_screen, border_col, slot_rect, 2, border_radius=3)
+        else:
+            # Normal hover over slot without dragging: Gray border (2px)
+            pygame.draw.rect(game.game_screen, (170, 170, 170), slot_rect, 2, border_radius=3)
 
-        if preview_item and getattr(preview_item, 'image', None):
-            img = pygame.transform.scale(preview_item.image, (int(highlighted_rect.height * 0.9) if highlighted_rect else 40, int(highlighted_rect.height * 0.9) if highlighted_rect else 40))
-            game.game_screen.blit(img, img.get_rect(topleft=(mouse_pos[0] - game.drag_offset[0], mouse_pos[1] - game.drag_offset[1])))
-        elif preview_item:
-            rect_w, rect_h = (int(highlighted_rect.width * 0.8), int(highlighted_rect.height * 0.8)) if highlighted_rect else (40, 40)
-            s = pygame.Surface((rect_w, rect_h), pygame.SRCALPHA)
-            s.fill((*preview_item.color, 180))
-            game.game_screen.blit(s, (mouse_pos[0] - rect_w//2, mouse_pos[1] - rect_h//2))
+    # Draw floating dragged item under the cursor
+    if is_dragging and preview_item:
+        if getattr(preview_item, 'image', None):
+            size = int(slot_rect.height * 0.9) if slot_rect else 40
+            img = pygame.transform.scale(preview_item.image, (size, size))
+            game.game_screen.blit(img, (mouse_pos[0] - game.drag_offset[0], mouse_pos[1] - game.drag_offset[1]))
+        else:
+            size = int(slot_rect.width * 0.8) if slot_rect else 40
+            s = pygame.Surface((size, size), pygame.SRCALPHA)
+            s.fill((*getattr(preview_item, 'color', WHITE), 180))
+            game.game_screen.blit(s, (mouse_pos[0] - size // 2, mouse_pos[1] - size // 2))
 
     if top_tooltip:
         tip_rect, item, frac, bar_color = top_tooltip['rect'], top_tooltip['item'], top_tooltip['frac'], top_tooltip['bar']

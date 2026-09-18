@@ -126,9 +126,10 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     current_tab_labels = set() 
     for container in nearby_containers:
         is_closed_maptile = (getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False))
+        is_locked_vehicle = (getattr(container, 'item_type', '') == 'vehicle' and hasattr(container, 'has_key_access') and not container.has_key_access(game.player))
 
-        if is_closed_maptile:
-            label = tr('ui', "Closed container")
+        if is_closed_maptile or is_locked_vehicle:
+            label = tr('ui', "Closed container") if is_closed_maptile else f"{container.name} ({tr('ui', 'Locked')})"
             icon = None
             icon_path = None
             if hasattr(container, 'image') and container.image:
@@ -201,7 +202,10 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
         container = active_tab_data['container']
         container_modal_view = {'rect': content_rect}
 
-        if getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False):
+        is_closed_maptile = (getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False))
+        is_locked_vehicle = (getattr(container, 'item_type', '') == 'vehicle' and hasattr(container, 'has_key_access') and not container.has_key_access(game.player))
+
+        if is_closed_maptile or is_locked_vehicle:
             _draw_closed_container_view(surface, game, container, content_rect, mouse_pos, modal)
         else:
             draw_container_content(surface, game, container, container_modal_view, assets, mouse_pos)

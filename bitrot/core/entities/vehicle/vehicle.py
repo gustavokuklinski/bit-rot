@@ -110,6 +110,53 @@ class Vehicle:
         if definition and 'sounds' in definition:
             self.sounds = definition['sounds']
 
+
+    def has_key_access(self, player):
+        """
+        Returns True if the vehicle key is inserted in equipment['key']
+        or if the player has the key in their inventory, belt, or gear.
+        """
+        # If the vehicle doesn't require a key, access is always granted
+        if not self.required_key_id or str(self.required_key_id).lower() in ['false', 'none', '']:
+            return True
+
+        # 1. Check if matching key is already set in the vehicle's key slot
+        key_item = self.equipment.get('key')
+        if key_item and self.can_equip(key_item, 'key'):
+            return True
+
+        # 2. Check if the player has the matching key on them
+        if player:
+            # Check Belt
+            found_key, _, _, _ = find_item_recursive(
+                player.belt, lambda it: self.can_equip(it, 'key')
+            )
+            if found_key:
+                return True
+
+            # Check Inventory
+            found_key, _, _, _ = find_item_recursive(
+                player.inventory, lambda it: self.can_equip(it, 'key')
+            )
+            if found_key:
+                return True
+
+            # Check Clothes / Gear
+            if hasattr(player, 'clothes'):
+                for slot_name, cloth_item in player.clothes.items():
+                    if not cloth_item:
+                        continue
+                    if self.can_equip(cloth_item, 'key'):
+                        return True
+                    if hasattr(cloth_item, 'inventory') and cloth_item.inventory:
+                        found_key, _, _, _ = find_item_recursive(
+                            cloth_item.inventory, lambda it: self.can_equip(it, 'key')
+                        )
+                        if found_key:
+                            return True
+
+        return False
+
     @property
     def image(self):
         if not self.images:
