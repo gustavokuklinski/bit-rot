@@ -82,6 +82,11 @@ def load_assets():
         assets['rain_texture'] = None
     
     try:
+        assets['fog_texture'] = pygame.image.load(SPRITE_PATH + 'ui/fog_texture.png').convert_alpha()
+    except pygame.error:
+        assets['fog_texture'] = None
+
+    try:
         # This image should be a white circle fading to transparent
         assets['crt_texture'] = pygame.image.load(SPRITE_PATH + 'ui/crt_overlay.png').convert_alpha()
     except pygame.error as e:

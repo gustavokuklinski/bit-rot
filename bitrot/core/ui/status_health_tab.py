@@ -154,32 +154,42 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         
         day_suffix = tr('ui', 'day') if day_count == 1 else tr('ui', 'days')
         
+        weather_state = getattr(game.world_time, 'weather', 'CLEAR')
+
         if player_has_mobile:
             time_str = f"{current_hour:02d}:{mins:02d}"
             time_color = WHITE
-            weather_state = getattr(game.world_time, 'weather', 'CLEAR')
             timer_ms = getattr(game.world_time, 'weather_timer', 0)
             game_ms_per_minute = game.world_time.day_length_ms / (24 * 60)
             total_game_mins_left = int(timer_ms / game_ms_per_minute) if game_ms_per_minute > 0 else 0
             w_hours = total_game_mins_left // 60
-            rain_val = f"{w_hours}h" if weather_state == 'CLEAR' else tr('ui', "Now")
-            rain_color = (100, 200, 255) if weather_state != 'CLEAR' else ((255, 170, 100) if w_hours <= 2 else WHITE)
+
+            if weather_state == 'RAIN':
+                weather_label = "Raining"
+                weather_color = (100, 200, 255)
+            elif weather_state == 'FOG':
+                weather_label = "Fog"
+                weather_color = (200, 215, 225)
+            elif weather_state == 'RAIN_FOG':
+                weather_label = "Raining with Fog"
+                weather_color = (130, 210, 255)
+            else:
+                weather_label = f"Clear ({w_hours}h)"
+                weather_color = (255, 170, 100) if w_hours <= 2 else WHITE
         else:
             time_str = tr('ui', "No Signal")
             time_color = (200, 80, 80)
-            rain_val = tr('ui', "Offline")
-            rain_color = (120, 120, 120)
+            weather_label = tr('ui', "Offline")
+            weather_color = (120, 120, 120)
 
         world_state = getattr(game.world_time, 'state', 'DAY')
         weather_icon = SPRITE_PATH + "ui/night.png" if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else SPRITE_PATH + "ui/day.png"
         day_night_str = tr('ui', "Darkness") if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else tr('ui', "Daylight")
-        dn_color = (150, 150, 255) if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else (255, 220, 100)
-        
+
         combined_lines = [
             (SPRITE_PATH + "ui/clock.png", tr('ui', "Time"), f"{time_str} - {day_count} {day_suffix}", time_color, time_ratio),
-            (weather_icon, "", f"{day_night_str} - {tr('ui', 'Rain in:')} {rain_val}", rain_color, None),
+            (weather_icon, "", f"{day_night_str} - {weather_label}", weather_color, None),
         ]
-        
         status_title = font_12.render(tr('ui', "World Info"), False, WHITE)
         surface.blit(status_title, (start_x, current_y))
         

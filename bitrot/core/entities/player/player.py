@@ -425,7 +425,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         is_outside = getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof
         
-        if is_outside and getattr(game.world_time, 'weather', 'CLEAR') == 'RAIN' and self.vehicle is None:
+        if is_outside and getattr(game.world_time, 'weather', 'CLEAR') in ['RAIN', 'RAIN_FOG'] and self.vehicle is None:
             total_defence = self.get_total_defence()
             total_weather_protection = min(1.0, total_defence / 5.0)
             

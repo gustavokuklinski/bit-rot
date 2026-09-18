@@ -40,6 +40,7 @@ class WorldTime:
         self._last_state = self.state
 
         self.weather = "CLEAR"
+        self.next_weather = random.choice(["FOG", "RAIN", "RAIN_FOG"])
         self.weather_timer = random.randint(60000, 180000)
 
         self.day_channel = None
@@ -134,15 +135,30 @@ class WorldTime:
             self.weather_timer -= delta_time
             if self.weather_timer <= 0:
                 if self.weather == 'CLEAR':
-                    self.weather = 'RAIN'
-                    display_message(tr('msg', "It started raining."))
-                    self.weather_timer = random.randint(30000, 90000)
-                    if hasattr(self.game, 'sound_manager') and not self.rain_channel:
-                        self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
+                    # Switch to the predetermined incoming weather
+                    self.weather = self.next_weather
+                    self.weather_timer = random.randint(45000, 110000)
+
+                    msg_map = {
+                        'RAIN': tr('msg', "It started raining."),
+                        'FOG': tr('msg', "A thick fog rolls in."),
+                        'RAIN_FOG': tr('msg', "Rain begins pouring through heavy fog.")
+                    }
+                    display_message(msg_map.get(self.weather, "Weather changed."))
+
+                    # Audio handling
+                    if self.weather in ['RAIN', 'RAIN_FOG']:
+                        if hasattr(self.game, 'sound_manager') and not self.rain_channel:
+                            self.rain_channel = self.game.sound_manager.play_sound(
+                                "rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000
+                            )
                 else:
+                    # Return to CLEAR and choose next weather pattern
                     self.weather = 'CLEAR'
-                    display_message(tr('msg', "The rain stopped."))
+                    self.next_weather = random.choice(["FOG", "RAIN", "RAIN_FOG"])
                     self.weather_timer = random.randint(90000, 240000)
+                    display_message(tr('msg', "The skies cleared up."))
+
                     if self.rain_channel:
                         self.rain_channel.fadeout(2000)
                         self.rain_channel = None
@@ -192,11 +208,17 @@ class WorldTime:
 
         if self.weather == 'RAIN':
             self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.70)
-            self.game.player_view_radius *= 0.90 
+            self.game.player_view_radius *= 0.90
+        elif self.weather == 'FOG':
+            self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.80)
+            self.game.player_view_radius *= 0.75  # Fog noticeably limits view radius
+        elif self.weather == 'RAIN_FOG':
+            self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * 0.60)
+            self.game.player_view_radius *= 0.65
         elif self.weather == 'CLEAR' and self.weather_timer <= one_hour_ms:
             progress = 1.0 - (self.weather_timer / one_hour_ms)
             storm_light_factor = self.lerp(1.0, 0.70, progress)
-            storm_view_factor = self.lerp(1.0, 0.90, progress)
+            storm_view_factor = self.lerp(1.0, 0.85, progress)
             self.current_ambient_light = max(float(self.night_ambient), self.current_ambient_light * storm_light_factor)
             self.game.player_view_radius *= storm_view_factor
 
@@ -227,7 +249,7 @@ class WorldTime:
     def _process_radio_broadcasts(self):
         if not hasattr(self.game, 'radio_frequencies'):
             return
-            
+
         freq = getattr(self.game, 'current_radio_freq', 0)
         current_time = pygame.time.get_ticks()
         ms_per_hour = self.day_length_ms / 24.0
@@ -242,16 +264,14 @@ class WorldTime:
 
         if not has_mobile():
             return
-            
+
         if not hasattr(self, 'radio_message_queue'):
             self.radio_message_queue = []
 
-        # --- PROCESS QUEUED MESSAGES ---
+        # Deliver queued messages
         for q_item in list(self.radio_message_queue):
             if current_time >= q_item['deliver_at']:
                 self.radio_message_queue.remove(q_item)
-                
-                # Double check if player is STILL tuned to the frequency before displaying text
                 st_freq = self.game.radio_frequencies.get(q_item['station'], -1)
                 if abs(freq - st_freq) <= 0.05:
                     self._send_radio_msg(q_item['station'], q_item['msg'])
@@ -281,16 +301,17 @@ class WorldTime:
                             trigger_msg = True
                             active_sched = 'time'
                     except: pass
-                
+
                 elif sched == 'weather':
                     if self.weather == 'CLEAR':
+                        # Broadcast warning before incoming weather
                         if self.weather_timer <= one_half_hours_ms and not state['weather_broadcasted']:
                             state['weather_broadcasted'] = True
                             trigger_msg = True
-                            active_sched = 'weather'
+                            active_sched = 'weather_warning'
                     else:
                         state['weather_broadcasted'] = False
-                
+
                 elif sched == 'random':
                     if current_time - state['last_random_time'] > 120000:
                         state['last_random_time'] = current_time
@@ -298,36 +319,50 @@ class WorldTime:
                             trigger_msg = True
                             active_sched = 'random'
 
-            if trigger_msg and station['messages']:
+            if trigger_msg:
                 msg = ""
-                if active_sched == 'weather':
-                    weather_msgs = [m for m in station['messages'] if '{rain_time}' in m]
-                    msg = random.choice(weather_msgs) if weather_msgs else random.choice(station['messages'])
+                # Calculate ETA time string
+                expected_exact_hour = (self.game_time_ms + self.weather_timer) / ms_per_hour
+                expected_exact_hour %= 24
+                exp_h = int(expected_exact_hour)
+                exp_m = int((expected_exact_hour - exp_h) * 60)
+                exp_m = exp_m - (exp_m % 10)
+                time_str = f"{exp_h:02d}:{exp_m:02d}"
+
+                is_military = "Military" in name
+                is_day = self.state in ["DAY", "TRANSITION_TO_DAY"]
+                tod_str = "Sunny" if is_day else "Night"
+
+                if active_sched == 'weather_warning':
+                    next_w = getattr(self, 'next_weather', 'RAIN')
+                    if is_military:
+                        if next_w == 'FOG':
+                            msg = f"[Met-Alert] Heavy fog bank inbound at {time_str}. Visibility will drop."
+                        elif next_w == 'RAIN':
+                            msg = f"[Met-Alert] Rainfall expected over sector at {time_str}. Prepare rain gear."
+                        else:  # RAIN_FOG
+                            msg = f"[Met-Alert] Storm warning: Rain with thick fog arriving at {time_str}."
+                    else:
+                        if next_w == 'FOG':
+                            msg = f"Weather forecast: Thick fog rolling in around {time_str}."
+                        elif next_w == 'RAIN':
+                            msg = f"Weather forecast: Rain showers arriving around {time_str}."
+                        else:
+                            msg = f"Weather forecast: Raining with dense fog expected by {time_str}."
                 else:
-                    normal_msgs = [m for m in station['messages'] if '{rain_time}' not in m]
-                    msg = random.choice(normal_msgs) if normal_msgs else random.choice(station['messages'])
-                
-                if '{rain_time}' in msg:
-                    expected_exact_hour = (self.game_time_ms + self.weather_timer) / ms_per_hour
-                    expected_exact_hour %= 24
-                    exp_h = int(expected_exact_hour)
-                    exp_m = int((expected_exact_hour - exp_h) * 60)
-                    exp_m = exp_m - (exp_m % 10)
-                    time_str = f"{exp_h:02d}:{exp_m:02d}"
-                    msg = msg.replace('{rain_time}', time_str)
-                
-                # --- NEW AUDIO QUEUE LOGIC ---
+                    # Regular or scheduled reports: include Sunny or Night
+                    if is_military:
+                        msg = f"[Status] Current sector report: {tod_str} skies. Atmospheric conditions stable."
+                    else:
+                        msg_pool = station.get('messages', [])
+                        msg = random.choice(msg_pool) if msg_pool else f"Broadcasting under {tod_str} conditions."
+                        msg = msg.replace('{rain_time}', time_str).replace('{weather_time}', time_str)
+
                 if is_tuned and hasattr(self.game, 'sound_manager'):
                     self.game.sound_manager.play_sound(
-                        "radio.ogg", 
-                        subdir="radio", 
-                        game=self.game, 
-                        source_pos=None, 
-                        base_volume=0.8,
-                        is_critical=True
+                        "radio.ogg", subdir="radio", game=self.game, source_pos=None, base_volume=0.8, is_critical=True
                     )
-                
-                # Push the message to the queue to be delivered exactly 1 second later
+
                 self.radio_message_queue.append({
                     'station': name,
                     'msg': msg,

@@ -220,16 +220,99 @@ def toggle_pause(game):
         game.game_state = 'PLAYING'
 
 def process_chat_command(game, text):
-    """Processes potential cheat commands entered in chat."""
+    """Processes debug cheat commands entered in chat."""
     import re
     text = text.strip()
-    if not text.startswith("%rot "):
+    if not (text.startswith("%rot ") or text.startswith("/rot ")):
         return False
         
-    command = text[5:].strip()
-    
-    # --- GOD MODE ---
-    if command == "god" or command == "godzen":
+    command = text[5:].strip().lower()
+
+    # --- WEATHER COMMANDS ---
+    if command.startswith("weather "):
+        w_type = command.split(" ", 1)[1].strip().lower()
+        wt = getattr(game, 'world_time', None)
+        if wt:
+            if w_type == "rain":
+                wt.weather = "RAIN"
+                wt.weather_timer = 180000
+                if hasattr(game, 'sound_manager'):
+                    if not getattr(wt, 'rain_channel', None):
+                        wt.rain_channel = game.sound_manager.play_sound(
+                            "rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000
+                        )
+                display_message(game, "[Debug] Weather set to: Raining")
+                return True
+
+            elif w_type == "fog":
+                wt.weather = "FOG"
+                wt.weather_timer = 180000
+                if getattr(wt, 'rain_channel', None):
+                    wt.rain_channel.fadeout(1000)
+                    wt.rain_channel = None
+                display_message(game, "[Debug] Weather set to: Fog")
+                return True
+
+            elif w_type in ("rain_fog", "rainfog", "fog_rain"):
+                wt.weather = "RAIN_FOG"
+                wt.weather_timer = 180000
+                if hasattr(game, 'sound_manager'):
+                    if not getattr(wt, 'rain_channel', None):
+                        wt.rain_channel = game.sound_manager.play_sound(
+                            "rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000
+                        )
+                display_message(game, "[Debug] Weather set to: Raining with Fog")
+                return True
+
+            elif w_type in ("clear", "clear_sky"):
+                wt.weather = "CLEAR"
+                wt.weather_timer = 180000
+                if getattr(wt, 'rain_channel', None):
+                    wt.rain_channel.fadeout(1000)
+                    wt.rain_channel = None
+                display_message(game, "[Debug] Weather set to: Clear")
+                return True
+
+    # --- TIME COMMANDS ---
+    if command.startswith("time "):
+        t_type = command.split(" ", 1)[1].strip().lower()
+        wt = getattr(game, 'world_time', None)
+        if wt:
+            if t_type in ("sun", "day", "daylight"):
+                target_hour = 12.0
+                wt.game_time_ms = (target_hour / 24.0) * wt.day_length_ms
+                wt.state = "DAY"
+                wt.current_ambient_light = wt.day_ambient
+                wt.game.player_view_radius = wt.day_radius
+                
+                if getattr(wt, 'night_channel', None):
+                    wt.night_channel.fadeout(1000)
+                    wt.night_channel = None
+                if not getattr(wt, 'day_channel', None) and hasattr(game, 'sound_manager'):
+                    wt.day_channel = game.sound_manager.play_sound(
+                        "day.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000
+                    )
+                display_message(game, "[Debug] Time set to: Sun / Daylight (12:00)")
+                return True
+
+            elif t_type in ("night", "darkness"):
+                target_hour = 0.0
+                wt.game_time_ms = (target_hour / 24.0) * wt.day_length_ms
+                wt.state = "NIGHT"
+                wt.current_ambient_light = wt.night_ambient
+                wt.game.player_view_radius = wt.night_radius
+                
+                if getattr(wt, 'day_channel', None):
+                    wt.day_channel.fadeout(1000)
+                    wt.day_channel = None
+                if not getattr(wt, 'night_channel', None) and hasattr(game, 'sound_manager'):
+                    wt.night_channel = game.sound_manager.play_sound(
+                        "night.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000
+                    )
+                display_message(game, "[Debug] Time set to: Night (00:00)")
+                return True
+
+    if command == "god":
         if game.player:
             game.player.health = 100.0
             game.player.max_health = 100.0
@@ -239,21 +322,129 @@ def process_chat_command(game, text):
             game.player.max_stamina = 100.0
             game.player.infection = 0.0
             game.player.anxiety = 0.0
-            
-            for part in game.player.body_parts.values():
+
+            for part in getattr(game.player, 'body_parts', {}).values():
                 part['value'] = 100.0
-                
-            for attr in game.player.attributes.keys():
-                game.player.progression.add_xp(game.player, attr, 999999)
-                
+
+            if hasattr(game.player, 'attributes'):
+                for attr in game.player.attributes.keys():
+                    game.player.progression.add_xp(game.player, attr, 999999)
+
             game.player.god_mode = True
-            
-            if command == "godzen":
-                game.player.godzen_mode = True
-                display_message(game, tr('msg', "GODZEN Mode Activated: Invincible and Invisible."))
-            else:
-                 game.player.godzen_mode = False
-                 display_message(game, tr('msg', "GOD Mode Activated: Invincible."))
+            display_message(game, tr('msg', "GOD Mode Activated: Invincible."))
+        return True
+
+    # --- REMOVE COMMANDS ---
+    if command in ("remove zombies", "remove zombie"):
+        count = len(getattr(game, 'zombies', []))
+        game.zombies.clear()
+        if hasattr(game, 'active_zombies'):
+            game.active_zombies.clear()
+        if hasattr(game, 'layer_zombies'):
+            curr_layer = getattr(game, 'current_layer_index', 1)
+            game.layer_zombies[curr_layer] = []
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
+        display_message(game, f"[Debug] Removed {count} zombies.")
+        return True
+
+    if command in ("remove npc", "remove npcs"):
+        count = len(getattr(game, 'npcs', []))
+        if hasattr(game.npcs, 'empty'):
+            game.npcs.empty()
+        else:
+            game.npcs = [n for n in game.npcs if False]
+        if hasattr(game, 'active_npcs'):
+            game.active_npcs.clear()
+        if hasattr(game, 'layer_npcs'):
+            curr_layer = getattr(game, 'current_layer_index', 1)
+            game.layer_npcs[curr_layer] = []
+        display_message(game, f"[Debug] Removed {count} NPCs.")
+        return True
+
+    if command in ("remove animals", "remove animal"):
+        from core.entities.animal.animal import Animal
+        removed_count = 0
+        if hasattr(game, 'items_on_ground'):
+            animals_to_del = [item for item in game.items_on_ground if isinstance(item, Animal) or getattr(item, 'type', '') == 'animal']
+            removed_count = len(animals_to_del)
+            game.items_on_ground = [item for item in game.items_on_ground if item not in animals_to_del]
+        if hasattr(game, 'active_animals'):
+            game.active_animals.clear()
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
+            game.spatial_manager.rebuild_item_grid(force=True)
+        display_message(game, f"[Debug] Removed {removed_count} animals.")
+        return True
+
+    # --- SPAWN / RESPAWN ON MARKERS COMMANDS ---
+    if command in ("spawn zombies", "spawn zombie", "respawn zombies", "respawn zombie"):
+        from core.map.spawn_manager import spawn_initial_zombies
+        spawns = list(getattr(game, 'current_zombie_spawns', []))
+        if not spawns and getattr(game, 'spawn_data', None):
+            for y, row in enumerate(game.spawn_data):
+                for x, char in enumerate(row):
+                    if char == 'Z':
+                        spawns.append((x * TILE_SIZE, y * TILE_SIZE))
+        
+        if spawns:
+            new_zombies = spawn_initial_zombies(
+                game.obstacles,
+                spawns,
+                game.items_on_ground + [game.player],
+                limit=core.data.config.MAX_ZOMBIES_GLOBAL,
+                spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
+                map_width_px=getattr(game, 'map_width_pixels', None),
+                map_height_px=getattr(game, 'map_height_pixels', None),
+                player=game.player,
+                game=game
+            )
+            game.zombies.extend(new_zombies)
+            if hasattr(game, 'spatial_manager'):
+                game.spatial_manager.rebuild_zombie_grid()
+            display_message(game, f"[Debug] Spawned {len(new_zombies)} zombies on markers.")
+        else:
+            display_message(game, "[Debug] No zombie spawn markers found on this chunk.")
+        return True
+
+    if command in ("spawn npc", "spawn npcs", "respawn npc", "respawn npcs"):
+        from core.entities.npc.npc import NPC
+        from core.placement import find_free_tile
+        npc_spawns = list(getattr(game, 'npc_spawn_points', []))
+        if not npc_spawns and getattr(game, 'spawn_data', None):
+            for y, row in enumerate(game.spawn_data):
+                for x, char in enumerate(row):
+                    if char.strip() in ['NPC', 'SNPC']:
+                        npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
+        
+        spawned_npcs = 0
+        curr_layer = getattr(game, 'current_layer_index', 1)
+        for spawn_data in npc_spawns:
+            nx, ny = spawn_data[0], spawn_data[1]
+            npc_type = spawn_data[2] if len(spawn_data) == 3 else 'NPC'
+            is_static = (npc_type == 'SNPC')
+            npc = NPC(nx, ny, game, is_static=is_static, layer=curr_layer)
+            npc.is_friendly = is_static
+            free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+            if free_pos:
+                npc.rect.topleft = free_pos
+                npc.x, npc.y = free_pos
+                game.npcs.add(npc)
+                spawned_npcs += 1
+
+        display_message(game, f"[Debug] Spawned {spawned_npcs} NPCs on markers.")
+        return True
+
+    if command in ("spawn animals", "spawn animal", "respawn animals", "respawn animal"):
+        from core.map.spawn_manager import spawn_animals
+        curr_layer = getattr(game, 'current_layer_index', 1)
+        old_count = sum(1 for item in getattr(game, 'items_on_ground', []) if getattr(item, 'type', '') == 'animal')
+        spawn_animals(game, target_layer=curr_layer)
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
+            game.spatial_manager.rebuild_item_grid(force=True)
+        new_count = sum(1 for item in getattr(game, 'items_on_ground', []) if getattr(item, 'type', '') == 'animal')
+        display_message(game, f"[Debug] Spawned {max(0, new_count - old_count)} animals on markers.")
         return True
 
     # --- ITEM SPAWN ---
@@ -331,50 +522,11 @@ def process_chat_command(game, text):
             )
             
             game.containers.append(new_vehicle)
-            game.rebuild_container_grid()
+            if hasattr(game, 'rebuild_container_grid'):
+                game.rebuild_container_grid()
             display_message(game, f"Spawned vehicle '{veh_name}' nearby.")
         else:
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
-        return True
-
-    if command == "zombie":
-        if game.player:
-            from core.entities.zombie.zombie import Zombie
-            import core.data.config as cfg
-            
-            count = getattr(cfg, 'ZOMBIES_PER_SPAWN', 1)
-            if count <= 0: count = 1
-            
-            spawned = 0
-            for _ in range(count):
-                angle = random.uniform(0, math.pi * 2)
-                dist = TILE_SIZE * 2
-                
-                # 1. Calculate raw position based on player TOP-LEFT to stay in grid sync
-                raw_x = game.player.rect.x + math.cos(angle) * dist
-                raw_y = game.player.rect.y + math.sin(angle) * dist
-                
-                # 2. STRICT SNAP: Force coordinates to be multiples of TILE_SIZE
-                snap_x = (int(raw_x) // TILE_SIZE) * TILE_SIZE
-                snap_y = (int(raw_y) // TILE_SIZE) * TILE_SIZE
-                
-                # 3. PHYSICAL CHECK: Use a Rect to see if this tile is actually empty
-                test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
-                
-                # We check obstacles AND existing zombies to prevent stacking
-                is_blocked = any(test_rect.colliderect(ob) for ob in game.obstacles)
-                if not is_blocked:
-                    # Also check if another zombie is already exactly there
-                    if any(z.rect.topleft == (snap_x, snap_y) for z in game.zombies):
-                        is_blocked = True
-                
-                if not is_blocked:
-                    new_zombie = Zombie.create_random(snap_x, snap_y)
-                    if new_zombie:
-                        game.zombies.append(new_zombie)
-                        spawned += 1
-            
-            display_message(game, f"{tr('msg', 'Debug:')} Spawned {spawned} zombies around player.")
         return True
 
     return False

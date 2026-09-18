@@ -120,7 +120,7 @@ class Animal(Zombie):
         threat_detected = False
         flee_x, flee_y = 0, 0
 
-        if game.player and not game.player.is_dead and not getattr(game.player, 'godzen_mode', False):
+        if game.player and not game.player.is_dead:
             dx = game.player.rect.centerx - self.rect.centerx
             dy = game.player.rect.centery - self.rect.centery
             dist = math.hypot(dx, dy)

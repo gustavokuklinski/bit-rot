@@ -50,8 +50,8 @@
         <has_tires_chance value="1.0" name="Car Tires chance" default="1.0"/>
     </vehicle>
     <animal>
-        <animal_spawn_per_chunk value="12" name="Max Animal spawn on chunk" default="12"/>
-        <spawn value="6" name="Animals per spawn" default="5"/>
+        <animal_spawn_per_chunk value="6" name="Max Animal spawn on chunk" default="6"/>
+        <spawn value="2" name="Animals per spawn" default="2"/>
         <respawn value="true" name="Animal respawn on death" default="true"/>
     </animal>
     <npc>
@@ -63,7 +63,7 @@
     </npc>
     <zombie>
         <zombie_spawn_per_chunk value="6" name="Max Zombie spawn on chunk" default="6"/>
-        <spawn value="6" name="Zombies per spawn" default="6"/>
+        <spawn value="3" name="Zombies per spawn" default="3"/>
         <zombie_multiplier value="1" name="Multiplier respawn by day" default="1"/>
         <wander value="true" name="Zombie wandering" default="true"/>
         <sight_check value="true" name="Sight player" default="true"/>

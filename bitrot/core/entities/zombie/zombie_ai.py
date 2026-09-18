@@ -223,12 +223,7 @@ class ZombieAI:
         else:
             dist_to_target_sq = dist_to_player_sq
 
-        # Godmode / Godzen check
-        if target_entity == game.player and getattr(game.player, 'godzen_mode', False):
-            self.state = 'wandering'
-            self.aggro_timer = 0
-            has_active_noise = False
-            self.noise_target = None
+        
 
         detection_radius = core.data.config.ZOMBIE_DETECTION_RADIUS
         if target_entity == game.player and getattr(game.player, 'is_aiming', False):
@@ -439,7 +434,7 @@ class ZombieAI:
                     return obstacle
 
             player = getattr(game, 'player', None)
-            if player and not player.is_dead and not getattr(player, 'godzen_mode', False):
+            if player and not player.is_dead:
                 if rect_check.colliderect(player.rect.inflate(-10, -10)):
                     return player
             return None
