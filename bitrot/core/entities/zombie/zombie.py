@@ -7,6 +7,7 @@ from faker import Faker
 import core.data.config
 from core.data.config import TILE_SIZE, RED
 from core.entities.item.item import Item
+from core.entities.item.item_factory import get_tinted_sprite
 
 # Mixins
 from core.entities.zombie.zombie_data import ZombieData
@@ -266,9 +267,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 if not is_explicitly_defined:
                     item.color = random.choice(CLOTHING_COLORS)
                     if item.image:
-                        tinted = item.image.copy()
-                        tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                        item.image = tinted
+                        item.image = get_tinted_sprite(item.image, item.name, item.color)
                 
                 actual_slot = getattr(item, 'slot', slot_name)
                 

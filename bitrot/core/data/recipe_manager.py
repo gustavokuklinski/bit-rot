@@ -1,3 +1,5 @@
+# core/data/recipe_manager.py
+
 import xml.etree.ElementTree as ET
 import os
 from core.data.config import DATA_PATH
@@ -39,11 +41,15 @@ class RecipeManager:
 
     @staticmethod
     def _parse_names(raw_name):
-        """Helper to split [A, B] into a list of strings."""
+        """Helper to split [A, B] into a list of strings, preserving wildcard specs."""
         if not raw_name: return []
-        if raw_name.startswith('[') and raw_name.endswith(']'):
-            return [n.strip() for n in raw_name[1:-1].split(',')]
-        return [raw_name]
+        raw_clean = raw_name.strip()
+        # Guard: Do NOT split wildcard container definitions on commas
+        if 'baseitem' in raw_clean.lower():
+            return [raw_clean]
+        if raw_clean.startswith('[') and raw_clean.endswith(']'):
+            return [n.strip() for n in raw_clean[1:-1].split(',')]
+        return [raw_clean]
 
     @staticmethod
     def _process_recipe_node(recipe_node):
@@ -77,6 +83,12 @@ class RecipeManager:
                 'destroy': ing_node.get('destroy', 'true').lower() == 'true'
             })
 
+        # --- Check for Wildcard Specification ---
+        parsed_wildcard = None
+        if raw_output_name and 'baseitem' in raw_output_name.lower():
+            from core.entities.item.item_factory import parse_wildcard_spec
+            parsed_wildcard = parse_wildcard_spec(raw_output_name)
+
         # --- Parse Results ---
         results = []
         
@@ -101,22 +113,32 @@ class RecipeManager:
             })
 
         # --- Determine Display Name ---
-        display_name = raw_output_name
+        if parsed_wildcard:
+            display_name = parsed_wildcard['friendly_name']
+        else:
+            display_name = raw_output_name
+
         if not display_name:
             if craft_type == 'dismantle':
                 display_name = f"Dismantle {first_ingredient_name}"
             elif results:
-                # Use the name of the first result
                 display_name = results[0]['names'][0]
             else:
                 display_name = "Unknown Recipe"
 
         recipe = Recipe(display_name, magazine, time_required, ingredients, output_amount, craft_type, req_level, gain_xp, results)
+        
+        # Store metadata for crafting previews and wildcard handlers
+        if parsed_wildcard:
+            recipe.base_item = parsed_wildcard['base_item']
+            recipe.raw_output = raw_output_name
+            recipe.wildcard_loot = parsed_wildcard['loot']
+            recipe.is_wildcard = True
+
         RecipeManager.RECIPES.append(recipe)
 
     @staticmethod
     def load_recipes():
-        # Points to ./data.rot/lib/data/craft/
         craft_path = os.path.join(DATA_PATH, 'craft') 
         
         if not os.path.exists(craft_path):
@@ -125,7 +147,6 @@ class RecipeManager:
 
         RecipeManager.RECIPES.clear()
 
-        # Walk through the directory and subdirectories
         for root_dir, _, files in os.walk(craft_path):
             for file_name in files:
                 if file_name.endswith('.xml'):
@@ -134,12 +155,8 @@ class RecipeManager:
                         tree = ET.parse(file_path)
                         root = tree.getroot()
 
-                        # Case 1: Single Recipe File (Root is <recipe>)
                         if root.tag == 'recipe':
                             RecipeManager._process_recipe_node(root)
-                        
-                       
-                                
                     except Exception as e:
                         print(f"Error loading recipe file {file_name}: {e}")
         

@@ -6,6 +6,7 @@ import sys
 import platform
 import subprocess
 import uuid
+from collections import OrderedDict
 
 def get_writable_dir():
     """Returns a safe, writable directory for saves and configs on any platform."""
@@ -207,27 +208,50 @@ def get_save_config_path(preset="config"):
 
 class ImageFontWrapper:
     """
-    A wrapper that acts exactly like a pygame Font but forces antialias=False 
-    and caches the resulting surfaces. This dynamically converts the TTF into a pure 
-    Pixel/Image font, preventing distortion when SDL_RENDER_SCALE_QUALITY is '0'.
+    High-performance font wrapper acting as a crisp pixel/image font renderer.
+    Uses an O(1) True LRU cache to prevent memory leaks from dynamic text 
+    (FPS, timers, health, coordinates) while keeping static UI text hot in RAM.
     """
-    def __init__(self, font_path, size, is_sysfont=False):
+    def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):
         if is_sysfont:
             self.font = pygame.font.SysFont(font_path, size)
         else:
             self.font = pygame.font.Font(font_path, size)
-        self.cache = {}
+            
+        self.cache = OrderedDict()
+        self.max_cache_size = max_cache_size
 
     def render(self, text, antialias, color, background=None):
         text_str = str(text)
-        cache_key = (text_str, color, background)
-        if cache_key not in self.cache:
-            # Force antialias to False to act as a crisp image font
-            self.cache[cache_key] = self.font.render(text_str, False, color, background)
-        return self.cache[cache_key]
+        
+        # 1. Normalize colors to hashable tuples (prevents unhashable list crashes)
+        color_key = tuple(color) if isinstance(color, (list, tuple, pygame.Color)) else color
+        bg_key = tuple(background) if isinstance(background, (list, tuple, pygame.Color)) else background
+        
+        # 2. Track font styling flags to avoid glyph collisions when set_bold is called
+        style_key = (self.font.get_bold(), self.font.get_italic())
+        cache_key = (text_str, color_key, bg_key, style_key)
+
+        # 3. Cache Hit: Move entry to MRU (Most Recently Used) in O(1)
+        if cache_key in self.cache:
+            self.cache.move_to_end(cache_key)
+            return self.cache[cache_key]
+
+        # 4. Cache Miss: Evict the single oldest entry (LRU) in O(1) without allocating lists
+        if len(self.cache) >= self.max_cache_size:
+            self.cache.popitem(last=False)
+
+        # 5. Render crisp pixel surface (forced antialias=False)
+        rendered_surface = self.font.render(text_str, False, color, background)
+        self.cache[cache_key] = rendered_surface
+        return rendered_surface
+
+    def clear_cache(self):
+        """Manually clear surfaces when switching scenes or changing languages."""
+        self.cache.clear()
 
     def __getattr__(self, name):
-        # Delegate all other standard font methods (size, get_height, etc.) to Pygame
+        # Delegate standard Pygame font methods (size, get_height, get_linesize, set_bold, etc.)
         return getattr(self.font, name)
 
 

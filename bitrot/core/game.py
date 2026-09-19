@@ -1,5 +1,4 @@
 import pygame
-import asyncio
 import os
 import math
 import core.data.config
@@ -35,7 +34,7 @@ from core.states.chunk_loading import run_chunk_loading
 class Game:
     def __init__(self):
         os.environ['SDL_RENDER_SCALE_QUALITY'] = '0'
-        pygame.mixer.pre_init(22050, -16, 2, 1024)
+        pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
 
         display_flags = pygame.SCALED | pygame.DOUBLEBUF
@@ -403,7 +402,7 @@ class Game:
                     if hasattr(npc, 'alert_to_noise'):
                         npc.alert_to_noise(source_pos, source_type=source_type)
 
-    async def run(self):
+    def run(self):
         self.logger.info("Entering Main Game Loop")
         try:
             while self.running:
@@ -427,7 +426,7 @@ class Game:
                     run_paused(self)
                 elif self.game_state == 'GAME_OVER':
                     run_game_over(self)
-                await asyncio.sleep(0)
+                
 
         except Exception as e:
             self.logger.crash("CRITICAL GAME CRASH DETECTED", e)

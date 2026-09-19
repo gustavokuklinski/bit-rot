@@ -219,7 +219,7 @@ class Animal(Zombie):
             capacity=10, 
             image_path="../animals/dead.png",  
             pos=self.rect.center,
-            decay_ms=120000 
+            decay_ms=60000
         )
 
         if hasattr(self, 'loot_table') and self.loot_table:

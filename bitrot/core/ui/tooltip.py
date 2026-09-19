@@ -80,11 +80,17 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
 
     if getattr(item, 'max_liquid', None) is not None:
         current_liquid = 0
+        liquid_names = []
         if hasattr(item, 'inventory') and item.inventory:
             for inside_item in item.inventory:
                 if getattr(inside_item, 'liquid', False):
-                    current_liquid += (getattr(inside_item, 'load', 1) or 1)
-        lines.append(f"{tr('tooltip', 'Liquid:')} {int(current_liquid)}/{item.max_liquid}")
+                    l_qty = getattr(inside_item, 'load', 1) or 1
+                    current_liquid += l_qty
+                    liquid_names.append(f"{tr('item', inside_item.name)} ({int(l_qty)})")
+        if liquid_names:
+            lines.append(f"{tr('tooltip', 'Liquid:')} {', '.join(liquid_names)} [{int(current_liquid)}/{item.max_liquid}]")
+        else:
+            lines.append(f"{tr('tooltip', 'Liquid:')} 0/{item.max_liquid}")
 
     # --- Durability Bar Logic ---
     if item.durability is not None:

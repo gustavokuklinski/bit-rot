@@ -194,9 +194,8 @@ class Item:
         if 'color' in data: 
             item.color = tuple(data['color'])
             if item.image and item.color != (255, 255, 255):
-                tinted = item.image.copy()
-                tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                item.image = tinted
+                from core.entities.item.item_factory import get_tinted_sprite
+                item.image = get_tinted_sprite(item.image, item.name, item.color)
 
         # Correctly clear and restore inventory (even if data['inventory'] is empty [])
         if 'inventory' in data:

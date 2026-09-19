@@ -1,29 +1,44 @@
+# core/draw/lighting.py
+
 import pygame
 import math
 from core.data.config import TILE_SIZE
 
 def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
-    if not hasattr(game, 'light_mask_cache'): game.light_mask_cache = {}
-    if len(game.light_mask_cache) > 256:
+    if not hasattr(game, 'light_mask_cache'): 
+        game.light_mask_cache = {}
+    if len(game.light_mask_cache) > 64:
         keys = list(game.light_mask_cache.keys())
-        for key in keys[:-256]: del game.light_mask_cache[key]
+        for key in keys[:-64]: 
+            del game.light_mask_cache[key]
 
     divisor = 2
     low_res_w = max(1, view_w // divisor)
     low_res_h = max(1, view_h // divisor)
 
+    # 1. Reusable Screen-Sized Surfaces (< 1MB each)
     if not hasattr(game, 'light_mask_low_cache') or game.light_mask_low_cache.get_size() != (low_res_w, low_res_h):
         game.light_mask_low_cache = pygame.Surface((low_res_w, low_res_h)).convert()
-        
+
+    if not hasattr(game, 'explored_screen_cache') or game.explored_screen_cache.get_size() != (low_res_w, low_res_h):
+        game.explored_screen_cache = pygame.Surface((low_res_w, low_res_h)).convert()
+
+    if not hasattr(game, 'shadow_mask_cache') or game.shadow_mask_cache.get_size() != (low_res_w, low_res_h):
+        game.shadow_mask_cache = pygame.Surface((low_res_w, low_res_h)).convert()
+        shrunk_w = max(1, low_res_w // 4)
+        shrunk_h = max(1, low_res_h // 4)
+        game.shadow_shrunk_cache = pygame.Surface((shrunk_w, shrunk_h)).convert()
+
     map_h = len(game.map_data) if hasattr(game, 'map_data') and game.map_data else 0
     map_w = len(game.map_data[0]) if map_h > 0 else 0
-    exp_w = max(1, (map_w * TILE_SIZE) // divisor)
-    exp_h = max(1, (map_h * TILE_SIZE) // divisor)
+    expected_size = map_w * map_h
     curr_map = getattr(game.map_manager, 'current_map_filename', 'unknown')
-    
-    if not hasattr(game, 'world_explored_mask') or game.world_explored_mask.get_size() != (exp_w, exp_h) or getattr(game, 'explored_map_name', '') != curr_map:
-        game.world_explored_mask = pygame.Surface((exp_w, exp_h)).convert()
-        game.world_explored_mask.fill((0, 0, 0))
+
+    # 2. Tile-Based Fog of War (Takes ~400KB instead of 105MB)
+    if (not hasattr(game, 'explored_tiles') or 
+        len(game.explored_tiles) != expected_size or 
+        getattr(game, 'explored_map_name', '') != curr_map):
+        game.explored_tiles = bytearray(expected_size)
         game.explored_map_name = curr_map
 
     ambient = int(game.world_time.current_ambient_light)
@@ -33,7 +48,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
     light_texture = game.assets.get('light_texture')
     light_sources = []
 
-    if light_texture:
+    if light_texture and game.player:
         try:
             radius_world_pixels = game.player_view_radius
             radius_view_pixels = int(radius_world_pixels)
@@ -43,12 +58,18 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
 
-                day_glow_brightness = max(50, ambient // 2) 
-                day_glow_surf = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
-                day_glow_surf.fill((day_glow_brightness, day_glow_brightness, day_glow_brightness), special_flags=pygame.BLEND_RGBA_MULT)
+                # Player Day Glow (Cached)
+                day_glow_brightness = max(50, ambient // 2)
+                cache_key_glow = ('day_glow', radius_low, day_glow_brightness)
+                if cache_key_glow not in game.light_mask_cache:
+                    glow = pygame.transform.scale(light_texture, (radius_low * 2, radius_low * 2))
+                    glow.fill((day_glow_brightness, day_glow_brightness, day_glow_brightness), special_flags=pygame.BLEND_RGBA_MULT)
+                    game.light_mask_cache[cache_key_glow] = glow
+                day_glow_surf = game.light_mask_cache[cache_key_glow]
                 day_glow_rect = day_glow_surf.get_rect(center=(p_screen_x, p_screen_y))
                 light_mask_low.blit(day_glow_surf, day_glow_rect, special_flags=pygame.BLEND_RGB_ADD)
 
+                # Player Aim Cone (Cached)
                 view_brightness = max(50, ambient)
                 cache_key_cone = ('soft_cone_tex', radius_low, view_brightness)
                 if cache_key_cone not in game.light_mask_cache:
@@ -62,7 +83,8 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 rotated_cone = pygame.transform.rotate(base_cone_tex, aim_angle_degrees)
                 light_mask_low.blit(rotated_cone, rotated_cone.get_rect(center=(p_screen_x, p_screen_y)), special_flags=pygame.BLEND_RGB_ADD)
 
-                shadow_mask = pygame.Surface((low_res_w, low_res_h))
+                # Obstacle Shadow Cast
+                shadow_mask = game.shadow_mask_cache
                 shadow_mask.fill((255, 255, 255))
                 p_pos_low = (p_screen_x, p_screen_y)
                 
@@ -70,11 +92,17 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                     gx = ob.x // TILE_SIZE
                     gy = ob.y // TILE_SIZE
                     tile_def = game.map_manager.get_tile_at(gx, gy)
-                    if tile_def and tile_def.get('is_visible'): continue
+                    if tile_def and tile_def.get('is_visible'): 
+                        continue
 
                     ob_low_x, ob_low_y = (ob.x + offset_x) / 2, (ob.y + offset_y) / 2
                     ob_w_low, ob_h_low = ob.width / 2, ob.height / 2
-                    corners = [(ob_low_x, ob_low_y), (ob_low_x + ob_w_low, ob_low_y), (ob_low_x + ob_w_low, ob_low_y + ob_h_low), (ob_low_x, ob_low_y + ob_h_low)]
+                    corners = [
+                        (ob_low_x, ob_low_y), 
+                        (ob_low_x + ob_w_low, ob_low_y), 
+                        (ob_low_x + ob_w_low, ob_low_y + ob_h_low), 
+                        (ob_low_x, ob_low_y + ob_h_low)
+                    ]
                     
                     for i in range(4):
                         p1, p2 = corners[i], corners[(i + 1) % 4]
@@ -92,40 +120,105 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                             proj2 = (p2[0] + (v2_x / mag2) * shadow_dist, p2[1] + (v2_y / mag2) * shadow_dist)
                             pygame.draw.polygon(shadow_mask, (0, 0, 0), [p1, p2, proj2, proj1])
                 
-                shrunk = pygame.transform.smoothscale(shadow_mask, (max(1, low_res_w // 4), max(1, low_res_h // 4)))
-                blurred_shadows = pygame.transform.smoothscale(shrunk, (low_res_w, low_res_h))
-                light_mask_low.blit(blurred_shadows, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                shrunk = game.shadow_shrunk_cache
+                pygame.transform.smoothscale(shadow_mask, shrunk.get_size(), shrunk)
+                pygame.transform.smoothscale(shrunk, (low_res_w, low_res_h), shadow_mask)
+                light_mask_low.blit(shadow_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-                current_vision = light_mask_low.copy()
-                current_vision.fill((40, 40, 40), special_flags=pygame.BLEND_RGB_MIN)
-                game.world_explored_mask.blit(current_vision, (int(-offset_x // divisor), int(-offset_y // divisor)), special_flags=pygame.BLEND_RGB_MAX)
-                light_mask_low.blit(game.world_explored_mask, (int(offset_x // divisor), int(offset_y // divisor)), special_flags=pygame.BLEND_RGB_MAX)
+                # --- 3. Mark Explored Tiles in bytearray ---
+                if map_w > 0 and map_h > 0:
+                    px = game.player.rect.centerx
+                    py = game.player.rect.centery
+                    ptx = int(px // TILE_SIZE)
+                    pty = int(py // TILE_SIZE)
+                    r_tiles = int(math.ceil(radius_world_pixels / TILE_SIZE))
+                    
+                    min_tx = max(0, ptx - r_tiles)
+                    max_tx = min(map_w, ptx + r_tiles + 1)
+                    min_ty = max(0, pty - r_tiles)
+                    max_ty = min(map_h, pty + r_tiles + 1)
+                    
+                    explored = game.explored_tiles
+                    for ty in range(min_ty, max_ty):
+                        row_idx = ty * map_w
+                        center_y_low = int((ty * TILE_SIZE + offset_y + TILE_SIZE // 2) // divisor)
+                        if 0 <= center_y_low < low_res_h:
+                            for tx in range(min_tx, max_tx):
+                                center_x_low = int((tx * TILE_SIZE + offset_x + TILE_SIZE // 2) // divisor)
+                                if 0 <= center_x_low < low_res_w:
+                                    # Tile is illuminated if pixel brightness is above shadow threshold
+                                    if light_mask_low.get_at((center_x_low, center_y_low))[0] > 20:
+                                        explored[row_idx + tx] = 1
 
-        except Exception as e: print(f"Error drawing player vision: {e}")
+                # --- 4. Render Explored Memory (Only on Screen) ---
+                if map_w > 0 and map_h > 0:
+                    screen_tx_start = max(0, int(-offset_x // TILE_SIZE) - 1)
+                    screen_tx_end = min(map_w, int((-offset_x + view_w) // TILE_SIZE) + 2)
+                    screen_ty_start = max(0, int(-offset_y // TILE_SIZE) - 1)
+                    screen_ty_end = min(map_h, int((-offset_y + view_h) // TILE_SIZE) + 2)
+                    
+                    tile_size_low = TILE_SIZE // divisor
+                    exp_cache = game.explored_screen_cache
+                    exp_cache.fill((0, 0, 0))
+                    
+                    explored = game.explored_tiles
+                    # Horizontal run-length batching: reduces 3,600 draw calls to ~50
+                    for ty in range(screen_ty_start, screen_ty_end):
+                        row_idx = ty * map_w
+                        ly = int((ty * TILE_SIZE + offset_y) // divisor)
+                        in_run = False
+                        run_start = 0
+                        for tx in range(screen_tx_start, screen_tx_end):
+                            if explored[row_idx + tx]:
+                                if not in_run:
+                                    in_run = True
+                                    run_start = tx
+                            else:
+                                if in_run:
+                                    lx = int((run_start * TILE_SIZE + offset_x) // divisor)
+                                    lw = (tx - run_start) * tile_size_low
+                                    pygame.draw.rect(exp_cache, (40, 40, 40), (lx, ly, lw, tile_size_low))
+                                    in_run = False
+                        if in_run:
+                            lx = int((run_start * TILE_SIZE + offset_x) // divisor)
+                            lw = (screen_tx_end - run_start) * tile_size_low
+                            pygame.draw.rect(exp_cache, (40, 40, 40), (lx, ly, lw, tile_size_low))
 
+                    light_mask_low.blit(exp_cache, (0, 0), special_flags=pygame.BLEND_RGB_MAX)
+
+        except Exception as e:
+            print(f"Error drawing player vision: {e}")
+
+    # Dynamic Light Sources (Torches, Flashlights, Vehicles, Campfires)
     for inv in [game.player.belt, game.player.inventory]:
         for item in inv:
-            if getattr(item, 'state', 'off') == 'on': light_sources.append({'item': item, 'owner': 'player'})
+            if getattr(item, 'state', 'off') == 'on': 
+                light_sources.append({'item': item, 'owner': 'player'})
 
     for item in game.visible_items:
-         if getattr(item, 'state', 'off') == 'on': light_sources.append({'item': item, 'owner': 'ground'})
+        if getattr(item, 'state', 'off') == 'on': 
+            light_sources.append({'item': item, 'owner': 'ground'})
     
     if hasattr(game, 'vehicles'):
         for vehicle in game.vehicles:
-            if getattr(vehicle, 'lights', 'off') == 'on' and vehicle.battery > 0: light_sources.append({'item': vehicle, 'owner': 'vehicle'})
+            if getattr(vehicle, 'lights', 'off') == 'on' and vehicle.battery > 0: 
+                light_sources.append({'item': vehicle, 'owner': 'vehicle'})
 
     for container in game.visible_containers:
         if getattr(container, 'item_type', '') == 'vehicle' and not any(ls['item'] == container for ls in light_sources):
-             if getattr(container, 'lights', 'off') == 'on' and container.battery > 0: light_sources.append({'item': container, 'owner': 'vehicle'})
+            if getattr(container, 'lights', 'off') == 'on' and container.battery > 0: 
+                light_sources.append({'item': container, 'owner': 'vehicle'})
 
     if light_texture:
         screen_rect = pygame.Rect(-offset_x, -offset_y, view_w, view_h)
         for light_info in light_sources:
             light = light_info['item']
             radius_world = getattr(light, 'current_light_radius', 0)
-            if radius_world <= 0: continue
+            if radius_world <= 0: 
+                continue
             lx, ly = (game.player.rect.centerx, game.player.rect.centery) if light_info['owner'] == 'player' else (light.rect.centerx, light.rect.centery)
-            if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly): continue
+            if not screen_rect.inflate(radius_world*2, radius_world*2).collidepoint(lx, ly): 
+                continue
 
             radius_low = max(16, round((int(radius_world / 2)) / 16) * 16)
             try:
@@ -139,15 +232,21 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                     zoom = getattr(game, 'zoom_level', 1.0)
                     offset_lx = (game.player.facing_direction[0] * TILE_SIZE / zoom) * 0.375
                     offset_ly = (game.player.facing_direction[1] * TILE_SIZE / zoom) * 0.375
-                    light_rect.center = ((game.player.rect.centerx + offset_x) / 2 + offset_lx, (game.player.rect.centery + offset_y) / 2 + offset_ly)
+                    light_rect.center = (
+                        (game.player.rect.centerx + offset_x) / 2 + offset_lx, 
+                        (game.player.rect.centery + offset_y) / 2 + offset_ly
+                    )
                 else:
                     light_rect.center = ((light.rect.centerx + offset_x) / 2, (light.rect.centery + offset_y) / 2)
                 light_mask_low.blit(scaled_light_tex, light_rect, special_flags=pygame.BLEND_RGBA_ADD)
-            except Exception: pass
+            except Exception: 
+                pass
 
+        # Static Map Lights (Street Lamps)
         if getattr(game.world_time, 'state', 'DAY') != 'DAY':
-            for light in game.map_lights:
-                if not light.get('active', True) or ('rect' in light and not screen_rect.colliderect(light['rect'])): continue
+            for map_light in game.map_lights:
+                if not map_light.get('active', True) or ('rect' in map_light and not screen_rect.colliderect(map_light['rect'])): 
+                    continue
                 try:
                     cache_key = ('map_light_darkened', 32)
                     if cache_key not in game.light_mask_cache:
@@ -155,10 +254,14 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                         base_scaled.fill((80, 80, 80, 255), special_flags=pygame.BLEND_RGBA_MULT)
                         game.light_mask_cache[cache_key] = base_scaled
                     
-                    light_rect = game.light_mask_cache[cache_key].get_rect(center=((light['rect'].centerx + offset_x) / 2, (light['rect'].centery + offset_y) / 2))
+                    light_rect = game.light_mask_cache[cache_key].get_rect(
+                        center=((map_light['rect'].centerx + offset_x) / 2, (map_light['rect'].centery + offset_y) / 2)
+                    )
                     light_mask_low.blit(game.light_mask_cache[cache_key], light_rect, special_flags=pygame.BLEND_RGBA_ADD)
-                except Exception: pass
+                except Exception: 
+                    pass
 
+    # Upscale Low-Resolution Light Mask onto Screen Viewport
     if not hasattr(game, 'light_upscaled_cache') or game.light_upscaled_cache.get_size() != (view_w, view_h):
         game.light_upscaled_cache = pygame.Surface((view_w, view_h)).convert()
     pygame.transform.scale(light_mask_low, (view_w, view_h), game.light_upscaled_cache)

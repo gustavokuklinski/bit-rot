@@ -1,0 +1,4 @@
+<recipe type="consumable_drink" craft="create" output="[{baseItem:Cup}, {loot:[Whiskey Unit:2]}]" gain_xp="[agility:0.1, maintenance:0.1]" amount="1" time="0.1">
+    <ingredient name="Cup" destroy="true" amount="1" />
+    <ingredient name="Whiskey Unit" destroy="true" amount="2" />
+</recipe>

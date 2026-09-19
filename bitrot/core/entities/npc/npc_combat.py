@@ -151,7 +151,7 @@ class NPCCombat:
             capacity=20,
             pos=self.rect.center, 
             image_path="zombie/dead.png",
-            decay_ms=3600000
+            decay_ms=60000
         )
         
         for item in self.inventory:

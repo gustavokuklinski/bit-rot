@@ -1,0 +1,12 @@
+<item name="Salt" type="consumable_food" allow_belt="false" consume_time="0.1">
+    <properties>
+        <restore status="[food]" value="1" />
+        <reduce status="[water]" value="5" />
+        <restore status="[stamina]" value="1" />
+        <load value="1" />
+        <capacity value="3" />
+        <weight weight="0.001"/>
+        <sprite file="consumable_food_salt.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

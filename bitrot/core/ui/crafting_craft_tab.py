@@ -113,7 +113,9 @@ class CraftingCraftTab:
                         self.modal.game.items_on_ground.append(result_item)
                         result_item.x, result_item.y = self.modal.player.x, self.modal.player.y
                         result_item.rect.topleft = (result_item.x, result_item.y)
-                    created_items_log.append(f"{res['amount']}x {final_name}")
+                    
+                    log_name = getattr(recipe, 'output_name', None) or result_item.name
+                    created_items_log.append(f"{res['amount']}x {log_name}")
 
             if created_items_log:
                 display_message(f"{tr('msg', 'Crafted:')} {', '.join(created_items_log)}")

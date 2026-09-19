@@ -427,10 +427,11 @@ class CraftingModal(BaseModal):
                 self.selected_target = None
 
                 if self.selected_recipe.craft_type == 'dismantle':
-                     first_ing = self.selected_recipe.ingredients[0]['names'][0]
-                     self.result_image = self.get_preview_image(first_ing)
+                    first_ing = self.selected_recipe.ingredients[0]['names'][0]
+                    self.result_image = self.get_preview_image(first_ing)
                 else:
-                    self.result_image = self.get_preview_image(self.selected_recipe.output_name)
+                    target_preview = getattr(self.selected_recipe, 'base_item', None) or getattr(self.selected_recipe, 'raw_output', None) or self.selected_recipe.output_name
+                    self.result_image = self.get_preview_image(target_preview)
                 
                 self.ingredient_images = {}
                 for req in self.selected_recipe.ingredients:

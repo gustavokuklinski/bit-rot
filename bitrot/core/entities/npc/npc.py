@@ -7,6 +7,7 @@ import time
 import core.data.config
 from core.data.config import *
 from core.entities.item.item import Item, Projectile, ITEM_TEMPLATES
+from core.entities.item.item_factory import get_tinted_sprite
 from core.entities.zombie.zombie import Zombie
 from core.entities.zombie.zombie_data import ZombieData  
 from core.messages import display_message
@@ -281,9 +282,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if not is_explicitly_defined and cloth_name in ("Tshirt", "Pants", "Jacket", "Sneakers"):
                     item.color = random.choice(CLOTHING_COLORS)
                     if item.image:
-                        tinted = item.image.copy()
-                        tinted.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                        item.image = tinted
+                        item.image = get_tinted_sprite(item.image, item.name, item.color)
                 
                 actual_slot = getattr(item, 'slot', slot_name)
                 

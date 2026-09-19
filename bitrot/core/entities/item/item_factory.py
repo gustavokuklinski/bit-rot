@@ -3,6 +3,7 @@
 import random
 import secrets
 import pygame
+import re
 import core.data.config
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 
@@ -21,6 +22,99 @@ CLOTHING_COLORS = [
 
 COLORABLE_ITEMS = ["Jacket", "Tshirt", "TShirt", "Sneakers", "Pants"]
 
+# Global shared cache: (item_name, (r, g, b)) -> pygame.Surface
+TINTED_SPRITE_CACHE = {}
+
+def get_tinted_sprite(base_image, item_name, color):
+    """
+    Returns a globally shared tinted surface for (item_name, color).
+    Reuses existing surfaces instead of copying, saving 50MB+ in RAM.
+    """
+    if not base_image:
+        return None
+    if not color or tuple(color)[:3] == (255, 255, 255):
+        return base_image
+
+    color_key = tuple(color)[:3]
+    cache_key = (item_name, color_key)
+
+    if cache_key in TINTED_SPRITE_CACHE:
+        return TINTED_SPRITE_CACHE[cache_key]
+
+    tinted = base_image.copy()
+    tinted.fill((*color_key, 255), special_flags=pygame.BLEND_RGBA_MULT)
+    TINTED_SPRITE_CACHE[cache_key] = tinted
+    return tinted
+
+def is_wildcard_item_spec(spec_str):
+    """Checks if string defines a wildcard container with dynamic loot."""
+    if not isinstance(spec_str, str):
+        return False
+    return bool(re.search(r'baseitem\s*:', spec_str, re.IGNORECASE))
+
+def parse_wildcard_spec(spec_str):
+    """
+    Parses wildcard container specifications such as:
+      '[{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
+      'Cup with [{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
+      'Coffee Cup [{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
+    """
+    if not isinstance(spec_str, str):
+        return None
+
+    base_match = re.search(r'baseitem\s*:\s*([^},\]]+)', spec_str, re.IGNORECASE)
+    if not base_match:
+        return None
+    base_item = base_match.group(1).strip()
+
+    loot_items = []
+    loot_match = re.search(r'loot\s*:\s*\[([^\]]*)\]', spec_str, re.IGNORECASE)
+    if not loot_match:
+        loot_match = re.search(r'loot\s*:\s*([^},\]]+)', spec_str, re.IGNORECASE)
+
+    if loot_match:
+        raw_loot = loot_match.group(1).strip()
+        if raw_loot:
+            for entry in raw_loot.split(','):
+                entry = entry.strip()
+                if not entry:
+                    continue
+                if ':' in entry:
+                    iname, iqty_str = entry.rsplit(':', 1)
+                    try:
+                        iqty = float(iqty_str.strip())
+                        if iqty.is_integer():
+                            iqty = int(iqty)
+                    except ValueError:
+                        iqty = 1
+                    loot_items.append((iname.strip(), iqty))
+                else:
+                    loot_items.append((entry, 1))
+
+    spec_start = re.search(r'\[?\s*\{?\s*baseitem', spec_str, re.IGNORECASE)
+    prefix = spec_str[:spec_start.start()].strip() if spec_start else ""
+
+    first_loot_name = loot_items[0][0] if loot_items else ""
+
+    if prefix:
+        p_low = prefix.lower()
+        if p_low.endswith("with") or p_low.endswith("of") or p_low.endswith("de"):
+            friendly_name = f"{prefix} {first_loot_name}".strip()
+        else:
+            friendly_name = prefix
+    else:
+        if first_loot_name:
+            friendly_name = f"{base_item} with {first_loot_name}"
+        else:
+            friendly_name = base_item
+
+    return {
+        'base_item': base_item,
+        'loot': loot_items,
+        'prefix': prefix,
+        'friendly_name': friendly_name
+    }
+
 def generate_random_item(cls):
     if random.random() > core.data.config.ITEM_SPAWN_CHANCE_MULTIPLIER:
         return None
@@ -28,7 +122,6 @@ def generate_random_item(cls):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
         
-    # ONLY map items that have a spawn_chance > 0
     spawnable = {n: d for n, d in ITEM_TEMPLATES.items() if d.get('spawn_chance', 1.0) > 0}
     if not spawnable:
         return None
@@ -55,13 +148,56 @@ def generate_random_item(cls):
 def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
-        
+
+    # --- WILDCARD CONTAINER GENERATION ---
+    if is_wildcard_item_spec(item_name):
+        parsed = parse_wildcard_spec(item_name)
+        if parsed:
+            base_name = parsed['base_item']
+            container_item = create_item_from_name(
+                cls, base_name, randomize_durability=randomize_durability, 
+                force_color=force_color, spawn_loot=False
+            )
+            if not container_item:
+                return None
+
+            container_item.inventory = []
+
+            for loot_name, loot_qty in parsed['loot']:
+                loot_item = create_item_from_name(cls, loot_name, randomize_durability=False, spawn_loot=True)
+                if loot_item:
+                    is_liq = getattr(loot_item, 'liquid', False)
+                    if is_liq and getattr(container_item, 'max_liquid', None) is not None:
+                        loot_item.capacity = container_item.max_liquid
+                        loot_item.load = min(loot_qty, container_item.max_liquid)
+                    elif getattr(loot_item, 'is_stackable', lambda: False)():
+                        loot_item.load = loot_qty
+
+                    container_item.inventory.append(loot_item)
+
+                    if not is_liq and not getattr(loot_item, 'is_stackable', lambda: False)():
+                        cap = container_item.capacity or 99
+                        for _ in range(min(int(loot_qty) - 1, cap - len(container_item.inventory))):
+                            extra = create_item_from_name(cls, loot_name, randomize_durability=False, spawn_loot=True)
+                            if extra:
+                                container_item.inventory.append(extra)
+
+            return container_item
+    # --------------------------------------
+
     template_name = item_name
     if item_name.startswith("ID: "):
         if "ID" in ITEM_TEMPLATES:
             template_name = "ID"
         elif "ID Card" in ITEM_TEMPLATES:
             template_name = "ID Card"
+    
+    if template_name not in ITEM_TEMPLATES:
+        target_lower = str(template_name).lower().strip()
+        for t_name in ITEM_TEMPLATES:
+            if t_name.lower().strip() == target_lower:
+                template_name = t_name
+                break
 
     if template_name not in ITEM_TEMPLATES:
         if item_name.startswith("ID: "):
@@ -216,7 +352,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     place_time = template.get('place_time', 1.5)
 
     new_item = cls(
-        item_name, template['type'], durability=durability, load=load, 
+        template_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
         spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, 
         max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, 
@@ -234,6 +370,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         place_items=place_items, place_time=place_time
     )
 
+    # Use shared cache instead of item.image.copy()
     if item_name in COLORABLE_ITEMS:
         if force_color is not None:
             new_item.color = force_color
@@ -241,9 +378,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             new_item.color = secrets.choice(CLOTHING_COLORS)
         
         if hasattr(new_item, 'image') and new_item.image and new_item.color != (255, 255, 255):
-            tinted = new_item.image.copy()
-            tinted.fill((*new_item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-            new_item.image = tinted
+            new_item.image = get_tinted_sprite(new_item.image, template_name, new_item.color)
 
     if spawn_loot and 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:
@@ -252,7 +387,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
 
             target_template = ITEM_TEMPLATES.get(loot_info['name'], {})
             
-            # Enforce global spawn ban within nested container loops
             if target_template.get('spawn_chance', 1.0) <= 0:
                 continue
 

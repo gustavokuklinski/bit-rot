@@ -1,0 +1,8 @@
+<item name="Food Bowl" type="container" allow_belt="false" tip="Bowl for Food">
+    <properties>
+        <capacity value="1" />
+        <sprite file="container_bowl.png" />
+        <weight weight="0.01" reduction="1%" />
+    </properties>
+    <spawn chance="1" />
+</item>

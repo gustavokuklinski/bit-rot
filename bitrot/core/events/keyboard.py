@@ -226,7 +226,8 @@ def process_chat_command(game, text):
     if not (text.startswith("%rot ") or text.startswith("/rot ")):
         return False
         
-    command = text[5:].strip().lower()
+    raw_command = text[5:].strip()
+    command = raw_command.lower()
 
     # --- WEATHER COMMANDS ---
     if command.startswith("weather "):
@@ -447,10 +448,10 @@ def process_chat_command(game, text):
         display_message(game, f"[Debug] Spawned {max(0, new_count - old_count)} animals on markers.")
         return True
 
-    # --- ITEM SPAWN ---
-    item_match = re.match(r'item\s+"([^"]+)"(?:\s+(\d+))?', command)
+    # --- ITEM SPAWN (Uses raw_command to keep original case) ---
+    item_match = re.match(r'item\s+"([^"]+)"(?:\s+(\d+))?', raw_command, re.IGNORECASE)
     if item_match:
-        item_name = item_match.group(1)
+        item_name = item_match.group(1).strip()
         qty = int(item_match.group(2)) if item_match.group(2) else 1
         
         from core.entities.item.item import Item
@@ -465,15 +466,15 @@ def process_chat_command(game, text):
                     break
         
         if spawned > 0:
-            display_message(game, f"{tr('msg', 'Spawned')} {spawned}x '{item_name}' {tr('msg', 'into inventory.')}")
+            display_message(game, f"{tr('msg', 'Spawned')} {spawned}x '{new_item.name}' {tr('msg', 'into inventory.')}")
         else:
             display_message(game, f"{tr('msg', 'Could not spawn item')} '{item_name}'.")
         return True
 
-    # --- CLOTH SPAWN ---
-    cloth_match = re.match(r'cloth\s+"([^"]+)"(?:\s+(\d+))?', command)
+    # --- CLOTH SPAWN (Uses raw_command) ---
+    cloth_match = re.match(r'cloth\s+"([^"]+)"(?:\s+(\d+))?', raw_command, re.IGNORECASE)
     if cloth_match:
-        cloth_name = cloth_match.group(1)
+        cloth_name = cloth_match.group(1).strip()
         qty = int(cloth_match.group(2)) if cloth_match.group(2) else 1
         
         from core.entities.item.item import Item
@@ -488,15 +489,15 @@ def process_chat_command(game, text):
                     break
         
         if spawned > 0:
-            display_message(game, f"Spawned {spawned}x '{cloth_name}' into inventory.")
+            display_message(game, f"Spawned {spawned}x '{new_cloth.name}' into inventory.")
         else:
             display_message(game, f"Could not spawn cloth '{cloth_name}'.")
         return True
         
-    # --- VEHICLE SPAWN ---
-    veh_match = re.match(r'vehicle\s+"([^"]+)"', command)
+    # --- VEHICLE SPAWN (Uses raw_command) ---
+    veh_match = re.match(r'vehicle\s+"([^"]+)"', raw_command, re.IGNORECASE)
     if veh_match:
-        veh_name = veh_match.group(1)
+        veh_name = veh_match.group(1).strip()
         from core.entities.vehicle.vehicle_loader import VehicleLoader
         from core.entities.vehicle.vehicle import Vehicle
         
@@ -524,7 +525,7 @@ def process_chat_command(game, text):
             game.containers.append(new_vehicle)
             if hasattr(game, 'rebuild_container_grid'):
                 game.rebuild_container_grid()
-            display_message(game, f"Spawned vehicle '{veh_name}' nearby.")
+            display_message(game, f"Spawned vehicle '{veh_def['name']}' nearby.")
         else:
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")
         return True

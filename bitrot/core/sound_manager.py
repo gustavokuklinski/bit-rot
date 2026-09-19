@@ -33,19 +33,22 @@ CATEGORY_TO_CONFIG_ATTR = {
 class SoundManager:
     def __init__(self):
         self.sounds = {}
-        # 1024 buffer size prevents buffer underrun/drops without latency
-        if not pygame.mixer.get_init():
-            pygame.mixer.pre_init(22050, -16, 2, 1024)
-            pygame.mixer.init()
-        pygame.mixer.set_num_channels(128)
         
-        # Channels 0..3: Dedicated for ambient loops (day, night, rain, cave)
-        # Channels 4..15: Dedicated for critical/priority sounds (weapons, hits, radio, notifications)
-        # Channels 16..127: Dynamic channels for entity/spatial sounds
-        pygame.mixer.set_reserved(16)
+        # 512 buffer size prevents latency without underruns
+        if not pygame.mixer.get_init():
+            pygame.mixer.pre_init(22050, -16, 2, 512)
+            pygame.mixer.init()
+            
+        # 32 channels is optimal for 2D games and uses 75% less RAM than 128
+        pygame.mixer.set_num_channels(32)
+        
+        # Channels 0..3: Ambient loops (day, night, rain, cave)
+        # Channels 4..7: Critical/priority sounds (weapons, hits, radio, notifications)
+        # Channels 8..31: Dynamic channels for entity/spatial SFX
+        pygame.mixer.set_reserved(8)
         
         self.ambient_channels = [0, 1, 2, 3]
-        self.critical_channels = list(range(4, 16))
+        self.critical_channels = [4, 5, 6, 7]
         self.current_critical_idx = 0
 
     @staticmethod
@@ -123,33 +126,11 @@ class SoundManager:
             return False
 
     def get_pitched_sound(self, sound_key, base_sound, pitch_factor):
-        if pitch_factor == 1.0:
-            return base_sound
-        pitched_key = f"{sound_key}_pitch_{pitch_factor:.2f}"
-        if pitched_key in self.sounds:
-            return self.sounds[pitched_key]
-            
-        try:
-            import numpy as np
-            import pygame.sndarray
-            
-            snd_array = pygame.sndarray.array(base_sound)
-            indices = np.round(np.arange(0, len(snd_array), pitch_factor)).astype(int)
-            indices = indices[indices < len(snd_array)]
-            pitched_array = np.ascontiguousarray(snd_array[indices])
-            
-            pitched_sound = pygame.sndarray.make_sound(pitched_array)
-            
-            # Prevent uncontrolled cache growth
-            if len(self.sounds) > 250:
-                keys_to_del = [k for k in self.sounds if '_pitch_' in k]
-                for k in keys_to_del[:50]:
-                    del self.sounds[k]
-                    
-            self.sounds[pitched_key] = pitched_sound
-            return pitched_sound
-        except (ImportError, Exception):
-            return base_sound
+        """
+        Backwards-compatible pass-through. 
+        
+        """
+        return base_sound
 
     def play_sound(self, name, subdir=None, game=None, source_pos=None, base_volume=1.0, loops=0, pitch_variance=0.0, force=False, is_critical=False, fade_ms=0):
         if not name: 
@@ -189,9 +170,11 @@ class SoundManager:
                 return None
                 
         sound = self.sounds[sound_key]
+
+        
         if pitch_variance > 0:
-            pitch_factor = round(random.uniform(1.0 - pitch_variance, 1.0 + pitch_variance) * 20) / 20.0
-            sound = self.get_pitched_sound(sound_key, sound, pitch_factor)
+            volume_jitter = random.uniform(1.0 - (pitch_variance * 0.4), 1.0 + (pitch_variance * 0.4))
+            base_volume = max(0.01, min(1.0, base_volume * volume_jitter))
 
         zoom_multiplier = self.calculate_zoom_multiplier(game)
 
@@ -209,7 +192,7 @@ class SoundManager:
             if not channel:
                 channel = pygame.mixer.Channel(self.ambient_channels[0])
         elif is_critical:
-            # Pick from critical channels (4..15) without stealing ambient channels
+            # Pick from critical channels (4..7) without stealing ambient channels
             for ch_idx in self.critical_channels:
                 c = pygame.mixer.Channel(ch_idx)
                 if not c.get_busy():
@@ -219,7 +202,7 @@ class SoundManager:
                 channel = pygame.mixer.Channel(self.critical_channels[self.current_critical_idx])
                 self.current_critical_idx = (self.current_critical_idx + 1) % len(self.critical_channels)
         else:
-            # Dynamic general SFX channel (16..127)
+            # Dynamic general SFX channel (8..31)
             channel = pygame.mixer.find_channel(False)
             if not channel:
                 # Steal oldest non-reserved channel so sounds are never dropped

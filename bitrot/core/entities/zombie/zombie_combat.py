@@ -136,7 +136,7 @@ class ZombieCombat:
             capacity=20, 
             image_path="zombie/dead.png",
             pos=self.rect.center,
-            decay_ms=300000
+            decay_ms=60000
         )
 
         for item in self.inventory:
