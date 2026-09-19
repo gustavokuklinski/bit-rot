@@ -8,7 +8,6 @@ from core.data.config import BASE_DIR
 _logo_img = None
 
 def draw_btn(surface, rect, text, mouse_pos, enabled=True):
-    """Helper to draw a standardized menu button (Shared style)."""
     is_hovered = rect.collidepoint(mouse_pos)
     
     if not enabled:
@@ -24,7 +23,6 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True):
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
-# --- CHANGED: Added days_survived parameter ---
 def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     scale = UI_SCALE
     def S(val): return int(val * scale)
@@ -51,7 +49,6 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
         title_rect = _logo_img.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(_logo_img, title_rect)
     else:
-        # --- CHANGED: Changed the title text ---
         title_text = font_16.render(tr('ui', "YOU ROTTED"), False, RED)
         title_rect = title_text.get_rect(center=(center_x, center_offset_y + S(180)))
         screen.blit(title_text, title_rect)
@@ -60,16 +57,19 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     score_rect = score_text.get_rect(center=(center_x, center_offset_y + S(324)))
     screen.blit(score_text, score_rect)
     
-    # --- CHANGED: Render the days survived below the kills ---
     days_text = font_16.render(f"{tr('ui', 'Days Survived:')} {days_survived}", False, WHITE)
     days_rect = days_text.get_rect(center=(center_x, center_offset_y + S(350)))
     screen.blit(days_text, days_rect)
 
     btn_width = S(400)
     btn_height = S(50)
-    start_y = center_offset_y + S(396)
+    spacing = S(15)
+    start_y = center_offset_y + S(390)
 
-    menu_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
+    respawn_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
+    draw_btn(screen, respawn_rect, tr('ui', "New Character"), mouse_pos)
+
+    menu_rect = pygame.Rect(center_x - btn_width // 2, respawn_rect.bottom + spacing, btn_width, btn_height)
     draw_btn(screen, menu_rect, tr('ui', "Back to Menu"), mouse_pos)
 
     current_year = datetime.now().year
@@ -78,4 +78,4 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     footer_rect = footer_text.get_rect(center=(center_x, center_offset_y + S(700)))
     screen.blit(footer_text, footer_rect)
 
-    return menu_rect
+    return respawn_rect, menu_rect

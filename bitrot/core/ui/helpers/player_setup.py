@@ -935,6 +935,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 
                 final_player_data['game_settings'] = state.get('settings_data')
 
+                # Maintain the existing world/save environment
+                if state.get('respawn_save_folder'):
+                    final_player_data['respawn_save_folder'] = state['respawn_save_folder']
+
                 raw_seed = state.get('world_seed', "").strip()
                 if not raw_seed:
                     raw_seed = core.data.config.generate_random_seed()

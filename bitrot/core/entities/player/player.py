@@ -39,6 +39,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         data = player_data or {}
         stats = data.get('stats', {})
+        self.player_id = data.get('player_id') or str(uuid.uuid4()) 
         self.progression = PlayerProgression(data)
         self.progression.player = self
         

@@ -11,7 +11,7 @@ from core.messages import init_messages
 from core.logger import GameLogger
 from core.systems.quadtree import Quadtree
 from core.systems.save_manager import save_game
-from core.systems.load_manager import load_game, start_new_game, load_map
+from core.systems.load_manager import load_game, start_new_game, load_map, respawn_player_in_world
 from core.systems.utils import (
     capture_pause_screen, get_scaled_mouse_pos, find_interactable_tile, 
     find_nearby_containers, screen_to_world, get_player_facing_tile
@@ -250,6 +250,8 @@ class Game:
         self.dynamic_w = GAME_WIDTH
         self.dynamic_h = GAME_HEIGHT
 
+    def respawn_player_in_world(self, player_data, save_folder_name):
+        return respawn_player_in_world(self, player_data, save_folder_name)
 
     def get_events(self):
         return pygame.event.get()

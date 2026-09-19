@@ -53,6 +53,7 @@ def save_game(game):
             "sex": game.player.sex,
             "x": game.player.x,
             "y": game.player.y,
+            "is_dead": getattr(game.player, 'is_dead', False),
             "map_filename": game.map_manager.current_map_filename,
             "zombies_killed": game.zombies_killed,
             "stats": {

@@ -25,7 +25,11 @@ def run_loading(game):
 
         # Step 2: Synchronously generate or load the game data
         if game.loading_data:
-            game.start_new_game(game.loading_data)
+            respawn_save = game.loading_data.get('respawn_save_folder')
+            if respawn_save:
+                game.respawn_player_in_world(game.loading_data, respawn_save)
+            else:
+                game.start_new_game(game.loading_data)
             game.loading_data = None
         elif game.loading_saved_game_folder:
             game.load_game(game.loading_saved_game_folder)

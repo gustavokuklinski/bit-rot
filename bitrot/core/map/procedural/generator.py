@@ -163,6 +163,25 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
         self.chunk_size = core.data.config.CHUNK_SIZE
         self.tile_size = core.data.config.TILE_SIZE
 
+        # Check for existing world layout
+        macro_meta_path = os.path.join(self.output_folder, "macro_world.json")
+        if not regenerate and os.path.exists(macro_meta_path):
+            try:
+                with open(macro_meta_path, "r") as f:
+                    meta = json.load(f)
+                self.grid_w = meta.get('grid_w', core.data.config.MAP_CHUNKS)
+                self.grid_h = meta.get('grid_h', core.data.config.MAP_CHUNKS)
+                self.chunk_path = [tuple(c) for c in meta.get('chunk_path', [])]
+                self.connections_grid = meta.get('connections_grid', [])
+                self.chunk_priority_map = {tuple(map(int, k.split('_'))): v for k, v in meta.get('chunk_priority_map', {}).items()}
+                self.chunk_l2_priority_map = {tuple(map(int, k.split('_'))): v for k, v in meta.get('chunk_l2_priority_map', {}).items()}
+                self.generated_chunks = {tuple(c) for c in meta.get('generated_chunks', [])}
+                self.game.generator = self
+                start_gx, start_gy = self.chunk_path[0]
+                return f"map_L1_{start_gx}_{start_gy}_map.csv"
+            except Exception as e:
+                print(f"Error reading existing macro_world.json: {e}")
+
         current_chunks = core.data.config.MAP_CHUNKS
         if not seed_pattern or seed_pattern == "5-DEFAULT":
             try: seed_pattern = generate_random_seed(current_chunks)

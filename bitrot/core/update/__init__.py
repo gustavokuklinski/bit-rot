@@ -7,6 +7,7 @@ from core.update.spawns import check_dynamic_zombie_spawns
 from core.update.projectiles import update_projectiles
 from core.update.entities import update_entities
 from core.update.vehicles import update_vehicles
+from core.systems.load_manager import handle_player_death
 
 # EXPOSE combat functions so external files don't break when importing from `core.update`
 from core.update.combat import (
@@ -37,6 +38,7 @@ def update_game_state(game):
     check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):
+        handle_player_death(game)
         game.game_state = 'GAME_OVER'
 
     zombies_to_remove = []
