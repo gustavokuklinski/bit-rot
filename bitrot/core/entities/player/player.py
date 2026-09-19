@@ -4,7 +4,7 @@ import time
 import pygame
 import random
 import math
-
+import uuid
 import core.data.config
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, BLUE, AUTO_DRINK
 from core.entities.item.item import Item

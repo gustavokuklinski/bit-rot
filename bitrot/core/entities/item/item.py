@@ -312,20 +312,31 @@ class Item:
             return SPRITE_CACHE[sprite_file]
 
         try:
-            if sprite_file.startswith("./data.rot/"):
+            if sprite_file.startswith("./data.rot/") or os.path.isabs(sprite_file):
                 path = sprite_file
             else:
-                if self.item_type == 'cloth':
-                    path = SPRITE_PATH + "clothes/" + sprite_file
+                clean_file = sprite_file.replace("../", "")
+                subfolder = "clothes" if self.item_type == 'cloth' else "items"
+                primary_path = os.path.join(SPRITE_PATH, subfolder, clean_file)
+                
+                if os.path.exists(primary_path):
+                    path = primary_path
                 else:
-                    path = SPRITE_PATH + "items/" + sprite_file
+                    candidates = [
+                        os.path.join(SPRITE_PATH, clean_file),
+                        os.path.join(SPRITE_PATH, "player", os.path.basename(clean_file)),
+                        os.path.join(SPRITE_PATH, "zombie", os.path.basename(clean_file)),
+                        os.path.join(SPRITE_PATH, "animals", os.path.basename(clean_file)),
+                        os.path.join(SPRITE_PATH, "items", clean_file)
+                    ]
+                    path = next((c for c in candidates if os.path.exists(c)), primary_path)
             
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
             
             SPRITE_CACHE[sprite_file] = image
             return image
-        except pygame.error as e:
+        except Exception as e:
             print(f"Warning: Could not load sprite '{sprite_file}': {e}")
             return None
 

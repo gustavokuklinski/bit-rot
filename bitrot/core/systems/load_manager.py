@@ -11,13 +11,17 @@ from core.data.config import *
 import core.data.config
 from core.entities.player.player import Player
 from core.entities.zombie.zombie import Zombie
+from core.entities.zombie.corpse import Corpse
 from core.entities.animal.animal import Animal
 from core.entities.item.item import Item
 from core.entities.npc.npc import NPC
 from core.entities.vehicle.vehicle import Vehicle
 from core.map.world_layers import load_all_map_layers, set_active_layer
 from core.map.map_loader import parse_layered_map_layout
-from core.map.spawn_manager import get_house_spawn_position, spawn_initial_zombies, manage_dynamic_npcs, spawn_l2_population, spawn_random_vehicles, spawn_animals
+from core.map.spawn_manager import (
+    get_house_spawn_position, spawn_initial_zombies, manage_dynamic_npcs,
+    spawn_l2_population, spawn_random_vehicles, spawn_animals
+)
 from core.map.procedural.generator import ProceduralGenerator
 from core.map.world_time import WorldTime
 from core.ui.assets import load_assets
@@ -47,7 +51,7 @@ def load_map(game, map_filename):
     
     set_active_layer(game, layer_index, skip_cache_save=True)
     
-    # [NEW] Fully parse the active chunk layer layout to extract physical barriers and containers
+    # Parse the active chunk layer layout to extract physical barriers and containers
     base_layout = game.all_map_layers.get(layer_index)
     ground_layout = game.all_ground_layers.get(layer_index)
     spawn_layout = game.all_spawn_layers.get(layer_index)
@@ -69,30 +73,31 @@ def load_map(game, map_filename):
     game.current_zombie_spawns = zombie_spawns
     game.player_spawn = player_spawn
 
-    # Extract map specific vehicles
     map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
     for v in map_vehicles:
-        if v in containers:
-            containers.remove(v)
-        if v.rect in obstacles:
-            obstacles.remove(v.rect)
+        if v in containers: containers.remove(v)
+        if v.rect in obstacles: obstacles.remove(v.rect)
     
     game.map_manager.vehicles = map_vehicles
     game.vehicles = map_vehicles
-
-    # [CRITICAL] Ensure chunked logic evaluates to true!
     game.is_giant_map = False
     
     return None
 
 def handle_player_death(game):
-    """Saves player belongings into a corpse and writes world state to disk."""
+    """
+    Saves player belongings into a yellow corpse (utils only from gear)
+    with a 30-minute decay timer and marks the player as deceased in host.rot.
+    """
     if not getattr(game, 'player', None) or getattr(game.player, 'is_dead', False):
         return
 
     game.player.is_dead = True
+    death_pos = (game.player.rect.centerx, game.player.rect.centery)
+    player_id = getattr(game.player, 'player_id', None) or str(uuid.uuid4())
+
     if hasattr(game, 'logger'):
-        game.logger.info(f"Player '{game.player.name}' died. Generating corpse...")
+        game.logger.info(f"Player '{game.player.name}' (ID: {player_id}) died at {death_pos}. Creating 30-minute yellow corpse...")
 
     # 1. Safely exit vehicle if seated
     if getattr(game.player, 'vehicle', None):
@@ -102,22 +107,30 @@ def handle_player_death(game):
             if hasattr(game, 'logger'):
                 game.logger.info(f"Error exiting vehicle on death: {e}")
 
-    # 2. Transfer inventory, belt items, and clothes to a corpse on the ground
+    # 2. Create yellow corpse with 30-minute (1,800,000 ms) decay timer
     try:
-        from core.entities.zombie.corpse import Corpse
+        PLAYER_CORPSE_DECAY_MS = 30 * 60 * 1000  # 30 minutes in milliseconds
         corpse = Corpse(
             name=f"Corpse of {game.player.name}",
-            capacity=30,
-            pos=game.player.rect.center,
-            image_path="zombie/dead.png",
-            decay_ms=600000
+            capacity=35,
+            pos=death_pos,
+            image_path="player/dead.png",
+            decay_ms=PLAYER_CORPSE_DECAY_MS,
+            is_permanent=False,
+            is_player_corpse=True
         )
+
+        # Inventory and Belt
         for it in list(getattr(game.player, 'inventory', [])):
             if it: corpse.inventory.append(it)
         for it in list(getattr(game.player, 'belt', [])):
             if it: corpse.inventory.append(it)
-        for it in list(getattr(game.player, 'clothes', {}).values()):
-            if it: corpse.inventory.append(it)
+
+        # Gear: Only include utility items ('util', 'util2', 'util3')
+        util_slots = {'util', 'util2', 'util3'}
+        for slot, it in getattr(game.player, 'clothes', {}).items():
+            if it and str(slot).lower() in util_slots:
+                corpse.inventory.append(it)
 
         game.items_on_ground.append(corpse)
         if hasattr(game, 'spatial_manager'):
@@ -132,14 +145,13 @@ def handle_player_death(game):
     game.player.clothes = {}
     game.player.active_weapon = None
 
-    # 4. Save world so the corpse and map changes persist
+    # 4. Save world and update host.rot
     if getattr(game, 'current_save_folder_name', None):
         try:
             game.save_game()
         except Exception as e:
             if hasattr(game, 'logger'):
                 game.logger.info(f"Error saving game on death: {e}")
-
 
 def respawn_player_in_world(game, new_player_data, save_folder_name):
     """Loads existing world state and spawns a new character in the same map."""
@@ -151,9 +163,11 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     game.current_save_folder_name = save_folder_name
     game.player_name = new_player_data.get('name', "Player")
 
-    # Instantiate fresh character with newly chosen traits, attributes, and appearance
+    # Generate a fresh unique ID for this new player
+    new_player_data['player_id'] = str(uuid.uuid4())
     new_player = Player(player_data=new_player_data)
     new_player.game = game
+    new_player.player_id = new_player_data['player_id']
     game.player = new_player
 
     initial_loot = new_player_data.get('initial_loot', [])
@@ -181,7 +195,7 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
         game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
-    # Initialize full player vitals
+    # Initialize player vitals
     game.player.health = game.player.max_health
     game.player.stamina = game.player.max_stamina
     game.player.water = 100.0
@@ -195,7 +209,6 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     game.player.is_reloading = False
     game.player.active_weapon = None
 
-    # Reset default UI layout
     stat_pos = game.last_modal_positions.get('status', (0, 0))
     inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
     nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
@@ -204,56 +217,12 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     slots_pos = game.last_modal_positions.get('slots', (1034, 3))
 
     game.modals = [
-        {
-            'type': 'status', 
-            'id': str(uuid.uuid4()), 
-            'position': stat_pos,
-            'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'inventory', 
-            'id': str(uuid.uuid4()), 
-            'position': inv_pos,
-            'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'active_tab': 'Inventory'
-        },
-        {
-            'type': 'gear', 
-            'id': str(uuid.uuid4()), 
-            'position': gear_pos,
-            'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'nearby', 
-            'id': str(uuid.uuid4()), 
-            'position': nearby_pos,
-            'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'active_tab': 'Ground'
-        },
-        {
-            'type': 'messages', 
-            'id': str(uuid.uuid4()), 
-            'position': msg_pos,
-            'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'slots', 
-            'id': str(uuid.uuid4()), 
-            'position': slots_pos,
-            'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        }
+        {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
+        {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
+        {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
     ]
 
     if hasattr(game, 'spatial_manager'):
@@ -261,12 +230,12 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game.spatial_manager.rebuild_item_grid(force=True)
         game.spatial_manager.rebuild_container_grid()
 
-    save_game(game)
+    game.save_game()
+    game.logger.info(f"Respawned new character '{game.player.name}' ({new_player.player_id}) in world '{save_folder_name}'.")
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.is_giant_map = False
     
-    # 1. Clear Map & Layer Data
     game.all_map_layers = {}
     game.all_ground_layers = {}
     game.all_spawn_layers = {}
@@ -275,7 +244,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.layer_spawn_triggers = {}
     game.triggered_spawns = set()
     
-    # 2. Clear Entity & World State
     game.map_states = {}  
     game.spawn_point_grid = {}
     game.items_on_ground = []
@@ -315,7 +283,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 
     game.current_radio_freq = 110.42
 
-    # 3. Clear Visual Caches
     if hasattr(game, '_tile_cache_surface'):
         game._tile_cache_surface = None
     game.tiles_dirty = True
@@ -364,14 +331,14 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         building_counts=gen_building_counts,
         chunk_settings=gen_chunk_settings
     )
-    game.generator = generator  # <--- Store generator reference on game instance
+    game.generator = generator
     
     if save_dir_name:
-            raw_seed = player_data.get('world_seed', "4-B1TR07")
+        raw_seed = player_data.get('world_seed', "4-B1TR07")
     else:
-            raw_seed = player_data.get('world_seed')
-            if not raw_seed or raw_seed == "4-B1TR07":
-                raw_seed = str(uuid.uuid4())
+        raw_seed = player_data.get('world_seed')
+        if not raw_seed or raw_seed == "4-B1TR07":
+            raw_seed = str(uuid.uuid4())
     
     world_seed = raw_seed
     game.world_seed = world_seed
@@ -404,56 +371,12 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     slots_pos = game.last_modal_positions.get('slots', (1034, 3))
 
     game.modals = [
-        {
-            'type': 'status', 
-            'id': str(uuid.uuid4()), 
-            'position': stat_pos,
-            'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'inventory', 
-            'id': str(uuid.uuid4()), 
-            'position': inv_pos,
-            'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'active_tab': 'Inventory'
-        },
-        {
-            'type': 'gear', 
-            'id': str(uuid.uuid4()), 
-            'position': gear_pos,
-            'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'nearby', 
-            'id': str(uuid.uuid4()), 
-            'position': nearby_pos,
-            'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'active_tab': 'Ground'
-        },
-        {
-            'type': 'messages', 
-            'id': str(uuid.uuid4()), 
-            'position': msg_pos,
-            'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        },
-        {
-            'type': 'slots', 
-            'id': str(uuid.uuid4()), 
-            'position': slots_pos,
-            'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0)
-        }
+        {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
+        {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
+        {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+        {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
     ]
 
     if getattr(core.data.config, 'UI_SHOW_TUTORIAL_DEFAULT', False):
@@ -468,8 +391,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         })
     
     game.map_states = {}
-    
-    # The load map handles everything now, bypass giant map logic
     load_map(game, game.map_manager.current_map_filename)
     
     if hasattr(game, 'map_width_pixels') and hasattr(game, 'map_height_pixels'):
@@ -498,24 +419,16 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             spawn_l2_population(game, count=20, target_layer=2)
             spawn_animals(game, target_layer=2)
 
-    # ---------------------------------------------------------
-    # [NEW] Determine Player Spawn Position
-    # ---------------------------------------------------------
-    
-    # Force a quick chunk update so that `game.roof_data` and map definitions 
-    # are populated for our spawn scan to read
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2
         center_y = getattr(game, 'map_height_pixels', 1000) // 2
         game.map_manager.update_chunks((center_x, center_y))
 
-    # [FIX] Prioritize the perfectly calculated 'P' marker from the generator safely!
     if game.player_spawn:
         game.logger.info(f"Player spawn point found at {game.player_spawn}. Setting player position.")
         game.player.x, game.player.y = game.player_spawn
         game.player.rect.topleft = game.player_spawn
     else:
-        # Fallback if no P marker exists
         house_spawn = get_house_spawn_position(game)
         if house_spawn:
             game.logger.info(f"House spawn point found at {house_spawn}. Setting player position.")
@@ -526,7 +439,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
             game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
-
     if spawn_entities:
         nearby_spawns = []
         GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
@@ -535,18 +447,18 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         
         for i in range(-2, 3): 
             for j in range(-2, 3):
-                    cell = (p_grid_x + i, p_grid_y + j)
-                    if cell in game.spawn_point_grid:
-                        nearby_spawns.extend(game.spawn_point_grid[cell])
+                cell = (p_grid_x + i, p_grid_y + j)
+                if cell in game.spawn_point_grid:
+                    nearby_spawns.extend(game.spawn_point_grid[cell])
                         
         if nearby_spawns:
-                if game.current_layer_index not in game.layer_spawn_triggers:
-                    game.layer_spawn_triggers[game.current_layer_index] = set()
-                
-                for pos in nearby_spawns:
-                    game.layer_spawn_triggers[game.current_layer_index].add(pos)
+            if game.current_layer_index not in game.layer_spawn_triggers:
+                game.layer_spawn_triggers[game.current_layer_index] = set()
+            
+            for pos in nearby_spawns:
+                game.layer_spawn_triggers[game.current_layer_index].add(pos)
 
-                initial_zombies = spawn_initial_zombies(
+            initial_zombies = spawn_initial_zombies(
                 game.obstacles, 
                 nearby_spawns, 
                 game.items_on_ground + [game.player],
@@ -557,10 +469,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 player=game.player,
                 obstacle_grid=getattr(game, 'cached_obstacle_grid', None),
                 game=game
-                )
-                game.zombies.extend(initial_zombies)
-                game.layer_zombies[game.current_layer_index] = game.zombies[:]
-                game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
+            )
+            game.zombies.extend(initial_zombies)
+            game.layer_zombies[game.current_layer_index] = game.zombies[:]
+            game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
 
         manage_dynamic_npcs(game)
 
@@ -568,35 +480,67 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.game_start_time = pygame.time.get_ticks()
 
     if should_initial_save:
-        from core.systems.save_manager import save_game
         if game.current_save_folder_name is None:
-                game.current_save_folder_name = save_name
-        save_game(game)
+            game.current_save_folder_name = save_name
+        game.save_game()
 
 def load_game(game, save_folder_name):
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder_name)
     map_path = os.path.join(save_path, "map")
+    player_dir = os.path.join(save_path, "player")
     
     game.logger.info(f"Loading game from {save_path}...")
 
     try:
-        with open(os.path.join(save_path, "host.rot"), "r") as f:
-            player_data = json.load(f)
+        host_file = os.path.join(save_path, "host.rot")
+        with open(host_file, "r") as f:
+            host_raw = json.load(f)
 
+        player_data = None
+        has_alive_player = False
 
-        is_player_dead = (
-            player_data.get('is_dead', False) or 
-            player_data.get('stats', {}).get('health', 100) <= 1 or
-            player_data.get('stats', {}).get('infection', 0) >= 100
-        )
-        if is_player_dead and not getattr(game, '_is_respawning_player', False):
-            game.logger.info(f"Save '{save_folder_name}' has a deceased player. Redirecting to Player Setup.")
-            game.player_setup_state = {}
-            game.player_setup_state['current_tab'] = 'Player'
-            game.player_setup_state['respawn_save_folder'] = save_folder_name
-            game.current_save_folder_name = save_folder_name
-            game.game_state = 'PLAYER_SETUP'
-            return
+        if "players" in host_raw and isinstance(host_raw["players"], dict):
+            alive_id = None
+            for p_id, p_info in host_raw["players"].items():
+                if p_info.get("alive", False):
+                    alive_id = p_id
+                    has_alive_player = True
+                    break
+
+            if not has_alive_player and not getattr(game, '_is_respawning_player', False):
+                game.logger.info(f"Save '{save_folder_name}' has no alive players. Redirecting to Player Setup.")
+                game.player_setup_state = {}
+                game.player_setup_state['current_tab'] = 'Player'
+                game.player_setup_state['respawn_save_folder'] = save_folder_name
+                game.current_save_folder_name = save_folder_name
+                game.game_state = 'PLAYER_SETUP'
+                return
+
+            target_id = alive_id or next(iter(host_raw["players"].keys()), None)
+            if target_id:
+                p_file_name = host_raw["players"][target_id].get("playerID", f"{target_id}.rot")
+                p_path = os.path.join(player_dir, p_file_name)
+                if os.path.exists(p_path):
+                    with open(p_path, "r") as pf:
+                        player_data = json.load(pf)
+        else:
+            player_data = host_raw
+            is_player_dead = (
+                player_data.get('is_dead', False) or 
+                player_data.get('stats', {}).get('health', 100) <= 1 or
+                player_data.get('stats', {}).get('infection', 0) >= 100
+            )
+            if is_player_dead and not getattr(game, '_is_respawning_player', False):
+                game.logger.info(f"Save '{save_folder_name}' has a deceased player. Redirecting to Player Setup.")
+                game.player_setup_state = {}
+                game.player_setup_state['current_tab'] = 'Player'
+                game.player_setup_state['respawn_save_folder'] = save_folder_name
+                game.current_save_folder_name = save_folder_name
+                game.game_state = 'PLAYER_SETUP'
+                return
+
+        if not player_data:
+            player_data = {'name': 'Player', 'stats': {'health': 100}}
 
         start_new_game(game, player_data, save_dir_name=save_folder_name, spawn_entities=False)
         
@@ -610,19 +554,18 @@ def load_game(game, save_folder_name):
         game.map_manager.map_folder = map_path
         game.map_manager.refresh_maps()
 
-        prog_data = player_data['progression']
+        prog_data = player_data.get('progression', {})
         if hasattr(game.player.progression, 'attributes'):
             for key, value in prog_data.items():
                 if key in game.player.progression.attributes:
-                        game.player.progression.attributes[key] = value
+                    game.player.progression.attributes[key] = value
 
-
-        game.player.x = player_data['x']
-        game.player.y = player_data['y']
+        game.player.x = player_data.get('x', game.player.x)
+        game.player.y = player_data.get('y', game.player.y)
+        game.player.player_id = player_data.get('player_id', str(uuid.uuid4()))
         game.player.rect.topleft = (game.player.x, game.player.y)
         
-        game.player.inventory = [deserialize_item(d) for d in player_data['inventory'] if deserialize_item(d)]
-
+        game.player.inventory = [deserialize_item(d) for d in player_data.get('inventory', []) if deserialize_item(d)]
         game.player.alcohol_level = float(player_data.get('stats', {}).get('alcohol_level', 0.0))
 
         game.player.belt = []
@@ -647,8 +590,6 @@ def load_game(game, save_folder_name):
         
         game.player.quests = player_data.get('quests', [])
         game.player.completed_quests = player_data.get('completed_quests', [])
-        # If your game code strictly requires dialog_history to be a set, use set(player_data.get('dialog_history', [])) here instead. 
-        # But lists work fine natively with `in` checks.
         game.player.dialog_history = player_data.get('dialog_history', [])
         game.player.special_dialogs = player_data.get('special_dialogs', [])
         
@@ -665,22 +606,23 @@ def load_game(game, save_folder_name):
             
         game.radio_frequencies = world_data.get('radio_frequencies')
         if not game.radio_frequencies:
-            # Fallback for old saves
             game.radio_frequencies = {}
             used_freqs = set()
             for name, data in RadioManager.STATIONS.items():
                 freq_raw = data['frequency']
                 if freq_raw == 'random':
                     f = round(random.uniform(110.42, 123.58), 2)
-                    while any(abs(f - uf) <= 0.10 for uf in used_freqs): f = round(random.uniform(110.42, 123.58), 2)
+                    while any(abs(f - uf) <= 0.10 for uf in used_freqs): 
+                        f = round(random.uniform(110.42, 123.58), 2)
                     game.radio_frequencies[name] = f
                     used_freqs.add(f)
                 else:
-                    try: game.radio_frequencies[name] = float(freq_raw)
-                    except: game.radio_frequencies[name] = 110.42
+                    try: 
+                        game.radio_frequencies[name] = float(freq_raw)
+                    except: 
+                        game.radio_frequencies[name] = 110.42
                     
         game.current_radio_freq = world_data.get('current_radio_freq', 110.42)
-
 
         for b_entry in world_data.get('barricades', []):
             m_name = b_entry['map']
@@ -710,17 +652,12 @@ def load_game(game, save_folder_name):
             if hasattr(c, 'rect'):
                 key = f"{c.rect.x}_{c.rect.y}"
                 if key in saved_container_map:
-                    # Container was opened before saving
                     c.is_opened = saved_container_map[key].get('is_opened', True)
                     c.inventory = [] 
                     for i_data in saved_container_map[key].get('inventory', []):
-                        if isinstance(i_data, dict):
-                            item = Item.from_dict(i_data)
-                        else:
-                            item = Item.create_from_name(i_data)
+                        item = Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data)
                         if item: c.inventory.append(item)
                 else:
-                    # Container was NEVER opened: keep it unopened and empty, UNLESS it's allow_liquid
                     if getattr(c, 'item_type', '') == 'maptile_container':
                         if not getattr(c, 'allow_liquid', False):
                             c.is_opened = False
@@ -735,38 +672,51 @@ def load_game(game, save_folder_name):
             except Exception as e:
                 game.logger.info(f"Error restoring triggers for layer {layer_str}: {e}")
         
+        # Load items on ground with corpse recreation
         game.items_on_ground = []
         saved_items = world_data.get('items', [])
-        game.logger.info(f"Found {len(saved_items)} items to load from save file.")
 
         for i_data in saved_items:
             try:
-                item = None
                 data = i_data.get('data', {})
                 
                 if data.get('is_corpse') or (isinstance(data.get('name'), str) and data['name'].startswith('Corpse')):
-                     from core.entities.zombie.corpse import Corpse
-                     
-                     name = data.get('name', 'Dead corpse')
-                     image_path = data.get('image_path') 
-                     
-                     item = Corpse(name=name, image_path=image_path)
-                     
-                     if 'inventory' in data and data['inventory']:
-                         item.inventory = [Item.from_dict(x) for x in data['inventory'] if x]
-                     
-                     item.x = int(i_data.get('x', 0))
-                     item.y = int(i_data.get('y', 0))
-                     item.rect.topleft = (item.x, item.y)
-                     
-                     game.items_on_ground.append(item)
-                     continue 
+                    name = data.get('name', 'Dead corpse')
+                    image_path = data.get('image_path')
+                    is_player_corpse = data.get('is_player_corpse', False) or ('of' in name.lower() and 'zombie' not in name.lower())
+                    
+                    # 30 minutes default for player corpse, 10 minutes for standard corpses
+                    default_decay = (30 * 60 * 1000) if is_player_corpse else 600000
+                    remaining_decay = data.get('remaining_decay_ms', data.get('decay_ms', default_decay))
+                    is_permanent = data.get('is_permanent', False)
+
+                    item = Corpse(
+                        name=name, 
+                        image_path=image_path,
+                        decay_ms=remaining_decay,
+                        is_permanent=is_permanent,
+                        is_player_corpse=is_player_corpse
+                    )
+                    
+                    if 'inventory' in data and data['inventory']:
+                        item.inventory = [Item.from_dict(x) for x in data['inventory'] if x]
+                    
+                    item.x = int(i_data.get('x', 0))
+                    item.y = int(i_data.get('y', 0))
+                    item.rect.topleft = (item.x, item.y)
+                    
+                    if is_player_corpse:
+                        item.is_placed = True
+                        item.color = (255, 255, 0)
+                        item.apply_yellow_tint()
+                    else:
+                        item.is_placed = False
+
+                    game.items_on_ground.append(item)
+                    continue
 
                 if 'data' in i_data:
-                    if isinstance(i_data['data'], dict):
-                        item = Item.from_dict(i_data['data'])
-                    else:
-                        item = Item.create_from_name(i_data['data'])
+                    item = Item.from_dict(i_data['data']) if isinstance(i_data['data'], dict) else Item.create_from_name(i_data['data'])
                 else:
                     item = Item.create_from_name(i_data['name'])
                     
@@ -775,20 +725,17 @@ def load_game(game, save_folder_name):
                     item.y = int(i_data.get('y', 0))
                     item.rect.topleft = (item.x, item.y)
                     game.items_on_ground.append(item)
-                else:
-                    game.logger.info(f"Warning: Failed to recreate item: {i_data}")
             except Exception as e:
                 game.logger.info(f"Error loading an item on ground: {e}")
         
+        # Load Zombies
         game.zombies = [] 
         zombies_path = os.path.join(save_path, "zombies.rot")
-        
         if os.path.exists(zombies_path):
-             game.logger.info("Loading zombies from zombies.rot...")
-             with open(zombies_path, "r") as f:
-                 zombie_list = json.load(f)
-             
-             for z_data in zombie_list:
+            with open(zombies_path, "r") as f:
+                zombie_list = json.load(f)
+            
+            for z_data in zombie_list:
                 template = {
                     'name': z_data.get('name', 'Zombie'),
                     'sex': z_data.get('sex', 'Male'),
@@ -807,89 +754,54 @@ def load_game(game, save_folder_name):
                 }
                 
                 z = Zombie(z_data['x'], z_data['y'], template)
-                
                 layer = z_data.get('layer', 1)
                 z.layer = layer
-
                 z.health = z_data.get('health', z.max_health)
                 z.max_health = z_data.get('max_health', z.health)
                 if 'id' in z_data and z_data['id']:
                     z.id = z_data['id']
                 
                 if 'inventory' in z_data:
-                    z.inventory = [] 
-                    for i_data in z_data['inventory']:
-                        if isinstance(i_data, dict):
-                            item = Item.from_dict(i_data)
-                        else:
-                            item = Item.create_from_name(i_data)
-                        if item:
-                            z.inventory.append(item)
+                    z.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in z_data['inventory']]
                 
                 clothes_data = z_data.get('clothes', {})
                 z.clothes = {}
                 for slot, c_data in clothes_data.items():
-                    if c_data:
-                        if isinstance(c_data, dict):
-                            z.clothes[slot] = Item.from_dict(c_data)
-                        else:
-                            z.clothes[slot] = Item.create_from_name(c_data)
-                    else:
-                        z.clothes[slot] = None
+                    z.clothes[slot] = (Item.from_dict(c_data) if isinstance(c_data, dict) else Item.create_from_name(c_data)) if c_data else None
 
                 if layer == game.current_layer_index:
                     game.zombies.append(z)
                 else:
                     if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
-                    if layer not in game.layer_zombies: game.layer_zombies[layer] = []
-                    game.layer_zombies[layer].append(z)
+                    game.layer_zombies.setdefault(layer, []).append(z)
 
-        else:
-             game.logger.info("zombies.rot not found. Attempting to load zombies from world.rot (legacy)...")
-             for z_data in world_data.get('zombies', []):
-                z = Zombie.create_random(z_data['x'], z_data['y']) 
-                if z:
-                    z.health = z_data['health']
-                    game.zombies.append(z)
-
+        # Load Animals
         animal_path = os.path.join(save_path, "animal.rot")
         if os.path.exists(animal_path):
-             game.logger.info("Loading animals from animal.rot...")
-             with open(animal_path, "r") as f:
-                 animal_list = json.load(f)
-             
-             for a_data in animal_list:
+            with open(animal_path, "r") as f:
+                animal_list = json.load(f)
+            
+            for a_data in animal_list:
                 animal_type = a_data.get('name', 'Rat')
                 layer = a_data.get('layer', 1)
                 a = Animal(a_data['x'], a_data['y'], animal_type, game=game, layer=layer)
-                
                 a.health = a_data.get('health', a.max_health)
                 a.max_health = a_data.get('max_health', a.health)
-                
                 if 'id' in a_data and a_data['id']:
                     a.id = a_data['id']
                 
                 if 'inventory' in a_data:
-                    a.inventory = []
-                    for i_data in a_data['inventory']:
-                         if isinstance(i_data, dict):
-                            item = Item.from_dict(i_data)
-                         else:
-                            item = Item.create_from_name(i_data)
-                         if item: a.inventory.append(item)
+                    a.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in a_data['inventory']]
 
                 if layer == game.current_layer_index:
                     game.items_on_ground.append(a)
                 else:
                     if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
-                    if layer not in game.layer_zombies: game.layer_zombies[layer] = []
-                    game.layer_zombies[layer].append(a)
-
+                    game.layer_zombies.setdefault(layer, []).append(a)
         
         if 'modal_positions' in world_data:
             saved_positions = world_data['modal_positions']
             game.last_modal_positions.update(saved_positions)
-            
             for modal in game.modals:
                 m_type = modal['type']
                 if m_type in saved_positions:
@@ -898,69 +810,48 @@ def load_game(game, save_folder_name):
                         modal['position'] = (int(pos[0]), int(pos[1]))
                         modal['rect'].topleft = modal['position']
 
+        # Load NPCs
         if os.path.exists(os.path.join(save_path, "npc.rot")):
-                with open(os.path.join(save_path, "npc.rot"), "r") as f:
-                    npc_list = json.load(f)
-                game.npcs.empty()
-                for n_data in npc_list:
-                    is_static = n_data.get('is_static', False)
-                    layer = n_data.get('layer', 1)
-                    npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static, layer=layer)
-                    npc.name = n_data.get('name', 'Survivor')
-                    npc.health = n_data.get('health', 100)
-                    npc.max_health = n_data.get('max_health', 100)
-                    
-                    npc.is_following = n_data.get('is_following', False)
-                    npc.is_friendly = n_data.get('is_friendly', True)
-                    
-                    if 'id' in n_data and n_data['id']:
-                        npc.id = n_data['id']
-                    
-                    if 'dialog_flags' in n_data:
-                        npc.dialog_flags = set(n_data['dialog_flags'])
+            with open(os.path.join(save_path, "npc.rot"), "r") as f:
+                npc_list = json.load(f)
+            game.npcs.empty()
+            for n_data in npc_list:
+                is_static = n_data.get('is_static', False)
+                layer = n_data.get('layer', 1)
+                npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static, layer=layer)
+                npc.name = n_data.get('name', 'Survivor')
+                npc.health = n_data.get('health', 100)
+                npc.max_health = n_data.get('max_health', 100)
+                npc.is_following = n_data.get('is_following', False)
+                npc.is_friendly = n_data.get('is_friendly', True)
+                if 'id' in n_data and n_data['id']: npc.id = n_data['id']
+                if 'dialog_flags' in n_data: npc.dialog_flags = set(n_data['dialog_flags'])
+                if npc.is_following: npc.state = 'following'
+                
+                npc.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in n_data.get('inventory', [])]
+                
+                w_data = n_data.get('equipped_weapon')
+                if w_data:
+                    npc.equipped_weapon = Item.from_dict(w_data) if isinstance(w_data, dict) else Item.create_from_name(w_data)
 
-                    if npc.is_following:
-                        npc.state = 'following'
-                    
-                    npc.inventory = []
-                    for i_data in n_data.get('inventory', []):
-                        if isinstance(i_data, dict):
-                            item = Item.from_dict(i_data)
-                        else:
-                            item = Item.create_from_name(i_data)
-                        if item: npc.inventory.append(item)
-                    
-                    w_data = n_data.get('equipped_weapon')
-                    if w_data:
-                        if isinstance(w_data, dict):
-                            npc.equipped_weapon = Item.from_dict(w_data)
-                        else:
-                            npc.equipped_weapon = Item.create_from_name(w_data)
-
-                    clothes_data = n_data.get('clothes', {})
-                    npc.clothes = {}
-                    for slot, c_data in clothes_data.items():
-                        if c_data:
-                            if isinstance(c_data, dict):
-                                npc.clothes[slot] = Item.from_dict(c_data)
-                            else:
-                                npc.clothes[slot] = Item.create_from_name(c_data)
-                    
-                    if 'loot_table' in n_data:
-                        npc.loot_table = n_data['loot_table']
-                            
-                    if layer == game.current_layer_index or npc.is_following:
-                        game.npcs.add(npc)
-                    else:
-                        if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}
-                        if layer not in game.layer_npcs: game.layer_npcs[layer] = []
-                        game.layer_npcs[layer].append(npc)
+                clothes_data = n_data.get('clothes', {})
+                npc.clothes = {}
+                for slot, c_data in clothes_data.items():
+                    npc.clothes[slot] = (Item.from_dict(c_data) if isinstance(c_data, dict) else Item.create_from_name(c_data)) if c_data else None
+                
+                if 'loot_table' in n_data: npc.loot_table = n_data['loot_table']
+                        
+                if layer == game.current_layer_index or npc.is_following:
+                    game.npcs.add(npc)
+                else:
+                    if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}
+                    game.layer_npcs.setdefault(layer, []).append(npc)
         
+        # Load Vehicles
         if os.path.exists(os.path.join(save_path, "vehicles.rot")):
             with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
                 v_list = json.load(f)
                 
-            # Ensure proper initialization of vehicles lists
             if not hasattr(game.map_manager, 'vehicles'):
                 game.map_manager.vehicles = []
             else:
@@ -976,43 +867,24 @@ def load_game(game, save_folder_name):
             for v_data in v_list:
                 vehicle_def = game.tile_manager.definitions.get(v_data.get('name').lower().replace(" ", "_"), None)
                 v_img = vehicle_def['image'] if vehicle_def else None 
-                v_w, v_h = TILE_SIZE, TILE_SIZE
                     
                 vehicle = Vehicle(
                     name=v_data.get('name'),
                     x=v_data.get('x'),
                     y=v_data.get('y'),
-                    width=v_w,
-                    height=v_h,
+                    width=TILE_SIZE,
+                    height=TILE_SIZE,
                     image=v_img, 
                     stats={}, 
                     capacity=20,
                     facing=v_data.get('facing', 'right')
                 )
                 
-                if hasattr(vehicle, 'inventory'):
-                    vehicle.inventory = []
-                    for i_data in v_data.get('inventory', []):
-                        if isinstance(i_data, dict):
-                            item = Item.from_dict(i_data)
-                        else:
-                            item = Item.create_from_name(i_data)
-                        if item: vehicle.inventory.append(item)
+                vehicle.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in v_data.get('inventory', [])]
                 
                 if 'equipment' in v_data:
-                    loaded_equipment = v_data['equipment']
-                    for slot, item_data in loaded_equipment.items():
-                        if item_data:
-                            if isinstance(item_data, dict):
-                                item = Item.from_dict(item_data)
-                            else:
-                                item = Item.create_from_name(item_data)
-                                
-                            if item:
-                                vehicle.equipment[slot] = item
-                        else:
-                            vehicle.equipment[slot] = None
-                    
+                    for slot, item_data in v_data['equipment'].items():
+                        vehicle.equipment[slot] = (Item.from_dict(item_data) if isinstance(item_data, dict) else Item.create_from_name(item_data)) if item_data else None
                     vehicle.update_stats_from_equipment()
                     
                 if 'lights' in v_data:
@@ -1023,7 +895,6 @@ def load_game(game, save_folder_name):
                 game.containers.append(vehicle)
                 game.obstacles.append(vehicle.rect)
 
-        #game.game_state = 'PLAYING'
         game.logger.info("Game loaded successfully!")
 
     except Exception as e:

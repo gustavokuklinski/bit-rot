@@ -64,17 +64,19 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
         if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
-        # [FIX] Render Placed items full-size, otherwise downscale 8x8 Drops
-        if getattr(item, 'is_placed', False):
-            if getattr(item, 'image', None): surface.blit(item.image, draw_pos)
-            else: pygame.draw.rect(surface, getattr(item, 'color', WHITE), draw_pos)
+        # Full-size 16x16 for player corpse or placed items; small 8x8 for zombie corpses & dropped items
+        if getattr(item, 'is_player_corpse', False) or getattr(item, 'is_placed', False):
+            if getattr(item, 'image', None):
+                surface.blit(item.image, draw_pos)
+            else:
+                pygame.draw.rect(surface, getattr(item, 'color', WHITE), draw_pos)
         else:
             if getattr(item, 'image', None):
-                if not hasattr(item, 'ground_image_8x8'): item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
+                if not hasattr(item, 'ground_image_8x8'):
+                    item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
                 surface.blit(item.ground_image_8x8, (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4))
             else:
                 pygame.draw.rect(surface, getattr(item, 'color', WHITE), (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4, 8, 8))
-
     for p in game.projectiles:
         if screen_rect.colliderect(p.rect): p.draw(surface, offset_x, offset_y)
 
