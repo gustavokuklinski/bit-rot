@@ -127,6 +127,10 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
             if current_opacity > 0 and screen_rect.colliderect(entity.rect):
                 entity.draw(surface, offset_x, offset_y, int(current_opacity))
 
+    for rp in getattr(game, 'remote_players', {}).values():
+        if screen_rect.colliderect(rp.rect):
+            rp.draw(surface, offset_x, offset_y, game)
+
     game.player.draw_highlight_stairs(surface, game, offset_x, offset_y)
     game.player.draw(surface, offset_x, offset_y, getattr(game.player, 'is_aiming', False))
     draw_debug_radius(game, surface, offset_x, offset_y)

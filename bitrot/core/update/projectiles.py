@@ -40,6 +40,26 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                 game.splashes.append({'pos': game.player.rect.center, 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 3, 'type': 'hit_puff'})
                 projectiles_to_remove.append(p)
                 continue
+                
+        if not getattr(p, 'is_explosive', False) and p not in projectiles_to_remove:
+            for rp in getattr(game, 'remote_players', {}).values():
+                if not getattr(rp, 'is_dead', False) and p.rect.colliderect(rp.rect):
+                    owner = getattr(p, 'owner', None)
+                    if owner == game.player:
+                        if getattr(game, 'is_client', False):
+                            from core.server.network import NetMsg, send_msg
+                            send_msg(game.client.socket, {
+                                'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player',
+                                'id': rp.player_id, 'damage': getattr(p, 'damage', 5)
+                            })
+                        else:
+                            for s, info in game.server.clients.items():
+                                if info.get('id') == rp.player_id:
+                                    from core.server.network import NetMsg, send_msg
+                                    send_msg(s, {'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player', 'damage': getattr(p, 'damage', 5)})
+                                    break
+                    projectiles_to_remove.append(p)
+                    break
         
         search_rect = p.rect.inflate(10, 10)
         potential_hits = game.quadtree.query(search_rect)
@@ -49,6 +69,22 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
         if hit_zombie:
             is_animal = getattr(hit_zombie, 'type', 'zombie') == 'animal'
             owner = getattr(p, 'owner', None)
+            damage = getattr(p, 'damage', 5)
+
+            if getattr(game, 'is_client', False):
+                from core.server.network import NetMsg, send_msg
+                dx = hit_zombie.rect.centerx - p.rect.centerx
+                dy = hit_zombie.rect.centery - p.rect.centery
+                mag = math.hypot(dx, dy) or 1.0
+                kb_force = 12.0
+                send_msg(game.client.socket, {
+                    'type': NetMsg.ENTITY_DAMAGE,
+                    'entity_type': 'zombie',
+                    'id': getattr(hit_zombie, 'id', None),
+                    'damage': damage,
+                    'kb_x': (dx / mag) * kb_force,
+                    'kb_y': (dy / mag) * kb_force
+                })
 
             if owner is None or owner == game.player:
                 if player_hit_zombie(game.player, hit_zombie, game):

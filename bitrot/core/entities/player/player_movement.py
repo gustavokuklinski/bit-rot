@@ -194,7 +194,7 @@ class PlayerMovement:
                     gx = obstacle.x // TILE_SIZE
                     gy = obstacle.y // TILE_SIZE
                     tile_def = game.map_manager.get_tile_at(gx, gy)
-                    if tile_def and 'mask' in tile_def:
+                    if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
                         offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
                         if self.mask.overlap(tile_def['mask'], offset):
                             return 'tile'

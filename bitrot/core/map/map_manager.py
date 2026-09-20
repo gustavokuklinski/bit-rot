@@ -345,7 +345,14 @@ class MapManager:
 
     def toggle_door_state(self, grid_x, grid_y):
         """Toggles a 'statable' tile (like a door) between its states."""
-        
+        if getattr(self.game, 'is_client', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(self.game.client.socket, {
+                'type': NetMsg.WORLD_ACTION, 'action': 'toggle_door',
+                'x': grid_x, 'y': grid_y
+            })
+            return
+            
         if self.get_barricade(grid_x, grid_y):
             display_message(tr('msg', "Door is barricaded!"))
             return
@@ -451,11 +458,7 @@ class MapManager:
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
             
-            self.game.map_data[grid_y][grid_x] = new_char
-            
-            self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-            if new_def['is_obstacle']:
-                self.game.obstacles.append(tile_rect)
+            self._replace_tile(grid_x, grid_y, current_char, new_char)
             
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
@@ -467,8 +470,6 @@ class MapManager:
                     pitch_variance=0.15,
                     is_critical=True
                 )
-            
-            self.invalidate_chunk(grid_x, grid_y)
 
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
@@ -486,26 +487,33 @@ class MapManager:
             barricade = self.get_barricade(grid_x, grid_y)
             
             draw_x = grid_x * TILE_SIZE + offset_x
-            draw_y = grid_y * TILE_SIZE + offset_y - 7
+            draw_y = grid_y * TILE_SIZE + offset_y - 6
 
+            bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 4)
+
+            # --- FIX: Clean Game-Standard UI design (No outlines) ---
             if barricade:
-                bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
-                pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
+                pygame.draw.rect(surface, (30, 30, 30), bg_bar_rect)
                 pct = max(0.0, min(1.0, barricade['health'] / barricade['max_health']))
-                bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 5)
+                bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 4)
                 pygame.draw.rect(surface, YELLOW, bar_rect)
+
             elif map_name in self.game.map_states and 'tile_health' in self.game.map_states[map_name]:
                 if pos in self.game.map_states[map_name]['tile_health']:
                     current_hp = self.game.map_states[map_name]['tile_health'][pos]
                     char = self.game.map_data[grid_y][grid_x]
                     defn = self.game.tile_manager.definitions.get(char)
-                    if defn:
-                        max_hp = defn.get('health_max', 100)
-                        bg_bar_rect = pygame.Rect(draw_x, draw_y, TILE_SIZE, 5)
-                        pygame.draw.rect(surface, DARK_GRAY, bg_bar_rect)
-                        pct = max(0.0, min(1.0, current_hp / max_hp))
-                        bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 5)
-                        pygame.draw.rect(surface, GREEN, bar_rect)
+                    
+                    base_name = char.replace("_open", "").replace("_close", "").replace("_broke", "")
+                    close_def = self.game.tile_manager.definitions.get(f"{base_name}_close")
+                    max_hp = (defn.get('health_max') if defn and defn.get('health_max') else 
+                              (close_def.get('health_max', 100) if close_def else 100))
+
+                    pygame.draw.rect(surface, (30, 30, 30), bg_bar_rect)
+                    pct = max(0.0, min(1.0, current_hp / max_hp))
+                    bar_color = GREEN if pct > 0.5 else (YELLOW if pct > 0.25 else RED)
+                    bar_rect = pygame.Rect(draw_x, draw_y, int(pct * TILE_SIZE), 4)
+                    pygame.draw.rect(surface, bar_color, bar_rect)
 
             self.tile_hit_timers[pos] -= 1
             if self.tile_hit_timers[pos] <= 0:
@@ -586,6 +594,16 @@ class MapManager:
         return None
 
     def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
+        if getattr(self.game, 'is_client', False) and not getattr(self, '_ignore_net', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(self.game.client.socket, {
+                'type': NetMsg.WORLD_ACTION, 'action': 'hit_tile',
+                'x': grid_x, 'y': grid_y, 'damage': damage
+            })
+            import time
+            self.shaking_tiles[(grid_x, grid_y)] = time.time()
+            return True
+            
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
 
@@ -622,8 +640,16 @@ class MapManager:
                 source_pos=tile_rect.center, base_volume=0.4, pitch_variance=0.15
             )
 
+        import time
         # Trigger shake effect
         self.shaking_tiles[(grid_x, grid_y)] = time.time()
+        if getattr(self.game, 'is_server', False):
+            from core.server.network import NetMsg, send_msg
+            for s in self.game.server.clients:
+                send_msg(s, {
+                    'type': NetMsg.WORLD_ACTION, 'action': 'shake_tile',
+                    'x': grid_x, 'y': grid_y
+                })
 
         # 1. BARRICADE ABSORPTION
         if barricade:
@@ -656,6 +682,15 @@ class MapManager:
                     max_h = 100
                     min_h = 60
             self.game.map_states[map_name]['tile_health'][pos_key] = random.randint(min_h, max_h)
+
+        if barricade:
+            barricade['health'] -= damage
+            if barricade['health'] <= 0:
+                self.remove_barricade(grid_x, grid_y)
+                display_message(tr('msg', "Barricade destroyed!"))
+                return True
+            else:
+                return True
 
         self.game.map_states[map_name]['tile_health'][pos_key] -= damage
         current_hp = self.game.map_states[map_name]['tile_health'][pos_key]
@@ -696,6 +731,14 @@ class MapManager:
             
         # [NEW] Invalidate chunk to redraw with new tile
         self.invalidate_chunk(grid_x, grid_y)
+        
+        if getattr(self.game, 'is_server', False):
+            from core.server.network import NetMsg, send_msg
+            for s in self.game.server.clients:
+                send_msg(s, {
+                    'type': NetMsg.WORLD_ACTION, 'action': 'tile_change',
+                    'x': grid_x, 'y': grid_y, 'char': new_char
+                })
     
     def remove_vehicle_tile(self, grid_x, grid_y):
         """

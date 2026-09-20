@@ -149,10 +149,20 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.images['right'] = old_sprite
 
         self.image = self.images.get('center')
+        if not self.image:
+            self.image = self._load_sprite('player.png')
+            if self.image:
+                self.images['center'] = self.image
+                self.images['left'] = self.image
+                self.images['right'] = self.image
+
         if self.image:
             self.mask = pygame.mask.from_surface(self.image)
         else:
-            self.mask = None
+            self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
+            self.image.fill(BLUE)
+            self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
+            self.mask.fill()
 
         self.layer_switch_cooldown = 0
         self.aim_angle = 0

@@ -72,7 +72,7 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
             else:
                 agility = game.player.progression.get_level('agility')
                 open_time = max(0.2, 1.8 - (agility * 0.2))
-                game.player.start_action(tr('ui', "Opening"), open_time, do_open_container, xp_reward=1.5)
+                game.player.start_action(f"{game.player.name} {tr('ui', "Opening")}", open_time, do_open_container, xp_reward=1.5)
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Nearby"))

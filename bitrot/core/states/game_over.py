@@ -3,6 +3,12 @@ from core.ui.helpers.game_over import draw_game_over
 from core.systems.load_manager import handle_player_death
 
 def run_game_over(game):
+    # If this is an active server, handle_player_death already set game_state to PLAYER_SETUP
+    if getattr(game, 'is_server', False):
+        handle_player_death(game)
+        game.game_state = 'PLAYER_SETUP'
+        return
+
     if hasattr(game, 'world_time') and game.world_time:
         game.world_time.stop_all_sounds()
     

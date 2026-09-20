@@ -184,8 +184,21 @@ class PlayerInventory:
                 item_to_drop.x, item_to_drop.y = found_pos
 
             item_to_drop.is_placed = False
+
+            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                from core.server.network import NetMsg, send_msg
+                send_msg(game.client.socket, {
+                    'type': NetMsg.WORLD_ACTION, 
+                    'action': 'drop', 
+                    'item_data': item_to_drop.to_dict(), 
+                    'x': item_to_drop.x, 
+                    'y': item_to_drop.y, 
+                    'is_placed': False
+                })
+            
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
+
             return item_to_drop
 
         return None
@@ -379,10 +392,21 @@ class PlayerInventory:
                 item_to_drop.rect.topleft = found_pos
                 item_to_drop.x, item_to_drop.y = found_pos
                 item_to_drop.is_placed = False
-                game.items_on_ground.append(item_to_drop)
             else:
-                # Fallback: If completely blocked, put it back in inventory or just spawn it anyway
                 item_to_drop.is_placed = False
+
+            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                from core.server.network import NetMsg, send_msg
+                send_msg(game.client.socket, {
+                    'type': NetMsg.WORLD_ACTION, 
+                    'action': 'drop', 
+                    'item_data': item_to_drop.to_dict(), 
+                    'x': item_to_drop.x, 
+                    'y': item_to_drop.y, 
+                    'is_placed': False
+                })
+                
+            if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
 
             self.drop_cooldown = 10 

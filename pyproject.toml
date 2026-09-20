@@ -11,15 +11,15 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pygame-ce",
-    "numpy",
-    "pillow",
+    "msgpack",
     "cryptography"
 ]
 
 [project.optional-dependencies]
 dev = [
     "Nuitka",
-    "faker"
+    "faker",
+    "pillow"
 ]
 
 [tool.black]

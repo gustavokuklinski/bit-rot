@@ -61,6 +61,21 @@ def handle_attack(game, mouse_pos):
                 adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
                 target_world_x, target_world_y = game.screen_to_world(adjusted_aim_pos)
                 
+                if getattr(game, 'is_client', False):
+                    from core.server.network import NetMsg, send_msg
+                    send_msg(game.client.socket, {
+                        'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
+                        'tx': target_world_x, 'ty': target_world_y
+                    })
+                elif getattr(game, 'is_server', False):
+                    from core.server.network import NetMsg, send_msg
+                    for s in game.server.clients:
+                        send_msg(s, {
+                            'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
+                            'player_id': getattr(game.player, 'player_id', 'host'),
+                            'tx': target_world_x, 'ty': target_world_y
+                        })
+                
                 dx = target_world_x - game.player.rect.centerx
                 dy = target_world_y - game.player.rect.centery
                 base_angle = math.atan2(dy, dx)
@@ -214,7 +229,29 @@ def handle_attack(game, mouse_pos):
         else:
             # --- MELEE ATTACK LOGIC ---
             if game.player.progression.handle_melee_attack(game.player, weapon):
-                
+                aim_pos = game._get_scaled_mouse_pos()
+                adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
+                world_pos = game.screen_to_world(adjusted_aim_pos)
+
+                dx_swing = world_pos[0] - game.player.rect.centerx
+                dy_swing = world_pos[1] - game.player.rect.centery
+                game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
+                game.player.melee_swing_timer = 15
+
+                if getattr(game, 'is_client', False):
+                    from core.server.network import NetMsg, send_msg
+                    send_msg(game.client.socket, {
+                        'type': NetMsg.WORLD_ACTION, 'action': 'melee_swing',
+                        'angle': game.player.melee_swing_angle
+                    })
+                elif getattr(game, 'is_server', False):
+                    from core.server.network import NetMsg, send_msg
+                    for s in game.server.clients:
+                        send_msg(s, {
+                            'type': NetMsg.WORLD_ACTION, 'action': 'melee_swing',
+                            'player_id': getattr(game.player, 'player_id', 'host'),
+                            'angle': game.player.melee_swing_angle
+                        })
 
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
@@ -227,30 +264,17 @@ def handle_attack(game, mouse_pos):
                         is_critical=True
                     )
 
-                game.player.melee_swing_timer = 10
-                
-                aim_pos = game._get_scaled_mouse_pos()
-                adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
-                world_pos = game.screen_to_world(adjusted_aim_pos)
-                
-                dx_swing = world_pos[0] - game.player.rect.centerx
-                dy_swing = world_pos[1] - game.player.rect.centery
-
-                game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
-
                 hit_something = False
-
                 attack_range = TILE_SIZE * 1.5 
                 if weapon and hasattr(weapon, 'reach'):
                      attack_range = weapon.reach * TILE_SIZE
 
-                # Allow damage if player has stamina, OR if they are using a weapon that doesn't require stamina
                 has_melee_weapon = weapon is not None and getattr(weapon, 'item_type', '') in ['weapon_melee', 'tool']
                 can_deal_damage = game.player.stamina > 0 or has_melee_weapon
 
+                # 1. Hit Zombies
                 for zombie in game.zombies:
                     dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
-
                     if dist <= attack_range:
                         dx = zombie.rect.centerx - game.player.rect.centerx
                         dy_inv = game.player.rect.centery - zombie.rect.centery
@@ -260,14 +284,34 @@ def handle_attack(game, mouse_pos):
                         if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
                         if zombie.rect.collidepoint(world_pos) or angle_diff < 1.0:
-                            if can_deal_damage:
-                                if player_hit_zombie(game.player, zombie, game):
-                                    handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                                    game.zombies_killed += 1
-
                             dx_kb = zombie.rect.centerx - game.player.rect.centerx
                             dy_kb = zombie.rect.centery - game.player.rect.centery 
                             kb_angle = math.atan2(dy_kb, dx_kb)
+
+                            if can_deal_damage:
+                                damage = game.player.get_attack_damage()
+                                create_blood_splatter(game, zombie.rect, damage, [math.cos(kb_angle), math.sin(kb_angle)])
+                                game.splashes.append({'pos': (zombie.rect.centerx, zombie.rect.bottom), 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 2, 'type': 'hit_puff'})
+
+                                force = 7
+                                kb_x = math.cos(kb_angle) * force
+                                kb_y = math.sin(kb_angle) * force
+                                zombie.knockback_velocity = [kb_x, kb_y]
+                                zombie.knockback_timer = 200
+
+                                if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                    send_msg(game.client.socket, {
+                                        'type': NetMsg.ENTITY_DAMAGE,
+                                        'entity_type': 'zombie',
+                                        'id': getattr(zombie, 'id', None),
+                                        'damage': damage,
+                                        'kb_x': kb_x,
+                                        'kb_y': kb_y
+                                    })
+                                else:
+                                    if player_hit_zombie(game.player, zombie, game):
+                                        handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
+                                        game.zombies_killed += 1
 
                             force = 7 
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
@@ -280,10 +324,47 @@ def handle_attack(game, mouse_pos):
                             hit_something = True
                             break
 
+                # 2. Hit Remote Players (PvP)
                 if not hit_something:
-                    for animal in game.active_animals:
-                        dist = math.hypot(animal.rect.centerx - game.player.rect.centerx, animal.rect.centery - game.player.rect.centery)
+                    for rp in getattr(game, 'remote_players', {}).values():
+                        if getattr(rp, 'is_dead', False): continue
+                        dist = math.hypot(rp.rect.centerx - game.player.rect.centerx, rp.rect.centery - game.player.rect.centery)
+                        if dist <= attack_range:
+                            dx = rp.rect.centerx - game.player.rect.centerx
+                            dy_inv = game.player.rect.centery - rp.rect.centery
+                            rp_angle = math.atan2(dy_inv, dx)
+                            angle_diff = abs(game.player.melee_swing_angle - rp_angle)
+                            if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
 
+                            if rp.rect.collidepoint(world_pos) or angle_diff < 1.0:
+                                dx_kb = rp.rect.centerx - game.player.rect.centerx
+                                dy_kb = rp.rect.centery - game.player.rect.centery 
+                                kb_angle = math.atan2(dy_kb, dx_kb)
+
+                                if can_deal_damage:
+                                    damage = game.player.get_attack_damage()
+                                    create_blood_splatter(game, rp.rect, damage, [math.cos(kb_angle), math.sin(kb_angle)])
+                                    game.splashes.append({'pos': rp.rect.center, 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 3, 'type': 'hit_puff'})
+
+                                    if getattr(game, 'is_client', False):
+                                        from core.server.network import NetMsg, send_msg
+                                        send_msg(game.client.socket, {
+                                            'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player',
+                                            'id': rp.player_id, 'damage': damage
+                                        })
+                                    else:
+                                        for s, info in game.server.clients.items():
+                                            if info.get('id') == rp.player_id:
+                                                from core.server.network import NetMsg, send_msg
+                                                send_msg(s, {'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player', 'damage': damage})
+                                                break
+                                hit_something = True
+                                break
+
+                # 3. Hit Animals
+                if not hit_something:
+                    for animal in getattr(game, 'active_animals', []):
+                        dist = math.hypot(animal.rect.centerx - game.player.rect.centerx, animal.rect.centery - game.player.rect.centery)
                         if dist <= attack_range:
                             dx = animal.rect.centerx - game.player.rect.centerx
                             dy_inv = game.player.rect.centery - animal.rect.centery
@@ -299,21 +380,15 @@ def handle_attack(game, mouse_pos):
 
                                 if can_deal_damage:
                                     damage = game.player.get_attack_damage()
+                                    create_blood_splatter(game, animal.rect, damage, [math.cos(kb_angle), math.sin(kb_angle)])
                                     is_dead = animal.take_damage(damage, game, attacker=game.player)
                                     display_message(f"{tr('msg', 'You attacked the animal for')} {damage} {tr('msg', 'damage!')}")
 
-                                    direction = [math.cos(kb_angle), math.sin(kb_angle)]
-                                    create_blood_splatter(game, animal.rect, damage, direction)
-
                                     if is_dead:
                                         animal.die(game)
-                                        if animal in game.items_on_ground:
-                                            game.items_on_ground.remove(animal)
-                                        if animal in game.active_animals:
-                                            game.active_animals.remove(animal)
+                                        if animal in game.items_on_ground: game.items_on_ground.remove(animal)
+                                        if animal in game.active_animals: game.active_animals.remove(animal)
                                         display_message(tr('msg', "You killed the animal!"))
-                                else:
-                                    is_dead = False
 
                                 if dist > 0:
                                     force = 7
@@ -327,11 +402,11 @@ def handle_attack(game, mouse_pos):
                                 hit_something = True
                                 break
 
+                # 4. Hit NPCs
                 if not hit_something:
-                    for npc in game.npcs:
+                    for npc in getattr(game, 'npcs', []):
                         if not npc.is_dead:
                             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
-
                             if dist <= attack_range:
                                 dx = npc.rect.centerx - game.player.rect.centerx
                                 dy_inv = game.player.rect.centery - npc.rect.centery
@@ -347,14 +422,29 @@ def handle_attack(game, mouse_pos):
 
                                     if can_deal_damage:
                                         damage = game.player.get_attack_damage()
-                                        is_dead = npc.take_damage(damage, game, attacker=game.player)
-                                        display_message(game, f"{tr('msg', 'You attacked')} {npc.name} {tr('msg', 'for')} {damage} {tr('msg', 'damage!')}")
-
                                         direction = [math.cos(kb_angle), math.sin(kb_angle)]
                                         create_blood_splatter(game, npc.rect, damage, direction)
-                                    else:
-                                        is_dead = False
 
+                                        force = 7
+                                        kb_x = math.cos(kb_angle) * force
+                                        kb_y = math.sin(kb_angle) * force
+                                        npc.knockback_velocity = [kb_x, kb_y]
+                                        npc.knockback_timer = 200
+
+                                        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                            from core.server.network import NetMsg, send_msg
+                                            send_msg(game.client.socket, {
+                                                'type': NetMsg.ENTITY_DAMAGE,
+                                                'entity_type': 'npc',
+                                                'id': getattr(npc, 'id', None),
+                                                'damage': damage,
+                                                'kb_x': kb_x,
+                                                'kb_y': kb_y
+                                            })
+                                        else:
+                                            is_dead = npc.take_damage(damage, game, attacker=game.player)
+                                            display_message(game, f"{tr('msg', 'You attacked')} {npc.name} {tr('msg', 'for')} {damage} {tr('msg', 'damage!')}")
+                                    
                                     if dist > 0:
                                         force = 7
                                         npc.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]

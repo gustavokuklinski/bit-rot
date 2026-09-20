@@ -212,15 +212,34 @@ class ZombieAI:
                 has_active_noise = True
 
         # Target selection: prioritize player or nearby hostile/entities
-        target_rect = player_rect
-        target_entity = game.player
+        # Target selection: prioritize LIVING players or nearby hostile entities
+        all_players = []
+        if game.player and not getattr(game.player, 'is_dead', False) and game.player.health > 0:
+            all_players.append(game.player)
+        for rp in getattr(game, 'remote_players', {}).values():
+            if not getattr(rp, 'is_dead', False) and rp.health > 0:
+                all_players.append(rp)
 
-        dx = player_rect.centerx - self.rect.centerx
-        dy = player_rect.centery - self.rect.centery
-        dist_to_player_sq = dx*dx + dy*dy
+        target_entity = None
+        target_rect = None
+        min_target_dist_sq = float('inf')
+
+        for p in all_players:
+            pdx = p.rect.centerx - self.rect.centerx
+            pdy = p.rect.centery - self.rect.centery
+            pdist_sq = pdx*pdx + pdy*pdy
+            if pdist_sq < min_target_dist_sq:
+                min_target_dist_sq = pdist_sq
+                target_entity = p
+                target_rect = p.rect
+
+        # FIX: If NO living players are present, DO NOT fall back to attacking the dead player!
+        if target_entity is None:
+            dist_to_player_sq = float('inf')
+        else:
+            dist_to_player_sq = min_target_dist_sq
 
         nearest_target = None
-        min_target_dist_sq = dist_to_player_sq
 
         for entity in nearby_entities:
             if getattr(entity, 'is_dead', False): 

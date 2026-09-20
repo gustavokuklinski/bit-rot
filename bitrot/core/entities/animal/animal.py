@@ -119,17 +119,22 @@ class Animal(Zombie):
         threat_radius = 150 if self.name.lower() != "cow" else 250
         threat_detected = False
         flee_x, flee_y = 0, 0
+        
+        threats = []
+        if game.player and not game.player.is_dead: threats.append(game.player)
+        for rp in getattr(game, 'remote_players', {}).values():
+            if not getattr(rp, 'is_dead', False): threats.append(rp)
 
-        if game.player and not game.player.is_dead:
-            dx = game.player.rect.centerx - self.rect.centerx
-            dy = game.player.rect.centery - self.rect.centery
+        for t in threats:
+            dx = t.rect.centerx - self.rect.centerx
+            dy = t.rect.centery - self.rect.centery
             dist = math.hypot(dx, dy)
             
-            if getattr(game.player, 'gun_flash_timer', 0) > 0 and dist < threat_radius * 2:
+            if getattr(t, 'gun_flash_timer', 0) > 0 and dist < threat_radius * 2:
                 flee_x -= dx
                 flee_y -= dy
                 threat_detected = True
-            elif dist < threat_radius and (getattr(game.player, 'is_running', False) or getattr(self, 'aggro_timer', 0) > 0):
+            elif dist < threat_radius and (getattr(t, 'is_running', False) or getattr(self, 'aggro_timer', 0) > 0):
                 flee_x -= dx
                 flee_y -= dy
                 threat_detected = True
@@ -162,6 +167,18 @@ class Animal(Zombie):
                 super().update_ai(player_rect, obstacles, other_zombies, game)
 
     def take_damage(self, amount, game, attacker=None):
+        if getattr(game, 'is_client', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.ENTITY_DAMAGE,
+                'entity_type': 'animal',
+                'id': getattr(self, 'id', None),
+                'damage': amount
+            })
+            self.health -= amount
+            if self.health <= 0: return True
+            return False
+            
         if getattr(self, 'is_dead', False):
             return False
 

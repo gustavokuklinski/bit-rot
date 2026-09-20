@@ -136,6 +136,7 @@ class Item:
     def to_dict(self):
         """Serializes the item's dynamic state to a dictionary."""
         data = {
+            'id': getattr(self, 'id', str(uuid.uuid4())),
             'name': self.name,
             'durability': self.durability,
             'load': self.load,
@@ -178,6 +179,7 @@ class Item:
         item = Item.create_from_name(data['name'], force_color=saved_color, spawn_loot=False)
         if not item: return None
         
+        if 'id' in data: item.id = data['id']
         if 'durability' in data: item.durability = data['durability']
         if 'load' in data: item.load = data['load']
         if 'state' in data: item.state = data['state']
@@ -409,7 +411,20 @@ class Container(Item):
         """Generates loot from tile definition upon first interaction."""
         if getattr(self, 'is_opened', False):
             return
+            
+        if game and getattr(game, 'is_client', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.WORLD_ACTION,
+                'action': 'open_container',
+                'x': self.rect.x, 'y': self.rect.y
+            })
+            self.is_opened = False
+            
+            return
+            
         self.is_opened = True
+        self.is_opening = False
         if getattr(self, 'tile_def', None):
             from core.map.map_loader import _generate_container_items
             # Pass the game object to apply player Luck and Kill modifiers!

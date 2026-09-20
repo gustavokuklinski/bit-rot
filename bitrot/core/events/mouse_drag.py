@@ -44,7 +44,43 @@ def check_container_weight_limit(container, incoming_item, item_to_remove=None):
     
     return (current_weight + incoming_item.get_total_weight()) <= max_weight
 
+
+def _remove_from_ground_and_sync(game, item, type_orig=None, container_obj=None):
+    if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
+        _sync_container_to_server(game, container_obj)
+        
+    if item in game.items_on_ground:
+        game.items_on_ground.remove(item)
+        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
+            })
+
+def _sync_source_container(game, container_obj):
+    if container_obj and hasattr(container_obj, 'inventory'):
+        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                'x': container_obj.rect.x, 'y': container_obj.rect.y,
+                'is_opened': getattr(container_obj, 'is_opened', True),
+                'inventory': [i.to_dict() for i in container_obj.inventory]
+            })
+
+def _sync_container_to_server(game, container_obj):
+    if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+        if container_obj and hasattr(container_obj, 'inventory'):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                'x': container_obj.rect.x, 'y': container_obj.rect.y,
+                'is_opened': getattr(container_obj, 'is_opened', True),
+                'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in container_obj.inventory]
+            })
+
 def handle_mouse_up(game, event, mouse_pos):
+    
     for modal in reversed(game.modals):
         modal['is_dragging'] = False
         modal['is_dragging_scrollbar'] = False
@@ -109,8 +145,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 game.items_on_ground.append(item_ref)
                                                 
                                             def do_stack_vehicle():
-                                                if item_ref in game.items_on_ground:
-                                                    game.items_on_ground.remove(item_ref)
+                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 
                                                 # Pour liquid up to max capacity
                                                 available = existing_item.capacity - existing_item.load
@@ -142,9 +177,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.items_on_ground.append(item_ref)
                                         
                                         def do_equip_vehicle():
-                                            # Clean it up from the floor once the action finishes successfully
-                                            if item_ref in game.items_on_ground:
-                                                game.items_on_ground.remove(item_ref)
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 
                                             old_item = vehicle.add_equipment(item_ref, slot_name)
                                             if old_item:
@@ -219,9 +252,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                     game.items_on_ground.append(item_ref)
 
                                 def do_belt_loot():
-                                    if item_ref in game.items_on_ground:
-                                        game.items_on_ground.remove(item_ref)
-                                        
+                                    _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                    _sync_source_container(game, container_obj)
+
                                     if game.player.belt[i_target] is None:
                                         game.player.belt[i_target] = item_ref
                                         item_ref.in_belt = True
@@ -357,8 +390,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 game.items_on_ground.append(item_ref)
 
                                             def do_tab_loot():
-                                                if item_ref in game.items_on_ground:
-                                                    game.items_on_ground.remove(item_ref)
+                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 target_container.inventory.append(item_ref)
                                         
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -396,9 +428,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 game.items_on_ground.append(item_ref)
 
                                             def do_tab_inv_loot():
-                                                if item_ref in game.items_on_ground:
-                                                    game.items_on_ground.remove(item_ref)
-                                                     
+                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 target_list.append(item_ref)
                              
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -456,8 +486,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     game.items_on_ground.append(item_ref)
 
                                                 def do_inv_stack():
-                                                    if item_ref in game.items_on_ground:
-                                                        game.items_on_ground.remove(item_ref)
+                                                    _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                         
                                                     avail = item_in_slot.capacity - item_in_slot.load
                                                     trans = min(avail, item_ref.load)
@@ -497,9 +526,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 game.items_on_ground.append(item_ref)
 
                                             def do_inv_loot():
-                                                if item_ref in game.items_on_ground:
-                                                    game.items_on_ground.remove(item_ref)
-                                                    
+                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                                _sync_source_container(game, container_obj)
+
                                                 game.player.inventory.insert(target_index, item_ref)
                                             
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
@@ -526,8 +555,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 game.items_on_ground.append(item_ref)
 
                                             def do_inv_append():
-                                                if item_ref in game.items_on_ground:
-                                                    game.items_on_ground.remove(item_ref)
+                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                     
                                                 game.player.inventory.append(item_ref)
                               
@@ -599,9 +627,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.items_on_ground.append(item_ref)
 
                                         def do_container_loot():
-                                            if item_ref in game.items_on_ground:
-                                                game.items_on_ground.remove(item_ref)
-                                                
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            _sync_source_container(game, container_obj)
                                             if is_stack:
                                                 item_in_dst = container.inventory[target_index]
                                                 avail = item_in_dst.capacity - item_in_dst.load
@@ -706,8 +733,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.items_on_ground.append(item_ref)
 
                                         def do_slots_container_loot():
-                                            if item_ref in game.items_on_ground:
-                                                game.items_on_ground.remove(item_ref)
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                             if is_stack:
                                                 item_in_dst = target_container.inventory[target_index]
                                                 avail = item_in_dst.capacity - item_in_dst.load
@@ -782,32 +808,31 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 break
 
                                             if len(target_container.inventory) < (target_container.capacity or 0):
-                                                 if not check_container_weight_limit(target_container, game.dragged_item):
-                                                     display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
-                                                     dropped_successfully = False
-                                                     break
+                                                if not check_container_weight_limit(target_container, game.dragged_item):
+                                                    display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
+                                                    dropped_successfully = False
+                                                    break
 
-                                                 if is_external_source:
-                                                     item_ref = game.dragged_item
+                                                if is_external_source:
+                                                    item_ref = game.dragged_item
                                                      
-                                                     # --- FIX 2: VOID DROP PROTECTION ---
-                                                     item_ref.rect.center = game.player.rect.center
-                                                     if item_ref not in game.items_on_ground:
-                                                         game.items_on_ground.append(item_ref)
+                                                    # --- FIX 2: VOID DROP PROTECTION ---
+                                                    item_ref.rect.center = game.player.rect.center
+                                                    if item_ref not in game.items_on_ground:
+                                                        game.items_on_ground.append(item_ref)
 
-                                                     def do_tab_loot():
-                                                         if item_ref in game.items_on_ground:
-                                                             game.items_on_ground.remove(item_ref)
+                                                    def do_tab_loot():
+                                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                              
-                                                         target_container.inventory.append(item_ref)
+                                                        target_container.inventory.append(item_ref)
                                   
-                                                     transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
-                                                     game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
-                                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                                     return
-                                                 else:
-                                                     target_container.inventory.append(game.dragged_item)
-                                                     dropped_successfully = True
+                                                    transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                                    game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
+                                                    game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                                    return
+                                                else:
+                                                    target_container.inventory.append(game.dragged_item)
+                                                    dropped_successfully = True
                                             else:
                                                 display_message(f"{tr('item', target_container.name)} is full.")
                                                 dropped_successfully = False
@@ -864,8 +889,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     game.items_on_ground.append(item_ref)
 
                                                 def do_gear_equip():
-                                                    if item_ref in game.items_on_ground:
-                                                        game.items_on_ground.remove(item_ref)
+                                                    _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                         
                                                     game.player.clothes[slot_name] = item_ref
 
@@ -950,8 +974,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.items_on_ground.append(item_ref)
 
                                         def do_gear_container_loot():
-                                            if item_ref in game.items_on_ground:
-                                                game.items_on_ground.remove(item_ref)
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 
                                             if is_stack:
                                                 item_in_dst = container.inventory[target_index]
@@ -1231,6 +1254,10 @@ def handle_mouse_up(game, event, mouse_pos):
                         if dropped_successfully: break
                 if dropped_successfully:
                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+
+                    if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
+                        _sync_container_to_server(game, container_obj)
+                        
                     return
 
             # --- Bounce back or Drop on Ground ---
@@ -1273,9 +1300,22 @@ def handle_mouse_up(game, event, mouse_pos):
                             game.dragged_item.y = game.dragged_item.rect.y
                             game.dragged_item.is_placed = False # <--- [FIX] Ensure it drops small
                             
-                            game.items_on_ground.append(game.dragged_item)
+                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                from core.server.network import NetMsg, send_msg
+                                send_msg(game.client.socket, {
+                                    'type': NetMsg.WORLD_ACTION, 'action': 'drop',
+                                    'item_data': game.dragged_item.to_dict(),
+                                    'x': game.dragged_item.x, 'y': game.dragged_item.y,
+                                    'is_placed': False
+                                })
+                            
+                            if game.dragged_item not in game.items_on_ground:
+                                game.items_on_ground.append(game.dragged_item)
                             dropped_successfully = True
-                    
+
+                            if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
+                                _sync_container_to_server(game, container_obj)
+
                     if not dropped_successfully and game.dragged_item:
                         # BOUNCE BACK
                         if type_orig == 'inventory' and 0 <= i_orig <= len(game.player.inventory):
@@ -1293,11 +1333,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                 pass # Discard the bounce back clone!
                             else:
                                 container_obj.inventory.insert(i_orig, game.dragged_item)
+                                _sync_container_to_server(game, container_obj)
                         elif type_orig == 'nearby' and container_obj is not None:
                             if is_infinite_liquid_source(container_obj) and getattr(game.dragged_item, 'liquid', False):
                                 pass # Discard the bounce back clone!
                             else:
                                 container_obj.inventory.insert(i_orig, game.dragged_item)
+                                _sync_container_to_server(game, container_obj)
                                 if getattr(container_obj, 'item_type', '') == 'ground':
                                     game.items_on_ground.append(game.dragged_item)
                         elif 'stack_split' in type_orig:

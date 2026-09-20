@@ -3,3 +3,4 @@ Nuitka
 faker
 pillow
 cryptography
+msgpack

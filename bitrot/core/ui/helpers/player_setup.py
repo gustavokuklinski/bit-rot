@@ -669,15 +669,16 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + S(20), col4_width, S(70))
     is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)
+    btn_label = tr('ui', "CONNECT") if getattr(game, 'is_client', False) else tr('ui', "START GAME")
     if is_balanced:
         pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
             pygame.draw.rect(game.game_screen, (0, 150, 0), start_btn_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
-        start_text = font_16.render(tr('ui', "START GAME"), True, WHITE)
+        start_text = font_16.render(btn_label, True, WHITE)
     else:
         pygame.draw.rect(game.game_screen, (50, 50, 50), start_btn_rect, border_radius=border_radius)
         pygame.draw.rect(game.game_screen, GRAY, start_btn_rect, 1, border_radius=border_radius)
-        start_text = font_12.render(tr('ui', "START GAME"), False, (100, 100, 100))
+        start_text = font_12.render(btn_label, False, (100, 100, 100))
     text_rect = start_text.get_rect(center=start_btn_rect.center)
     game.game_screen.blit(start_text, text_rect)
     clickable_rects["start_button"] = start_btn_rect
@@ -932,8 +933,21 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['traits'] = state['chosen_traits']
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
-                
                 final_player_data['game_settings'] = state.get('settings_data')
+
+                # Client connect mode: connect and initialize world with server's map
+                if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
+                    from core.server.client import GameClient, init_client_world
+                    c_ip, c_port = game.cli_connect_address
+                    game.client = GameClient(game)
+
+                    success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
+                    if success and ack_data:
+                        init_client_world(game, ack_data, final_player_data)
+                        game.game_state = 'PLAYING'
+                    else:
+                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+                    return
 
                 # Maintain the existing world/save environment
                 if state.get('respawn_save_folder'):
@@ -1195,14 +1209,18 @@ def run_player_setup(game):
     settings_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
     back_btn = pygame.Rect(base_x, GAME_HEIGHT - S(91) - center_offset_y, sidebar_width, btn_h)
 
+    is_client = getattr(game, 'is_client', False)
+
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
-    s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
     pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
     game.game_screen.blit(font_12.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
-    pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
-    pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
-    game.game_screen.blit(font_12.render(tr('tab', "Settings"), False, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
+    
+    if not is_client:
+        s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
+        pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
+        pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
+        game.game_screen.blit(font_12.render(tr('tab', "Settings"), False, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
 
     b_col = GRAY_80
     pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
@@ -1240,7 +1258,7 @@ def run_player_setup(game):
             if player_btn.collidepoint(event_pos):
                 state['current_tab'] = 'Player'
                 continue
-            elif settings_btn.collidepoint(event_pos):
+            elif not getattr(game, 'is_client', False) and settings_btn.collidepoint(event_pos):
                 state['current_tab'] = 'Settings'
                 continue
 

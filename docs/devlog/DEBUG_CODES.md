@@ -23,3 +23,6 @@
 `%rot radius all` Display a radius debug on Zombies and Hostile NPCs
 `%rot radius hostilenpc` Display a radius debug on Hostile NPCs
 `%rot radius off` Turn off the radius
+
+`%rot openserver` Start game server from current game
+`%rot closeserver` Close game server from current game

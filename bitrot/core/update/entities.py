@@ -47,10 +47,19 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
     """Generic updater for both zombie and animal batches with LOD and spatial separation."""
     current_time = pygame.time.get_ticks()
     processed_count = 0
-    entities_by_dist = sorted(entity_list, key=lambda e: (e.rect.centerx - player_x)**2 + (e.rect.centery - player_y)**2)
+
+    all_p_coords = [(player_x, player_y)]
+    for rp in getattr(game, 'remote_players', {}).values():
+        if not getattr(rp, 'is_dead', False):
+            all_p_coords.append((int(rp.x), int(rp.y)))
+
+    def get_min_player_dist_sq(e):
+        return min((px - e.rect.centerx)**2 + (py - e.rect.centery)**2 for px, py in all_p_coords)
+
+    entities_by_dist = sorted(entity_list, key=get_min_player_dist_sq)
 
     for entity in entities_by_dist:
-        dist_sq = (player_x - entity.rect.centerx)**2 + (player_y - entity.rect.centery)**2
+        dist_sq = get_min_player_dist_sq(entity)
         is_chasing = getattr(entity, 'state', None) == 'chasing'
         is_aggroed = getattr(entity, 'aggro_timer', 0) > 0
 
@@ -105,6 +114,9 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
         entity.update_ai(game.player.rect, obstacles, ai_nearby, game)
 
 def update_entities(game, GRID_SIZE, zombies_to_remove):
+    if getattr(game, 'is_client', False):
+        return
+
     map_chunks = getattr(core.data.config, 'MAP_CHUNKS', 2)
     max_zombies = max(12, 25 - (map_chunks * 2))
     max_animals = max(6, max_zombies // 2)

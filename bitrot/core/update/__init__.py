@@ -35,7 +35,8 @@ def update_game_state(game):
         tx, ty = target_tile
         game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-    check_dynamic_zombie_spawns(game, GRID_SIZE)
+    if not getattr(game, 'is_client', False):
+        check_dynamic_zombie_spawns(game, GRID_SIZE)
     
     if game.player.update_stats(game):
         handle_player_death(game)

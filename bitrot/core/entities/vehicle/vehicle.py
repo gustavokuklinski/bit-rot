@@ -91,6 +91,7 @@ class Vehicle:
         self.seats = [None] * self.seat_count
 
         self.hit_entities = []
+        self.id = str(uuid.uuid4())
 
         self._spawn_random_equipment()
         self.generate_trunk_loot(loot_table)

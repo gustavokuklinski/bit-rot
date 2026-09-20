@@ -25,6 +25,15 @@ UTIL_TYPES = ['util1', 'util2', 'util3']
 def generate_npc_trade_stock(npc):
     if getattr(npc, 'trade_stock_generated', False):
         return
+    # If the NPC already has items in inventory, treat stock as already populated
+    if getattr(npc, 'inventory', None) and len(npc.inventory) > 0:
+        npc.trade_stock_generated = True
+        return
+
+    # Deterministic generation using NPC's unique ID so stock is identical across client & server
+    seed_val = hash(getattr(npc, 'id', npc.name))
+    rng = random.Random(seed_val)
+
     valid_templates = []
     for name, tmpl in ITEM_TEMPLATES.items():
         if name.startswith("Empty "): continue
@@ -38,29 +47,24 @@ def generate_npc_trade_stock(npc):
     if valid_templates:
         if not hasattr(npc, 'inventory'): npc.inventory = []
         for _ in range(5):
-            choice = random.choice(valid_templates)
+            choice = rng.choice(valid_templates)
             new_item = Item.create_from_name(choice)
             if new_item:
                 itype = getattr(new_item, 'item_type', '')
-                
-                # 1. Handle items that strictly have NO Durability
                 if itype in NO_DURABILITY_TYPES or itype == 'currency':
                     if hasattr(new_item, 'durability'): 
                         new_item.durability = None
-                    
                     stackable_types = ['consumable_ammo', 'consumable_food', 'consumable_medication', 
                                        'consumable_drink', 'consumable_drugs', 'resource', 'currency']
                     if itype in stackable_types:
                         cap = getattr(new_item, 'capacity', 30) or 30
-                        new_item.load = random.randint(1, max(1, int(cap)))
-                
-                # 2. Handle Gear that DOES have Durability
+                        new_item.load = rng.randint(1, max(1, int(cap)))
                 elif itype in HAS_DURABILITY_TYPES or itype in UTIL_TYPES:
                     max_dur = getattr(new_item, 'max_durability', None)
                     if max_dur and max_dur > 0:
-                        new_item.durability = random.randint(1, max(1, int(max_dur)))
-                
+                        new_item.durability = rng.randint(1, max(1, int(max_dur)))
                 npc.inventory.append(new_item)
+
     npc.trade_stock_generated = True
 
 def is_currency(item):

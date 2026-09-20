@@ -604,7 +604,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     if getattr(game, 'hovered_tab_tooltip', None):
         _draw_tt(game, game.hovered_tab_tooltip, mouse_pos[0] + 15, mouse_pos[1] + 15)
 
-    # --- LAYER 4.5: Player Action Progress Bar (Above FoW) ---
+    # --- LAYER 4.5: Action Progress Bar (Above FoW for Local and Remote Players) ---
     if game.player.action_timer > 0 and game.player.action_total_time > 0:
         progress = 1.0 - (game.player.action_timer / game.player.action_total_time)
         bar_total_width = int(TILE_SIZE * zoom)
@@ -621,13 +621,28 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         bar_x = screen_x - (bar_total_width / 2)
         bar_y = screen_y
 
-        bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_total_width, bar_h)
-        pygame.draw.rect(game.game_screen, DARK_GRAY, bg_bar_rect)
-        
+        pygame.draw.rect(game.game_screen, DARK_GRAY, pygame.Rect(bar_x, bar_y, bar_total_width, bar_h))
         bar_progress_width = int(bar_total_width * progress)
         if bar_progress_width > 0:
-            bar_rect = pygame.Rect(bar_x, bar_y, bar_progress_width, bar_h)
-            pygame.draw.rect(game.game_screen, (50, 200, 50), bar_rect)
+            pygame.draw.rect(game.game_screen, (50, 200, 50), pygame.Rect(bar_x, bar_y, bar_progress_width, bar_h))
+
+    for rp in getattr(game, 'remote_players', {}).values():
+        if not getattr(rp, 'is_dead', False) and getattr(rp, 'action_timer', 0) > 0 and getattr(rp, 'action_total_time', 0) > 0:
+            progress = 1.0 - (rp.action_timer / rp.action_total_time)
+            bar_total_width = int(TILE_SIZE * zoom)
+            bar_h = max(1, int(4 * zoom))
+            screen_x = ((rp.rect.centerx + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_y = ((rp.rect.top + offset_y) * zoom) - (14 * zoom)
+            bar_x = screen_x - (bar_total_width / 2)
+            bar_y = screen_y
+            pygame.draw.rect(game.game_screen, DARK_GRAY, pygame.Rect(bar_x, bar_y, bar_total_width, bar_h))
+            bar_progress_width = int(bar_total_width * max(0.0, min(1.0, progress)))
+            if bar_progress_width > 0:
+                pygame.draw.rect(game.game_screen, (50, 200, 50), pygame.Rect(bar_x, bar_y, bar_progress_width, bar_h))
+            if getattr(rp, 'action_name', ''):
+                act_surf = font_12.render(tr('ui', rp.action_name), False, WHITE)
+                act_rect = act_surf.get_rect(midbottom=(screen_x, bar_y - 2))
+                game.game_screen.blit(act_surf, act_rect)
 
     # --- LAYER 5: Combat HUD (Reticle & Ammo) ---
     if getattr(game.player, 'is_aiming', False):

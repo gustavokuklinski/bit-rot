@@ -36,41 +36,45 @@ def run_playing(game):
         game.spatial_manager.rebuild_container_grid()
         game._cached_c_count = current_c_count
 
-    px, py = game.player.rect.center
+    player_positions = []
+    if game.player:
+        player_positions.append(game.player.rect.center)
+    for rp in getattr(game, 'remote_players', {}).values():
+        if not getattr(rp, 'is_dead', False):
+            player_positions.append((int(rp.x), int(rp.y)))
+
+    px, py = game.player.rect.center if game.player else (0, 0)
     
-    BASE_SIMULATION_DISTANCE = 250
-    MAX_ACTIVE_ENTITIES_TARGET = 60
-    MAX_ACTIVE_ZOMBIES = 20
-    MAX_ACTIVE_ANIMALS = 10
-    
-    total_nearby_entities = len(getattr(game, 'active_zombies', []))
-    
-    if total_nearby_entities > MAX_ACTIVE_ENTITIES_TARGET:
-        SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 0.75  
-    elif total_nearby_entities < MAX_ACTIVE_ENTITIES_TARGET * 0.5:
-        SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE * 1.25
-    else:
-        SIMULATION_DISTANCE = BASE_SIMULATION_DISTANCE
-    
-    start_grid_x = int((px - SIMULATION_DISTANCE) // game.GRID_CELL_SIZE)
-    end_grid_x = int((px + SIMULATION_DISTANCE) // game.GRID_CELL_SIZE) + 1
-    start_grid_y = int((py - SIMULATION_DISTANCE) // game.GRID_CELL_SIZE)
-    end_grid_y = int((py + SIMULATION_DISTANCE) // game.GRID_CELL_SIZE) + 1
+    SIMULATION_DISTANCE = 350
+    MAX_ACTIVE_ZOMBIES = 40
+    MAX_ACTIVE_ANIMALS = 20
 
     game.active_zombies = []
     game.visible_items = []
     game.visible_containers = []
     game.active_animals = []
+    seen_cells = set()
 
-    for gy in range(start_grid_y, end_grid_y):
-        for gx in range(start_grid_x, end_grid_x):
-            key = (gx, gy)
-            if key in game.zombie_grid:
-                game.active_zombies.extend(game.zombie_grid[key])
-            if key in game.item_grid:
-                game.visible_items.extend(game.item_grid[key])
-            if key in game.container_grid:
-                game.visible_containers.extend(game.container_grid[key])
+    for p_center in player_positions:
+        p_x, p_y = p_center
+        start_grid_x = int((p_x - SIMULATION_DISTANCE) // game.GRID_CELL_SIZE)
+        end_grid_x = int((p_x + SIMULATION_DISTANCE) // game.GRID_CELL_SIZE) + 1
+        start_grid_y = int((p_y - SIMULATION_DISTANCE) // game.GRID_CELL_SIZE)
+        end_grid_y = int((p_y + SIMULATION_DISTANCE) // game.GRID_CELL_SIZE) + 1
+
+        for gy in range(start_grid_y, end_grid_y):
+            for gx in range(start_grid_x, end_grid_x):
+                key = (gx, gy)
+                if key in seen_cells:
+                    continue
+                seen_cells.add(key)
+
+                if key in game.zombie_grid:
+                    game.active_zombies.extend(game.zombie_grid[key])
+                if key in game.item_grid:
+                    game.visible_items.extend(game.item_grid[key])
+                if key in game.container_grid:
+                    game.visible_containers.extend(game.container_grid[key])
 
     game.active_animals = [z for z in game.active_zombies if isinstance(z, Animal)]
     game.active_zombies = [z for z in game.active_zombies if not isinstance(z, Animal)]
@@ -159,7 +163,8 @@ def run_playing(game):
     
     game.npc_spawn_timer += 1
     if game.npc_spawn_timer >= 30:
-        manage_dynamic_npcs(game)
+        if not getattr(game, 'is_client', False):
+            manage_dynamic_npcs(game)
         game.npc_spawn_timer = 0
 
     player_pos = game.player.rect.center if game.player else None

@@ -62,7 +62,19 @@ class NPCCombat:
         return False
 
     def take_damage(self, damage, game, attacker=None):
-        
+        if getattr(game, 'is_client', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.ENTITY_DAMAGE,
+                'entity_type': 'npc',
+                'id': getattr(self, 'id', None),
+                'damage': damage
+            })
+            self.health -= damage
+            self.health_bar_timer = 180
+            if self.health <= 0: return True
+            return False
+            
         player = getattr(game, 'player', None)
         
         # --- TRIGGER HIT STATIC NPC ---

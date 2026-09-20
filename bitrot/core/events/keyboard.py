@@ -212,6 +212,10 @@ def find_closest_vehicle(game):
     return None
 
 def toggle_pause(game):
+    if getattr(game, 'is_server', False) or getattr(game, 'is_client', False):
+        display_message(game, tr('msg', "[Server] Pause and offline save are disabled during multiplayer."))
+        return
+
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
         game.capture_pause_screen()
@@ -228,6 +232,35 @@ def process_chat_command(game, text):
         
     raw_command = text[5:].strip()
     command = raw_command.lower()
+
+    if command == "openserver":
+        if getattr(game, 'is_client', False):
+            display_message(game, "[Server] Client cannot start a server.")
+            return True
+        if getattr(game, 'is_server', False):
+            display_message(game, f"[Server] Server already running on {game.server.ip}:{game.server.port}")
+            return True
+
+        from core.server.server import GameServer
+        game.server = GameServer(game)
+        success, host_ip, port = game.server.start()
+        if success:
+            game.is_server = True
+            display_message(game, f"[Server] Server opened at {host_ip}:{port}")
+        else:
+            display_message(game, "[Server] Failed to open server.")
+        return True
+
+    if command == "closeserver":
+        if not getattr(game, 'is_server', False):
+            display_message(game, "[Server] No active server to close.")
+            return True
+
+        game.server.stop()
+        game.server = None
+        game.is_server = False
+        display_message(game, "[Server] Server closed. Disconnected all peers.")
+        return True
 
     # --- WEATHER COMMANDS ---
     if command.startswith("weather "):
@@ -273,6 +306,7 @@ def process_chat_command(game, text):
                     wt.rain_channel = None
                 display_message(game, "[Debug] Weather set to: Clear")
                 return True
+
 
     # --- TIME COMMANDS ---
     if command.startswith("time "):
@@ -875,6 +909,6 @@ def handle_keyboard_events(game, event, action_triggered=None):
                             else:
                                 agility = game.player.progression.get_level('agility')
                                 open_time = max(0.2, 1.8 - (agility * 0.2))
-                                game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+                                game.player.start_action(f"{game.player.name} {tr('ui', "Opening")}", open_time, open_and_show_modal, xp_reward=1.5)
                         else:
                             open_and_show_modal()

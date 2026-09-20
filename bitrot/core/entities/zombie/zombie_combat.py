@@ -9,6 +9,20 @@ from core.ui.notifications import check_milestone_progress
 
 class ZombieCombat:
     def take_damage(self, amount, game, attacker=None):
+        if getattr(game, 'is_client', False):
+            from core.server.network import NetMsg, send_msg
+            send_msg(game.client.socket, {
+                'type': NetMsg.ENTITY_DAMAGE,
+                'entity_type': 'zombie',
+                'id': getattr(self, 'id', None),
+                'damage': amount
+            })
+            self.health -= amount
+            self.show_health_bar_timer = 120
+            if self.health <= 0: return True
+            return False
+
+
         # Prevent multiple kill triggers on an already dead zombie
         was_dead = getattr(self, 'is_dead', False) or self.health <= 0
         
@@ -57,6 +71,9 @@ class ZombieCombat:
         return False
 
     def attack(self, target_entity, game):
+        if getattr(target_entity, 'is_dead', False) or getattr(target_entity, 'health', 1) <= 0:
+            return
+            
         if getattr(target_entity, 'type', '') == 'animal' or target_entity.__class__.__name__ == 'Animal':
             return
 
@@ -66,21 +83,25 @@ class ZombieCombat:
         self.melee_swing_angle = math.atan2(-dy, dx)
         damage = random.randint(self.min_attack, self.max_attack)
 
-        # 1. Target is the Player
-        if target_entity == game.player:
+
+        # 1. Target is the Player or a RemotePlayer
+        if target_entity == game.player or type(target_entity).__name__ == 'RemotePlayer':
             infection = 0
             if random.random() < ZOMBIE_INFECTION_CHANCE:
                 infection = random.uniform(self.min_infection, self.max_infection)
             
-            # The player's take_damage handles defense modifiers internally now
-            final_dmg, final_inf = target_entity.take_damage(game, damage, infection)
-            
-            if final_inf > 0:
-                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
-            else:
-                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+            if target_entity == game.player:
+                # The player's take_damage handles defense modifiers internally now
+                final_dmg, final_inf = target_entity.take_damage(game, damage, infection)
                 
-
+                if final_inf > 0:
+                    print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
+                else:
+                    print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+            else:
+                # Notify the remote player's client to apply damage
+                target_entity.take_damage(damage, game, infection=infection)
+                
         # 2. Target is an NPC, Animal, or other Zombie
         else:
             if getattr(target_entity, 'type', '') == 'animal' or target_entity.__class__.__name__ == 'Animal':

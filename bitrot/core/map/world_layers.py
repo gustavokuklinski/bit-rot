@@ -365,113 +365,121 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                 game.spawn_point_grid[cell].append(sp_pos)
 
     # --- RESTORE OR SPAWN NEW LAYER STATE ---
-    if not skip_cache_save:
-        chasing_animals = []
-        if hasattr(game, 'active_animals'):
-            chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
-        
-        followers = []
-        if hasattr(game, 'npcs'):
-            for npc in game.npcs:
-                if getattr(npc, 'is_following', False):
-                    followers.append(npc)
-
-        if new_filename in game.map_states:
-            game.items_on_ground = game.map_states[new_filename].get('items_on_ground', [])
-            game.zombies = game.map_states[new_filename].get('zombies', [])
-            game.blood_stains = game.map_states[new_filename].get('blood_stains', [])
-
+    # --- RESTORE OR SPAWN NEW LAYER STATE ---
+        if not skip_cache_save:
+            chasing_animals = []
             if hasattr(game, 'active_animals'):
-                game.active_animals = game.map_states[new_filename].get('active_animals', [])
-                
+                chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+            
+            followers = []
             if hasattr(game, 'npcs'):
-                game.npcs.empty()
-                for npc in game.map_states[new_filename].get('npcs', []):
-                    game.npcs.add(npc)
+                for npc in game.npcs:
+                    if getattr(npc, 'is_following', False):
+                        followers.append(npc)
+
+            if new_filename in game.map_states:
+                game.items_on_ground = game.map_states[new_filename].get('items_on_ground', [])
+                game.zombies = game.map_states[new_filename].get('zombies', [])
+                game.blood_stains = game.map_states[new_filename].get('blood_stains', [])
+
+                if hasattr(game, 'active_animals'):
+                    game.active_animals = game.map_states[new_filename].get('active_animals', [])
                     
-            if 'containers' in game.map_states[new_filename]:
-                default_container_rects = [c.rect for c in game.containers]
-                obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
-                
-                game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
-                
-                game.containers = game.map_states[new_filename]['containers']
-                for c in game.containers:
-                    if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
-                        game.obstacles.append(c.rect)
-                        
-            if 'vehicles' in game.map_states[new_filename] and hasattr(game.map_manager, 'vehicles'):
-                default_veh_rects = [v.rect for v in game.map_manager.vehicles]
-                game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
-                
-                game.map_manager.vehicles = game.map_states[new_filename]['vehicles']
-                for v in game.map_manager.vehicles:
-                    if v.rect not in game.obstacles:
-                        game.obstacles.append(v.rect)
-        else:
-            game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-            game.blood_stains = []
-            if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
-                game.zombies = list(game.layer_zombies[layer_index])
-            else:
-                game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
-                
-            if hasattr(game, 'active_animals'):
-                game.active_animals = []
-            if hasattr(game, 'npcs'):
-                game.npcs.empty()
-            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
-                
-                for spawn_data in game.npc_spawn_points:
-                    if len(spawn_data) == 3:
-                        nx, ny, npc_type = spawn_data
-                    else:
-                        nx, ny = spawn_data
-                        npc_type = 'NPC'
-                        
-                    is_static = (npc_type == 'SNPC')
-                    
-                    npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
-                    
-                    if npc_type == 'NPC':
-                        npc.is_friendly = False   
-                        npc.is_static = False     
-                    elif npc_type == 'SNPC':
-                        npc.is_friendly = True    
-                        npc.is_static = True       
-                        
-                    free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
-                    if free_pos:
-                        npc.rect.topleft = free_pos
-                        npc.x, npc.y = free_pos
+                if hasattr(game, 'npcs'):
+                    game.npcs.empty()
+                    for npc in game.map_states[new_filename].get('npcs', []):
                         game.npcs.add(npc)
-        
-        if hasattr(game, 'npcs'):
-            for f_npc in followers:
-                game.npcs.add(f_npc)
-        
-        if hasattr(game, 'active_animals'):
-            game.active_animals.extend(chasing_animals)
-            game.items_on_ground.extend(chasing_animals)
+                        
+                if 'containers' in game.map_states[new_filename]:
+                    default_container_rects = [c.rect for c in game.containers]
+                    obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
+                    
+                    game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
+                    
+                    game.containers = game.map_states[new_filename]['containers']
+                    for c in game.containers:
+                        if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
+                            game.obstacles.append(c.rect)
+                            
+                if 'vehicles' in game.map_states[new_filename] and hasattr(game.map_manager, 'vehicles'):
+                    default_veh_rects = [v.rect for v in game.map_manager.vehicles]
+                    game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
+                    
+                    game.map_manager.vehicles = game.map_states[new_filename]['vehicles']
+                    for v in game.map_manager.vehicles:
+                        if v.rect not in game.obstacles:
+                            game.obstacles.append(v.rect)
+            else:
+                if getattr(game, 'is_client', False):
+                    game.items_on_ground = []
+                    game.zombies = []
+                    game.blood_stains = []
+                    if hasattr(game, 'active_animals'): game.active_animals = []
+                    if hasattr(game, 'npcs'): game.npcs.empty()
+                else:
+                    game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
+                    game.blood_stains = []
+                    if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
+                        game.zombies = list(game.layer_zombies[layer_index])
+                    else:
+                        game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
+                        
+                    if hasattr(game, 'active_animals'):
+                        game.active_animals = []
+                    if hasattr(game, 'npcs'):
+                        game.npcs.empty()
+                    if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                        for spawn_data in game.npc_spawn_points:
+                            if len(spawn_data) == 3:
+                                nx, ny, npc_type = spawn_data
+                            else:
+                                nx, ny = spawn_data
+                                npc_type = 'NPC'
+                                
+                            is_static = (npc_type == 'SNPC')
+                            npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
+                            if npc_type == 'NPC':
+                                npc.is_friendly = False   
+                                npc.is_static = False     
+                            elif npc_type == 'SNPC':
+                                npc.is_friendly = True    
+                                npc.is_static = True       
+                                
+                            free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                            if free_pos:
+                                npc.rect.topleft = free_pos
+                                npc.x, npc.y = free_pos
+                                game.npcs.add(npc)
+            
+            if hasattr(game, 'npcs'):
+                for f_npc in followers:
+                    game.npcs.add(f_npc)
+            
+            if hasattr(game, 'active_animals'):
+                game.active_animals.extend(chasing_animals)
+                game.items_on_ground.extend(chasing_animals)
 
-        if hasattr(game, 'player') and getattr(game.player, 'vehicle', None):
-            veh = game.player.vehicle
-            if veh not in game.containers:
-                game.containers.append(veh)
-            if hasattr(game.map_manager, 'vehicles') and veh not in game.map_manager.vehicles:
-                game.map_manager.vehicles.append(veh)
-            if veh.rect in game.obstacles:
-                game.obstacles.remove(veh.rect)
-    else:
-        game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-        
-        if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
-            game.zombies = list(game.layer_zombies[layer_index])
+            if hasattr(game, 'player') and getattr(game.player, 'vehicle', None):
+                veh = game.player.vehicle
+                if veh not in game.containers:
+                    game.containers.append(veh)
+                if hasattr(game.map_manager, 'vehicles') and veh not in game.map_manager.vehicles:
+                    game.map_manager.vehicles.append(veh)
+                if veh.rect in game.obstacles:
+                    game.obstacles.remove(veh.rect)
         else:
-            game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
+            if getattr(game, 'is_client', False):
+                game.items_on_ground = []
+                game.zombies = []
+            else:
+                game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
+                if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
+                    game.zombies = list(game.layer_zombies[layer_index])
+                else:
+                    game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
 
-    game.layer_items[layer_index] = game.items_on_ground
-    game.layer_zombies[layer_index] = game.zombies
+        game.layer_items[layer_index] = game.items_on_ground
+        game.layer_zombies[layer_index] = game.zombies
 
     if hasattr(game, 'tiles_dirty'):
         game.tiles_dirty = True

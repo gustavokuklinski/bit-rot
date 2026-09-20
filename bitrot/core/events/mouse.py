@@ -38,7 +38,7 @@ def handle_mouse_down(game, event, mouse_pos):
             
             if in_range:
                 test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
-                is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
+                is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
                 
                 if not is_free:
                     display_message(tr('msg', "Cannot place item here, blocked by obstacle!"))
@@ -69,6 +69,17 @@ def handle_mouse_down(game, event, mouse_pos):
                             dropped_item.rect.topleft = (snap_x, snap_y)
                             dropped_item.x, dropped_item.y = snap_x, snap_y
                             dropped_item.is_placed = True
+                            
+                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                from core.server.network import NetMsg, send_msg
+                                send_msg(game.client.socket, {
+                                    'type': NetMsg.WORLD_ACTION, 
+                                    'action': 'drop', 
+                                    'item_data': dropped_item.to_dict(), 
+                                    'x': dropped_item.x, 
+                                    'y': dropped_item.y, 
+                                    'is_placed': True
+                                })
                             
             else:
                 display_message(tr('msg', "Too far to place item!"))

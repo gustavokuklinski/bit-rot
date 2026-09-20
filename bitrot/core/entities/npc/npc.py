@@ -358,6 +358,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
         if game.player and not game.player.is_dead:
             entities_to_check.append(game.player)
+        for rp in getattr(game, 'remote_players', {}).values():
+            if not getattr(rp, 'is_dead', False):
+                entities_to_check.append(rp)
 
         target_entity = None
         target_pos = None
@@ -403,9 +406,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     potential_targets.append(npc)
             if attacker == game.player and game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
+            for rp in getattr(game, 'remote_players', {}).values():
+                if attacker == rp and not getattr(rp, 'is_dead', False):
+                    potential_targets.append(rp)
         else:
             if game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
+            for rp in getattr(game, 'remote_players', {}).values():
+                if not getattr(rp, 'is_dead', False):
+                    potential_targets.append(rp)
             for npc in game.npcs:
                 if npc != self and not npc.is_dead and npc.is_friendly:
                     potential_targets.append(npc)
@@ -726,6 +735,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     
                     if target_entity == game.player:
                         target_entity.take_damage(game, damage_to_deal, 0)
+                    elif type(target_entity).__name__ == 'RemotePlayer':
+                        target_entity.take_damage(damage_to_deal, game, attacker=self)
                     else:
                         is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         if is_dead:

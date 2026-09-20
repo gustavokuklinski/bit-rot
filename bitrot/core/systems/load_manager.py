@@ -37,6 +37,16 @@ def load_map(game, map_filename):
     game.all_spawn_layers.clear()
     game.layer_items.clear()
     game.layer_zombies.clear()
+
+    # Safety check: if the file does not exist, find an available Layer 1 map file in the folder
+    target_path = os.path.join(game.map_manager.map_folder, map_filename)
+    if not os.path.exists(target_path):
+        if os.path.exists(game.map_manager.map_folder):
+            for f in sorted(os.listdir(game.map_manager.map_folder)):
+                if f.startswith("map_L1_") and f.endswith("_map.csv"):
+                    map_filename = f
+                    break
+
     game.map_manager.current_map_filename = map_filename
     
     # Pass the current map folder (save folder) to the loader
@@ -146,12 +156,33 @@ def handle_player_death(game):
     game.player.active_weapon = None
 
     # 4. Save world and update host.rot
-    if getattr(game, 'current_save_folder_name', None):
+    if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+        from core.server.network import NetMsg, send_msg
+        items_payload = [it.to_dict() for it in corpse.inventory]
+        send_msg(game.client.socket, {
+            'type': NetMsg.WORLD_ACTION,
+            'action': 'player_death',
+            'x': death_pos[0],
+            'y': death_pos[1],
+            'name': game.player.name,
+            'inventory': items_payload
+        })
+
+    # 5. Save world and update host.rot
+    if getattr(game, 'current_save_folder_name', None) and not getattr(game, 'is_client', False):
         try:
             game.save_game()
         except Exception as e:
             if hasattr(game, 'logger'):
                 game.logger.info(f"Error saving game on death: {e}")
+
+    # If the host is running a server, do not disconnect or shut down the server!
+    # Immediately send the host player back to the setup screen to create/respawn a character.
+    if getattr(game, 'is_server', False):
+        game.player_setup_state = {}
+        game.player_setup_state['current_tab'] = 'Player'
+        game.player_setup_state['respawn_save_folder'] = game.current_save_folder_name
+        game.game_state = 'PLAYER_SETUP'
 
 def respawn_player_in_world(game, new_player_data, save_folder_name):
     """Loads existing world state and spawns a new character in the same map."""
@@ -499,9 +530,10 @@ def load_game(game, save_folder_name):
         player_data = None
         has_alive_player = False
 
-        if "players" in host_raw and isinstance(host_raw["players"], dict):
+        host_players_map = host_raw.get("host", host_raw.get("players", {}))
+        if isinstance(host_players_map, dict) and host_players_map:
             alive_id = None
-            for p_id, p_info in host_raw["players"].items():
+            for p_id, p_info in host_players_map.items():
                 if p_info.get("alive", False):
                     alive_id = p_id
                     has_alive_player = True
@@ -516,9 +548,9 @@ def load_game(game, save_folder_name):
                 game.game_state = 'PLAYER_SETUP'
                 return
 
-            target_id = alive_id or next(iter(host_raw["players"].keys()), None)
+            target_id = alive_id or next(iter(host_players_map.keys()), None)
             if target_id:
-                p_file_name = host_raw["players"][target_id].get("playerID", f"{target_id}.rot")
+                p_file_name = host_players_map[target_id].get("playerID", f"{target_id}.rot")
                 p_path = os.path.join(player_dir, p_file_name)
                 if os.path.exists(p_path):
                     with open(p_path, "r") as pf:

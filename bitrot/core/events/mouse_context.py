@@ -58,15 +58,10 @@ def handle_context_menu_click(game, mouse_pos):
                     verified_item = game.player.clothes.get(index)
                 elif source == 'ground' and 0 <= index < len(game.items_on_ground):
                     verified_item = game.items_on_ground[index]
-                elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                    verified_item = container_item.inventory[index]
-                elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
+                elif source in ('container', 'nearby') and container_item and 0 <= index < len(container_item.inventory):
                     verified_item = container_item.inventory[index]
                 elif source == 'npc':
-                    if item in game.npcs:
-                        verified_item = item
-                    else:
-                        verified_item = None
+                    verified_item = item if item in game.npcs else None
                 elif source == 'container_map': 
                     if getattr(item, 'item_type', '') == 'vehicle':
                         verified_item = item 
@@ -74,10 +69,23 @@ def handle_context_menu_click(game, mouse_pos):
                         verified_item = container_item.inventory[index] if 0 <= index < len(container_item.inventory) else None
                     else:
                         verified_item = item
-                elif source == 'player_self' or source == 'map_tile' or source == 'vehicle_equipment' or source == 'vehicle_slot':
+                elif source in ('player_self', 'map_tile', 'vehicle_equipment', 'vehicle_slot', 'light_source'):
                     verified_item = item
                 
-                if verified_item is not item and not isinstance(item, dict):
+                # FIX: Check object identity OR matching item id / name so network re-sync doesn't fail validation
+                is_match = False
+                if verified_item is item or isinstance(item, dict):
+                    is_match = True
+                elif verified_item and hasattr(verified_item, 'id') and hasattr(item, 'id') and verified_item.id == item.id:
+                    item = verified_item  # Re-bind to current local object instance
+                    game.context_menu['item'] = verified_item
+                    is_match = True
+                elif verified_item and hasattr(verified_item, 'name') and hasattr(item, 'name') and verified_item.name == item.name:
+                    item = verified_item
+                    game.context_menu['item'] = verified_item
+                    is_match = True
+
+                if not is_match:
                     print("Error: UI Index Mismatch. The item changed or moved.")
                     game.context_menu['active'] = False
                     return
@@ -1083,6 +1091,11 @@ def handle_context_menu_click(game, mouse_pos):
                 elif getattr(item, 'inventory', None) is not None:
                     is_closed_maptile = getattr(item, 'item_type', '') == 'maptile_container' and not getattr(item, 'is_opened', False)
 
+                    if getattr(item, 'is_opening', False):
+                        display_message(tr('msg', "Someone is already opening this container."))
+                        game.context_menu['active'] = False
+                        return
+
                     def open_and_show_modal():
                         # Open and generate loot if unopened
                         if hasattr(item, 'open'):
@@ -1108,7 +1121,17 @@ def handle_context_menu_click(game, mouse_pos):
                         else:
                             agility = game.player.progression.get_level('agility')
                             open_time = max(0.2, 1.8 - (agility * 0.2))
-                            game.player.start_action(tr('ui', "Opening"), open_time, open_and_show_modal, xp_reward=1.5)
+
+                            item.is_opening = True
+                            if getattr(game, 'is_client', False):
+                                from core.server.network import NetMsg, send_msg
+                                send_msg(game.client.socket, {
+                                    'type': NetMsg.WORLD_ACTION, 
+                                    'action': 'lock_container', 
+                                    'x': item.rect.x, 'y': item.rect.y
+                                })
+                                
+                            game.player.start_action(f"{game.player.name} {tr('ui', "Opening")}", open_time, open_and_show_modal, xp_reward=1.5)
                     else:
                         open_and_show_modal()
                         
@@ -1206,19 +1229,32 @@ def handle_context_menu_click(game, mouse_pos):
                         if source == 'ground' and item in game.items_on_ground:
                             game.items_on_ground.remove(item)
                             grabbed = True
-                        elif source == 'nearby' and container_item and item in container_item.inventory:
+                        elif source in ('nearby', 'container') and container_item and item in container_item.inventory:
                             container_item.inventory.remove(item)
                             if getattr(container_item, 'item_type', '') == 'ground' and item in game.items_on_ground:
                                 game.items_on_ground.remove(item)
-                            grabbed = True
-                        elif source == 'container' and container_item and item in container_item.inventory:
-                            container_item.inventory.remove(item)
                             grabbed = True
 
                         if grabbed:
                             item_to_grab.is_placed = False
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
+
+                            # SYNC TO SERVER
+                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                from core.server.network import NetMsg, send_msg
+                                if source == 'ground':
+                                    send_msg(game.client.socket, {
+                                        'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
+                                    })
+                                elif container_item:
+                                    # Sync the container inventory to server immediately
+                                    send_msg(game.client.socket, {
+                                        'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                                        'x': container_item.rect.x, 'y': container_item.rect.y,
+                                        'is_opened': getattr(container_item, 'is_opened', True),
+                                        'inventory': [i.to_dict() for i in container_item.inventory]
+                                    })
 
                     if source == 'nearby':
                         grab_weight = item.get_total_weight() * weight_multiplier

@@ -117,21 +117,27 @@ def save_game(game):
         host_data = {
             "os": platform.system(),
             "uip": get_host_ip(),
-            "players": {}
+            "host": {},
+            "remote": {}
         }
-        
-        # Load existing players in host.rot if file exists (so old/dead characters aren't wiped)
+
+        # Load existing players in host.rot if file exists
         if os.path.exists(host_path):
             try:
                 with open(host_path, "r") as f:
                     existing_host = json.load(f)
-                    if isinstance(existing_host, dict) and "players" in existing_host:
-                        host_data["players"] = existing_host["players"]
+                    if isinstance(existing_host, dict):
+                        if "host" in existing_host:
+                            host_data["host"] = existing_host["host"]
+                        elif "players" in existing_host:
+                            host_data["host"] = existing_host["players"]
+                        if "remote" in existing_host:
+                            host_data["remote"] = existing_host["remote"]
             except Exception as e:
                 game.logger.info(f"Could not read existing host.rot: {e}")
 
-        # Update or add current player entry
-        host_data["players"][player_id] = {
+        # Update or add host player entry
+        host_data["host"][player_id] = {
             "name": game.player.name,
             "playerID": f"{player_id}.rot",
             "alive": is_player_alive,
@@ -244,6 +250,7 @@ def save_game(game):
                     safe_equipment[slot] = item.to_dict() if (item and hasattr(item, 'to_dict')) else item
 
             vehicle_data.append({
+                "id": str(uuid.uuid4()),
                 "x": v.rect.x,
                 "y": v.rect.y,
                 "name": v.name, 
@@ -271,6 +278,7 @@ def save_game(game):
             safe_inv = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(c, 'inventory', [])]
 
             container_data.append({
+                "id": str(uuid.uuid4()),
                 "x": c.rect.x if hasattr(c, 'rect') else c.x,
                 "y": c.rect.y if hasattr(c, 'rect') else c.y,
                 "inventory": safe_inv,
