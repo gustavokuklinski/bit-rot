@@ -939,9 +939,9 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 if state.get('respawn_save_folder'):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
-                raw_seed = getattr(game, 'world_setup_state', {}).get('world_seed', "").strip()
-                if not raw_seed:
-                    raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
+                raw_seed = state.get('world_seed', "").strip()
+                #if not raw_seed:
+                #    raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
                 
                 # Prepend the active MAP_CHUNKS prefix so generator.py builds the requested grid
                 chunks = core.data.config.MAP_CHUNKS
@@ -1139,7 +1139,7 @@ def run_player_setup(game):
 
         state['player_name'] = fake.name()
         state['name_input_active'] = False
-        state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+        # state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
 
         state['seed_input_active'] = False
         state['preset_list'] = ["None"]
@@ -1218,7 +1218,7 @@ def run_player_setup(game):
     if state['current_tab'] == 'Player':
         clickable_rects = _draw_player_build_screen(game, state, mouse_pos)
     else:
-        clickable_rects = _draw_world_screen(game, mouse_pos)
+        clickable_rects = _draw_world_screen(game, state, mouse_pos)
     
     for event in game.get_events():
         event_pos = mouse_pos
@@ -1233,10 +1233,14 @@ def run_player_setup(game):
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
+            if not is_client and world_btn.collidepoint(event_pos):
+                state['current_tab'] = 'World'
+                continue
+
+            # Handle Player Tab Click
             if player_btn.collidepoint(event_pos):
                 if hasattr(game, 'world_setup_state'):
                     w_state = game.world_setup_state
-                    # Save unsaved world preset if user clicked Player tab directly
                     if w_state.get('world_unsaved', False):
                         from core.ui.helpers.world import _save_world_preset
                         _save_world_preset(w_state)
@@ -1248,6 +1252,10 @@ def run_player_setup(game):
                     state['world_data'] = w_state.get('world_data')
                     state['world_seed'] = w_state.get('world_seed')
                 state['current_tab'] = 'Player'
+                continue
+
+            if back_btn.collidepoint(event_pos):
+                game.game_state = 'MENU'  # This returns the user to the main menu
                 continue
 
         if state['current_tab'] == 'World':

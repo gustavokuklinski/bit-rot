@@ -123,7 +123,7 @@ def _delete_world_preset(state):
         except Exception as e:
             print(f"Error deleting preset: {e}")
 
-def _draw_world_screen(game, mouse_pos):
+def _draw_world_screen(game, state, mouse_pos):
     if not hasattr(game, 'world_setup_state'):
         game.world_setup_state = {}
         
@@ -140,11 +140,16 @@ def _draw_world_screen(game, mouse_pos):
         state['world_unsaved'] = False
         
         # Pull seed from preset XML if available, otherwise generate fresh
-        xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
-        if xml_seed and str(xml_seed).strip():
-            state['world_seed'] = str(xml_seed).strip()
+        if 'world_seed' in state and state['world_seed']:
+            # Keep the seed we already have (the fresh one from New Game)
+            pass 
         else:
-            state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+            # Only generate if we are loading a preset that has no seed
+            xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
+            if xml_seed and str(xml_seed).strip():
+                state['world_seed'] = str(xml_seed).strip()
+            else:
+                state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
 
         state['seed_input_active'] = False
         _load_world_presets(state)
