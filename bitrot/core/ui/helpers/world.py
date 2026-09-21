@@ -46,49 +46,68 @@ def _load_world_presets(state):
         pass
     state['config_preset_list'] = presets
 
+def _clone_to_custom(state):
+    """When editing the default world, automatically spawn a custom timestamped preset to edit."""
+    # FIX: Check if we are already on a custom preset. If so, do not clone again!
+    if state.get('selected_config_preset', 'world') != 'world':
+        return
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    new_name = f"world-{timestamp}"
+    state['selected_config_preset'] = new_name
+    state['world_preset_name'] = new_name
+    
+    # Save the file immediately so it exists on disk
+    writable_root = core.data.config.get_writable_dir()
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{new_name}.xml")
+    save_config_xml(state['world_data'], filepath)
+    
+    _load_world_presets(state)
+
 def _save_world_preset(state):
     preset_name = state.get('world_preset_name', '').strip()
     if not preset_name: return
     
+    if preset_name == 'world':
+        # Don't overwrite the default! Clone it first.
+        _clone_to_custom(state)
+        return
+
     if not preset_name.startswith('world-'):
         preset_name = f"world-{preset_name}"
         
-    filepath = core.data.config.get_world_config_path(preset_name)
+    # Build path manually to avoid 'get_world_config_path' fallback overwriting defaults
+    writable_root = core.data.config.get_writable_dir()
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset_name}.xml")
+    
     save_config_xml(state['world_data'], filepath)
     
     state['selected_config_preset'] = preset_name
+    state['world_preset_name'] = preset_name
     _load_world_presets(state)
 
 def _delete_world_preset(state):
     preset_name = state.get('selected_config_preset', 'world')
     if preset_name == 'world': return # Cannot delete default
 
-    filepath = core.data.config.get_world_config_path(preset_name)
+    # Target exact file directly
+    writable_root = core.data.config.get_writable_dir()
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset_name}.xml")
+    
     if os.path.exists(filepath):
         try:
             os.remove(filepath)
             state['selected_config_preset'] = 'world'
+            state['world_preset_name'] = 'world'
             state['world_data'] = load_config_data(core.data.config.get_world_config_path('world'))
             _load_world_presets(state)
         except Exception as e:
             print(f"Error deleting preset: {e}")
 
-def _clone_to_custom(state):
-    """When editing the default world, automatically spawn a custom timestamped preset to edit."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    new_name = f"world-{timestamp}"
-    state['selected_config_preset'] = new_name
-    state['world_preset_name'] = new_name
-    # Don't save to disk until they hit 'Save'
-    _load_world_presets(state)
-    if new_name not in state['config_preset_list']:
-        state['config_preset_list'].append(new_name)
-
 def _draw_world_screen(game, state, mouse_pos):
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
-    # Initialize if missing
     if not state.get('world_data'):
         preset_name = state.get('selected_config_preset', 'world')
         state['world_preset_name'] = preset_name
@@ -99,7 +118,6 @@ def _draw_world_screen(game, state, mouse_pos):
     center_offset_x = (GAME_WIDTH - S(1280)) // 2
     center_offset_y = (GAME_HEIGHT - S(720)) // 2
     
-    # EXACT COLUMN MATCH WITH player_setup.py
     col1_x = S(170) + center_offset_x
     base_y = S(30) + center_offset_y
     
@@ -110,7 +128,7 @@ def _draw_world_screen(game, state, mouse_pos):
     col3_width = S(225)
     
     col4_x = col3_x + col3_width + S(20)
-    col4_width = S(275) # Exact match for Current Stats
+    col4_width = S(275)
     
     header_height = S(30)
     border_radius = S(4)
@@ -132,7 +150,7 @@ def _draw_world_screen(game, state, mouse_pos):
     }
 
     # =========================================================
-    # LEFT: World Rules (Uses col1 + col2 + col3 width combined)
+    # LEFT: World Rules
     # =========================================================
     settings_area_x = col1_x
     settings_area_w = (col3_x + col3_width) - col1_x
@@ -294,7 +312,7 @@ def _draw_world_screen(game, state, mouse_pos):
     state['world_content_rect'] = content_rect
     
     # =========================================================
-    # RIGHT: World Preset & Next Button (Uses col4 constraints)
+    # RIGHT: World Preset & Next Button
     # =========================================================
     
     preset_rect = pygame.Rect(col4_x, base_y, col4_width, S(550))
@@ -315,7 +333,7 @@ def _draw_world_screen(game, state, mouse_pos):
     game.game_screen.blit(font_12.render(selected_preset, False, WHITE), (load_dd_rect.x + S(5), load_dd_rect.y + S(5)))
     pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - S(15), load_dd_rect.y + S(10)), (load_dd_rect.right - S(5), load_dd_rect.y + S(10)), (load_dd_rect.right - S(10), load_dd_rect.y + S(15))])
 
-    # Name Input (Only allowed if not default world)
+    # Name Input
     is_default = (selected_preset == "world")
     input_y = load_dd_rect.bottom + S(20)
     
@@ -403,7 +421,7 @@ def _draw_world_screen(game, state, mouse_pos):
     if next_rect.collidepoint(mouse_pos):
         pygame.draw.rect(game.game_screen, (0, 150, 0), next_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
     
-    next_txt = font_16.render(tr('ui', "NEXT"), True, WHITE)
+    next_txt = font_16.render(tr('ui', "NEXT: PLAYER SETUP"), True, WHITE)
     game.game_screen.blit(next_txt, next_txt.get_rect(center=next_rect.center))
     clickable_rects['next_tab'] = next_rect
 
