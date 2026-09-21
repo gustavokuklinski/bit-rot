@@ -3,7 +3,7 @@
 import csv
 import pygame
 import random
-
+import core.data.config
 from core.data.config import *
 from core.entities.item.item import Item, Container
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
@@ -31,7 +31,7 @@ def _generate_container_items(tile_def, game=None):
     is_liquid_source = tile_def.get('allow_liquid', False)
     
     # 1. Base Global Multiplier
-    dynamic_multiplier = ITEM_SPAWN_CHANCE_MULTIPLIER
+    dynamic_multiplier = getattr(core.data.config, 'ITEM_SPAWN_CHANCE_MULTIPLIER', 1.0)
     lucky_level = 0
 
     # 2. Dynamic Player Multipliers (Only applies if game/player context is passed)

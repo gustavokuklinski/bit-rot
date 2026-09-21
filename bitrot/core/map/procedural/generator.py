@@ -183,9 +183,7 @@ class ProceduralGenerator(ProceduralGeneratorUtils, ProceduralGeneratorRendering
                 print(f"Error reading existing macro_world.json: {e}")
 
         current_chunks = core.data.config.MAP_CHUNKS
-        if not seed_pattern or seed_pattern == "5-DEFAULT":
-            try: seed_pattern = generate_random_seed(current_chunks)
-            except: seed_pattern = f"{current_chunks}-{random.randint(1000,9999)}"
+        
 
         if '-' in seed_pattern:
             parts = seed_pattern.split('-', 1)

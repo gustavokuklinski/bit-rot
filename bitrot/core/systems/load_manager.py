@@ -346,7 +346,9 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.map_manager.map_folder = map_path
 
     if not save_dir_name:
-        preset_name = game.player_setup_state.get('selected_config_preset', 'default')
+        preset_name = player_data.get('selected_config_preset') or \
+                      game.player_setup_state.get('selected_config_preset') or \
+                      getattr(game, 'world_setup_state', {}).get('selected_config_preset', 'world')
         game.logger.info(f"Reloading game configuration from XML: {preset_name}.xml")
         core.data.config.load_settings(preset_name)
 
@@ -442,7 +444,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
         if 1 in game.all_map_layers:
             game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
-            spawn_random_vehicles(game, count=8)
+            spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 5))
             spawn_animals(game, target_layer=1)
 
         if 2 in game.all_map_layers:

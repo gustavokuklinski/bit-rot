@@ -15,7 +15,7 @@
         <map_chunks value="2" name="Map size" default="2"/>
     </map>
     <item_spawning>
-        <item_spawn_chance_multiplier value="0.25" name="Global Multiplier" default="1.0"/>
+        <item_spawn_chance_multiplier value="0.5" name="Global Multiplier" default="0.5"/>
     </item_spawning>
     <vehicle>
         <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk" default="5"/>

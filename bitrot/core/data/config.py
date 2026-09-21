@@ -168,13 +168,29 @@ def get_preferences_path():
 
 def get_world_config_path(preset="world"):
     """Gets the world configuration path."""
+    if not preset or preset == "default":
+        preset = "world"
+
     writable_root = get_writable_dir()
-    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml")
-    if not os.path.exists(filepath):
-        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
-    if not os.path.exists(filepath):
-        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml")
-    return filepath
+    candidates = [
+        os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml"),
+        os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml"),
+        os.path.join(DATA_PATH, "config", f"{preset}.xml"),
+        os.path.join(DATA_PATH, f"{preset}.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", f"{preset}.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "config", f"{preset}.xml"),
+        # Fallbacks to world.xml
+        os.path.join(writable_root, "data.rot", "save", "config", "world.xml"),
+        os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml"),
+        os.path.join(DATA_PATH, "config", "world.xml"),
+        os.path.join(DATA_PATH, "world.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", "world.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "config", "world.xml"),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return candidates[0]
 
 class ImageFontWrapper:
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):
@@ -265,6 +281,11 @@ def load_settings(world_preset="world"):
     except Exception as e:
         print(f"Error loading preferences: {e}")
 
+    def _get_val(parent, tag, default):
+        if parent is None: return default
+        node = parent.find(tag)
+        return node.get('value', default) if node is not None else default
+
     world_path = get_world_config_path(world_preset)
     try:
         tree = ET.parse(world_path)
@@ -274,35 +295,32 @@ def load_settings(world_preset="world"):
         if game_config is not None:
             TIME_TRANSITION_HR = 1.0
             MAX_DARKNESS_OPACITY = 255
-            TIME_DAYLENGTH = int(game_config.find('time_daylength').get('value', '900000'))
-            TIME_SUNRISE_HR = float(game_config.find('time_sunrise_hr').get('value', '5.5'))
-            TIME_SUNSET_HR = float(game_config.find('time_sunset_hr').get('value', '17.5'))
-            TIME_START_HR = float(game_config.find('time_start_hr').get('value', '6.0'))
+            TIME_DAYLENGTH = int(_get_val(game_config, 'time_daylength', '900000'))
+            TIME_SUNRISE_HR = float(_get_val(game_config, 'time_sunrise_hr', '5.5'))
+            TIME_SUNSET_HR = float(_get_val(game_config, 'time_sunset_hr', '17.5'))
+            TIME_START_HR = float(_get_val(game_config, 'time_start_hr', '6.0'))
 
         map_config = root.find('map')
         if map_config is not None:
-            MAP_CHUNKS = int(map_config.find('map_chunks').get('value', '2'))
+            MAP_CHUNKS = int(_get_val(map_config, 'map_chunks', '2'))
             CHUNK_SIZE = 128
         
         player_config = root.find('player')
         if player_config is not None:
             PLAYER_SPEED = 1.6 
-            BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value', '9')) * TILE_SIZE
-            val_auto_drink = player_config.find('water_autodrink').get('value', 'true')
+            BASE_PLAYER_VIEW_RADIUS = int(_get_val(player_config, 'view_radius', '9')) * TILE_SIZE
+            val_auto_drink = _get_val(player_config, 'water_autodrink', 'true')
             AUTO_DRINK = str(val_auto_drink).lower() == 'true'
-            AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value', '100'))
+            AUTO_DRINK_THRESHOLD = int(_get_val(player_config, 'water_threshold', '100'))
 
         zombie_config = root.find('zombie')
         if zombie_config is not None:
-            val_wander = zombie_config.find('wander').get('value', 'true')
-            ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
-            ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value', '3'))
-            val_respawn = zombie_config.find('respawn')
-            if val_respawn is not None: ZOMBIE_RESPAWN = str(val_respawn.get('value', 'true')).lower() == 'true'
-            ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value', '6'))
-            ZOMBIE_INFECTION_CHANCE = float(zombie_config.find('infection_chance').get('value', '0.25'))
-            val_sight = zombie_config.find('sight_check')
-            if val_sight is not None: ZOMBIE_LINE_OF_SIGHT_CHECK = str(val_sight.get('value', 'true')).lower() == 'true'
+            ZOMBIE_WANDER_ENABLED = str(_get_val(zombie_config, 'wander', 'true')).lower() == 'true'
+            ZOMBIES_PER_SPAWN = int(_get_val(zombie_config, 'spawn', '3'))
+            ZOMBIE_RESPAWN = str(_get_val(zombie_config, 'respawn', 'true')).lower() == 'true'
+            ZOMBIE_MAX_CHUNK = int(_get_val(zombie_config, 'zombie_spawn_per_chunk', '6'))
+            ZOMBIE_INFECTION_CHANCE = float(_get_val(zombie_config, 'infection_chance', '0.25'))
+            ZOMBIE_LINE_OF_SIGHT_CHECK = str(_get_val(zombie_config, 'sight_check', 'true')).lower() == 'true'
             ZOMBIE_SPEED = 0.3
             ZOMBIE_DETECTION_RADIUS = 5 * TILE_SIZE
             ZOMBIE_DROP = 1
@@ -311,9 +329,7 @@ def load_settings(world_preset="world"):
 
         spawning_config = root.find('item_spawning')
         if spawning_config is not None:
-            multiplier_node = spawning_config.find('item_spawn_chance_multiplier')
-            if multiplier_node is not None:
-                ITEM_SPAWN_CHANCE_MULTIPLIER = float(multiplier_node.get('value', '1.0'))
+            ITEM_SPAWN_CHANCE_MULTIPLIER = float(_get_val(spawning_config, 'item_spawn_chance_multiplier', '1.0'))
 
         npc_config = root.find('npc')
         if npc_config is not None:
@@ -323,32 +339,27 @@ def load_settings(world_preset="world"):
             NPC_DAMAGE_MULTIPLIER = 1.0
             NPC_SPEED_MULTIPLIER = 1.0
             NPC_DETECTION_RADIUS = 5 * TILE_SIZE
-            NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value', '12'))
-            spawn_node = npc_config.find('spawn')
-            NPCS_PER_SPAWN = int(spawn_node.get('value', '6')) if spawn_node is not None else 6
-            NPC_STATIC_PERCENT = float(npc_config.find('static_percent').get('value', '0.40'))    
-            NPC_HOSTILE_PERCENT = float(npc_config.find('hostile_percent').get('value', '0.60'))
-            respawn_node = npc_config.find('respawn')
-            NPC_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
+            NPC_MAX_CHUNK = int(_get_val(npc_config, 'npc_spawn_per_chunk', '12'))
+            NPCS_PER_SPAWN = int(_get_val(npc_config, 'spawn', '6'))
+            NPC_STATIC_PERCENT = float(_get_val(npc_config, 'static_percent', '0.40'))    
+            NPC_HOSTILE_PERCENT = float(_get_val(npc_config, 'hostile_percent', '0.60'))
+            NPC_RESPAWN = str(_get_val(npc_config, 'respawn', 'true')).lower() == 'true'
 
         vehicle_config = root.find('vehicle')
         if vehicle_config is not None:
-            MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value', '5'))
-            VEH_HAS_FUEL = float(vehicle_config.find('has_fuel_chance').get('value', '0.25'))
-            VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value', '0.25'))
-            VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value', '1.0'))
-            VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value', '0.75'))
-            VEH_HAS_TIRES = float(vehicle_config.find('has_tires_chance').get('value', '1.0'))
+            MAX_VEH_CHUNK = int(_get_val(vehicle_config, 'vehicle_spawn_per_chunk', '5'))
+            VEH_HAS_FUEL = float(_get_val(vehicle_config, 'has_fuel_chance', '0.25'))
+            VEH_HAS_KEY = float(_get_val(vehicle_config, 'has_key_chance', '0.25'))
+            VEH_HAS_MOTOR = float(_get_val(vehicle_config, 'has_motor_chance', '1.0'))
+            VEH_HAS_BATTERY = float(_get_val(vehicle_config, 'has_battery_chance', '0.75'))
+            VEH_HAS_TIRES = float(_get_val(vehicle_config, 'has_tires_chance', '1.0'))
 
         animal_config = root.find('animal')
         if animal_config is not None:
-            chunk_node = animal_config.find('animal_spawn_per_chunk')
-            ANIMAL_MAX_CHUNK = int(chunk_node.get('value', '6')) if chunk_node is not None else 6
+            ANIMAL_MAX_CHUNK = int(_get_val(animal_config, 'animal_spawn_per_chunk', '6'))
             ANIMAL_SPAWN_COUNT = ANIMAL_MAX_CHUNK
-            spawn_node = animal_config.find('spawn')
-            ANIMALS_PER_SPAWN = int(spawn_node.get('value', '3')) if spawn_node is not None else 3
-            respawn_node = animal_config.find('respawn')
-            ANIMAL_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
+            ANIMALS_PER_SPAWN = int(_get_val(animal_config, 'spawn', '3'))
+            ANIMAL_RESPAWN = str(_get_val(animal_config, 'respawn', 'true')).lower() == 'true'
 
     except Exception as e:
         print(f"Error loading world from {world_path}: {e}")

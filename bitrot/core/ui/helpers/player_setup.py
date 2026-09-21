@@ -4,15 +4,16 @@ import pygame
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 import os
+import random
 from datetime import datetime
+from faker import Faker
+from types import SimpleNamespace
+
 from core.data.config import *
 import core.data.config
 import core.data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
-import random
-from faker import Faker
-from types import SimpleNamespace
 from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.world import _draw_world_screen, handle_world_events
@@ -806,15 +807,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             elif len(state['player_name']) <= 20: 
                 state['player_name'] += event.unicode
             
-        if state.get('seed_input_active'):
-            if event.key == pygame.K_BACKSPACE:
-                state['world_seed'] = state['world_seed'][:-1]
-            elif event.key == pygame.K_RETURN:
-                state['seed_input_active'] = False
-            elif len(state.get('world_seed', "")) <= 10: 
-                if event.unicode.isalnum() or event.unicode == '-':
-                    state['world_seed'] += event.unicode.upper()
-
     elif event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
         dropdown_clicked = False
         scrollbar_clicked = False
@@ -872,12 +864,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos): state['name_input_active'] = True
         else: state['name_input_active'] = False
 
-        if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
-            state['seed_input_active'] = True
-            state['name_input_active'] = False 
-        else:
-            state['seed_input_active'] = False
-        
         if clickable_rects.get('slot_color_buttons'):
             for slot_name, rect in clickable_rects['slot_color_buttons'].items():
                 if rect.collidepoint(mouse_pos):
@@ -914,6 +900,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
         if clickable_rects.get("start_button") and clickable_rects["start_button"].collidepoint(mouse_pos):
             if state.get('total_trait_cost', 0) <= STARTING_POINTS:
+                preset_to_load = state.get('selected_config_preset') or \
+                                 getattr(game, 'world_setup_state', {}).get('selected_config_preset', 'world')
+                core.data.config.load_settings(preset_to_load)
+                
                 final_player_data = state['base_data'].copy()
                 final_player_data['attributes'] = state['final_attrs']
                 final_player_data['clothes'] = state['chosen_clothes']
@@ -924,7 +914,8 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
                 
-                final_player_data['game_settings'] = state.get('world_data') 
+                final_player_data['selected_config_preset'] = preset_to_load
+                final_player_data['game_settings'] = getattr(game, 'world_setup_state', {}).get('world_data', state.get('world_data'))
 
                 if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
                     from core.server.client import GameClient, init_client_world
@@ -936,15 +927,16 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                         init_client_world(game, ack_data, final_player_data)
                         game.game_state = 'PLAYING'
                     else:
+                        from core.messages import display_message
                         display_message(game, f"Failed to connect to {c_ip}:{c_port}")
                     return
 
                 if state.get('respawn_save_folder'):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
-                raw_seed = state.get('world_seed', "").strip()
-                if not raw_seed:
-                    raw_seed = core.data.config.generate_random_seed()
+                raw_seed = game.world_setup_state.get('world_seed', "").strip()
+                if not raw_seed or len(raw_seed) != 12:
+                    raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
                 
                 final_player_data['world_seed'] = raw_seed
 
@@ -987,7 +979,7 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             was_scrolling_preset = False
             if state.get('is_scrolling_preset_content'):
                 drag_dist = abs(mouse_pos[1] - state.get('preset_content_drag_start_y', mouse_pos[1]))
-                if drag_dist > S(5):
+                if drag_dist > S(5): 
                     was_scrolling_preset = True
             
             if state.get('preset_dropdown_active') and not was_scrolling_preset:
@@ -1135,7 +1127,8 @@ def run_player_setup(game):
 
         state['player_name'] = fake.name()
         state['name_input_active'] = False
-        state['world_seed'] = ""
+        state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+
         state['seed_input_active'] = False
         state['preset_list'] = ["None"]
         state['selected_preset'] = "None"
@@ -1213,7 +1206,7 @@ def run_player_setup(game):
     if state['current_tab'] == 'Player':
         clickable_rects = _draw_player_build_screen(game, state, mouse_pos)
     else:
-        clickable_rects = _draw_world_screen(game, state, mouse_pos)
+        clickable_rects = _draw_world_screen(game, mouse_pos)
     
     for event in game.get_events():
         event_pos = mouse_pos
@@ -1228,14 +1221,20 @@ def run_player_setup(game):
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
-            if back_btn.collidepoint(event_pos):
-                game.game_state = 'MENU'
-                return
+            if back_btn.collidepoint(mouse_pos):
+                if state.get('current_tab') == 'Player' and not is_client:
+                    state['current_tab'] = 'World'
+                    continue
+                else:
+                    game.game_state = 'MENU'
+                    return
             if player_btn.collidepoint(event_pos):
+                if hasattr(game, 'world_setup_state'):
+                    state['selected_config_preset'] = game.world_setup_state.get('selected_config_preset', 'world')
+                    state['world_preset_name'] = game.world_setup_state.get('world_preset_name', 'world')
+                    state['world_data'] = game.world_setup_state.get('world_data')
+                    state['world_seed'] = game.world_setup_state.get('world_seed')
                 state['current_tab'] = 'Player'
-                continue
-            elif not getattr(game, 'is_client', False) and world_btn.collidepoint(event_pos):
-                state['current_tab'] = 'World'
                 continue
 
         if state['current_tab'] == 'World':
