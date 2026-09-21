@@ -775,39 +775,39 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         # ---------------------------------------------------------
         from core.map.spawn_manager import get_out_of_sight_spawn_pos
 
-        # 1. Instantly spawn replacement NPC in a circle 10 tiles away from view radius
-        if getattr(core.data.config, 'NPC_RESPAWN', True):
-            npcs_per_spawn = getattr(core.data.config, 'NPCS_PER_SPAWN', 1)
-            num_npcs = max(1, int(npcs_per_spawn))
+        max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+        if getattr(core.data.config, 'NPC_RESPAWN', True) and max_npc > 0 and max_npc_chunk > 0:
+            num_npcs = int(getattr(core.data.config, 'NPCS_PER_SPAWN', 1))
+            if num_npcs > 0:
+                for _ in range(num_npcs):
+                    if len(game.npcs) >= max_npc:
+                        break
+                    spawn_pos = get_out_of_sight_spawn_pos(game)
+                    if spawn_pos:
+                        new_npc = NPC(
+                            spawn_pos[0], 
+                            spawn_pos[1], 
+                            game, 
+                            is_static=False, 
+                            layer=getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+                        )
+                        new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
+                        game.npcs.add(new_npc)
 
-            for _ in range(num_npcs):
-                if len(game.npcs) >= getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500):
-                    break
-                spawn_pos = get_out_of_sight_spawn_pos(game)
-                if spawn_pos:
-                    new_npc = NPC(
-                        spawn_pos[0], 
-                        spawn_pos[1], 
-                        game, 
-                        is_static=False, 
-                        layer=getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
-                    )
-                    new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
-                    game.npcs.add(new_npc)
-
-        # 2. Spawn reinforcement zombies in circular pattern
-        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
+        max_zombies = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+        max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True) and max_zombies > 0 and max_z_chunk > 0:
             from core.entities.zombie.zombie import Zombie
-            max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
-            num_zombies = max(1, int(max_zombie_spawns))
-            
-            for _ in range(num_zombies):
-                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500):
-                    break
-                spawn_pos = get_out_of_sight_spawn_pos(game)
-                if spawn_pos:
-                    zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
-                    game.zombies.append(zombie)
+            num_zombies = int(getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1))
+            if num_zombies > 0:
+                for _ in range(num_zombies):
+                    if len(game.zombies) >= max_zombies:
+                        break
+                    spawn_pos = get_out_of_sight_spawn_pos(game)
+                    if spawn_pos:
+                        zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
+                        game.zombies.append(zombie)
 
         if hasattr(game, 'spatial_manager'):
             game.spatial_manager.rebuild_zombie_grid()

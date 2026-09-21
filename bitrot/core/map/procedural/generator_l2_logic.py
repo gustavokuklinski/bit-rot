@@ -2,6 +2,7 @@
 
 import math
 import random
+import core.data.config
 from core.data.config import *
 
 class ProceduralGeneratorL2:
@@ -60,15 +61,18 @@ class ProceduralGeneratorL2:
         chunks_x = max(1, w // self.chunk_size)
         chunks_y = max(1, h // self.chunk_size)
         total_chunks = max(1, chunks_x * chunks_y)
-        total_zombies = ZOMBIE_MAX_CHUNK * total_chunks
+        zombie_max = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+        total_zombies = zombie_max * total_chunks
 
-        if pathway_candidates:
+        # FIX: Initialize chosen before the condition
+        chosen = []
+        if pathway_candidates and total_zombies > 0:
             count = min(len(pathway_candidates), total_zombies)
             chosen = random.sample(pathway_candidates, count)
             for (zx, zy) in chosen:
                 spawn[zy][zx] = 'Z'
                 
-        print(f"  > Spawning Report L2: {len(chosen) if pathway_candidates else 0} Zombies on Pathways (Map Limit: {total_zombies}).")
+        print(f"  > Spawning Report L2: {len(chosen)} Zombies on Pathways (Map Limit: {total_zombies}).")
 
     def _decorate_l2_pathways(self, layers, mask):
         """

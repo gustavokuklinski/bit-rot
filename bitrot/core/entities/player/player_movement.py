@@ -431,6 +431,7 @@ class PlayerMovement:
                                         game.obstacles.append(v.rect)
                         else:
                             # First time visiting chunk
+                            # First time visiting chunk
                             game.items_on_ground = []
                             game.zombies = []
                             if hasattr(game, 'active_animals'):
@@ -438,10 +439,16 @@ class PlayerMovement:
                             if hasattr(game, 'npcs'):
                                 game.npcs.empty()
                                 
-                            if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns:
+                            max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+                            z_per_spawn = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 3)
+                            max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+
+                            if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns and max_z_chunk > 0 and max_z_global > 0 and z_per_spawn > 0:
                                 from core.entities.zombie.zombie import Zombie
                                 for szx, szy in game.current_zombie_spawns:
-                                    for _ in range(random.randint(1, 2)):
+                                    if len(game.zombies) >= max_z_chunk or len(game.zombies) >= max_z_global:
+                                        break
+                                    for _ in range(z_per_spawn):
                                         z = Zombie.create_random(szx, szy)
                                         if z:
                                             free_pos = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
@@ -450,8 +457,14 @@ class PlayerMovement:
                                                 z.x, z.y = free_pos
                                                 game.zombies.append(z)
                                         
-                            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                            max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+                            max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+                            can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
+
+                            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points and can_spawn_npcs:
                                 for spawn_data in game.npc_spawn_points:
+                                    if len(game.npcs) >= max_npc_chunk:
+                                        break
                                     nx, ny = spawn_data[0], spawn_data[1]
                                     npc_type = spawn_data[2] if len(spawn_data) == 3 else 'NPC'
                                     is_static = (npc_type == 'SNPC')
@@ -463,7 +476,9 @@ class PlayerMovement:
                                         npc.x, npc.y = free_pos
                                         game.npcs.add(npc)
                                     
-                            if hasattr(game, 'active_animals') and getattr(core.data.config, 'ANIMAL_SPAWN_COUNT', 1) > 0:
+                            max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
+                            anim_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 3)
+                            if hasattr(game, 'active_animals') and max_anim > 0 and anim_per_spawn > 0:
                                 from core.entities.animal.animal import Animal
                                 from core.entities.animal.animal_loader import AnimalLoader
                                 AnimalLoader.load_animals()
@@ -477,7 +492,7 @@ class PlayerMovement:
                                         valid_weights.append(max(1, int(a_def.get('spawn_weight', 10))))
 
                                 if valid_animal_types:
-                                    num_to_spawn = random.randint(3, 7)
+                                    num_to_spawn = min(anim_per_spawn, max_anim)
                                     for _ in range(num_to_spawn):
                                         ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
                                         ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))

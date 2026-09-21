@@ -900,8 +900,13 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
         if clickable_rects.get("start_button") and clickable_rects["start_button"].collidepoint(mouse_pos):
             if state.get('total_trait_cost', 0) <= STARTING_POINTS:
+                w_state = getattr(game, 'world_setup_state', {})
+                if w_state.get('world_unsaved', False):
+                    from core.ui.helpers.world import _save_world_preset
+                    _save_world_preset(w_state)
+
                 preset_to_load = state.get('selected_config_preset') or \
-                                 getattr(game, 'world_setup_state', {}).get('selected_config_preset', 'world')
+                                 w_state.get('selected_config_preset', 'world')
                 core.data.config.load_settings(preset_to_load)
                 
                 final_player_data = state['base_data'].copy()
@@ -934,11 +939,18 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 if state.get('respawn_save_folder'):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
-                raw_seed = game.world_setup_state.get('world_seed', "").strip()
-                if not raw_seed or len(raw_seed) != 12:
+                raw_seed = getattr(game, 'world_setup_state', {}).get('world_seed', "").strip()
+                if not raw_seed:
                     raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
                 
-                final_player_data['world_seed'] = raw_seed
+                # Prepend the active MAP_CHUNKS prefix so generator.py builds the requested grid
+                chunks = core.data.config.MAP_CHUNKS
+                if not raw_seed.startswith(f"{chunks}-"):
+                    world_seed = f"{chunks}-{raw_seed}"
+                else:
+                    world_seed = raw_seed
+
+                final_player_data['world_seed'] = world_seed
 
                 game.loading_data = final_player_data
                 game.game_state = 'LOADING'
@@ -1221,19 +1233,20 @@ def run_player_setup(game):
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
-            if back_btn.collidepoint(mouse_pos):
-                if state.get('current_tab') == 'Player' and not is_client:
-                    state['current_tab'] = 'World'
-                    continue
-                else:
-                    game.game_state = 'MENU'
-                    return
             if player_btn.collidepoint(event_pos):
                 if hasattr(game, 'world_setup_state'):
-                    state['selected_config_preset'] = game.world_setup_state.get('selected_config_preset', 'world')
-                    state['world_preset_name'] = game.world_setup_state.get('world_preset_name', 'world')
-                    state['world_data'] = game.world_setup_state.get('world_data')
-                    state['world_seed'] = game.world_setup_state.get('world_seed')
+                    w_state = game.world_setup_state
+                    # Save unsaved world preset if user clicked Player tab directly
+                    if w_state.get('world_unsaved', False):
+                        from core.ui.helpers.world import _save_world_preset
+                        _save_world_preset(w_state)
+                    
+                    p_name = w_state.get('selected_config_preset', 'world')
+                    core.data.config.load_settings(p_name)
+                    state['selected_config_preset'] = p_name
+                    state['world_preset_name'] = p_name
+                    state['world_data'] = w_state.get('world_data')
+                    state['world_seed'] = w_state.get('world_seed')
                 state['current_tab'] = 'Player'
                 continue
 

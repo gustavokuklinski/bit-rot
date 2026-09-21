@@ -57,6 +57,9 @@ class ZombieAI:
 
     def has_line_of_sight(self, target_rect, game, current_time):
         """Checks if there is an uninterrupted line between entity and target."""
+        if not target_rect:
+            return False
+
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
             return True
 
@@ -170,9 +173,8 @@ class ZombieAI:
                 cost_mod = step_cost
                 if is_obstacle and next_node != target_grid:
                     if not allow_break_obstacles:
-                        continue  # Closed door/window/wall is completely impassable
+                        continue
 
-                    # If noise or damage forced breaking through obstacles:
                     name = str(tile_def.get('name', '')).lower() if tile_def else ''
                     char = game.map_data[ny][nx] if 0 <= ny < map_h and 0 <= nx < map_w else ''
                     is_barricaded = bool(map_mgr.get_barricade(nx, ny)) if map_mgr else False
@@ -190,7 +192,6 @@ class ZombieAI:
                     h = octile_heuristic(next_node, target_grid)
                     heapq.heappush(open_set, (new_g + h, h, next_node, path + [current]))
 
-        # Return closest partial path only if allow_break_obstacles is enabled
         if allow_break_obstacles and closest_node != start_grid:
             return [(closest_node[0] * TILE_SIZE + TILE_SIZE // 2, closest_node[1] * TILE_SIZE + TILE_SIZE // 2)]
 
@@ -211,7 +212,6 @@ class ZombieAI:
             else:
                 has_active_noise = True
 
-        # Target selection: prioritize player or nearby hostile/entities
         # Target selection: prioritize LIVING players or nearby hostile entities
         all_players = []
         if game.player and not getattr(game.player, 'is_dead', False) and game.player.health > 0:
@@ -227,13 +227,12 @@ class ZombieAI:
         for p in all_players:
             pdx = p.rect.centerx - self.rect.centerx
             pdy = p.rect.centery - self.rect.centery
-            pdist_sq = pdx*pdx + pdy*pdy
+            pdist_sq = pdx * pdx + pdy * pdy
             if pdist_sq < min_target_dist_sq:
                 min_target_dist_sq = pdist_sq
                 target_entity = p
                 target_rect = p.rect
 
-        # FIX: If NO living players are present, DO NOT fall back to attacking the dead player!
         if target_entity is None:
             dist_to_player_sq = float('inf')
         else:
@@ -249,7 +248,7 @@ class ZombieAI:
             if is_npc:
                 edx = entity.rect.centerx - self.rect.centerx
                 edy = entity.rect.centery - self.rect.centery
-                entity_dist_sq = edx*edx + edy*edy
+                entity_dist_sq = edx * edx + edy * edy
                 if entity_dist_sq < min_target_dist_sq:
                     if getattr(entity, 'is_static', False):
                         if not self.has_line_of_sight(entity.rect, game, current_time):
@@ -264,17 +263,15 @@ class ZombieAI:
         else:
             dist_to_target_sq = dist_to_player_sq
 
-        
-
         detection_radius = getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE)
-        if target_entity == game.player and getattr(game.player, 'is_aiming', False):
+        if target_entity and target_entity == game.player and getattr(game.player, 'is_aiming', False):
             detection_radius *= 0.5
-        elif target_entity == game.player and getattr(game.player, 'is_running', False):
+        elif target_entity and target_entity == game.player and getattr(game.player, 'is_running', False):
             detection_radius *= 1.4
 
         detection_radius_sq = detection_radius ** 2
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
-        can_see_target = self.has_line_of_sight(target_rect, game, current_time)
+        can_see_target = self.has_line_of_sight(target_rect, game, current_time) if target_rect else False
 
         # Store for debug visualization
         self.current_detection_radius = detection_radius
@@ -282,15 +279,14 @@ class ZombieAI:
 
         target_pos = None
 
-        # Player MUST be within the 5-tile detection zone
-        in_detection_zone = dist_to_target_sq <= detection_radius_sq
+        # Player MUST be within the detection zone and a valid target must exist
+        in_detection_zone = (dist_to_target_sq <= detection_radius_sq) and (target_rect is not None)
         player_is_reachable = False
 
-        if in_detection_zone:
+        if in_detection_zone and target_rect:
             if can_see_target:
                 player_is_reachable = True
             elif not has_active_noise:
-                # Behind an obstacle: check if an open door/window allows a clear path
                 check_path = self._get_path_astar(self.rect.center, target_rect.center, game, allow_break_obstacles=False)
                 if check_path is not None:
                     player_is_reachable = True
@@ -299,11 +295,18 @@ class ZombieAI:
         if has_active_noise:
             self.state = 'chasing'
             target_pos = self.noise_target
-        elif is_aggroed:
+        elif is_aggroed and target_rect:
             self.state = 'chasing'
             target_pos = target_rect.center
-        elif in_detection_zone and player_is_reachable:
-            # Sensed/seen within 5 tiles: initiate chase and alert nearby horde
+
+            attack_range_sq = (self.attack_range) ** 2
+            if dist_to_target_sq < attack_range_sq:
+                if current_time - getattr(self, 'last_attack_time', 0) > 1000:
+                    self.attack(target_entity, game)
+                    self.last_attack_time = current_time
+                    self.vx, self.vy = 0, 0
+                    return
+        elif in_detection_zone and player_is_reachable and target_rect:
             self.state = 'chasing'
             target_pos = target_rect.center
 
@@ -318,10 +321,10 @@ class ZombieAI:
                     self.vx, self.vy = 0, 0
                     return
         else:
-            # Outside 5 tiles OR behind a sealed wall -> Keep wandering!
+            # Clear expired or target-less aggro timer
+            self.aggro_timer = 0
             self.state = 'wandering'
 
-            # Ambient moans/groans only when wandering
             if getattr(self, 'is_ambiently_noisy', False) and core.data.config.ZOMBIE_WANDER_ENABLED and getattr(self, 'sound_wander', None):
                 if getattr(self, 'last_wander_sound_time', 0) == 0:
                     self.last_wander_sound_time = current_time + random.randint(0, 4000)
@@ -340,7 +343,6 @@ class ZombieAI:
                     self.last_wander_sound_time = current_time
                     self.wander_sound_cooldown = random.randint(6000, 14000)
 
-            # Wander target selection
             if core.data.config.ZOMBIE_WANDER_ENABLED:
                 target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
                 wander_interval = core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL
@@ -393,7 +395,6 @@ class ZombieAI:
                     self.path = new_path
                     self.last_path_calc_time = current_time
 
-            # Path Smoothing: String Pulling to skip redundant waypoints
             while len(self.path) > 1:
                 second_node = self.path[1]
                 second_rect = pygame.Rect(second_node[0] - 2, second_node[1] - 2, 4, 4)
@@ -429,7 +430,6 @@ class ZombieAI:
                 move_x = (dx / dist) * effective_speed
                 move_y = (dy / dist) * effective_speed
 
-        # Soft entity separation
         sep_x, sep_y = 0, 0
         separation_radius = TILE_SIZE * 0.9
         separation_radius_sq = separation_radius ** 2
@@ -443,7 +443,7 @@ class ZombieAI:
             if abs(dx) > separation_radius or abs(dy) > separation_radius:
                 continue
 
-            dist_sq = dx*dx + dy*dy
+            dist_sq = dx * dx + dy * dy
             if dist_sq < separation_radius_sq:
                 dist = math.sqrt(dist_sq) if dist_sq > 0.001 else 0.001
                 force = (separation_radius - dist) / separation_radius
@@ -464,7 +464,6 @@ class ZombieAI:
         is_moving = move_x != 0 or move_y != 0
         self.walk_anim_angle = math.sin(time.time() * 15) * 2 if is_moving else 0
 
-        # Collision & Substepping
         def check_collision(rect_check):
             indices = rect_check.collidelistall(obstacles)
             for idx in indices:
@@ -480,7 +479,7 @@ class ZombieAI:
                     return obstacle
 
             player = getattr(game, 'player', None)
-            if player and not player.is_dead:
+            if player and not getattr(player, 'is_dead', False) and player.health > 0:
                 if rect_check.colliderect(player.rect.inflate(-10, -10)):
                     return player
             return None
@@ -492,7 +491,6 @@ class ZombieAI:
         max_slide = 4
 
         for _ in range(steps):
-            # X Axis
             self.x += step_x
             self.rect.x = round(self.x)
             collider = check_collision(self.rect)
@@ -520,7 +518,6 @@ class ZombieAI:
                     if collider != getattr(game, 'player', None) and allow_break_obstacles:
                         self._try_attack_obstacle(collider, game, current_time, 1.0)
 
-            # Y Axis
             self.y += step_y
             self.rect.y = round(self.y)
             collider = check_collision(self.rect)

@@ -1,3 +1,5 @@
+# core/ui/helpers/start_loading.py
+
 import os
 import re
 import pygame
@@ -6,10 +8,7 @@ from core.data.config import *
 from core.data.localization import tr
 from core.ui.text_modal import wrap_text
 from core.ui.modals import draw_scrollbar
-try:
-    from PIL import Image
-except ImportError:
-    pass
+from PIL import Image
 
 HELP_CACHE = {
     'tabs': [],          
@@ -187,8 +186,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             HELP_CACHE['scroll_y'] = 0.0 
             HELP_CACHE['is_dragging'] = False
             HELP_CACHE['active_tab'] = 0
-            
-            # --- NEW: Init scroll vars ---
             HELP_CACHE['is_scrolling_content'] = False
             HELP_CACHE['content_drag_last_y'] = 0
             
@@ -201,7 +198,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
 
     tab_h = S(35)
     tab_y = box_rect.top + padding_y
-    mouse_buttons = pygame.mouse.get_pressed()
     
     clicked = False
     if events is not None:
@@ -211,7 +207,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     
     active_tab_idx = HELP_CACHE.get('active_tab', 0)
     tabs = HELP_CACHE.get('tabs', [])
-    active_tab = tabs[active_tab_idx] if tabs else {'layout': [], 'total_h': 0}
+    active_tab = tabs[active_tab_idx] if (tabs and active_tab_idx < len(tabs)) else {'layout': [], 'total_h': 0}
 
     total_tabs = len(tabs)
     if total_tabs > 0:
@@ -228,16 +224,19 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             tab_rects.append(tab_rect)
             current_x += tab_width
 
+        # Render Inactive Tabs & Handle Tab Clicks
         for i, tab in enumerate(tabs):
             if i != active_tab_idx:
                 tab_rect = tab_rects[i]
                 is_hovered = tab_rect.collidepoint(mouse_pos)
                 
-                if is_hovered and (mouse_buttons[0] or clicked):
+                if is_hovered and clicked:
                     HELP_CACHE['active_tab'] = i
+                    active_tab_idx = i
+                    active_tab = tabs[i]
                     HELP_CACHE['scroll_y'] = 0.0 
                     HELP_CACHE['is_dragging'] = False
-                    clicked = False 
+                    clicked = False
                     
                 pygame.draw.rect(surface, DARK_GRAY, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1)
@@ -246,6 +245,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
+        # Render Active Tab on Top
         if active_tab_idx < total_tabs:
             tab_rect = tab_rects[active_tab_idx]
             pygame.draw.rect(surface, GRAY_60, tab_rect)
@@ -259,51 +259,46 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     clip_h = box_rect.bottom - content_y_start - padding_y
     max_scroll = max(0, active_tab['total_h'] - clip_h)
     
-    mouse_y = mouse_pos[1]
-    
-    # Pre-calculate the content clip rect for use in event logic
     clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
     
-    # --- ADDED: Kinetic scroll logic merged into the main event loop ---
+    # Event-based scroll handling using scaled mouse_pos
     if events is not None:
         for event in events:
             if event.type == pygame.MOUSEWHEEL:
                 HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - (event.y * S(35)), max_scroll))
             
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # Prevent dragging content if they clicked the scrollbar directly
+            elif event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
                 handle_rect = HELP_CACHE.get('scrollbar_handle_rect')
-                if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(event.pos):
-                    pass # Scrollbar drag handled below
-                elif clip_rect.collidepoint(event.pos) and max_scroll > 0:
+                if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(mouse_pos):
+                    pass
+                elif clip_rect.collidepoint(mouse_pos) and max_scroll > 0:
                     HELP_CACHE['is_scrolling_content'] = True
-                    HELP_CACHE['content_drag_last_y'] = event.pos[1]
+                    HELP_CACHE['content_drag_last_y'] = mouse_pos[1]
                     
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            elif event.type == pygame.MOUSEBUTTONUP and getattr(event, 'button', 1) == 1:
                 HELP_CACHE['is_scrolling_content'] = False
                 
             elif event.type == pygame.MOUSEMOTION:
                 if HELP_CACHE.get('is_scrolling_content'):
-                    delta_y = event.pos[1] - HELP_CACHE['content_drag_last_y']
-                    HELP_CACHE['content_drag_last_y'] = event.pos[1]
+                    delta_y = mouse_pos[1] - HELP_CACHE['content_drag_last_y']
+                    HELP_CACHE['content_drag_last_y'] = mouse_pos[1]
                     HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - delta_y, max_scroll))
 
-    track_h = clip_h
-    scrollbar_area_rect = pygame.Rect(box_rect.right - S(20), content_y_start, S(10), track_h)
-    
+    # Scrollbar drag
+    mouse_buttons = pygame.mouse.get_pressed()
     if max_scroll > 0:
         if mouse_buttons[0] or clicked:
             if not HELP_CACHE.get('is_dragging_scrollbar'):
                 handle_rect = HELP_CACHE.get('scrollbar_handle_rect')
                 if handle_rect and handle_rect.inflate(S(20), 0).collidepoint(mouse_pos):
                     HELP_CACHE['is_dragging_scrollbar'] = True
-                    HELP_CACHE['drag_start_y'] = mouse_y
+                    HELP_CACHE['drag_start_y'] = mouse_pos[1]
                     HELP_CACHE['drag_start_scroll'] = HELP_CACHE['scroll_y']
         else:
             HELP_CACHE['is_dragging_scrollbar'] = False
             
         if HELP_CACHE.get('is_dragging_scrollbar'):
-            delta_y = mouse_y - HELP_CACHE['drag_start_y']
+            delta_y = mouse_pos[1] - HELP_CACHE['drag_start_y']
             handle_h = max(20, (clip_h / max(1.0, float(active_tab['total_h']))) * clip_h)
             track_travel = clip_h - handle_h
             if track_travel > 0:
@@ -314,10 +309,10 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         HELP_CACHE['is_dragging_scrollbar'] = False
 
     actual_scroll = int(HELP_CACHE['scroll_y'])
-
     bar_rect = pygame.Rect(box_rect.right - S(14), content_y_start, 8, clip_h)
     draw_scrollbar(surface, HELP_CACHE, bar_rect, clip_h, active_tab['total_h'], HELP_CACHE['scroll_y'])
 
+    # Render tab content
     try:
         content_surface = surface.subsurface(clip_rect)
         y_offset = -actual_scroll
@@ -326,18 +321,32 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             if element['type'] in ['text', 'image']:
                 pos_x, pos_y = element['pos']
                 draw_y = pos_y + y_offset
-                
                 if draw_y + element['surf'].get_height() > 0 and draw_y < clip_h:
                     content_surface.blit(element['surf'], (pos_x, draw_y))
+            elif element['type'] == 'gif':
+                now = pygame.time.get_ticks()
+                cur_idx = element.get('current_frame', 0)
+                durations = element.get('durations', [100])
+                dur = durations[cur_idx] if cur_idx < len(durations) else 100
+                if now - element.get('last_update', 0) > dur:
+                    element['current_frame'] = (cur_idx + 1) % len(element['frames'])
+                    element['last_update'] = now
+                frame_surf = element['frames'][element['current_frame']]
+                pos_x, pos_y = element['pos']
+                draw_y = pos_y + y_offset
+                if draw_y + frame_surf.get_height() > 0 and draw_y < clip_h:
+                    content_surface.blit(frame_surf, (pos_x, draw_y))
     except ValueError:
         pass 
 
+    # --- Footer: Animated Loading or Click to Start Button ---
     if not is_done:
         bar_w, bar_h = S(600), S(25)
         bar_bg_rect = pygame.Rect(0, 0, bar_w, bar_h)
         bar_bg_rect.center = (center_x, center_offset_y + S(640))
-               
-        loading_text = font_16.render(tr('ui', "Loading..."), False, WHITE)
+        
+        dots = "." * ((current_time // 400) % 4)
+        loading_text = font_16.render(f"{tr('ui', 'Loading')}{dots}", False, WHITE)
         loading_rect = loading_text.get_rect(center=bar_bg_rect.center)
         surface.blit(loading_text, loading_rect)
         return None
@@ -348,7 +357,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         btn_rect.center = (center_x, center_offset_y + S(640))
         
         is_hovered = btn_rect.collidepoint(mouse_pos)
-        bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
+        bg_color = (0, 150, 0) if (is_hovered and not is_main_menu_help) else ((0, 100, 0) if not is_main_menu_help else ((80, 80, 80) if is_hovered else (60, 60, 60)))
         text_color = WHITE
             
         pygame.draw.rect(surface, bg_color, btn_rect, border_radius=6)

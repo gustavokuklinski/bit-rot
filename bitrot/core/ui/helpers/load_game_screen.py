@@ -1,7 +1,10 @@
+# core/ui/helpers/load_game_screen.py
+
 import pygame
 import os
 import shutil
 from datetime import datetime
+import core.data.config as config
 from core.data.config import *
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
@@ -51,13 +54,28 @@ def delete_save(filename):
         print(f"Error deleting save {path}: {e}")
     return False
 
+def _draw_btn(surface, rect, text, mouse_pos, enabled=True, base_color=(80, 80, 80)):
+    is_hovered = rect.collidepoint(mouse_pos)
+    
+    if not enabled:
+        bg_color = (40, 40, 40)
+        text_color = (100, 100, 100)
+    else:
+        bg_color = (min(255, base_color[0] + 30), min(255, base_color[1] + 30), min(255, base_color[2] + 30)) if is_hovered else base_color
+        text_color = WHITE
+
+    pygame.draw.rect(surface, bg_color, rect, border_radius=4)
+    txt_surf = font_16.render(tr('ui', text), False, text_color)
+    txt_rect = txt_surf.get_rect(center=rect.center)
+    surface.blit(txt_surf, txt_rect)
+
 def draw_load_game_screen(game, state, mouse_pos):
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
-    center_offset_x = (GAME_WIDTH - S(1280)) // 2
-    center_offset_y = (GAME_HEIGHT - S(720)) // 2
-    
+    center_x = GAME_WIDTH // 2
+    center_y = GAME_HEIGHT // 2
+
     if 'save_list' not in state:
         state['save_list'] = get_save_files()
         state['scroll_y'] = 0
@@ -68,167 +86,114 @@ def draw_load_game_screen(game, state, mouse_pos):
         state['is_dragging_scrollbar'] = False
         state['scrollbar_drag_last_y'] = 0
     
+    # 1. Fill Background
     game.game_screen.fill(DARK_GRAY)
+
+    # 2. Main Panel Dimensions matching Preferences & Keybinds
+    w = S(900)
+    h = S(480)
+    bg_rect = pygame.Rect(center_x - w // 2, center_y - h // 2, w, h)
     
-    panel_w = S(600)
-    panel_h = S(500)
-    panel_x = (GAME_WIDTH - panel_w) // 2
-    panel_y = (GAME_HEIGHT - panel_h) // 2
-    header_height = S(40)
-    border_radius = S(4)
-    padding = S(10)
+    pygame.draw.rect(game.game_screen, (35, 35, 35), bg_rect, border_radius=10)
+    pygame.draw.rect(game.game_screen, GRAY_80, bg_rect, width=2, border_radius=10)
 
-    clickable_rects = {
-        'save_items': [], 
-        'load_button': None,
-        'delete_button': None,
-        'back_button': None
-    }
-
-    panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
-    header_rect = pygame.Rect(panel_x, panel_y, panel_w, header_height)
-    body_rect = pygame.Rect(panel_x, panel_y + header_height, panel_w, panel_h - header_height)
-
-    pygame.draw.rect(game.game_screen, (30, 30, 30), body_rect, border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
-    pygame.draw.rect(game.game_screen, GRAY_60, header_rect, border_top_left_radius=border_radius, border_top_right_radius=border_radius)
-    pygame.draw.rect(game.game_screen, WHITE, panel_rect, 1, border_radius=border_radius)
+    # Header Bar
+    header_h = S(50)
+    header_rect = pygame.Rect(bg_rect.x, bg_rect.y, bg_rect.width, header_h)
+    pygame.draw.rect(game.game_screen, (45, 45, 45), header_rect, border_top_left_radius=10, border_top_right_radius=10)
+    pygame.draw.line(game.game_screen, GRAY_80, header_rect.bottomleft, header_rect.bottomright, 2)
 
     title_surf = font_16.render(tr('ui', "Load Game"), False, WHITE)
-    game.game_screen.blit(title_surf, (header_rect.x + S(15), header_rect.y + S(10)))
+    game.game_screen.blit(title_surf, (header_rect.x + S(20), header_rect.centery - title_surf.get_height() // 2))
 
-    list_rect = pygame.Rect(body_rect.x + padding, body_rect.y + padding, body_rect.width - (padding * 2), body_rect.height - S(70))
-    pygame.draw.rect(game.game_screen, (20, 20, 20), list_rect)
-    pygame.draw.rect(game.game_screen, GRAY, list_rect, 1)
-    
-    # --- ADDED: Pass exactly where the list is drawn to the event handler ---
-    clickable_rects['list_area'] = list_rect
+    # 3. Content List & Scrollbar Area
+    padding = S(20)
+    scrollbar_w = S(12)
+    list_y = header_rect.bottom + padding
+    list_h = bg_rect.bottom - list_y - padding
 
-    item_height = S(35)
+    list_rect = pygame.Rect(bg_rect.x + padding, list_y, bg_rect.width - (padding * 2) - scrollbar_w - S(10), list_h)
+    bar_rect = pygame.Rect(list_rect.right + S(10), list_y, scrollbar_w, list_h)
+
+    item_height = S(45)
     total_content_height = len(state['save_list']) * item_height
     max_scroll = max(0, total_content_height - list_rect.height)
     state['max_scroll'] = max_scroll
-    
     state['scroll_y'] = max(0, min(state['scroll_y'], max_scroll))
-    
-    clip_rect = game.game_screen.get_rect().clip(list_rect)
-    if clip_rect.width > 0 and clip_rect.height > 0:
-        sub = game.game_screen.subsurface(clip_rect)
-        sub.fill((20, 20, 20))
-        
-        y_offset = -state['scroll_y']
-        for i, save in enumerate(state['save_list']):
-            row_rect_rel = pygame.Rect(0, y_offset, list_rect.width, item_height)
-            row_rect_abs = pygame.Rect(list_rect.x, list_rect.y + y_offset, list_rect.width, item_height)
-            
-            if row_rect_abs.bottom > list_rect.top and row_rect_abs.top < list_rect.bottom:
-                
-                is_selected = (state['selected_save_index'] == i)
-                is_hovered = row_rect_abs.collidepoint(mouse_pos)
-                
-                bg_color = (20, 20, 20)
-                if is_selected:
-                    bg_color = (60, 80, 100) 
-                elif is_hovered:
-                    bg_color = (40, 40, 40) 
-                
-                pygame.draw.rect(sub, bg_color, row_rect_rel)
-                
-                text_color = WHITE if is_selected else GRAY
-                name_surf = font_16.render(save['display_name'], False, text_color)
-                sub.blit(name_surf, (S(10), y_offset + S(8)))
-                
-                clickable_rects['save_items'].append((i, save['filename'], row_rect_abs))
-            
-            y_offset += item_height
 
-    if max_scroll > 0:
-        bar_rect = pygame.Rect(list_rect.right - S(10), list_rect.top, 8, list_rect.height)
-        draw_scrollbar(game.game_screen, state, bar_rect, list_rect.height, total_content_height, state['scroll_y'])
-        
-        clickable_rects['scrollbar_track'] = bar_rect
-        clickable_rects['scrollbar_handle'] = state['scrollbar_handle_rect']
+    clickable_rects = {
+        'save_items': [],
+        'load_button': None,
+        'delete_button': None,
+        'back_button': None,
+        'list_area': list_rect,
+        'scrollbar_track': bar_rect,
+        'scrollbar_handle': None
+    }
 
-    button_area_y = list_rect.bottom + S(10)
-    btn_width = S(120)
-    btn_height = S(35)
-    
-    load_btn_rect = pygame.Rect(panel_rect.centerx - btn_width // 2, button_area_y, btn_width, btn_height)
-    load_color = GREEN if state['selected_save_index'] is not None else GRAY_60
-    pygame.draw.rect(game.game_screen, load_color, load_btn_rect, border_radius=4)
-    load_txt = font_16.render(tr('ui', "Load"), False, WHITE)
-    game.game_screen.blit(load_txt, load_txt.get_rect(center=load_btn_rect.center))
-    if state['selected_save_index'] is not None:
+    # Draw Save Entries
+    old_clip = game.game_screen.get_clip()
+    game.game_screen.set_clip(list_rect)
+
+    y_offset = list_rect.y - state['scroll_y']
+    for i, save in enumerate(state['save_list']):
+        row_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, item_height)
+        
+        if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
+            is_selected = (state['selected_save_index'] == i)
+            is_hovered = row_rect.collidepoint(mouse_pos)
+
+            if is_selected:
+                row_bg = (55, 75, 95)
+            elif is_hovered:
+                row_bg = (45, 45, 45)
+            else:
+                row_bg = (30, 30, 30)
+
+            pygame.draw.rect(game.game_screen, row_bg, row_rect, border_radius=4)
+            pygame.draw.line(game.game_screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
+
+            text_color = YELLOW if is_selected else (WHITE if is_hovered else (200, 200, 200))
+            name_surf = font_16.render(save['display_name'], False, text_color)
+            game.game_screen.blit(name_surf, (row_rect.x + S(15), row_rect.centery - name_surf.get_height() // 2))
+
+            clickable_rects['save_items'].append((i, save['filename'], row_rect))
+
+        y_offset += item_height
+
+    game.game_screen.set_clip(old_clip)
+
+    # Draw Scrollbar
+    draw_scrollbar(game.game_screen, state, bar_rect, list_rect.height, total_content_height, state['scroll_y'])
+    clickable_rects['scrollbar_handle'] = state.get('scrollbar_handle_rect')
+
+    # 4. Standard Bottom Buttons matching Preferences & Keybinds
+    btn_w = S(200)
+    btn_h = S(45)
+    spacing = S(20)
+
+    total_btns_w = (btn_w * 3) + (spacing * 2)
+    start_btn_x = center_x - (total_btns_w // 2)
+    btn_y = bg_rect.bottom + S(20)
+
+    has_selection = state['selected_save_index'] is not None
+
+    load_btn_rect = pygame.Rect(start_btn_x, btn_y, btn_w, btn_h)
+    delete_btn_rect = pygame.Rect(load_btn_rect.right + spacing, btn_y, btn_w, btn_h)
+    back_btn_rect = pygame.Rect(delete_btn_rect.right + spacing, btn_y, btn_w, btn_h)
+
+    # Draw Load Button (Teal / Cyan theme like Apply in preferences)
+    _draw_btn(game.game_screen, load_btn_rect, "Load", mouse_pos, enabled=has_selection, base_color=(23, 162, 184))
+    if has_selection:
         clickable_rects['load_button'] = load_btn_rect
 
-    del_btn_rect = pygame.Rect(panel_rect.x + padding, button_area_y, btn_width - S(20), btn_height)
-    if state['selected_save_index'] is not None:
-        pygame.draw.rect(game.game_screen, RED, del_btn_rect, border_radius=4)
-        del_txt = font_16.render(tr('ui', "Delete"), False, WHITE)
-        game.game_screen.blit(del_txt, del_txt.get_rect(center=del_btn_rect.center))
-        clickable_rects['delete_button'] = del_btn_rect
-    
-    back_btn_rect = pygame.Rect(panel_rect.right - padding - (btn_width - S(20)), button_area_y, btn_width - S(20), btn_height)
-    pygame.draw.rect(game.game_screen, GRAY_80, back_btn_rect, border_radius=4)
-    back_txt = font_16.render(tr('ui', "Back"), False, WHITE)
-    game.game_screen.blit(back_txt, back_txt.get_rect(center=back_btn_rect.center))
+    # Draw Delete Button (Red theme like Reset in preferences/keybinds)
+    _draw_btn(game.game_screen, delete_btn_rect, "Delete", mouse_pos, enabled=has_selection, base_color=(200, 50, 50))
+    if has_selection:
+        clickable_rects['delete_button'] = delete_btn_rect
+
+    # Draw Back Button (Neutral Gray)
+    _draw_btn(game.game_screen, back_btn_rect, "Back", mouse_pos, enabled=True, base_color=(80, 80, 80))
     clickable_rects['back_button'] = back_btn_rect
 
     return clickable_rects
-
-def handle_load_game_events(game, state, event, mouse_pos, clickable_rects):
-    scale = UI_SCALE
-    def S(val): return int(val * scale)
-
-    if event.type == pygame.MOUSEWHEEL:
-        state['scroll_y'] = max(0, min(state['scroll_y'] - (event.y * S(30)), state.get('max_scroll', 0)))
-
-    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        # Use event.pos instead of mouse_pos for exact touch locations
-        click_pos = event.pos 
-        
-        # 1. Check Scrollbar Track/Handle
-        if clickable_rects.get('scrollbar_handle') and clickable_rects['scrollbar_handle'].collidepoint(click_pos):
-            state['is_dragging_scrollbar'] = True
-            state['scrollbar_drag_last_y'] = click_pos[1]
-            return
-
-        # 2. Check Content Area (for Kinetic Scrolling)
-        list_rect = clickable_rects.get('list_area')
-        if list_rect and list_rect.collidepoint(click_pos) and state.get('max_scroll', 0) > 0:
-            state['is_scrolling_content'] = True
-            state['content_drag_last_y'] = click_pos[1]
-
-        # 3. Check specific item clicks
-        for idx, filename, rect in clickable_rects.get('save_items', []):
-            if rect.collidepoint(click_pos):
-                state['selected_save_index'] = idx
-                break
-
-    elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-        state['is_dragging_scrollbar'] = False
-        state['is_scrolling_content'] = False
-
-    elif event.type == pygame.MOUSEMOTION:
-        # Use event.pos for flawless drag tracking on Android
-        motion_pos = event.pos 
-        
-        if state.get('is_dragging_scrollbar'):
-            mouse_delta_y = motion_pos[1] - state['scrollbar_drag_last_y']
-            state['scrollbar_drag_last_y'] = motion_pos[1]
-            
-            track_rect = clickable_rects.get('scrollbar_track')
-            handle_rect = clickable_rects.get('scrollbar_handle')
-            max_scroll = state.get('max_scroll', 0)
-
-            if track_rect and handle_rect and max_scroll > 0:
-                track_height = track_rect.height - handle_rect.height
-                if track_height > 0:
-                    scroll_amount = mouse_delta_y * (max_scroll / track_height)
-                    state['scroll_y'] = max(0, min(state['scroll_y'] + scroll_amount, max_scroll))
-
-        elif state.get('is_scrolling_content'):
-            mouse_delta_y = motion_pos[1] - state['content_drag_last_y']
-            state['content_drag_last_y'] = motion_pos[1]
-            
-            new_scroll = state.get('scroll_y', 0) - mouse_delta_y
-            state['scroll_y'] = max(0, min(new_scroll, state.get('max_scroll', 0)))

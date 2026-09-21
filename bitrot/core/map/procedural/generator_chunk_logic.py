@@ -3,6 +3,7 @@
 import math
 import random
 import pygame
+import core.data.config
 from core.data.config import *
 
 class ProceduralGeneratorChunk:

@@ -13,12 +13,13 @@
     </player>
     <map>
         <map_chunks value="2" name="Map size" default="2"/>
+        <seed value="" name="World seed" default=""/>
     </map>
     <item_spawning>
         <item_spawn_chance_multiplier value="0.5" name="Global Multiplier" default="0.5"/>
     </item_spawning>
     <vehicle>
-        <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk" default="5"/>
+        <vehicle_spawn_per_chunk value="6" name="Max vehicle spawn on chunk" default="6"/>
         <has_fuel_chance value="0.25" name="Car Fuel chance" default="0.25"/>
         <has_key_chance value="0.25" name="Car Key chance" default="0.25"/>
         <has_motor_chance value="1.0" name="Car Motor chance" default="1.0"/>
@@ -34,8 +35,8 @@
         <respawn value="true" name="Zombie respawn on death" default="true"/>
     </zombie>
     <npc>
-        <npc_spawn_per_chunk value="12" name="Max NPC spawn on chunk" default="12"/>
-        <spawn value="6" name="NPCs per spawn" default="6"/>
+        <npc_spawn_per_chunk value="6" name="Max NPC spawn on chunk" default="6"/>
+        <spawn value="3" name="NPCs per spawn" default="3"/>
         <static_percent value="0.40" name="Static NPC percentage" default="0.40"/>
         <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
         <respawn value="true" name="NPC respawn on death" default="true"/>

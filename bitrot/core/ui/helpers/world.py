@@ -30,7 +30,6 @@ def _get_friendly_value_display(key, value):
         size = int(val_float)
         return f"({size}x{size} {tr('ui', 'World')})"
 
-    # Gameplay player settings in world.xml
     if key == 'view_radius':
         return f"({int(val_float)} {tr('ui', 'tiles')})"
 
@@ -46,14 +45,14 @@ def _load_world_presets(state):
     presets = ["world"]
     try:
         files = [f for f in os.listdir(preset_dir) if f.startswith('world-') and f.endswith('.xml')]
-        for f in files:
+        for f in sorted(files):
             presets.append(f.replace('.xml', ''))
     except Exception:
         pass
     state['config_preset_list'] = presets
 
 def _clone_to_custom(state):
-    """When editing the default world, automatically spawn a custom timestamped preset to edit."""
+    """When editing the default world, automatically spawn a custom timestamped preset."""
     if state.get('selected_config_preset', 'world') != 'world':
         return
 
@@ -61,8 +60,15 @@ def _clone_to_custom(state):
     new_name = f"world-{timestamp}"
     state['selected_config_preset'] = new_name
     state['world_preset_name'] = new_name
-    state['world_unsaved'] = False  # <--- CLEAR UNSAVED FLAG
+    state['world_unsaved'] = False
     
+    # Preserve current seed into the new XML
+    if 'map' in state['world_data']:
+        state['world_data']['map']['seed'] = {
+            'value': str(state.get('world_seed', '')),
+            'name': 'World seed'
+        }
+
     writable_root = core.data.config.get_writable_dir()
     filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{new_name}.xml")
     save_config_xml(state['world_data'], filepath)
@@ -74,6 +80,16 @@ def _save_world_preset(state):
     if not preset_name: 
         preset_name = "world"
     
+    # Store the 12-digit seed into the XML DOM under <map><seed value="..."/></map>
+    if 'world_data' in state:
+        if 'map' not in state['world_data']:
+            state['world_data']['map'] = {}
+        state['world_data']['map']['seed'] = {
+            'value': str(state.get('world_seed', '')),
+            'name': 'World seed',
+            'default': ''
+        }
+
     writable_root = core.data.config.get_writable_dir()
     if preset_name == 'world':
         filepath = os.path.join(writable_root, "data.rot", "save", "config", "world.xml")
@@ -108,7 +124,6 @@ def _delete_world_preset(state):
             print(f"Error deleting preset: {e}")
 
 def _draw_world_screen(game, mouse_pos):
-    # Retrieve decoupled World state from Game
     if not hasattr(game, 'world_setup_state'):
         game.world_setup_state = {}
         
@@ -123,7 +138,14 @@ def _draw_world_screen(game, mouse_pos):
         correct_path = core.data.config.get_world_config_path(preset_name)
         state['world_data'] = load_config_data(correct_path)
         state['world_unsaved'] = False
-        state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+        
+        # Pull seed from preset XML if available, otherwise generate fresh
+        xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
+        if xml_seed and str(xml_seed).strip():
+            state['world_seed'] = str(xml_seed).strip()
+        else:
+            state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+
         state['seed_input_active'] = False
         _load_world_presets(state)
 
@@ -146,7 +168,6 @@ def _draw_world_screen(game, mouse_pos):
     padding = S(10)
     
     BTN_GREEN = (50, 205, 50)
-    BTN_RED = (200, 50, 50)
     
     clickable_rects = {
         "world_inputs": [], 
@@ -180,10 +201,8 @@ def _draw_world_screen(game, mouse_pos):
     draw_items = []
     config_data = state.get('world_data', {})
     
-    # Include 'player' in the block order right after 'game'
     block_order = ['game', 'player', 'map', 'item_spawning', 'vehicle', 'zombie', 'npc', 'animal']
     for k in config_data:
-        # Only exclude UI, Audio, and Preferences blocks
         if k not in block_order and k not in ['ui', 'audio', 'durability', 'preferences']: 
             block_order.append(k)
 
@@ -191,6 +210,8 @@ def _draw_world_screen(game, mouse_pos):
         if block not in config_data: continue
         draw_items.append(('header', block))
         for key, val_data in config_data[block].items():
+            if key == 'seed': 
+                continue  # Seed has its own dedicated input on the right panel
             draw_items.append(('item', block, key, val_data))
 
     total_h = len(draw_items) * line_h
@@ -229,7 +250,7 @@ def _draw_world_screen(game, mouse_pos):
                 is_bool = str_val in ('true', 'false')
                 
                 is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key)
-                is_time_cycle = key in ['time_daylength', 'time_sunrise_hr', 'time_sunset_hr', 'time_start_hr', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
+                is_time_cycle = key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
                 is_cycle_setting = is_percentage_cycle or is_time_cycle 
 
                 lbl = font_12.render(display_label + ":", False, WHITE)
@@ -270,7 +291,8 @@ def _draw_world_screen(game, mouse_pos):
                         
                     if is_percentage_cycle:
                         comp_val = round(current_val_float, 2)
-                        if comp_val < 0.25: label = tr('ui', "Extreme Low")
+                        if comp_val == 0.0: label = tr('ui', "Disabled (0%)")
+                        elif comp_val < 0.25: label = tr('ui', "Extreme Low")
                         elif comp_val < 0.50: label = tr('ui', "Low")
                         elif comp_val < 0.75: label = tr('ui', "Balanced")
                         elif comp_val < 1.0: label = tr('ui', "High")
@@ -437,7 +459,6 @@ def _draw_world_screen(game, mouse_pos):
     next_rect = pygame.Rect(col4_x, S(310) + S(20) + S(240) + S(20), col4_width, S(70))
     is_unsaved = state.get('world_unsaved', False)
 
-    # Always make next_tab clickable; if unsaved, it saves and proceeds
     clickable_rects['next_tab'] = next_rect
 
     if is_unsaved:
@@ -455,14 +476,12 @@ def _draw_world_screen(game, mouse_pos):
     return clickable_rects
 
 def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
-    # Use decoupled state
     if not hasattr(game, 'world_setup_state'):
         game.world_setup_state = {}
     state = game.world_setup_state
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
-    # Fallback only if clickable_rects was not passed from the draw phase
     if clickable_rects is None:
         clickable_rects = _draw_world_screen(game, mouse_pos)
 
@@ -491,11 +510,13 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             current_val = state.get('world_seed', '')
             if event.key == pygame.K_BACKSPACE:
                 state['world_seed'] = current_val[:-1]
+                state['world_unsaved'] = True
             elif event.key == pygame.K_RETURN: 
                 state['seed_input_active'] = False
             else: 
                 if len(current_val) < 12 and event.unicode.isnumeric():
                     state['world_seed'] = current_val + event.unicode
+                    state['world_unsaved'] = True
 
         elif state.get('active_setting'):
             block, key = state['active_setting']
@@ -528,16 +549,14 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             return
 
         if clickable_rects.get('next_tab') and clickable_rects['next_tab'].collidepoint(mouse_pos):
-            # If unsaved changes exist, commit them automatically
-            if state.get('world_unsaved', False):
+            preset_name = state.get('selected_config_preset', 'world')
+            if state.get('world_unsaved', False) or preset_name != 'world':
                 _save_world_preset(state)
 
-            preset_name = state.get('selected_config_preset', 'world')
             core.data.config.load_settings(preset_name)
 
-            # Sync preset state across dictionaries
             game.player_setup_state['world_data'] = state['world_data']
-            game.player_setup_state['world_seed'] = state['world_seed']
+            game.player_setup_state['world_seed'] = state.get('world_seed', '')
             game.player_setup_state['selected_config_preset'] = preset_name
             game.player_setup_state['world_preset_name'] = preset_name
             game.player_setup_state['current_tab'] = 'Player'
@@ -570,6 +589,11 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                         path = core.data.config.get_world_config_path(option_name)
                         state['world_data'] = load_config_data(path)
                         state['world_unsaved'] = False
+                        
+                        # Load seed stored in this preset if present
+                        xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
+                        if xml_seed and str(xml_seed).strip():
+                            state['world_seed'] = str(xml_seed).strip()
                         break
                 return 
             elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
@@ -618,11 +642,12 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                     is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key)
                     if is_percentage_cycle:
                         comp_val = round(current_val_float, 2)
-                        if comp_val < 0.25: new_val = 0.25
+                        if comp_val == 0.0: new_val = 0.25
+                        elif comp_val < 0.25: new_val = 0.25
                         elif comp_val < 0.50: new_val = 0.50
                         elif comp_val < 0.75: new_val = 0.75
                         elif comp_val < 1.0: new_val = 1.0
-                        else: new_val = 0.01 
+                        else: new_val = 0.0
                     elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
                         if current_val_float < 1800000: new_val = 1800000.0
                         elif current_val_float < 2700000: new_val = 2700000.0

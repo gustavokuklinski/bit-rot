@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+import core.data.config
 from core.data.config import *
 from core.entities.item.item import Item
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
@@ -206,36 +207,43 @@ class Vehicle:
             self.velocity = [0, 0]
 
     def _spawn_random_equipment(self):
-        if self.required_key_id and random.random() < VEH_HAS_KEY:
+        veh_has_key = getattr(core.data.config, 'VEH_HAS_KEY', 0.25)
+        veh_has_fuel = getattr(core.data.config, 'VEH_HAS_FUEL', 0.25)
+        veh_has_motor = getattr(core.data.config, 'VEH_HAS_MOTOR', 1.0)
+        veh_has_battery = getattr(core.data.config, 'VEH_HAS_BATTERY', 0.75)
+        veh_has_tires = getattr(core.data.config, 'VEH_HAS_TIRES', 1.0)
+
+        if self.required_key_id and random.random() < veh_has_key:
             key_item = Item.create_from_name(self.required_key_id)
             if key_item:
                 self.equipment['key'] = key_item
 
-        if random.random() < VEH_HAS_FUEL:
+        if random.random() < veh_has_fuel:
             fuel_item = Item.create_from_name("Fuel Unit") 
             if fuel_item:
                 if hasattr(fuel_item, 'capacity') and fuel_item.capacity:
                     fuel_item.load = random.uniform(1.0, float(fuel_item.capacity))
                 self.equipment['fuel'] = fuel_item
         
-        motor_item = Item.create_from_name("Car Engine")
-        if motor_item:
-            if hasattr(motor_item, 'durability'):
-                 motor_item.durability = float(motor_item.durability)
-            self.equipment['motor'] = motor_item
+        if random.random() < veh_has_motor:
+            motor_item = Item.create_from_name("Car Engine")
+            if motor_item:
+                if hasattr(motor_item, 'durability') and motor_item.durability is not None:
+                    motor_item.durability = float(motor_item.durability)
+                self.equipment['motor'] = motor_item
 
-        if random.random() < VEH_HAS_BATTERY:
+        if random.random() < veh_has_battery:
             batt_item = Item.create_from_name("Car Battery")
             if batt_item:
                 if hasattr(batt_item, 'durability') and hasattr(batt_item, 'max_durability'):
                     batt_item.durability = random.uniform(1.0, float(batt_item.max_durability))
                 elif hasattr(batt_item, 'capacity') and batt_item.capacity:
-                     if hasattr(batt_item, 'load'): 
+                    if hasattr(batt_item, 'load'): 
                         batt_item.load = random.uniform(1.0, float(batt_item.capacity))
                 self.equipment['battery'] = batt_item
 
         for tire_slot in self.required_tires:
-            if random.random() < VEH_HAS_TIRES:
+            if random.random() < veh_has_tires:
                 tire_item = Item.create_from_name("Car Tire")
                 if tire_item:
                     if hasattr(tire_item, 'durability') and hasattr(tire_item, 'max_durability'):

@@ -431,25 +431,32 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     
     if spawn_entities:
         game.npc_spawn_points = []
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+        max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+        can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
+
         if game.current_layer_index in game.all_spawn_layers:
             spawn_layer = game.all_spawn_layers[game.current_layer_index]
             for y, row in enumerate(spawn_layer):
                 for x, char in enumerate(row):
-                    if char.strip() == 'NPC':
-                        game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
-                    elif char.strip() == 'SNPC':
-                        px, py = x * TILE_SIZE, y * TILE_SIZE
-                        npc = NPC(px, py, game, is_static=True)
-                        game.npcs.add(npc)
+                    if can_spawn_npcs:
+                        if char.strip() == 'NPC':
+                            game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
+                        elif char.strip() == 'SNPC':
+                            px, py = x * TILE_SIZE, y * TILE_SIZE
+                            npc = NPC(px, py, game, is_static=True)
+                            game.npcs.add(npc)
 
         if 1 in game.all_map_layers:
             game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
-            spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 5))
+            spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
             spawn_animals(game, target_layer=1)
 
         if 2 in game.all_map_layers:
             game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
-            spawn_l2_population(game, count=20, target_layer=2)
+            z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+            if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
             spawn_animals(game, target_layer=2)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):

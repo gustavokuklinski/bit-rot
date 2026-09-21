@@ -260,30 +260,30 @@ class Animal(Zombie):
         # --- DIVERSIFIED INSTANT RESPAWN ---
         from core.map.spawn_manager import get_out_of_sight_spawn_pos
 
-        if getattr(core.data.config, 'ANIMAL_RESPAWN', True):
-            animals_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1)
-            num_animals = max(1, int(animals_per_spawn))
+        max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
+        if getattr(core.data.config, 'ANIMAL_RESPAWN', True) and max_anim > 0:
+            animals_per_spawn = int(getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1))
+            if animals_per_spawn > 0:
+                for _ in range(animals_per_spawn):
+                    spawn_pos = get_out_of_sight_spawn_pos(game)
+                    if spawn_pos:
+                        diverse_type = AnimalLoader.get_random_animal_type(layer=self.layer)
+                        new_animal = Animal(spawn_pos[0], spawn_pos[1], diverse_type, game=game, layer=self.layer)
+                        game.items_on_ground.append(new_animal)
 
-            for _ in range(num_animals):
-                spawn_pos = get_out_of_sight_spawn_pos(game)
-                if spawn_pos:
-                    # Pick a diverse animal species based on XML definitions for this layer
-                    diverse_type = AnimalLoader.get_random_animal_type(layer=self.layer)
-                    new_animal = Animal(spawn_pos[0], spawn_pos[1], diverse_type, game=game, layer=self.layer)
-                    game.items_on_ground.append(new_animal)
-
-        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True):
+        max_zombies = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+        max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True) and max_zombies > 0 and max_z_chunk > 0:
             from core.entities.zombie.zombie import Zombie
-            max_zombie_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1)
-            num_zombies = max(1, int(max_zombie_spawns))
-
-            for _ in range(num_zombies):
-                if len(game.zombies) >= getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 10000):
-                    break
-                spawn_pos = get_out_of_sight_spawn_pos(game)
-                if spawn_pos:
-                    zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
-                    game.zombies.append(zombie)
+            num_zombies = int(getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1))
+            if num_zombies > 0:
+                for _ in range(num_zombies):
+                    if len(game.zombies) >= max_zombies:
+                        break
+                    spawn_pos = get_out_of_sight_spawn_pos(game)
+                    if spawn_pos:
+                        zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
+                        game.zombies.append(zombie)
 
         if hasattr(game, 'splashes'):
             game.splashes.append({

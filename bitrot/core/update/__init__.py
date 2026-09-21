@@ -1,49 +1,58 @@
+# core/update/__init__.py
+
 import pygame
 from core.data.config import TILE_SIZE
-
-# Internal Pipeline Steps
-from core.update.utils import build_obstacle_grid, get_nearby_obstacles
-from core.update.spawns import check_dynamic_zombie_spawns
-from core.update.projectiles import update_projectiles
-from core.update.entities import update_entities
-from core.update.vehicles import update_vehicles
+from core.map.spawn_manager import async_spawner
 from core.systems.load_manager import handle_player_death
-
-# EXPOSE combat functions so external files don't break when importing from `core.update`
 from core.update.combat import (
-    player_hit_zombie, 
-    handle_zombie_death, 
-    create_blood_splatter, 
-    trigger_explosion
+    create_blood_splatter,
+    handle_zombie_death,
+    player_hit_zombie,
+    trigger_explosion,
 )
+from core.update.entities import update_entities
+from core.update.projectiles import update_projectiles
+from core.update.spawns import check_dynamic_zombie_spawns
+from core.update.utils import build_obstacle_grid, get_nearby_obstacles
+from core.update.vehicles import update_vehicles
+
 
 def update_game_state(game):
-    GRID_SIZE = 128
-    
-    current_obstacle_count = len(game.obstacles)
-    if not hasattr(game, 'cached_obstacle_grid') or getattr(game, 'cached_obstacle_count', -1) != current_obstacle_count:
-        game.cached_obstacle_grid = build_obstacle_grid(game.obstacles, GRID_SIZE)
-        game.cached_obstacle_count = current_obstacle_count
+  GRID_SIZE = 128
 
-    nearby_player_obstacles = get_nearby_obstacles(game.player.rect, game.cached_obstacle_grid, GRID_SIZE)
-    game.player.update_position(nearby_player_obstacles, game.zombies, game)
+  current_obstacle_count = len(game.obstacles)
+  if not hasattr(game, 'cached_obstacle_grid') or getattr(
+      game, 'cached_obstacle_count', -1
+  ) != current_obstacle_count:
+    game.cached_obstacle_grid = build_obstacle_grid(game.obstacles, GRID_SIZE)
+    game.cached_obstacle_count = current_obstacle_count
 
-    game.hovered_interactable_tile_rect = None 
-    facing_x, facing_y = game.get_player_facing_tile()
-    target_tile = game.find_interactable_tile()
-    if target_tile:
-        tx, ty = target_tile
-        game.hovered_interactable_tile_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+  nearby_player_obstacles = get_nearby_obstacles(
+      game.player.rect, game.cached_obstacle_grid, GRID_SIZE
+  )
+  game.player.update_position(nearby_player_obstacles, game.zombies, game)
 
-    if not getattr(game, 'is_client', False):
-        check_dynamic_zombie_spawns(game, GRID_SIZE)
-    
-    if game.player.update_stats(game):
-        handle_player_death(game)
-        game.game_state = 'GAME_OVER'
+  game.hovered_interactable_tile_rect = None
+  facing_x, facing_y = game.get_player_facing_tile()
+  target_tile = game.find_interactable_tile()
+  if target_tile:
+    tx, ty = target_tile
+    game.hovered_interactable_tile_rect = pygame.Rect(
+        tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE
+    )
 
-    zombies_to_remove = []
+  # Check spawns and flush background-threaded spawns
+  if not getattr(game, 'is_client', False):
+    check_dynamic_zombie_spawns(game, GRID_SIZE)
+    async_spawner.flush_to_game(game)
 
-    update_projectiles(game, GRID_SIZE, zombies_to_remove)
-    update_entities(game, GRID_SIZE, zombies_to_remove)
-    update_vehicles(game, zombies_to_remove)
+  if game.player.update_stats(game):
+    handle_player_death(game)
+    game.game_state = 'GAME_OVER'
+    return
+
+  zombies_to_remove = []
+
+  update_projectiles(game, GRID_SIZE, zombies_to_remove)
+  update_entities(game, GRID_SIZE, zombies_to_remove)
+  update_vehicles(game, zombies_to_remove)
