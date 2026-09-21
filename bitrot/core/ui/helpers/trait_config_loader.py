@@ -1,3 +1,4 @@
+# core/ui/helpers/trait_config_loader.py
 import os
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
@@ -15,7 +16,6 @@ def load_trait_definitions():
         tree = ET.parse(filepath)
         root = tree.getroot()
         
-        # [NEW] Gather nodes from both <profession> and <traits>
         nodes_to_parse = []
         prof_node = root.find('profession')
         if prof_node is not None:
@@ -25,7 +25,6 @@ def load_trait_definitions():
         if traits_node is not None:
             for t in traits_node.findall('trait'): nodes_to_parse.append((t, False))
             
-        # Fallback for old XML structure
         if prof_node is None and traits_node is None:
             for t in root.findall('trait'): nodes_to_parse.append((t, False))
         
@@ -34,10 +33,8 @@ def load_trait_definitions():
             if not trait_id:
                 continue
                 
-            try:
-                cost = int(trait_node.get('cost', 0))
-            except ValueError:
-                cost = 0
+            try: cost = int(trait_node.get('cost', 0))
+            except ValueError: cost = 0
                 
             trait_data = {
                 'cost': cost, 
@@ -49,20 +46,16 @@ def load_trait_definitions():
                 'recipes': [],
                 'name': trait_node.get('name', trait_id),
                 'tooltip': trait_node.get('tooltip'),
-                'is_profession': is_prof # [NEW] Distinguish professions
+                'is_profession': is_prof 
             }
             
-            # Parse 'stats'
             stats_node = trait_node.find('stats')
             if stats_node is not None:
                 trait_data['stats'] = {}
                 for stat_name, val in stats_node.attrib.items():
-                    try:
-                        trait_data['stats'][stat_name] = float(val)
-                    except ValueError:
-                        pass
+                    try: trait_data['stats'][stat_name] = float(val)
+                    except ValueError: pass
 
-            # Parse 'config' modifiers
             config_node = trait_node.find('config')
             if config_node is not None:
                 set_str = config_node.get('set')
@@ -72,10 +65,8 @@ def load_trait_definitions():
                     for part in parts:
                         if ':' in part:
                             key, val = part.split(':')
-                            try:
-                                trait_data['config_modifiers'][key.strip()] = float(val)
-                            except ValueError:
-                                print(f"Error parsing config modifier '{part}' in trait {trait_id}")
+                            try: trait_data['config_modifiers'][key.strip()] = float(val)
+                            except ValueError: pass
 
             disable_str = trait_node.get('disable')
             if disable_str:
@@ -84,10 +75,8 @@ def load_trait_definitions():
                     parts = clean_str.split(',')
                     for part in parts:
                         t_id = part.strip()
-                        if t_id:
-                            trait_data['conflicts'].append(t_id)
+                        if t_id: trait_data['conflicts'].append(t_id)
 
-            # Parse 'attributes'
             attrs_node = trait_node.find('attributes')
             if attrs_node is not None:
                 trait_data['attributes'] = {}
@@ -99,17 +88,13 @@ def load_trait_definitions():
                         for part in parts:
                             if ':' in part:
                                 attr_key, lvl_val = part.split(':')
-                                try:
-                                    trait_data['starting_levels'][attr_key.strip()] = int(lvl_val)
-                                except ValueError:
-                                    pass
+                                try: trait_data['starting_levels'][attr_key.strip()] = int(lvl_val)
+                                except ValueError: pass
 
                 for attr_name, val in attrs_node.attrib.items():
                     if attr_name == 'level': continue
-                    try:
-                        trait_data['attributes'][attr_name] = float(val)
-                    except ValueError:
-                        pass
+                    try: trait_data['attributes'][attr_name] = float(val)
+                    except ValueError: pass
             
             for r_node in trait_node.findall('recipe'):
                 mag = r_node.get('magazine')
@@ -124,9 +109,7 @@ def load_trait_definitions():
         
     return traits
 
-# ... (rest of the file remains unchanged: load_config_data, save_config_xml, _load_config_presets) ...
 def load_config_data(filepath):
-    """Parses the config XML into a dictionary separated by blocks."""
     if not os.path.exists(filepath):
         print(f"Config file not found: {filepath}")
         return {}
@@ -155,7 +138,10 @@ def load_config_data(filepath):
         return {}
 
 def save_config_xml(data, filepath):
-    root = ET.Element("config")
+    # Determine root element name based on file path to maintain clean XML
+    root_tag = "world" if "world" in os.path.basename(filepath).lower() else "preferences"
+    root = ET.Element(root_tag)
+    
     for block_name, settings in data.items():
         block_node = ET.SubElement(root, block_name)
         for key, val_data in settings.items():
@@ -186,12 +172,12 @@ def _load_config_presets(state):
     preset_dir = "./data.rot/save/config"
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
-    presets = ["default"] 
+    presets = ["world"] 
     try:
-        files = [f for f in os.listdir(preset_dir) if f.endswith('.xml')]
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.xml') and f != "preferences.xml"]
         for f in files:
             name = f.replace('.xml', '')
-            if name != 'default':
+            if name != 'world':
                 presets.append(name)
     except Exception:
         pass

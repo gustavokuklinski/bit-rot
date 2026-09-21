@@ -1,3 +1,4 @@
+# core/states/menu.py
 import os
 import glob
 import pygame
@@ -6,6 +7,7 @@ import core.data.localization
 from core.data.config import get_writable_dir
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.keybinds import keybinds_ui
+from core.ui.helpers.preferences import preferences_ui
 from core.ui.helpers.start_loading import draw_loading_screen
 
 def run_menu(game):
@@ -20,6 +22,13 @@ def run_menu(game):
     if getattr(keybinds_ui, 'active', False):
         keybinds_ui.handle_events(events)
         keybinds_ui.draw(game.game_screen, mouse_pos)
+        game._update_screen()
+        return
+
+    # Handle the new Preferences UI
+    if getattr(preferences_ui, 'active', False):
+        preferences_ui.handle_events(game, events)
+        preferences_ui.draw(game.game_screen, mouse_pos)
         game._update_screen()
         return
 
@@ -38,14 +47,14 @@ def run_menu(game):
             pygame.display.toggle_fullscreen()
 
         if getattr(game, 'show_main_menu_help', False):
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
                 mouse_pos = game._get_scaled_mouse_pos()
                 if back_btn and back_btn.collidepoint(mouse_pos):
                     game.show_main_menu_help = False
                     continue
             continue 
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
             mouse_pos = game._get_scaled_mouse_pos()
             
             if help_rect and help_rect.collidepoint(mouse_pos):
@@ -70,7 +79,7 @@ def run_menu(game):
             if start_btn.collidepoint(mouse_pos):
                 game.player_setup_state = {} 
                 game.game_state = 'PLAYER_SETUP'
-                game.player_setup_state['current_tab'] = 'Player' 
+                game.player_setup_state['current_tab'] = 'World'  # Default to World
                 
             elif has_save and load_btn.collidepoint(mouse_pos):
                 game.game_state = 'LOAD_GAME_MENU'
@@ -78,8 +87,7 @@ def run_menu(game):
                      del game.load_game_state['save_list']
                      
             elif settings_btn.collidepoint(mouse_pos):
-                game.game_state = 'PLAYER_SETUP'
-                game.player_setup_state['current_tab'] = 'Settings'
+                preferences_ui.toggle() 
                 
             elif quit_btn.collidepoint(mouse_pos):
                 game.running = False

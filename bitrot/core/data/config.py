@@ -1,4 +1,3 @@
-# core/data/config.py
 import pygame
 import xml.etree.ElementTree as ET
 import os
@@ -9,8 +8,6 @@ import uuid
 from collections import OrderedDict
 
 def get_writable_dir():
-    """Returns a safe, writable directory for saves and configs on any platform."""
-    # Running on PC - Use the standard local directory
     return os.path.abspath(".")
 
 pygame.init()
@@ -21,19 +18,11 @@ GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
 if getattr(sys, 'frozen', False) or '__compiled__' in globals():
-    # PRODUCTION: The game is compiled. 
-    # sys.executable is the path to the .exe or .bin file.
-    # We take the directory containing that executable as the root.
     BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
 else:
-    # DEVELOPMENT: The game is running as a .py script.
-    # File is at: /bit-rot/bitrot/core/data/config.py
-    # We go up two levels to get to /bit-rot/bitrot/
     current_dir = os.path.dirname(os.path.abspath(__file__))
     BASE_DIR = os.path.abspath(os.path.join(current_dir, "..", ".."))
 
-# 2. Define the paths relative to the discovered BASE_DIR
-# We use os.path.join for everything to ensure it works on Windows and Linux
 VERSION_PATH = os.path.join(BASE_DIR, "data.rot", "lib", "VERSION")
 MAP_DIR      = os.path.join(BASE_DIR, "data.rot", "lib", "map") + os.sep
 DATA_PATH    = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
@@ -41,7 +30,6 @@ SPRITE_PATH  = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
 SOUND_PATH   = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
 FONT_FACE    = os.path.join(BASE_DIR, "data.rot", "lib", "font", "PixelOperator8.ttf")
 
-# Colors
 TRANSPARENT = (0, 0, 0, 0)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -73,12 +61,10 @@ SLOTS_MODAL_WIDTH = 256
 SLOTS_MODAL_HEIGHT = 240
 TEXT_MODAL_WIDTH = 256
 TEXT_MODAL_HEIGHT = 240
-
 VEHICLE_MODAL_WIDTH = 512
 VEHICLE_MODAL_HEIGHT = 240
 MESSAGES_MODAL_WIDTH = 512
 MESSAGES_MODAL_HEIGHT = 240
-
 CRAFTING_MODAL_WIDTH = 920
 CRAFTING_MODAL_HEIGHT = 600
 MAP_MODAL_WIDTH = 720
@@ -91,18 +77,15 @@ NPC_DIALOG_MODAL_HEIGHT = 450
 font_16 = None
 font_14 = None
 font_12 = None
-
 TILE_SIZE = 16
 
+# WORLD DEFAULTS
 TIME_DAYLENGTH = 0
 TIME_SUNRISE_HR = 0.0
 TIME_SUNSET_HR = 0.0
 TIME_TRANSITION_HR = 0.0
 TIME_START_HR = 0.0
 MAX_DARKNESS_OPACITY = 0
-START_ZOOM = 1.0
-FAR_ZOOM = 0.5
-NEAR_ZOOM = 2.0
 PLAYER_SPEED = 1.6
 AUTO_DRINK = False
 AUTO_DRINK_THRESHOLD = 0
@@ -123,7 +106,6 @@ WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
 WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
 CLOTH_DURABILITY_MULTIPLIER = 1.0
 ITEM_SPAWN_CHANCE_MULTIPLIER = 1.0
-
 NPC_MAX_CHUNK = 0
 NPC_HOSTILE_PERCENT = 0
 MAX_NPCS_GLOBAL = 0
@@ -134,8 +116,6 @@ NPC_SPEED_MULTIPLIER = 1.0
 NPC_DETECTION_RADIUS = 0
 NPC_STATIC_PERCENT = 0.0
 NPC_RESPAWN = True
-NPC_DETECTION_RADIUS = 0
-
 MAX_VEH_CHUNK = 0
 VEH_HAS_FUEL = 1.0
 VEH_HAS_KEY = 1.0
@@ -144,19 +124,20 @@ VEH_HAS_BATTERY = 1.0
 VEH_HAS_TIRES = 1.0
 MAP_CHUNKS = 0
 CHUNK_SIZE = 128
+ANIMAL_MAX_CHUNK = 10
+ANIMAL_SPAWN_COUNT = 10
+ANIMALS_PER_SPAWN = 5
+ANIMAL_RESPAWN = True
+
+# PREFERENCES DEFAULTS
 UI_BACKGROUND_MUSIC = True
 UI_SHOW_TUTORIAL_DEFAULT = True
 RESOLUTION = "1280x720"
 WINDOW_MODE = "fullscreen"
 UI_SCALE = 1
-
-ANIMAL_MAX_CHUNK = 10
-ANIMAL_SPAWN_COUNT = 10
-ANIMALS_PER_SPAWN = 5
-ANIMAL_RESPAWN = True
-ANIMAL_RESPAWN = True
-
-
+START_ZOOM = 1.0
+FAR_ZOOM = 0.5
+NEAR_ZOOM = 2.0
 VOLUME_MUSIC = 0.50
 VOLUME_BACKGROUND = 0.50
 VOLUME_ATMOSPHERIC = 0.50
@@ -167,96 +148,66 @@ VOLUME_PLAYER = 0.50
 VOLUME_VEHICLE = 0.50
 VOLUME_ITEMS = 0.50
 VOLUME_MAP = 0.50
+GAME_LANGUAGE = "en_US"
 
 MAX_CLIENTS = 16
-
-GAME_LANGUAGE = "en_US"
 
 def generate_random_seed(chunks=None):
     if chunks is None:
         chunks = MAP_CHUNKS
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
-def get_active_config_path(preset="config"): # CHANGED "default" to "config"
-    """
-    Loading Logic:
-    1. Look for local user config: ./data.rot/save/config/config.xml
-    2. Fallback to main game config: ./bitrot/data.rot/save/config/config.xml
-    """
+# --- FILE PATH HANDLERS ---
+def get_preferences_path():
+    """Gets the global preferences.xml path."""
     writable_root = get_writable_dir()
-    # Local Path
-    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml")
-    
-    if os.path.exists(filepath):
-        return filepath
-        
-    # Main Fallback Path
-    filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
-    
-    # Final safety fallback if the preset name is weird
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", "preferences.xml")
     if not os.path.exists(filepath):
-        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", "config.xml")
-            
+        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", "preferences.xml")
     return filepath
 
-def get_save_config_path(preset="config"):
-    """
-    Saving Logic:
-    Always returns the path to the local folder, never the main game folder.
-    """
-    return os.path.join(get_writable_dir(), "data.rot", "save", "config", f"{preset}.xml")
-
+def get_world_config_path(preset="world"):
+    """Gets the world configuration path."""
+    writable_root = get_writable_dir()
+    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml")
+    if not os.path.exists(filepath):
+        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
+    if not os.path.exists(filepath):
+        filepath = os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml")
+    return filepath
 
 class ImageFontWrapper:
-    """
-    High-performance font wrapper acting as a crisp pixel/image font renderer.
-    Uses an O(1) True LRU cache to prevent memory leaks from dynamic text 
-    (FPS, timers, health, coordinates) while keeping static UI text hot in RAM.
-    """
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):
-        if is_sysfont:
-            self.font = pygame.font.SysFont(font_path, size)
-        else:
-            self.font = pygame.font.Font(font_path, size)
-            
+        if is_sysfont: self.font = pygame.font.SysFont(font_path, size)
+        else: self.font = pygame.font.Font(font_path, size)
         self.cache = OrderedDict()
         self.max_cache_size = max_cache_size
 
     def render(self, text, antialias, color, background=None):
         text_str = str(text)
-        
-        # 1. Normalize colors to hashable tuples (prevents unhashable list crashes)
         color_key = tuple(color) if isinstance(color, (list, tuple, pygame.Color)) else color
         bg_key = tuple(background) if isinstance(background, (list, tuple, pygame.Color)) else background
-        
-        # 2. Track font styling flags to avoid glyph collisions when set_bold is called
         style_key = (self.font.get_bold(), self.font.get_italic())
         cache_key = (text_str, color_key, bg_key, style_key)
 
-        # 3. Cache Hit: Move entry to MRU (Most Recently Used) in O(1)
         if cache_key in self.cache:
             self.cache.move_to_end(cache_key)
             return self.cache[cache_key]
 
-        # 4. Cache Miss: Evict the single oldest entry (LRU) in O(1) without allocating lists
         if len(self.cache) >= self.max_cache_size:
             self.cache.popitem(last=False)
 
-        # 5. Render crisp pixel surface (forced antialias=False)
         rendered_surface = self.font.render(text_str, False, color, background)
         self.cache[cache_key] = rendered_surface
         return rendered_surface
 
     def clear_cache(self):
-        """Manually clear surfaces when switching scenes or changing languages."""
         self.cache.clear()
 
     def __getattr__(self, name):
-        # Delegate standard Pygame font methods (size, get_height, get_linesize, set_bold, etc.)
         return getattr(self.font, name)
 
-
-def load_settings(preset="config"):
+def load_settings(world_preset="world"):
     global GAME_WIDTH, GAME_HEIGHT, UI_SCALE, RESOLUTION_VALUE
     global font_16, font_14, font_12
     global TIME_DAYLENGTH, TIME_SUNRISE_HR, TIME_SUNSET_HR, TIME_TRANSITION_HR, TIME_START_HR
@@ -269,7 +220,7 @@ def load_settings(preset="config"):
     global WEAPON_RANGED_DURABILITY_MULTIPLIER, CLOTH_DURABILITY_MULTIPLIER
     global ITEM_SPAWN_CHANCE_MULTIPLIER
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
-    global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT, NPC_DETECTION_RADIUS
+    global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE
@@ -278,75 +229,91 @@ def load_settings(preset="config"):
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
 
-    filepath = get_active_config_path(preset)
-
+    pref_path = get_preferences_path()
     try:
-        print(f"Loading config from: {filepath}")
-        tree = ET.parse(filepath)
+        tree = ET.parse(pref_path)
+        root = tree.getroot()
+        ui_config = root.find('ui')
+        if ui_config is not None:
+            val_music = ui_config.find('ui_background_music')
+            if val_music is not None: UI_BACKGROUND_MUSIC = str(val_music.get('value')).lower() == 'true'
+            val_tutorial = ui_config.find('ui_show_tutorial_default')
+            if val_tutorial is not None: UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
+            val_lang = ui_config.find('language')
+            if val_lang is not None: GAME_LANGUAGE = val_lang.get('value', 'en_US')
+            val_mode = ui_config.find('window_mode')
+            if val_mode is not None: WINDOW_MODE = val_mode.get('value', 'windowed')
+
+        audio_config = root.find('audio')
+        if audio_config is not None:
+            VOLUME_MUSIC = float(audio_config.find('volume_music').get('value', '0.5'))
+            VOLUME_BACKGROUND = float(audio_config.find('volume_background').get('value', '0.5'))
+            VOLUME_ATMOSPHERIC = float(audio_config.find('volume_atmospheric').get('value', '0.5'))
+            VOLUME_MAP = float(audio_config.find('volume_map').get('value', '0.5'))
+            VOLUME_ITEMS = float(audio_config.find('volume_items').get('value', '0.5'))
+            VOLUME_VEHICLE = float(audio_config.find('volume_vehicle').get('value', '0.5'))
+            VOLUME_PLAYER = float(audio_config.find('volume_player').get('value', '0.5'))
+            VOLUME_ZOMBIE = float(audio_config.find('volume_zombie').get('value', '0.5'))
+            VOLUME_NPC = float(audio_config.find('volume_npc').get('value', '0.5'))
+            VOLUME_ANIMAL = float(audio_config.find('volume_animal').get('value', '0.5'))
+
+        player_pref = root.find('player')
+        if player_pref is not None:
+            START_ZOOM = float(player_pref.find('zoom_start').get('value', '3.0'))
+            FAR_ZOOM = float(player_pref.find('zoom_far').get('value', '2.0'))
+            NEAR_ZOOM = float(player_pref.find('zoom_near').get('value', '3.5'))
+    except Exception as e:
+        print(f"Error loading preferences: {e}")
+
+    world_path = get_world_config_path(world_preset)
+    try:
+        tree = ET.parse(world_path)
         root = tree.getroot()
 
         game_config = root.find('game')
-        TIME_TRANSITION_HR = 1.0
-        MAX_DARKNESS_OPACITY = 255
-        TIME_DAYLENGTH = int(game_config.find('time_daylength').get('value'))
-        TIME_SUNRISE_HR = float(game_config.find('time_sunrise_hr').get('value'))
-        TIME_SUNSET_HR = float(game_config.find('time_sunset_hr').get('value'))
-        TIME_START_HR = float(game_config.find('time_start_hr').get('value'))
+        if game_config is not None:
+            TIME_TRANSITION_HR = 1.0
+            MAX_DARKNESS_OPACITY = 255
+            TIME_DAYLENGTH = int(game_config.find('time_daylength').get('value', '900000'))
+            TIME_SUNRISE_HR = float(game_config.find('time_sunrise_hr').get('value', '5.5'))
+            TIME_SUNSET_HR = float(game_config.find('time_sunset_hr').get('value', '17.5'))
+            TIME_START_HR = float(game_config.find('time_start_hr').get('value', '6.0'))
 
         map_config = root.find('map')
-        MAP_CHUNKS = int(map_config.find('map_chunks').get('value'))
-        CHUNK_SIZE = 128
+        if map_config is not None:
+            MAP_CHUNKS = int(map_config.find('map_chunks').get('value', '2'))
+            CHUNK_SIZE = 128
         
         player_config = root.find('player')
-        PLAYER_SPEED = 1.6 
-
-        BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value')) * TILE_SIZE
-        START_ZOOM = float(player_config.find('zoom_start').get('value'))
-        FAR_ZOOM = float(player_config.find('zoom_far').get('value'))
-        NEAR_ZOOM = float(player_config.find('zoom_near').get('value'))
-
-        val_auto_drink = player_config.find('water_autodrink').get('value')
-        AUTO_DRINK = str(val_auto_drink).lower() == 'true'
-        AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value'))
+        if player_config is not None:
+            PLAYER_SPEED = 1.6 
+            BASE_PLAYER_VIEW_RADIUS = int(player_config.find('view_radius').get('value', '9')) * TILE_SIZE
+            val_auto_drink = player_config.find('water_autodrink').get('value', 'true')
+            AUTO_DRINK = str(val_auto_drink).lower() == 'true'
+            AUTO_DRINK_THRESHOLD = int(player_config.find('water_threshold').get('value', '100'))
 
         zombie_config = root.find('zombie')
-        val_wander = zombie_config.find('wander').get('value')
-        ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
-        ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value'))
-        val_respawn = zombie_config.find('respawn')
-        if val_respawn is not None:
-            ZOMBIE_RESPAWN = str(val_respawn.get('value', 'true')).lower() == 'true'
-        else:
-            # Fallback for old configs having respawn_timer
-            old_timer = zombie_config.find('respawn_timer')
-            ZOMBIE_RESPAWN = (old_timer is not None and int(old_timer.get('value', '0')) > 0)
-
-        ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value'))
-
-        ZOMBIE_INFECTION_CHANCE = 0.4
-        val_sight = zombie_config.find('sight_check')
-        if val_sight is not None:
-            ZOMBIE_LINE_OF_SIGHT_CHECK = str(val_sight.get('value', 'true')).lower() == 'true'
-        else:
-            ZOMBIE_LINE_OF_SIGHT_CHECK = True
-            
-        ZOMBIE_SPEED = 0.3
-
-        ZOMBIE_DETECTION_RADIUS = 5 * TILE_SIZE
-        ZOMBIE_DROP = 1
-        MAX_ZOMBIES_GLOBAL = 500
-        ZOMBIE_WANDER_CHANGE_INTERVAL = 2000
-
-        DURABILITY_MULTIPLIER = 1.0
-        WEAPON_MELEE_DURABILITY_MULTIPLIER = 1.0
-        WEAPON_RANGED_DURABILITY_MULTIPLIER = 1.0
-        CLOTH_DURABILITY_MULTIPLIER = 1.0
+        if zombie_config is not None:
+            val_wander = zombie_config.find('wander').get('value', 'true')
+            ZOMBIE_WANDER_ENABLED = str(val_wander).lower() == 'true'
+            ZOMBIES_PER_SPAWN = int(zombie_config.find('spawn').get('value', '3'))
+            val_respawn = zombie_config.find('respawn')
+            if val_respawn is not None: ZOMBIE_RESPAWN = str(val_respawn.get('value', 'true')).lower() == 'true'
+            ZOMBIE_MAX_CHUNK = int(zombie_config.find('zombie_spawn_per_chunk').get('value', '6'))
+            ZOMBIE_INFECTION_CHANCE = float(zombie_config.find('infection_chance').get('value', '0.25'))
+            val_sight = zombie_config.find('sight_check')
+            if val_sight is not None: ZOMBIE_LINE_OF_SIGHT_CHECK = str(val_sight.get('value', 'true')).lower() == 'true'
+            ZOMBIE_SPEED = 0.3
+            ZOMBIE_DETECTION_RADIUS = 5 * TILE_SIZE
+            ZOMBIE_DROP = 1
+            MAX_ZOMBIES_GLOBAL = 500
+            ZOMBIE_WANDER_CHANGE_INTERVAL = 2000
 
         spawning_config = root.find('item_spawning')
         if spawning_config is not None:
             multiplier_node = spawning_config.find('item_spawn_chance_multiplier')
             if multiplier_node is not None:
-                ITEM_SPAWN_CHANCE_MULTIPLIER = float(multiplier_node.get('value'))
+                ITEM_SPAWN_CHANCE_MULTIPLIER = float(multiplier_node.get('value', '1.0'))
 
         npc_config = root.find('npc')
         if npc_config is not None:
@@ -356,112 +323,54 @@ def load_settings(preset="config"):
             NPC_DAMAGE_MULTIPLIER = 1.0
             NPC_SPEED_MULTIPLIER = 1.0
             NPC_DETECTION_RADIUS = 5 * TILE_SIZE
-            
-            NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value', '10'))
-            
+            NPC_MAX_CHUNK = int(npc_config.find('npc_spawn_per_chunk').get('value', '12'))
             spawn_node = npc_config.find('spawn')
-            NPCS_PER_SPAWN = int(spawn_node.get('value', '5')) if spawn_node is not None else 5
-            
+            NPCS_PER_SPAWN = int(spawn_node.get('value', '6')) if spawn_node is not None else 6
             NPC_STATIC_PERCENT = float(npc_config.find('static_percent').get('value', '0.40'))    
             NPC_HOSTILE_PERCENT = float(npc_config.find('hostile_percent').get('value', '0.60'))
-
             respawn_node = npc_config.find('respawn')
             NPC_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
 
-
         vehicle_config = root.find('vehicle')
-        MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value'))
-        VEH_HAS_FUEL = float(vehicle_config.find('has_fuel_chance').get('value'))
-        VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value'))
-        VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value'))
-        VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value'))
-        VEH_HAS_TIRES = float(vehicle_config.find('has_tires_chance').get('value'))
-
-        ui_config = root.find('ui')
-        val_music = ui_config.find('ui_background_music').get('value')
-        UI_BACKGROUND_MUSIC = str(val_music).lower() == 'true'
-        val_tutorial = ui_config.find('ui_show_tutorial_default')
-        UI_SHOW_TUTORIAL_DEFAULT = str(val_tutorial.get('value')).lower() == 'true'
-
-        RESOLUTION = "1280x720"
-        WINDOW_MODE = ui_config.find('window_mode').get('value')
-
-        # --- 3. Lock-in the True Font Render right here ---
-        font_16  = ImageFontWrapper(FONT_FACE, 16)
-        font_14  = ImageFontWrapper(FONT_FACE, 8)
-        font_12  = ImageFontWrapper(FONT_FACE, 12)
-            
-        val_lang = ui_config.find('language')
-        if val_lang is not None:
-            GAME_LANGUAGE = val_lang.get('value', 'en_US')
-        else:
-            GAME_LANGUAGE = 'en_US'
-        
-        audio_config = root.find('audio')
-        vol_m = audio_config.find('volume_music')
-        VOLUME_MUSIC = float(vol_m.get('value'))
-        
-        vol_b = audio_config.find('volume_background')
-        VOLUME_BACKGROUND = float(vol_b.get('value'))
-        
-        vol_a = audio_config.find('volume_atmospheric')
-        VOLUME_ATMOSPHERIC = float(vol_a.get('value'))
-
-        vol_map = audio_config.find('volume_map')
-        VOLUME_MAP = float(vol_map.get('value'))
-
-        vol_items = audio_config.find('volume_items')
-        VOLUME_ITEMS = float(vol_items.get('value'))
-
-        vol_vehicle = audio_config.find('volume_vehicle')
-        VOLUME_VEHICLE = float(vol_vehicle.get('value'))
-
-        vol_player = audio_config.find('volume_player')
-        VOLUME_PLAYER = float(vol_player.get('value'))
-
-        vol_zombie = audio_config.find('volume_zombie')
-        VOLUME_ZOMBIE = float(vol_zombie.get('value'))
-
-        vol_npc = audio_config.find('volume_npc')
-        VOLUME_NPC = float(vol_npc.get('value'))
-
-        vol_animal = audio_config.find('volume_animal')
-        VOLUME_ANIMAL = float(vol_animal.get('value'))
+        if vehicle_config is not None:
+            MAX_VEH_CHUNK = int(vehicle_config.find('vehicle_spawn_per_chunk').get('value', '5'))
+            VEH_HAS_FUEL = float(vehicle_config.find('has_fuel_chance').get('value', '0.25'))
+            VEH_HAS_KEY = float(vehicle_config.find('has_key_chance').get('value', '0.25'))
+            VEH_HAS_MOTOR = float(vehicle_config.find('has_motor_chance').get('value', '1.0'))
+            VEH_HAS_BATTERY = float(vehicle_config.find('has_battery_chance').get('value', '0.75'))
+            VEH_HAS_TIRES = float(vehicle_config.find('has_tires_chance').get('value', '1.0'))
 
         animal_config = root.find('animal')
         if animal_config is not None:
             chunk_node = animal_config.find('animal_spawn_per_chunk')
-            ANIMAL_MAX_CHUNK = int(chunk_node.get('value', '10')) if chunk_node is not None else 10
+            ANIMAL_MAX_CHUNK = int(chunk_node.get('value', '6')) if chunk_node is not None else 6
             ANIMAL_SPAWN_COUNT = ANIMAL_MAX_CHUNK
-
             spawn_node = animal_config.find('spawn')
-            ANIMALS_PER_SPAWN = int(spawn_node.get('value', '5')) if spawn_node is not None else 5
-
+            ANIMALS_PER_SPAWN = int(spawn_node.get('value', '3')) if spawn_node is not None else 3
             respawn_node = animal_config.find('respawn')
             ANIMAL_RESPAWN = str(respawn_node.get('value', 'true')).lower() == 'true' if respawn_node is not None else True
 
     except Exception as e:
-        print(f"Error loading config from {filepath}: {e}")
+        print(f"Error loading world from {world_path}: {e}")
 
-def save_language_to_config(lang_code, preset="config"):
+    # Fonts
+    font_16  = ImageFontWrapper(FONT_FACE, 16)
+    font_14  = ImageFontWrapper(FONT_FACE, 8)
+    font_12  = ImageFontWrapper(FONT_FACE, 12)
+
+def save_language_to_config(lang_code):
     global GAME_LANGUAGE
     GAME_LANGUAGE = lang_code
-    writable_root = get_writable_dir()
-    config_dir = os.path.join(writable_root, "data.rot", "save", "config")
-    os.makedirs(config_dir, exist_ok=True) 
+    filepath = get_preferences_path()
     
-    filepath = os.path.join(config_dir, f"{preset}.xml")
-    
-    if not os.path.exists(filepath):
-        bundled_path = os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
-        if os.path.exists(bundled_path):
-            import shutil
-            shutil.copy(bundled_path, filepath)
-        
     try:
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        if not os.path.exists(filepath):
+            root = ET.Element('preferences')
+        else:
+            tree = ET.parse(filepath)
+            root = tree.getroot()
+            
         ui_config = root.find('ui')
         if ui_config is None:
             ui_config = ET.SubElement(root, 'ui')
@@ -473,7 +382,6 @@ def save_language_to_config(lang_code, preset="config"):
         lang_node.set('value', lang_code)
         lang_node.set('name', 'Language')
         
-        # Cleanly Format
         import xml.dom.minidom
         raw_xml = ET.tostring(root, 'utf-8')
         pretty_xml = xml.dom.minidom.parseString(raw_xml).toprettyxml(indent="    ")
@@ -482,10 +390,9 @@ def save_language_to_config(lang_code, preset="config"):
         with open(filepath, "w") as f:
             f.write(pretty_xml)
     except Exception as e:
-        print(f"Error saving language to config: {e}")
+        print(f"Error saving language to preferences.xml: {e}")
 
 version_file_path = VERSION_PATH
-
 try:
     with open(version_file_path, "r") as f:
         GAME_VERSION = f.read().strip()

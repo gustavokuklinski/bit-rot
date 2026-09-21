@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<world>
+    <game>
+        <time_daylength value="900000" name="Day length" default="900000"/>
+        <time_sunrise_hr value="5.5" name="Time sunrise" default="5.5"/>
+        <time_sunset_hr value="17.5" name="Time sunset" default="17.5"/>
+        <time_start_hr value="6.0" name="Start hour" default="6.0"/>
+    </game>
+    <player>
+        <view_radius value="9" name="View radius tiles" default="9"/>
+        <water_autodrink value="true" name="Allow Autodrink" default="true"/>
+        <water_threshold value="100" name="Minimum % to start autodrink" default="100"/>
+    </player>
+    <map>
+        <map_chunks value="2" name="Map size" default="2"/>
+    </map>
+    <item_spawning>
+        <item_spawn_chance_multiplier value="0.25" name="Global Multiplier" default="1.0"/>
+    </item_spawning>
+    <vehicle>
+        <vehicle_spawn_per_chunk value="5" name="Max vehicle spawn on chunk" default="5"/>
+        <has_fuel_chance value="0.25" name="Car Fuel chance" default="0.25"/>
+        <has_key_chance value="0.25" name="Car Key chance" default="0.25"/>
+        <has_motor_chance value="1.0" name="Car Motor chance" default="1.0"/>
+        <has_battery_chance value="0.75" name="Car Battery chance" default="0.75"/>
+        <has_tires_chance value="1.0" name="Car Tires chance" default="1.0"/>
+    </vehicle>
+    <zombie>
+        <zombie_spawn_per_chunk value="6" name="Max Zombie spawn on chunk" default="6"/>
+        <spawn value="3" name="Zombies per spawn" default="3"/>
+        <wander value="true" name="Zombie wandering" default="true"/>
+        <sight_check value="true" name="Sight player" default="true"/>
+        <infection_chance value="0.25" name="Zombie infection chance" default="0.25"/>
+        <respawn value="true" name="Zombie respawn on death" default="true"/>
+    </zombie>
+    <npc>
+        <npc_spawn_per_chunk value="12" name="Max NPC spawn on chunk" default="12"/>
+        <spawn value="6" name="NPCs per spawn" default="6"/>
+        <static_percent value="0.40" name="Static NPC percentage" default="0.40"/>
+        <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
+        <respawn value="true" name="NPC respawn on death" default="true"/>
+    </npc>
+    <animal>
+        <animal_spawn_per_chunk value="6" name="Max Animal spawn on chunk" default="6"/>
+        <spawn value="3" name="Animals per spawn" default="3"/>
+        <respawn value="true" name="Animal respawn on death" default="true"/>
+    </animal>
+</world>

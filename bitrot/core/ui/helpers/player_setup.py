@@ -1,3 +1,5 @@
+# core/ui/helpers/player_setup.py
+
 import pygame
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
@@ -13,7 +15,7 @@ from faker import Faker
 from types import SimpleNamespace
 from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
-from core.ui.helpers.settings import _draw_settings_screen, handle_settings_events
+from core.ui.helpers.world import _draw_world_screen, handle_world_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
 from core.data.progression_loader import PROGRESSION_CONFIG
@@ -90,7 +92,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
         "random_button": None
     }
     
-    # Mathematical native scaling function 
     scale = UI_SCALE
     def S(val): return int(val * scale)
 
@@ -145,7 +146,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
     btn_width = S(77)
     btn_gap = S(10)
     
-    # Calculate total width of the three buttons to center them as a group
     total_buttons_width = (btn_width * 3) + (btn_gap * 2)
     start_btn_x = preset_body_rect.x + (preset_body_rect.width - total_buttons_width) // 2
     
@@ -181,7 +181,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
     sex_btn_width = (preset_body_rect.width - (padding * 3)) // 2
     sex_gap = padding
     
-    # Calculate total width of the two sex buttons to center them as a group
     total_sex_width = (sex_btn_width * 2) + sex_gap
     start_sex_x = preset_body_rect.x + (preset_body_rect.width - total_sex_width) // 2
     
@@ -634,17 +633,14 @@ def _draw_player_build_screen(game, state, mouse_pos):
             xp_mod = display_modifiers.get(attr, 0)   
             lvl_mod = level_modifiers.get(attr, 0)    
             
-            # [FIX] Read the display name dynamically from progression.xml
             attr_config = PROGRESSION_CONFIG.attributes.get(attr, {})
             xml_name = attr_config.get('name', attr.capitalize())
             
-            # Add colon after the name
             stat_name_str = f"{tr('ui', xml_name)}:"
             
             text_surf = font_12.render(stat_name_str, False, WHITE)
             content_surface.blit(text_surf, (text_x, y_offset + S(3)))
             
-            # [FIX] Position the modifiers directly after the text instead of a hardcoded gap
             current_draw_x = text_x + text_surf.get_width() + S(5)
             
             if lvl_mod > 0:
@@ -659,7 +655,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
             
             y_offset += line_height
 
-    # --- CHANGED: Stats Scrollbar ---
     if total_text_height > visible_height:
         bar_rect = pygame.Rect(stats_content_rect.right + S(2), stats_content_rect.top, 8, stats_content_rect.height)
         draw_scrollbar(game.game_screen, state, bar_rect, visible_height, total_text_height, scroll_offset_y)
@@ -820,7 +815,7 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 if event.unicode.isalnum() or event.unicode == '-':
                     state['world_seed'] += event.unicode.upper()
 
-    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    elif event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
         dropdown_clicked = False
         scrollbar_clicked = False
 
@@ -838,25 +833,20 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         if scrollbar_clicked: return
 
         if state.get('preset_dropdown_active'):
-            # 1. Did they click inside the open dropdown menu?
             if state.get('preset_list_rect') and state['preset_list_rect'].collidepoint(mouse_pos):
                 if state.get('preset_max_scroll', 0) > 0:
                     state['is_scrolling_preset_content'] = True
                     state['preset_content_drag_start_y'] = mouse_pos[1]
                     state['preset_content_drag_last_y'] = mouse_pos[1]
-                # Consume the click to prevent Ghost Clicks on things beneath the menu!
                 return 
                 
-            # 2. Did they click the toggle button to close it?
             elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
                 state['preset_dropdown_active'] = False
                 return 
                 
-            # 3. If they clicked completely outside the menu, close the menu and let the click fall through.
             else:
                 state['preset_dropdown_active'] = False
                 
-        # If the menu is CLOSED, check if they clicked the button to open it
         elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
             state['preset_dropdown_active'] = True
             return
@@ -933,9 +923,9 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['traits'] = state['chosen_traits']
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
-                final_player_data['game_settings'] = state.get('settings_data')
+                
+                final_player_data['game_settings'] = state.get('world_data') 
 
-                # Client connect mode: connect and initialize world with server's map
                 if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
                     from core.server.client import GameClient, init_client_world
                     c_ip, c_port = game.cli_connect_address
@@ -949,7 +939,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                         display_message(game, f"Failed to connect to {c_ip}:{c_port}")
                     return
 
-                # Maintain the existing world/save environment
                 if state.get('respawn_save_folder'):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
@@ -998,10 +987,9 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             was_scrolling_preset = False
             if state.get('is_scrolling_preset_content'):
                 drag_dist = abs(mouse_pos[1] - state.get('preset_content_drag_start_y', mouse_pos[1]))
-                if drag_dist > S(5): # If moved more than 5 pixels, it's a drag
+                if drag_dist > S(5):
                     was_scrolling_preset = True
             
-            # If they didn't drag the menu, select the option
             if state.get('preset_dropdown_active') and not was_scrolling_preset:
                 if state.get('preset_list_rect') and state['preset_list_rect'].collidepoint(mouse_pos):
                     for option_name, option_rect in clickable_rects.get("load_dropdown_options", []):
@@ -1083,7 +1071,7 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             state['prof_content_drag_last_y'] = mouse_pos[1]
             new_offset = state.get('prof_scroll_offset_y', 0) - mouse_delta_y
             state['prof_scroll_offset_y'] = max(0, min(new_offset, state.get('prof_max_scroll', 0)))
-            
+
 def run_player_setup(game):
     scale = UI_SCALE
     def S(val): return int(val * scale)
@@ -1097,21 +1085,17 @@ def run_player_setup(game):
             game.running = False
             return
         state['all_traits'] = TRAIT_DEFINITIONS
-
         state['chosen_traits'] = []
         _update_available_traits(state)
-
         state['final_stats'] = state['base_data']['stats'].copy()
         state['final_attrs'] = state['base_data']['attributes'].copy()
         
         state['stats_scroll_offset_y'] = 0; state['stats_content_rect'] = None; state['stats_line_height'] = S(25); state['stats_max_scroll'] = 0
         state['traits_scroll_offset_y'] = 0; state['traits_content_rect'] = None; state['traits_line_height'] = S(35); state['traits_max_scroll'] = 0
         state['chosen_scroll_offset_y'] = 0; state['chosen_content_rect'] = None; state['chosen_max_scroll'] = 0; state['is_dragging_chosen_scrollbar'] = False; state['chosen_scroll_drag_last_y'] = 0
-        
         state['is_dragging_stats_scrollbar'] = False; state['stats_scroll_drag_last_y'] = 0
         state['is_dragging_traits_scrollbar'] = False; state['traits_scroll_drag_last_y'] = 0
         state['total_trait_cost'] = 0
-
         state['is_scrolling_stats_content'] = False; state['stats_content_drag_last_y'] = 0
         state['is_scrolling_traits_content'] = False; state['traits_content_drag_last_y'] = 0
         state['is_scrolling_chosen_content'] = False; state['chosen_content_drag_last_y'] = 0
@@ -1128,14 +1112,11 @@ def run_player_setup(game):
 
         for item_name, template in ITEM_TEMPLATES.items():
             if template.get('type') == 'cloth':
-                if not template.get('builder', False):
-                    continue
-
+                if not template.get('builder', False): continue
                 slot = template.get('properties', {}).get('slot', {}).get('value')
                 if slot == 'hand': slot = 'hands' 
                 if slot in state['available_clothes']:
-                    if not item_name.startswith("Empty"):
-                        state['available_clothes'][slot].append(item_name)
+                    if not item_name.startswith("Empty"): state['available_clothes'][slot].append(item_name)
                     sprite_file = template.get('properties', {}).get('sprite', {}).get('file')
                     if sprite_file:
                         try:
@@ -1159,7 +1140,6 @@ def run_player_setup(game):
         state['preset_list'] = ["None"]
         state['selected_preset'] = "None"
         state['preset_dropdown_active'] = False
-
         state['preset_scroll_y'] = 0
         state['preset_max_scroll'] = 0
         state['is_dragging_preset_scrollbar'] = False
@@ -1167,31 +1147,31 @@ def run_player_setup(game):
         state['preset_list_rect'] = None
         _load_presets(state)
 
+        # CHANGED: Default tab is now World!
         if 'current_tab' not in state:
-             state['current_tab'] = 'Player'
+            state['current_tab'] = 'World'
 
-        state['settings_data'] = load_config_data("./data.rot/save/config/config.xml")
-        state['config_name'] = ""
-        state['config_name_active'] = False
-        state['settings_scroll_y'] = 0
-        state['settings_max_scroll'] = 0
-        state['is_dragging_settings_scrollbar'] = False 
-        state['settings_scroll_drag_last_y'] = 0        
+        state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
+        state['world_scroll_y'] = 0
+        state['world_max_scroll'] = 0
+        state['is_dragging_world_scrollbar'] = False 
+        state['world_scroll_drag_last_y'] = 0        
         state['active_setting'] = None
         state['config_dd_active'] = False
+        
         state['prof_scroll_offset_y'] = 0 
         state['prof_content_rect'] = None 
         state['prof_max_scroll'] = 0 
         state['is_dragging_prof_scrollbar'] = False 
         state['prof_scroll_drag_last_y'] = 0
 
-        state['config_preset_list'] = ["config"] 
-        state['selected_config_preset'] = 'config'
-        _load_config_presets(state)
+        state['config_preset_list'] = ["world"] 
+        state['selected_config_preset'] = 'world'
+        state['world_preset_name'] = 'world'
+        from core.ui.helpers.world import _load_world_presets
+        _load_world_presets(state)
 
     state = game.player_setup_state
-    
-    # Global mouse position is strictly used ONLY for visual hovers during drawing
     mouse_pos = game._get_scaled_mouse_pos()
     
     game.game_screen.fill(DARK_GRAY)
@@ -1205,26 +1185,26 @@ def run_player_setup(game):
     base_x = S(10) + center_offset_x
     base_y = S(30) + center_offset_y
     
-    player_btn = pygame.Rect(base_x, base_y, sidebar_width, btn_h)
-    settings_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
+    # REORDERED BUTTONS
+    world_btn = pygame.Rect(base_x, base_y, sidebar_width, btn_h)
+    player_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
     back_btn = pygame.Rect(base_x, GAME_HEIGHT - S(91) - center_offset_y, sidebar_width, btn_h)
 
     is_client = getattr(game, 'is_client', False)
+
+    if not is_client:
+        s_col = GRAY_60 if state['current_tab'] == 'World' else (40, 40, 40)
+        pygame.draw.rect(game.game_screen, s_col, world_btn, border_radius=4)
+        pygame.draw.rect(game.game_screen, WHITE, world_btn, 1, border_radius=4)
+        game.game_screen.blit(font_12.render(tr('tab', "World"), False, WHITE), (world_btn.x + S(10), world_btn.y + S(10)))
 
     p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
     pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
     pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
     game.game_screen.blit(font_12.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
-    
-    if not is_client:
-        s_col = GRAY_60 if state['current_tab'] == 'Settings' else (40, 40, 40)
-        pygame.draw.rect(game.game_screen, s_col, settings_btn, border_radius=4)
-        pygame.draw.rect(game.game_screen, WHITE, settings_btn, 1, border_radius=4)
-        game.game_screen.blit(font_12.render(tr('tab', "Settings"), False, WHITE), (settings_btn.x + S(10), settings_btn.y + S(10)))
 
     b_col = GRAY_80
     pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
-  
     back_txt = font_12.render(tr('ui', "Back"), False, WHITE)
     txt_rect = back_txt.get_rect(center=back_btn.center)
     game.game_screen.blit(back_txt, txt_rect)
@@ -1233,12 +1213,9 @@ def run_player_setup(game):
     if state['current_tab'] == 'Player':
         clickable_rects = _draw_player_build_screen(game, state, mouse_pos)
     else:
-        clickable_rects = _draw_settings_screen(game, state, mouse_pos)
+        clickable_rects = _draw_world_screen(game, state, mouse_pos)
     
     for event in game.get_events():
-        # --- FIX: Anti-Ghost Click Logic ---
-        # Intercept the exact hardware coordinate tied to this single event frame 
-        # bypassing the delayed multi-touch tracker lag on Android.
         event_pos = mouse_pos
         if hasattr(event, 'pos'):
             event_pos = event.pos
@@ -1250,20 +1227,19 @@ def run_player_setup(game):
             game.running = False
             return
             
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # We must use event_pos instead of mouse_pos for interactions
+        if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
             if back_btn.collidepoint(event_pos):
                 game.game_state = 'MENU'
                 return
             if player_btn.collidepoint(event_pos):
                 state['current_tab'] = 'Player'
                 continue
-            elif not getattr(game, 'is_client', False) and settings_btn.collidepoint(event_pos):
-                state['current_tab'] = 'Settings'
+            elif not getattr(game, 'is_client', False) and world_btn.collidepoint(event_pos):
+                state['current_tab'] = 'World'
                 continue
 
-        if state['current_tab'] == 'Settings':
-            handle_settings_events(game, state, event, event_pos, clickable_rects)
+        if state['current_tab'] == 'World':
+            handle_world_events(game, state, event, event_pos, clickable_rects)
         else:
             handle_player_events(game, state, event, event_pos, clickable_rects)
 
@@ -1359,7 +1335,6 @@ def _load_preset(state):
                 item_name = node.text
                 if slot_name in state['chosen_clothes']:
                     state['chosen_clothes'][slot_name] = item_name
-                    # LOAD SAVED COLORS
                     r = int(node.attrib.get('r', 255))
                     g = int(node.attrib.get('g', 255))
                     b = int(node.attrib.get('b', 255))

@@ -1,9 +1,9 @@
+# core/ui/helpers/keybinds.py
 import pygame
 import os
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 import core.data.config as config
-from core.ui.helpers.main_menu import draw_btn
 from core.ui.modals import draw_scrollbar
 
 # Keyboard / Mouse uses positive integers for keys, negative for mouse buttons.
@@ -38,7 +38,6 @@ DEFAULT_KB_MOUSE_BINDS = {
 }
 
 # Joystick uses button integers directly (0, 1, 2, 3...)
-# Note: LT (Shoot), RT (Aim), and X (Context Menu) are handled natively via hardware axes/overrides
 DEFAULT_JOYSTICK_BINDS = {
     'move_up': {'val': 11, 'name': 'Move Up (D-Pad)'},
     'move_down': {'val': 12, 'name': 'Move Down (D-Pad)'},
@@ -78,6 +77,25 @@ JOYSTICK_BTN_NAMES = {
     15: 'LT',
     16: 'RT'
 }
+
+def draw_btn(surface, rect, text, mouse_pos, enabled=True, base_color=(60, 60, 60)):
+    is_hovered = rect.collidepoint(mouse_pos)
+    
+    if not enabled:
+        bg_color = (40, 40, 40)
+        text_color = (100, 100, 100)
+    else:
+        # Slightly brighten the base color when hovered
+        bg_color = (min(255, base_color[0]+30), min(255, base_color[1]+30), min(255, base_color[2]+30)) if is_hovered else base_color
+        text_color = config.WHITE
+
+    # Draw the filled rectangle with NO border
+    pygame.draw.rect(surface, bg_color, rect, border_radius=4)
+
+    txt_surf = config.font_16.render(text, False, text_color)
+    txt_rect = txt_surf.get_rect(center=rect.center)
+    surface.blit(txt_surf, txt_rect)
+
 
 class KeybindManager:
     def __init__(self):
@@ -122,7 +140,6 @@ class KeybindManager:
                 node = ET.SubElement(kb_node, 'bind')
                 node.set('action', action)
                 node.set('key', str(key))
-                # Add default attribute when rewriting
                 if action in DEFAULT_KB_MOUSE_BINDS:
                     node.set('default', str(DEFAULT_KB_MOUSE_BINDS[action]['val']))
 
@@ -131,7 +148,6 @@ class KeybindManager:
                 node = ET.SubElement(joy_node, 'bind')
                 node.set('action', action)
                 node.set('key', str(key))
-                # Add default attribute when rewriting
                 if action in DEFAULT_JOYSTICK_BINDS:
                     node.set('default', str(DEFAULT_JOYSTICK_BINDS[action]['val']))
 
@@ -164,7 +180,6 @@ class KeybindsMenuUI:
         self.error_timer = 0
         self.scroll_offset_y = 0
         self.is_dragging_scrollbar = False
-        
         self.is_scrolling_content = False
         self.content_drag_last_y = 0
 
@@ -197,7 +212,6 @@ class KeybindsMenuUI:
             
         thumb_h = max(20, (visible_h / total_h) * bar_rect.height)
         track_h = bar_rect.height - thumb_h
-        
         rel_y = my - bar_rect.y - thumb_h / 2
         ratio = max(0.0, min(1.0, rel_y / track_h))
         self.scroll_offset_y = int(ratio * (total_h - visible_h))
@@ -229,7 +243,6 @@ class KeybindsMenuUI:
                         conflict = keybind_manager.get_joy_action_for_key(event.button)
                         self._attempt_bind(event.button, conflict)
                     continue
-
                 continue
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -259,7 +272,7 @@ class KeybindsMenuUI:
                 continue
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect = self.get_rects()
+                _, _, _, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, reset_btn_rect, back_btn_rect = self.get_rects()
                 mouse_pos = event.pos
 
                 if back_btn_rect.collidepoint(mouse_pos):
@@ -357,18 +370,24 @@ class KeybindsMenuUI:
         list_rect = pygame.Rect(bg_rect.x + padding, list_y, bg_rect.width - (padding * 2) - scrollbar_width - S(10), list_height)
         bar_rect = pygame.Rect(list_rect.right + S(10), list_y, scrollbar_width, list_height)
 
+        # Reorder buttons: Reset on the left, Back on the right
         btn_width = S(200)
         btn_height = S(45)
         spacing = S(20)
-        back_btn_rect = pygame.Rect(center_x - btn_width - spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
-        reset_btn_rect = pygame.Rect(center_x + spacing//2, bg_rect.bottom + S(20), btn_width, btn_height)
         
-        return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect
+        # Center the 2 buttons exactly
+        total_btn_width = (btn_width * 2) + spacing
+        start_btn_x = center_x - (total_btn_width // 2)
+        
+        reset_btn_rect = pygame.Rect(start_btn_x, bg_rect.bottom + S(20), btn_width, btn_height)
+        back_btn_rect = pygame.Rect(reset_btn_rect.right + spacing, bg_rect.bottom + S(20), btn_width, btn_height)
+        
+        return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, reset_btn_rect, back_btn_rect
 
     def draw(self, screen, mouse_pos):
         if not self.active: return
 
-        center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, back_btn_rect, reset_btn_rect = self.get_rects()
+        center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, reset_btn_rect, back_btn_rect = self.get_rects()
 
         screen.fill(config.DARK_GRAY)
 
@@ -425,7 +444,6 @@ class KeybindsMenuUI:
                 else:
                     key_name = pygame.key.name(current_key).upper()
             else:
-                # Use the lookup dictionary, or fallback to the raw number if it's an unknown button
                 key_name = JOYSTICK_BTN_NAMES.get(current_key, f"JOY BUTTON {current_key}")
 
             row_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, self.item_height)
@@ -443,11 +461,11 @@ class KeybindsMenuUI:
                 
                 display_text = "PRESS ANY KEY..." if self.waiting_for_key == action else key_name
                 
-                draw_btn(screen, key_btn_rect, display_text, mouse_pos, enabled=True)
+                # Use standard draw_btn (no borders)
+                draw_btn(screen, key_btn_rect, display_text, mouse_pos, enabled=True, base_color=(50, 50, 50))
                 
                 if self.waiting_for_key == action:
-                    pygame.draw.rect(screen, config.BLUE, key_btn_rect, border_radius=6)
-                    pygame.draw.rect(screen, config.WHITE, key_btn_rect, width=2, border_radius=6)
+                    pygame.draw.rect(screen, config.BLUE, key_btn_rect, border_radius=4)
                     active_surf = config.font_16.render(display_text, False, config.WHITE)
                     screen.blit(active_surf, active_surf.get_rect(center=key_btn_rect.center))
 
@@ -458,14 +476,9 @@ class KeybindsMenuUI:
         total_h = len(binds_ref) * self.item_height
         draw_scrollbar(screen, self.modal_state, bar_rect, list_rect.height, total_h, self.scroll_offset_y)
 
-        draw_btn(screen, back_btn_rect, "Back", mouse_pos, enabled=True)
-
-        hovered = reset_btn_rect.collidepoint(mouse_pos)
-        reset_color = (220, 70, 70) if hovered else (200, 50, 50)
-        pygame.draw.rect(screen, reset_color, reset_btn_rect, border_radius=4)
-        pygame.draw.rect(screen, config.WHITE, reset_btn_rect, width=1, border_radius=4)
-        reset_txt = config.font_16.render("Reset Default", False, config.WHITE)
-        screen.blit(reset_txt, (reset_btn_rect.centerx - reset_txt.get_width()//2, reset_btn_rect.centery - reset_txt.get_height()//2))
+        # Draw main bottom buttons without harsh white borders
+        draw_btn(screen, reset_btn_rect, "Reset Default", mouse_pos, base_color=(200, 50, 50))
+        draw_btn(screen, back_btn_rect, "Back", mouse_pos, base_color=(80, 80, 80))
 
         if self.error_message:
             if pygame.time.get_ticks() - self.error_timer < 3000:

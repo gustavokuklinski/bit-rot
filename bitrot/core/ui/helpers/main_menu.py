@@ -134,7 +134,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     settings_rect = pygame.Rect(center_x - btn_width // 2, start_rect.bottom + spacing, split_width, btn_height)
     quit_rect = pygame.Rect(settings_rect.right + spacing, start_rect.bottom + spacing, split_width, btn_height)
 
-    draw_btn(screen, settings_rect, tr('ui', "Settings"), mouse_pos)
+    draw_btn(screen, settings_rect, tr('ui', "Preferences"), mouse_pos)
     draw_btn(screen, quit_rect, tr('ui', "Quit"), mouse_pos)
 
     current_year = datetime.now().year
