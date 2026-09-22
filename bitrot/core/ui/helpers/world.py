@@ -217,6 +217,8 @@ def _draw_world_screen(game, state, mouse_pos):
         for key, val_data in config_data[block].items():
             if key == 'seed': 
                 continue  # Seed has its own dedicated input on the right panel
+            if key == 'spawn' and block in ['zombie', 'npc', 'animal']:
+                continue  # Hide spawns to be auto-calculated behind the scenes
             draw_items.append(('item', block, key, val_data))
 
     total_h = len(draw_items) * line_h
@@ -254,9 +256,14 @@ def _draw_world_screen(game, state, mouse_pos):
                 str_val = str(val).lower()
                 is_bool = str_val in ('true', 'false')
                 
-                is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key)
-                is_time_cycle = key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
-                is_cycle_setting = is_percentage_cycle or is_time_cycle 
+                is_time_cycle = key in ['time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']
+                is_percent_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or key in ['static_percent', 'hostile_percent']
+                is_view_cycle = key in ['view_radius']
+                is_max_ent_cycle = key in ['vehicle_spawn_per_chunk', 'zombie_spawn_per_chunk', 'npc_spawn_per_chunk', 'animal_spawn_per_chunk']
+                is_legacy_cycle = key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
+                is_int_percent_cycle = ('threshold' in key)
+                
+                is_cycle_setting = is_time_cycle or is_percent_cycle or is_view_cycle or is_max_ent_cycle or is_legacy_cycle or is_int_percent_cycle
 
                 lbl = font_12.render(display_label + ":", False, WHITE)
                 sub.blit(lbl, (0, y_off + S(12))) 
@@ -292,27 +299,27 @@ def _draw_world_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, WHITE, input_rect, 1, border_radius=3)
                     
                     try: current_val_float = float(val)
-                    except: current_val_float = 1.0
+                    except: current_val_float = 0.0
                         
-                    if is_percentage_cycle:
-                        comp_val = round(current_val_float, 2)
-                        if comp_val == 0.0: label = tr('ui', "Disabled (0%)")
-                        elif comp_val < 0.25: label = tr('ui', "Extreme Low")
-                        elif comp_val < 0.50: label = tr('ui', "Low")
-                        elif comp_val < 0.75: label = tr('ui', "Balanced")
-                        elif comp_val < 1.0: label = tr('ui', "High")
-                        elif comp_val == 1.0: label = tr('ui', "Extreme High")
-                        else: label = f"{tr('ui', 'Custom')} ({comp_val*100:.0f}%)"
-                    elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
-                        mins = int(current_val_float / 60000)
-                        if mins == 0: mins = 15
-                        label = f"{mins} {tr('ui', 'min')}"
-                    elif key in ['time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']:
+                    if is_time_cycle:
                         hours = int(current_val_float)
                         minutes = int((current_val_float - hours) * 60)
                         label = f"{hours:02d}:{minutes:02d}"
+                    elif is_percent_cycle:
+                        label = f"{int(round(current_val_float * 100))}%"
+                    elif is_int_percent_cycle:
+                        disp_val = current_val_float * 100 if current_val_float <= 1.0 and current_val_float > 0 and "." in str(val) else current_val_float
+                        label = f"{int(disp_val)}%"
+                    elif is_view_cycle:
+                        label = f"{int(current_val_float)} tiles"
+                    elif is_max_ent_cycle:
+                        label = f"{int(current_val_float)} spawn"
+                    elif is_legacy_cycle:
+                        mins = int(current_val_float / 60000)
+                        if mins == 0: mins = 15
+                        label = f"{mins} {tr('ui', 'min')}"
                     else:
-                        label = str(current_val_float)
+                        label = f"{str(current_val_float)}"
                 
                     txt_surf = font_12.render(label, False, WHITE)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
@@ -642,45 +649,75 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                          state['world_data'][block][key] = setting_obj
 
                     try: current_val_float = float(setting_obj['value'])
-                    except: current_val_float = 1.0
-                        
-                    is_percentage_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key)
-                    if is_percentage_cycle:
-                        comp_val = round(current_val_float, 2)
-                        if comp_val == 0.0: new_val = 0.25
-                        elif comp_val < 0.25: new_val = 0.25
-                        elif comp_val < 0.50: new_val = 0.50
-                        elif comp_val < 0.75: new_val = 0.75
-                        elif comp_val < 1.0: new_val = 1.0
-                        else: new_val = 0.0
-                    elif key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
-                        if current_val_float < 1800000: new_val = 1800000.0
-                        elif current_val_float < 2700000: new_val = 2700000.0
-                        elif current_val_float < 3600000: new_val = 3600000.0
-                        else: new_val = 900000.0
-                    elif key == 'time_sunrise_hr':
-                        if current_val_float < 5.5: new_val = 5.5
-                        elif current_val_float < 6.0: new_val = 6.0
-                        elif current_val_float < 6.5: new_val = 6.5
-                        elif current_val_float < 7.0: new_val = 7.0
-                        else: new_val = 5.0
-                    elif key == 'time_sunset_hr':
-                        if current_val_float < 17.5: new_val = 17.5
-                        elif current_val_float < 18.0: new_val = 18.0
-                        elif current_val_float < 18.5: new_val = 18.5
-                        elif current_val_float < 19.0: new_val = 19.0
-                        else: new_val = 17.0
-                    elif key == 'time_start_hr':
-                        new_val = current_val_float + 1.0
-                        if new_val > 23.0: new_val = 0.0
+                    except: current_val_float = 0.0
+
+                    is_time_cycle = key in ['time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']
+                    is_percent_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or key in ['static_percent', 'hostile_percent']
+                    is_view_cycle = key in ['view_radius']
+                    is_max_ent_cycle = key in ['vehicle_spawn_per_chunk', 'zombie_spawn_per_chunk', 'npc_spawn_per_chunk', 'animal_spawn_per_chunk']
+                    is_legacy_cycle = key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']
+                    is_int_percent_cycle = ('threshold' in key)
+
+                    dir_step = -1 if mouse_pos[0] < rect.centerx else 1
+
+                    if is_time_cycle:
+                        new_val = current_val_float + (0.5 * dir_step)
+                        if new_val < 0: new_val = 23.5
+                        elif new_val >= 24.0: new_val = 0.0
+                    elif is_percent_cycle:
+                        new_val = round(current_val_float + (0.1 * dir_step), 2)
+                        if new_val < 0.0: new_val = 1.0
+                        elif new_val > 1.0: new_val = 0.0
+                    elif is_int_percent_cycle:
+                        work_val = current_val_float * 100 if current_val_float <= 1.0 and current_val_float > 0 and "." in str(setting_obj['value']) else current_val_float
+                        new_val = work_val + (10 * dir_step)
+                        if new_val < 0: new_val = 100
+                        elif new_val > 100: new_val = 0
+                    elif is_view_cycle:
+                        new_val = current_val_float + (3 * dir_step)
+                        if new_val < 3: new_val = 30
+                        elif new_val > 30: new_val = 3
+                    elif is_max_ent_cycle:
+                        new_val = current_val_float + (4 * dir_step)
+                        if new_val < 0: new_val = 100
+                        elif new_val > 100: new_val = 0
+                    elif is_legacy_cycle:
+                        steps = [900000.0, 1800000.0, 2700000.0, 3600000.0]
+                        try: idx = steps.index(current_val_float)
+                        except ValueError: idx = 0
+                        idx = (idx + dir_step) % len(steps)
+                        new_val = steps[idx]
                     else:
                         new_val = current_val_float
-                    
-                    if key in ['time_daylength', 'respawn_timer', 'zombie_respawn_timer_ms', 'animal_respawn_ms_timer']:
+
+                    if is_view_cycle or is_max_ent_cycle or is_legacy_cycle or is_int_percent_cycle:
                         state['world_data'][block][key]['value'] = str(int(new_val))
                     else:
                         state['world_data'][block][key]['value'] = str(new_val)
-                    
+
+                    # --- Automatic synchronization rules ---
+                    if is_max_ent_cycle and block in ['zombie', 'npc', 'animal']:
+                        spawn_val = max(1, int(new_val) // 2)
+                        if 'spawn' not in state['world_data'][block]:
+                             state['world_data'][block]['spawn'] = {'value': str(spawn_val), 'name': 'spawns'}
+                        else:
+                             if not isinstance(state['world_data'][block]['spawn'], dict):
+                                 state['world_data'][block]['spawn'] = {'value': str(spawn_val), 'name': 'spawns'}
+                             state['world_data'][block]['spawn']['value'] = str(spawn_val)
+
+                    if key == 'static_percent':
+                        hostile_val = round(1.0 - new_val, 2)
+                        if 'hostile_percent' in state['world_data'][block]:
+                            if not isinstance(state['world_data'][block]['hostile_percent'], dict):
+                                state['world_data'][block]['hostile_percent'] = {'value': str(hostile_val), 'name': 'Hostile NPC percentage'}
+                            state['world_data'][block]['hostile_percent']['value'] = str(hostile_val)
+                    elif key == 'hostile_percent':
+                        static_val = round(1.0 - new_val, 2)
+                        if 'static_percent' in state['world_data'][block]:
+                            if not isinstance(state['world_data'][block]['static_percent'], dict):
+                                state['world_data'][block]['static_percent'] = {'value': str(static_val), 'name': 'Static NPC percentage'}
+                            state['world_data'][block]['static_percent']['value'] = str(static_val)
+
                     _clone_to_custom(state)
                     state['world_unsaved'] = True
                     clicked_input = True

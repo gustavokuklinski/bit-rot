@@ -348,22 +348,45 @@ class ProceduralGenerator(
     for fc in self.forest_chunks:
       if shed_pool and random.random() < 0.35:
         self.chunk_priority_map[fc].append(random.choice(shed_pool))
+    
+    # Connect adjacent empty/forest chunks to create shortcuts
+    for gy in range(grid_h):
+      for gx in range(grid_w):
+          if (gx, gy) in self.forest_chunks:
+              # Check Right Neighbor
+              if gx + 1 < grid_w and (gx + 1, gy) in self.forest_chunks:
+                  self.connections_grid[gy][gx]['right'] = True
+                  self.connections_grid[gy][gx+1]['left'] = True
+                  # Use 'dirty' or 'sand' for shortcuts to distinguish from main urban highways
+                  self.connections_grid[gy][gx]['right_type'] = 'dirty'
+                  self.connections_grid[gy][gx+1]['left_type'] = 'dirty'
+                  
+              # Check Bottom Neighbor
+              if gy + 1 < grid_h and (gx, gy + 1) in self.forest_chunks:
+                  self.connections_grid[gy][gx]['bottom'] = True
+                  self.connections_grid[gy+1][gx]['top'] = True
+                  self.connections_grid[gy][gx]['bottom_type'] = 'dirty'
+                  self.connections_grid[gy+1][gx]['top_type'] = 'dirty'
+  # -----------------------------------------
 
     # 6. Save & Pre-generate Starting Chunks
+    # 6. Save & Pre-generate ALL Chunks
     self.game.generator = self
     self.generated_chunks = set()
 
-    print(
-        f'[ProceduralGenerator] Generating Start Chunk ({start_gx},'
-        f' {start_gy})...'
-    )
-    self.generate_chunk_on_demand(start_gx, start_gy)
 
-    print(
-        '[ProceduralGenerator] Pre-generating Military Goal Chunk'
-        f' ({military_gx}, {military_gy})...'
-    )
-    self.generate_chunk_on_demand(military_gx, military_gy)
+    print(f'[ProceduralGenerator] Generating ALL {grid_w * grid_h} chunks...')
+    for gy in range(grid_h):
+        for gx in range(grid_w):
+            self.generate_chunk_on_demand(gx, gy)
+
+
+
+
+    # 7. Generate JPG Map Images
+    print('[ProceduralGenerator] Exporting map images...')
+    self.export_world_image(1, 'world_map_L1.jpg')
+    self.export_world_image(2, 'world_map_L2.jpg')
 
     # Save Macro Metadata
     try:

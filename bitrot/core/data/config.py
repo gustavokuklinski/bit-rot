@@ -88,7 +88,7 @@ TIME_START_HR = 6.0
 MAX_DARKNESS_OPACITY = 255
 PLAYER_SPEED = 1.6
 AUTO_DRINK = True
-AUTO_DRINK_THRESHOLD = 100
+AUTO_DRINK_THRESHOLD = 1.0
 BASE_PLAYER_VIEW_RADIUS = 9 * 16
 ZOMBIE_SPEED = 0.3
 MAX_ZOMBIES_GLOBAL = 500
@@ -339,7 +339,7 @@ def load_settings(world_preset="world"):
                 PLAYER_SPEED = float(_get_val(player_config, ['player_speed', 'speed'], '1.6'))
                 BASE_PLAYER_VIEW_RADIUS = int(_get_val(player_config, ['view_radius', 'player_view_radius'], '9')) * TILE_SIZE
                 AUTO_DRINK = str(_get_val(player_config, ['water_autodrink', 'autodrink'], 'true')).lower() == 'true'
-                AUTO_DRINK_THRESHOLD = int(_get_val(player_config, ['water_threshold', 'autodrink_threshold'], '100'))
+                AUTO_DRINK_THRESHOLD = int(_get_val(player_config, ['water_threshold', 'autodrink_threshold'], '1.0'))
 
             zombie_config = root.find('zombie')
             if zombie_config is not None:

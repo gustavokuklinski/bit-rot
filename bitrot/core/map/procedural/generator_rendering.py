@@ -5,6 +5,77 @@ import csv
 import pygame
 
 class ProceduralGeneratorRendering:
+    def export_world_image(self, layer_idx, output_filename):
+        """Exports the entire stitched map layer to a JPG image."""
+        chunk_w = getattr(self, 'chunk_size', 128)
+        chunk_h = getattr(self, 'chunk_size', 128)
+        map_w = self.grid_w * chunk_w
+        map_h = self.grid_h * chunk_h
+        
+        # Scale defines pixels per tile (e.g., 4x4 pixels = 1 tile)
+        scale = 4 
+        surf = pygame.Surface((map_w * scale, map_h * scale))
+        surf.fill((30, 30, 30))
+        
+        def load_csv(path):
+            if not os.path.exists(path): return []
+            with open(path, 'r', newline='') as f:
+                return list(csv.reader(f))
+                
+        for gy in range(self.grid_h):
+            for gx in range(self.grid_w):
+                base_name = f"map_L{layer_idx}_{gx}_{gy}"
+                b_path = os.path.join(self.output_folder, base_name + "_map.csv")
+                g_path = os.path.join(self.output_folder, base_name + "_ground.csv")
+                r_path = os.path.join(self.output_folder, base_name + "_roof.csv")
+                
+                b_data = load_csv(b_path)
+                g_data = load_csv(g_path)
+                r_data = load_csv(r_path)
+                
+                if not b_data and not g_data:
+                    continue
+                
+                for y in range(chunk_h):
+                    for x in range(chunk_w):
+                        color = (30, 30, 30)
+                        
+                        g_char = g_data[y][x] if y < len(g_data) and x < len(g_data[y]) else ' '
+                        b_char = b_data[y][x] if y < len(b_data) and x < len(b_data[y]) else ' '
+                        r_char = r_data[y][x] if y < len(r_data) and x < len(r_data[y]) else ' '
+                        
+                        # Interpret Ground
+                        if g_char != ' ':
+                            g_low = g_char.lower()
+                            if 'water' in g_low: color = (30, 144, 255)
+                            elif 'sand' in g_low: color = (238, 214, 175)
+                            elif 'dirty' in g_low: color = (139, 69, 19)
+                            elif 'asphalt' in g_low or 'road' in g_low: color = (80, 80, 80)
+                            elif 'grass' in g_low: color = (34, 139, 34)
+                            elif 'cave' in g_low: color = (60, 50, 40)
+                            else: color = (100, 100, 100)
+                            
+                        # Interpret Obstacles / Walls
+                        if b_char != ' ':
+                            b_low = b_char.lower()
+                            if b_char in ['@', '#'] or 'wall' in b_low: color = (150, 150, 150)
+                            elif 'tree' in b_low: color = (20, 80, 20)
+                            else: color = (120, 120, 120)
+                            
+                        # Interpret Roofs
+                        if r_char != ' ':
+                            color = (70, 70, 70)
+                            
+                        rect = ((gx * chunk_w + x) * scale, (gy * chunk_h + y) * scale, scale, scale)
+                        pygame.draw.rect(surf, color, rect)
+                        
+        out_path = os.path.join(self.output_folder, output_filename)
+        try:
+            pygame.image.save(surf, out_path)
+            print(f"[ProceduralGenerator] Saved map image to {out_path}")
+        except Exception as e:
+            print(f"[ProceduralGenerator] Failed to save map image: {e}")
+            
     def _save_chunk(self, fname, layers):
         for name, data in layers.items():
             suffix = f"_{name}.csv" if name != 'base' else "_map.csv"

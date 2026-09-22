@@ -7,6 +7,94 @@ import core.data.config
 from core.data.config import *
 
 class ProceduralGeneratorChunk:
+
+    def _generate_confusing_asphalt_maze(self, layers, occupied_mask, w, h, cx, cy):
+        """Generates straight, wide road arms that branch from the center and avoid beaches."""
+        road_tile = 'asphalt_01'
+        road_width = 4 
+        
+        # We create several 'arms' that start from the center hub
+        num_arms = random.randint(3, 6)
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+        def is_area_beach_free(x, y, rw):
+            """Checks if a wide road segment at this point hits sand or water."""
+            for ox in range(-rw // 2, rw // 2 + 1):
+                for oy in range(-rw // 2, rw // 2 + 1):
+                    tx, ty = x + ox, y + oy
+                    if 0 <= tx < w and 0 <= ty < h:
+                        ground = layers['ground'][ty][tx]
+                        if ground == getattr(self, 'sand_tile', 'sand_01') or \
+                           ground == getattr(self, 'water_tile', 'water_01'):
+                            return False
+                    else:
+                        return False # Out of bounds = beach/edge
+            return True
+
+        def paint_wide_segment(x1, y1, x2, y2):
+            """Paints a thick asphalt line between two points."""
+            # We use a simple interpolation to draw the line
+            steps = max(abs(x2 - x1), abs(y2 - y1))
+            if steps == 0: return
+            
+            dx = (x2 - x1) / steps
+            dy = (y2 - y1) / steps
+            
+            for i in range(steps + 1):
+                curr_x = int(x1 + dx * i)
+                curr_y = int(y1 + dy * i)
+                # Paint the width brush
+                for ox in range(-road_width // 2, road_width // 2 + 1):
+                    for oy in range(-road_width // 2, road_width // 2 + 1):
+                        tx, ty = curr_x + ox, curr_y + oy
+                        if 0 <= tx < w and 0 <= ty < h:
+                            if not self._is_in_connector_zone_internal(tx, ty, w, h, cx, cy):
+                                layers['ground'][ty][tx] = road_tile
+                                occupied_mask[ty][tx] = 1
+
+        # Start all arms from the center
+        for _ in range(num_arms):
+            curr_x, curr_y = cx, cy
+            
+            # Each arm can have 1 to 3 straight segments (turns)
+            num_segments = random.randint(1, 3)
+            
+            for _ in range(num_segments):
+                # Pick a random straight direction
+                direction = random.choice(directions)
+                dx, dy = direction
+                
+                # Determine length of this straight stretch
+                length = random.randint(8, 15)
+                target_x = curr_x + (dx * length)
+                target_y = curr_y + (dy * length)
+                
+                # Validate the entire segment for beaches before painting
+                can_paint = True
+                for step in range(length + 1):
+                    check_x = curr_x + (dx * step)
+                    check_y = curr_y + (dy * step)
+                    if not is_area_beach_free(check_x, check_y, road_width):
+                        can_paint = False
+                        break
+                
+                if can_paint:
+                    paint_wide_segment(curr_x, curr_y, target_x, target_y)
+                    curr_x, curr_y = target_x, target_y
+                else:
+                    # If the road hits a beach, this arm stops growing
+                    break
+
+    def _is_in_connector_zone_internal(self, tx, ty, w, h, cx, cy):
+        """Prevents procedural roads from blocking the main chunk transitions."""
+        depth = 5
+        radius = 3
+        if ty < depth and abs(tx - cx) <= radius: return True
+        if ty >= h - depth and abs(tx - cx) <= radius: return True
+        if tx < depth and abs(ty - cy) <= radius: return True
+        if tx >= w - depth and abs(ty - cy) <= radius: return True
+        return False
+
     def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, assigned_l2_templates=None, allow_buildings=True, force_forest=False, cell_w=None, cell_h=None, coast_left=False, coast_right=False, coast_top=False, coast_bottom=False):
         if cell_w is not None and cell_h is not None:
             w, h = cell_w, cell_h
@@ -75,7 +163,7 @@ class ProceduralGeneratorChunk:
 
         road_tile = 'asphalt_01'
         dirt_tile = 'dirty_01'
-        sand_tile = 'sand_01'
+        sand_tile = getattr(self, 'sand_tile', 'sand_01')
 
         # [FIX] Helper to carve a strictly straight corridor without any wobbles
         def carve_straight_segment(x1, y1, x2, y2, tile_type, path_width=4):
@@ -486,6 +574,61 @@ class ProceduralGeneratorChunk:
                                 occupied_mask_L2[ly][lx] = 1
 
         # 7. Forest / Nature
+        if force_forest:
+            # --- NEW: Spawn buildings starting with 'forest_' ---
+            # Filter all templates for those starting with 'forest_'
+            forest_building_pool = [name for name in self.templates.keys() if name.startswith('Forest_L1_')]
+            
+            if forest_building_pool:
+                # Determine how many forest buildings to spawn (e.g., 1 to 3)
+                num_forest_buildings = 10
+                
+                for _ in range(num_forest_buildings):
+                    tmpl_name = random.choice(forest_building_pool)
+                    tmpl = self.templates[tmpl_name]
+                    tw, th = tmpl['width'], tmpl['height']
+                    
+                    # Try a few times to find a valid empty spot
+                    for _ in range(15): 
+                        tx = random.randint(2, w - tw - 2)
+                        ty = random.randint(2, h - th - 2)
+                        
+                        # use is_area_free to ensure it doesn't hit the beach or the industrial complex
+                        if is_area_free(tx, ty, tw, th, gap=2):
+                            self._blit_template(layers, tmpl, tx, ty, w, h)
+                            
+                            # Mark the area as occupied so other buildings don't overlap
+                            for ry in range(ty, ty + th):
+                                for rx in range(tx, tx + tw):
+                                    if 0 <= rx < w and 0 <= ry < h:
+                                        occupied_mask[ry][rx] = 1
+                            break
+            # ---------------------------------------------------
+            petrol_pool = [name for name in self.templates.keys() if name.startswith('Petrol_')]
+            
+            if petrol_pool:
+                petrol_name = random.choice(petrol_pool)
+                petrol_tmpl = self.templates[petrol_name]
+                ptw, pth = petrol_tmpl['width'], petrol_tmpl['height']
+                
+                placed_petrol = False
+                for _ in range(30): # Try harder to find a spot for the petrol station
+                    ptx = random.randint(2, w - ptw - 2)
+                    pty = random.randint(2, h - pth - 2)
+                    
+                    if is_area_free(ptx, pty, ptw, pth, gap=2):
+                        self._blit_template(layers, petrol_tmpl, ptx, pty, w, h)
+                        # Mark as occupied so decorations don't spawn on top
+                        for ry in range(pty, pty + pth):
+                            for rx in range(ptx, ptx + ptw):
+                                if 0 <= rx < w and 0 <= ry < h:
+                                    occupied_mask[ry][rx] = 1
+                        placed_petrol = True
+                        break
+                
+                if not placed_petrol:
+                    print(f"[ProceduralGenerator] Warning: Could not find space for Petrol building in chunk ({gx}, {gy})")
+
         if hasattr(self, 'forest_templates') and self.forest_templates and not force_forest:
             for _ in range(20): 
                 tmpl_name = random.choice(self.forest_templates)
@@ -515,6 +658,9 @@ class ProceduralGeneratorChunk:
                             occupied_mask[ry][rx] = 1
 
         # 8. Ground Formatting
+        if force_forest:
+            self._generate_confusing_asphalt_maze(layers, occupied_mask, w, h, cx, cy)
+            
         if force_forest:
             for y in range(h):
                 for x in range(w):
@@ -619,7 +765,7 @@ class ProceduralGeneratorChunk:
         dirty_decos = ['garden_stone', 'garden_stone_iron', 'garden_stone_powder', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
         wall_decos = ['garden_tree_8','garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4']
         sand_decos = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
-        asphalt_decos = ['garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4']
+        asphalt_decos = ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
 
         path_tiles = set()
         for y in range(h):

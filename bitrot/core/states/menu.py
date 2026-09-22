@@ -77,7 +77,8 @@ def run_menu(game):
             if flag_clicked: continue
             
             if start_btn.collidepoint(mouse_pos):
-                game.player_setup_state = {} 
+                game.player_setup_state = {}
+                game.world_setup_state = {}
                 game.game_state = 'PLAYER_SETUP'
                 game.player_setup_state['current_tab'] = 'World'  # Default to World
                 
