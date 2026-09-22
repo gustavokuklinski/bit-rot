@@ -656,6 +656,12 @@ class ProceduralGenerator(
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l2_layers, None, c_w, c_h, 2)
 
+    for y in range(c_h):
+        for x in range(c_w):
+            if l2_layers['ground'][y][x] == ' ':
+                l2_layers['ground'][y][x] = 'dirty_01'
+                l2_layers['base'][y][x] = '@'
+                
     self._save_chunk(f'map_L1_{gx}_{gy}', l1_layers)
     self._save_chunk(f'map_L2_{gx}_{gy}', l2_layers)
 

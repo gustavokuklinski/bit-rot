@@ -1,4 +1,4 @@
-<map name="bg00" type="maptile" char="#" is_obstacle="true">
+<map name="bg00" type="maptile" char="#" is_obstacle="true" is_visible="false">
     <visuals>
         <sprite file="bg00.png" />
     </visuals>

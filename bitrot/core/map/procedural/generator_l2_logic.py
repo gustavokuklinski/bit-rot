@@ -291,7 +291,8 @@ class ProceduralGeneratorL2:
                                 base[ny][nx] = ' '
                         else:
                             if ground[ny][nx] in [' ', '#']:
-                                ground[ny][nx] = border_tile
+                                ground[ny][nx] = path_tile  # <--- FIX: Ensure there is a floor
+                                base[ny][nx] = border_tile  # <--- FIX: Put the wall on the base layer
             
             dist_x = tx - cx
             dist_y = ty - cy
@@ -321,8 +322,9 @@ class ProceduralGeneratorL2:
                 break
 
     def _apply_l2_border(self, layers, tx, ty, tmpl_w, tmpl_h, mw, mh):
-        ground = layers.get('ground_L2')
-        if not ground: return
+        ground_l2 = layers.get('ground_L2')
+        base_l2 = layers.get('base_L2')
+        if not ground_l2 or not base_l2: return
         
         padding = 4
         border_tile = '@'
@@ -336,12 +338,11 @@ class ProceduralGeneratorL2:
         for y in range(y1, y2):
             for x in range(x1, x2):
                 if not (tx <= x < tx + tmpl_w and ty <= y < ty + tmpl_h):
-                    if ground[y][x] == ' ':
+                    if ground_l2[y][x] == ' ':
                         is_border = False
                         if x == x1 or x == x2 - 1 or y == y1 or y == y2 - 1:
                             is_border = True
                         
+                        ground_l2[y][x] = padding_tile
                         if is_border:
-                            ground[y][x] = border_tile
-                        else:
-                            ground[y][x] = padding_tile
+                            base_l2[y][x] = border_tile

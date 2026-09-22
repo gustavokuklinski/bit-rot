@@ -536,9 +536,16 @@ class ProceduralGeneratorChunk:
                     # Blit L2 template with full bounds protection
                     self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                     l2_w, l2_h = tmpl_l2['width'], tmpl_l2['height']
-                    for ly in range(ty, min(h, ty + l2_h)):
-                        for lx in range(tx, min(w, tx + l2_w)):
+                    
+                    # --- FIX: Apply L2 Border and Padding for Urban buildings ---
+                    if hasattr(self, '_apply_l2_border'):
+                        self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+                        
+                    pad = 4
+                    for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                        for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                             occupied_mask_L2[ly][lx] = 1
+                    # ------------------------------------------------------------
 
         # 7. Forest / Nature Rooms (NO urban buildings or petrol stations)
         if force_forest:
@@ -576,13 +583,17 @@ class ProceduralGeneratorChunk:
                     if found_l2_key:
                         tmpl_l2 = self.templates[found_l2_key]
                         self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
-                        if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, tmpl_l2.get('width', 10), tmpl_l2.get('height', 10), w, h)
                         
                         l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
-                        for ly in range(ty, min(h, ty + l2_h)):
-                            for lx in range(tx, min(w, tx + l2_w)):
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+                        
+                        # --- FIX: Protect the entire margin from overlaps ---
+                        pad = 4
+                        for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                            for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                                 occupied_mask_L2[ly][lx] = 1
+                        # ----------------------------------------------------
 
                     placed_rects.append(pygame.Rect(tx, ty, tw, th))
                     for ry in range(ty, ty + th):
@@ -657,13 +668,14 @@ class ProceduralGeneratorChunk:
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
                 
                 placed_l2 = False
+                pad = 4 # --- FIX: Enforce padding margin
                 for _ in range(40): 
-                    tx = random.randint(4, max(4, w - l2_w - 4))
-                    ty = random.randint(4, max(4, h - l2_h - 4))
+                    tx = random.randint(pad, max(pad, w - l2_w - pad))
+                    ty = random.randint(pad, max(pad, h - l2_h - pad))
                     
                     collision = False
-                    for ly in range(ty, min(h, ty + l2_h)):
-                        for lx in range(tx, min(w, tx + l2_w)):
+                    for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                        for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                             if occupied_mask_L2[ly][lx] == 1:
                                 collision = True
                                 break
@@ -671,9 +683,15 @@ class ProceduralGeneratorChunk:
                     
                     if not collision:
                         self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
-                        for ly in range(ty, min(h, ty + l2_h)):
-                            for lx in range(tx, min(w, tx + l2_w)):
+                        
+                        # --- FIX: Generate Walls & Floor Padding ---
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
+                            
+                        for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                            for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                                 occupied_mask_L2[ly][lx] = 1
+                        # -------------------------------------------
                         placed_l2 = True
                         break
         

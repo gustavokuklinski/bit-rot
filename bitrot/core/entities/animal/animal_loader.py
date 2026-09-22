@@ -10,7 +10,6 @@ class AnimalLoader:
 
     @classmethod
     def get_animal_folder(cls):
-        """Resolves the animal folder across development and compiled paths."""
         candidates = [
             cls.animal_folder,
             os.path.join(BASE_DIR, 'data.rot', 'lib', 'data', 'animals'),
@@ -61,37 +60,42 @@ class AnimalLoader:
             try:
                 name = animal_node.get('name') or animal_node.get('id') or fallback_name
                 animal_type = animal_node.get('type', 'animal')
-                attack_player = animal_node.get('attack_player', 'false').lower() == 'true'
-                spawn_zombies = int(float(animal_node.get('spawn_zombies', '0')))
+                attack_player = str(animal_node.get('attack_player', 'false')).strip().lower() == 'true'
+                
+                try:
+                    spawn_zombies = int(float(animal_node.get('spawn_zombies', '0')))
+                except (ValueError, TypeError):
+                    spawn_zombies = 0
 
                 try:
                     spawn_weight = max(1, int(float(animal_node.get('spawn_weight', '10'))))
                 except (ValueError, TypeError):
                     spawn_weight = 10
 
-                # Parse spawn_layer (supports '[1]', '[1, 2]', '1', or default to [1, 2])
+                # Robust layer parser: accepts [1, 2], [L1, L2], [L1], 1, L2, etc.
                 spawn_layer_raw = animal_node.get('spawn_layer') or animal_node.get('spawn_layers') or animal_node.get('layer') or '[1, 2]'
                 spawn_layers = []
                 try:
-                    clean_str = str(spawn_layer_raw).replace('[', '').replace(']', '').strip()
+                    clean_str = str(spawn_layer_raw).replace('[', '').replace(']', '').replace('"', '').replace("'", '').strip()
                     if clean_str:
-                        spawn_layers = [int(x.strip()) for x in clean_str.split(',') if x.strip().isdigit()]
+                        for part in clean_str.split(','):
+                            cleaned_num = part.strip().upper().replace('L', '')
+                            if cleaned_num.isdigit():
+                                spawn_layers.append(int(cleaned_num))
                 except Exception:
                     spawn_layers = [1, 2]
 
                 if not spawn_layers:
                     spawn_layers = [1, 2]
 
-                # Safe Stat Parser (handles min/max, value, or sensible defaults)
                 stats_node = animal_node.find('stats')
                 stats = {
                     'health': cls._parse_stat_range(stats_node, 'health', default_min=10, default_max=20),
-                    'speed': cls._parse_stat_range(stats_node, 'speed', default_min=0.8, default_max=1.2, is_float=True),
-                    'attack': cls._parse_stat_range(stats_node, 'attack', default_min=0, default_max=0),
+                    'speed': cls._parse_stat_range(stats_node, 'speed', default_min=0.5, default_max=0.8, is_float=True),
+                    'attack': cls._parse_stat_range(stats_node, 'attack', default_min=1, default_max=5),
                     'infection': cls._parse_stat_range(stats_node, 'infection', default_min=0, default_max=0)
                 }
 
-                # Safe Sprite Parser
                 sprite_file = None
                 visuals_node = animal_node.find('visuals')
                 if visuals_node is not None:
@@ -107,10 +111,8 @@ class AnimalLoader:
                 if not sprite_file:
                     sprite_file = f"{name.lower()}.png"
 
-                # Normalize sprite path to just filename
                 sprite_file = os.path.basename(sprite_file)
 
-                # Safe Loot Parser
                 loot = []
                 loot_node = animal_node.find('loot')
                 if loot_node is not None:
@@ -125,11 +127,9 @@ class AnimalLoader:
                             chance_val = 50.0
                         loot.append({'item': item_name, 'chance': chance_val})
 
-                # Safe Capacity
                 cap_node = animal_node.find('capacity')
                 capacity = int(float(cap_node.get('value', 0))) if cap_node is not None else 0
 
-                # Safe Sounds
                 sounds = {}
                 sound_node = animal_node.find('sound') or animal_node.find('sounds')
                 if sound_node is not None:
@@ -187,30 +187,22 @@ class AnimalLoader:
         return {'min': default_min, 'max': default_max}
 
     @classmethod
-    def get_definition(cls, animal_type=None):
-        """Case-insensitive getter with random fallback if not found."""
+    def get_definition(cls, animal_type=None, layer=None):
         if not cls.definitions:
             cls.load_animals()
 
         if not animal_type:
-            return cls.get_random_definition()
+            return cls.get_random_definition(layer=layer)
 
-        # 1. Exact match
-        if animal_type in cls.definitions:
-            return cls.definitions[animal_type]
-
-        # 2. Case-insensitive match
         target_lower = str(animal_type).strip().lower()
         for k, v in cls.definitions.items():
             if k.lower().strip() == target_lower:
                 return v
 
-        # 3. Random fallback from available definitions
-        return cls.get_random_definition()
+        return cls.get_random_definition(layer=layer)
 
     @classmethod
     def get_random_definition(cls, layer=None):
-        """Returns a weighted random animal definition according to spawn_weight and layer."""
         if not cls.definitions:
             cls.load_animals()
 
@@ -232,14 +224,16 @@ class AnimalLoader:
         if candidates:
             return random.choices(candidates, weights=weights, k=1)[0]
 
-        # Fallback to any definition
+        # Do NOT pick animals from forbidden layers
+        if layer is not None:
+            return None
+
         all_defs = list(cls.definitions.values())
         return random.choice(all_defs) if all_defs else None
 
     @classmethod
     def get_random_animal_type(cls, layer=None):
-        """Returns the species name of a randomly chosen animal definition."""
         defn = cls.get_random_definition(layer=layer)
         if defn:
             return defn['name']
-        return list(cls.definitions.keys())[0] if cls.definitions else 'Rat'
+        return None

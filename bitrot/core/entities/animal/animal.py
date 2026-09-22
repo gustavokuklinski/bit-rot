@@ -10,6 +10,7 @@ from core.entities.animal.animal_loader import AnimalLoader
 from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Item
 from core.ui.notifications import check_milestone_progress
+from core.data.config import TILE_SIZE
 
 class Animal(Zombie):
 
@@ -17,17 +18,24 @@ class Animal(Zombie):
         if not AnimalLoader.definitions:
             AnimalLoader.load_animals()
 
-        # Retrieve definition dynamically with case-insensitivity and random fallback
-        template = AnimalLoader.get_definition(animal_type)
+        # 1. Resolve target layer into a local variable before initializing Sprite
+        if layer is not None:
+            target_layer = layer
+        elif game:
+            target_layer = getattr(game, 'current_layer_index', 1)
+        else:
+            target_layer = 1
+
+        # 2. Get definition matching the resolved layer
+        template = AnimalLoader.get_definition(animal_type, layer=target_layer)
 
         if not template:
-            # Absolute failsafe if no XMLs exist
             template = {
                 'name': 'Rat',
                 'stats': {
-                    'health': {'min': 5, 'max': 10},
-                    'speed': {'min': 1.0, 'max': 1.5},
-                    'attack': {'min': 1, 'max': 2},
+                    'health': {'min': 10, 'max': 20},
+                    'speed': {'min': 0.5, 'max': 0.8},
+                    'attack': {'min': 1, 'max': 5},
                     'infection': {'min': 0, 'max': 0}
                 },
                 'loot': [],
@@ -54,7 +62,11 @@ class Animal(Zombie):
             'sprites': {'center': template['sprite']} 
         }
 
+        # 3. Call super().__init__ which initializes pygame.sprite.Sprite
         super().__init__(x, y, zombie_template)
+
+        # 4. Now safe to set self.layer on the initialized Sprite
+        self.layer = target_layer
         self.attack_player = template.get('attack_player', False)
         self.spawn_zombies_max = template.get('spawn_zombies', 0)
 
@@ -63,13 +75,7 @@ class Animal(Zombie):
         self.sound_dead = sounds.get('dead')
         self.sound_attack = sounds.get('attack')
         self.sound_steps = sounds.get('steps')
-
-        if layer is not None:
-            self.layer = layer
-        elif game:
-            self.layer = getattr(game, 'current_layer_index', 1)
-        else:
-            self.layer = 1
+        self.sound_wander = sounds.get('wander')
 
         self.inventory = []
         self.type = "animal"
@@ -82,6 +88,12 @@ class Animal(Zombie):
         min_spd = float(template['stats']['speed']['min'])
         max_spd = float(template['stats']['speed']['max'])
         self.speed = random.uniform(min_spd, max(min_spd, max_spd))
+
+    def attack(self, target_entity, game):
+        # Prevent non-hostile animals from ever damaging players
+        if not self.attack_player and (target_entity == getattr(game, 'player', None) or type(target_entity).__name__ == 'RemotePlayer'):
+            return
+        super().attack(target_entity, game)
 
     def update(self, game):
         super().update(game)
@@ -112,18 +124,22 @@ class Animal(Zombie):
         if self.is_dead:
             return
 
+        # Predator animals that are flagged to attack players
         if self.attack_player:
             super().update_ai(player_rect, obstacles, other_zombies, game)
             return
 
+        # Non-hostile animals: flee from threats or wander peacefully
         threat_radius = 150 if self.name.lower() != "cow" else 250
         threat_detected = False
         flee_x, flee_y = 0, 0
         
         threats = []
-        if game.player and not game.player.is_dead: threats.append(game.player)
+        if game.player and not game.player.is_dead:
+            threats.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False): threats.append(rp)
+            if not getattr(rp, 'is_dead', False):
+                threats.append(rp)
 
         for t in threats:
             dx = t.rect.centerx - self.rect.centerx
@@ -140,7 +156,7 @@ class Animal(Zombie):
                 threat_detected = True
 
         for entity in other_zombies + list(getattr(game, 'npcs', [])):
-            if entity is self or entity.is_dead: 
+            if entity is self or getattr(entity, 'is_dead', False): 
                 continue
             dx = entity.rect.centerx - self.rect.centerx
             dy = entity.rect.centery - self.rect.centery
@@ -152,19 +168,57 @@ class Animal(Zombie):
 
         if threat_detected:
             self.state = 'fleeing'
-            self.aggro_timer = 2000
+            self.aggro_timer = 3000
             flee_dist = math.hypot(flee_x, flee_y)
             if flee_dist > 0:
-                flee_x += random.uniform(-50, 50)
-                flee_y += random.uniform(-50, 50)
+                flee_x += random.uniform(-40, 40)
+                flee_y += random.uniform(-40, 40)
                 target_x = self.rect.centerx + flee_x
                 target_y = self.rect.centery + flee_y
                 self.move_towards((target_x, target_y), obstacles, other_zombies, game, can_see_target=True)
         else:
             if getattr(self, 'aggro_timer', 0) > 0:
-                self.aggro_timer -= game.dt_ms
-            else:
-                super().update_ai(player_rect, obstacles, other_zombies, game)
+                self.aggro_timer -= getattr(game, 'dt_ms', 16)
+
+            # Peaceful wandering (never targets or attacks the player)
+            self.state = 'wandering'
+            current_time = pygame.time.get_ticks()
+
+            if getattr(self, 'sound_wander', None):
+                if current_time - getattr(self, 'last_wander_sound_time', 0) > getattr(self, 'wander_sound_cooldown', 8000):
+                    game.sound_manager.play_sound(
+                        self.sound_wander,
+                        subdir='animals',
+                        game=game,
+                        source_pos=self.rect.center,
+                        base_volume=0.3,
+                        pitch_variance=0.15
+                    )
+                    self.last_wander_sound_time = current_time
+                    self.wander_sound_cooldown = random.randint(6000, 14000)
+
+            target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
+            wander_interval = getattr(core.data.config, 'ZOMBIE_WANDER_CHANGE_INTERVAL', 2000)
+
+            if (current_time - getattr(self, 'last_wander_change', 0) > wander_interval) or (self.wander_target is None) or target_reached:
+                for _ in range(6):
+                    wander_radius = 4 * TILE_SIZE
+                    new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
+                    new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
+
+                    grid_x = int(new_target_x // TILE_SIZE)
+                    grid_y = int(new_target_y // TILE_SIZE)
+
+                    if hasattr(game, 'map_data') and 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
+                        tile = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
+                        if not tile or not tile.get('is_obstacle', False):
+                            self.wander_target = (new_target_x, new_target_y)
+                            break
+
+                self.last_wander_change = current_time
+
+            if self.wander_target:
+                self.move_towards(self.wander_target, obstacles, other_zombies, game, can_see_target=True, allow_break_obstacles=False)
 
     def take_damage(self, amount, game, attacker=None):
         if getattr(game, 'is_client', False):
@@ -211,7 +265,7 @@ class Animal(Zombie):
             self.aggro_timer = 10000
             self.state = 'chasing'
         else:
-            self.aggro_timer = 2000
+            self.aggro_timer = 4000
             self.state = 'fleeing'
 
         return False
@@ -257,7 +311,35 @@ class Animal(Zombie):
             try: game.active_animals.remove(self)
             except ValueError: pass
 
-        # --- DIVERSIFIED INSTANT RESPAWN ---
+        # --- SPAWN ZOMBIES ON PLAYER RADIUS (Based on XML spawn_zombies flag) ---
+        max_zombies_to_spawn = int(getattr(self, 'spawn_zombies_max', 0))
+        if max_zombies_to_spawn > 0 and getattr(game, 'player', None):
+            from core.entities.zombie.zombie import Zombie
+            from core.placement import find_free_tile
+            
+            max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+            num_z_to_spawn = random.randint(1, max_zombies_to_spawn) if max_zombies_to_spawn > 1 else max_zombies_to_spawn
+            p_center = game.player.rect.center
+            view_radius = getattr(game, 'player_view_radius', 10 * TILE_SIZE)
+
+            for _ in range(num_z_to_spawn):
+                if len(game.zombies) >= max_z_global:
+                    break
+                angle = random.uniform(0, math.pi * 2)
+                dist = random.uniform(TILE_SIZE * 3, max(TILE_SIZE * 5, view_radius))
+                zx = int(p_center[0] + math.cos(angle) * dist)
+                zy = int(p_center[1] + math.sin(angle) * dist)
+                
+                z = Zombie.create_random(zx, zy)
+                if z:
+                    z.layer = self.layer
+                    free_pos = find_free_tile(z.rect, game.obstacles, initial_pos=(zx, zy), max_radius=8)
+                    if free_pos:
+                        z.rect.topleft = free_pos
+                        z.x, z.y = free_pos
+                        game.zombies.append(z)
+
+        # --- DIVERSIFIED RESPAWN (Strictly on self.layer) ---
         from core.map.spawn_manager import get_out_of_sight_spawn_pos
 
         max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
@@ -268,22 +350,11 @@ class Animal(Zombie):
                     spawn_pos = get_out_of_sight_spawn_pos(game)
                     if spawn_pos:
                         diverse_type = AnimalLoader.get_random_animal_type(layer=self.layer)
-                        new_animal = Animal(spawn_pos[0], spawn_pos[1], diverse_type, game=game, layer=self.layer)
-                        game.items_on_ground.append(new_animal)
-
-        max_zombies = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
-        max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-        if getattr(core.data.config, 'ZOMBIE_RESPAWN', True) and max_zombies > 0 and max_z_chunk > 0:
-            from core.entities.zombie.zombie import Zombie
-            num_zombies = int(getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1))
-            if num_zombies > 0:
-                for _ in range(num_zombies):
-                    if len(game.zombies) >= max_zombies:
-                        break
-                    spawn_pos = get_out_of_sight_spawn_pos(game)
-                    if spawn_pos:
-                        zombie = Zombie.create_random(spawn_pos[0], spawn_pos[1])
-                        game.zombies.append(zombie)
+                        if diverse_type:
+                            new_animal = Animal(spawn_pos[0], spawn_pos[1], diverse_type, game=game, layer=self.layer)
+                            game.items_on_ground.append(new_animal)
+                            if hasattr(game, 'active_animals'):
+                                game.active_animals.append(new_animal)
 
         if hasattr(game, 'splashes'):
             game.splashes.append({
