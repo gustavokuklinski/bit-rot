@@ -43,16 +43,16 @@ class ProceduralGeneratorUtils:
                                 target['protected_mask'][gy][gx] = 1
 
     def _blit_template_mapped(self, target_layers, source_tmpl, tx, ty, mw, mh, suffix=''):
+        mask_key = 'protected_mask' + suffix
+        if mask_key not in target_layers:
+            target_layers[mask_key] = [[0 for _ in range(mw)] for _ in range(mh)]
+
         for layer in ['base', 'light', 'ground', 'spawn', 'roof']:
             if layer not in source_tmpl: continue
             target_key = layer + suffix 
             if target_key not in target_layers:
                  target_layers[target_key] = [[' ' for _ in range(mw)] for _ in range(mh)]
             grid = source_tmpl[layer]
-
-            mask_key = 'protected_mask' + suffix
-            if mask_key not in target_layers:
-                 target_layers[mask_key] = [[0 for _ in range(mw)] for _ in range(mh)]
 
             for r in range(len(grid)):
                 for c in range(len(grid[r])):
@@ -61,9 +61,16 @@ class ProceduralGeneratorUtils:
                         gx, gy = tx + c, ty + r
                         if 0 <= gx < mw and 0 <= gy < mh:
                             target_layers[target_key][gy][gx] = tile
+                            target_layers[mask_key][gy][gx] = 1
 
-                            if layer == 'ground':
-                                target_layers[mask_key][gy][gx] = 1
+        # Fully protect the bounding box so pathways never carve into or overwrite building rooms
+        tw = source_tmpl.get('width', 0)
+        th = source_tmpl.get('height', 0)
+        for r in range(th):
+            for c in range(tw):
+                gx, gy = tx + c, ty + r
+                if 0 <= gx < mw and 0 <= gy < mh:
+                    target_layers[mask_key][gy][gx] = 1
 
     def _apply_terrain_smoothing(self, global_layers, w, h):
         """

@@ -7,10 +7,6 @@ from core.data.config import *
 
 class ProceduralGeneratorL2:
     def _populate_l2_spawns(self, layers):
-        """
-        Populates Layer 2 with Zombies on Pathways only.
-        Guarantees NO zombies spawn on obstacles, walls, '@', '#', or void tiles.
-        """
         ground = layers.get('ground')
         base = layers.get('base')
         spawn = layers.get('spawn')
@@ -19,28 +15,29 @@ class ProceduralGeneratorL2:
         
         h = len(ground)
         w = len(ground[0])
+        cx, cy = w // 2, h // 2
         
         pathway_candidates = []
         defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
 
-        for y in range(2, h - 2):
-            for x in range(2, w - 2):
+        for y in range(4, h - 4):
+            for x in range(4, w - 4):
+                if (y < 6 or y >= h - 6) and abs(x - cx) <= 3: continue
+                if (x < 6 or x >= w - 6) and abs(y - cy) <= 3: continue
+
                 base_tile = base[y][x]
                 ground_tile = ground[y][x]
                 spawn_tile = spawn[y][x]
 
-                # Base must be completely empty (no obstacles, no walls, no @, no #)
                 if base_tile != ' ': continue
                 if base_tile in ['@', '#']: continue
                 if base_tile in defs and defs[base_tile].get('is_obstacle', False): continue
 
-                # Ground must be a valid walkable tile (NOT void ' ', NOT @, NOT #, NOT obstacle)
                 if ground_tile in ['@', '#', ' ', '']: continue
                 if ground_tile in defs and defs[ground_tile].get('is_obstacle', False): continue
 
                 if spawn_tile != ' ': continue
 
-                # Check neighbors to avoid spawning right against walls, void, or @ / #
                 has_wall_neighbor = False
                 for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     nb = base[y + dy][x + dx]
@@ -54,7 +51,6 @@ class ProceduralGeneratorL2:
                 if has_wall_neighbor: continue
 
                 g_char = ground_tile.lower()
-                # Include sand_01 pathway as valid candidate
                 if 'dirty' in g_char or 'asphalt' in g_char or 'path' in g_char or 'cave_l2' in g_char or 'sand' in g_char:
                     pathway_candidates.append((x, y))
 
@@ -64,7 +60,6 @@ class ProceduralGeneratorL2:
         zombie_max = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
         total_zombies = zombie_max * total_chunks
 
-        # FIX: Initialize chosen before the condition
         chosen = []
         if pathway_candidates and total_zombies > 0:
             count = min(len(pathway_candidates), total_zombies)
@@ -75,19 +70,13 @@ class ProceduralGeneratorL2:
         print(f"  > Spawning Report L2: {len(chosen)} Zombies on Pathways (Map Limit: {total_zombies}).")
 
     def _decorate_l2_pathways(self, layers, mask):
-        """
-        Decorates L2 pathways with vegetation.
-        """
         ground = layers.get('ground')
         base = layers.get('base')
         if not ground or not base: return
 
         h = len(ground)
         w = len(ground[0])
-        
         veg_options = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_stone', 'garden_tree_11', 'garden_tall_grass', 'garden_stone_powder', 'garden_stone_iron']
-
-        print("Decorating L2 Pathways with vegetation...")
 
         for y in range(h):
             for x in range(w):
@@ -95,65 +84,93 @@ class ProceduralGeneratorL2:
                     if random.random() < 0.15:
                         base[y][x] = random.choice(veg_options)
 
-    def _enforce_l2_contained_borders(self, layers, w, h, conns=None):
+    def _enforce_l2_contained_borders(self, layers, w, h, conns_l2=None):
         """
-        Keeps Layer 2 contained within the chunk.
-        Where chunks connect (and along outer chunk edges), creates a wall with '@'.
+        Enforces Layer 2 boundaries with guaranteed 4-tile wide safe passages
+        without overwriting or modifying any protected building tiles.
         """
         ground = layers.get('ground')
         base = layers.get('base')
+        protected = layers.get('protected_mask')
         if not ground or not base: return
 
         border_tile = '@'
+        path_tile = 'dirty_01'
         cx, cy = w // 2, h // 2
-        conn_depth = 4
-        conn_radius = 4
+        conn_depth = 5
+        c_min, c_max = -2, 2
 
-        # 1. At all chunk connection points, create a wall with '@' on Layer 2
-        if conns:
-            if conns.get('top'):
-                for y in range(conn_depth):
-                    for x in range(max(0, cx - conn_radius), min(w, cx + conn_radius + 1)):
-                        base[y][x] = border_tile
-            if conns.get('bottom'):
-                for y in range(h - conn_depth, h):
-                    for x in range(max(0, cx - conn_radius), min(w, cx + conn_radius + 1)):
-                        base[y][x] = border_tile
-            if conns.get('left'):
-                for x in range(conn_depth):
-                    for y in range(max(0, cy - conn_radius), min(h, cy + conn_radius + 1)):
-                        base[y][x] = border_tile
-            if conns.get('right'):
-                for x in range(w - conn_depth, w):
-                    for y in range(max(0, cy - conn_radius), min(h, cy + conn_radius + 1)):
-                        base[y][x] = border_tile
+        conns = conns_l2 or {}
 
-        # 2. Seal the outer 2-tile perimeter of the chunk so paths never leak into the void
+        # 1. Open 4-tile wide safe passages on boundaries where L2 connects
+        if conns.get('top'):
+            for y in range(conn_depth):
+                for x in range(max(0, cx + c_min), min(w, cx + c_max)):
+                    if protected and protected[y][x] == 1: continue
+                    ground[y][x] = path_tile
+                    base[y][x] = ' '
+
+        if conns.get('bottom'):
+            for y in range(h - conn_depth, h):
+                for x in range(max(0, cx + c_min), min(w, cx + c_max)):
+                    if protected and protected[y][x] == 1: continue
+                    ground[y][x] = path_tile
+                    base[y][x] = ' '
+
+        if conns.get('left'):
+            for x in range(conn_depth):
+                for y in range(max(0, cy + c_min), min(h, cy + c_max)):
+                    if protected and protected[y][x] == 1: continue
+                    ground[y][x] = path_tile
+                    base[y][x] = ' '
+
+        if conns.get('right'):
+            for x in range(w - conn_depth, w):
+                for y in range(max(0, cy + c_min), min(h, cy + c_max)):
+                    if protected and protected[y][x] == 1: continue
+                    ground[y][x] = path_tile
+                    base[y][x] = ' '
+
+        # 2. Seal the outer perimeter everywhere EXCEPT in doorways and protected buildings
         for y in range(h):
             for x in range(w):
-                if x < 2 or x >= w - 2 or y < 2 or y >= h - 2:
-                    if ground[y][x] != ' ' or base[y][x] != ' ':
-                        base[y][x] = border_tile
+                # Never overwrite protected building walls or floors
+                if protected and protected[y][x] == 1:
+                    continue
 
-    def _connect_l2_drunkards(self, layers):
+                is_doorway = False
+                if conns.get('top') and y < conn_depth and (cx + c_min <= x < cx + c_max):
+                    is_doorway = True
+                elif conns.get('bottom') and y >= h - conn_depth and (cx + c_min <= x < cx + c_max):
+                    is_doorway = True
+                elif conns.get('left') and x < conn_depth and (cy + c_min <= y < cy + c_max):
+                    is_doorway = True
+                elif conns.get('right') and x >= w - conn_depth and (cy + c_min <= y < cy + c_max):
+                    is_doorway = True
+
+                if not is_doorway:
+                    if x < 2 or x >= w - 2 or y < 2 or y >= h - 2:
+                        base[y][x] = border_tile
+                        if ground[y][x] == ' ':
+                            ground[y][x] = 'cave_floor_01' if 'cave_floor_01' in ground[y][x] else 'dirty_01'
+
+    def _connect_l2_drunkards(self, layers, conns_l2=None):
         """
-        Carves a 3-tier connected maze contained on Layer 2:
-        1. Primary pathways (width 4, dirty_01).
-        2. Secondary drunkard maze (width 3, dirty_01) with loops and cross-branches.
-        3. Third pathway (strictly 2 tiles narrow, sand_01).
-        Everything is 100% connected.
+        Connects L2 structures to doorway exits without ever carving through buildings.
         """
         ground = layers.get('ground')
         base = layers.get('base')
+        protected = layers.get('protected_mask')
         if not ground or not base: return
 
         h = len(ground)
         w = len(ground[0])
+        cx, cy = w // 2, h // 2
         
         visited = set()
         components = []
 
-        # Identify all rooms/structures inside this chunk
+        # Find existing underground structures and select connection points at their perimeters
         for y in range(h):
             for x in range(w):
                 if (x, y) not in visited and ground[y][x] not in [' ', '@', '#']:
@@ -161,37 +178,49 @@ class ProceduralGeneratorL2:
                     visited.add((x, y))
                     island_pixels = []
                     while stack:
-                        cx, cy = stack.pop()
-                        island_pixels.append((cx, cy))
+                        cur_x, cur_y = stack.pop()
+                        island_pixels.append((cur_x, cur_y))
                         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                            nx, ny = cx + dx, cy + dy
+                            nx, ny = cur_x + dx, cur_y + dy
                             if 0 <= nx < w and 0 <= ny < h:
                                 if (nx, ny) not in visited and ground[ny][nx] not in [' ', '@', '#']:
                                     visited.add((nx, ny))
                                     stack.append((nx, ny))
+
                     if island_pixels and len(island_pixels) >= 4:
-                        avg_x = sum(p[0] for p in island_pixels) // len(island_pixels)
-                        avg_y = sum(p[1] for p in island_pixels) // len(island_pixels)
-                        components.append((avg_x, avg_y))
+                        # Find a perimeter entrance point bordering outside space so we connect to the door
+                        entrance_point = None
+                        for px, py in island_pixels:
+                            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                                nx, ny = px + dx, py + dy
+                                if 0 <= nx < w and 0 <= ny < h:
+                                    if (not protected or protected[ny][nx] == 0) and ground[ny][nx] in [' ', '@', '#']:
+                                        entrance_point = (nx, ny)
+                                        break
+                            if entrance_point:
+                                break
+
+                        if not entrance_point:
+                            avg_x = sum(p[0] for p in island_pixels) // len(island_pixels)
+                            avg_y = sum(p[1] for p in island_pixels) // len(island_pixels)
+                            entrance_point = (avg_x, avg_y)
+
+                        components.append(entrance_point)
+
+        conns = conns_l2 or {}
+        doorway_points = []
+        if conns.get('top'): doorway_points.append((cx, 4))
+        if conns.get('bottom'): doorway_points.append((cx, h - 5))
+        if conns.get('left'): doorway_points.append((4, cy))
+        if conns.get('right'): doorway_points.append((w - 5, cy))
 
         if not components:
-            return  # No L2 structures in this chunk
+            components.append((cx, cy))
 
-        # If only 1 structure, create internal anchors around it to build an underground maze
-        if len(components) == 1:
-            cx, cy = components[0]
-            for angle in [0, math.pi / 2, math.pi, 3 * math.pi / 2]:
-                dist = random.randint(15, 25)
-                nx = max(6, min(w - 7, int(cx + math.cos(angle) * dist)))
-                ny = max(6, min(h - 7, int(cy + math.sin(angle) * dist)))
-                if (nx, ny) != (cx, cy):
-                    components.append((nx, ny))
+        for dp in doorway_points:
+            if dp not in components:
+                components.append(dp)
 
-        print(f"L2 Contained Maze: Connecting {len(components)} points inside chunk...")
-
-        # ------------------------------------------------------------------
-        # 1. PRIMARY PATHWAYS (Width 4, dirty_01): Guaranteed Spanning Tree Connection
-        # ------------------------------------------------------------------
         connected_set = [components[0]]
         unconnected_set = list(components[1:])
 
@@ -215,65 +244,28 @@ class ProceduralGeneratorL2:
             else:
                 break
 
-        # ------------------------------------------------------------------
-        # 2. SECONDARY DRUNKARD PATHWAY (Width 3, dirty_01): Connected Maze Loops
-        # ------------------------------------------------------------------
         if len(components) >= 3:
             for i in range(len(components)):
                 c1 = components[i]
                 c2 = components[(i + 2) % len(components)]
-                if random.random() < 0.75:
-                    self._carve_drunkard_path(layers, c1, c2, path_width=3, path_tile='dirty_01')
-        elif len(components) == 2:
-            self._carve_drunkard_path(layers, components[0], components[1], path_width=3, path_tile='dirty_01')
-
-        num_maze_loops = max(2, len(components))
-        for _ in range(num_maze_loops):
-            start_comp = random.choice(components)
-            angle = random.uniform(0, math.pi * 2)
-            dist = random.randint(12, 28)
-            mid_x = max(6, min(w - 7, int(start_comp[0] + math.cos(angle) * dist)))
-            mid_y = max(6, min(h - 7, int(start_comp[1] + math.sin(angle) * dist)))
-            
-            end_comp = random.choice(components)
-            self._carve_drunkard_path(layers, start_comp, (mid_x, mid_y), path_width=3, path_tile='dirty_01')
-            self._carve_drunkard_path(layers, (mid_x, mid_y), end_comp, path_width=3, path_tile='dirty_01')
-
-        # ------------------------------------------------------------------
-        # 3. THIRD PATHWAY (Width 2, sand_01): 2-Tile Narrow Walkthrough
-        # ------------------------------------------------------------------
-        num_narrow = max(2, len(components) // 2 + 1)
-        for i in range(num_narrow):
-            c1 = components[i % len(components)]
-            c2 = components[(i + max(1, len(components) // 2)) % len(components)]
-            # [FIX] Carve third pathway strictly with sand_01
-            self._carve_drunkard_path(layers, c1, c2, path_width=2, path_tile='sand_01')
+                if random.random() < 0.65:
+                    self._carve_drunkard_path(layers, c1, c2, path_width=4, path_tile='dirty_01')
 
     def _carve_drunkard_path(self, layers, start, end, path_width=4, path_tile='dirty_01'):
         """
-        Carves a drunkard pathway with support for widths 4, 3, and 2, and selectable path_tile.
-        - path_width 2 creates a strictly 2-tile narrow crawlway.
-        - Automatically clears walls in the core and walls borders with '@'.
+        Carves a 4-tile wide safe pathway. Protects all building tiles from being altered.
         """
         cx, cy = start
         tx, ty = end
         
         ground = layers['ground']
         base = layers['base']
+        protected = layers.get('protected_mask')
         h, w = len(ground), len(ground[0])
         
         border_tile = '@'
-        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
-
-        if path_width >= 4:
-            core_min, core_max = -2, 2
-            border_min, border_max = -3, 3
-        elif path_width == 3:
-            core_min, core_max = -1, 2
-            border_min, border_max = -2, 3
-        else:  # path_width == 2 (strictly 2 tiles narrow)
-            core_min, core_max = 0, 2
-            border_min, border_max = -1, 3
+        core_min, core_max = -2, 2
+        border_min, border_max = -3, 3
         
         max_steps = (abs(tx - cx) + abs(ty - cy)) * 6 + 40
         steps = 0
@@ -285,27 +277,30 @@ class ProceduralGeneratorL2:
                 for dx in range(border_min, border_max):
                     nx, ny = cx + dx, cy + dy
                     if 0 <= nx < w and 0 <= ny < h:
+                        # NEVER overwrite or clear any part of an L2 building
+                        if protected and protected[ny][nx] == 1:
+                            continue
+
                         is_core = (core_min <= dx < core_max and core_min <= dy < core_max)
                         
                         if is_core:
                             current_tile = ground[ny][nx]
                             if current_tile in [' ', border_tile, '#']:
                                 ground[ny][nx] = path_tile
-                                if base[ny][nx] in ['@', '#', ' '] or (defs.get(base[ny][nx], {}).get('is_obstacle', False) and base[ny][nx] != '@'):
-                                    base[ny][nx] = ' '
+                            if base[ny][nx] != ' ':
+                                base[ny][nx] = ' '
                         else:
                             if ground[ny][nx] in [' ', '#']:
                                 ground[ny][nx] = border_tile
             
-            # Biased random walk towards target
             dist_x = tx - cx
             dist_y = ty - cy
             choice = random.random()
             
-            if choice < 0.45 and dist_x != 0:
+            if choice < 0.50 and dist_x != 0:
                 dx_step = 1 if dist_x > 0 else -1
                 dy_step = 0
-            elif choice < 0.90 and dist_y != 0:
+            elif choice < 0.95 and dist_y != 0:
                 dx_step = 0
                 dy_step = 1 if dist_y > 0 else -1
             else:
@@ -319,9 +314,8 @@ class ProceduralGeneratorL2:
             cx += dx_step
             cy += dy_step
             
-            # Keep paths contained safely inside the chunk
-            cx = max(4, min(w - 5, cx))
-            cy = max(4, min(h - 5, cy))
+            cx = max(3, min(w - 4, cx))
+            cy = max(3, min(h - 4, cy))
             
             if abs(cx - tx) <= 1 and abs(cy - ty) <= 1:
                 break

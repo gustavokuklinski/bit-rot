@@ -26,9 +26,9 @@ def _get_friendly_value_display(key, value):
     if 'multiplier' in key or 'chance' in key or 'percent' in key:
         return f"({val_float*100:.0f}%)"
         
-    if key == 'map_chunks':
+    if key in ['map_chunks', 'chunks']:
         size = int(val_float)
-        return f"({size}x{size} {tr('ui', 'World')})"
+        return f"({size} {tr('ui', 'Chunks')})"
 
     if key == 'view_radius':
         return f"({int(val_float)} {tr('ui', 'tiles')})"
@@ -546,9 +546,10 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             elif event.key == pygame.K_RETURN: 
                 state['active_setting'] = None
             else: 
-                setting_obj['value'] = current_val + event.unicode
-                _clone_to_custom(state)
-                state['world_unsaved'] = True
+                if event.unicode.isnumeric() if key in ['map_chunks', 'chunks'] else event.unicode.isprintable():
+                    setting_obj['value'] = current_val + event.unicode
+                    _clone_to_custom(state)
+                    state['world_unsaved'] = True
                 
     elif event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
         state['active_setting'] = None

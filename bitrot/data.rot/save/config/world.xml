@@ -12,11 +12,11 @@
         <water_threshold value="100" name="Minimum % to start autodrink" default="100"/>
     </player>
     <map>
-        <map_chunks value="2" name="Map size" default="2"/>
+        <map_chunks value="3" name="Map size" default="3"/>
         <seed value="" name="World seed" default=""/>
     </map>
     <item_spawning>
-        <item_spawn_chance_multiplier value="0.1" name="Global Multiplier" default="0.1"/>
+        <item_spawn_chance_multiplier value="0.3" name="Global Multiplier" default="0.3"/>
     </item_spawning>
     <vehicle>
         <vehicle_spawn_per_chunk value="6" name="Max vehicle spawn on chunk" default="6"/>
@@ -37,8 +37,8 @@
     <npc>
         <npc_spawn_per_chunk value="4" name="Max NPC spawn on chunk" default="4"/>
         <spawn value="2" name="NPCs per spawn" default="2"/>
-        <static_percent value="0.40" name="Static NPC percentage" default="0.40"/>
-        <hostile_percent value="0.60" name="Hostile NPC percentage" default="0.60"/>
+        <static_percent value="0.50" name="Static NPC percentage" default="0.50"/>
+        <hostile_percent value="0.50" name="Hostile NPC percentage" default="0.50"/>
         <respawn value="true" name="NPC respawn on death" default="true"/>
     </npc>
     <animal>

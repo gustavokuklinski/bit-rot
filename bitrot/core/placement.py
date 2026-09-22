@@ -27,8 +27,15 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                     if abs(i) < radius and abs(j) < radius:
                         continue
 
-                    rect.x = start_x + i * TILE_SIZE
-                    rect.y = start_y + j * TILE_SIZE
+                    cand_x = start_x + i * TILE_SIZE
+                    cand_y = start_y + j * TILE_SIZE
+
+                    # Prevent returning negative or out-of-bounds positions
+                    if cand_x < 0 or cand_y < 0:
+                        continue
+
+                    rect.x = cand_x
+                    rect.y = cand_y
 
                     if not _is_colliding(rect, obstacles):
                         return (rect.x, rect.y)

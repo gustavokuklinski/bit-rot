@@ -39,7 +39,7 @@ class ProceduralGenerator(
     self.templates = load_building_templates(self.buildings_path)
 
     self.default_chunk_settings = {
-        'urban_chunk_ratio': 0.6,  # 50% Urban towns, 50% Nature & Forests
+        'urban_chunk_ratio': 0.55,
         'min_urban_chunks': 1,
         'military_chunk_count': 1,
         'force_start_urban': True,
@@ -56,6 +56,10 @@ class ProceduralGenerator(
     self.grid_w = MAP_CHUNKS
     self.grid_h = MAP_CHUNKS
     self.chunk_path = []
+    self.active_chunks = set()
+    self.isolated_island_chunks = set()
+    self.start_chunk = (0, 0)
+    self.military_chunk = (0, 0)
     self.connections_grid = []
     self.chunk_priority_map = {}
     self.chunk_l2_priority_map = {}
@@ -65,67 +69,139 @@ class ProceduralGenerator(
 
     self._init_templates()
 
-  def _generate_hamiltonian_progression(self, w, h):
-    """Generates a randomized winding progression path visiting all chunks."""
-    total_nodes = w * h
-    all_cells = [(x, y) for x in range(w) for y in range(h)]
+  def _link_conns(self, grid, x1, y1, x2, y2, road_type='asphalt', link_l1=True, link_l2=True):
+    if x2 == x1 + 1 and y2 == y1:
+      if link_l1:
+        grid[y1][x1]['right'] = True
+        grid[y1][x1]['right_type'] = road_type
+        grid[y2][x2]['left'] = True
+        grid[y2][x2]['left_type'] = road_type
+      if link_l2:
+        grid[y1][x1]['l2_right'] = True
+        grid[y2][x2]['l2_left'] = True
+    elif x2 == x1 - 1 and y2 == y1:
+      if link_l1:
+        grid[y1][x1]['left'] = True
+        grid[y1][x1]['left_type'] = road_type
+        grid[y2][x2]['right'] = True
+        grid[y2][x2]['right_type'] = road_type
+      if link_l2:
+        grid[y1][x1]['l2_left'] = True
+        grid[y2][x2]['l2_right'] = True
+    elif y2 == y1 + 1 and x2 == x1:
+      if link_l1:
+        grid[y1][x1]['bottom'] = True
+        grid[y1][x1]['bottom_type'] = road_type
+        grid[y2][x2]['top'] = True
+        grid[y2][x2]['top_type'] = road_type
+      if link_l2:
+        grid[y1][x1]['l2_bottom'] = True
+        grid[y2][x2]['l2_top'] = True
+    elif y2 == y1 - 1 and x2 == x1:
+      if link_l1:
+        grid[y1][x1]['top'] = True
+        grid[y1][x1]['top_type'] = road_type
+        grid[y2][x2]['bottom'] = True
+        grid[y2][x2]['bottom_type'] = road_type
+      if link_l2:
+        grid[y1][x1]['l2_top'] = True
+        grid[y2][x2]['l2_bottom'] = True
 
-    if total_nodes % 2 == 1:
-      possible_starts = [c for c in all_cells if (c[0] + c[1]) % 2 == 0]
-    else:
-      possible_starts = list(all_cells)
+  def _generate_evolving_island_path(self, target_count):
+    """
+    Generates an evolving path of 128x128 chunks with branches,
+    islands (target_count // 2, with Military Chunk always as an island),
+    and an interconnected L2 underground network with 4-tile passages.
+    """
+    DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+    best_result = None
 
-    def get_unvisited_neighbors(cx, cy, visited):
-      nbrs = []
-      for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-        nx, ny = cx + dx, cy + dy
-        if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
-          nbrs.append((nx, ny))
-      return nbrs
+    for attempt in range(300):
+      current = (0, 0)
+      spine = [current]
+      visited = {current}
+      current_dir = (1, 0)
+      spine_target = max(2, int(target_count * 0.70))
 
-    found_path = None
-    for _ in range(500):
-      start = random.choice(possible_starts)
-      path = [start]
-      visited = {start}
+      while len(spine) < spine_target:
+        valid_dirs = []
+        for d in DIRS:
+          nxt = (current[0] + d[0], current[1] + d[1])
+          if nxt not in visited:
+            valid_dirs.append(d)
 
-      while len(path) < total_nodes:
-        curr = path[-1]
-        nbrs = get_unvisited_neighbors(curr[0], curr[1], visited)
-        if not nbrs:
+        if not valid_dirs:
           break
-        nbrs.sort(
-            key=lambda n: (
-                len(get_unvisited_neighbors(n[0], n[1], visited)),
-                random.random(),
-            )
-        )
-        nxt = nbrs[0]
-        visited.add(nxt)
-        path.append(nxt)
 
-      if len(path) == total_nodes:
-        found_path = path
+        if current_dir in valid_dirs and random.random() < 0.65:
+          chosen_dir = current_dir
+        else:
+          perp_dirs = [d for d in valid_dirs if d != current_dir and (d[0] == -current_dir[0] or d[1] == -current_dir[1])]
+          if perp_dirs and random.random() < 0.80:
+            chosen_dir = random.choice(perp_dirs)
+          else:
+            chosen_dir = random.choice(valid_dirs)
+
+        current_dir = chosen_dir
+        current = (current[0] + chosen_dir[0], current[1] + chosen_dir[1])
+        visited.add(current)
+        spine.append(current)
+
+      all_cells = list(spine)
+      branch_attempts = 0
+      while len(all_cells) < target_count and branch_attempts < 600:
+        branch_attempts += 1
+        parent = random.choice(all_cells)
+        free_neighbors = []
+        for d in DIRS:
+          cand = (parent[0] + d[0], parent[1] + d[1])
+          if cand not in visited:
+            free_neighbors.append(cand)
+
+        if free_neighbors:
+          new_cell = random.choice(free_neighbors)
+          visited.add(new_cell)
+          all_cells.append(new_cell)
+
+      if len(all_cells) >= target_count:
+        best_result = (spine, all_cells[:target_count])
         break
 
-    if not found_path:
-      base = []
-      for y in range(h):
-        xs = range(w) if y % 2 == 0 else range(w - 1, -1, -1)
-        for x in xs:
-          base.append((x, y))
-      if random.random() < 0.5:
-        base.reverse()
-      flip_h = random.choice([True, False])
-      flip_v = random.choice([True, False])
-      found_path = [
-          ((w - 1 - x) if flip_h else x, (h - 1 - y) if flip_v else y)
-          for (x, y) in base
-      ]
+    if not best_result:
+      spine = []
+      all_cells = []
+      w_fallback = 6
+      x, y = 0, 0
+      dx = 1
+      while len(all_cells) < target_count:
+        cell = (x, y)
+        all_cells.append(cell)
+        spine.append(cell)
+        x += dx
+        if x >= w_fallback:
+          x = w_fallback - 1
+          y += 1
+          dx = -1
+        elif x < 0:
+          x = 0
+          y += 1
+          dx = 1
+      best_result = (spine, all_cells)
 
-    path = found_path
-    start_chunk = path[0]
-    military_chunk = path[-1]
+    spine, all_cells = best_result
+
+    min_x = min(c[0] for c in all_cells)
+    min_y = min(c[1] for c in all_cells)
+
+    norm_cells = [(c[0] - min_x, c[1] - min_y) for c in all_cells]
+    norm_spine = [(c[0] - min_x, c[1] - min_y) for c in spine]
+
+    active_set = set(norm_cells)
+    start_chunk = norm_spine[0]
+    military_chunk = norm_spine[-1]
+
+    max_w = max(c[0] for c in norm_cells) + 1
+    max_h = max(c[1] for c in norm_cells) + 1
 
     connections_grid = [[
         {
@@ -137,27 +213,97 @@ class ProceduralGenerator(
             'bottom_type': 'asphalt',
             'left_type': 'asphalt',
             'right_type': 'asphalt',
+            'l2_top': False,
+            'l2_bottom': False,
+            'l2_left': False,
+            'l2_right': False,
         }
-        for _ in range(w)
-    ] for _ in range(h)]
+        for _ in range(max_w)
+    ] for _ in range(max_h)]
 
-    for i in range(len(path) - 1):
-      x1, y1 = path[i]
-      x2, y2 = path[i + 1]
-      if x2 == x1 + 1:
-        connections_grid[y1][x1]['right'] = True
-        connections_grid[y2][x2]['left'] = True
-      elif x2 == x1 - 1:
-        connections_grid[y1][x1]['left'] = True
-        connections_grid[y2][x2]['right'] = True
-      elif y2 == y1 + 1:
-        connections_grid[y1][x1]['bottom'] = True
-        connections_grid[y2][x2]['top'] = True
-      elif y2 == y1 - 1:
-        connections_grid[y1][x1]['top'] = True
-        connections_grid[y2][x2]['bottom'] = True
+    # 1. Connect the spine on both L1 and L2
+    for i in range(len(norm_spine) - 1):
+      x1, y1 = norm_spine[i]
+      x2, y2 = norm_spine[i + 1]
+      self._link_conns(connections_grid, x1, y1, x2, y2, 'asphalt', link_l1=True, link_l2=True)
 
-    return path, connections_grid
+    # 2. Connect branch nodes and form loop shortcuts
+    for cell in norm_cells:
+      cx, cy = cell
+      for dx, dy in DIRS:
+        nx, ny = cx + dx, cy + dy
+        if (nx, ny) in active_set:
+          already_connected = False
+          if dx == 1 and connections_grid[cy][cx]['right']: already_connected = True
+          elif dx == -1 and connections_grid[cy][cx]['left']: already_connected = True
+          elif dy == 1 and connections_grid[cy][cx]['bottom']: already_connected = True
+          elif dy == -1 and connections_grid[cy][cx]['top']: already_connected = True
+
+          if not already_connected:
+            has_any_conn = (connections_grid[cy][cx]['top'] or connections_grid[cy][cx]['bottom'] or
+                            connections_grid[cy][cx]['left'] or connections_grid[cy][cx]['right'])
+            if not has_any_conn or random.random() < 0.25:
+              self._link_conns(connections_grid, cx, cy, nx, ny, 'dirty', link_l1=True, link_l2=True)
+
+    # 3. Connect all adjacent chunks on Layer 2 (Underground)
+    for cell in norm_cells:
+      cx, cy = cell
+      for dx, dy in DIRS:
+        nx, ny = cx + dx, cy + dy
+        if (nx, ny) in active_set:
+          self._link_conns(connections_grid, cx, cy, nx, ny, link_l1=False, link_l2=True)
+
+    # 4. Generate Islands: Exactly divided by 2 (num_islands = target_count // 2)
+    # Military Chunk is ALWAYS an island
+    num_islands = max(1, target_count // 2)
+    isolated_islands = {military_chunk}
+
+    # Pick additional islands if num_islands > 1
+    other_candidates = [c for c in norm_cells if c != start_chunk and c != military_chunk]
+    if other_candidates and num_islands > 1:
+      needed_additional = num_islands - 1
+      leaf_candidates = []
+      for c in other_candidates:
+        cx, cy = c
+        l1_count = sum(1 for d in [connections_grid[cy][cx]['top'], connections_grid[cy][cx]['bottom'],
+                                   connections_grid[cy][cx]['left'], connections_grid[cy][cx]['right']] if d)
+        if l1_count <= 1:
+          leaf_candidates.append(c)
+
+      random.shuffle(leaf_candidates)
+      random.shuffle(other_candidates)
+
+      pool = leaf_candidates + [c for c in other_candidates if c not in leaf_candidates]
+      for c in pool[:needed_additional]:
+        isolated_islands.add(c)
+
+    # Sever all surface L1 connections for all designated island chunks
+    for island_coord in isolated_islands:
+      ix, iy = island_coord
+      if connections_grid[iy][ix]['top']:
+        connections_grid[iy][ix]['top'] = False
+        connections_grid[iy - 1][ix]['bottom'] = False
+      if connections_grid[iy][ix]['bottom']:
+        connections_grid[iy][ix]['bottom'] = False
+        connections_grid[iy + 1][ix]['top'] = False
+      if connections_grid[iy][ix]['left']:
+        connections_grid[iy][ix]['left'] = False
+        connections_grid[iy][ix - 1]['right'] = False
+      if connections_grid[iy][ix]['right']:
+        connections_grid[iy][ix]['right'] = False
+        connections_grid[iy][ix + 1]['left'] = False
+
+      # Ensure island is linked on L2 to at least one adjacent chunk
+      has_l2 = (connections_grid[iy][ix]['l2_top'] or connections_grid[iy][ix]['l2_bottom'] or
+                connections_grid[iy][ix]['l2_left'] or connections_grid[iy][ix]['l2_right'])
+      if not has_l2:
+        for dx, dy in DIRS:
+          nx, ny = ix + dx, iy + dy
+          if (nx, ny) in active_set:
+            self._link_conns(connections_grid, ix, iy, nx, ny, link_l1=False, link_l2=True)
+            break
+
+    return norm_spine, norm_cells, active_set, connections_grid, max_w, max_h, start_chunk, military_chunk, isolated_islands
 
   def generate_world(self, seed_pattern=None, regenerate=False):
     self.chunk_size = core.data.config.CHUNK_SIZE
@@ -171,6 +317,10 @@ class ProceduralGenerator(
         self.grid_w = meta.get('grid_w', core.data.config.MAP_CHUNKS)
         self.grid_h = meta.get('grid_h', core.data.config.MAP_CHUNKS)
         self.chunk_path = [tuple(c) for c in meta.get('chunk_path', [])]
+        self.active_chunks = {tuple(c) for c in meta.get('active_chunks', self.chunk_path)}
+        self.isolated_island_chunks = {tuple(c) for c in meta.get('isolated_island_chunks', [])}
+        self.start_chunk = tuple(meta.get('start_chunk', self.chunk_path[0]))
+        self.military_chunk = tuple(meta.get('military_chunk', self.chunk_path[-1]))
         self.connections_grid = meta.get('connections_grid', [])
         self.chunk_priority_map = {
             tuple(map(int, k.split('_'))): v
@@ -190,7 +340,7 @@ class ProceduralGenerator(
             tuple(c) for c in meta.get('generated_chunks', [])
         }
         self.game.generator = self
-        start_gx, start_gy = self.chunk_path[0]
+        start_gx, start_gy = self.start_chunk
         return f'map_L1_{start_gx}_{start_gy}_map.csv'
       except Exception as e:
         print(f'Error reading existing macro_world.json: {e}')
@@ -200,45 +350,44 @@ class ProceduralGenerator(
     if seed_pattern and '-' in seed_pattern:
       parts = seed_pattern.split('-', 1)
       n_part = parts[0] or str(current_chunks)
-      grid_w = int(n_part)
-      grid_h = int(n_part)
+      try:
+        req_n = int(n_part)
+      except ValueError:
+        req_n = current_chunks
       actual_seed = parts[1] or 'DEFAULT'
     else:
-      grid_w, grid_h = current_chunks, current_chunks
+      req_n = current_chunks
       actual_seed = seed_pattern or 'DEFAULT'
 
-    self.grid_w = grid_w
-    self.grid_h = grid_h
+    target_chunks = max(2, req_n)
 
-    print(f'[ProceduralGenerator] Seed: {actual_seed} | Size: {grid_w}x{grid_h}')
+    print(f'[ProceduralGenerator] Seed: {actual_seed} | Target Chunks: {target_chunks} (Fixed 128x128)')
     random.seed(actual_seed)
 
     if not os.path.exists(self.output_folder):
       os.makedirs(self.output_folder)
 
-    # 1. Progression Path
-    self.chunk_path, self.connections_grid = (
-        self._generate_hamiltonian_progression(grid_w, grid_h)
-    )
-    start_gx, start_gy = self.chunk_path[0]
-    military_gx, military_gy = self.chunk_path[-1]
-    mil_coord = (military_gx, military_gy)
-    start_coord = (start_gx, start_gy)
+    # 1. Generate Evolving Island Path (Military Chunk ALWAYS an island, islands = target_chunks // 2)
+    (self.chunk_path, all_cells, self.active_chunks,
+     self.connections_grid, self.grid_w, self.grid_h,
+     self.start_chunk, self.military_chunk,
+     self.isolated_island_chunks) = self._generate_evolving_island_path(target_chunks)
+
+    start_coord = self.start_chunk
+    mil_coord = self.military_chunk
 
     # 2. Divide intermediate chunks into Forest/Nature vs Urban
-    intermediate = [c for c in self.chunk_path if c != mil_coord]
+    intermediate = [c for c in all_cells if c != mil_coord]
     non_start_intermediate = [c for c in intermediate if c != start_coord]
     random.shuffle(non_start_intermediate)
 
-    # Reserve 40% - 50% of the world strictly for Forest/Wilderness
-    num_forest = max(1, int(len(non_start_intermediate) * 0.45)) if non_start_intermediate else 0
+    num_forest = max(0, int(len(non_start_intermediate) * 0.40)) if non_start_intermediate else 0
     self.forest_chunks = set(non_start_intermediate[:num_forest])
     self.urban_chunks = set(non_start_intermediate[num_forest:])
-    self.urban_chunks.add(start_coord)  # Start chunk is residential/urban
+    self.urban_chunks.add(start_coord)
 
     num_urban = max(1, len(self.urban_chunks))
 
-    # --- BALANCED REALISTIC LIMITS PER CHUNK (No more 640 buildings!) ---
     self.global_building_limits = {
         'Building': num_urban * 3,
         'Stores': num_urban * 2,
@@ -252,7 +401,7 @@ class ProceduralGenerator(
         'Dungeon': num_urban * 2,
     }
 
-    # 3. Separate ALL Military Buildings (Strict Exclusivity)
+    # 3. Separate Military Buildings
     self.military_deck = []
     for t_name in list(self.templates.keys()):
       low = t_name.lower()
@@ -266,7 +415,7 @@ class ProceduralGenerator(
         (t for t in self.categorized_templates.get('Petrol', [])), None
     )
 
-    # 4. Build standard global deck (STRICTLY NO MILITARY BUILDINGS IN THIS DECK)
+    # 4. Build standard global deck
     global_deck = []
     for category, limit in self.global_building_limits.items():
       if category in ('Cave', 'Military', 'Heli'):
@@ -290,7 +439,6 @@ class ProceduralGenerator(
 
     random.shuffle(global_deck)
 
-    # Global L2 Deck
     global_l2_deck = []
     for category, limit in self.global_l2_limits.items():
       available = self.categorized_l2_templates.get(category, [])
@@ -307,17 +455,15 @@ class ProceduralGenerator(
     random.shuffle(global_l2_deck)
 
     # 5. Assign Chunks
-    all_coords = [(x, y) for x in range(grid_w) for y in range(grid_h)]
-    self.chunk_priority_map = {coord: [] for coord in all_coords}
-    self.chunk_l2_priority_map = {coord: [] for coord in all_coords}
+    self.chunk_priority_map = {coord: [] for coord in all_cells}
+    self.chunk_l2_priority_map = {coord: [] for coord in all_cells}
 
-    # Cave links
+    # Guarantee cave/stair connections in every chunk
     cave_temps = self.categorized_templates.get('Cave', [])
     if cave_temps:
-      for coord in all_coords:
+      for coord in all_cells:
         self.chunk_priority_map[coord].append(random.choice(cave_temps))
 
-    # ASSIGN MILITARY CHUNK EXCLUSIVELY
     if self.military_deck:
       self.chunk_priority_map[mil_coord].extend(self.military_deck)
     if self.heli_template:
@@ -325,7 +471,6 @@ class ProceduralGenerator(
     if self.mil_petrol_template:
       self.chunk_priority_map[mil_coord].append(self.mil_petrol_template)
 
-    # Distribute standard urban buildings ONLY across Urban Chunks
     urban_list = [c for c in self.urban_chunks if c != mil_coord]
     if urban_list and global_deck:
       idx = 0
@@ -339,49 +484,23 @@ class ProceduralGenerator(
         self.chunk_l2_priority_map[urban_list[idx]].append(tmpl)
         idx = (idx + 1) % len(urban_list)
 
-    # Forest Chunks get NO urban decks; only optional small solitary cabins/sheds
+    # Forest Chunks: optional small shed
     shed_pool = [
         s
         for s in self.categorized_templates.get('Shed', [])
         if 'military' not in s.lower()
     ]
     for fc in self.forest_chunks:
-      if shed_pool and random.random() < 0.35:
+      if shed_pool and random.random() < 0.20:
         self.chunk_priority_map[fc].append(random.choice(shed_pool))
-    
-    # Connect adjacent empty/forest chunks to create shortcuts
-    for gy in range(grid_h):
-      for gx in range(grid_w):
-          if (gx, gy) in self.forest_chunks:
-              # Check Right Neighbor
-              if gx + 1 < grid_w and (gx + 1, gy) in self.forest_chunks:
-                  self.connections_grid[gy][gx]['right'] = True
-                  self.connections_grid[gy][gx+1]['left'] = True
-                  # Use 'dirty' or 'sand' for shortcuts to distinguish from main urban highways
-                  self.connections_grid[gy][gx]['right_type'] = 'dirty'
-                  self.connections_grid[gy][gx+1]['left_type'] = 'dirty'
-                  
-              # Check Bottom Neighbor
-              if gy + 1 < grid_h and (gx, gy + 1) in self.forest_chunks:
-                  self.connections_grid[gy][gx]['bottom'] = True
-                  self.connections_grid[gy+1][gx]['top'] = True
-                  self.connections_grid[gy][gx]['bottom_type'] = 'dirty'
-                  self.connections_grid[gy+1][gx]['top_type'] = 'dirty'
-  # -----------------------------------------
 
-    # 6. Save & Pre-generate Starting Chunks
-    # 6. Save & Pre-generate ALL Chunks
+    # 6. Generate ALL active chunks (fixed 128x128)
     self.game.generator = self
     self.generated_chunks = set()
 
-
-    print(f'[ProceduralGenerator] Generating ALL {grid_w * grid_h} chunks...')
-    for gy in range(grid_h):
-        for gx in range(grid_w):
-            self.generate_chunk_on_demand(gx, gy)
-
-
-
+    print(f'[ProceduralGenerator] Generating {len(self.active_chunks)} evolving island chunks of 128x128 (Islands: {len(self.isolated_island_chunks)})...')
+    for (gx, gy) in self.active_chunks:
+      self.generate_chunk_on_demand(gx, gy)
 
     # 7. Generate JPG Map Images
     print('[ProceduralGenerator] Exporting map images...')
@@ -393,11 +512,13 @@ class ProceduralGenerator(
       with open(macro_meta_path, 'w') as f:
         json.dump(
             {
-                'grid_w': grid_w,
-                'grid_h': grid_h,
+                'grid_w': self.grid_w,
+                'grid_h': self.grid_h,
+                'active_chunks': [list(c) for c in self.active_chunks],
+                'isolated_island_chunks': [list(c) for c in self.isolated_island_chunks],
                 'chunk_path': self.chunk_path,
-                'start_chunk': [start_gx, start_gy],
-                'military_chunk': [military_gx, military_gy],
+                'start_chunk': list(self.start_chunk),
+                'military_chunk': list(self.military_chunk),
                 'connections_grid': self.connections_grid,
                 'chunk_priority_map': {
                     f'{k[0]}_{k[1]}': v
@@ -417,25 +538,51 @@ class ProceduralGenerator(
     except Exception as e:
       print(f'Error saving macro_world.json: {e}')
 
+    start_gx, start_gy = self.start_chunk
     return f'map_L1_{start_gx}_{start_gy}_map.csv'
 
   def generate_chunk_on_demand(self, gx, gy):
-    """Generates a chunk's CSV files dynamically when entered."""
-    if (gx, gy) in self.generated_chunks:
+    """Generates a fixed 128x128 chunk CSV dynamically when entered."""
+    if (gx, gy) in self.generated_chunks or (gx, gy) not in self.active_chunks:
       return
 
-    conns = self.connections_grid[gy][gx]
-    is_start = (gx, gy) == self.chunk_path[0]
-    is_military = (gx, gy) == self.chunk_path[-1]
-    is_forest = (gx, gy) in self.forest_chunks
+    conns_raw = self.connections_grid[gy][gx]
+    is_start = ((gx, gy) == self.start_chunk)
+    is_military = ((gx, gy) == self.military_chunk)
+    is_forest = ((gx, gy) in self.forest_chunks)
+    is_isolated = ((gx, gy) in self.isolated_island_chunks)
+
+    conns_l1 = {
+        'top': conns_raw.get('top', False),
+        'bottom': conns_raw.get('bottom', False),
+        'left': conns_raw.get('left', False),
+        'right': conns_raw.get('right', False),
+        'top_type': conns_raw.get('top_type', 'asphalt'),
+        'bottom_type': conns_raw.get('bottom_type', 'asphalt'),
+        'left_type': conns_raw.get('left_type', 'asphalt'),
+        'right_type': conns_raw.get('right_type', 'asphalt'),
+    }
+
+    conns_l2 = {
+        'top': conns_raw.get('l2_top', False),
+        'bottom': conns_raw.get('l2_bottom', False),
+        'left': conns_raw.get('l2_left', False),
+        'right': conns_raw.get('l2_right', False),
+    }
 
     assigned_buildings = self.chunk_priority_map.get((gx, gy), [])
     assigned_l2 = self.chunk_l2_priority_map.get((gx, gy), [])
 
-    coast_left = gx == 0
-    coast_right = gx == self.grid_w - 1
-    coast_top = gy == 0
-    coast_bottom = gy == self.grid_h - 1
+    # An island chunk has full beach borders on all 4 sides.
+    # A mainland chunk has a beach coast on any side where there is no L1 pathway
+    # (including when facing an ocean void or an adjacent island chunk).
+    if is_isolated:
+      coast_left = coast_right = coast_top = coast_bottom = True
+    else:
+      coast_left = not conns_l1['left']
+      coast_right = not conns_l1['right']
+      coast_top = not conns_l1['top']
+      coast_bottom = not conns_l1['bottom']
 
     c_w = self.chunk_size
     c_h = self.chunk_size
@@ -443,7 +590,7 @@ class ProceduralGenerator(
     chunk_data = self._generate_chunk_data(
         gx,
         gy,
-        conns,
+        conns_l1,
         is_start=is_start,
         assigned_templates=assigned_buildings,
         assigned_l2_templates=assigned_l2,
@@ -455,6 +602,7 @@ class ProceduralGenerator(
         coast_right=coast_right,
         coast_top=coast_top,
         coast_bottom=coast_bottom,
+        conns_l2=conns_l2,
     )
 
     l1_layers = {
@@ -474,7 +622,7 @@ class ProceduralGenerator(
     self._apply_sand_smoothing(l1_layers, c_w, c_h, 'beach_sand_01')
     self._apply_asphalt_smoothing(l1_layers, c_w, c_h)
 
-    # Vehicles & Animals (More animals in forests, more vehicles on roads)
+    # Vehicles & Animals
     self._scatter_vehicles(l1_layers, None, c_w, c_h)
     self._scatter_animals(l1_layers, None, c_w, c_h)
     if hasattr(self, '_scatter_quest_items'):
@@ -499,9 +647,9 @@ class ProceduralGenerator(
         if not found:
           l1_layers['spawn'][c_h // 2][c_w // 2] = 'P'
 
-    # Layer 2 Processing
-    self._connect_l2_drunkards(l2_layers)
-    self._enforce_l2_contained_borders(l2_layers, c_w, c_h, conns)
+    # Layer 2 Processing: 4-tile wide safe passages across chunks
+    self._connect_l2_drunkards(l2_layers, conns_l2=conns_l2)
+    self._enforce_l2_contained_borders(l2_layers, c_w, c_h, conns_l2=conns_l2)
     self._populate_l2_spawns(l2_layers)
     if hasattr(self, '_scatter_animals'):
       self._scatter_animals(l2_layers, None, c_w, c_h)
@@ -513,9 +661,9 @@ class ProceduralGenerator(
 
     self.generated_chunks.add((gx, gy))
     chunk_type_lbl = (
-        'MILITARY' if is_military else ('FOREST' if is_forest else 'URBAN')
+        'MILITARY ISLAND' if is_military else ('ISOLATED ISLAND' if is_isolated else ('FOREST' if is_forest else 'URBAN'))
     )
     print(
         f'[ProceduralGenerator] Generated {chunk_type_lbl} chunk ({gx},'
-        f' {gy}) successfully.'
+        f' {gy}) [128x128] successfully.'
     )

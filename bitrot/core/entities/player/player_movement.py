@@ -47,7 +47,6 @@ class PlayerMovement:
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
             
-            # --- Dynamic Pixel-Perfect Exit Logic ---
             exit_points = [
                 (self.vehicle.rect.right + 2, self.vehicle.rect.centery - (self.rect.height / 2)),
                 (self.vehicle.rect.left - self.rect.width - 2, self.vehicle.rect.centery - (self.rect.height / 2)),
@@ -125,33 +124,26 @@ class PlayerMovement:
                 
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005 * game.dt_mult)
 
-            # Move vehicle
             self.vehicle.move(move_x, move_y, obstacles, game=game)
             vehicle_rect = self.vehicle.rect
             
-            # --- ZOMBIE ROADKILL LOGIC ---
             for zombie in zombies[:]:
                 if vehicle_rect.colliderect(zombie.rect):
                     self.vehicle.damage_motor(1.5)
                     damage_to_zombie = 2
-
                     if zombie.take_damage(damage_to_zombie, game):
                         zombie.die(game)
                         display_message(tr('msg', "Roadkill! Zombie splattered."))
-
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
-
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 
-            # --- ANIMAL ROADKILL LOGIC ---
             animals_to_check = getattr(game, 'active_animals', [])
             for animal in list(animals_to_check):
                 if vehicle_rect.colliderect(animal.rect):
                     self.vehicle.damage_motor(1.5)
                     damage_to_animal = 2
-
                     if animal.take_damage(damage_to_animal, game):
                         animal.die(game)
                         if animal in game.items_on_ground:
@@ -159,34 +151,27 @@ class PlayerMovement:
                         if animal in game.active_animals:
                             game.active_animals.remove(animal)
                         display_message(tr('msg', "Roadkill! Animal splattered."))
-
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 
-            # --- NPC ROADKILL LOGIC ---
             if hasattr(game, 'npcs'):
                 npcs_to_check = game.npcs.sprites() if hasattr(game.npcs, 'sprites') else game.npcs
-                
                 for npc in list(npcs_to_check):
                     if not npc.is_dead and vehicle_rect.colliderect(npc.rect):
                         self.vehicle.damage_motor(1.5)
                         damage_to_npc = 2
                         is_dead = npc.take_damage(damage_to_npc, game, attacker=self)
-                        
                         self.vehicle.velocity[0] *= 0.5
                         self.vehicle.velocity[1] *= 0.5
-                        
                         if is_dead:
                             npc.die(game)
                             display_message(f"{tr('msg', 'You ran over')} {npc.name}!")
 
-            # Sync player position to vehicle
             self.x = self.vehicle.x
             self.y = self.vehicle.y
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
-            # Standard Walking Movement
             def check_collision(rect_check):
                 indices = rect_check.collidelistall(obstacles)
                 for idx in indices:
@@ -204,7 +189,6 @@ class PlayerMovement:
 
             speed_mult = 1.0
 
-            # 1. Check entities push/slowdown
             entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
             for entity in entities:
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
@@ -214,25 +198,20 @@ class PlayerMovement:
                             continue
 
                     speed_mult = min(speed_mult, 0.20) 
-                    
                     dx = entity.rect.centerx - self.rect.centerx
                     dy = entity.rect.centery - self.rect.centery
                     dist = math.hypot(dx, dy)
-                    
                     push_power = 0.5 
                     if not hasattr(entity, 'knockback_velocity') or isinstance(entity.knockback_velocity, tuple):
                         entity.knockback_velocity = [0.0, 0.0]
-                        
                     if dist > 0:
                         entity.knockback_velocity[0] += (dx / dist) * push_power
                         entity.knockback_velocity[1] += (dy / dist) * push_power
                     else:
                         entity.knockback_velocity[0] += random.choice([-1.0, 1.0]) * push_power
                         entity.knockback_velocity[1] += random.choice([-1.0, 1.0]) * push_power
-                        
                     entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 100)
-                    
-            # 2. Window slow down
+
             gx = self.rect.centerx // TILE_SIZE
             gy = self.rect.centery // TILE_SIZE
             if hasattr(game, 'map_manager'):
@@ -245,7 +224,6 @@ class PlayerMovement:
             move_x = self.vx * speed_mult * game.dt_mult
             move_y = self.vy * speed_mult * game.dt_mult
 
-            # Sub-stepping with slide resolution
             total_dist = max(abs(move_x), abs(move_y))
             steps = max(1, int(math.ceil(total_dist)))
             step_x = move_x / steps
@@ -253,7 +231,6 @@ class PlayerMovement:
             max_slide = 4 
 
             for _ in range(steps):
-                # Move X
                 self.x += step_x
                 self.rect.x = round(self.x)
                 if check_collision(self.rect) == 'tile':
@@ -265,19 +242,16 @@ class PlayerMovement:
                             resolved = True
                             break
                         self.rect.y += offset
-
                         self.rect.y += offset
                         if check_collision(self.rect) != 'tile':
                             self.y += offset
                             resolved = True
                             break
                         self.rect.y -= offset
-
                     if not resolved:
                         self.x -= step_x
                         self.rect.x = round(self.x)
 
-                # Move Y
                 self.y += step_y
                 self.rect.y = round(self.y)
                 if check_collision(self.rect) == 'tile':
@@ -289,14 +263,12 @@ class PlayerMovement:
                             resolved = True
                             break
                         self.rect.x += offset
-
                         self.rect.x += offset
                         if check_collision(self.rect) != 'tile':
-                            self.x += offset
+                            self.y += offset
                             resolved = True
                             break
                         self.rect.x -= offset
-
                     if not resolved:
                         self.y -= step_y
                         self.rect.y = round(self.y)
@@ -316,38 +288,78 @@ class PlayerMovement:
                 
                 new_gx, new_gy = gx, gy
                 transition = False
+                dir_x = 0
+                dir_y = 0
                 
                 target = self.vehicle if self.vehicle else self
                 
                 if target.rect.centerx < 0:
                     new_gx -= 1
+                    dir_x = -1
                     transition = True
                 elif target.rect.centerx >= chunk_width_px:
                     new_gx += 1
+                    dir_x = 1
                     transition = True
                     
                 if target.rect.centery < 0:
                     new_gy -= 1
+                    dir_y = -1
                     transition = True
                 elif target.rect.centery >= chunk_height_px:
                     new_gy += 1
+                    dir_y = 1
                     transition = True
                     
                 if transition:
+                    # Enforce that surface transitions on L1 require an active L1 road connection
+                    if layer == 1:
+                        conn_key = 'right' if dir_x == 1 else ('left' if dir_x == -1 else ('bottom' if dir_y == 1 else ('top' if dir_y == -1 else None)))
+                        if conn_key and hasattr(game, 'generator') and hasattr(game.generator, 'connections_grid'):
+                            cg = game.generator.connections_grid
+                            if 0 <= gy < len(cg) and 0 <= gx < len(cg[0]):
+                                if not cg[gy][gx].get(conn_key, False):
+                                    # Blocked by water/coast on L1 - player must use L2 underground
+                                    if target.rect.centerx < 0: target.x = 0
+                                    elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
+                                    if target.rect.centery < 0: target.y = 0
+                                    elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
+                                    target.rect.topleft = (int(target.x), int(target.y))
+                                    if self.vehicle:
+                                        self.vehicle.velocity = [0, 0]
+                                        self.x = self.vehicle.x
+                                        self.y = self.vehicle.y
+                                        self.rect.topleft = (int(self.x), int(self.y))
+                                    return
+                    elif layer == 2:
+                        # On Layer 2: allow crossing into any active neighboring room
+                        if hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
+                            if (new_gx, new_gy) not in game.generator.active_chunks:
+                                if target.rect.centerx < 0: target.x = 0
+                                elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
+                                if target.rect.centery < 0: target.y = 0
+                                elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
+                                target.rect.topleft = (int(target.x), int(target.y))
+                                return
+
                     new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
 
-                    # --- ON-DEMAND GENERATION: Generate chunk as player enters it ---
+                    # Generate chunk on demand only if it's an active island chunk
                     if new_map not in game.map_manager.map_files:
                         if hasattr(game, 'generator') and game.generator:
-                            if 0 <= new_gx < game.generator.grid_w and 0 <= new_gy < game.generator.grid_h:
+                            can_generate = False
+                            if hasattr(game.generator, 'active_chunks'):
+                                can_generate = (new_gx, new_gy) in game.generator.active_chunks
+                            elif 0 <= new_gx < game.generator.grid_w and 0 <= new_gy < game.generator.grid_h:
+                                can_generate = True
+                                
+                            if can_generate:
                                 game.generator.generate_chunk_on_demand(new_gx, new_gy)
                                 game.map_manager.refresh_maps()
 
-                    # Check if the map file exists in the manager now
                     if new_map in game.map_manager.map_files:
-                        print(f"Transitioning to chunk: {new_map}")
+                        print(f"Transitioning to chunk room (Layer {layer}): {new_map}")
                         
-                        # --- CACHE DEPARTING CHUNK STATE ---
                         game.map_states.setdefault(current_map, {})
                         
                         chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
@@ -386,22 +398,61 @@ class PlayerMovement:
                         
                         new_width = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
                         new_height = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
-                        
+
+                        # --- SAFE DOORWAY POSITIONING (Prevents instant reverse bounce) ---
+                        cx_px = (new_width // 2)
+                        cy_px = (new_height // 2)
+
+                        if dir_x == 1:
+                            # Moving East: Enter through West (left) opening, placed safely inside
+                            dest_x = 2 * TILE_SIZE
+                            dest_y = cy_px if layer == 2 else (cy_px + (target.y - old_height / 2.0))
+                        elif dir_x == -1:
+                            # Moving West: Enter through East (right) opening, placed safely inside
+                            dest_x = new_width - (3 * TILE_SIZE)
+                            dest_y = cy_px if layer == 2 else (cy_px + (target.y - old_height / 2.0))
+                        elif dir_y == 1:
+                            # Moving South: Enter through North (top) opening, placed safely inside
+                            dest_x = cx_px if layer == 2 else (cx_px + (target.x - old_width / 2.0))
+                            dest_y = 2 * TILE_SIZE
+                        elif dir_y == -1:
+                            # Moving North: Enter through South (bottom) opening, placed safely inside
+                            dest_x = cx_px if layer == 2 else (cx_px + (target.x - old_width / 2.0))
+                            dest_y = new_height - (3 * TILE_SIZE)
+                        else:
+                            dest_x = cx_px
+                            dest_y = cy_px
+
+                        # Clamp strictly inside safe boundaries
+                        dest_x = max(2 * TILE_SIZE, min(dest_x, new_width - 3 * TILE_SIZE))
+                        dest_y = max(2 * TILE_SIZE, min(dest_y, new_height - 3 * TILE_SIZE))
+
+                        delta_x = dest_x - target.x
+                        delta_y = dest_y - target.y
+
                         for ent in entities_to_teleport:
-                            if new_gx < gx: ent.x += new_width
-                            elif new_gx > gx: ent.x -= old_width
-                            
-                            if new_gy < gy: ent.y += new_height
-                            elif new_gy > gy: ent.y -= old_height
-                            
+                            ent.x += delta_x
+                            ent.y += delta_y
                             ent.rect.topleft = (int(ent.x), int(ent.y))
+
+                        # Resolve local obstacle collision strictly inside bounds
+                        free_pos = find_free_tile(target.rect, game.obstacles, initial_pos=(int(target.x), int(target.y)), max_radius=4)
+                        if free_pos and (0 < free_pos[0] < new_width - TILE_SIZE) and (0 < free_pos[1] < new_height - TILE_SIZE):
+                            shift_x = free_pos[0] - target.x
+                            shift_y = free_pos[1] - target.y
+                            target.x, target.y = free_pos
+                            target.rect.topleft = (int(target.x), int(target.y))
+                            for ent in entities_to_teleport[1:]:
+                                ent.x += shift_x
+                                ent.y += shift_y
+                                ent.rect.topleft = (int(ent.x), int(ent.y))
                             
                         if self.vehicle:
                             self.x = self.vehicle.x
                             self.y = self.vehicle.y
                             self.rect.topleft = (int(self.x), int(self.y))
                         
-                        # --- RESTORE NEW CHUNK STATE ---
+                        # --- RESTORE OR SPAWN NEW CHUNK STATE ---
                         if new_map in game.map_states:
                             game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
                             game.zombies = game.map_states[new_map].get('zombies', [])
@@ -430,8 +481,6 @@ class PlayerMovement:
                                     if v.rect not in game.obstacles:
                                         game.obstacles.append(v.rect)
                         else:
-                            # First time visiting chunk
-                            # First time visiting chunk
                             game.items_on_ground = []
                             game.zombies = []
                             if hasattr(game, 'active_animals'):
@@ -451,10 +500,10 @@ class PlayerMovement:
                                     for _ in range(z_per_spawn):
                                         z = Zombie.create_random(szx, szy)
                                         if z:
-                                            free_pos = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
-                                            if free_pos:
-                                                z.rect.topleft = free_pos
-                                                z.x, z.y = free_pos
+                                            free_spot = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
+                                            if free_spot:
+                                                z.rect.topleft = free_spot
+                                                z.x, z.y = free_spot
                                                 game.zombies.append(z)
                                         
                             max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
@@ -470,10 +519,10 @@ class PlayerMovement:
                                     is_static = (npc_type == 'SNPC')
                                     npc = NPC(nx, ny, game, is_static=is_static)
                                     npc.is_friendly = is_static
-                                    free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
-                                    if free_pos:
-                                        npc.rect.topleft = free_pos
-                                        npc.x, npc.y = free_pos
+                                    free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                                    if free_spot:
+                                        npc.rect.topleft = free_spot
+                                        npc.x, npc.y = free_spot
                                         game.npcs.add(npc)
                                     
                             max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
@@ -494,14 +543,14 @@ class PlayerMovement:
                                 if valid_animal_types:
                                     num_to_spawn = min(anim_per_spawn, max_anim)
                                     for _ in range(num_to_spawn):
-                                        ax = random.randint(100, max(101, getattr(game, 'map_width_pixels', chunk_width_px) - 100))
-                                        ay = random.randint(100, max(101, getattr(game, 'map_height_pixels', chunk_height_px) - 100))
+                                        ax = random.randint(100, max(101, new_width - 100))
+                                        ay = random.randint(100, max(101, new_height - 100))
                                         animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
                                         animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
-                                        free_pos = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
-                                        if free_pos:
-                                            animal_obj.rect.topleft = free_pos
-                                            animal_obj.x, animal_obj.y = free_pos
+                                        free_spot = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
+                                        if free_spot:
+                                            animal_obj.rect.topleft = free_spot
+                                            animal_obj.x, animal_obj.y = free_spot
                                             game.active_animals.append(animal_obj)
                                             game.items_on_ground.append(animal_obj)
                                     
@@ -522,18 +571,16 @@ class PlayerMovement:
                             if self.vehicle.rect in game.obstacles:
                                 game.obstacles.remove(self.vehicle.rect)
 
-                        # Prevent physics explosions due to the chunk load time spike
                         if hasattr(game, 'last_time'):
                             game.last_time = pygame.time.get_ticks()
                         if hasattr(game, 'dt_ms'):
                             game.dt_ms = 16.0
                             game.dt_mult = 1.0
 
-                        # --- TRIGGER CHUNK LOADING SCREEN ---
                         game.game_state = 'CHUNK_LOADING'
                         return
                     else:
-                        # Revert movement if walking into map bounds where no chunk exists or blocked
+                        # Prevent player from walking into empty ocean cells
                         if target.rect.centerx < 0: target.x = 0
                         elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
                         if target.rect.centery < 0: target.y = 0

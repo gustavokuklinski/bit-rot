@@ -353,16 +353,12 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
     game.layer_spawn_triggers.setdefault(layer_index, set())
 
     if not getattr(game, 'is_giant_map', False):
-        game.spawn_point_grid.clear()
-        GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512) 
-        for sp_pos in game.current_zombie_spawns:
-            grid_x = int(sp_pos[0] // GRID_SIZE_SPAWNS)
-            grid_y = int(sp_pos[1] // GRID_SIZE_SPAWNS)
-            cell = (grid_x, grid_y)
-            if cell not in game.spawn_point_grid:
-                game.spawn_point_grid[cell] = [sp_pos]
-            else:
-                game.spawn_point_grid[cell].append(sp_pos)
+        if game.map_data:
+            game.map_height_pixels = len(game.map_data) * TILE_SIZE
+            game.map_width_pixels = len(game.map_data[0]) * TILE_SIZE
+        else:
+            game.map_height_pixels = 0
+            game.map_width_pixels = 0
 
     # --- RESTORE OR SPAWN NEW LAYER STATE ---
     # --- RESTORE OR SPAWN NEW LAYER STATE ---
