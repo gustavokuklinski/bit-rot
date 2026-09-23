@@ -226,8 +226,11 @@ class ProceduralGeneratorSpawning:
         for (vx, vy) in chosen:
             layers['spawn'][vy][vx] = 'VEH'
 
-    def _scatter_animals(self, layers, mask, w, h):
+    def _scatter_animals(self, layers, mask, w, h, multiplier=1, is_l2=False):
         animal_count = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', getattr(core.data.config, 'ANIMAL_SPAWN_COUNT', 6))
+        
+        # --- FIX: Apply biome multiplier ---
+        animal_count = int(animal_count * multiplier)
         if animal_count <= 0: return
 
         valid_tiles = []
@@ -245,13 +248,19 @@ class ProceduralGeneratorSpawning:
                 if b_char in ['@', '#']: continue
                 if b_char in defs and defs[b_char].get('is_obstacle', False): continue
                 if g_char in ['@', '#', ' ', '']: continue
-                if g_char == self.water_tile or 'water' in g_char.lower(): continue
+                if getattr(self, 'water_tile', 'water_01') in g_char.lower(): continue
                 if g_char in defs and defs[g_char].get('is_obstacle', False): continue
                 if s_char != ' ': continue
 
                 t_def = defs.get(g_char)
                 t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
                 if 'floor' in t_name or g_char == 'house_floor_01': continue
+
+                # --- FIX: Layer 2 Bypass (Paths are valid) ---
+                if is_l2:
+                    valid_tiles.append((x, y))
+                    continue
+                # ---------------------------------------------
 
                 is_path = 'asphalt' in g_char or 'dirty' in g_char or 'path' in g_char
                 is_border = False

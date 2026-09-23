@@ -170,11 +170,24 @@ def handle_player_death(game):
 
     # 5. Save world and update host.rot
     if getattr(game, 'current_save_folder_name', None) and not getattr(game, 'is_client', False):
-        try:
-            game.save_game()
-        except Exception as e:
-            if hasattr(game, 'logger'):
-                game.logger.info(f"Error saving game on death: {e}")
+        if getattr(core.data.config, 'PERMADEATH', False):
+            import shutil
+            try:
+                save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", game.current_save_folder_name)
+                if os.path.exists(save_path):
+                    shutil.rmtree(save_path)
+                    if hasattr(game, 'logger'):
+                        game.logger.info(f"Permadeath enabled: Deleted save {save_path}")
+            except Exception as e:
+                if hasattr(game, 'logger'):
+                    game.logger.info(f"Error deleting save for permadeath: {e}")
+            game.current_save_folder_name = None  # Wipe the pointer so UI knows it's dead
+        else:
+            try:
+                game.save_game()
+            except Exception as e:
+                if hasattr(game, 'logger'):
+                    game.logger.info(f"Error saving game on death: {e}")
 
     # If the host is running a server, do not disconnect or shut down the server!
     # Immediately send the host player back to the setup screen to create/respawn a character.
@@ -450,14 +463,14 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         if 1 in game.all_map_layers:
             game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
             spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
-            spawn_animals(game, target_layer=1)
+            #spawn_animals(game, target_layer=1)
 
         if 2 in game.all_map_layers:
             game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
             z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
             if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
                 spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
-            spawn_animals(game, target_layer=2)
+            #spawn_animals(game, target_layer=2)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2

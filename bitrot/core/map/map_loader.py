@@ -191,7 +191,9 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             allow_liquid = str(val_liq).lower() in ['true', '1'] or val_liq is True
                             
                             val_open = tile_def.get('is_opened', False)
-                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
+
+                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True or getattr(core.data.config, 'ALL_VISIBLE', False)
+                            # is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
                             if allow_liquid or is_opened:
                                 items = _generate_container_items(tile_def)
@@ -247,7 +249,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             allow_liquid = str(val_liq).lower() in ['true', '1'] or val_liq is True
                             
                             val_open = tile_def.get('is_opened', False)
-                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
+                            # is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
+                            is_opened = str(val_open).lower() in ['true', '1'] or val_open is True or getattr(core.data.config, 'ALL_VISIBLE', False)
 
                             if allow_liquid or is_opened:
                                 items = _generate_container_items(tile_def)

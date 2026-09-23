@@ -421,7 +421,18 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                         game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground)
                         
                     if hasattr(game, 'active_animals'):
-                        game.active_animals = []
+                        from core.entities.animal.animal import Animal
+                        from core.entities.animal.animal_loader import AnimalLoader
+                        AnimalLoader.load_animals()
+                        
+                        for y, row in enumerate(game.spawn_data):
+                            for x, char in enumerate(row):
+                                if char == 'ANM':
+                                    a_type = AnimalLoader.get_random_animal_type(layer=layer_index)
+                                    if a_type:
+                                        animal = Animal(x * TILE_SIZE, y * TILE_SIZE, a_type, game=game, layer=layer_index)
+                                        game.active_animals.append(animal)
+                                        game.items_on_ground.append(animal)
                     if hasattr(game, 'npcs'):
                         game.npcs.empty()
                     if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:

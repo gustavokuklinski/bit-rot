@@ -624,7 +624,9 @@ class ProceduralGenerator(
 
     # Vehicles & Animals
     self._scatter_vehicles(l1_layers, None, c_w, c_h)
-    self._scatter_animals(l1_layers, None, c_w, c_h)
+    
+    self._scatter_animals(l1_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
+
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
 
@@ -651,8 +653,9 @@ class ProceduralGenerator(
     self._connect_l2_drunkards(l2_layers, conns_l2=conns_l2)
     self._enforce_l2_contained_borders(l2_layers, c_w, c_h, conns_l2=conns_l2)
     self._populate_l2_spawns(l2_layers)
+
     if hasattr(self, '_scatter_animals'):
-      self._scatter_animals(l2_layers, None, c_w, c_h)
+      self._scatter_animals(l2_layers, None, c_w, c_h, multiplier=4 if is_forest else 2, is_l2=True)
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l2_layers, None, c_w, c_h, 2)
 

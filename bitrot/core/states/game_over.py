@@ -1,4 +1,5 @@
 import pygame
+import core.data.config
 from core.ui.helpers.game_over import draw_game_over
 from core.systems.load_manager import handle_player_death
 
@@ -33,12 +34,17 @@ def run_game_over(game):
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                save_folder = game.current_save_folder_name
-                game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'Player'
-                game.player_setup_state['respawn_save_folder'] = save_folder
-                game.game_state = 'PLAYER_SETUP'
-                return
+                if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
+                    save_folder = game.current_save_folder_name
+                    game.player_setup_state = {}
+                    game.player_setup_state['current_tab'] = 'Player'
+                    game.player_setup_state['respawn_save_folder'] = save_folder
+                    game.game_state = 'PLAYER_SETUP'
+                    return
+                else:
+                    game.current_save_folder_name = None
+                    game.game_state = 'MENU'
+                    return
             elif event.key == pygame.K_ESCAPE:
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'
@@ -48,12 +54,13 @@ def run_game_over(game):
             mouse_pos = game._get_scaled_mouse_pos()
             
             if respawn_btn.collidepoint(mouse_pos):
-                save_folder = game.current_save_folder_name
-                game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'Player'
-                game.player_setup_state['respawn_save_folder'] = save_folder
-                game.game_state = 'PLAYER_SETUP'
-                return
+                if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
+                    save_folder = game.current_save_folder_name
+                    game.player_setup_state = {}
+                    game.player_setup_state['current_tab'] = 'Player'
+                    game.player_setup_state['respawn_save_folder'] = save_folder
+                    game.game_state = 'PLAYER_SETUP'
+                    return
             elif menu_btn.collidepoint(mouse_pos):
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'

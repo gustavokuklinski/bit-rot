@@ -1,9 +1,9 @@
 import pygame
 import os
-from core.data.config import *
+import core.data.config
 from datetime import datetime
 from core.data.localization import tr
-from core.data.config import BASE_DIR
+from core.data.config import *
 
 _logo_img = None
 
@@ -66,8 +66,9 @@ def draw_game_over(screen, zombies_killed, days_survived, mouse_pos):
     spacing = S(15)
     start_y = center_offset_y + S(390)
 
+    can_respawn = not getattr(core.data.config, 'PERMADEATH', False)
     respawn_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
-    draw_btn(screen, respawn_rect, tr('ui', "New Character"), mouse_pos)
+    draw_btn(screen, respawn_rect, tr('ui', "New Character"), mouse_pos, enabled=can_respawn)
 
     menu_rect = pygame.Rect(center_x - btn_width // 2, respawn_rect.bottom + spacing, btn_width, btn_height)
     draw_btn(screen, menu_rect, tr('ui', "Back to Menu"), mouse_pos)

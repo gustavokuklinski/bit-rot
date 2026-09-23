@@ -80,6 +80,8 @@ font_12 = None
 TILE_SIZE = 16
 
 # WORLD DEFAULTS
+PERMADEATH = False
+ALL_VISIBLE = False
 TIME_DAYLENGTH = 900000
 TIME_SUNRISE_HR = 5.5
 TIME_SUNSET_HR = 17.5
@@ -265,6 +267,7 @@ def load_settings(world_preset="world"):
     global ANIMAL_MAX_CHUNK, ANIMALS_PER_SPAWN, ANIMAL_RESPAWN, ANIMAL_SPAWN_COUNT
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
+    global PERMADEATH, ALL_VISIBLE 
 
     pref_path = get_preferences_path()
     try:
@@ -327,6 +330,9 @@ def load_settings(world_preset="world"):
                 TIME_SUNRISE_HR = float(_get_val(game_config, ['time_sunrise_hr', 'sunrise_hr'], '5.5'))
                 TIME_SUNSET_HR = float(_get_val(game_config, ['time_sunset_hr', 'sunset_hr'], '17.5'))
                 TIME_START_HR = float(_get_val(game_config, ['time_start_hr', 'start_hr'], '6.0'))
+
+                PERMADEATH = str(_get_val(game_config, ['permadeath'], 'false')).lower() == 'true'
+                ALL_VISIBLE = str(_get_val(game_config, ['all_visible'], 'false')).lower() == 'true'
 
             map_config = root.find('map')
             if map_config is not None:
