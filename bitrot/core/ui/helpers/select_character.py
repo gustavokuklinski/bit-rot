@@ -3,6 +3,7 @@
 import os
 import random
 import pygame
+import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 from faker import Faker
 
@@ -10,7 +11,7 @@ import core.data.config
 from core.data.config import (
     GAME_WIDTH, GAME_HEIGHT, UI_SCALE, TILE_SIZE, WHITE, GRAY, DARK_GRAY,
     GRAY_60, GRAY_80, GREEN, RED, YELLOW, font_16, font_14, font_12,
-    SPRITE_PATH, BASE_DIR
+    SPRITE_PATH, BASE_DIR, get_writable_dir
 )
 from core.data.localization import tr
 from core.entities.item.item import Item
@@ -57,116 +58,78 @@ def _get_logo_image(width):
     return None
 
 
-CHARACTER_CLASSES = [
-    {
-        'id': 'exxoil',
-        'name': "Exxoil",
-        'subtitle': "Drilling Workforce",
-        'description': "The drilling land workers at GHT-42 providing workforce from United States of America.",
-        'accent': (255, 165, 0),
-        'clothes': [
-            "Worker helmet",
-            "Military boots",
-            "Jeans Pants",
-            "Exxoil Tshirt"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Wrench"
-        ]
-    },
-    {
-        'id': 'gethulius',
-        'name': "Gethulius",
-        'subtitle': "Deep Extraction and Refine",
-        'description': "The tech to deep explore the rocks and wells to refine and distribuite vaccines to the world from Brazil.",
-        'accent': (50, 205, 50),
-        'clothes': [
-            "Worker helmet",
-            "Military boots",
-            "Jeans Pants",
-            "Gethulius Tshirt"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Hammer"
-        ]
-    },
-    {
-        'id': 'rsf',
-        'name': "Rosskrild and Silva Family",
-        'subtitle': "Philanthropic Hegemony",
-        'description': "The philantropic powerfull family who invested in land, companies and personel to protect it's hiegemony.",
-        'accent': (100, 150, 255),
-        'clothes': [
-            "Shoes",
-            "Pants",
-            "Next Petrol Tshirt",
-            "Jacket"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Metal Bar"
-        ]
-    },
-    {
-        'id': 'civilian',
-        'name': "Civilian",
-        'subtitle': "Main Work Force",
-        'description': "The main work force who paid to be safe and get a part of the new world.",
-        'accent': (220, 220, 220),
-        'clothes': [
-            "Sneakers",
-            "Jeans Short",
-            "Tshirt"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Knife"
-        ]
-    },
-    {
-        'id': 'doctor',
-        'name': "Doctor",
-        'subtitle': "Velvet Cross Healthcare",
-        'description': "The Velvet Cross around the world and private health care from the remains of nations.",
-        'accent': (255, 100, 120),
-        'clothes': [
-            "Medical Mask",
-            "Shoes",
-            "Tshirt",
-            "Medical Vest",
-            "Jeans Pants"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Scissor"
-        ]
-    },
-    {
-        'id': 'military',
-        'name': "Military",
-        'subtitle': "Armed Forces",
-        'description': "The small nations who still survive and distribuite the vaccines to the world.",
-        'accent': (120, 180, 80),
-        'clothes': [
-            "Beret",
-            "Military boots",
-            "Military Tshirt",
-            "Military Pants"
-        ],
-        'items': [
-            "ID",
-            "Wallet",
-            "Pistol 9mm"
-        ]
-    }
-]
+def load_player_builds():
+    """Dynamically loads player build classes from the XML files."""
+    classes = []
+    builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "player_builds")
+    
+    
+        
+    for filename in os.listdir(builds_dir):
+        if filename.endswith(".xml"):
+            filepath = os.path.join(builds_dir, filename)
+            try:
+                tree = ET.parse(filepath)
+                root = tree.getroot()
+                if root.tag == "player_build":
+                    cid = root.get('id', 'unknown')
+                    
+                    name_node = root.find('name')
+                    name = name_node.get('value') if name_node is not None else "Unknown"
+                    
+                    sub_node = root.find('subtitle')
+                    subtitle = sub_node.get('value') if sub_node is not None else ""
+                    
+                    desc_node = root.find('description')
+                    desc = desc_node.get('value') if desc_node is not None else ""
+                    
+                    accent = (255, 255, 255)
+                    color_node = root.find('color')
+                    if color_node is not None:
+                        color_str = color_node.get('value', '(255, 255, 255)')
+                        try:
+                            # Safely parse "(R, G, B)"
+                            parts = color_str.strip("() ").split(',')
+                            accent = tuple(int(p.strip()) for p in parts)
+                        except ValueError:
+                            pass
+                            
+                    clothes = []
+                    clothes_node = root.find('clothes')
+                    if clothes_node is not None:
+                        for cloth in clothes_node.findall('cloth'):
+                            cname = cloth.get('name')
+                            if cname: clothes.append(cname)
+                            
+                    items = []
+                    items_node = root.find('items')
+                    if items_node is not None:
+                        for item in items_node.findall('item'):
+                            iname = item.get('name')
+                            if iname: items.append(iname)
+                            
+                    classes.append({
+                        'id': cid,
+                        'name': name,
+                        'subtitle': subtitle,
+                        'description': desc,
+                        'accent': accent,
+                        'clothes': clothes,
+                        'items': items
+                    })
+            except Exception as e:
+                print(f"[SelectCharacter] Error loading build {filename}: {e}")
+                
+    if not classes:
+        print("[SelectCharacter] No valid XML builds found.")
+       
+        
+    # Sort them by name to keep the UI consistent
+    classes.sort(key=lambda x: x['name'])
+    return classes
+
+# Initialize the classes directly
+CHARACTER_CLASSES = load_player_builds()
 
 # Baseline thematic colors ONLY for Tshirt, Pants, Jacket, Shoes, Sneakers
 DEFAULT_TINTABLE_COLORS = {
@@ -204,8 +167,6 @@ def _find_cloth_item(name):
         return _cloth_item_cache[name]
 
     item = Item.create_from_name(name)
-    
-
     _cloth_item_cache[name] = item
     return item
 
@@ -467,12 +428,43 @@ def _start_with_class(game, state, class_def):
     final_player_data['attributes'] = final_attrs
 
     # World seed and preset resolution
+    # World seed and preset resolution
     w_state = getattr(game, 'world_setup_state', {})
     preset_to_load = state.get('selected_config_preset') or w_state.get('selected_config_preset', 'world')
-    core.data.config.load_settings(preset_to_load)
 
+    final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+    final_player_data['game_mode'] = final_mode
+
+    # Resolve save folder and world.xml path
+    save_folder = state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+    world_data = w_state.get('world_data') or state.get('world_data')
+
+    if not save_folder and not state.get('respawn_save_folder'):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_folder = f"save_{final_mode}_{timestamp}"
+        save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+        os.makedirs(save_path, exist_ok=True)
+        world_xml_path = os.path.join(save_path, "world.xml")
+        if not world_data:
+            from core.ui.helpers.trait_config_loader import load_config_data
+            world_data = load_config_data(os.path.join(DATA_PATH, "world.xml"))
+        from core.ui.helpers.trait_config_loader import save_config_xml
+        save_config_xml(world_data, world_xml_path)
+    elif save_folder:
+        save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+        world_xml_path = os.path.join(save_path, "world.xml")
+    else:
+        world_xml_path = None
+
+    # Load its world.xml inside the folder right when character is selected
+    if world_xml_path and os.path.exists(world_xml_path):
+        core.data.config.load_settings(world_xml_path)
+
+    game.current_save_folder_name = save_folder
+    final_player_data['save_folder_name'] = save_folder
+    final_player_data['world_xml_path'] = world_xml_path
     final_player_data['selected_config_preset'] = preset_to_load
-    final_player_data['game_settings'] = w_state.get('world_data', state.get('world_data'))
+    final_player_data['game_settings'] = world_data
 
     # Forward respawn folder if respawning in an existing world save
     if state.get('respawn_save_folder'):
@@ -488,6 +480,10 @@ def _start_with_class(game, state, class_def):
 
     final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
     final_player_data['sounds'] = {'steps': 'steps.ogg'}
+
+    # [FIX] Attach Game Mode properly to bypass the 'sandbox' default!
+    final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+    final_player_data['game_mode'] = final_mode
 
     game.loading_data = final_player_data
     game.game_state = 'LOADING'
@@ -646,9 +642,6 @@ def draw_select_character_screen(game, state, mouse_pos):
         card_rect = pygame.Rect(cx, card_y, card_w, card_h)
         is_hovered = card_rect.collidepoint(mouse_pos)
 
-        if is_hovered:
-            hovered_class = c_def
-
         bg_col = (45, 45, 45) if is_hovered else (32, 32, 32)
         border_col = c_def['accent'] if is_hovered else GRAY_60
         border_width = 2 if is_hovered else 1
@@ -717,14 +710,31 @@ def draw_select_character_screen(game, state, mouse_pos):
         # Card Action Button (Start Game)
         btn_h = S(38)
         btn_rect = pygame.Rect(card_rect.left + S(18), card_rect.bottom - btn_h - S(14), card_rect.width - S(36), btn_h)
-        btn_bg = c_def['accent'] if is_hovered else (55, 55, 55)
-        btn_text_col = (10, 10, 10) if is_hovered else WHITE
+        
+        # --- NEW: "More info" text left-aligned above the button ---
+        info_text = tr('ui', "More info")
+        info_dummy_surf = font_12.render(info_text, False, WHITE)
+        info_rect = info_dummy_surf.get_rect(bottomleft=(btn_rect.left, btn_rect.top - S(8)))
+        
+        info_hovered = info_rect.collidepoint(mouse_pos)
+        if info_hovered:
+            hovered_class = c_def  # Trigger the tooltip
+            
+        info_color = YELLOW if info_hovered else (150, 150, 150)
+        info_surf = font_12.render(info_text, False, info_color)
+        game.game_screen.blit(info_surf, info_rect)
+        
+        # Draw Start Game Button (Highlight only when button is hovered)
+        btn_hovered = btn_rect.collidepoint(mouse_pos)
+        btn_bg = c_def['accent'] if btn_hovered else (55, 55, 55)
+        btn_text_col = (10, 10, 10) if btn_hovered else WHITE
         pygame.draw.rect(game.game_screen, btn_bg, btn_rect, border_radius=S(5))
 
         btn_txt = font_12.render(tr('ui', "Start Game"), False, btn_text_col)
         game.game_screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
 
-        clickable_rects['cards'].append((c_def, card_rect))
+        # Store btn_rect instead of card_rect for click detection
+        clickable_rects['cards'].append((c_def, btn_rect))
 
     # --- 5. BOTTOM BAR: BACK, RANDOM, AND CUSTOM CHARACTER ---
     back_w = S(160)

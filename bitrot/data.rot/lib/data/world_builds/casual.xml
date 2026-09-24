@@ -1,0 +1,61 @@
+<?xml version="1.0" ?>
+<build id="casual">
+    <properties>
+        <name value="Casual" />
+        <subtitle value="Fast and play" />
+        <icon_path value="ui/infection.png" />
+        <accent value="(50, 205, 50)" />
+        <tooltips value="[Fast to play, Small map, Lower Rotters, High loot]" />
+    </properties>
+
+    <world>
+        <game>
+            <time_daylength value="900000" name="Day length" default="900000"/>
+            <time_sunrise_hr value="5.5" name="Time sunrise" default="5.5"/>
+            <time_sunset_hr value="17.5" name="Time sunset" default="17.5"/>
+            <time_start_hr value="6.0" name="Start hour" default="6.0"/>
+            <permadeath value="false" name="Delete save when die" default="false"/>
+            <all_visible value="true" name="All containers are opened" default="false"/>
+        </game>
+        <player>
+            <view_radius value="6" name="View radius tiles" default="6"/>
+            <water_autodrink value="true" name="Allow Autodrink" default="true"/>
+            <water_threshold value="100" name="Minimum % to start autodrink" default="100"/>
+        </player>
+        <map>
+            <map_chunks value="2" name="Map size" default="2"/>
+            <seed value="" name="World seed" default=""/>
+        </map>
+        <item_spawning>
+            <item_spawn_chance_multiplier value="0.9" name="Global Multiplier" default="0.9"/>
+        </item_spawning>
+        <vehicle>
+            <vehicle_spawn_per_chunk value="6" name="Max vehicle spawn on chunk" default="6"/>
+            <has_fuel_chance value="0.5" name="Car Fuel chance" default="0.5"/>
+            <has_key_chance value="0.4" name="Car Key chance" default="0.4"/>
+            <has_motor_chance value="1.0" name="Car Motor chance" default="1.0"/>
+            <has_battery_chance value="0.8" name="Car Battery chance" default="0.8"/>
+            <has_tires_chance value="1.0" name="Car Tires chance" default="1.0"/>
+        </vehicle>
+        <zombie>
+            <zombie_spawn_per_chunk value="4" name="Max Zombie spawn on chunk" default="4"/>
+            <spawn value="2" name="Zombies per spawn" default="2"/>
+            <wander value="true" name="Zombie wandering" default="true"/>
+            <sight_check value="true" name="Sight player" default="true"/>
+            <infection_chance value="0.5" name="Zombie infection chance" default="0.5"/>
+            <respawn value="false" name="Zombie respawn on death" default="true"/>
+        </zombie>
+        <npc>
+            <npc_spawn_per_chunk value="4" name="Max NPC spawn on chunk" default="4"/>
+            <spawn value="2" name="NPCs per spawn" default="2"/>
+            <static_percent value="0.50" name="Static NPC percentage" default="0.50"/>
+            <hostile_percent value="0.50" name="Hostile NPC percentage" default="0.50"/>
+            <respawn value="true" name="NPC respawn on death" default="true"/>
+        </npc>
+        <animal>
+            <animal_spawn_per_chunk value="4" name="Max Animal spawn on chunk" default="4"/>
+            <spawn value="2" name="Animals per spawn" default="3"/>
+            <respawn value="true" name="Animal respawn on death" default="true"/>
+        </animal>
+    </world>
+</build>

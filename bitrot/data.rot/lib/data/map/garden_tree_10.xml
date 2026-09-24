@@ -6,7 +6,7 @@
         <health min="50" max="250" />
     </properties>
     <drop>
-        <item item="Log" chance="1" />
+        <item item="Log" chance="1.0" />
     </drop>
     <sound src="chop_tree.ogg" />
 </map>

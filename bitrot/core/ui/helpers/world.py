@@ -52,76 +52,24 @@ def _load_world_presets(state):
     state['config_preset_list'] = presets
 
 def _clone_to_custom(state):
-    """When editing the default world, automatically spawn a custom timestamped preset."""
-    if state.get('selected_config_preset', 'world') != 'world':
-        return
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    new_name = f"world-{timestamp}"
-    state['selected_config_preset'] = new_name
-    state['world_preset_name'] = new_name
-    state['world_unsaved'] = False
-    
-    # Preserve current seed into the new XML
-    if 'map' in state['world_data']:
-        state['world_data']['map']['seed'] = {
-            'value': str(state.get('world_seed', '')),
-            'name': 'World seed'
-        }
-
-    writable_root = core.data.config.get_writable_dir()
-    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{new_name}.xml")
-    save_config_xml(state['world_data'], filepath)
-    
-    _load_world_presets(state)
+    """(Modified) Sandbox edits now only update the unsaved state indicator."""
+    state['world_unsaved'] = True
 
 def _save_world_preset(state):
-    preset_name = state.get('world_preset_name', '').strip()
-    if not preset_name: 
-        preset_name = "world"
-    
-    # Store the 12-digit seed into the XML DOM under <map><seed value="..."/></map>
-    if 'world_data' in state:
-        if 'map' not in state['world_data']:
-            state['world_data']['map'] = {}
-        state['world_data']['map']['seed'] = {
-            'value': str(state.get('world_seed', '')),
-            'name': 'World seed',
-            'default': ''
-        }
-
-    writable_root = core.data.config.get_writable_dir()
-    if preset_name == 'world':
-        filepath = os.path.join(writable_root, "data.rot", "save", "config", "world.xml")
-    else:
-        if not preset_name.startswith('world-'):
-            preset_name = f"world-{preset_name}"
-        filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset_name}.xml")
-    
-    save_config_xml(state['world_data'], filepath)
-    
-    state['selected_config_preset'] = preset_name
-    state['world_preset_name'] = preset_name
+    preset_name = state.get('world_preset_name', 'world')
+    if not preset_name:
+        preset_name = 'world'
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
+    os.makedirs(preset_dir, exist_ok=True)
+    save_path = os.path.join(preset_dir, f"{preset_name}.xml")
+    save_config_xml(state['world_data'], save_path)
     state['world_unsaved'] = False
     _load_world_presets(state)
 
 def _delete_world_preset(state):
-    preset_name = state.get('selected_config_preset', 'world')
-    if preset_name == 'world': return 
-
-    writable_root = core.data.config.get_writable_dir()
-    filepath = os.path.join(writable_root, "data.rot", "save", "config", f"{preset_name}.xml")
-    
-    if os.path.exists(filepath):
-        try:
-            os.remove(filepath)
-            state['selected_config_preset'] = 'world'
-            state['world_preset_name'] = 'world'
-            state['world_data'] = load_config_data(core.data.config.get_world_config_path('world'))
-            state['world_unsaved'] = False
-            _load_world_presets(state)
-        except Exception as e:
-            print(f"Error deleting preset: {e}")
+    path = core.data.config.get_world_config_path('world')
+    state['world_data'] = load_config_data(path)
+    state['world_unsaved'] = False
 
 def _draw_world_screen(game, state, mouse_pos):
     if not hasattr(game, 'world_setup_state'):
@@ -566,12 +514,27 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             if state.get('world_unsaved', False) or preset_name != 'world':
                 _save_world_preset(state)
 
-            core.data.config.load_settings(preset_name)
+            # Create the save folder with world.xml for Sandbox mode
+            mode_id = state.get('chosen_mode', 'sandbox')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            save_name = f"save_{mode_id}_{timestamp}"
+            save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
+            os.makedirs(save_path, exist_ok=True)
 
+            world_xml_path = os.path.join(save_path, "world.xml")
+            save_config_xml(state['world_data'], world_xml_path)
+
+            game.current_save_folder_name = save_name
+            state['save_folder_name'] = save_name
+            state['world_xml_path'] = world_xml_path
+
+            game.player_setup_state['save_folder_name'] = save_name
+            game.player_setup_state['world_xml_path'] = world_xml_path
             game.player_setup_state['world_data'] = state['world_data']
             game.player_setup_state['world_seed'] = state.get('world_seed', '')
             game.player_setup_state['selected_config_preset'] = preset_name
             game.player_setup_state['world_preset_name'] = preset_name
+            game.player_setup_state['chosen_mode'] = mode_id
             game.player_setup_state['current_tab'] = 'Player'  # Go directly to Player Builder
             return
 

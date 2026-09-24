@@ -174,46 +174,54 @@ def get_preferences_path():
     return filepath
 
 def get_world_config_path(preset="world"):
-    """Gets the world configuration path, giving strict priority to user saved presets."""
+    """Gets the world configuration path, allowing absolute paths for per-save configs."""
     if not preset:
         preset = "world"
+
+    # 1. Exact existing file path check (used for per-save world.xml)
+    if os.path.exists(preset):
+        return preset
+    if os.path.exists(preset + ".xml"):
+        return preset + ".xml"
+
     if preset.endswith(".xml"):
         preset = preset[:-4]
 
     writable_root = get_writable_dir()
-    
-    # 1. First priority: The user's writable save directory
-    writable_candidates = [
-        os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml"),
-        os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
-    ]
-    for path in writable_candidates:
-        if os.path.exists(path):
-            return path
 
-    # 2. Second priority: Data library defaults
+    # 2. Sandbox mode specifically looks for data.rot/save/config/world.xml
+    if preset == "sandbox":
+        sandbox_candidates = [
+            os.path.join(writable_root, "data.rot", "save", "config", "world.xml"),
+            os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml")
+        ]
+        for path in sandbox_candidates:
+            if os.path.exists(path):
+                return path
+        return os.path.join(DATA_PATH, "world.xml")
+
+    # 3. Custom presets (e.g. world-custom.xml) saved in data.rot/save/config/
+    if preset != "world":
+        custom_candidates = [
+            os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.xml"),
+            os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.xml")
+        ]
+        for path in custom_candidates:
+            if os.path.exists(path):
+                return path
+
+    # 4. Default game template from data library (never the sandbox-edited world.xml)
     lib_candidates = [
-        os.path.join(DATA_PATH, "config", f"{preset}.xml"),
-        os.path.join(DATA_PATH, f"{preset}.xml"),
-        os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", f"{preset}.xml"),
-        os.path.join(BASE_DIR, "data.rot", "lib", "config", f"{preset}.xml")
+        os.path.join(DATA_PATH, "world.xml"),
+        os.path.join(DATA_PATH, "config", "world.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml"),
+        os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", "world.xml")
     ]
     for path in lib_candidates:
         if os.path.exists(path):
             return path
 
-    # 3. Fallback to default world.xml in writable or lib paths
-    fallbacks = [
-        os.path.join(writable_root, "data.rot", "save", "config", "world.xml"),
-        os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml"),
-        os.path.join(DATA_PATH, "world.xml"),
-        os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml")
-    ]
-    for path in fallbacks:
-        if os.path.exists(path):
-            return path
-
-    return writable_candidates[0]
+    return os.path.join(DATA_PATH, "world.xml")
 
 class ImageFontWrapper:
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):

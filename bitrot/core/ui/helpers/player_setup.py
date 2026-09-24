@@ -903,13 +903,10 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
         if clickable_rects.get("start_button") and clickable_rects["start_button"].collidepoint(mouse_pos):
             if state.get('total_trait_cost', 0) <= STARTING_POINTS:
                 w_state = getattr(game, 'world_setup_state', {})
-                if w_state.get('world_unsaved', False):
-                    from core.ui.helpers.world import _save_world_preset
-                    _save_world_preset(w_state)
-
-                preset_to_load = state.get('selected_config_preset') or \
-                                 w_state.get('selected_config_preset', 'world')
-                core.data.config.load_settings(preset_to_load)
+                
+                # Fetch settings properly, prioritizing explicit world_setup_state
+                final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+                final_world_data = w_state.get('world_data') or state.get('world_data') or {}
                 
                 final_player_data = state['base_data'].copy()
                 final_player_data['attributes'] = state['final_attrs']
@@ -921,8 +918,28 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
                 
-                final_player_data['selected_config_preset'] = preset_to_load
-                final_player_data['game_settings'] = getattr(game, 'world_setup_state', {}).get('world_data', state.get('world_data'))
+                final_player_data['game_mode'] = final_mode
+                final_player_data['game_settings'] = final_world_data
+
+                save_folder = state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+                if not save_folder and not state.get('respawn_save_folder'):
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    save_folder = f"save_{final_mode}_{timestamp}"
+                    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+                    os.makedirs(save_path, exist_ok=True)
+                    world_xml_path = os.path.join(save_path, "world.xml")
+                    save_config_xml(final_world_data, world_xml_path)
+                elif save_folder:
+                    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+                    world_xml_path = os.path.join(save_path, "world.xml")
+                else:
+                    world_xml_path = None
+
+                if world_xml_path and os.path.exists(world_xml_path):
+                    core.data.config.load_settings(world_xml_path)
+
+                game.current_save_folder_name = save_folder
+                final_player_data['save_folder_name'] = save_folder
 
                 if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
                     from core.server.client import GameClient, init_client_world
@@ -942,10 +959,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
                 raw_seed = state.get('world_seed', "").strip()
-                #if not raw_seed:
-                #    raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
-                
-                # Prepend the active MAP_CHUNKS prefix so generator.py builds the requested grid
                 chunks = core.data.config.MAP_CHUNKS
                 if not raw_seed.startswith(f"{chunks}-"):
                     world_seed = f"{chunks}-{raw_seed}"

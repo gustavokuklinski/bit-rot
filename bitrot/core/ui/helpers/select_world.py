@@ -3,12 +3,14 @@
 import os
 import pygame
 import random
-from types import SimpleNamespace
+from datetime import datetime
+import xml.etree.ElementTree as ET
 
 import core.data.config
 from core.data.config import (
-    GAME_WIDTH, GAME_HEIGHT, UI_SCALE, WHITE, GRAY, DARK_GRAY,
-    GRAY_60, GRAY_80, GREEN, RED, YELLOW, font_16, font_12, SPRITE_PATH, BASE_DIR
+    GAME_WIDTH, GAME_HEIGHT, UI_SCALE, WHITE, GRAY, DARK_GRAY, BLACK,
+    GRAY_60, GRAY_80, GREEN, RED, YELLOW, font_16, font_12, SPRITE_PATH,
+    BASE_DIR, DATA_PATH, get_writable_dir
 )
 from core.data.localization import tr
 from core.ui.helpers.trait_config_loader import load_config_data
@@ -17,7 +19,6 @@ _world_icons_cache = {}
 _logo_cache = None
 
 def _get_logo_image(width):
-    """Loads, scales, and caches the game logo."""
     global _logo_cache
     if _logo_cache is not None and _logo_cache.get_width() == width:
         return _logo_cache
@@ -34,9 +35,7 @@ def _get_logo_image(width):
             print(f"[SelectWorld] Error loading logo: {e}")
     return None
 
-
 def _get_mode_icon(filename_or_relpath, size=(48, 48)):
-    """Safely loads and caches mode icons with a fallback surface."""
     if filename_or_relpath in _world_icons_cache:
         return _world_icons_cache[filename_or_relpath]
 
@@ -51,36 +50,140 @@ def _get_mode_icon(filename_or_relpath, size=(48, 48)):
             _world_icons_cache[filename_or_relpath] = scaled
             return scaled
     except Exception as e:
-        print(f"[SelectWorld] Warning loading icon '{filename_or_relpath}': {e}")
+        pass
 
     fallback = pygame.Surface(size, pygame.SRCALPHA)
     fallback.fill((80, 80, 80))
     _world_icons_cache[filename_or_relpath] = fallback
     return fallback
 
-
-def _apply_preset_and_proceed(game, state, preset_name):
-    """Loads world preset config and moves directly to Character Selection."""
-    path = core.data.config.get_world_config_path(preset_name)
-    world_data = load_config_data(path)
+def load_world_builds():
+    """Dynamically loads world build modes from XML files in world_builds/."""
+    builds = []
+    builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds")
     
-    state['world_data'] = world_data
-    state['selected_config_preset'] = preset_name
-    state['world_preset_name'] = preset_name
-    core.data.config.load_settings(preset_name)
+    if os.path.exists(builds_dir):
+        for filename in os.listdir(builds_dir):
+            if filename.endswith(".xml"):
+                filepath = os.path.join(builds_dir, filename)
+                try:
+                    tree = ET.parse(filepath)
+                    root = tree.getroot()
+                    if root.tag == "build":
+                        bid = root.get('id', 'unknown')
+                        props = root.find('properties')
+                        
+                        name, subtitle, icon_path = "Unknown", "", "ui/infection.png"
+                        accent, tooltips = (255, 255, 255), []
+                        
+                        if props is not None:
+                            n_node = props.find('name')
+                            if n_node is not None: name = n_node.get('value', 'Unknown')
+                            
+                            s_node = props.find('subtitle')
+                            if s_node is not None: subtitle = s_node.get('value', '')
+                            
+                            i_node = props.find('icon_path')
+                            if i_node is not None: icon_path = i_node.get('value', 'ui/infection.png')
+                            
+                            c_node = props.find('accent')
+                            if c_node is not None:
+                                try:
+                                    parts = c_node.get('value', '(255,255,255)').strip("() ").split(',')
+                                    accent = tuple(int(p.strip()) for p in parts)
+                                except: pass
+                                
+                            t_node = props.find('tooltips')
+                            if t_node is not None:
+                                tt_str = t_node.get('value', '[]')
+                                if tt_str.startswith('[') and tt_str.endswith(']'):
+                                    tooltips = [s.strip() for s in tt_str[1:-1].split(',')]
+                                    
+                        builds.append({
+                            'id': bid,
+                            'name': name,
+                            'subtitle': subtitle,
+                            'icon_path': icon_path,
+                            'accent': accent,
+                            'tooltip_lines': tooltips,
+                            'filename': filename
+                        })
+                except Exception as e:
+                    print(f"[SelectWorld] Error loading {filename}: {e}")
+                    
+    builds.sort(key=lambda x: x['name'])
+    return builds
 
-    # Ensure 12-digit world seed is initialized
+WORLD_MODES = load_world_builds()
+
+def _load_world_build_config(filename):
+    """Parses the <world> block from the chosen XML file."""
+    path = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds", filename)
+    if not os.path.exists(path): return {}
+    try:
+        tree = ET.parse(path)
+        world_node = tree.getroot().find('world')
+        data = {}
+        if world_node is not None:
+            for child in world_node:
+                block_name = child.tag
+                data[block_name] = {}
+                for setting in child:
+                    key = setting.tag
+                    val = setting.get('value')
+                    display_name = setting.get('name', key)
+                    default_val = setting.get('default')
+                    setting_dict = {'value': val, 'name': display_name}
+                    if default_val is not None:
+                        setting_dict['default'] = default_val
+                    data[block_name][key] = setting_dict
+        return data
+    except Exception as e:
+        print(f"Error parsing world data from {filename}: {e}")
+        return {}
+
+def _apply_build_and_proceed(game, state, mode_id, filename):
+    """Loads world settings in memory, creates save folder with world.xml, and proceeds to Character Selection."""
+    from datetime import datetime
+    from core.data.config import get_writable_dir
+    from core.ui.helpers.trait_config_loader import save_config_xml
+
+    if filename:
+        world_data = _load_world_build_config(filename)
+    else:
+        path = core.data.config.get_world_config_path('world')
+        world_data = load_config_data(path)
+
+    state['world_data'] = world_data
+    state['chosen_mode'] = mode_id
+    
     if not state.get('world_seed'):
         state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
 
-    if hasattr(game, 'world_setup_state'):
-        game.world_setup_state['world_data'] = world_data
-        game.world_setup_state['selected_config_preset'] = preset_name
-        game.world_setup_state['world_preset_name'] = preset_name
-        game.world_setup_state['world_seed'] = state['world_seed']
-        game.world_setup_state['world_unsaved'] = False
+    # Create the save folder immediately with world.xml inside
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_name = f"save_{mode_id}_{timestamp}"
+    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
+    os.makedirs(save_path, exist_ok=True)
 
-    state['current_tab'] = 'SelectCharacter'  # Advance to Character Selection
+    world_xml_path = os.path.join(save_path, "world.xml")
+    save_config_xml(world_data, world_xml_path)
+
+    game.current_save_folder_name = save_name
+    state['save_folder_name'] = save_name
+    state['world_xml_path'] = world_xml_path
+
+    if not hasattr(game, 'world_setup_state'):
+        game.world_setup_state = {}
+
+    game.world_setup_state['world_data'] = world_data
+    game.world_setup_state['chosen_mode'] = mode_id
+    game.world_setup_state['world_seed'] = state['world_seed']
+    game.world_setup_state['save_folder_name'] = save_name
+    game.world_setup_state['world_xml_path'] = world_xml_path
+    game.world_setup_state['world_unsaved'] = False
+
+    state['current_tab'] = 'SelectCharacter'
 
 
 def draw_select_world_screen(game, state, mouse_pos):
@@ -88,8 +191,6 @@ def draw_select_world_screen(game, state, mouse_pos):
     def S(val): return int(val * scale)
 
     center_x = GAME_WIDTH // 2
-
-    # --- 1. GAME LOGO AT THE TOP ---
     logo_w = S(240)
     logo_img = _get_logo_image(logo_w)
     
@@ -101,7 +202,6 @@ def draw_select_world_screen(game, state, mouse_pos):
     else:
         top_cursor_y = S(45)
 
-    # --- 2. SCREEN TITLE & SUBTITLE ---
     title_text = font_16.render(tr('ui', "SELECT GAME WORLD"), False, WHITE)
     title_rect = title_text.get_rect(center=(center_x, top_cursor_y + S(40)))
     game.game_screen.blit(title_text, title_rect)
@@ -110,71 +210,22 @@ def draw_select_world_screen(game, state, mouse_pos):
     sub_rect = sub_text.get_rect(center=(center_x, title_rect.bottom + S(12)))
     game.game_screen.blit(sub_text, sub_rect)
 
-    # --- 3. MODE CARDS ---
-    MODES = [
-        {
-            'id': 'casual',
-            'name': "Casual",
-            'subtitle': tr('ui', "Fast and play"),
-            'icon_path': 'ui/infection.png',
-            'preset': 'world-casual',
-            'accent': (50, 205, 50),
-            'tooltip_lines': [
-                tr('ui', "Fast and play"),
-                tr('ui', "Small map"),
-                tr('ui', "Lower rotters"),
-                tr('ui', "High loot")
-            ]
-        },
-        {
-            'id': 'hardcore',
-            'name': "Hardcore",
-            'subtitle': tr('ui', "High risk survival"),
-            'icon_path': 'zombie/dead.png',
-            'preset': 'world-hardcore',
-            'accent': (220, 60, 60),
-            'tooltip_lines': [
-                tr('ui', "Large map"),
-                tr('ui', "Lot of rotters"),
-                tr('ui', "Low loot")
-            ]
-        },
-        {
-            'id': 'sandbox',
-            'name': "Sandbox",
-            'subtitle': tr('ui', "Custom world rules"),
-            'icon_path': 'items/consumable_book_general_content.png',
-            'preset': 'world',
-            'accent': (255, 200, 50),
-            'tooltip_lines': [
-                tr('ui', "Tailor how you will rot")
-            ]
-        }
-    ]
-
     card_w = S(270)
     card_h = S(345)
     spacing = S(25)
-    total_w = (card_w * 3) + (spacing * 2)
+    
+    modes_count = len(WORLD_MODES)
+    total_w = (card_w * modes_count) + (spacing * max(0, modes_count - 1))
     start_x = center_x - (total_w // 2)
     card_y = sub_rect.bottom + S(16)
 
-    clickable_rects = {
-        'cards': [],
-        'back_button': None
-    }
+    clickable_rects = {'cards': [], 'back_button': None, 'sandbox_button': None}
 
-    hovered_mode = None
-
-    for i, mode in enumerate(MODES):
+    for i, mode in enumerate(WORLD_MODES):
         cx = start_x + i * (card_w + spacing)
         card_rect = pygame.Rect(cx, card_y, card_w, card_h)
         is_hovered = card_rect.collidepoint(mouse_pos)
 
-        if is_hovered:
-            hovered_mode = mode
-
-        # Background and card frame
         bg_col = (45, 45, 45) if is_hovered else (32, 32, 32)
         border_col = mode['accent'] if is_hovered else GRAY_60
         border_width = 2 if is_hovered else 1
@@ -182,56 +233,51 @@ def draw_select_world_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, bg_col, card_rect, border_radius=S(8))
         pygame.draw.rect(game.game_screen, border_col, card_rect, width=border_width, border_radius=S(8))
 
-        # Icon Frame
         icon_box_size = S(64)
         icon_box = pygame.Rect(0, 0, icon_box_size, icon_box_size)
         icon_box.center = (card_rect.centerx, card_rect.top + S(55))
         pygame.draw.rect(game.game_screen, (22, 22, 22), icon_box, border_radius=S(6))
         pygame.draw.rect(game.game_screen, border_col, icon_box, width=1, border_radius=S(6))
 
-        # Draw Icon
         icon_surf = _get_mode_icon(mode['icon_path'], size=(S(44), S(44)))
         if icon_surf:
             game.game_screen.blit(icon_surf, icon_surf.get_rect(center=icon_box.center))
 
-        # Mode Title
         name_surf = font_16.render(tr('ui', mode['name']), False, mode['accent'] if is_hovered else WHITE)
         game.game_screen.blit(name_surf, name_surf.get_rect(center=(card_rect.centerx, card_rect.top + S(110))))
 
-        # Subtitle
-        sub_surf = font_12.render(mode['subtitle'], False, (180, 180, 180))
+        sub_surf = font_12.render(tr('ui', mode['subtitle']), False, (180, 180, 180))
         game.game_screen.blit(sub_surf, sub_surf.get_rect(center=(card_rect.centerx, card_rect.top + S(134))))
 
-        # Divider
-        pygame.draw.line(
-            game.game_screen, (55, 55, 55),
-            (card_rect.left + S(20), card_rect.top + S(155)),
-            (card_rect.right - S(20), card_rect.top + S(155)), 1
-        )
+        pygame.draw.line(game.game_screen, (55, 55, 55), (card_rect.left + S(20), card_rect.top + S(155)), (card_rect.right - S(20), card_rect.top + S(155)), 1)
 
-        # Overview Bullet Summary inside Card
         line_cursor_y = card_rect.top + S(172)
         for line_str in mode['tooltip_lines']:
-            b_surf = font_12.render(f"- {line_str}", False, (220, 220, 220))
+            b_surf = font_12.render(f"- {tr('ui', line_str)}", False, (220, 220, 220))
             game.game_screen.blit(b_surf, (card_rect.left + S(25), line_cursor_y))
             line_cursor_y += S(22)
 
-        # Select Mode Button
         btn_h = S(38)
         btn_rect = pygame.Rect(card_rect.left + S(20), card_rect.bottom - btn_h - S(14), card_rect.width - S(40), btn_h)
-        btn_bg = mode['accent'] if is_hovered else (55, 55, 55)
-        btn_text_col = (10, 10, 10) if is_hovered else WHITE
+        
+        btn_hovered = btn_rect.collidepoint(mouse_pos)
+        btn_bg = mode['accent'] if btn_hovered else (55, 55, 55)
+        btn_text_col = (10, 10, 10) if btn_hovered else WHITE
         pygame.draw.rect(game.game_screen, btn_bg, btn_rect, border_radius=S(5))
 
         btn_txt = font_12.render(tr('ui', "Select Mode"), False, btn_text_col)
         game.game_screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
+        clickable_rects['cards'].append((mode, btn_rect))
 
-        clickable_rects['cards'].append((mode, card_rect))
+    # --- 4. BOTTOM BAR: BACK & SANDBOX ---
+    btn_w = S(200)
+    btn_h = S(42)
+    gap = S(20)
+    total_bottom_w = (btn_w * 2) + gap
+    start_bottom_x = center_x - (total_bottom_w // 2)
+    bottom_y = card_y + card_h + S(60)
 
-    # --- 4. BOTTOM BACK BUTTON ---
-    back_w = S(200)
-    back_h = S(42)
-    back_rect = pygame.Rect(center_x - back_w // 2, card_y + card_h + S(60), back_w, back_h)
+    back_rect = pygame.Rect(start_bottom_x, bottom_y, btn_w, btn_h)
     is_back_hover = back_rect.collidepoint(mouse_pos)
     back_bg = (80, 80, 80) if is_back_hover else (60, 60, 60)
     pygame.draw.rect(game.game_screen, back_bg, back_rect, border_radius=S(6))
@@ -239,23 +285,36 @@ def draw_select_world_screen(game, state, mouse_pos):
     game.game_screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
     clickable_rects['back_button'] = back_rect
 
+    sandbox_rect = pygame.Rect(back_rect.right + gap, bottom_y, btn_w, btn_h)
+    is_sandbox_hover = sandbox_rect.collidepoint(mouse_pos)
+    sandbox_bg = (255, 200, 50) if is_sandbox_hover else (200, 150, 30)
+    pygame.draw.rect(game.game_screen, sandbox_bg, sandbox_rect, border_radius=S(6))
+    sandbox_txt = font_16.render(tr('ui', "Sandbox Mode"), False, WHITE if is_sandbox_hover else BLACK)
+    game.game_screen.blit(sandbox_txt, sandbox_txt.get_rect(center=sandbox_rect.center))
+    clickable_rects['sandbox_button'] = sandbox_rect
 
     return clickable_rects
 
-
 def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
     if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
-        # Check Back Button
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
             game.game_state = 'MENU'
             return
+            
+        if clickable_rects.get('sandbox_button') and clickable_rects['sandbox_button'].collidepoint(mouse_pos):
+            state['chosen_mode'] = 'sandbox'
+            state['current_tab'] = 'World'
+            path = core.data.config.get_world_config_path('sandbox')
+            world_data = load_config_data(path)
+            state['world_data'] = world_data
 
-        # Check Cards Click
+            if not hasattr(game, 'world_setup_state'):
+                game.world_setup_state = {}
+            game.world_setup_state['world_data'] = world_data
+            game.world_setup_state['chosen_mode'] = 'sandbox'
+            return
+
         for mode, rect in clickable_rects.get('cards', []):
             if rect.collidepoint(mouse_pos):
-                state['chosen_mode'] = mode['id']
-                if mode['id'] in ('casual', 'hardcore'):
-                    _apply_preset_and_proceed(game, state, mode['preset'])
-                elif mode['id'] == 'sandbox':
-                    state['current_tab'] = 'World'
+                _apply_build_and_proceed(game, state, mode['id'], mode.get('filename'))
                 return

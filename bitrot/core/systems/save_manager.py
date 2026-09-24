@@ -52,6 +52,14 @@ def save_game(game):
             game.map_manager.map_folder = map_dst
 
         game.map_manager.save_map_to_file(map_dst)
+
+        world_xml_path = os.path.join(save_path, "world.xml")
+        if not os.path.exists(world_xml_path):
+            from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
+            w_data = getattr(game, 'world_setup_state', {}).get('world_data')
+            if not w_data:
+                w_data = load_config_data(os.path.join(DATA_PATH, "world.xml"))
+            save_config_xml(w_data, world_xml_path)
         
         # --- 1. PREPARE INDIVIDUAL PLAYER DATA ---
         player_id = getattr(game.player, 'player_id', None)

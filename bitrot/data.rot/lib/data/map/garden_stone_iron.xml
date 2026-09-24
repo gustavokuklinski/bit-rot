@@ -6,6 +6,7 @@
         <health min="50" max="100" />
     </properties>
     <drop>
-        <item item="Iron" chance="1" />
+        <item item="Iron" chance="0.8" />
+        <item item="Stone" chance="0.2" />
     </drop>
 </map>

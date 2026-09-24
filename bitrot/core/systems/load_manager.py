@@ -335,15 +335,21 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         game.map_manager.map_files = {}
         game.map_manager.clear_cache() 
 
-    if save_dir_name:
+    is_loading_existing_save = bool(save_dir_name)
+
+    if is_loading_existing_save:
         save_name = save_dir_name
         regenerate_map = False
         should_initial_save = False
     else:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_name = f"save_{timestamp}"
+        save_name = player_data.get('save_folder_name') or game.current_save_folder_name
+        if not save_name:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            game_mode = player_data.get('game_mode', 'sandbox')
+            save_name = f"save_{game_mode}_{timestamp}"
         regenerate_map = True
         should_initial_save = True
+
     game.current_save_folder_name = save_name
     
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
@@ -358,18 +364,24 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
     game.map_manager.map_folder = map_path
 
-    if not save_dir_name:
-        preset_name = player_data.get('selected_config_preset') or \
-                      game.player_setup_state.get('selected_config_preset') or \
-                      getattr(game, 'world_setup_state', {}).get('selected_config_preset', 'world')
-        game.logger.info(f"Reloading game configuration from XML: {preset_name}.xml")
-        core.data.config.load_settings(preset_name)
+    world_xml_path = os.path.join(save_path, "world.xml")
+    if not os.path.exists(world_xml_path):
+        from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
+        game_settings = player_data.get('game_settings')
+        if not game_settings:
+            default_path = os.path.join(DATA_PATH, "world.xml")
+            game_settings = load_config_data(default_path)
+        save_config_xml(game_settings, world_xml_path)
+
+    # Load its world.xml directly from inside the save folder
+    if os.path.exists(world_xml_path):
+        core.data.config.load_settings(world_xml_path)
 
     if 'attributes' not in player_data:
         player_data['attributes'] = {} 
 
-    gen_building_counts = game.player_setup_state.get('building_counts_config', None)
-    gen_chunk_settings = game.player_setup_state.get('chunk_settings_config', None)
+    gen_building_counts = getattr(game, 'player_setup_state', {}).get('building_counts_config', None)
+    gen_chunk_settings = getattr(game, 'player_setup_state', {}).get('chunk_settings_config', None)
     
     generator = ProceduralGenerator(
         game, 
@@ -463,14 +475,12 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         if 1 in game.all_map_layers:
             game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
             spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
-            #spawn_animals(game, target_layer=1)
 
         if 2 in game.all_map_layers:
             game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
             z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
             if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
                 spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
-            #spawn_animals(game, target_layer=2)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2
@@ -537,6 +547,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             game.current_save_folder_name = save_name
         game.save_game()
 
+
 def load_game(game, save_folder_name):
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder_name)
     map_path = os.path.join(save_path, "map")
@@ -544,6 +555,13 @@ def load_game(game, save_folder_name):
     
     game.logger.info(f"Loading game from {save_path}...")
 
+    # Load settings directly from the save folder's world.xml
+    world_xml_path = os.path.join(save_path, "world.xml")
+    if os.path.exists(world_xml_path):
+        core.data.config.load_settings(world_xml_path)
+    else:
+        core.data.config.load_settings(os.path.join(DATA_PATH, "world.xml"))
+        
     try:
         host_file = os.path.join(save_path, "host.rot")
         with open(host_file, "r") as f:
@@ -853,17 +871,6 @@ def load_game(game, save_folder_name):
                     if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
                     game.layer_zombies.setdefault(layer, []).append(a)
         
-        if 'modal_positions' in world_data:
-            saved_positions = world_data['modal_positions']
-            game.last_modal_positions.update(saved_positions)
-            for modal in game.modals:
-                m_type = modal['type']
-                if m_type in saved_positions:
-                    pos = saved_positions[m_type]
-                    if isinstance(pos, (list, tuple)) and len(pos) == 2:
-                        modal['position'] = (int(pos[0]), int(pos[1]))
-                        modal['rect'].topleft = modal['position']
-
         # Load NPCs
         if os.path.exists(os.path.join(save_path, "npc.rot")):
             with open(os.path.join(save_path, "npc.rot"), "r") as f:
