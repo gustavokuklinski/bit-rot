@@ -55,29 +55,29 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 | Action               | Keyboard / Mouse      | Joystick (Xbox-style) | Joystick Compatible |
 | :------------------- | :-------------------- | :-------------------- | :-----------------: |
-| **Move Up**          | `W`                   | `D-Pad Up`            | ✅                   |
-| **Move Down**        | `S`                   | `D-Pad Down`          | ✅                   |
-| **Move Left**        | `A`                   | `D-Pad Left`          | ✅                   |
-| **Move Right**       | `D`                   | `D-Pad Right`         | ✅                   |
-| **Run**              | `Left Shift`          | `B Button`            | ✅                   |
-| **Interact**         | `E`                   | `A Button`            | ✅                   |
-| **Reload**           | `R`                   | `X Button`            | ✅                   |
-| **Vehicle Engine**   | `Q`                   | `Y Button`            | ✅                   |
-| **Shove**            | `Space`               | `LB (Left Bumper)`    | ✅                   |
-| **Pause**            | `F2/Esc`              | `Start`               | ✅                   |
-| **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✅                   |
-| **Reset Modals**     | `F4`                  | `Back`                | ✅                   |
-| **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✅                   |
-| **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✅                   |
-| **Fullscreen**       | `F11`                 | —                     | ❌                   |
-| **Chat**             | `T`                   | —                     | ❌                   |
-| **Toggle Inventory** | `I`                   | —                     | ❌                   |
-| **Toggle Crafting**  | `C`                   | —                     | ❌                   |
-| **Toggle Status**    | `H`                   | —                     | ❌                   |
-| **Toggle Gear**      | `G`                   | —                     | ❌                   |
-| **Toggle Nearby**    | `N`                   | —                     | ❌                   |
-| **Toggle Messages**  | `M`                   | —                     | ❌                   |
-| **Toggle Slots**     | `Y`                   | —                     | ❌                   |
+| **Move Up**          | `W`                   | `D-Pad Up`            | ✓                   |
+| **Move Down**        | `S`                   | `D-Pad Down`          | ✓                   |
+| **Move Left**        | `A`                   | `D-Pad Left`          | ✓                   |
+| **Move Right**       | `D`                   | `D-Pad Right`         | ✓                   |
+| **Run**              | `Left Shift`          | `B Button`            | ✓                   |
+| **Interact**         | `E`                   | `A Button`            | ✓                   |
+| **Reload**           | `R`                   | `X Button`            | ✓                   |
+| **Vehicle Engine**   | `Q`                   | `Y Button`            | ✓                   |
+| **Shove**            | `Space`               | `LB (Left Bumper)`    | ✓                   |
+| **Pause**            | `F2/Esc`              | `Start`               | ✓                   |
+| **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✓                   |
+| **Reset Modals**     | `F4`                  | `Back`                | ✓                   |
+| **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✓                   |
+| **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✓                   |
+| **Fullscreen**       | `F11`                 | —                     | —                   |
+| **Chat**             | `T`                   | —                     | —                   |
+| **Toggle Inventory** | `I`                   | —                     | —                   |
+| **Toggle Crafting**  | `C`                   | —                     | —                   |
+| **Toggle Status**    | `H`                   | —                     | —                   |
+| **Toggle Gear**      | `G`                   | —                     | —                   |
+| **Toggle Nearby**    | `N`                   | —                     | —                   |
+| **Toggle Messages**  | `M`                   | —                     | —                   |
+| **Toggle Slots**     | `Y`                   | —                     | —                   |
 
 
 *Controllers can be edited `data.rot/save/config/keybinds.xml` XML file*

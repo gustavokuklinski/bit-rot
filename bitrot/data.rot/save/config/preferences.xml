@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <preferences>
     <ui>
-        <ui_background_music value="false" name="Background music" default="true"/>
+        <ui_background_music value="true" name="Background music" default="true"/>
         <ui_show_tutorial_default value="false" name="Display Help and Tutorial at start gameplay" default="false"/>
         <language value="en_US" name="Language" default="en_US"/>
         <window_mode value="windowed" name="Window" default="windowed"/>

@@ -5,7 +5,7 @@
         <subtitle value="High risk survival" />
         <icon_path value="zombie/dead.png" />
         <accent value="(220, 60, 60)" />
-        <tooltips value="[Large map, Lot of Rotters, Low loot, Investigate]" />
+        <tooltips value="[Large map, Lot of Rotters, Low loot]" />
     </properties>
     <world>
         <game>

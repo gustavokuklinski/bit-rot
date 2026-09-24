@@ -4,6 +4,7 @@ import os
 import pygame
 import random
 from datetime import datetime
+from types import SimpleNamespace
 import xml.etree.ElementTree as ET
 
 import core.data.config
@@ -14,6 +15,7 @@ from core.data.config import (
 )
 from core.data.localization import tr
 from core.ui.helpers.trait_config_loader import load_config_data
+from core.ui.tooltip import draw_tooltip
 
 _world_icons_cache = {}
 _logo_cache = None
@@ -154,6 +156,21 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
         path = core.data.config.get_world_config_path('world')
         world_data = load_config_data(path)
 
+    # Apply checkbox states directly to world configuration
+    if 'game' not in world_data:
+        world_data['game'] = {}
+
+    world_data['game']['all_visible'] = {
+        'value': 'true' if state.get('all_visible', False) else 'false',
+        'name': 'All containers are opened',
+        'default': 'false'
+    }
+    world_data['game']['permadeath'] = {
+        'value': 'true' if state.get('permadeath', False) else 'false',
+        'name': 'Delete save when die',
+        'default': 'false'
+    }
+
     state['world_data'] = world_data
     state['chosen_mode'] = mode_id
     
@@ -269,13 +286,68 @@ def draw_select_world_screen(game, state, mouse_pos):
         game.game_screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
         clickable_rects['cards'].append((mode, btn_rect))
 
+    # --- 3.5. CHECKBOXES: ALL VISIBLE & PERMADEATH ---
+    if 'all_visible' not in state:
+        state['all_visible'] = False
+    if 'permadeath' not in state:
+        state['permadeath'] = False
+
+    box_size = S(18)
+    cb_gap = S(35)
+    cb_y = card_y + card_h + S(16)
+
+    txt_all_vis = tr('ui', "All visible")
+    txt_perma = tr('ui', "Permadeath")
+
+    w1 = box_size + S(8) + font_12.size(txt_all_vis)[0]
+    w2 = box_size + S(8) + font_12.size(txt_perma)[0]
+    total_cb_w = w1 + cb_gap + w2
+    cb_start_x = center_x - (total_cb_w // 2)
+
+    hovered_cb_tooltip = None
+
+    # Checkbox 1: All visible
+    cb1_click_rect = pygame.Rect(cb_start_x, cb_y, w1, box_size)
+    cb1_box_rect = pygame.Rect(cb_start_x, cb_y, box_size, box_size)
+    is_hover_cb1 = cb1_click_rect.collidepoint(mouse_pos)
+
+    pygame.draw.rect(game.game_screen, (45, 45, 45), cb1_box_rect, border_radius=S(3))
+    pygame.draw.rect(game.game_screen, WHITE if is_hover_cb1 else GRAY, cb1_box_rect, 1, border_radius=S(3))
+    if state.get('all_visible', False):
+        inner_rect1 = cb1_box_rect.inflate(-S(6), -S(6))
+        pygame.draw.rect(game.game_screen, GREEN, inner_rect1, border_radius=S(2))
+
+    lbl1 = font_12.render(txt_all_vis, False, YELLOW if is_hover_cb1 else WHITE)
+    game.game_screen.blit(lbl1, (cb1_box_rect.right + S(8), cb1_box_rect.centery - lbl1.get_height() // 2))
+    clickable_rects['checkbox_all_visible'] = cb1_click_rect
+    if is_hover_cb1:
+        hovered_cb_tooltip = (txt_all_vis, tr('ui', "All containers are opened"))
+
+    # Checkbox 2: Permadeath
+    cb2_x = cb_start_x + w1 + cb_gap
+    cb2_click_rect = pygame.Rect(cb2_x, cb_y, w2, box_size)
+    cb2_box_rect = pygame.Rect(cb2_x, cb_y, box_size, box_size)
+    is_hover_cb2 = cb2_click_rect.collidepoint(mouse_pos)
+
+    pygame.draw.rect(game.game_screen, (45, 45, 45), cb2_box_rect, border_radius=S(3))
+    pygame.draw.rect(game.game_screen, WHITE if is_hover_cb2 else GRAY, cb2_box_rect, 1, border_radius=S(3))
+    if state.get('permadeath', False):
+        inner_rect2 = cb2_box_rect.inflate(-S(6), -S(6))
+        pygame.draw.rect(game.game_screen, GREEN, inner_rect2, border_radius=S(2))
+
+    lbl2 = font_12.render(txt_perma, False, YELLOW if is_hover_cb2 else WHITE)
+    game.game_screen.blit(lbl2, (cb2_box_rect.right + S(8), cb2_box_rect.centery - lbl2.get_height() // 2))
+    clickable_rects['checkbox_permadeath'] = cb2_click_rect
+    if is_hover_cb2:
+        hovered_cb_tooltip = (txt_perma, tr('ui', "Delete save when die"))
+
     # --- 4. BOTTOM BAR: BACK & SANDBOX ---
     btn_w = S(200)
     btn_h = S(42)
     gap = S(20)
     total_bottom_w = (btn_w * 2) + gap
     start_bottom_x = center_x - (total_bottom_w // 2)
-    bottom_y = card_y + card_h + S(60)
+    bottom_y = cb_y + box_size + S(16)
 
     back_rect = pygame.Rect(start_bottom_x, bottom_y, btn_w, btn_h)
     is_back_hover = back_rect.collidepoint(mouse_pos)
@@ -293,10 +365,34 @@ def draw_select_world_screen(game, state, mouse_pos):
     game.game_screen.blit(sandbox_txt, sandbox_txt.get_rect(center=sandbox_rect.center))
     clickable_rects['sandbox_button'] = sandbox_rect
 
+    if hovered_cb_tooltip:
+        t_proxy = SimpleNamespace(
+            name=hovered_cb_tooltip[0],
+            tooltip_lines=[hovered_cb_tooltip[1]],
+            tooltip_text=None,
+            item_type=None,
+            durability=None,
+            defence=None,
+            load=None,
+            capacity=None,
+            min_damage=None,
+            max_damage=None,
+            ammo_type=None
+        )
+        draw_tooltip(game.game_screen, t_proxy, (mouse_pos[0] + S(2), mouse_pos[1] + S(2)))
+
     return clickable_rects
 
 def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
     if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
+        if clickable_rects.get('checkbox_all_visible') and clickable_rects['checkbox_all_visible'].collidepoint(mouse_pos):
+            state['all_visible'] = not state.get('all_visible', False)
+            return
+
+        if clickable_rects.get('checkbox_permadeath') and clickable_rects['checkbox_permadeath'].collidepoint(mouse_pos):
+            state['permadeath'] = not state.get('permadeath', False)
+            return
+
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
             game.game_state = 'MENU'
             return
@@ -306,6 +402,20 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             state['current_tab'] = 'World'
             path = core.data.config.get_world_config_path('sandbox')
             world_data = load_config_data(path)
+
+            if 'game' not in world_data:
+                world_data['game'] = {}
+            world_data['game']['all_visible'] = {
+                'value': 'true' if state.get('all_visible', False) else 'false',
+                'name': 'All containers are opened',
+                'default': 'false'
+            }
+            world_data['game']['permadeath'] = {
+                'value': 'true' if state.get('permadeath', False) else 'false',
+                'name': 'Delete save when die',
+                'default': 'false'
+            }
+
             state['world_data'] = world_data
 
             if not hasattr(game, 'world_setup_state'):
