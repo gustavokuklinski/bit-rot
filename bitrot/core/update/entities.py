@@ -23,7 +23,7 @@ def _process_entity_substepping(entity, nearby_obstacles, game):
     orig_x = entity.x
     entity.x += dx
     entity.rect.x = int(entity.x)
-    if any(entity.rect.colliderect(obs) for obs in nearby_obstacles):
+    if any(entity.rect.inflate(-4, -4).colliderect(obs) for obs in nearby_obstacles):
         entity.x = orig_x
         entity.rect.x = int(entity.x)
         entity.knockback_velocity[0] = 0
@@ -31,7 +31,7 @@ def _process_entity_substepping(entity, nearby_obstacles, game):
     orig_y = entity.y
     entity.y += dy
     entity.rect.y = int(entity.y)
-    if any(entity.rect.colliderect(obs) for obs in nearby_obstacles):
+    if any(entity.rect.inflate(-4, -4).colliderect(obs) for obs in nearby_obstacles):
         entity.y = orig_y
         entity.rect.y = int(entity.y)
         entity.knockback_velocity[1] = 0
@@ -98,12 +98,10 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
                 if overlap_dist_sq < TILE_SIZE**2:
                     if not hasattr(entity, 'knockback_velocity') or isinstance(entity.knockback_velocity, tuple):
                         entity.knockback_velocity = [0.0, 0.0]
-                    if overlap_dist_sq > 0:
-                        entity.knockback_velocity[0] += (dx / overlap_dist_sq)
-                        entity.knockback_velocity[1] += (dy / overlap_dist_sq)
-                    else:
-                        entity.knockback_velocity[0] += random.uniform(-1.0, 1.0)
-                        entity.knockback_velocity[1] += random.uniform(-1.0, 1.0)
+                    dist = math.sqrt(overlap_dist_sq) if overlap_dist_sq > 0.001 else 0.001
+                    push = max(0.2, min(2.0, (TILE_SIZE - dist) / TILE_SIZE))
+                    entity.knockback_velocity[0] += (dx / dist) * push
+                    entity.knockback_velocity[1] += (dy / dist) * push
                     entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 50)
 
         if getattr(entity, 'aggro_timer', 0) > 0:

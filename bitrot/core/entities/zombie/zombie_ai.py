@@ -56,7 +56,7 @@ class ZombieAI:
                     z.path = []
 
     def has_line_of_sight(self, target_rect, game, current_time):
-        """Checks if there is an uninterrupted line between entity and target."""
+        """Checks if there is an unobstructed body corridor (3-ray check) between entity and target."""
         if not target_rect:
             return False
 
@@ -65,7 +65,7 @@ class ZombieAI:
 
         if not hasattr(self, 'last_los_check_time'):
             self.last_los_check_time = 0
-            self.los_check_interval = 350
+            self.los_check_interval = 250
             self.cached_los_result = True
 
         if current_time - self.last_los_check_time < self.los_check_interval:
@@ -74,10 +74,27 @@ class ZombieAI:
         start_pos = self.rect.center
         end_pos = target_rect.center
 
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        dist = math.hypot(dx, dy)
+        if dist == 0:
+            return True
+
+        # Perpendicular normal for physical width check (5 px half-width)
+        nx = (-dy / dist) * 5.0
+        ny = (dx / dist) * 5.0
+
+        rays = [
+            (start_pos, end_pos),
+            ((start_pos[0] + nx, start_pos[1] + ny), (end_pos[0] + nx, end_pos[1] + ny)),
+            ((start_pos[0] - nx, start_pos[1] - ny), (end_pos[0] - nx, end_pos[1] - ny)),
+        ]
+
         los_result = True
         obstacles = getattr(game, 'obstacles', [])
         for obs in obstacles:
-            if obs.clipline(start_pos, end_pos):
+            hit = any(obs.clipline(p1, p2) for p1, p2 in rays)
+            if hit:
                 gx = obs.centerx // TILE_SIZE
                 gy = obs.centery // TILE_SIZE
                 tile_def = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
@@ -371,6 +388,9 @@ class ZombieAI:
             self.move_towards(target_pos, obstacles, nearby_entities, game, can_see_target=can_see_target, allow_break_obstacles=allow_break)
 
     def move_towards(self, target_pos, obstacles, nearby_entities, game, can_see_target=True, allow_break_obstacles=False):
+        from core.systems.utils import resolve_stuck_in_obstacle
+        resolve_stuck_in_obstacle(self, obstacles, game)
+
         speed_mult = 1.0
         gx = self.rect.centerx // TILE_SIZE
         gy = self.rect.centery // TILE_SIZE
@@ -384,11 +404,15 @@ class ZombieAI:
         effective_speed = self.speed * getattr(game, 'dt_mult', 1.0) * speed_mult
         current_time = pygame.time.get_ticks()
 
+        dist_to_goal = math.hypot(target_pos[0] - self.rect.centerx, target_pos[1] - self.rect.centery)
+        close_enough_for_direct = (dist_to_goal <= self.attack_range * 1.5)
+
+        use_pathfinding = (not can_see_target) or (self.stuck_timer > 0) or (self.state == 'wandering') or (not close_enough_for_direct)
+
         move_x, move_y = 0, 0
-        use_pathfinding = (not can_see_target) or (self.stuck_timer > 0) or (self.state == 'wandering')
 
         if use_pathfinding:
-            recalc_time = 600 if self.state == 'chasing' else 1200
+            recalc_time = 500 if self.state == 'chasing' else 1000
             if current_time - getattr(self, 'last_path_calc_time', 0) > recalc_time or not self.path:
                 new_path = self._get_path_astar(self.rect.center, target_pos, game, allow_break_obstacles=allow_break_obstacles)
                 if new_path:
@@ -409,7 +433,11 @@ class ZombieAI:
                 dy = next_node[1] - self.rect.centery
                 dist = math.hypot(dx, dy)
 
-                if dist < TILE_SIZE * 0.4:
+                node_tile = (next_node[0] // TILE_SIZE, next_node[1] // TILE_SIZE)
+                my_tile = (self.rect.centerx // TILE_SIZE, self.rect.centery // TILE_SIZE)
+
+                # Clear waypoint if close or inside the same grid tile
+                if dist < TILE_SIZE * 0.75 or (node_tile == my_tile):
                     self.path.pop(0)
                     if self.path:
                         next_node = self.path[0]
@@ -488,62 +516,78 @@ class ZombieAI:
         total_dist_x, total_dist_y = abs(move_x), abs(move_y)
         steps = max(1, int(math.ceil(max(total_dist_x, total_dist_y) / safe_step_size)))
         step_x, step_y = move_x / steps, move_y / steps
-        max_slide = 4
+        max_slide = 6
+
+        moved_any = False
+        last_collider = None
 
         for _ in range(steps):
+            # X Axis
             self.x += step_x
             self.rect.x = round(self.x)
             collider = check_collision(self.rect)
             if collider:
+                last_collider = collider
                 resolved = False
+                orig_rect_y = self.rect.y
                 for offset in range(1, max_slide + 1):
-                    self.rect.y -= offset
+                    self.rect.y = orig_rect_y - offset
                     if not check_collision(self.rect):
                         self.y -= offset
+                        self.rect.y = round(self.y)
                         resolved = True
                         break
-                    self.rect.y += offset * 2
+                    self.rect.y = orig_rect_y + offset
                     if not check_collision(self.rect):
                         self.y += offset
+                        self.rect.y = round(self.y)
                         resolved = True
                         break
-                    self.rect.y -= offset
-
                 if not resolved:
+                    self.rect.y = orig_rect_y
                     self.x -= step_x
                     self.rect.x = round(self.x)
-                    if abs(step_x) > 0.1:
-                        self.stuck_timer = 200
-                        self.path = []
-                    if collider != getattr(game, 'player', None) and allow_break_obstacles:
-                        self._try_attack_obstacle(collider, game, current_time, 1.0)
+                else:
+                    moved_any = True
+            else:
+                moved_any = True
 
+            # Y Axis
             self.y += step_y
             self.rect.y = round(self.y)
             collider = check_collision(self.rect)
             if collider:
+                last_collider = collider
                 resolved = False
+                orig_rect_x = self.rect.x
                 for offset in range(1, max_slide + 1):
-                    self.rect.x -= offset
+                    self.rect.x = orig_rect_x - offset
                     if not check_collision(self.rect):
                         self.x -= offset
+                        self.rect.x = round(self.x)
                         resolved = True
                         break
-                    self.rect.x += offset * 2
+                    self.rect.x = orig_rect_x + offset
                     if not check_collision(self.rect):
                         self.x += offset
+                        self.rect.x = round(self.x)
                         resolved = True
                         break
-                    self.rect.x -= offset
-
                 if not resolved:
+                    self.rect.x = orig_rect_x
                     self.y -= step_y
                     self.rect.y = round(self.y)
-                    if abs(step_y) > 0.1:
-                        self.stuck_timer = 200
-                        self.path = []
-                    if collider != getattr(game, 'player', None) and allow_break_obstacles:
-                        self._try_attack_obstacle(collider, game, current_time, 1.0)
+                else:
+                    moved_any = True
+            else:
+                moved_any = True
+
+        # Only register as stuck if movement was completely blocked on both axes
+        if not moved_any and (abs(move_x) > 0.1 or abs(move_y) > 0.1):
+            self.stuck_timer = 200
+            self.path = []
+            if allow_break_obstacles and last_collider and last_collider != getattr(game, 'player', None):
+                self._try_attack_obstacle(last_collider, game, current_time, 1.0)
 
         self.rect.topleft = (round(self.x), round(self.y))
 

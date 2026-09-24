@@ -98,11 +98,9 @@ class Vehicle:
         self.generate_trunk_loot(loot_table)
         self.update_stats_from_equipment()
         
-        if self.image:
-             self.mask = pygame.mask.from_surface(self.image)
-        else:
-             self.mask = pygame.mask.Mask((width, height))
-             self.mask.fill()
+        surf_mask = pygame.Surface((width, height), pygame.SRCALPHA)
+        pygame.draw.rect(surf_mask, (255, 255, 255, 255), pygame.Rect(2, 2, max(2, width - 4), max(2, height - 4)), border_radius=4)
+        self.mask = pygame.mask.from_surface(surf_mask)
         
         self.engine_channel = None
         self.sounds = {}
@@ -160,6 +158,7 @@ class Vehicle:
         return False
 
     @property
+    @property
     def image(self):
         if not self.images:
             if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates()
@@ -176,7 +175,9 @@ class Vehicle:
                  self.width = img.get_width()
                  self.height = img.get_height()
                  self.rect.size = (self.width, self.height)
-                 self.mask = pygame.mask.from_surface(img)
+                 surf_mask = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+                 pygame.draw.rect(surf_mask, (255, 255, 255, 255), pygame.Rect(2, 2, max(2, self.width - 4), max(2, self.height - 4)), border_radius=4)
+                 self.mask = pygame.mask.from_surface(surf_mask)
             return img
             
         return None
@@ -399,9 +400,9 @@ class Vehicle:
                 if collider not in self.hit_entities:
                     self.hit_entities.append(collider)
             else:
-                if dx > 0: self.rect.right = collider.left
-                elif dx < 0: self.rect.left = collider.right
-                self.x = self.rect.x
+                self.x -= dx
+                self.rect.x = int(self.x)
+                self.velocity[0] = 0
 
         self.y += dy
         self.rect.y = int(self.y)
@@ -417,17 +418,9 @@ class Vehicle:
                 if collider not in self.hit_entities:
                     self.hit_entities.append(collider)
             else:
-                if dy > 0: self.rect.bottom = collider.top
-                elif dy < 0: self.rect.top = collider.bottom
-                self.y = self.rect.y
-        
-        if collision and not is_entity:
-             current_speed = self.current_speed_val
-             if current_speed > 2.0:
-                 damage = current_speed * 0.5
-                 print(f"CRASH! Speed: {current_speed:.1f} | Damage: {damage:.1f}")
-                 self.damage_motor(damage)
-                 self.velocity = [0, 0]
+                self.y -= dy
+                self.rect.y = int(self.y)
+                self.velocity[1] = 0
 
     @property
     def current_light_radius(self):

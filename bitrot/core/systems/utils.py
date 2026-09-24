@@ -2,6 +2,44 @@ import pygame
 import math
 from core.data.config import GAME_OFFSET_X, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
+def create_smooth_entity_mask(width=TILE_SIZE, height=TILE_SIZE, inset_x=2, inset_y=2):
+    """Creates a smoothed, rounded collision mask that glides around corners and through 1-tile doorways."""
+    surf = pygame.Surface((width, height), pygame.SRCALPHA)
+    rect = pygame.Rect(inset_x, inset_y, max(2, width - inset_x * 2), max(2, height - inset_y * 2))
+    pygame.draw.ellipse(surf, (255, 255, 255, 255), rect)
+    return pygame.mask.from_surface(surf)
+
+def resolve_stuck_in_obstacle(entity, obstacles, game):
+    """Gently nudges an entity outward if it ever starts inside an obstacle."""
+    if not obstacles or not hasattr(entity, 'rect'):
+        return
+    indices = entity.rect.collidelistall(obstacles)
+    for idx in indices:
+        obs = obstacles[idx]
+        gx = obs.x // TILE_SIZE
+        gy = obs.y // TILE_SIZE
+        tile_def = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
+        
+        collides = False
+        if tile_def and 'mask' in tile_def and getattr(entity, 'mask', None):
+            offset = (obs.x - entity.rect.x, obs.y - entity.rect.y)
+            if entity.mask.overlap(tile_def['mask'], offset):
+                collides = True
+        else:
+            collides = True
+            
+        if collides:
+            dx = entity.rect.centerx - obs.centerx
+            dy = entity.rect.centery - obs.centery
+            dist = math.hypot(dx, dy)
+            push = 2.0
+            if dist > 0.001:
+                entity.x += (dx / dist) * push
+                entity.y += (dy / dist) * push
+            else:
+                entity.x += push
+            entity.rect.topleft = (round(entity.x), round(entity.y))
+
 def capture_pause_screen(game):
     """Creates a black and white version of the current screen for the pause menu."""
     game.paused_surface = game.game_screen.copy()

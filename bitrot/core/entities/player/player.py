@@ -13,7 +13,7 @@ from core.messages import display_message
 from core.data.recipe_manager import RecipeManager
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.data.progression_loader import PROGRESSION_CONFIG
-
+from core.systems.utils import create_smooth_entity_mask
 # Import Mixins
 from core.entities.player.player_stats import PlayerStats
 from core.entities.player.player_movement import PlayerMovement
@@ -156,13 +156,11 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 self.images['left'] = self.image
                 self.images['right'] = self.image
 
-        if self.image:
-            self.mask = pygame.mask.from_surface(self.image)
-        else:
+        
+        self.mask = create_smooth_entity_mask(TILE_SIZE, TILE_SIZE, inset_x=2, inset_y=2)
+        if not self.image:
             self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
             self.image.fill(BLUE)
-            self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
-            self.mask.fill()
 
         self.layer_switch_cooldown = 0
         self.aim_angle = 0

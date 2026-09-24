@@ -11,6 +11,7 @@ from core.entities.zombie.corpse import Corpse
 from core.entities.item.item import Item
 from core.ui.notifications import check_milestone_progress
 from core.data.config import TILE_SIZE
+from core.systems.utils import create_smooth_entity_mask
 
 class Animal(Zombie):
 
@@ -66,6 +67,8 @@ class Animal(Zombie):
         super().__init__(x, y, zombie_template)
 
         # 4. Now safe to set self.layer on the initialized Sprite
+        
+        self.mask = create_smooth_entity_mask(TILE_SIZE, TILE_SIZE, inset_x=2, inset_y=2)
         self.layer = target_layer
         self.attack_player = template.get('attack_player', False)
         self.spawn_zombies_max = template.get('spawn_zombies', 0)
@@ -171,16 +174,15 @@ class Animal(Zombie):
             self.aggro_timer = 3000
             flee_dist = math.hypot(flee_x, flee_y)
             if flee_dist > 0:
-                flee_x += random.uniform(-40, 40)
-                flee_y += random.uniform(-40, 40)
+                flee_x += random.uniform(-20, 20)
+                flee_y += random.uniform(-20, 20)
                 target_x = self.rect.centerx + flee_x
                 target_y = self.rect.centery + flee_y
-                self.move_towards((target_x, target_y), obstacles, other_zombies, game, can_see_target=True)
+                self.move_towards((target_x, target_y), obstacles, other_zombies, game, can_see_target=False, allow_break_obstacles=False)
         else:
             if getattr(self, 'aggro_timer', 0) > 0:
                 self.aggro_timer -= getattr(game, 'dt_ms', 16)
 
-            # Peaceful wandering (never targets or attacks the player)
             self.state = 'wandering'
             current_time = pygame.time.get_ticks()
 
@@ -198,11 +200,11 @@ class Animal(Zombie):
                     self.wander_sound_cooldown = random.randint(6000, 14000)
 
             target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
-            wander_interval = getattr(core.data.config, 'ZOMBIE_WANDER_CHANGE_INTERVAL', 2000)
+            wander_interval = getattr(core.data.config, 'ZOMBIE_WANDER_CHANGE_INTERVAL', 2500)
 
             if (current_time - getattr(self, 'last_wander_change', 0) > wander_interval) or (self.wander_target is None) or target_reached:
-                for _ in range(6):
-                    wander_radius = 4 * TILE_SIZE
+                for _ in range(10):
+                    wander_radius = 5 * TILE_SIZE
                     new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
                     new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
 
@@ -212,13 +214,16 @@ class Animal(Zombie):
                     if hasattr(game, 'map_data') and 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
                         tile = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
                         if not tile or not tile.get('is_obstacle', False):
-                            self.wander_target = (new_target_x, new_target_y)
-                            break
+                            g_layer = game.all_ground_layers.get(getattr(self, 'layer', 1), [[]])
+                            g_tile = g_layer[grid_y][grid_x] if 0 <= grid_y < len(g_layer) and 0 <= grid_x < len(g_layer[0]) else ''
+                            if 'water' not in g_tile.lower():
+                                self.wander_target = (new_target_x, new_target_y)
+                                break
 
                 self.last_wander_change = current_time
 
             if self.wander_target:
-                self.move_towards(self.wander_target, obstacles, other_zombies, game, can_see_target=True, allow_break_obstacles=False)
+                self.move_towards(self.wander_target, obstacles, other_zombies, game, can_see_target=False, allow_break_obstacles=False)
 
     def take_damage(self, amount, game, attacker=None):
         if getattr(game, 'is_client', False):

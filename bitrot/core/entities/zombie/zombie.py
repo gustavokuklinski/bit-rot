@@ -8,7 +8,7 @@ import core.data.config
 from core.data.config import TILE_SIZE, RED
 from core.entities.item.item import Item
 from core.entities.item.item_factory import get_tinted_sprite
-
+from core.systems.utils import create_smooth_entity_mask
 # Mixins
 from core.entities.zombie.zombie_data import ZombieData
 from core.entities.zombie.zombie_graphics import ZombieGraphics
@@ -74,11 +74,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 self.images['left'] = fallback_image
                 self.images['right'] = fallback_image
 
+        
         self.image = self.images.get('center')
-        if self.image:
-            self.mask = pygame.mask.from_surface(self.image)
-        else:
-            self.mask = None
+        self.mask = create_smooth_entity_mask(TILE_SIZE, TILE_SIZE, inset_x=2, inset_y=2)
 
         self.clothes = template.get('clothes', {})
         self.color = RED

@@ -47,7 +47,7 @@ class TileManager:
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
-                                mask = pygame.mask.from_surface(image)
+                                mask = pygame.mask.from_surface(image, 127)
 
                                 definition = {
                                     'name': root.get('name', 'Unknown'),

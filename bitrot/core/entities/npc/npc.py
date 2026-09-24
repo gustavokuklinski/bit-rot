@@ -13,6 +13,7 @@ from core.entities.zombie.zombie_data import ZombieData
 from core.messages import display_message
 from faker import Faker
 from core.entities.npc.npc_dialog import NPCDialog
+from core.systems.utils import create_smooth_entity_mask, resolve_stuck_in_obstacle
 
 # Mixins
 from core.entities.npc.npc_data import NPCData
@@ -296,17 +297,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if actual_slot not in self.clothes:
                     self.clothes[actual_slot] = item
         
-        if self.image:
-            self.mask = pygame.mask.from_surface(self.image)
-        else:
-            self.mask = pygame.mask.Mask((TILE_SIZE, TILE_SIZE))
-            self.mask.fill()
+        
+        self.mask = create_smooth_entity_mask(TILE_SIZE, TILE_SIZE, inset_x=2, inset_y=2)
 
         self.last_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
 
     def update(self, game):
         obstacles = game.obstacles
         if self.is_dead: return 
+        resolve_stuck_in_obstacle(self, obstacles, game)
 
         multiplier = 1.0
         
@@ -490,7 +489,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         dy_path = next_node[1] - self.rect.centery
                         dist_path = math.hypot(dx_path, dy_path)
                         
-                        if dist_path < TILE_SIZE * 0.5:
+                        node_tile = (next_node[0] // TILE_SIZE, next_node[1] // TILE_SIZE)
+                        my_tile = (self.rect.centerx // TILE_SIZE, self.rect.centery // TILE_SIZE)
+                        if dist_path < TILE_SIZE * 0.75 or (node_tile == my_tile):
                             self.path.pop(0)
                             if self.path:
                                 next_node = self.path[0]
@@ -595,7 +596,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         
         step_dx = self.dx / steps
         step_dy = self.dy / steps
-        max_slide = 4
+        max_slide = 6
+        moved_any = False
 
         for _ in range(steps):
             # --- X AXIS WITH VERTICAL CORNER SLIDING ---
@@ -605,28 +607,30 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             
             if collider:
                 resolved = False
+                orig_rect_y = self.rect.y
                 for offset in range(1, max_slide + 1):
-                    self.rect.y -= offset
+                    self.rect.y = orig_rect_y - offset
                     if not check_collision(self.rect):
                         self.y -= offset
+                        self.rect.y = round(self.y)
                         resolved = True
                         break
-                    self.rect.y += offset
-
-                    self.rect.y += offset
+                    self.rect.y = orig_rect_y + offset
                     if not check_collision(self.rect):
                         self.y += offset
+                        self.rect.y = round(self.y)
                         resolved = True
                         break
-                    self.rect.y += offset
 
                 if not resolved:
+                    self.rect.y = orig_rect_y
                     self.x -= step_dx
                     self.rect.x = round(self.x)
                     self.dx = 0
-                    if self.stuck_timer <= 0:
-                        self.stuck_timer = 200
-                        self.path = []
+                else:
+                    moved_any = True
+            else:
+                moved_any = True
 
             # --- Y AXIS WITH HORIZONTAL CORNER SLIDING ---
             self.y += step_dy
@@ -635,28 +639,35 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             
             if collider:
                 resolved = False
+                orig_rect_x = self.rect.x
                 for offset in range(1, max_slide + 1):
-                    self.rect.x -= offset
+                    self.rect.x = orig_rect_x - offset
                     if not check_collision(self.rect):
                         self.x -= offset
+                        self.rect.x = round(self.x)
                         resolved = True
                         break
-                    self.rect.x += offset
-
-                    self.rect.x += offset
+                    self.rect.x = orig_rect_x + offset
                     if not check_collision(self.rect):
                         self.x += offset
+                        self.rect.x = round(self.x)
                         resolved = True
                         break
-                    self.rect.x += offset
 
                 if not resolved:
+                    self.rect.x = orig_rect_x
                     self.y -= step_dy
                     self.rect.y = round(self.y)
                     self.dy = 0
-                    if self.stuck_timer <= 0:
-                        self.stuck_timer = 200
-                        self.path = []
+                else:
+                    moved_any = True
+            else:
+                moved_any = True
+
+        if not moved_any and (abs(self.dx) > 0.1 or abs(self.dy) > 0.1):
+            if self.stuck_timer <= 0:
+                self.stuck_timer = 200
+                self.path = []
 
         self.rect.topleft = (round(self.x), round(self.y))
 

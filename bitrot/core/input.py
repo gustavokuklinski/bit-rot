@@ -67,7 +67,7 @@ def handle_movement(game):
     
     # --- Dynamic Speed Calculation using XML Config ---
     base_move_speed = core.data.config.PLAYER_SPEED
-    speed_multiplier = 1.0
+    speed_multiplier = 0.8
 
     if game.player:
         for trait_id in game.player.traits:

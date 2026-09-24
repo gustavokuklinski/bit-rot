@@ -10,6 +10,7 @@ from core.messages import display_message
 from core.placement import find_free_tile
 from core.entities.npc.npc import NPC
 from core.data.localization import tr
+from core.systems.utils import resolve_stuck_in_obstacle
 
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):
@@ -172,8 +173,11 @@ class PlayerMovement:
             self.rect.topleft = (int(self.x), int(self.y))
             
         else:
+            resolve_stuck_in_obstacle(self, obstacles, game)
+            
             def check_collision(rect_check):
                 indices = rect_check.collidelistall(obstacles)
+
                 for idx in indices:
                     obstacle = obstacles[idx]
                     gx = obstacle.x // TILE_SIZE
@@ -228,48 +232,54 @@ class PlayerMovement:
             steps = max(1, int(math.ceil(total_dist)))
             step_x = move_x / steps
             step_y = move_y / steps
-            max_slide = 4 
+            max_slide = 6 
 
             for _ in range(steps):
+                # X Axis Movement
                 self.x += step_x
                 self.rect.x = round(self.x)
                 if check_collision(self.rect) == 'tile':
                     resolved = False
+                    orig_y = self.rect.y
                     for offset in range(1, max_slide + 1):
-                        self.rect.y -= offset
+                        self.rect.y = orig_y - offset
                         if check_collision(self.rect) != 'tile':
                             self.y -= offset
+                            self.rect.y = round(self.y)
                             resolved = True
                             break
-                        self.rect.y += offset
-                        self.rect.y += offset
+                        self.rect.y = orig_y + offset
                         if check_collision(self.rect) != 'tile':
                             self.y += offset
+                            self.rect.y = round(self.y)
                             resolved = True
                             break
-                        self.rect.y -= offset
                     if not resolved:
+                        self.rect.y = orig_y
                         self.x -= step_x
                         self.rect.x = round(self.x)
 
+                # Y Axis Movement
                 self.y += step_y
                 self.rect.y = round(self.y)
                 if check_collision(self.rect) == 'tile':
                     resolved = False
+                    orig_x = self.rect.x
                     for offset in range(1, max_slide + 1):
-                        self.rect.x -= offset
+                        self.rect.x = orig_x - offset
                         if check_collision(self.rect) != 'tile':
                             self.x -= offset
+                            self.rect.x = round(self.x)
                             resolved = True
                             break
-                        self.rect.x += offset
-                        self.rect.x += offset
+                        self.rect.x = orig_x + offset
                         if check_collision(self.rect) != 'tile':
-                            self.y += offset
+                            self.x += offset
+                            self.rect.x = round(self.x)
                             resolved = True
                             break
-                        self.rect.x -= offset
                     if not resolved:
+                        self.rect.x = orig_x
                         self.y -= step_y
                         self.rect.y = round(self.y)
 
