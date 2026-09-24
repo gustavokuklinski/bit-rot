@@ -3,6 +3,7 @@
 import os
 import xml.etree.ElementTree as ET
 import pygame
+import core.data.config
 from core.data.config import *
 import core.data.config
 
@@ -105,15 +106,20 @@ class TileManager:
 
                                 # Parse Explicit Drops
                                 drop_node = root.find('drop')
+                                if drop_node is None and props_node is not None:
+                                    drop_node = props_node.find('drop')
+
                                 if drop_node is not None:
                                     definition['drops'] = []
                                     for item_node in drop_node.findall('item'):
-                                        definition['drops'].append({
-                                            'item': item_node.get('item'),
-                                            'chance': float(item_node.get('chance', 1.0)),
-                                            'min_qty': int(item_node.get('min', 1)),
-                                            'max_qty': int(item_node.get('max', 1))
-                                        })
+                                        item_name = item_node.get('item') or item_node.get('name')
+                                        if item_name:
+                                            definition['drops'].append({
+                                                'item': item_name,
+                                                'chance': float(item_node.get('chance', 1.0)),
+                                                'min_qty': int(item_node.get('min', 1)),
+                                                'max_qty': int(item_node.get('max', 1))
+                                            })
 
                                 if definition['destructible'] or 'tree' in filename.lower():
                                     if 'health_max' not in definition:

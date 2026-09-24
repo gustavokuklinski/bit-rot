@@ -6,6 +6,7 @@ import csv
 import pygame
 import random
 import time
+import core.data.config
 from core.data.config import *
 from core.messages import display_message
 from core.entities.item.item import Item
@@ -700,36 +701,71 @@ class MapManager:
             if (grid_x, grid_y) in self.shaking_tiles:
                 del self.shaking_tiles[(grid_x, grid_y)]
 
+            # 1. Process and spawn tile item drops
+            if definition and definition.get('drops'):
+                spawn_x = grid_x * TILE_SIZE
+                spawn_y = grid_y * TILE_SIZE
+
+                m = getattr(core.data.config, 'ITEM_SPAWN_CHANCE_MULTIPLIER', 1.0)
+                lucky_bonus = 0.0
+                if is_player and getattr(self.game, 'player', None):
+                    lucky_bonus = self.game.player.progression.get_lucky(self.game.player) * 0.05
+
+                for drop in definition['drops']:
+                    item_name = drop.get('item')
+                    if not item_name:
+                        continue
+
+                    chance = drop.get('chance', 1.0) * m * (1.0 + lucky_bonus)
+                    if random.random() <= chance:
+                        min_q = drop.get('min_qty', 1)
+                        max_q = drop.get('max_qty', 1)
+                        qty = random.randint(min_q, max_q)
+
+                        for _ in range(qty):
+                            new_item = Item.create_from_name(item_name)
+                            if new_item:
+                                new_item.rect.topleft = (spawn_x, spawn_y)
+                                new_item.x = spawn_x
+                                new_item.y = spawn_y
+                                new_item.is_placed = False
+
+                                free_spot = find_free_tile(new_item.rect, self.game.obstacles, initial_pos=(spawn_x, spawn_y), max_radius=2)
+                                if free_spot:
+                                    new_item.rect.topleft = free_spot
+                                    new_item.x, new_item.y = free_spot
+
+                                self.game.items_on_ground.append(new_item)
+
+                if hasattr(self.game, 'spatial_manager'):
+                    self.game.spatial_manager.rebuild_item_grid(force=True)
+
+            # 2. Determine target tile state (broken sprite or empty space)
             base_name = char.replace("_open", "").replace("_close", "").replace("_broke", "")
             broken_char = f"{base_name}_broke"
             if broken_char in self.game.tile_manager.definitions:
                 target_char = broken_char
+                display_message(tr('msg', "Door/Window broken!"))
             else:
-                ground_char = "."
-                try:
-                    ground_char = self.game.all_ground_layers[self.game.current_layer_index][grid_y][grid_x]
-                except Exception:
-                    pass
-                target_char = ground_char
+                target_char = ' '
+                tile_name = definition.get('name', 'Object') if definition else 'Object'
+                display_message(f"{tr('tile', tile_name)} {tr('msg', 'destroyed!')}")
 
             self._replace_tile(grid_x, grid_y, char, target_char)
-            display_message(tr('msg', "Door/Window broken!"))
         return True
 
     def _replace_tile(self, grid_x, grid_y, old_char, new_char):
-        new_def = self.game.tile_manager.definitions.get(new_char)
-        old_def = self.game.tile_manager.definitions.get(old_char)
-        if not new_def or not old_def: return
+        new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
         self.game.map_data[grid_y][grid_x] = new_char
         
         self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-        if new_def['is_obstacle']:
+        if new_def and new_def.get('is_obstacle', False):
             self.game.obstacles.append(tile_rect)
             
-        # [NEW] Invalidate chunk to redraw with new tile
+        # Invalidate chunk to redraw with updated tile
         self.invalidate_chunk(grid_x, grid_y)
         
         if getattr(self.game, 'is_server', False):
