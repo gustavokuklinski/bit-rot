@@ -1,3 +1,5 @@
+# core/states/game_over.py
+
 import pygame
 import core.data.config
 from core.ui.helpers.game_over import draw_game_over
@@ -37,7 +39,7 @@ def run_game_over(game):
                 if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
                     save_folder = game.current_save_folder_name
                     game.player_setup_state = {}
-                    game.player_setup_state['current_tab'] = 'Player'
+                    game.player_setup_state['current_tab'] = 'SelectCharacter'  # Go to Select Character
                     game.player_setup_state['respawn_save_folder'] = save_folder
                     game.game_state = 'PLAYER_SETUP'
                     return
@@ -57,7 +59,7 @@ def run_game_over(game):
                 if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
                     save_folder = game.current_save_folder_name
                     game.player_setup_state = {}
-                    game.player_setup_state['current_tab'] = 'Player'
+                    game.player_setup_state['current_tab'] = 'SelectCharacter'  # Go to Select Character
                     game.player_setup_state['respawn_save_folder'] = save_folder
                     game.game_state = 'PLAYER_SETUP'
                     return

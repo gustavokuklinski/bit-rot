@@ -30,10 +30,10 @@
     <initial_loot>
         <item name="ID" chance="1" />
         <item name="Wallet" chance="1" />
-        <item name="Personal Data" chance="1" />
+        <!-- <item name="Personal Data" chance="1" />
         <item name="Expanded Bright" chance="1" />
         <item name="welding_ght-49" chance="1" />
-        <item name="Mobile off" chance="1" />
+        <item name="Mobile off" chance="1" /> -->
     </initial_loot>
 
     <visuals>

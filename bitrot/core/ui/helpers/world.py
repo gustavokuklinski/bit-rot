@@ -572,7 +572,7 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             game.player_setup_state['world_seed'] = state.get('world_seed', '')
             game.player_setup_state['selected_config_preset'] = preset_name
             game.player_setup_state['world_preset_name'] = preset_name
-            game.player_setup_state['current_tab'] = 'Player'
+            game.player_setup_state['current_tab'] = 'Player'  # Go directly to Player Builder
             return
 
         if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos):

@@ -1,0 +1,18 @@
+<player_build id="doctor">
+    <name value="Doctor" />
+    <subtitle value="Velvet Cross Healthcare" />
+    <description value="The Velvet Cross around the world and private health care from the remains of nations." />
+    <color value="(255, 100, 120)" />
+    <clothes>
+        <cloth name="Medical Mask" id="facial" />
+        <cloth name="Shoes" id="feet" />
+        <cloth name="Tshirt" id="body"/>
+        <cloth name="Medical Vest" id="arms"/>
+        <cloth name="Jeans Pants" id="legs" />
+    </clothes>
+    <items>
+        <item name="ID" />
+        <item name="Wallet" />
+        <item name="Scissor" />
+    </items>
+</player_build>

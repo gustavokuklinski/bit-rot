@@ -34,7 +34,7 @@
         <wander value="true" name="Zombie wandering" default="true"/>
         <sight_check value="true" name="Sight player" default="true"/>
         <infection_chance value="0.5" name="Zombie infection chance" default="0.5"/>
-        <respawn value="true" name="Zombie respawn on death" default="true"/>
+        <respawn value="false" name="Zombie respawn on death" default="true"/>
     </zombie>
     <npc>
         <npc_spawn_per_chunk value="4" name="Max NPC spawn on chunk" default="4"/>

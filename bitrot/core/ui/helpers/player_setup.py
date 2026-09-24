@@ -20,6 +20,8 @@ from core.ui.helpers.world import _draw_world_screen, handle_world_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
 from core.data.progression_loader import PROGRESSION_CONFIG
+from core.ui.helpers.select_world import draw_select_world_screen, handle_select_world_events
+from core.ui.helpers.select_character import draw_select_character_screen, handle_select_character_events
 
 fake = Faker()
 _stat_icons_cache = {}
@@ -1154,7 +1156,8 @@ def run_player_setup(game):
 
         # CHANGED: Default tab is now World!
         if 'current_tab' not in state:
-            state['current_tab'] = 'World'
+            #state['current_tab'] = 'World'
+            state['current_tab'] = 'SelectWorld'
 
         state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
         state['world_scroll_y'] = 0
@@ -1195,27 +1198,32 @@ def run_player_setup(game):
     player_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
     back_btn = pygame.Rect(base_x, GAME_HEIGHT - S(91) - center_offset_y, sidebar_width, btn_h)
 
-    is_client = getattr(game, 'is_client', False)
+    if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
+        is_client = getattr(game, 'is_client', False)
 
-    if not is_client:
-        s_col = GRAY_60 if state['current_tab'] == 'World' else (40, 40, 40)
-        pygame.draw.rect(game.game_screen, s_col, world_btn, border_radius=4)
-        pygame.draw.rect(game.game_screen, WHITE, world_btn, 1, border_radius=4)
-        game.game_screen.blit(font_12.render(tr('tab', "World"), False, WHITE), (world_btn.x + S(10), world_btn.y + S(10)))
+        if not is_client:
+            s_col = GRAY_60 if state['current_tab'] == 'World' else (40, 40, 40)
+            pygame.draw.rect(game.game_screen, s_col, world_btn, border_radius=4)
+            pygame.draw.rect(game.game_screen, WHITE, world_btn, 1, border_radius=4)
+            game.game_screen.blit(font_12.render(tr('tab', "World"), False, WHITE), (world_btn.x + S(10), world_btn.y + S(10)))
 
-    p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
-    pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
-    pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
-    game.game_screen.blit(font_12.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
+        p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
+        pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
+        pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
+        game.game_screen.blit(font_12.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
 
-    b_col = GRAY_80
-    pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
-    back_txt = font_12.render(tr('ui', "Back"), False, WHITE)
-    txt_rect = back_txt.get_rect(center=back_btn.center)
-    game.game_screen.blit(back_txt, txt_rect)
+        b_col = GRAY_80
+        pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
+        back_txt = font_12.render(tr('ui', "Back"), False, WHITE)
+        txt_rect = back_txt.get_rect(center=back_btn.center)
+        game.game_screen.blit(back_txt, txt_rect)
 
     clickable_rects = {}
-    if state['current_tab'] == 'Player':
+    if state['current_tab'] == 'SelectWorld':
+        clickable_rects = draw_select_world_screen(game, state, mouse_pos)
+    elif state['current_tab'] == 'SelectCharacter':
+        clickable_rects = draw_select_character_screen(game, state, mouse_pos)
+    elif state['current_tab'] == 'Player':
         clickable_rects = _draw_player_build_screen(game, state, mouse_pos)
     else:
         clickable_rects = _draw_world_screen(game, state, mouse_pos)
@@ -1233,32 +1241,29 @@ def run_player_setup(game):
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
-            if not is_client and world_btn.collidepoint(event_pos):
-                state['current_tab'] = 'World'
-                continue
+            if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
+                if not is_client and world_btn.collidepoint(event_pos):
+                    state['current_tab'] = 'World'
+                    continue
 
-            # Handle Player Tab Click
-            if player_btn.collidepoint(event_pos):
-                if hasattr(game, 'world_setup_state'):
-                    w_state = game.world_setup_state
-                    if w_state.get('world_unsaved', False):
-                        from core.ui.helpers.world import _save_world_preset
-                        _save_world_preset(w_state)
-                    
-                    p_name = w_state.get('selected_config_preset', 'world')
-                    core.data.config.load_settings(p_name)
-                    state['selected_config_preset'] = p_name
-                    state['world_preset_name'] = p_name
-                    state['world_data'] = w_state.get('world_data')
-                    state['world_seed'] = w_state.get('world_seed')
-                state['current_tab'] = 'Player'
-                continue
+                if player_btn.collidepoint(event_pos):
+                    state['current_tab'] = 'Player'
+                    continue
 
-            if back_btn.collidepoint(event_pos):
-                game.game_state = 'MENU'  # This returns the user to the main menu
-                continue
+                if back_btn.collidepoint(event_pos):
+                    if state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
+                        state['current_tab'] = 'World'
+                    elif state['current_tab'] == 'World':
+                        state['current_tab'] = 'SelectWorld'
+                    else:
+                        state['current_tab'] = 'SelectCharacter'
+                    continue
 
-        if state['current_tab'] == 'World':
+        if state['current_tab'] == 'SelectWorld':
+            handle_select_world_events(game, state, event, event_pos, clickable_rects)
+        elif state['current_tab'] == 'SelectCharacter':
+            handle_select_character_events(game, state, event, event_pos, clickable_rects)
+        elif state['current_tab'] == 'World':
             handle_world_events(game, state, event, event_pos, clickable_rects)
         else:
             handle_player_events(game, state, event, event_pos, clickable_rects)

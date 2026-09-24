@@ -1,0 +1,17 @@
+<player_build id="military">
+    <name value="Military" />
+    <subtitle value="Armed Forces" />
+    <description value="The small nations who still survive and distribuite the vaccines to the world." />
+    <color value="(120, 180, 80)" />
+    <clothes>
+        <cloth name="Beret" id="head" />
+        <cloth name="Military Boots" id="feet" />
+        <cloth name="Military Tshirt" id="body" />
+        <cloth name="Military Pants" id="legs" />
+    </clothes>
+    <items>
+        <item name="ID" />
+        <item name="Wallet" />
+        <item name="Pistol 9mm" />
+    </items>
+</player_build>

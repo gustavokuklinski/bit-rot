@@ -1,0 +1,17 @@
+<player_build id="exxoil">
+    <name value="Exxoil" />
+    <subtitle value="Drilling Workforce" />
+    <description value="The drilling land workers at GHT-42 providing workforce from United States of America." />
+    <color value="(255, 165, 0)" />
+    <clothes>
+        <head><cloth name="Worker Helmet" id="head" />
+        <cloth name="Military Boots" id="feet" />
+        <cloth name="Exxoil Tshirt" id="body"/>
+        <cloth name="Jeans Pants" id="legs" />
+    </clothes>
+    <items>
+        <item name="ID" />
+        <item name="Wallet" />
+        <item name="Wrench" />
+    </items>
+</player_build>

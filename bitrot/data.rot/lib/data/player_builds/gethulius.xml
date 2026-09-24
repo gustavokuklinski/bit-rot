@@ -1,0 +1,17 @@
+<player_build id="gethulius">
+    <name value="Gethulius" />
+    <subtitle value="Deep Extraction and Refine" />
+    <description value="The tech to deep explore the rocks and wells to refine and distribuite vaccines to the world from Brazil." />
+    <color value="(50, 205, 50)" />
+    <clothes>
+        <cloth name="Worker Helmet" id="head" />
+        <cloth name="Military Boots" id="feet" />
+        <cloth name="Gethulius Tshirt" id="body" />
+        <cloth name="Jeans Pants" id="legs" />
+    </clothes>
+    <items>
+        <item name="ID" />
+        <item name="Wallet" />
+        <item name="Hammer" />
+    </items>
+</player_build>

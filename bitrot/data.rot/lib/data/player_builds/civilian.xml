@@ -1,0 +1,16 @@
+<player_build id="civilian">
+    <name value="Civilian" />
+    <subtitle value="Main Work Force" />
+    <description value="The main work force who paid to be safe and get a part of the new world." />
+    <color value="(220, 220, 220)" />
+    <clothes>
+        <cloth name="Sneakers" id="feet" />
+        <cloth name="Tshirt" id="body" />
+        <cloth name="Jeans Short" id="legs" />
+    </clothes>
+    <items>
+        <item name="ID" />
+        <item name="Wallet" />
+        <item name="Crowbar" />
+    </items>
+</player_build>

@@ -80,7 +80,8 @@ def run_menu(game):
                 game.player_setup_state = {}
                 game.world_setup_state = {}
                 game.game_state = 'PLAYER_SETUP'
-                game.player_setup_state['current_tab'] = 'World'  # Default to World
+                # game.player_setup_state['current_tab'] = 'World'  # Default to World
+                game.player_setup_state['current_tab'] = 'SelectWorld'
                 
             elif has_save and load_btn.collidepoint(mouse_pos):
                 game.game_state = 'LOAD_GAME_MENU'

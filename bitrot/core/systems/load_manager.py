@@ -193,7 +193,7 @@ def handle_player_death(game):
     # Immediately send the host player back to the setup screen to create/respawn a character.
     if getattr(game, 'is_server', False):
         game.player_setup_state = {}
-        game.player_setup_state['current_tab'] = 'Player'
+        game.player_setup_state['current_tab'] = 'SelectCharacter'
         game.player_setup_state['respawn_save_folder'] = game.current_save_folder_name
         game.game_state = 'PLAYER_SETUP'
 
@@ -564,7 +564,7 @@ def load_game(game, save_folder_name):
             if not has_alive_player and not getattr(game, '_is_respawning_player', False):
                 game.logger.info(f"Save '{save_folder_name}' has no alive players. Redirecting to Player Setup.")
                 game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'Player'
+                game.player_setup_state['current_tab'] = 'SelectCharacter'
                 game.player_setup_state['respawn_save_folder'] = save_folder_name
                 game.current_save_folder_name = save_folder_name
                 game.game_state = 'PLAYER_SETUP'
@@ -587,7 +587,7 @@ def load_game(game, save_folder_name):
             if is_player_dead and not getattr(game, '_is_respawning_player', False):
                 game.logger.info(f"Save '{save_folder_name}' has a deceased player. Redirecting to Player Setup.")
                 game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'Player'
+                game.player_setup_state['current_tab'] = 'SelectCharacter'
                 game.player_setup_state['respawn_save_folder'] = save_folder_name
                 game.current_save_folder_name = save_folder_name
                 game.game_state = 'PLAYER_SETUP'
