@@ -50,11 +50,16 @@ def load_building_templates(buildings_dir):
 
         # Only add if we found at least a base or ground layer
         if template['base'] or template['ground']:
-            # Calculate dimensions from the largest layer
-            height = max(len(template['base']), len(template['ground']))
+            
+            height = 0
             width = 0
-            if template['base']: width = max(width, len(template['base'][0]))
-            if template['ground']: width = max(width, len(template['ground'][0]))
+            
+            # [FIX] Calculate max width across ALL rows and ALL layers
+            # This prevents truncation from ragged CSV files that drop trailing commas
+            for layer_key in ['base', 'ground', 'spawn', 'roof', 'light']:
+                if template[layer_key]:
+                    height = max(height, len(template[layer_key]))
+                    width = max([width] + [len(row) for row in template[layer_key]])
             
             template['width'] = width
             template['height'] = height

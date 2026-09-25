@@ -454,7 +454,11 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     if hasattr(game, 'map_width_pixels') and hasattr(game, 'map_height_pixels'):
         game.quadtree = Quadtree(pygame.Rect(0, 0, game.map_width_pixels, game.map_height_pixels))
     
-    if spawn_entities:
+
+    is_in_lobby = getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk') and \
+                  game.generator.start_chunk == game.generator.lobby_chunk
+
+    if spawn_entities and not is_in_lobby:
         game.npc_spawn_points = []
         max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
         max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
@@ -883,11 +887,9 @@ def load_game(game, save_folder_name):
                 npc.name = n_data.get('name', 'Survivor')
                 npc.health = n_data.get('health', 100)
                 npc.max_health = n_data.get('max_health', 100)
-                npc.is_following = n_data.get('is_following', False)
                 npc.is_friendly = n_data.get('is_friendly', True)
                 if 'id' in n_data and n_data['id']: npc.id = n_data['id']
                 if 'dialog_flags' in n_data: npc.dialog_flags = set(n_data['dialog_flags'])
-                if npc.is_following: npc.state = 'following'
                 
                 npc.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in n_data.get('inventory', [])]
                 
@@ -902,7 +904,7 @@ def load_game(game, save_folder_name):
                 
                 if 'loot_table' in n_data: npc.loot_table = n_data['loot_table']
                         
-                if layer == game.current_layer_index or npc.is_following:
+                if layer == game.current_layer_index:
                     game.npcs.add(npc)
                 else:
                     if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}

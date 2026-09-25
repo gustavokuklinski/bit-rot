@@ -287,7 +287,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
             if x >= map_width: break
             if char and char != ' ': 
                 
-                if char == 'P':
+                if char in ('P', 'P2'):
                     if player_spawn:
                          print(f"Warning: Multiple player spawns defined. Using last one found at ({x},{y}).")
                     player_spawn = (x * TILE_SIZE, y * TILE_SIZE)

@@ -1,6 +1,12 @@
+# core/systems/utils.py
+
 import pygame
 import math
+import core.data.config
 from core.data.config import GAME_OFFSET_X, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
+from core.messages import display_message
+from core.placement import find_free_tile
+from core.data.localization import tr
 
 def create_smooth_entity_mask(width=TILE_SIZE, height=TILE_SIZE, inset_x=2, inset_y=2):
     """Creates a smoothed, rounded collision mask that glides around corners and through 1-tile doorways."""
@@ -8,6 +14,235 @@ def create_smooth_entity_mask(width=TILE_SIZE, height=TILE_SIZE, inset_x=2, inse
     rect = pygame.Rect(inset_x, inset_y, max(2, width - inset_x * 2), max(2, height - inset_y * 2))
     pygame.draw.ellipse(surf, (255, 255, 255, 255), rect)
     return pygame.mask.from_surface(surf)
+
+def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
+    if not getattr(game, 'player', None):
+        return
+
+    # Exit vehicle if seated
+    if getattr(game.player, 'vehicle', None):
+        game.player.exit_vehicle(game)
+
+    current_map = game.map_manager.current_map_filename
+    game.map_states.setdefault(current_map, {})
+
+    chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
+    game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]
+
+    chasing_animals = []
+    if hasattr(game, 'active_animals'):
+        chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+        game.map_states[current_map]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
+
+    game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
+
+    if hasattr(game, 'npcs'):
+        game.map_states[current_map]['npcs'] = list(game.npcs)
+
+    clean_containers = [c for c in game.containers if c != getattr(game.player, 'vehicle', None)]
+    game.map_states[current_map]['containers'] = clean_containers
+
+    if hasattr(game.map_manager, 'vehicles'):
+        clean_vehicles = [v for v in game.map_manager.vehicles if v != getattr(game.player, 'vehicle', None)]
+        game.map_states[current_map]['vehicles'] = clean_vehicles
+
+    new_map = f"map_L{dest_layer}_{dest_gx}_{dest_gy}_map.csv"
+
+    # Generate chunk on demand if needed
+    if new_map not in game.map_manager.map_files:
+        if hasattr(game, 'generator') and game.generator:
+            game.generator.generate_chunk_on_demand(dest_gx, dest_gy)
+            game.map_manager.refresh_maps()
+
+    if new_map not in game.map_manager.map_files:
+        display_message(tr('msg', "Failed to navigate to destination."))
+        return
+
+    game.load_map(new_map)
+
+    # Restore or spawn state
+    if new_map in game.map_states:
+        game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
+        game.zombies = game.map_states[new_map].get('zombies', [])
+        if hasattr(game, 'active_animals'):
+            game.active_animals = game.map_states[new_map].get('active_animals', [])
+        if hasattr(game, 'npcs'):
+            game.npcs.empty()
+            for npc in game.map_states[new_map].get('npcs', []):
+                game.npcs.add(npc)
+        if 'containers' in game.map_states[new_map]:
+            default_container_rects = [c.rect for c in game.containers]
+            obstacle_container_rects = [r for r in default_container_rects if r in game.obstacles]
+            game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
+            game.containers = game.map_states[new_map]['containers']
+            for c in game.containers:
+                if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
+                    game.obstacles.append(c.rect)
+        if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
+            default_veh_rects = [v.rect for v in game.map_manager.vehicles]
+            game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
+            game.map_manager.vehicles = game.map_states[new_map]['vehicles']
+            for v in game.map_manager.vehicles:
+                if v.rect not in game.obstacles:
+                    game.obstacles.append(v.rect)
+    else:
+        game.items_on_ground = []
+        game.zombies = []
+        if hasattr(game, 'active_animals'):
+            game.active_animals = []
+        if hasattr(game, 'npcs'):
+            game.npcs.empty()
+
+        is_lobby = getattr(game, 'generator', None) and (dest_gx, dest_gy) == getattr(game.generator, 'lobby_chunk', None)
+        if not is_lobby:
+            from core.map.spawn_manager import spawn_initial_zombies
+            if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns:
+                initial_zombies = spawn_initial_zombies(
+                    game.obstacles,
+                    game.current_zombie_spawns,
+                    game.items_on_ground + [game.player],
+                    limit=core.data.config.MAX_ZOMBIES_GLOBAL,
+                    spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
+                    game=game
+                )
+                game.zombies.extend(initial_zombies)
+
+    h = len(game.map_data) if game.map_data else 0
+    w = len(game.map_data[0]) if h > 0 else 0
+
+    is_dest_lobby = getattr(game, 'generator', None) and (dest_gx, dest_gy) == getattr(game.generator, 'lobby_chunk', None)
+    target_marker = 'P' if is_dest_lobby else 'P2'
+
+    spawn_pos = None
+
+    # 0. Check parsed player spawn
+    if getattr(game, 'player_spawn', None):
+        test_rect = pygame.Rect(game.player_spawn[0], game.player_spawn[1], TILE_SIZE, TILE_SIZE)
+        if not any(test_rect.colliderect(ob) for ob in game.obstacles):
+            spawn_pos = game.player_spawn
+
+    # 1. Search for target spawn marker: 'P' for Lobby, 'P2' for other chunks (sand tile at Port_L1)
+    if not spawn_pos and getattr(game, 'spawn_data', None):
+        for y in range(min(h, len(game.spawn_data))):
+            for x in range(min(w, len(game.spawn_data[y]))):
+                char = game.spawn_data[y][x]
+                if isinstance(char, str) and char.strip() == target_marker:
+                    test_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    if not any(test_rect.colliderect(ob) for ob in game.obstacles):
+                        spawn_pos = (x * TILE_SIZE, y * TILE_SIZE)
+                        break
+            if spawn_pos:
+                break
+
+        # 1.5 Fallback if the exact marker tile is blocked by an obstacle
+        if not spawn_pos:
+            for y in range(min(h, len(game.spawn_data))):
+                for x in range(min(w, len(game.spawn_data[y]))):
+                    char = game.spawn_data[y][x]
+                    if isinstance(char, str) and char.strip() == target_marker:
+                        free_tile = find_free_tile(game.player.rect, game.obstacles, initial_pos=(x * TILE_SIZE, y * TILE_SIZE), max_radius=8)
+                        if free_tile:
+                            spawn_pos = free_tile
+                            break
+                if spawn_pos:
+                    break
+
+    # 2. If marker not found, locate the boat
+    boat_tx, boat_ty = None, None
+    if not spawn_pos:
+        for y in range(h):
+            for x in range(w):
+                b_char = game.map_data[y][x] if y < len(game.map_data) and x < len(game.map_data[y]) else ''
+                g_char = game.ground_data[y][x] if (getattr(game, 'ground_data', None) and y < len(game.ground_data) and x < len(game.ground_data[y])) else ''
+                s_char = game.spawn_data[y][x] if (getattr(game, 'spawn_data', None) and y < len(game.spawn_data) and x < len(game.spawn_data[y])) else ''
+                t_def = game.map_manager.get_tile_at(x, y)
+
+                if (
+                    (isinstance(b_char, str) and b_char.strip() in ('tp_boat', 'teleport_boat')) or
+                    (isinstance(g_char, str) and g_char.strip() in ('tp_boat', 'teleport_boat')) or
+                    (isinstance(s_char, str) and s_char.strip() in ('tp_boat', 'teleport_boat')) or
+                    (t_def and (t_def.get('type') == 'maptile_teleport' or t_def.get('name') in ('tp_boat', 'teleport_boat') or 'boat' in t_def.get('name', '').lower()))
+                ):
+                    boat_tx, boat_ty = x, y
+                    break
+            if boat_tx is not None:
+                break
+
+    # 3. Locate the nearest walkable sand tile to the boat at Port_L1
+    if not spawn_pos and boat_tx is not None and boat_ty is not None:
+        sand_near_boat = []
+        for dy in range(-15, 16):
+            for dx in range(-15, 16):
+                sx = boat_tx + dx
+                sy = boat_ty + dy
+                if 0 <= sx < w and 0 <= sy < h:
+                    g_char = game.ground_data[sy][sx] if (getattr(game, 'ground_data', None) and sy < len(game.ground_data) and sx < len(game.ground_data[sy])) else ''
+                    g_name = g_char.strip().lower() if isinstance(g_char, str) else ''
+                    b_char = game.map_data[sy][sx] if sy < len(game.map_data) and sx < len(game.map_data[sy]) else ''
+                    b_char = b_char.strip() if isinstance(b_char, str) else ''
+                    b_def = game.map_manager.get_tile_at(sx, sy)
+
+                    if b_char in ('', ' ') and not (b_def and b_def.get('is_obstacle', False)):
+                        if 'sand' in g_name or 'beach' in g_name:
+                            test_rect = pygame.Rect(sx * TILE_SIZE, sy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            if not any(test_rect.colliderect(ob) for ob in game.obstacles):
+                                dist = math.hypot(dx, dy)
+                                sand_near_boat.append((dist, sx * TILE_SIZE, sy * TILE_SIZE))
+
+        if sand_near_boat:
+            sand_near_boat.sort(key=lambda c: c[0])
+            spawn_pos = (sand_near_boat[0][1], sand_near_boat[0][2])
+
+    # 4. Fallback directly near the boat (never center chunk!)
+    if not spawn_pos and boat_tx is not None and boat_ty is not None:
+        free_tile = find_free_tile(game.player.rect, game.obstacles, initial_pos=(boat_tx * TILE_SIZE, boat_ty * TILE_SIZE), max_radius=8)
+        if free_tile:
+            spawn_pos = free_tile
+
+    # 5. Fallback on any free sand tile in the map
+    if not spawn_pos:
+        for y in range(h):
+            for x in range(w):
+                g_char = game.ground_data[y][x] if (getattr(game, 'ground_data', None) and y < len(game.ground_data) and x < len(game.ground_data[y])) else ''
+                b_char = game.map_data[y][x] if y < len(game.map_data) and x < len(game.map_data[y]) else ''
+                b_def = game.map_manager.get_tile_at(x, y)
+                g_char = g_char.strip() if isinstance(g_char, str) else ''
+                b_char = b_char.strip() if isinstance(b_char, str) else ''
+                
+                if b_char in (' ', '') and not (b_def and b_def.get('is_obstacle', False)):
+                    if 'sand' in g_char.lower() or 'beach' in g_char.lower():
+                        test_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        if not any(test_rect.colliderect(ob) for ob in game.obstacles):
+                            spawn_pos = (x * TILE_SIZE, y * TILE_SIZE)
+                            break
+            if spawn_pos:
+                break
+
+    # Apply spawn position directly
+    if spawn_pos:
+        game.player.x = float(spawn_pos[0])
+        game.player.y = float(spawn_pos[1])
+        game.player.rect.topleft = (int(game.player.x), int(game.player.y))
+    game.player.vx = 0
+    game.player.vy = 0
+
+    # Center camera directly on the player
+    view_w = int(game.dynamic_w / game.zoom_level)
+    view_h = int(game.dynamic_h / game.zoom_level)
+    game.true_camera_x = game.player.rect.centerx - (view_w / 2)
+    game.true_camera_y = game.player.rect.centery - (view_h / 2)
+    game.camera_pan_x = 0
+    game.camera_pan_y = 0
+
+    # Refresh spatial grids
+    if hasattr(game, 'spatial_manager'):
+        game.spatial_manager.rebuild_zombie_grid()
+        game.spatial_manager.rebuild_item_grid(force=True)
+        game.spatial_manager.rebuild_container_grid()
+
+    game.game_state = 'CHUNK_LOADING'
+    display_message(tr('msg', "Arrived at destination."))
+
 
 def resolve_stuck_in_obstacle(entity, obstacles, game):
     """Gently nudges an entity outward if it ever starts inside an obstacle."""
@@ -101,7 +336,6 @@ def find_interactable_tile(game):
 def find_nearby_containers(game):
     nearby_objects = []
     seen_ids = set()
-    # all_candidates = game.items_on_ground + game.containers + game.corpses
     all_candidates = game.items_on_ground + game.containers + getattr(game, 'corpses', [])
     
     for obj in all_candidates:
@@ -117,10 +351,6 @@ def find_nearby_containers(game):
     return nearby_objects
 
 def get_targeted_interactable(game):
-    """
-    Returns the highest priority interactable entity based on where the player is facing,
-    with a forgiving search radius for analog stick users.
-    """
     if not getattr(game, 'player', None): return None
 
     facing_x, facing_y = get_player_facing_tile(game)
@@ -130,28 +360,23 @@ def get_targeted_interactable(game):
     target_world_y = facing_y * TILE_SIZE + TILE_SIZE / 2
     
     candidates = []
-    
     px, py = int(game.player.rect.centerx // TILE_SIZE), int(game.player.rect.centery // TILE_SIZE)
     
-    # 1. Stairs (Highest Priority if standing directly on them)
+    # 1. Stairs
     if hasattr(game, 'map_data') and 0 <= py < len(game.map_data) and 0 <= px < len(game.map_data[0]):
         current_t = game.map_manager.get_tile_at(px, py)
         if current_t and current_t.get('is_stair'):
             candidates.append({'type': 'stair', 'entity': (px, py), 'dist': -1}) 
     
-    # 2. Facing Tile & Nearby Tiles (Doors / Windows / Stairs)
-    # To make this mobile-friendly, we search a 3x3 area around the player
-    # and find the closest interactable tile. 
+    # 2. Facing Tile & Nearby Tiles
     best_tile = find_interactable_tile(game)
     if best_tile:
         tx, ty = best_tile
-        # Calculate distance to prioritize it properly
         tile_center_x = (tx * TILE_SIZE) + (TILE_SIZE / 2)
         tile_center_y = (ty * TILE_SIZE) + (TILE_SIZE / 2)
         dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
         candidates.append({'type': 'tile', 'entity': (tx, ty), 'dist': dist})
     
-    # Also explicitly check the facing tile if it's a stair (since find_interactable_tile only checks 'is_statable')
     if hasattr(game, 'map_data') and 0 <= facing_y < len(game.map_data) and 0 <= facing_x < len(game.map_data[0]):
         facing_t = game.map_manager.get_tile_at(facing_x, facing_y)
         if facing_t and facing_t.get('is_stair'):
@@ -170,18 +395,12 @@ def get_targeted_interactable(game):
         if getattr(obj, 'item_type', '') == 'vehicle':
             if getattr(game.player, 'vehicle', None) == obj:
                 continue
-            
-            # Check if player is close to the vehicle's outer edges instead of center
             interact_rect = obj.rect.inflate(TILE_SIZE, TILE_SIZE)
             if interact_rect.colliderect(game.player.rect):
-                
                 facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
                 facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                
                 if obj.rect.colliderect(facing_rect):
-                    # Give massive priority boost if the tile the player is directly facing touches the vehicle
                     facing_dist -= 1000 
-                    
                 candidates.append({'type': 'vehicle', 'entity': obj, 'dist': facing_dist})
 
     for obj in find_nearby_containers(game):
@@ -199,27 +418,21 @@ def get_targeted_interactable(game):
             facing_dist = math.hypot(target_world_x - obj.rect.centerx, target_world_y - obj.rect.centery)
             facing_rect = pygame.Rect(facing_x * TILE_SIZE, facing_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             if obj.rect.colliderect(facing_rect):
-                facing_dist -= 500 # Priority boost if facing directly
-                
+                facing_dist -= 500 
             candidates.append({'type': 'container', 'entity': obj, 'dist': facing_dist})
 
     if not candidates:
         return None
         
-    # Sort by closest distance 
     candidates.sort(key=lambda x: x['dist'])
     return candidates[0]
 
 def screen_to_world(game, screen_pos):
     screen_x, screen_y = screen_pos
     screen_x -= GAME_OFFSET_X
-    
     zoom = getattr(game, 'zoom_level', 1.0)
-    
     view_x = screen_x / zoom
     view_y = screen_y / zoom
-    
     offset_x = getattr(game, 'offset_x', 0)
     offset_y = getattr(game, 'offset_y', 0)
-    
     return (view_x - offset_x, view_y - offset_y)

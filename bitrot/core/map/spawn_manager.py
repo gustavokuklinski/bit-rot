@@ -15,7 +15,7 @@ from core.entities.vehicle.vehicle_data import VehicleData
 from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 import pygame
-
+import re
 NPC_SPAWN_RADIUS = 70 * TILE_SIZE
 NPC_DESPAWN_RADIUS = 80 * TILE_SIZE
 NPC_MIN_SPAWN_DIST = 50 * TILE_SIZE
@@ -307,6 +307,13 @@ def _find_spawn_spot_near(
 def manage_dynamic_npcs(game):
     if not game.player:
         return
+
+    curr_map = getattr(game.map_manager, 'current_map_filename', '')
+    match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
+    if match and getattr(game, 'generator', None):
+        curr_coord = (int(match.group(1)), int(match.group(2)))
+        if curr_coord == getattr(game.generator, 'lobby_chunk', None):
+            return  # Zero NPCs allowed in Lobby
     
     max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
     max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
@@ -319,15 +326,10 @@ def manage_dynamic_npcs(game):
         if not hasattr(npc, 'layer'):
             npc.layer = 1
         if npc.layer != game.current_layer_index:
-            if hasattr(npc, 'is_following') and npc.is_following:
-                npc.layer = game.current_layer_index
-            else:
-                game.layer_npcs.setdefault(npc.layer, []).append(npc)
-                game.npcs.remove(npc)
-                continue
-
-        if hasattr(npc, 'is_following') and npc.is_following:
+            game.layer_npcs.setdefault(npc.layer, []).append(npc)
+            game.npcs.remove(npc)
             continue
+
         dist_sq = (npc.rect.centerx - px) ** 2 + (npc.rect.centery - py) ** 2
         if dist_sq > NPC_DESPAWN_RADIUS**2:
             game.npcs.remove(npc)

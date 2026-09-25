@@ -2,6 +2,7 @@
 
 import pygame
 import math
+import re
 from core.data.config import TILE_SIZE
 
 def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
@@ -38,8 +39,36 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
     if (not hasattr(game, 'explored_tiles') or 
         len(game.explored_tiles) != expected_size or 
         getattr(game, 'explored_map_name', '') != curr_map):
+        
         game.explored_tiles = bytearray(expected_size)
         game.explored_map_name = curr_map
+        
+        # --- [FIX] Automatically explore Lobby Chunk AND Water/Petrol tiles ---
+        is_lobby = False
+        match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
+        if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+            cgx, cgy = int(match.group(1)), int(match.group(2))
+            if (cgx, cgy) == game.generator.lobby_chunk:
+                is_lobby = True
+
+        if is_lobby:
+            # If it's the safe haven lobby, reveal the whole chunk
+            for i in range(expected_size):
+                game.explored_tiles[i] = 1
+        else:
+            # Otherwise, only reveal ocean and petrol zones
+            ground_data = getattr(game, 'ground_data', [])
+            base_data = getattr(game, 'map_data', [])
+            for ty in range(map_h):
+                row_idx = ty * map_w
+                for tx in range(map_w):
+                    g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
+                    b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
+                    
+                    if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
+                       (b_char and ('water_' in b_char or 'petrol_' in b_char)):
+                        game.explored_tiles[row_idx + tx] = 1
+        # ----------------------------------------------------------------------
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache

@@ -382,15 +382,8 @@ class PlayerMovement:
                         
                         game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
                             
-                        followers = []
-                        chunk_npcs = []
                         if hasattr(game, 'npcs'):
-                            for npc in game.npcs:
-                                if getattr(npc, 'is_following', False):
-                                    followers.append(npc)
-                                else:
-                                    chunk_npcs.append(npc)
-                            game.map_states[current_map]['npcs'] = chunk_npcs
+                            game.map_states[current_map]['npcs'] = list(game.npcs)
                             
                         clean_containers = [c for c in game.containers if c != self.vehicle]
                         game.map_states[current_map]['containers'] = clean_containers
@@ -399,7 +392,7 @@ class PlayerMovement:
                             clean_vehicles = [v for v in game.map_manager.vehicles if v != self.vehicle]
                             game.map_states[current_map]['vehicles'] = clean_vehicles
                         
-                        entities_to_teleport = [target] + followers + chasing_zombies + chasing_animals
+                        entities_to_teleport = [target] + chasing_zombies + chasing_animals
                         
                         old_width = chunk_width_px
                         old_height = chunk_height_px
@@ -564,9 +557,7 @@ class PlayerMovement:
                                             game.active_animals.append(animal_obj)
                                             game.items_on_ground.append(animal_obj)
                                     
-                        if hasattr(game, 'npcs'):
-                            for f_npc in followers:
-                                game.npcs.add(f_npc)
+                        
 
                         game.zombies.extend(chasing_zombies)
                         if hasattr(game, 'active_animals'):

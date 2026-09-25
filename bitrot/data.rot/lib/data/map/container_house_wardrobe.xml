@@ -24,5 +24,6 @@
         <!-- Containers (Bags/Backpacks) inside wardrobes: Middle to Rare -->
         <item type="container" min="1" max="1" chance="0.12" />
         <item type="utility" min="1" max="2" chance="0.25" />
+        <item type="sd_card" min="1" max="1" chance="0.10" />
     </loot>
 </map>

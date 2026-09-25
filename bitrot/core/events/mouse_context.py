@@ -1,7 +1,11 @@
+# core/events/mouse_context.py
+
 import pygame
 import uuid
 import math
 import random
+import re
+import core.data.config
 from core.data.config import *
 from core.data.recipe_manager import RecipeManager
 from core.entities.item.item import Item
@@ -14,6 +18,8 @@ from core.data.localization import tr
 from core.placement import find_free_tile
 from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
+from core.systems.utils import teleport_player_to_chunk as sys_teleport
+from core.systems.utils import teleport_player_to_chunk
 
 def _is_barricade_item(it):
     """Safely checks if an item is a valid barricade, guarding against NoneType values."""
@@ -23,6 +29,10 @@ def _is_barricade_item(it):
     if b_health is not None and b_health > 0:
         return True
     return 'barricade' in getattr(it, 'name', '').lower()
+
+def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
+    """Safely teleports the player (and any active followers) to the beach 2 tiles away from the destination boat."""
+    sys_teleport(game, dest_gx, dest_gy, dest_layer)
 
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
@@ -116,7 +126,8 @@ def handle_context_menu_click(game, mouse_pos):
                     clicked_on_menu = True
 
             if clicked_on_menu: 
-                print(f"Clicked '{option}' on '{getattr(item,'name',str(item))}' (source={source})")
+                item_name_str = item.get('name', 'Object') if isinstance(item, dict) else getattr(item, 'name', str(item))
+                print(f"Clicked '{option}' on '{item_name_str}' (source={source})")
             
             if option == 'Place barricade':
                 if source == 'map_tile' and isinstance(item, dict):
@@ -144,7 +155,6 @@ def handle_context_menu_click(game, mouse_pos):
                                 break
 
                     if found_barricade:
-                        # Check required tools & materials from <place>
                         all_player_items = [it for it in (game.player.inventory + game.player.belt) if it and it != found_barricade]
                         missing_reqs = []
 
@@ -165,7 +175,6 @@ def handle_context_menu_click(game, mouse_pos):
                             return
 
                         def do_place_barricade():
-                            # Consume required materials that have destroy="true"
                             for req in getattr(found_barricade, 'place_items', []):
                                 if not req.get('destroy', False):
                                     continue
@@ -189,7 +198,6 @@ def handle_context_menu_click(game, mouse_pos):
                                     if to_remove <= 0:
                                         break
 
-                            # Consume the barricade item itself
                             if barricade_source == 'inventory':
                                 if barricade_idx < len(game.player.inventory) and game.player.inventory[barricade_idx] == found_barricade:
                                     game.player.inventory.pop(barricade_idx)
@@ -319,7 +327,17 @@ def handle_context_menu_click(game, mouse_pos):
                         game.player.start_action("Repairing", r_info.get('time', 1.5), do_repair_door, xp_reward=0)
                 clicked_on_menu = True
 
-            if option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
+            elif option == 'Travel to':
+                if target_sub_slot:
+                    try:
+                        dest_gx, dest_gy = map(int, target_sub_slot.split('_'))
+                        
+                        teleport_player_to_chunk(game, dest_gx, dest_gy)
+                    except Exception as e:
+                        print(f"Error traveling: {e}")
+                clicked_on_menu = True
+
+            elif option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 grid_x = int(item.x // TILE_SIZE)
                 grid_y = int(item.y // TILE_SIZE)
                 if hasattr(game.map_manager, 'remove_vehicle_tile'):
@@ -345,7 +363,6 @@ def handle_context_menu_click(game, mouse_pos):
 
             elif option == 'Trunk':
                 if getattr(item, 'item_type', '') == 'vehicle':
-                    # Check key requirement
                     if hasattr(item, 'has_key_access') and not item.has_key_access(game.player):
                         display_message(tr('msg', "Vehicle trunk is locked! Requires vehicle key."))
                         if 'fail' in getattr(item, 'sounds', {}):
@@ -379,22 +396,22 @@ def handle_context_menu_click(game, mouse_pos):
                     game.modals.append(new_container_modal)
                 clicked_on_menu = True
 
-            if option == 'Status': toggle_status_modal(game)
+            elif option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
             elif option == 'Gear': toggle_gear_modal(game)
                     
-            if option in ['Open door/window', 'Close door/window']:
+            elif option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
                     game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
                 clicked_on_menu = True
 
-            if option == 'Toggle Light':
+            elif option == 'Toggle Light':
                 if source == 'light_source':
                     item['active'] = not item['active']
                     print(f"Light turned {'ON' if item['active'] else 'OFF'}")
                 clicked_on_menu = True
 
-            if option == 'Use': game.player.consume_item(item, source, index, container_item)
+            elif option == 'Use': game.player.consume_item(item, source, index, container_item)
             elif option.startswith('Bandage '):
                 part = option.split(' ')[1].lower()
                 game.player.consume_item(item, source, index, container_item, target_part=part)
@@ -1131,7 +1148,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     'x': item.rect.x, 'y': item.rect.y
                                 })
                                 
-                            game.player.start_action(f"{game.player.name} {tr('ui', "Opening")}", open_time, open_and_show_modal, xp_reward=1.5)
+                            game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5)
                     else:
                         open_and_show_modal()
                         
@@ -1299,8 +1316,6 @@ def handle_right_click(game, mouse_pos):
                     for i, item in enumerate(game.player.belt):
                         if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
                             clicked_item, click_source, click_index = item, 'belt', i; break
-                
-                
             
             elif modal.get('active_tab') in modal.get('container_mapping', {}):
                 container = modal['container_mapping'][modal['active_tab']]
@@ -1319,7 +1334,6 @@ def handle_right_click(game, mouse_pos):
                             item = game.player.clothes.get(slot_name)
                             if item:
                                 clicked_item, click_source, click_index = item, 'gear', slot_name; break
-
 
         elif modal['type'] == 'gear':
             active_tab = modal.get('active_tab', 'Gear')
@@ -1468,20 +1482,37 @@ def handle_right_click(game, mouse_pos):
             dx = game.player.rect.centerx - world_pos[0]
             dy = game.player.rect.centery - world_pos[1]
             dist_sq = dx*dx + dy*dy
-            max_dist_sq = (TILE_SIZE * 2) ** 2
 
             if tile:
+                char = ""
+                try: char = game.map_data[grid_y][grid_x]
+                except: pass
+                
+                is_boat = (
+                    tile.get('type') == "maptile_teleport" or 
+                    tile.get('name') in ("tp_boat", "teleport_boat") or 
+                    char in ("tp_boat", "teleport_boat")
+                )
+                max_dist_sq = (TILE_SIZE * 3.5) ** 2 if is_boat else (TILE_SIZE * 2) ** 2
+
                 if dist_sq <= max_dist_sq:
-                    char = ""
-                    try: char = game.map_data[grid_y][grid_x]
-                    except: pass
-                    
                     if tile.get('type') == "maptile_car":
                         vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                         if vehicle:
                             clicked_item = vehicle
                             click_source = 'container_map'
                             click_index = 0
+
+                    elif is_boat:
+                        clicked_item = {
+                            'name': tile.get('name', 'Boat'), 
+                            'type': 'maptile_teleport', 
+                            'grid_x': grid_x, 
+                            'grid_y': grid_y,
+                            'char': char
+                        }
+                        click_source = 'map_tile'
+
                     elif tile.get('is_statable') or ('door' in char.lower() or 'window' in char.lower()):
                         clicked_item = {
                             'name': tile.get('name', 'Object'), 
@@ -1494,7 +1525,7 @@ def handle_right_click(game, mouse_pos):
                         click_source = 'map_tile'
                     
                 else:
-                    if tile.get('type') == "maptile_car" or tile.get('is_statable'):
+                    if tile.get('type') == "maptile_car" or tile.get('is_statable') or is_boat:
                         display_message(game, tr('msg', "Too far away to interact."))
 
     if not clicked_item:
@@ -1554,6 +1585,51 @@ def handle_right_click(game, mouse_pos):
             char = clicked_item.get('char', '')
             t_def = game.map_manager.get_tile_at(gx, gy)
 
+            if clicked_item.get('type') == 'maptile_teleport':
+                # Build travel destinations list
+                cur_map = game.map_manager.current_map_filename
+                match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_map)
+                cur_gx, cur_gy = (int(match.group(1)), int(match.group(2))) if match else (None, None)
+
+                gen = getattr(game, 'generator', None)
+                active_chunks = set()
+                lobby_chunk = None
+                military_chunk = None
+                isolated_islands = set()
+
+                if gen:
+                    active_chunks = getattr(gen, 'active_chunks', set())
+                    lobby_chunk = getattr(gen, 'lobby_chunk', None)
+                    military_chunk = getattr(gen, 'military_chunk', None)
+                    isolated_islands = getattr(gen, 'isolated_island_chunks', set())
+
+                sub_opts = []
+                display_map = {}
+
+                # 1. Lobby Option
+                if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
+                    sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
+                    sub_opts.append(sub_key)
+                    display_map[sub_key] = tr('ui', "Lobby (Safe Haven)")
+
+                # 2. Island and Mainland Chunks (Excluding military chunk)
+                for (cgx, cgy) in sorted(list(active_chunks)):
+                    if (cgx, cgy) == military_chunk:
+                        continue
+                    if (cgx, cgy) == lobby_chunk:
+                        continue
+                    if (cgx, cgy) == (cur_gx, cur_gy):
+                        continue
+
+                    sub_key = f"{cgx}_{cgy}"
+                    sub_opts.append(sub_key)
+                    if (cgx, cgy) in isolated_islands:
+                        display_map[sub_key] = f"{tr('ui', 'Island')} ({cgx}, {cgy})"
+                    else:
+                        display_map[sub_key] = f"{tr('ui', 'Sector')} ({cgx}, {cgy})"
+
+                options = [{'label': 'Travel to', 'sub': sub_opts, 'display_names': display_map}]
+
             barricade = game.map_manager.get_barricade(gx, gy)
 
             # 1. Door Open / Close
@@ -1577,7 +1653,6 @@ def handle_right_click(game, mouse_pos):
                 else:
                     options.append('Place barricade')
 
-                    # Find barricade in player inventory/belt or fallback to template
                     barricade_ref = None
                     for it in game.player.inventory + game.player.belt:
                         if _is_barricade_item(it):
@@ -1668,7 +1743,6 @@ def handle_right_click(game, mouse_pos):
                     else:
                         if 'Grab' not in options: options.insert(0, 'Grab') 
 
-
             if getattr(clicked_item, 'inventory', None) is not None:
                 is_valid_type = getattr(clicked_item, 'item_type', '') in ['container', 'cloth']
                 if isinstance(clicked_item, Corpse) or is_valid_type:
@@ -1696,23 +1770,21 @@ def handle_right_click(game, mouse_pos):
                 if 'Open' not in options:
                     options.append('Open')
 
-        # Detect if it's a map tile/map container
         is_maptile = False
         if isinstance(clicked_item, dict):
-            if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile']:
+            if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
                 is_maptile = True
         else:
-            if getattr(clicked_item, 'type', None) in ['maptile', 'maptile_container', 'map_tile']:
+            if getattr(clicked_item, 'type', None) in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
                 is_maptile = True
-            if getattr(clicked_item, 'item_type', None) in ['maptile', 'maptile_container', 'map_tile']:
+            if getattr(clicked_item, 'item_type', None) in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
                 is_maptile = True
                 
         if click_source in ['container_map', 'map_tile']:
             is_maptile = True
 
-        # Allow "Send to" for ANY valid item, but exclude map objects, corpses, vehicles, camps, etc.
         item_type = getattr(clicked_item, 'item_type', None)
-        invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container']
+        invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
         
         if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
             if 'Send to' not in options:
@@ -1738,7 +1810,7 @@ def handle_right_click(game, mouse_pos):
             if veh.can_equip(clicked_item, 'tire_fl'):
                 if 'Add tire to' not in options: options.append('Add tire to')
 
-        if item_type not in ['map_tile', 'maptile', 'maptile_container', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
+        if item_type not in ['map_tile', 'maptile', 'maptile_container', 'maptile_teleport', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
             item_name_to_check = getattr(clicked_item, 'name', '')
             if item_name_to_check:
                 if not RecipeManager.RECIPES:
@@ -1748,10 +1820,17 @@ def handle_right_click(game, mouse_pos):
                 if has_crafts and 'Crafts' not in options:
                     options.append('Crafts')
 
-
         # --- SUBMENU GENERATION LOGIC ---
         new_options = []
         for opt in options:
+            # FIX: If option is already a dictionary (like {'label': 'Travel to', ...}), keep it intact!
+            if isinstance(opt, dict):
+                new_options.append(opt)
+                continue
+
+            if not isinstance(opt, str):
+                continue
+
             if opt.startswith('Add to '): 
                 continue 
 
@@ -1900,12 +1979,10 @@ def handle_right_click(game, mouse_pos):
                 
                 is_liquid = getattr(clicked_item, 'liquid', False)
                 
-                # Never display plain 'Inventory' for liquid items
                 if not is_liquid:
                     sub_opts.append('Inventory')
                     display_map['Inventory'] = 'Inventory'
                 
-                # Fetch all valid player containers alongside their UI locations
                 containers_with_loc = []
                 for i, b_item in enumerate(game.player.belt):
                     if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
@@ -1919,9 +1996,8 @@ def handle_right_click(game, mouse_pos):
                         
                 for c, loc_str in containers_with_loc:
                     if c is clicked_item: continue
-                    if click_container_item and c is click_container_item: continue # Fix: Exclude sending it back instantly to its current physical container
+                    if click_container_item and c is click_container_item: continue
                     
-                    # Core constraints: Filter based on liquid allowance
                     if is_liquid and not getattr(c, 'allow_liquid', False): continue
                     if getattr(c, 'allow_liquid', False) and not is_liquid: continue
                     
@@ -1963,14 +2039,12 @@ def handle_right_click(game, mouse_pos):
                         liquid_qty = 0
                         liquid_name = ""
                         
-                        # Inspect the container to see if there are any liquids inside
                         if getattr(c, 'allow_liquid', False):
                             for inside_item in getattr(c, 'inventory', []):
                                 if getattr(inside_item, 'liquid', False):
                                     liquid_qty += getattr(inside_item, 'load', 1) or 1
                                     liquid_name = inside_item.name
                         
-                        # Generate the dynamic label string 
                         max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
                         if liquid_qty > 0:
                             display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
@@ -1979,7 +2053,6 @@ def handle_right_click(game, mouse_pos):
                         else:
                             display_str = c.name
                             
-                        # Package for the dropdown architect
                         if c_id not in sub_opts:
                             sub_opts.append(c_id)
                             display_map[c_id] = display_str
@@ -2000,7 +2073,6 @@ def handle_right_click(game, mouse_pos):
                 item_name = getattr(clicked_item, 'name', '')
                 game.context_menu['craft_recipes'] = {}
 
-                # 1. Bucket recipes by craft type using the strict relevance filter
                 craft_buckets = {
                     'Craft': [],
                     'Repair': [],
@@ -2008,7 +2080,6 @@ def handle_right_click(game, mouse_pos):
                 }
 
                 for r in RecipeManager.RECIPES:
-                    # Filter out recipes that do not use this item as an ingredient (or repair/dismantle target)
                     if not is_recipe_relevant_to_item(r, item_name):
                         continue
 
@@ -2030,7 +2101,6 @@ def handle_right_click(game, mouse_pos):
                         'missing_skills': missing_skills
                     })
 
-                # 2. Append each category in order: Craft -> Repair -> Dismantle
                 global_idx = 0
                 max_total_recipes = 12
 
@@ -2039,10 +2109,8 @@ def handle_right_click(game, mouse_pos):
                     if not bucket:
                         continue
 
-                    # Sort: Available crafts (can_craft=True) first
                     bucket.sort(key=lambda d: (not d['can_craft'], d['recipe'].output_name))
 
-                    # Add category header
                     hdr_id = f"header_{cat_name.lower()}"
                     sub_opts.append(hdr_id)
                     display_map[hdr_id] = tr('tab', cat_name)
@@ -2066,7 +2134,6 @@ def handle_right_click(game, mouse_pos):
                         display_map[sub_key] = f"- {out_name}"
                         color_map[sub_key] = WHITE if data['can_craft'] else GRAY
 
-                        # Build tooltip
                         tt_lines = [
                             out_name,
                             f"{tr('ui', 'Type')}: {tr('tab', cat_name)}",

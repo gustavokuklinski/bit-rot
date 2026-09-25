@@ -123,7 +123,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.is_friendly = False
             
         self.state = 'wandering' if not self.is_static else 'idle'
-        self.is_following = False
 
         self.start_x = x
         self.start_y = y
@@ -364,15 +363,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         target_entity = None
         target_pos = None
         
-        FOLLOW_PRIORITY_RANGE = TILE_SIZE * 20
-        player_is_far_and_following = False
-        is_aggroed = self.aggro_timer > 0
-        if game.player:
-            player_dist = math.hypot(game.player.rect.centerx - self.rect.centerx, game.player.rect.centery - self.rect.centery)
-            if self.is_following and player_dist > FOLLOW_PRIORITY_RANGE:
-                player_is_far_and_following = True
-            if is_aggroed and player_dist > FOLLOW_PRIORITY_RANGE:
-                player_is_far_and_following = True
+        
 
         weapon = getattr(self, 'equipped_weapon', None)
         # 5-tile radius default for NPCs
@@ -398,6 +389,27 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 potential_targets.append(z)
 
         attacker = getattr(self, 'current_attacker', None)
+        is_aggroed = self.aggro_timer > 0
+
+        weapon = getattr(self, 'equipped_weapon', None)
+        search_range = getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE)
+
+        if not self.is_friendly and game.player:
+            if getattr(game.player, 'is_aiming', False):
+                search_range *= 0.5
+            elif getattr(game.player, 'is_running', False):
+                search_range *= 1.5
+
+        is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
+        if is_ranged_weapon:
+            search_range = search_range * 1.5
+
+        self.current_detection_range = search_range
+        potential_targets = []
+        
+        for z in game.zombies:
+            if not getattr(z, 'is_dead', False):
+                potential_targets.append(z)
 
         if self.is_friendly:
             for npc in game.npcs:
@@ -420,20 +432,18 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         min_dist_to_target = float('inf')
 
-        if not player_is_far_and_following:
-            for entity in potential_targets:
-                if self.is_static:
-                    continue
+        for entity in potential_targets:
+            if self.is_static:
+                continue
 
-                dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
-                if dist <= search_range and dist < min_dist_to_target:
-                    # Line of sight check before engaging
-                    if self.has_line_of_sight(entity.rect, game, current_time):
-                        min_dist_to_target = dist
-                        target_entity = entity
-                        self.state = 'chasing'
-                        if entity == game.player and not self.is_friendly:
-                            self.alert_nearby_zombies(game, search_range)
+            dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
+            if dist <= search_range and dist < min_dist_to_target:
+                if self.has_line_of_sight(entity.rect, game, current_time):
+                    min_dist_to_target = dist
+                    target_entity = entity
+                    self.state = 'chasing'
+                    if entity == game.player and not self.is_friendly:
+                        self.alert_nearby_zombies(game, search_range)
 
         if is_aggroed:
             if attacker and not attacker.is_dead:
@@ -445,11 +455,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             elif game.player and not game.player.is_dead:
                 target_entity = game.player
                 self.state = 'chasing'
-
-        if not target_entity and self.is_following and game.player or player_is_far_and_following:
-            if player_dist > TILE_SIZE * 2 or player_is_far_and_following:
-                target_entity = game.player
-                self.state = 'following'
 
         if target_entity:
             target_pos = target_entity.rect.center
@@ -466,12 +471,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         
         if target_pos:
             dist_to_dest = math.hypot(target_pos[0] - self.rect.centerx, target_pos[1] - self.rect.centery)
-            
-            move_threshold = TILE_SIZE * 0.5
-            if self.state == 'chasing':
-                 move_threshold = (TILE_SIZE * 8) if is_ranged_weapon else (TILE_SIZE * 0.8)
-            elif self.state == 'following':
-                 move_threshold = TILE_SIZE * 2.5
+            move_threshold = (TILE_SIZE * 8) if is_ranged_weapon else (TILE_SIZE * 0.8)
             
             if dist_to_dest > move_threshold:
                 has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)

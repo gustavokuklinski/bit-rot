@@ -9,10 +9,8 @@ from core.data.config import *
 class ProceduralGeneratorChunk:
 
     def _generate_confusing_asphalt_maze(self, layers, occupied_mask, w, h, cx, cy):
-        """Generates winding pathways that branch from the center and avoid beaches."""
         road_tile = 'dirty_01'
         road_width = 2
-        
         num_arms = random.randint(2, 4)
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
 
@@ -32,10 +30,8 @@ class ProceduralGeneratorChunk:
         def paint_wide_segment(x1, y1, x2, y2):
             steps = max(abs(x2 - x1), abs(y2 - y1))
             if steps == 0: return
-            
             dx = (x2 - x1) / steps
             dy = (y2 - y1) / steps
-            
             for i in range(steps + 1):
                 curr_x = int(x1 + dx * i)
                 curr_y = int(y1 + dy * i)
@@ -56,7 +52,6 @@ class ProceduralGeneratorChunk:
                 length = random.randint(6, 14)
                 target_x = curr_x + (dx * length)
                 target_y = curr_y + (dy * length)
-                
                 can_paint = True
                 for step in range(length + 1):
                     check_x = curr_x + (dx * step)
@@ -64,7 +59,6 @@ class ProceduralGeneratorChunk:
                     if not is_area_beach_free(check_x, check_y, road_width):
                         can_paint = False
                         break
-                
                 if can_paint:
                     paint_wide_segment(curr_x, curr_y, target_x, target_y)
                     curr_x, curr_y = target_x, target_y
@@ -72,7 +66,6 @@ class ProceduralGeneratorChunk:
                     break
 
     def _is_in_connector_zone_internal(self, tx, ty, w, h, cx, cy):
-        """Prevents procedural roads from blocking the main chunk transitions."""
         depth = 5
         radius = 3
         if ty < depth and abs(tx - cx) <= radius: return True
@@ -80,6 +73,326 @@ class ProceduralGeneratorChunk:
         if tx < depth and abs(ty - cy) <= radius: return True
         if tx >= w - depth and abs(ty - cy) <= radius: return True
         return False
+
+    def _resolve_boat_char(self):
+        if hasattr(self.game, 'tile_manager') and hasattr(self.game.tile_manager, 'definitions'):
+            for char, defn in self.game.tile_manager.definitions.items():
+                if char in ('tp_boat', 'teleport_boat') or defn.get('type') == 'maptile_teleport' or defn.get('name') in ('tp_boat', 'teleport_boat'):
+                    return char
+        return 'tp_boat'
+
+    def _generate_lobby_chunk(self, gx, gy, w, h):
+        boat_char = self._resolve_boat_char()
+        water_tile = getattr(self, 'water_tile', 'water_01')
+
+        layers = {
+            'base': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground': [[water_tile for _ in range(w)] for _ in range(h)],
+            'spawn': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof': [[' ' for _ in range(w)] for _ in range(h)],
+            'light': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask': [[0 for _ in range(w)] for _ in range(h)],
+            'base_L2': [['@' for _ in range(w)] for _ in range(h)],
+            'ground_L2': [['dirty_01' for _ in range(w)] for _ in range(h)],
+            'spawn_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'light_L2': [[' ' for _ in range(w)] for _ in range(h)],
+        }
+
+        lobby_name = getattr(self, 'lobby_template', None)
+        if not lobby_name:
+            for k in self.templates.keys():
+                if 'lobby' in k.lower():
+                    lobby_name = k
+                    break
+
+        tmpl = self.templates.get(lobby_name) if lobby_name else None
+        tx, ty = w // 2 - 15, h // 2 - 15
+        tw, th = 30, 30
+
+        if tmpl:
+            tw, th = tmpl['width'], tmpl['height']
+            tx = max(4, (w - tw) // 2)
+            ty = max(4, (h - th) // 2)
+            self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
+        else:
+            for dy in range(th):
+                for dx in range(tw):
+                    layers['ground'][ty + dy][tx + dx] = 'house_floor_01'
+
+        for y in range(h):
+            for x in range(w):
+                sp = layers['spawn'][y][x]
+                if sp in ('SNPC', 'NPC', 'Z', 'ANM'):
+                    layers['spawn'][y][x] = ' '
+
+        boat_coords = None
+        for y in range(h):
+            for x in range(w):
+                if layers['base'][y][x] in (boat_char, 'tp_boat', 'teleport_boat'):
+                    boat_coords = (x, y)
+                    layers['base'][y][x] = boat_char
+                    break
+            if boat_coords:
+                break
+
+        if not boat_coords:
+            for dy in range(-2, th + 2):
+                for dx in range(-2, tw + 2):
+                    bx = tx + dx
+                    by = ty + dy
+                    if 0 <= bx < w and 0 <= by < h:
+                        if layers['ground'][by][bx] == water_tile and layers['base'][by][bx] == ' ':
+                            has_land_adj = False
+                            for ox, oy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                                nx, ny = bx + ox, by + oy
+                                if 0 <= nx < w and 0 <= ny < h:
+                                    if layers['ground'][ny][nx] != water_tile and layers['base'][ny][nx] == ' ':
+                                        has_land_adj = True
+                                        break
+                            if has_land_adj:
+                                layers['base'][by][bx] = boat_char
+                                layers['spawn'][by][bx] = ' '
+                                boat_coords = (bx, by)
+                                break
+                if boat_coords:
+                    break
+
+        # Set player spawn 'P' for Lobby
+        if boat_coords:
+            bx, by = boat_coords
+            candidates = []
+            for dy in range(-3, 4):
+                for dx in range(-3, 4):
+                    cx_tile = bx + dx
+                    cy_tile = by + dy
+                    if 0 <= cx_tile < w and 0 <= cy_tile < h:
+                        dist = math.hypot(dx, dy)
+                        if 1.4 <= dist <= 2.8:
+                            if layers['ground'][cy_tile][cx_tile] != water_tile and layers['base'][cy_tile][cx_tile] == ' ':
+                                candidates.append((abs(dist - 2.0), cx_tile, cy_tile))
+
+            if candidates:
+                candidates.sort(key=lambda c: c[0])
+                px, py = candidates[0][1], candidates[0][2]
+                layers['spawn'][py][px] = 'P'
+            else:
+                layers['spawn'][ty + th // 2][tx + tw // 2] = 'P'
+
+        return layers
+
+    def _place_single_teleport_boat(self, layers, w, h):
+        boat_char = self._resolve_boat_char()
+        for y in range(h):
+            for x in range(w):
+                if layers['base'][y][x] in (boat_char, 'tp_boat', 'teleport_boat'):
+                    return
+
+        cx, cy = w // 2, h // 2
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                if self._is_in_connector_zone_internal(x, y, w, h, cx, cy):
+                    continue
+                g_tile = layers['ground'][y][x].lower()
+                b_tile = layers['base'][y][x]
+                if 'water' in g_tile and b_tile in (' ', ''):
+                    layers['base'][y][x] = boat_char
+                    layers['spawn'][y][x] = ' '
+                    return
+
+    def _place_port_at_shore(self, layers, occupied_mask, placed_rects, w, h, coast_left, coast_right, coast_top, coast_bottom, draw_secondary_maze_road):
+        """Places Port_L1 at the shore, places boat, and marks player teleport spawn 'P2' on the sand tile."""
+        port_name = getattr(self, 'port_template', None)
+        if not port_name or port_name not in self.templates:
+            for k in ['Port_L1', 'Port_01', 'port_l1', 'port_01', 'Port', 'port']:
+                if k in self.templates:
+                    port_name = k
+                    break
+        if not port_name or port_name not in self.templates:
+            for k in self.templates.keys():
+                if 'port' in k.lower():
+                    port_name = k
+                    break
+
+        port_tmpl = self.templates.get(port_name) if port_name else None
+        if not port_tmpl:
+            self._place_single_teleport_boat(layers, w, h)
+            return
+
+        pw, ph = port_tmpl['width'], port_tmpl['height']
+        cx, cy = w // 2, h // 2
+
+        available_coasts = []
+        if coast_bottom: available_coasts.append('bottom')
+        if coast_top: available_coasts.append('top')
+        if coast_left: available_coasts.append('left')
+        if coast_right: available_coasts.append('right')
+        if not available_coasts:
+            available_coasts = ['bottom', 'top', 'left', 'right']
+
+        random.shuffle(available_coasts)
+
+        best_candidate = None
+        best_score = -999999
+        chosen_side = available_coasts[0]
+
+        for side in available_coasts:
+            if side == 'bottom':
+                ty_min, ty_max = max(2, h - ph - 6), max(2, h - ph - 1)
+                tx_min, tx_max = 6, max(7, w - pw - 6)
+            elif side == 'top':
+                ty_min, ty_max = 1, min(h - ph - 2, 6)
+                tx_min, tx_max = 6, max(7, w - pw - 6)
+            elif side == 'left':
+                tx_min, tx_max = 1, min(w - pw - 2, 6)
+                ty_min, ty_max = 6, max(7, h - ph - 6)
+            else:  # right
+                tx_min, tx_max = max(2, w - pw - 6), max(2, w - pw - 1)
+                ty_min, ty_max = 6, max(7, h - ph - 6)
+
+            for _ in range(40):
+                tx = random.randint(tx_min, tx_max)
+                ty = random.randint(ty_min, ty_max)
+
+                collides_conn = False
+                for ry in range(ty, ty + ph):
+                    for rx in range(tx, tx + pw):
+                        if self._is_in_connector_zone_internal(rx, ry, w, h, cx, cy):
+                            collides_conn = True
+                            break
+                    if collides_conn: break
+                if collides_conn: continue
+
+                p_rect = pygame.Rect(tx, ty, pw, ph)
+                if any(p_rect.colliderect(pr) for pr in placed_rects):
+                    continue
+
+                water_count = 0
+                land_count = 0
+                for ry in range(ty, ty + ph):
+                    for rx in range(tx, tx + pw):
+                        gt = layers['ground'][ry][rx].lower()
+                        if 'water' in gt:
+                            water_count += 1
+                        else:
+                            land_count += 1
+
+                score = 0
+                if water_count > 0 and land_count > 0:
+                    score = 2000 - abs(water_count - land_count)
+                elif water_count > 0:
+                    score = 100 + water_count
+                elif land_count > 0:
+                    score = 50 + land_count
+
+                if score > best_score:
+                    best_score = score
+                    best_candidate = (tx, ty)
+                    chosen_side = side
+
+        if not best_candidate:
+            tx = max(4, min(w - pw - 4, cx - pw // 2))
+            ty = max(4, min(h - ph - 4, h - ph - 6))
+            best_candidate = (tx, ty)
+
+        tx, ty = best_candidate
+        
+        # 1. Blit Port template clearing base layer obstacles
+        self._blit_template(layers, port_tmpl, tx, ty, w, h, clear_base=True)
+        
+        port_rect = pygame.Rect(tx, ty, pw, ph)
+        placed_rects.append(port_rect)
+
+        # 2. Protect Port_L1 from decoration overlays
+        for ry in range(ty, ty + ph):
+            for rx in range(tx, tx + pw):
+                if 0 <= rx < w and 0 <= ry < h:
+                    occupied_mask[ry][rx] = 1
+                    layers['protected_mask'][ry][rx] = 1
+                    if layers['base'][ry][rx] == '@':
+                        layers['base'][ry][rx] = ' '
+
+        # 3. Ensure boat tile is present
+        boat_char = self._resolve_boat_char()
+        has_boat = False
+        boat_pos = None
+        for ry in range(ty, ty + ph):
+            for rx in range(tx, tx + pw):
+                if 0 <= rx < w and 0 <= ry < h:
+                    b_tile = layers['base'][ry][rx]
+                    g_tile = layers['ground'][ry][rx]
+                    if b_tile in (boat_char, 'tp_boat', 'teleport_boat') or g_tile in (boat_char, 'tp_boat', 'teleport_boat'):
+                        has_boat = True
+                        boat_pos = (rx, ry)
+                        layers['base'][ry][rx] = boat_char
+                        layers['spawn'][ry][rx] = ' '
+                        break
+            if has_boat: break
+
+        if not has_boat:
+            water_tile = getattr(self, 'water_tile', 'water_01')
+            for ry in range(max(0, ty - 2), min(h, ty + ph + 2)):
+                for rx in range(max(0, tx - 2), min(w, tx + pw + 2)):
+                    if layers['ground'][ry][rx] == water_tile and layers['base'][ry][rx] == ' ':
+                        layers['base'][ry][rx] = boat_char
+                        layers['spawn'][ry][rx] = ' '
+                        has_boat = True
+                        boat_pos = (rx, ry)
+                        break
+                if has_boat: break
+
+        # 4. Find the walkable sand tile at Port_L1 and set spawn marker 'P2'
+        sand_tile_type = getattr(self, 'sand_tile', 'beach_sand_01')
+        ref_x = boat_pos[0] if boat_pos else (tx + pw // 2)
+        ref_y = boat_pos[1] if boat_pos else (ty + ph // 2)
+
+        sand_candidates = []
+        for ry in range(max(0, ty - 3), min(h, ty + ph + 3)):
+            for rx in range(max(0, tx - 3), min(w, tx + pw + 3)):
+                gt = layers['ground'][ry][rx].lower()
+                bt = layers['base'][ry][rx]
+                if ('sand' in gt or 'beach' in gt) and bt == ' ':
+                    d = math.hypot(rx - ref_x, ry - ref_y)
+                    sand_candidates.append((d, rx, ry))
+
+        if sand_candidates:
+            sand_candidates.sort(key=lambda c: c[0])
+            chosen_sand = (sand_candidates[0][1], sand_candidates[0][2])
+        else:
+            if chosen_side == 'bottom':
+                chosen_sand = (tx + pw // 2, max(2, ty - 1))
+            elif chosen_side == 'top':
+                chosen_sand = (tx + pw // 2, min(h - 3, ty + ph))
+            elif chosen_side == 'left':
+                chosen_sand = (min(w - 3, tx + pw), ty + ph // 2)
+            else:
+                chosen_sand = (max(2, tx - 1), ty + ph // 2)
+            layers['ground'][chosen_sand[1]][chosen_sand[0]] = sand_tile_type
+            layers['base'][chosen_sand[1]][chosen_sand[0]] = ' '
+
+        # Clear any old P or P2 in this chunk, and stamp 'P2' on the sand tile at Port_L1
+        for y in range(h):
+            for x in range(w):
+                if layers['spawn'][y][x] in ('P', 'P2'):
+                    layers['spawn'][y][x] = ' '
+
+        layers['spawn'][chosen_sand[1]][chosen_sand[0]] = 'P2'
+
+        # 5. Connect a pathway from the inland entrance of Port_L1 to the chunk road network
+        if chosen_side == 'bottom':
+            ent_x = max(2, min(w - 3, tx + pw // 2))
+            ent_y = max(2, ty - 1)
+        elif chosen_side == 'top':
+            ent_x = max(2, min(w - 3, tx + pw // 2))
+            ent_y = min(h - 3, ty + ph)
+        elif chosen_side == 'left':
+            ent_x = min(w - 3, tx + pw)
+            ent_y = max(2, min(h - 3, ty + ph // 2))
+        else:  # right
+            ent_x = max(2, tx - 1)
+            ent_y = max(2, min(h - 3, ty + ph // 2))
+
+        draw_secondary_maze_road(ent_x, ent_y, cx, cy, 'dirty_01', path_width=2)
 
     def _generate_chunk_data(self, gx, gy, conns, is_start=False, assigned_templates=None, assigned_l2_templates=None, allow_buildings=True, force_forest=False, cell_w=None, cell_h=None, coast_left=False, coast_right=False, coast_top=False, coast_bottom=False, conns_l2=None):
         w = cell_w if cell_w is not None else 128
@@ -273,7 +586,7 @@ class ProceduralGeneratorChunk:
                         layers['base'][y][x] = tile
                         occupied_mask[y][x] = 1
 
-        # 4. Organic Beach Coastlines (Where path does NOT touch another chunk or on isolated islands)
+        # 4. Organic Beach Coastlines
         cw = getattr(self, 'coast_width', 15)
         def get_coast_noise(idx, scale=0.1, amp=4.0):
             q_idx = (idx // 4) * 4
@@ -378,6 +691,14 @@ class ProceduralGeneratorChunk:
                             layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
                             occupied_mask[y][x] = 1
                             layers['protected_mask'][y][x] = 1
+
+        if getattr(self, 'lobby_chunk', None) and (gx, gy) == self.lobby_chunk:
+            return self._generate_lobby_chunk(gx, gy, w, h)
+
+        # 4.5 Place Port_L1 at the shore of all non-military chunks BEFORE buildings and walls
+        is_military = (getattr(self, 'military_chunk', None) == (gx, gy))
+        if not is_military:
+            self._place_port_at_shore(layers, occupied_mask, placed_rects, w, h, coast_left, coast_right, coast_top, coast_bottom, draw_secondary_maze_road)
 
         # 5. Organic Trade Routes for Urban Chunks
         if allow_buildings and not force_forest:
@@ -500,7 +821,6 @@ class ProceduralGeneratorChunk:
                 is_cave = 'cave' in tmpl_name.lower()
                 is_military_base = "military" in tmpl_name.lower() or "heli" in tmpl_name.lower()
 
-                # Determine full required dimensions accounting for both L1 and L2 counterparts
                 found_l2_key = get_l2_counterpart(tmpl_name, is_forest=False)
                 tmpl_l2 = self.templates.get(found_l2_key) if found_l2_key else None
                 fit_w = max(tw, tmpl_l2['width']) if tmpl_l2 else tw
@@ -533,11 +853,9 @@ class ProceduralGeneratorChunk:
                             break
                 
                 if placed and tmpl_l2:
-                    # Blit L2 template with full bounds protection
                     self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                     l2_w, l2_h = tmpl_l2['width'], tmpl_l2['height']
                     
-                    # --- FIX: Apply L2 Border and Padding for Urban buildings ---
                     if hasattr(self, '_apply_l2_border'):
                         self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
                         
@@ -545,9 +863,8 @@ class ProceduralGeneratorChunk:
                     for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                         for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                             occupied_mask_L2[ly][lx] = 1
-                    # ------------------------------------------------------------
 
-        # 7. Forest / Nature Rooms (NO urban buildings or petrol stations)
+        # 7. Forest / Nature Rooms
         if force_forest:
             self._generate_confusing_asphalt_maze(layers, occupied_mask, w, h, cx, cy)
             
@@ -560,7 +877,7 @@ class ProceduralGeneratorChunk:
                     tx = random.randint(3, max(4, w - tw - 3))
                     ty = random.randint(3, max(4, h - th - 3))
                     if is_area_free(tx, ty, tw, th, gap=2):
-                      self._blit_template(layers, tmpl, tx, ty, w, h)
+                      self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
                       for ry in range(ty, ty + th):
                         for rx in range(tx, tx + tw):
                           if 0 <= rx < w and 0 <= ry < h:
@@ -577,7 +894,7 @@ class ProceduralGeneratorChunk:
                 ty = random.randint(2, max(3, h - th - 2))
                 
                 if is_area_free(tx, ty, tw, th, gap=2):
-                    self._blit_template(layers, tmpl, tx, ty, w, h)
+                    self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
                     
                     found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
                     if found_l2_key:
@@ -588,12 +905,10 @@ class ProceduralGeneratorChunk:
                         if hasattr(self, '_apply_l2_border'):
                             self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
                         
-                        # --- FIX: Protect the entire margin from overlaps ---
                         pad = 4
                         for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                                 occupied_mask_L2[ly][lx] = 1
-                        # ----------------------------------------------------
 
                     placed_rects.append(pygame.Rect(tx, ty, tw, th))
                     for ry in range(ty, ty + th):
@@ -608,7 +923,7 @@ class ProceduralGeneratorChunk:
                     if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile and ground_tile != getattr(self, 'water_tile', 'water_01'):
                          layers['ground'][y][x] = 'bg_grass'
 
-        # --- HARD BORDER ENFORCEMENT ---
+        # Border enforcement
         pathway_tiles = [road_tile, dirt_tile, sand_tile]
         clear_radius = 2 
         
@@ -617,12 +932,15 @@ class ProceduralGeneratorChunk:
                 layers['base'][by][bx] = ' '
                 return
 
+            if layers.get('protected_mask') and layers['protected_mask'][by][bx] == 1:
+                return
+            if any(pr.collidepoint(bx, by) for pr in placed_rects):
+                return
+
             ground = layers['ground'][by][bx]
-            # Never place stone walls on water or beach sand
             if ground == getattr(self, 'water_tile', 'water_01') or 'sand' in ground or 'beach' in ground:
                 return
 
-            # Skip stone walls on edges designated as a coast
             if is_horizontal:
                 if (by == 0 and coast_top) or (by == h - 1 and coast_bottom):
                     return
@@ -668,7 +986,7 @@ class ProceduralGeneratorChunk:
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
                 
                 placed_l2 = False
-                pad = 4 # --- FIX: Enforce padding margin
+                pad = 4
                 for _ in range(40): 
                     tx = random.randint(pad, max(pad, w - l2_w - pad))
                     ty = random.randint(pad, max(pad, h - l2_h - pad))
@@ -683,15 +1001,12 @@ class ProceduralGeneratorChunk:
                     
                     if not collision:
                         self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
-                        
-                        # --- FIX: Generate Walls & Floor Padding ---
                         if hasattr(self, '_apply_l2_border'):
                             self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h)
                             
                         for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
                                 occupied_mask_L2[ly][lx] = 1
-                        # -------------------------------------------
                         placed_l2 = True
                         break
         
@@ -776,7 +1091,7 @@ class ProceduralGeneratorChunk:
             bx, by = tx + tw // 2, ty + th // 2
             draw_secondary_maze_road(bx, by, cx, cy, 'dirty_01', path_width=3)
             
-        self._blit_template(layers, tmpl, tx, ty, w, h)
+        self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
         placed_rects.append(pygame.Rect(tx, ty, tw, th))
         for ry in range(ty, ty + th):
             for rx in range(tx, tx + tw): 

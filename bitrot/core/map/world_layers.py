@@ -309,12 +309,8 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
             game.map_states[current_filename]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
         
-        chunk_npcs = []
         if hasattr(game, 'npcs'):
-            for npc in game.npcs:
-                if not getattr(npc, 'is_following', False):
-                    chunk_npcs.append(npc)
-            game.map_states[current_filename]['npcs'] = chunk_npcs
+            game.map_states[current_filename]['npcs'] = list(game.npcs)
             
         game.map_states[current_filename]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
         
@@ -367,11 +363,7 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             if hasattr(game, 'active_animals'):
                 chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
             
-            followers = []
-            if hasattr(game, 'npcs'):
-                for npc in game.npcs:
-                    if getattr(npc, 'is_following', False):
-                        followers.append(npc)
+            
 
             if new_filename in game.map_states:
                 game.items_on_ground = game.map_states[new_filename].get('items_on_ground', [])
@@ -458,9 +450,7 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                                 npc.x, npc.y = free_pos
                                 game.npcs.add(npc)
             
-            if hasattr(game, 'npcs'):
-                for f_npc in followers:
-                    game.npcs.add(f_npc)
+            
             
             if hasattr(game, 'active_animals'):
                 game.active_animals.extend(chasing_animals)

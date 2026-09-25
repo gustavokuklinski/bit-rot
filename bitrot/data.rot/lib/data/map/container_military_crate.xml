@@ -11,6 +11,7 @@
         <item type="container" min="1" max="1" chance="0.15" />
         <item type="camp" min="1" max="1" chance="0.10" />
         <item type="text" min="1" max="2" chance="0.60" />
+        <item type="sd_card" min="1" max="1" chance="0.15" />
 
         <item item="Ammo Canister 556" chance="0.05" />
         <item item="Ammo Canister 9mm" chance="0.05" />

@@ -10,7 +10,8 @@
         <item type="consumable_drugs" min="1" max="1" chance="0.01" />
         <item type="recipe" min="1" max="1" chance="0.20" />
         <item type="text" min="1" max="2" chance="0.75" />
-        
+        <item type="sd_card" min="1" max="1" chance="0.25" />
+
         <item item="MRE" chance="0.45" />
         <item item="Magazine" chance="0.30" />
         <!-- Mobile phones are utility/rare -->

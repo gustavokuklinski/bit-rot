@@ -1,4 +1,4 @@
-<map name="petrol_bottom_01" type="maptile" char="petrol_bottom_01" is_obstacle="true">
+<map name="petrol_bottom_01" type="maptile" char="petrol_bottom_01" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite id="close" file="petrol_bottom_01.png" />
     </visuals>

@@ -173,7 +173,6 @@ def save_game(game):
                 "name": npc.name,
                 "health": npc.health,
                 "max_health": getattr(npc, 'max_health', 100),
-                "is_following": npc.is_following,
                 "is_friendly": npc.is_friendly,
                 "is_static": getattr(npc, 'is_static', False),
                 "inventory": safe_inventory,

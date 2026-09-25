@@ -148,10 +148,10 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                       hit_npc.knockback_timer = 200
 
              if not hit_npc.is_dead:
-                 hit_npc.aggro_timer, hit_npc.current_attacker, hit_npc.is_following, hit_npc.state = 10000, attacker, True, 'chasing'
+                 hit_npc.aggro_timer, hit_npc.current_attacker, hit_npc.state = 10000, attacker, True, 'chasing'
                  for other_npc in game.npcs:
                      if other_npc != hit_npc and not other_npc.is_dead and (other_npc.rect.centerx - hit_npc.rect.centerx)**2 + (other_npc.rect.centery - hit_npc.rect.centery)**2 < (TILE_SIZE * 15) ** 2:
-                         other_npc.aggro_timer, other_npc.is_following, other_npc.state = max(other_npc.aggro_timer, 8000), True, 'chasing'
+                         other_npc.aggro_timer, other_npc.state = max(other_npc.aggro_timer, 8000), True, 'chasing'
 
              if hit_npc.take_damage(damage, game, attacker=attacker) and attacker == game.player:
                  print(f"You shot and killed {hit_npc.name}!")

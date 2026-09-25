@@ -8,6 +8,7 @@
         <item type="charm" min="1" max="1" chance="0.10" />
         <item type="consumable_book" min="1" max="2" chance="0.35" />
         <item type="text" min="1" max="3" chance="0.85" />
+        <item type="sd_card" min="1" max="1" chance="0.25" />
         <item item="Lighter off" chance="0.25" />
         <item item="Cigarette Pack" chance="0.15" />
     </loot>

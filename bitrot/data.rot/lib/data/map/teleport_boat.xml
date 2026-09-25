@@ -1,0 +1,5 @@
+<map name="teleport_boat" type="maptile_teleport" char="tp_boat" is_visible="true" is_obstacle="true">
+    <visuals>
+        <sprite file="teleport_boat.png" />
+    </visuals>
+</map>

@@ -1,3 +1,5 @@
+# core/map/procedural/generator_template_loader.py
+
 import os
 from core.data.config import *
 from core.map.building_loader import load_building_templates
@@ -22,46 +24,54 @@ class ProceduralGeneratorTemplate:
             'Heli': [],
             'Military': [],
             'Cave': [],
-            #'Bunker': [], # L1 Bunker
+            'Lobby': [],
+            'Port': []
         }
         
-        # NEW: Categorized L2 Templates
         self.categorized_l2_templates = {
             'Bunker': [],
             'Dungeon': [],
         }
         
         self.forest_templates = []
-        self.l2_templates = [] # Generic L2
+        self.l2_templates = []
+        self.lobby_template = None
+        self.port_template = None
 
         print("--- Template Discovery & Categorization ---")
         for name in self.templates.keys():
             lower_name = name.lower()
             
-            # --- SEPARATE L2 TEMPLATES ---
+            # Identify special lobby template
+            if "lobby" in lower_name:
+                self.lobby_template = name
+                continue
+
+            # Identify port template (shore-only building)
+            if "port" in lower_name:
+                self.port_template = name
+                self.categorized_templates['Port'].append(name)
+                continue
+
+            # Separate L2 templates
             if "l2" in lower_name:
-                # FIX: Exclude Caves from random L2 pool so they only spawn via links
                 if "cave" not in lower_name:
                     assigned_l2 = False
-                    # Categorize specific L2 types
                     if "bunker" in lower_name:
                         self.categorized_l2_templates['Bunker'].append(name)
                         assigned_l2 = True
                     elif "dungeon" in lower_name:
                         self.categorized_l2_templates['Dungeon'].append(name)
                         assigned_l2 = True
-                    
-                    # If not specific, add to generic pool
                     if not assigned_l2:
                         self.l2_templates.append(name)
-                continue # Do not add to L1 pools
+                continue
 
             if name.startswith("Forest_"):
                 self.forest_templates.append(name)
                 continue
 
             assigned = False
-            
             if "heli" in lower_name:
                 self.categorized_templates['Heli'].append(name)
                 assigned = True
