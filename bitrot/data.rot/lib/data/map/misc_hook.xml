@@ -1,4 +1,4 @@
-<map name="misc_hook" type="maptile" char="misc_hook" is_obstacle="true">
+<map name="misc_hook" type="maptile" char="misc_hook" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="misc_hook.png" />
     </visuals>

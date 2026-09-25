@@ -867,12 +867,16 @@ def handle_keyboard_events(game, event, action_triggered=None):
                         tile = game.map_manager.get_tile_at(tx, ty)
                         if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
                             game.map_manager.toggle_door_state(tx, ty)
-                        #elif tile and tile.get('is_stair'):
-                        #    target_layer = tile.get('target_layer')
-                        #    if game.player.layer_switch_cooldown <= 0:
-                        #        if set_active_layer(game, target_layer):
-                        #            game.player.layer_switch_cooldown = 30
                     
+                    elif target['type'] == 'maptile_teleport':
+                        tx, ty = target['entity']
+                        zoom = getattr(game, 'zoom_level', 1.0)
+                        screen_x = int(((tx * TILE_SIZE + TILE_SIZE/2 + game.offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset)
+                        screen_y = int(((ty * TILE_SIZE + TILE_SIZE/2 + game.offset_y) * zoom))
+                        
+                        from core.events.mouse_context import handle_right_click
+                        handle_right_click(game, (screen_x, screen_y))
+                        
                     elif target['type'] == 'container':
                         found_container = target['entity']
                         is_closed_maptile = getattr(found_container, 'item_type', '') == 'maptile_container' and not getattr(found_container, 'is_opened', False)
@@ -883,24 +887,25 @@ def handle_keyboard_events(game, event, action_triggered=None):
                             else:
                                 found_container.is_opened = True
 
-                            modal_exists = False
-                            for modal in game.modals:
-                                if modal['type'] == 'container' and modal.get('item') == found_container:
-                                    modal_exists = True
-                                    break
-                                    
-                            if not modal_exists:
-                                default_pos = getattr(game, 'last_modal_positions', {}).get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
-                                new_modal = {
-                                    'id': uuid.uuid4(),
-                                    'type': 'container',
-                                    'item': found_container,
-                                    'position': default_pos,
-                                    'rect': pygame.Rect(default_pos[0], default_pos[1], MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-                                    'is_dragging': False,
-                                    'drag_offset': (0, 0)
-                                }
-                                game.modals.append(new_modal)
+                            nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
+                            if nearby_modal:
+                                nearby_modal['active_tab'] = found_container.name
+                                game.modals.remove(nearby_modal)
+                                game.modals.append(nearby_modal)
+                            else:
+                                modal_exists = any(m['type'] == 'container' and m.get('item') == found_container for m in game.modals)
+                                if not modal_exists:
+                                    target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+                                    new_modal = {
+                                        'id': uuid.uuid4(),
+                                        'type': 'container',
+                                        'item': found_container,
+                                        'position': target_pos,
+                                        'rect': pygame.Rect(target_pos[0], target_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
+                                        'is_dragging': False,
+                                        'drag_offset': (0, 0)
+                                    }
+                                    game.modals.append(new_modal)
 
                         if is_closed_maptile:
                             # If the SD card is active, open immediately with ZERO timer

@@ -1,4 +1,4 @@
-<map name="factory_industrial_pipe_holder" type="maptile" char="factory_industrial_pipe_holder" is_obstacle="true">
+<map name="factory_industrial_pipe_holder" type="maptile" char="factory_industrial_pipe_holder" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="factory_industrial_pipe_holder.png" />
     </visuals>

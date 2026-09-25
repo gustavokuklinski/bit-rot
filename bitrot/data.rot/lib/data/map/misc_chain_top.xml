@@ -1,4 +1,4 @@
-<map name="misc_chain_top" type="maptile" char="misc_chain_top" is_obstacle="true">
+<map name="misc_chain_top" type="maptile" char="misc_chain_top" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="misc_chain_top.png" />
     </visuals>

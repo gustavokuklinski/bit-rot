@@ -390,7 +390,7 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
 
     if target:
         if target['type'] in ['npc', 'vehicle', 'container']: target_world_rect = target['entity'].rect
-        elif target['type'] in ['tile', 'stair']: target_world_rect = pygame.Rect(target['entity'][0] * TILE_SIZE, target['entity'][1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        elif target['type'] in ['tile', 'stair', 'maptile_teleport']: target_world_rect = pygame.Rect(target['entity'][0] * TILE_SIZE, target['entity'][1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
         if target_world_rect: pygame.draw.rect(surface, (0, 255, 100), target_world_rect.move(offset_x, offset_y), 2)
 
     return target_world_rect
@@ -442,6 +442,25 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
             tip_text = get_tooltip_tr('inspect_container', "Inspect [{key}]").replace('{key}', get_key_name('interact'))
             interactables.append({'rect': obj.rect, 'tip': tip_text})
+
+    p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+    p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+    for dy in range(-1, 2):
+        for dx in range(-1, 2):
+            tx, ty = p_grid_x + dx, p_grid_y + dy
+            t_def = game.map_manager.get_tile_at(tx, ty)
+            char = ""
+            try: char = game.map_data[ty][tx]
+            except: pass
+            
+            is_boat = (
+                (t_def and (t_def.get('type') == 'maptile_teleport' or t_def.get('name') in ('tp_boat', 'teleport_boat'))) or
+                char in ('tp_boat', 'teleport_boat')
+            )
+            if is_boat:
+                tip_text = tr('tooltip', "Right click to navigate")
+                world_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                interactables.append({'rect': world_rect, 'tip': tip_text})
 
     tooltip_to_draw = None
     focused_tip = None 

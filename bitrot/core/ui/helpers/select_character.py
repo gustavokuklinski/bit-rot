@@ -620,21 +620,22 @@ def draw_select_character_screen(game, state, mouse_pos):
     can_prev = carousel_idx > 0
     can_next = carousel_idx < max_carousel_idx
 
-    prev_hover = prev_arrow_rect.collidepoint(mouse_pos) and can_prev
-    next_hover = next_arrow_rect.collidepoint(mouse_pos) and can_next
+    if len(CHARACTER_CLASSES) > 3:
+        prev_hover = prev_arrow_rect.collidepoint(mouse_pos) and can_prev
+        next_hover = next_arrow_rect.collidepoint(mouse_pos) and can_next
 
-    pygame.draw.rect(game.game_screen, (70, 70, 70) if prev_hover else ((45, 45, 45) if can_prev else (25, 25, 25)), prev_arrow_rect, border_radius=S(5))
-    pygame.draw.rect(game.game_screen, WHITE if prev_hover else ((100, 100, 100) if can_prev else (50, 50, 50)), prev_arrow_rect, 1, border_radius=S(5))
-    prev_txt = font_16.render("<", False, WHITE if can_prev else (80, 80, 80))
-    game.game_screen.blit(prev_txt, prev_txt.get_rect(center=prev_arrow_rect.center))
+        pygame.draw.rect(game.game_screen, (70, 70, 70) if prev_hover else ((45, 45, 45) if can_prev else (25, 25, 25)), prev_arrow_rect, border_radius=S(5))
+        pygame.draw.rect(game.game_screen, WHITE if prev_hover else ((100, 100, 100) if can_prev else (50, 50, 50)), prev_arrow_rect, 1, border_radius=S(5))
+        prev_txt = font_16.render("<", False, WHITE if can_prev else (80, 80, 80))
+        game.game_screen.blit(prev_txt, prev_txt.get_rect(center=prev_arrow_rect.center))
 
-    pygame.draw.rect(game.game_screen, (70, 70, 70) if next_hover else ((45, 45, 45) if can_next else (25, 25, 25)), next_arrow_rect, border_radius=S(5))
-    pygame.draw.rect(game.game_screen, WHITE if next_hover else ((100, 100, 100) if can_next else (50, 50, 50)), next_arrow_rect, 1, border_radius=S(5))
-    next_txt = font_16.render(">", False, WHITE if can_next else (80, 80, 80))
-    game.game_screen.blit(next_txt, next_txt.get_rect(center=next_arrow_rect.center))
+        pygame.draw.rect(game.game_screen, (70, 70, 70) if next_hover else ((45, 45, 45) if can_next else (25, 25, 25)), next_arrow_rect, border_radius=S(5))
+        pygame.draw.rect(game.game_screen, WHITE if next_hover else ((100, 100, 100) if can_next else (50, 50, 50)), next_arrow_rect, 1, border_radius=S(5))
+        next_txt = font_16.render(">", False, WHITE if can_next else (80, 80, 80))
+        game.game_screen.blit(next_txt, next_txt.get_rect(center=next_arrow_rect.center))
 
-    if can_prev: clickable_rects['prev_arrow'] = prev_arrow_rect
-    if can_next: clickable_rects['next_arrow'] = next_arrow_rect
+        if can_prev: clickable_rects['prev_arrow'] = prev_arrow_rect
+        if can_next: clickable_rects['next_arrow'] = next_arrow_rect
 
     # Render The 3 Visible Preset Cards
     for i, c_def in enumerate(visible_classes):

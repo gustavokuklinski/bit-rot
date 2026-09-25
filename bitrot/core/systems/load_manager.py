@@ -30,6 +30,7 @@ from core.entities.item.item_helpers import deserialize_item
 from core.data.radio_manager import RadioManager
 from core.placement import find_free_tile
 from core.systems.save_manager import save_game
+from core.systems.utils import teleport_player_to_chunk
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -218,26 +219,31 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
     # Locate safe spawn position in the existing map
-    spawn_pos = None
-    if getattr(game, 'player_spawn', None):
-        spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=game.player_spawn, max_radius=15)
-        
-    if not spawn_pos:
-        house_pos = get_house_spawn_position(game)
-        if house_pos:
-            spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=house_pos, max_radius=15)
-            
-    if not spawn_pos:
-        cx = getattr(game, 'map_width_pixels', 1000) // 2
-        cy = getattr(game, 'map_height_pixels', 1000) // 2
-        spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx, cy), max_radius=25)
-
-    if spawn_pos:
-        game.player.x, game.player.y = spawn_pos
-        game.player.rect.topleft = spawn_pos
+    if hasattr(game, 'generator') and hasattr(game.generator, 'lobby_chunk'):
+        lobby_gx, lobby_gy = game.generator.lobby_chunk
+        teleport_player_to_chunk(game, lobby_gx, lobby_gy)
     else:
-        game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
-        game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+        # Locate safe spawn position in the existing map
+        spawn_pos = None
+        if getattr(game, 'player_spawn', None):
+            spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=game.player_spawn, max_radius=15)
+            
+        if not spawn_pos:
+            house_pos = get_house_spawn_position(game)
+            if house_pos:
+                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=house_pos, max_radius=15)
+                
+        if not spawn_pos:
+            cx = getattr(game, 'map_width_pixels', 1000) // 2
+            cy = getattr(game, 'map_height_pixels', 1000) // 2
+            spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx, cy), max_radius=25)
+
+        if spawn_pos:
+            game.player.x, game.player.y = spawn_pos
+            game.player.rect.topleft = spawn_pos
+        else:
+            game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
+            game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
     # Initialize player vitals
     game.player.health = game.player.max_health

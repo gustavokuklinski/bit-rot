@@ -18,8 +18,10 @@ from core.data.localization import tr
 from core.placement import find_free_tile
 from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
+
+# --- KEEP ONLY THIS ONE ---
 from core.systems.utils import teleport_player_to_chunk as sys_teleport
-from core.systems.utils import teleport_player_to_chunk
+
 
 def _is_barricade_item(it):
     """Safely checks if an item is a valid barricade, guarding against NoneType values."""
@@ -1114,23 +1116,27 @@ def handle_context_menu_click(game, mouse_pos):
                         return
 
                     def open_and_show_modal():
-                        # Open and generate loot if unopened
                         if hasattr(item, 'open'):
                             item.open(game)
                         else:
                             item.is_opened = True
 
-                        modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
-                        if not modal_exists:
-                            new_container_modal = {
-                                'id': uuid.uuid4(), 'type': 'container', 'item': item,
-                                'position': game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)),
-                                'is_dragging': False, 'drag_offset': (0, 0),
-                                'rect': pygame.Rect(game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[0], 
-                                                    game.last_modal_positions.get('container', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[1],
-                                                    CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
-                            }
-                            game.modals.append(new_container_modal)
+                        nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
+                        if nearby_modal:
+                            nearby_modal['active_tab'] = item.name
+                            game.modals.remove(nearby_modal)
+                            game.modals.append(nearby_modal)
+                        else:
+                            modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                            if not modal_exists:
+                                target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+                                new_container_modal = {
+                                    'id': uuid.uuid4(), 'type': 'container', 'item': item,
+                                    'position': target_pos,
+                                    'is_dragging': False, 'drag_offset': (0, 0),
+                                    'rect': pygame.Rect(target_pos[0], target_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
+                                }
+                                game.modals.append(new_container_modal)
 
                     if is_closed_maptile:
                         if has_app(game, 'open_container_instant'):
@@ -1493,7 +1499,7 @@ def handle_right_click(game, mouse_pos):
                     tile.get('name') in ("tp_boat", "teleport_boat") or 
                     char in ("tp_boat", "teleport_boat")
                 )
-                max_dist_sq = (TILE_SIZE * 3.5) ** 2 if is_boat else (TILE_SIZE * 2) ** 2
+                max_dist_sq = (TILE_SIZE * 1.5) ** 2 if is_boat else (TILE_SIZE * 2) ** 2
 
                 if dist_sq <= max_dist_sq:
                     if tile.get('type') == "maptile_car":

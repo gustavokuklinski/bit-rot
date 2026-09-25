@@ -243,7 +243,6 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
     game.game_state = 'CHUNK_LOADING'
     display_message(tr('msg', "Arrived at destination."))
 
-
 def resolve_stuck_in_obstacle(entity, obstacles, game):
     """Gently nudges an entity outward if it ever starts inside an obstacle."""
     if not obstacles or not hasattr(entity, 'rect'):
@@ -381,6 +380,24 @@ def get_targeted_interactable(game):
         facing_t = game.map_manager.get_tile_at(facing_x, facing_y)
         if facing_t and facing_t.get('is_stair'):
              candidates.append({'type': 'tile', 'entity': (facing_x, facing_y), 'dist': 0.1})
+
+    # --- [FIX] Add boat detection within 1.5 tiles ---
+    p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+    p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+    for dy in range(-1, 2):
+        for dx in range(-1, 2):
+            tx, ty = p_grid_x + dx, p_grid_y + dy
+            t_def = game.map_manager.get_tile_at(tx, ty)
+            char = ""
+            try: char = game.map_data[ty][tx]
+            except: pass
+            
+            is_boat = (t_def and (t_def.get('type') == 'maptile_teleport' or t_def.get('name') in ('tp_boat', 'teleport_boat'))) or char in ('tp_boat', 'teleport_boat')
+            if is_boat:
+                dist = math.hypot(game.player.rect.centerx - (tx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (ty*TILE_SIZE + TILE_SIZE/2))
+                if dist <= TILE_SIZE * 1.5:
+                    candidates.append({'type': 'maptile_teleport', 'entity': (tx, ty), 'char': char, 'dist': dist})
+    # -------------------------------------------------
 
     # 3. NPCs
     for npc in getattr(game, 'npcs', []):

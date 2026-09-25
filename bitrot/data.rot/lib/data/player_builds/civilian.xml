@@ -5,12 +5,12 @@
     <color value="(220, 220, 220)" />
     <clothes>
         <cloth name="Sneakers" id="feet" />
-        <cloth name="Tshirt" id="body" />
+        <cloth name="Next Petrol Tshirt" id="body" />
         <cloth name="Jeans Short" id="legs" />
     </clothes>
     <items>
         <item name="ID" />
         <item name="Wallet" />
-        <item name="Crowbar" />
+        <item name="Survivor Kit" />
     </items>
 </player_build>
