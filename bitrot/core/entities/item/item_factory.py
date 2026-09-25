@@ -5,6 +5,7 @@ import secrets
 import pygame
 import re
 import core.data.config
+from core.data.config import *
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 
 CLOTHING_COLORS = [
@@ -149,6 +150,27 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     if not ITEM_TEMPLATES:
         load_item_templates_data()
 
+    actual_name = item_name
+    template_name = item_name
+
+    # Check if we are dealing with a dynamic cartography map
+    if template_name.startswith("Cartography for ") and "[MAP_POS]" not in template_name:
+        template_name = "Cartography for [MAP_POS]"
+
+    if "[MAP_POS]" in template_name:
+        from core.messages import _game_instance
+        game = getattr(core.messages, '_game_instance', None)
+        chosen_chunk = (0, 0)
+        
+        # Pick a random active chunk to tie this map to
+        if game and hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
+            chunks = list(game.generator.active_chunks)
+            if chunks:
+                chosen_chunk = random.choice(chunks)
+                
+        actual_name = template_name.replace("[MAP_POS]", f"{chosen_chunk[0]}_{chosen_chunk[1]}")
+        template_name = "Cartography for [MAP_POS]"
+
     # --- WILDCARD CONTAINER GENERATION ---
     if is_wildcard_item_spec(item_name):
         parsed = parse_wildcard_spec(item_name)
@@ -185,8 +207,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             return container_item
     # --------------------------------------
 
-    template_name = item_name
-    if item_name.startswith("ID: "):
+    if actual_name.startswith("ID: "):
         if "ID" in ITEM_TEMPLATES:
             template_name = "ID"
         elif "ID Card" in ITEM_TEMPLATES:
@@ -200,11 +221,11 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                 break
 
     if template_name not in ITEM_TEMPLATES:
-        if item_name.startswith("ID: "):
-            item = cls(item_name, item_type='text', weight=0.001)
-            item.text = item_name
+        if actual_name.startswith("ID: "):
+            item = cls(actual_name, item_type='text', weight=0.001)
+            item.text = actual_name
             return item
-        print(f"Error: No template for '{item_name}'")
+        print(f"Error: No template for '{actual_name}'")
         return None
 
     template = ITEM_TEMPLATES[template_name]
@@ -352,7 +373,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     place_time = template.get('place_time', 1.5)
 
     new_item = cls(
-        template_name, template['type'], durability=durability, load=load, 
+        actual_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
         spread_angle=spread_angle, sprite_file=sprite_file, min_damage=min_damage, 
         max_damage=max_damage, min_restore=min_restore, max_restore=max_restore, 

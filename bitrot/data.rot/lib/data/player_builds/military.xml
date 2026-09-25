@@ -2,7 +2,7 @@
     <name value="Military" />
     <subtitle value="Armed Forces" />
     <description value="The small nations who still survive and distribuite the vaccines to the world." />
-    <color value="(120, 180, 80)" />
+    <color value="(255, 206, 149)" />
     <clothes>
         <cloth name="Beret" id="head" />
         <cloth name="Military Boots" id="feet" />
@@ -13,5 +13,6 @@
         <item name="ID" />
         <item name="Wallet" />
         <item name="Pistol 9mm" />
+        <item name="Cartography for [MAP_POS]" />
     </items>
 </player_build>

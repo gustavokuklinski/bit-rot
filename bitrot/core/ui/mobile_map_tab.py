@@ -19,11 +19,67 @@ MINIMAP_COLORS = {
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255)
 
-def generate_minimap_cache(game, full_map=False):
+def generate_minimap_cache(game, full_map=False, target_chunk=None):
     current_layer = getattr(game, 'current_layer_index', 1)
     tile_defs = game.tile_manager.definitions
+    chunk_size = getattr(game, 'CHUNK_SIZE', 128)
 
-    if full_map and not getattr(game, 'is_giant_map', False):
+    if target_chunk:
+        cache_surf = pygame.Surface((chunk_size, chunk_size))
+        cache_surf.fill(MINIMAP_COLORS['W'])
+        pixels = pygame.PixelArray(cache_surf)
+
+        gx, gy = target_chunk
+        map_folder = game.map_manager.map_folder
+        prefix = f"map_L{current_layer}_{gx}_{gy}"
+        b_file = os.path.join(map_folder, f"{prefix}_map.csv")
+        g_file = os.path.join(map_folder, f"{prefix}_ground.csv")
+        r_file = os.path.join(map_folder, f"{prefix}_roof.csv")
+
+        b_data = load_map_from_file(b_file) if os.path.exists(b_file) else []
+        g_data = load_map_from_file(g_file) if os.path.exists(g_file) else []
+        r_data = load_map_from_file(r_file) if os.path.exists(r_file) else []
+
+        for y in range(chunk_size):
+            for x in range(chunk_size):
+                final_char = ' '
+
+                if y < len(g_data) and x < len(g_data[y]):
+                    g_tile = g_data[y][x]
+                    if g_tile and g_tile != ' ':
+                        g_def = tile_defs.get(g_tile)
+                        g_name = g_def.get('name', '').lower() if g_def else ''
+                        if 'water' in g_name or g_tile.upper().startswith('W'): final_char = 'W'
+                        elif 'grass' in g_name or g_tile.upper().startswith('G'): final_char = 'G'
+                        elif 'forest' in g_name: final_char = 'F'
+                        else: final_char = 'default'
+
+                if y < len(b_data) and x < len(b_data[y]):
+                    b_tile = b_data[y][x]
+                    if b_tile and b_tile != ' ':
+                        b_def = tile_defs.get(b_tile)
+                        if b_def:
+                            b_name = b_def.get('name', '').lower()
+                            if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']): final_char = 'R'
+                            elif b_def.get('is_obstacle') or 'wall' in b_name: final_char = 'C'
+                            elif 'floor' in b_name and 'grass' not in b_name: final_char = 'default'
+                            elif final_char == ' ': final_char = 'default'
+                        elif b_tile.upper().startswith('R'): final_char = 'R'
+                        elif final_char == ' ': final_char = 'default'
+
+                if y < len(r_data) and x < len(r_data[y]):
+                    r_tile = r_data[y][x]
+                    if r_tile and r_tile != ' ': final_char = 'C'
+
+                if final_char != ' ':
+                    try:
+                        pixels[x, y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
+                    except IndexError:
+                        pass
+        pixels.close()
+        return cache_surf
+
+    elif full_map and not getattr(game, 'is_giant_map', False):
         map_files = game.map_manager.map_files
         max_gx = 0
         max_gy = 0
@@ -113,6 +169,19 @@ def generate_minimap_cache(game, full_map=False):
                                 pass
 
         pixels.close()
+
+        # Overlay map coordinates on the full map
+        from core.data.config import font_12, WHITE
+        for gy in range(max_gy + 1):
+            for gx in range(max_gx + 1):
+                if active_chunks is not None and (gx, gy) not in active_chunks:
+                    continue
+                text = font_12.render(f"[{gx},{gy}]", False, WHITE)
+                offset_x = gx * chunk_size
+                offset_y = gy * chunk_size
+                # Top right corner of each chunk
+                cache_surf.blit(text, (offset_x + chunk_size - text.get_width() - 5, offset_y + 5))
+
         return cache_surf
 
     else:
@@ -168,7 +237,7 @@ def generate_minimap_cache(game, full_map=False):
         return cache_surf
 
 
-def draw_map_tab(surface, game, modal, assets, full_map=False):
+def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None):
     if 'map_zoom' not in modal:
         modal['map_zoom'] = 6
     if 'map_offset' not in modal:
@@ -218,7 +287,7 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
         needs_update = True
 
     if needs_update:
-        modal[cache_key] = generate_minimap_cache(game, full_map)
+        modal[cache_key] = generate_minimap_cache(game, full_map, target_chunk)
         modal['cached_layer'] = current_layer
         modal['cached_map_file'] = current_map_file
 
@@ -226,20 +295,28 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
     
     if cached_surf:
         map_zoom = float(modal.get('map_zoom', 6))
-        player_grid_x = game.player.rect.centerx // TILE_SIZE
-        player_grid_y = game.player.rect.centery // TILE_SIZE
-
+        
+        chunk_size = getattr(game, 'CHUNK_SIZE', 128)
         gx_offset, gy_offset = 0, 0
-        if full_map and not getattr(game, 'is_giant_map', False):
-            current_map = game.map_manager.current_map_filename
-            match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map)
-            if match:
-                gx, gy = int(match.group(1)), int(match.group(2))
-                chunk_size = getattr(game, 'CHUNK_SIZE', 128)
-                gx_offset = (gx * chunk_size)
-                gy_offset = (gy * chunk_size)
-                player_grid_x += gx_offset
-                player_grid_y += gy_offset
+
+        if target_chunk:
+            gx_offset = target_chunk[0] * chunk_size
+            gy_offset = target_chunk[1] * chunk_size
+            player_grid_x = chunk_size // 2
+            player_grid_y = chunk_size // 2
+        else:
+            player_grid_x = game.player.rect.centerx // TILE_SIZE
+            player_grid_y = game.player.rect.centery // TILE_SIZE
+
+            if full_map and not getattr(game, 'is_giant_map', False):
+                current_map = game.map_manager.current_map_filename
+                match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map)
+                if match:
+                    gx, gy = int(match.group(1)), int(match.group(2))
+                    gx_offset = (gx * chunk_size)
+                    gy_offset = (gy * chunk_size)
+                    player_grid_x += gx_offset
+                    player_grid_y += gy_offset
 
         map_w, map_h = cached_surf.get_size()
         off_x, off_y = modal.get('map_offset', (0, 0))
@@ -340,9 +417,19 @@ def draw_map_tab(surface, game, modal, assets, full_map=False):
 
 
 def draw_big_map_modal(surface, game, modal, assets):
-    base_modal = BaseModal(surface, modal, assets, f"{modal['item'].name}")
+    item = modal['item']
+    base_modal = BaseModal(surface, modal, assets, f"{item.name}")
     modal['rect'] = base_modal.modal_rect
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
-    draw_map_tab(surface, game, modal, assets, full_map=True)
+
+    target_chunk = None
+    if item.name.startswith("Cartography for "):
+        try:
+            coords = item.name.replace("Cartography for ", "").strip().split("_")
+            target_chunk = (int(coords[0]), int(coords[1]))
+        except:
+            pass
+
+    draw_map_tab(surface, game, modal, assets, full_map=(target_chunk is None), target_chunk=target_chunk)
     return [close_button]

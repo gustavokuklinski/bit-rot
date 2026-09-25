@@ -2,7 +2,7 @@
     <name value="Civilian" />
     <subtitle value="Main Work Force" />
     <description value="The main work force who paid to be safe and get a part of the new world." />
-    <color value="(220, 220, 220)" />
+    <color value="(255, 206, 149)" />
     <clothes>
         <cloth name="Sneakers" id="feet" />
         <cloth name="Next Petrol Tshirt" id="body" />
@@ -12,5 +12,6 @@
         <item name="ID" />
         <item name="Wallet" />
         <item name="Survivor Kit" />
+        <item name="Cartography for [MAP_POS]" />
     </items>
 </player_build>

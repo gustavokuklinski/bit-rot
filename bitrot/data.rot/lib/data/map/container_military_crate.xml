@@ -20,6 +20,7 @@
         
         <item item="MRE" chance="0.50" />
         <item item="Island Map" chance="0.15" />
+        <item item="Cartography for [MAP_POS]" chance="0.8"/>
         <item item="Survivor Kit" chance="0.10" />
         <item item="Medical Kit" chance="0.25" />
         <item item="Sewing Kit" chance="0.20" />

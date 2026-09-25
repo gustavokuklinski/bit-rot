@@ -1609,10 +1609,25 @@ def handle_right_click(game, mouse_pos):
                     military_chunk = getattr(gen, 'military_chunk', None)
                     isolated_islands = getattr(gen, 'isolated_island_chunks', set())
 
+                owned_maps = set()
+                def check_inventory_for_maps(inv):
+                    for it in inv:
+                        if not it: continue
+                        if it.name.startswith("Cartography for "):
+                            chunk_str = it.name.replace("Cartography for ", "").strip()
+                            owned_maps.add(chunk_str)
+                        if hasattr(it, 'inventory') and it.inventory:
+                            check_inventory_for_maps(it.inventory)
+
+                if game.player:
+                    check_inventory_for_maps(game.player.inventory)
+                    check_inventory_for_maps(game.player.belt)
+                    check_inventory_for_maps(game.player.clothes.values())
+
                 sub_opts = []
                 display_map = {}
 
-                # 1. Lobby Option
+                # 1. Lobby Option (Always available as a safe haven fallback)
                 if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
@@ -1620,6 +1635,7 @@ def handle_right_click(game, mouse_pos):
 
                 # 2. Island and Mainland Chunks (Excluding military chunk)
                 for (cgx, cgy) in sorted(list(active_chunks)):
+                    sub_key = f"{cgx}_{cgy}"
                     if (cgx, cgy) == military_chunk:
                         continue
                     if (cgx, cgy) == lobby_chunk:
@@ -1627,12 +1643,21 @@ def handle_right_click(game, mouse_pos):
                     if (cgx, cgy) == (cur_gx, cur_gy):
                         continue
 
-                    sub_key = f"{cgx}_{cgy}"
+                    # ONLY allow if player owns the map for this chunk!
+                    if sub_key not in owned_maps:
+                        continue
+
                     sub_opts.append(sub_key)
                     if (cgx, cgy) in isolated_islands:
                         display_map[sub_key] = f"{tr('ui', 'Island')} ({cgx}, {cgy})"
                     else:
                         display_map[sub_key] = f"{tr('ui', 'Sector')} ({cgx}, {cgy})"
+
+                if not sub_opts:
+                    from core.messages import display_message
+                    display_message(tr('msg', "You need Cartography maps to navigate further."))
+                    game.context_menu['active'] = False
+                    return
 
                 options = [{'label': 'Travel to', 'sub': sub_opts, 'display_names': display_map}]
 

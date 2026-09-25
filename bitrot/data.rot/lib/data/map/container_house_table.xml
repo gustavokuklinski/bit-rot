@@ -6,6 +6,7 @@
     <loot>
         <!-- Text: Abundant -->
         <item type="text" min="1" max="2" chance="0.75" />
+        <item item="Cartography for [MAP_POS]" chance="0.40"/>
         
         <!-- Utility / Resources / Books: Middle -->
         <item type="utility" min="1" max="2" chance="0.30" />
@@ -17,5 +18,6 @@
         <item type="container" min="1" max="1" chance="0.10" />
         <item type="sd_card" min="1" max="1" chance="0.05" />
         <item type="weapon_ranged" min="1" max="1" chance="0.05" />
+
     </loot>
 </map>

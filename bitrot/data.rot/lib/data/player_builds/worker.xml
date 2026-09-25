@@ -2,7 +2,7 @@
     <name value="Worker" />
     <subtitle value="Deep Extraction and Refine" />
     <description value="The tech to deep explore the rocks and wells to refine and distribuite vaccines to the world." />
-    <color value="(50, 205, 50)" />
+    <color value="(255, 206, 149)" />
     <clothes>
         <cloth name="Worker Helmet" id="head" />
         <cloth name="Military Boots" id="feet" />
@@ -13,5 +13,6 @@
         <item name="ID" />
         <item name="Wallet" />
         <item name="Crowbar" />
+        <item name="Cartography for [MAP_POS]" />
     </items>
 </player_build>
