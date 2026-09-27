@@ -91,10 +91,10 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     stat_icons = {}
     icon_files = {
         "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
-        "WTR": SPRITE_PATH + "ui/water.png", "WGT": SPRITE_PATH + "ui/weight.png",
+        "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", "WGT": SPRITE_PATH + "ui/weight.png",
         "DEF": SPRITE_PATH + "ui/defence.png"
     }
-    stat_names = { "HP": "Health", "STM": "Stamina", "WTR": "Water", "WGT": "Weight", "DEF": "Defence" }
+    stat_names = { "HP": "Health", "STM": "Stamina", "WTR": "Water","FOD": "Food", "WGT": "Weight", "DEF": "Defence" }
 
     for k, path in icon_files.items():
         try:
@@ -105,6 +105,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     stats = [
         ("HP", player.health, player.max_health, GRAY),
         ("STM", player.stamina, player.max_stamina, GRAY),
+        ("FOD", player.food, 100, GRAY),
         ("WTR", player.water, 100, GRAY),
         ("WGT", player.current_weight, player.max_carry_weight, GRAY),
         ("DEF", player.get_total_defence(), 100, GRAY)

@@ -1122,21 +1122,44 @@ def handle_context_menu_click(game, mouse_pos):
                             item.is_opened = True
 
                         nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
-                        if nearby_modal:
-                            nearby_modal['active_tab'] = item.name
-                            game.modals.remove(nearby_modal)
-                            game.modals.append(nearby_modal)
-                        else:
-                            modal_exists = any(m['type'] == 'container' and m['item'] == item for m in game.modals)
+                        is_nearby_tab = False
+                        if source != 'nearby' and nearby_modal and 'tabs_data' in nearby_modal:
+                            for tab in nearby_modal['tabs_data']:
+                                if tab.get('container') == item:
+                                    is_nearby_tab = True
+                                    nearby_modal['active_tab'] = tab['label']
+                                    game.modals.remove(nearby_modal)
+                                    game.modals.append(nearby_modal)
+                                    break
+
+                        if not is_nearby_tab:
+                            modal_exists = any(m['type'] == 'container' and m.get('item') == item for m in game.modals)
                             if not modal_exists:
-                                target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+                                slots_modal = next((m for m in game.modals if m.get('type') == 'slots'), None)
+                                if slots_modal and 'rect' in slots_modal:
+                                    slots_pos = (slots_modal['rect'].x, slots_modal['rect'].y)
+                                else:
+                                    slots_pos = getattr(game, 'last_modal_positions', {}).get(
+                                        'slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
+                                    )
+                                target_pos = (slots_pos[0], max(0, slots_pos[1] - CONTAINER_MODAL_HEIGHT))
+                                game.last_modal_positions['container'] = target_pos
+
                                 new_container_modal = {
-                                    'id': uuid.uuid4(), 'type': 'container', 'item': item,
+                                    'id': uuid.uuid4(),
+                                    'type': 'container',
+                                    'item': item,
                                     'position': target_pos,
-                                    'is_dragging': False, 'drag_offset': (0, 0),
+                                    'is_dragging': False,
+                                    'drag_offset': (0, 0),
                                     'rect': pygame.Rect(target_pos[0], target_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT)
                                 }
                                 game.modals.append(new_container_modal)
+                            else:
+                                existing = next((m for m in game.modals if m['type'] == 'container' and m.get('item') == item), None)
+                                if existing:
+                                    game.modals.remove(existing)
+                                    game.modals.append(existing)
 
                     if is_closed_maptile:
                         if has_app(game, 'open_container_instant'):
@@ -1531,8 +1554,8 @@ def handle_right_click(game, mouse_pos):
                         click_source = 'map_tile'
                     
                 else:
-                    if tile.get('type') == "maptile_car" or tile.get('is_statable') or is_boat:
-                        display_message(game, tr('msg', "Too far away to interact."))
+                    # if tile.get('type') == "maptile_car" or tile.get('is_statable') or is_boat:
+                    display_message(game, tr('msg', "Too far away to interact."))
 
     if not clicked_item:
         adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
@@ -1654,7 +1677,6 @@ def handle_right_click(game, mouse_pos):
                         display_map[sub_key] = f"{tr('ui', 'Sector')} ({cgx}, {cgy})"
 
                 if not sub_opts:
-                    from core.messages import display_message
                     display_message(tr('msg', "You need Cartography maps to navigate further."))
                     game.context_menu['active'] = False
                     return

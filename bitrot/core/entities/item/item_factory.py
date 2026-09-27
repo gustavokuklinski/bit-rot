@@ -154,21 +154,30 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     template_name = item_name
 
     # Check if we are dealing with a dynamic cartography map
-    if template_name.startswith("Cartography for ") and "[MAP_POS]" not in template_name:
+    is_cartography = template_name.startswith("Cartography for ")
+    if is_cartography and "[MAP_POS]" not in template_name:
         template_name = "Cartography for [MAP_POS]"
 
-    if "[MAP_POS]" in template_name:
+    if "[MAP_POS]" in actual_name or (is_cartography and actual_name.strip() in ("Cartography for [MAP_POS]", "Cartography for")):
         from core.messages import _game_instance
         game = getattr(core.messages, '_game_instance', None)
         chosen_chunk = (0, 0)
         
-        # Pick a random active chunk to tie this map to
+        # Pick a random active chunk to tie this map to (excluding military and lobby chunks)
         if game and hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
-            chunks = list(game.generator.active_chunks)
-            if chunks:
-                chosen_chunk = random.choice(chunks)
+            excluded = set()
+            if hasattr(game.generator, 'military_chunk') and game.generator.military_chunk is not None:
+                excluded.add(tuple(game.generator.military_chunk))
+            if hasattr(game.generator, 'lobby_chunk') and game.generator.lobby_chunk is not None:
+                excluded.add(tuple(game.generator.lobby_chunk))
+
+            valid_chunks = [c for c in game.generator.active_chunks if tuple(c) not in excluded]
+            if valid_chunks:
+                chosen_chunk = random.choice(valid_chunks)
+            elif game.generator.active_chunks:
+                chosen_chunk = random.choice(list(game.generator.active_chunks))
                 
-        actual_name = template_name.replace("[MAP_POS]", f"{chosen_chunk[0]}_{chosen_chunk[1]}")
+        actual_name = f"Cartography for {chosen_chunk[0]}_{chosen_chunk[1]}"
         template_name = "Cartography for [MAP_POS]"
 
     # --- WILDCARD CONTAINER GENERATION ---
