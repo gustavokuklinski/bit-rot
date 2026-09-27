@@ -13,11 +13,11 @@
 
 <p align="center">
   <b>Support the Game</b><br />
-  <a href='https://ko-fi.com/I2I61MH19A' target='_blank'><img src='https://shields.io/badge/ko--fi-Donate-ff5f5f?logo=ko-fi&style=for-the-badge' alt='Buy Me a Coffee at ko-fi.com' />
+  <a href='https://ko-fi.com/I2I61MH19A' target='_blank'><img src='https://shields.io/badge/ko--fi-Donate-ff5f5f?logo=ko-fi&style=for-the-badge' alt='Buy Me a Coffee at ko-fi.com' /></a>
   <a href='https://www.paypal.com/donate/?hosted_button_id=2LJ6J5V9XLBKQ' target='_blank'><img src='https://shields.io/badge/paypal-donate-blue?logo=paypal&style=for-the-badge' alt='PayPal Donation' /></a>
   <a href='https://etherscan.io/address/0x1c03c13e6Ea32d3Db9F9ABDeE610779D1547F92A' target='_blank'><img src='https://img.shields.io/badge/Ethereum-Donate-blue?style=for-the-badge&logo=ethereum' alt='Donate Ethereum' /></a>
   <br />
-  Donations will help to make the project reach Steam.<br />All donors will get a Steam Key of the game.
+  <small><i>Donations will help to make the project reach Steam. All donors will get a Steam Key of the game.</i></small>
 </p>
 
 # 🧟 Bit Rot
