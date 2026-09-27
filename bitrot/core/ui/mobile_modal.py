@@ -24,8 +24,8 @@ def draw_mobile_modal(surface, game, modal, assets):
     tabs_data = [
         {'label': 'Clock', 'icon_path': SPRITE_PATH + 'ui/clock.png'},
         {'label': 'Map', 'icon_path':  SPRITE_PATH + 'ui/map.png'},
-        {'label': 'Apps', 'icon_path':  SPRITE_PATH + 'ui/mp3.png'},
-        {'label': 'Radio', 'icon_path': SPRITE_PATH + 'ui/mp3.png'},
+        {'label': 'Apps', 'icon_path':  SPRITE_PATH + 'ui/sd_card.png'},
+        {'label': 'Radio', 'icon_path': SPRITE_PATH + 'ui/radio.png'},
     ]
     modal['tabs_data'] = tabs_data
 
